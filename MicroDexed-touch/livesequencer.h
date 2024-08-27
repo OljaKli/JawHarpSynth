@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include "UI.h"
 
 typedef void (*SetupFn)(void*);
 
@@ -17,8 +18,9 @@ class UI_LiveSequencer;
 class LiveSequencer {
 
 public:
-  static constexpr int LIVESEQUENCER_NUM_TRACKS = 6;
-  static constexpr int LIVESEQUENCER_NUM_LAYERS = 4;
+  static constexpr uint8_t LIVESEQUENCER_TRACKS_PER_SCREEN = 6;
+  static constexpr uint8_t LIVESEQUENCER_NUM_TRACKS = 2 * LIVESEQUENCER_TRACKS_PER_SCREEN;
+  static constexpr uint8_t LIVESEQUENCER_NUM_LAYERS = 4;
 
   enum EventSource : uint8_t {
     EVENT_SONG = 0,
@@ -88,6 +90,7 @@ public:
   struct FillNotes {
     uint8_t number;
     uint8_t offset;
+    uint8_t velocityLevel;
   };
 
   enum ArpMode : uint8_t {
@@ -139,6 +142,7 @@ public:
 
     // volatile
     bool isActive;
+    std::string performanceName;
     std::unordered_set<uint8_t> instrumentChannels;
     Track tracks[LIVESEQUENCER_NUM_TRACKS];
     ArpSettings arpSettings;
@@ -153,12 +157,11 @@ public:
     uint8_t songPatternCount = 0;
     uint8_t songLayerCount = 0;
     uint8_t lastPlayedNote = 0;
-    bool trackLayersChanged = false;
-    bool songLayersChanged = false;
+
     bool startedFlag = false;
     bool isRunning = false;
     bool isRecording = false;
-    bool lastPlayedNoteChanged = false;
+
     bool isSongMode = false;
     bool recordedToSong = false;
     int currentBpm = 90;
@@ -170,7 +173,7 @@ public:
   void initOnce(void);
   LiveSequencer::LiveSeqData* getData(void);
   void songLayerAction(uint8_t layer, LayerMode action);
-  void trackLayerAction(uint8_t track, uint8_t layer, LayerMode action);
+  bool trackLayerAction(uint8_t track, uint8_t layer, LayerMode action);
   void handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity);
   void handlePatternBegin(void);
   void start(void);

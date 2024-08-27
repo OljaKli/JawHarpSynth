@@ -9,14 +9,33 @@
 
 class UI_LiveSequencer {
 public:
+  enum GuiUpdates : uint16_t {
+    drawTopButtons = (1 << 0),
+    drawTrackButtons = (1 << 1),
+    drawLayerButtons = (1 << 2),
+    drawTools = (1 << 3),
+    drawActiveNotes = (1 << 4),
+    drawTime = (1 << 5),
+    drawSongLayers = (1 << 6),
+    drawLastPlayedNote = (1 << 7),
+    drawActiveTrackSubLabel = (1 << 8)
+  };
+
   UI_LiveSequencer(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
   void init(void);
   void showDirectMappingWarning(uint8_t inChannel);
   void processLCDM(void);
   void handleTouchscreen(void);
   void onStopped(void);
+  void drawSingleLayer(uint8_t track, uint8_t layer); // used for layer mute GUI updates
+  void drawTrackLayers(uint8_t track);
+  void drawUpdates(uint16_t flags);
 
 private:
+  uint16_t guiUpdateFlags = 0;
+  uint8_t layerUpdates[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN] = { 0 };
+
+  uint8_t trackOffset = 0;
   struct ProgressBar {
     bool currentPhase;
     uint8_t drawnLength;  
@@ -31,7 +50,6 @@ private:
   bool showingHowTo = false;
 
   bool isLayerViewActive = false;
-  uint16_t guiUpdateFlags = 0;
 
   ActiveValue currentValue = { nullptr, nullptr };
   TouchButton *applyPatternLength;
@@ -39,11 +57,14 @@ private:
   std::vector<TouchButton*> buttonsToolSelect;
 
   TouchButton *lastNoteLabel;
-  ValueButtonRange<uint8_t> *currentTrackDevice;
-  ValueButtonRange<uint8_t> *currentTrackInstrument;
-  TouchButton *selectedTrackLabel;
-  uint8_t selectedTrackDevice = 0;
-  uint8_t selectedTrackInstrument = 0;
+
+  struct SelectedTrackSetup {
+    TouchButton *label;
+    uint8_t device;
+    uint8_t instrument;
+    uint8_t quantizeDenom;
+    uint8_t velocity;
+  } selectedTrackSetup;
 
   UI_LiveSequencer* instance;
   LiveSequencer& liveSeq;
@@ -76,19 +97,9 @@ private:
   std::vector<TouchButton*> toolsPages[TOOLS_NUM];
   std::vector<TouchButton*> trackButtons;
 
-  enum GuiUpdates : uint16_t {
-    drawTopButtons = (1 << 0),
-    drawTrackButtons = (1 << 1),
-    drawLayerButtons = (1 << 2),
-    drawTools = (1 << 3),
-    drawActiveNotes = (1 << 5),
-    drawTime = (1 << 6),
-    drawSongLayers = (1 << 7)
-  };
-
-  uint16_t GRID_X[6];
-  uint16_t GRID_Y[6];
-
+  uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
+  uint16_t GRID_Y[LiveSequencer::LIVESEQUENCER_NUM_LAYERS + 2];
+ 
   static constexpr uint8_t BAR_WIDTH = 104; // 2 * BUTTON_WIDTH + spacing
   static constexpr uint8_t BAR_HEIGHT = 3;
   static void openScreen(LCDML_FuncPtr_pu8 screen, uint8_t p_param = 0);
@@ -105,7 +116,9 @@ private:
   void handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color &color);
   void resetProgressBars(void);
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
-  void updateTrackChannelSetupButtons(void);
+  void updateTrackChannelSetupButtons(uint8_t track);
+  void drawTrackSubtext(uint8_t track);
+  void checkApplyTrackInstrument(void);
 };
 
 #endif //UI_LIVESEQUENCER_H
