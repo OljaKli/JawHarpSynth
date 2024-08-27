@@ -2975,7 +2975,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             sidechain_trigger_b = true;
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-          if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000)
+          if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
+            (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 210 && d < 216))
           {
 #endif
 
@@ -4787,8 +4788,8 @@ void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
 
 void set_sample_filter_freq(uint8_t sample, float s_freq)
 {
-  if (s_freq>2.195)
-  s_freq=2.195;
+  if (s_freq > 2.195)
+    s_freq = 2.195;
   drum_config[sample].filter_freq = s_freq;
 }
 

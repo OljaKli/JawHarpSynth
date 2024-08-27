@@ -17706,7 +17706,7 @@ FLASHMEM void print_psram_stats_filemanager()
   display.setCursor(CHAR_width_small * 44, 1 * CHAR_height_small);
   if (psram_size != 0)
   {
-    sprintf(text1, "%05d MB", (int)psram_size / 1024);
+    sprintf(text1, "%05d KB", (int)psram_size / 1024);
     display.print(text1);
   }
   for (int i = 0; i < NUM_DRUMSET_CONFIG; i++) {
@@ -17859,14 +17859,11 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     }
 
-#ifdef COMPILE_FOR_FLASH
-    if (LCDML.BT_checkEnter() && fm.active_window == 0) // left window, SDCARD
-#endif
+// #ifdef COMPILE_FOR_FLASH
+//        if (LCDML.BT_checkEnter() && fm.active_window == 0) // left window, SDCARD
+// #endif
 
-#ifdef COMPILE_FOR_PSRAM
-      if (LCDML.BT_checkEnter()) // left or right window, PSRAM
-#endif
-
+  if (LCDML.BT_checkEnter()) 
       {
 #ifdef COMPILE_FOR_FLASH
         if (fm.sd_mode == FM_COPY_PRESETS) // copy presets dir from SD to flash
