@@ -654,7 +654,7 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
       liveSeq.stop();
     }
     else {
-      if(data.isRecording) {
+      if (data.isRecording) {
         liveSeq.startCountIn(); // pressing start with record activated does a count in
         drawUpdates(drawTopButtons);
       } else {

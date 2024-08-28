@@ -205,7 +205,7 @@ FLASHMEM void LiveSequencer::startCountIn(void) {
   const int intervalMS = data.patternLengthMs / 4;
 
   countInTimer.begin([ this, intervalMS ] {
-    if(data.remainingCountIns > 1) {
+    if (data.remainingCountIns > 1) {
       handleNoteOn(drum_midi_channel, 73, 127, DEVICE_INTERNAL); // rim
       ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawTopButtons);
     } else {
