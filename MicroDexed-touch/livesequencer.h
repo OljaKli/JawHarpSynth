@@ -157,6 +157,7 @@ public:
     uint8_t songPatternCount = 0;
     uint8_t songLayerCount = 0;
     uint8_t lastPlayedNote = 0;
+    uint8_t remainingCountIns = 0;
 
     bool startedFlag = false;
     bool isRunning = false;
@@ -191,7 +192,7 @@ public:
   void setArpEnabled(bool enabled);
   void cleanEvents(void);
   uint32_t timeToMs(uint8_t patternNumber, uint16_t patternMs) const;
-
+  void startCountIn(void);
   void getDeviceName(uint8_t device, char *name, char *sub) const;
   void getInstrumentName(uint8_t device, uint8_t instrument, char *name, char *sub) const;
   void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument);

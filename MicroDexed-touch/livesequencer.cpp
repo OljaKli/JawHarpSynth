@@ -24,9 +24,10 @@ extern void handleStop();
 
 using namespace TeensyTimerTool;
 
-PeriodicTimer tickTimer(TMR1);  // only 16bit needed
-OneShotTimer arpTimer(TCK);     // one tick timer of 20
-OneShotTimer liveTimer(TCK);    // one tick timer of 20
+PeriodicTimer tickTimer(TMR1);   // only 16bit needed
+OneShotTimer arpTimer(TCK);      // one tick timer of 20
+OneShotTimer liveTimer(TCK);     // one tick timer of 20
+PeriodicTimer countInTimer(TCK); // one tick timer of 20
 
 UI_LiveSequencer* ui_liveSeq;
 
@@ -98,9 +99,6 @@ FLASHMEM void LiveSequencer::onStopped(void) {
 }
 
 FLASHMEM void LiveSequencer::onStarted(void) {
-  tickTimer.begin([] { TeensyTimerTool::tick(); }, 0.1ms);
-  liveTimer.begin([this] { playNextEvent(); });
-  arpTimer.begin([this] { playNextArpNote(); });
   data.startedFlag = true;
   data.isRunning = true;
   data.recordedToSong = false;
@@ -199,6 +197,23 @@ FLASHMEM void LiveSequencer::onSongStopped(void) {
 
   refreshSongLength();
   applySongStartLayerMutes();
+}
+
+FLASHMEM void LiveSequencer::startCountIn(void) {
+  handleNoteOn(drum_midi_channel, 82, 127, DEVICE_INTERNAL); // casta
+  data.remainingCountIns = 4;
+  const int intervalMS = data.patternLengthMs / 4;
+
+  countInTimer.begin([ this, intervalMS ] {
+    if(data.remainingCountIns > 1) {
+      handleNoteOn(drum_midi_channel, 73, 127, DEVICE_INTERNAL); // rim
+      ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawTopButtons);
+    } else {
+      countInTimer.stop();
+      handleStart();
+    }
+    data.remainingCountIns--;
+  }, intervalMS * 1000);
 }
 
 FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
@@ -722,6 +737,9 @@ FLASHMEM void LiveSequencer::playArp(const midi::MidiType type, const ArpNote ar
 }
 
 FLASHMEM void LiveSequencer::initOnce(void) {
+  tickTimer.begin([] { TeensyTimerTool::tick(); }, 0.1ms);
+  liveTimer.begin([this] { playNextEvent(); });
+  arpTimer.begin([this] { playNextArpNote(); });
   ui_liveSeq->init();
 }
 

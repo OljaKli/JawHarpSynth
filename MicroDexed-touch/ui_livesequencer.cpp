@@ -654,7 +654,12 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
       liveSeq.stop();
     }
     else {
-      liveSeq.start();
+      if(data.isRecording) {
+        liveSeq.startCountIn(); // pressing start with record activated does a count in
+        drawUpdates(drawTopButtons);
+      } else {
+        liveSeq.start();
+      }
     }
   }
 
@@ -786,7 +791,11 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
   display.console = true;
   
   if (guiFlags & drawTopButtons) {
-    TouchButton::drawButton(GRID_X[0], GRID_Y[0], (runningHere ? "STOP" : "START"), "", runningHere ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+    TouchButton::Color playColor = runningHere ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
+    if(data.remainingCountIns > 0) {
+      playColor = (data.remainingCountIns) % 2 ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_HIGHLIGHTED;
+    }
+    TouchButton::drawButton(GRID_X[0], GRID_Y[0], (runningHere ? "STOP" : "START"), "", playColor);
     TouchButton::drawButton(GRID_X[1], GRID_Y[0], "REC", "", data.isRecording ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
     TouchButton::drawButton(GRID_X[4], GRID_Y[0], isLayerViewActive ? "LAYERS" : "TOOLS", "VIEW", TouchButton::BUTTON_NORMAL);
     TouchButton::drawButton(GRID_X[5], GRID_Y[0], data.isSongMode ? "SONG" : "PATT", "MODE", TouchButton::BUTTON_HIGHLIGHTED);
