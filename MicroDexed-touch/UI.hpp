@@ -739,7 +739,7 @@ void update_seq_speed() {
 
 FLASHMEM bool menu_item_check(uint8_t in)
 {
-  const bool redrawRequired = (generic_temp_select_menu == in) || generic_full_draw_required || ((seq.edit_state == false) && (generic_temp_select_menu == in - 1) || (generic_temp_select_menu == in + 1));
+  const bool redrawRequired = (generic_temp_select_menu == in) || generic_full_draw_required || ((seq.edit_state == false) && ((generic_temp_select_menu == in - 1) || (generic_temp_select_menu == in + 1)));
   return redrawRequired;
 }
 
@@ -14332,6 +14332,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
       else if (seq.edit_state == 1 && generic_temp_select_menu != 0) {
         helptext_r("EDIT VALUE");
       }
+      update_selective_values_master_effects();
     }
 
     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())) {
@@ -14345,7 +14346,6 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
         }
         update_selective_values_master_effects();
       }
-      
       else {
         switch (generic_temp_select_menu) {
         case 1:
@@ -14379,6 +14379,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           // level
           master_effects_delay_level_global(0);
           print_small_intbar(6, 10, configuration.fx.delay_level_global[0], 5, 1, 0);
+          break;
 
         case 6:
           configuration.fx.delay_filter_mode[0] = constrain(configuration.fx.delay_filter_mode[0] + (factorChange * 1), 0, 3);
@@ -14476,6 +14477,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
         case 20:
           configuration.fx.delay_filter_mode[1] = constrain(configuration.fx.delay_filter_mode[1] + (factorChange * 1), 0, 3);
           print_delay_filter_mode(1, 20);
+          break;
 
         case 21:
           configuration.fx.delay_filter_freq[1] = constrain(configuration.fx.delay_filter_freq[1] + (factorChange * 50), 0, 9999);
@@ -14595,11 +14597,12 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           print_small_intbar(43, 18, microsynth[1].rev_send, 39, 1, 0);
           break;
 
-          case 40:
+        case 40:
           braids_osc.rev_send = constrain(braids_osc.rev_send + (factorChange * ENCODER[ENC_R].speed()), REVERB_SEND_MIN, REVERB_SEND_MAX);
           braids_mixer_reverb.gain(0, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
           braids_mixer_reverb.gain(1, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
           print_small_intbar(43, 19, braids_osc.rev_send, 40, 1, 0);
+          break;
         }
       }
     }
