@@ -540,7 +540,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     }
     
     drawUpdates(data.isRunning ? (drawActiveNotes | drawTime) : 0);
-    if ((isLayerViewActive == false) && (currentTools == TOOLS_SEQ) && (guiUpdateFlags & drawLastPlayedNote)) {
+    if ((isLayerViewActive == false) && (currentTools == TOOLS_PATTERN) && (guiUpdateFlags & drawLastPlayedNote)) {
       lastNoteLabel->drawNow();
     }
 
