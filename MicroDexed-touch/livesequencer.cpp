@@ -232,7 +232,7 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
       const uint8_t velocitySetting = data.trackSettings[data.activeTrack].velocityLevel;
       const uint8_t velocityActive = (velocitySetting == 0) ? velocity : velocitySetting * 1.27f; // 100% * 1.27 = 127
 
-      if (data.isRecording && data.isRunning) {
+      if ((data.isRecording && data.isRunning) || data.remainingCountIns > 0) {
         const EventSource source = data.isSongMode ? EVENT_SONG : EVENT_PATTERN;
 
         MidiEvent newEvent = { source, uint16_t(data.patternTimer), data.currentPattern, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, event, note, velocityActive };
@@ -461,13 +461,10 @@ FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent& e, 
   }
 }
 
-//extern int compensate_seq_delay;
-
 FLASHMEM void LiveSequencer::loadNextEvent(int timeMs) {
   if (timeMs > 0) {
     //LOG.printf("trigger in %ims\n", timeMs);
     liveTimer.trigger(timeMs * 1000);
-    //liveTimer.trigger(timeMs * 1000 + compensate_seq_delay);
   }
   else {
     playNextEvent();
