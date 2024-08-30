@@ -4176,20 +4176,21 @@ void handleStart(void)
     mb_set_compressor();
     mb_set_master();
 
-    if (seq.loop_start == 99) // no loop start set, start at step 0
+    if (seq.loop_start == 99) { // no loop start set, start at step 0
       seq.current_song_step = 0;
-    else
+    }
+    else {
       seq.current_song_step = seq.loop_start;
+    }
+
+    seq.running = true; // before calling sequencer()
 
     // MIDI SYNC: use timer only when internal or MIDI Master
     if (seq.clock == 0 || seq.clock == 2)
     {
       liveSeq.onStarted();
-      liveSeq.handlePatternBegin();
-      sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1));
+      sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), true); // first callback immediately
     }
-
-    seq.running = true;
 
 #ifdef MIDI_DEVICE_USB_HOST
     midi_usb.sendRealTime(midi::Start);

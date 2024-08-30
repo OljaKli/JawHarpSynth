@@ -197,7 +197,6 @@ void handle_pattern_end_in_song_mode()
   if (seq.step > 15 - seq.pattern_len_dec)  // change to vari length
   {
     seq.step = 0;
-    liveSeq.handlePatternBegin();
     //seq.total_played_patterns++;//MIDI SLAVE SYNC TEST
     if (seq.play_mode == false) // play mode = full song
     {
@@ -909,10 +908,12 @@ extern void send_midi_clock();
 
 void sequencer(void)
 {
-  if (seq.running)
-  {
+  if (seq.running) {
     // if (seq.ticks < 4)
     //   seq_live_recording();
+    if(seq.ticks == 0 && seq.step == 0) {
+      liveSeq.handlePatternBegin();
+    }
 
     if (seq.clock == 2) // MDT is MIDI MASTER
     {

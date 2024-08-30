@@ -18535,10 +18535,6 @@ FLASHMEM void _render_misc_settings()
   display.print(configuration.sys.invert_colors ? F("YES") : F("NO "));
 
   _dexed_engine_mode();
-
-  // setCursor_textGrid_small(42, 15);
-  // display.print(compensate_seq_delay);
-  // display.print(" ");
 }
 
 FLASHMEM void UI_func_system_settings(uint8_t param)
@@ -18624,10 +18620,6 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
             MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
           _dexed_engine_mode();
           break;
-
-          //case 8:
-          //  compensate_seq_delay = constrain(compensate_seq_delay + (factorChange * 200), 0, 30000);
-          //  break;
         }
       }
       set_sys_params();
@@ -18699,11 +18691,6 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
     {
       display.print(F("OPL "));
     }
-
-    // setModeColor(8);
-    // setCursor_textGrid_small(42, 15);
-    // display.print(compensate_seq_delay);
-    // display.print(" ");
   }
   // ****** STABLE END *********
   if (LCDML.FUNC_close())
