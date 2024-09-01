@@ -111,12 +111,17 @@ A quick guide how the push Encoders are working:
 Encoder left will be referred to as ENC_L and encoder right will be referred to as ENC_R.
 
 [SHORT PUSH] means a simple, momentary push on the encoder.
+
 [LONG PUSH] means a push and hold down of the encoder for about 2 seconds.
 
 Usually [SHORT PUSH] ENC_L brings you back to the main menu or closer to the main menu one step.
+
 Usually [SHORT PUSH] ENC_R selects or confirms an input/menu item/goes deeper into this item.
+
 In microsynth and in dexed voice page, [LONG PUSH] ENC_R, switches between the 2 Instances.
+
 In Menus that need 2 Encoders for naviation, ENC_R controls Y movement and ENC_L controls X movement (for example in Song mode)
+
 [LONG PUSH] ENC_L starts and stops the sequencer in most pages.
 
 
