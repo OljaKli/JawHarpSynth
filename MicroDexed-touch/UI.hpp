@@ -6737,7 +6737,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
       const uint16_t xCoord = x + index;
       const uint16_t yCoord = y + halfHeight + value;
       const uint16_t height = std::abs(yCoord - lastY);
-      if (height > 0) {
+      if (height > 1) {
         const uint16_t startY = std::min(yCoord, lastY);
         display.drawFastVLine(xCoord, startY, height, RED);
       }
@@ -6763,7 +6763,9 @@ void drumChanged(uint8_t drumNote) {
     }
 #endif
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
-    printSampleWaveform(180, 35, DISPLAY_WIDTH - 180, DISPLAY_HEIGHT - 35, (int16_t*)drum_config[drumNote].drum_data, drum_config[drumNote].len);
+    static constexpr uint16_t plotX = 180;
+    static constexpr uint16_t plotY = 35;
+    printSampleWaveform(plotX, plotY, DISPLAY_WIDTH - plotX, DISPLAY_HEIGHT - plotY, (int16_t*)drum_config[drumNote].drum_data, drum_config[drumNote].len);
 #endif
   }
 }
