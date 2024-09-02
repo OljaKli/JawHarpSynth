@@ -126,12 +126,13 @@ In Menus that need 2 Encoders for naviation, ENC_R controls Y movement and ENC_L
 [LONG PUSH] ENC_L starts and stops the sequencer in most pages.
 
 <br>
-<p>   
-## MDT MANUAL AND BUILD GUIDE
-<br>
-https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/MicroDexed-touch-manual.pdf
-<br>
+<p>  
 
+## MDT MANUAL AND BUILD GUIDE
+
+https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/MicroDexed-touch-manual.pdf
+
+<br>
 
 ## CONTRIBUTING
 
