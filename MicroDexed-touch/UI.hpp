@@ -6720,6 +6720,34 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t *data, uint32_t length) {
+  display.fillRect(x, y, w, h, COLOR_BACKGROUND);
+
+  if(w > 0 && h > 0 && data != nullptr && length > 0) {
+    const float scaleX = length / float(w);
+    const float scaleY = h / 65535.0f;
+    const uint16_t halfHeight = h / 2;
+
+    uint16_t lastY = y + halfHeight;
+
+    for(uint16_t index = 0; index < w; index++) {
+      const uint32_t scaledIndex = index * scaleX;
+      const int16_t value = scaleY * data[scaledIndex];
+
+      const uint16_t xCoord = x + index;
+      const uint16_t yCoord = y + halfHeight + value;
+      const uint16_t startY = std::min(yCoord, lastY);
+      const uint16_t height = std::abs(yCoord - lastY);
+      if(height > 0) {
+        display.drawFastVLine(xCoord, startY, height, RED);
+      } else {
+        display.drawPixel(xCoord, yCoord, RED);
+      }
+      lastY = yCoord;
+    }
+  }
+}
+
 bool drumScreenActive = false;
 void drumChanged(uint8_t drumNote) {
   if (drumScreenActive) {
@@ -6732,6 +6760,9 @@ void drumChanged(uint8_t drumNote) {
       // this makes MDT crash often (press two keys fast one after another)
       //draw_waveform_overview_in_drums_page_step1(activesample);
     }
+#endif
+#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+    printSampleWaveform(180, 35, DISPLAY_WIDTH - 180, DISPLAY_HEIGHT - 35, (int16_t*)drum_config[drumNote].drum_data, drum_config[drumNote].len);
 #endif
   }
 }
