@@ -6723,24 +6723,25 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t *data, uint32_t length) {
   display.fillRect(x, y, w, h, COLOR_BACKGROUND);
 
-  if(w > 0 && data != nullptr) {
+  if (w > 0 && data != nullptr) {
     const float scaleX = length / float(w);
     const float scaleY = h / 65535.0f;
     const uint16_t halfHeight = h / 2;
 
     uint16_t lastY = y + halfHeight;
 
-    for(uint16_t index = 0; index < w; index++) {
+    for (uint16_t index = 0; index < w; index++) {
       const uint32_t scaledIndex = index * scaleX;
       const int16_t value = scaleY * data[scaledIndex];
 
       const uint16_t xCoord = x + index;
       const uint16_t yCoord = y + halfHeight + value;
       const uint16_t height = std::abs(yCoord - lastY);
-      if(height > 0) {
+      if (height > 0) {
         const uint16_t startY = std::min(yCoord, lastY);
         display.drawFastVLine(xCoord, startY, height, RED);
-      } else {
+      }
+      else {
         display.drawPixel(xCoord, yCoord, RED);
       }
       lastY = yCoord;
