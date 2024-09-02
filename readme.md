@@ -1,5 +1,6 @@
 > NOTE: Microdexed-touch is capable of generating audio with a large dynamic range, the extremes of which can cause damage to loudspeakers or other components, and also to your hearing.
-> Please be specially careful when activating the MultiBand Compressor. Depending on it's settings, this easily can increase the perceived output loudness by 10x or even more.
+> Please be specially careful when activating the MultiBand Compressor. Depending on it's settings, this easily can increase the perceived output loudness by 10x or even more.<br>
+> Set the volume **on your amplifier to zero** and then increase the volume in slow steps, to avoid taking any risk hurting your ears or your equipment.
 
 # MicroDexed-touch
 
@@ -123,6 +124,13 @@ In microsynth and in dexed voice page, [LONG PUSH] ENC_R, switches between the 2
 In Menus that need 2 Encoders for naviation, ENC_R controls Y movement and ENC_L controls X movement (for example in Song mode)
 
 [LONG PUSH] ENC_L starts and stops the sequencer in most pages.
+
+<br>
+<p>   
+## MDT MANUAL AND BUILD GUIDE
+<br>
+https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/MicroDexed-touch-manual.pdf
+<br>
 
 
 ## CONTRIBUTING
