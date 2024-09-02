@@ -6736,9 +6736,9 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
       const uint16_t xCoord = x + index;
       const uint16_t yCoord = y + halfHeight + value;
-      const uint16_t startY = std::min(yCoord, lastY);
       const uint16_t height = std::abs(yCoord - lastY);
       if(height > 0) {
+        const uint16_t startY = std::min(yCoord, lastY);
         display.drawFastVLine(xCoord, startY, height, RED);
       } else {
         display.drawPixel(xCoord, yCoord, RED);
