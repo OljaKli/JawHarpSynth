@@ -29,7 +29,7 @@
 
 #include "config.h"
 
-#define STRING_BUFFER_SIZE display_cols + 1
+#define STRING_BUFFER_SIZE 27 //display_cols + 1
 
 template <class T>
 class Disp_Plus : public T

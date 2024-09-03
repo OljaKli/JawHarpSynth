@@ -6720,19 +6720,46 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t *data, uint32_t length) {
+  display.console = true;
+
+  display.fillRect(x, y, w, h, GREY3);
+  static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
+
+  if (w > 0 && data != nullptr) {
+    const float scaleX = length / float(w);
+    const float scaleY = h / 65535.0f;
+    const uint16_t halfHeight = h / 2;
+
+    uint16_t lastY = y + halfHeight;
+
+    for (uint16_t index = 0; index < w; index++) {
+      display.console = true;
+      const uint32_t scaledIndex = index * scaleX;
+      const int16_t value = scaleY * data[scaledIndex];
+
+      const uint16_t xCoord = x + index;
+      const uint16_t yCoord = y + halfHeight + value;
+      const uint16_t height = std::abs(yCoord - lastY);
+      if (height > 1) {
+        display.drawLine(xCoord, lastY, xCoord, yCoord, PLOT_COLOR); // drawFastYLine does not work for console
+      }
+      else {
+        display.drawPixel(xCoord, yCoord, PLOT_COLOR);
+      }
+      lastY = yCoord;
+    }
+  }
+}
+
 bool drumScreenActive = false;
 void drumChanged(uint8_t drumNote) {
   if (drumScreenActive) {
-    activesample = constrain(drumNote, 0, NUM_DRUMSET_CONFIG - 1);
-
-    ui.draw_editors(true);  // hack..not sure how to otherwise update all parameters when scrolling through samples
-
-#if defined(COMPILE_FOR_FLASH)
-    if (seq.running == false) {
-      // this makes MDT crash often (press two keys fast one after another)
-      //draw_waveform_overview_in_drums_page_step1(activesample);
+    const uint8_t newSample = constrain(drumNote, 0, NUM_DRUMSET_CONFIG - 1);
+    if (activesample != newSample) {
+      activesample = newSample;
+      ui.draw_editors(true);  // hack..not sure how to otherwise update all parameters when scrolling through samples
     }
-#endif
   }
 }
 
@@ -6756,17 +6783,31 @@ void UI_func_drums(uint8_t param)
         // set the currently selected drum sample
         // and refresh all editors.
         activesample = value;
-        ui.draw_editors(true);
+        //ui.draw_editors(true);
       },
       [](Editor* editor, bool refresh)
       {
         // render the current selected drum sample slot number and name
-        char number[] = "00:";
-        snprintf_P(number, sizeof(number), PSTR("%02d:"), activesample);
+        char header[25] = { " " };
+        sprintf(header, "%02i: %s", activesample, basename(drum_config[activesample].name));
+        
         display.setTextSize(2);
         setModeColor(editor->select_id);
-        show(editor->y, editor->x, 10, number);
-        show(editor->y, editor->x + 3, 20, basename(drum_config[activesample].name));
+        show(editor->y, editor->x, 25, header);
+
+#if defined(COMPILE_FOR_FLASH)
+      if (seq.running == false) {
+        // this makes MDT crash often (press two keys fast one after another)
+        // draw_waveform_overview_in_drums_page_step1(activesample);
+      }
+#endif
+#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+      static constexpr uint16_t plotX = 182;
+      static constexpr uint16_t plotY = 35;
+      static constexpr uint16_t plotW = 130;
+      static constexpr uint16_t plotH = 100;
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len);
+#endif
       });
 
     ui.setCursor(2, 4);
@@ -6812,14 +6853,11 @@ void UI_func_drums(uint8_t param)
   {
     ui.handle_input();
 
-    if (generic_temp_select_menu == 0 || generic_temp_select_menu == 6)
+    const bool editingFilter = (generic_temp_select_menu == 8);// adapt if layout changed
+    if (generic_temp_select_menu == 0 || editingFilter)
     {
-      if (generic_temp_select_menu == 0) {
-        drumChanged(activesample);
-      }
-
       display.setTextSize(1);
-      setCursor_textGrid_small(20, 9);
+      setCursor_textGrid_small(20, 11);
       if (seq.edit_state == 0) {
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       }
