@@ -6721,7 +6721,8 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
 }
 
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t *data, uint32_t length) {
-  display.fillRect(x, y, w, h, COLOR_BACKGROUND);
+  display.fillRect(x, y, w, h, GREY3);
+  static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
     const float scaleX = length / float(w);
@@ -6738,11 +6739,12 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
       const uint16_t yCoord = y + halfHeight + value;
       const uint16_t height = std::abs(yCoord - lastY);
       if (height > 1) {
+        display.console = true; // does not work. plot on console is missing this
         const uint16_t startY = std::min(yCoord, lastY);
-        display.drawFastVLine(xCoord, startY, height, RED);
+        display.drawFastVLine(xCoord, startY, height, PLOT_COLOR);
       }
       else {
-        display.drawPixel(xCoord, yCoord, RED);
+        display.drawPixel(xCoord, yCoord, PLOT_COLOR);
       }
       lastY = yCoord;
     }
@@ -6752,21 +6754,11 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 bool drumScreenActive = false;
 void drumChanged(uint8_t drumNote) {
   if (drumScreenActive) {
-    activesample = constrain(drumNote, 0, NUM_DRUMSET_CONFIG - 1);
-
-    ui.draw_editors(true);  // hack..not sure how to otherwise update all parameters when scrolling through samples
-
-#if defined(COMPILE_FOR_FLASH)
-    if (seq.running == false) {
-      // this makes MDT crash often (press two keys fast one after another)
-      //draw_waveform_overview_in_drums_page_step1(activesample);
+    const uint8_t newSample = constrain(drumNote, 0, NUM_DRUMSET_CONFIG - 1);
+    if (activesample != newSample) {
+      activesample = newSample;
+      ui.draw_editors(true);  // hack..not sure how to otherwise update all parameters when scrolling through samples
     }
-#endif
-#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
-    static constexpr uint16_t plotX = 180;
-    static constexpr uint16_t plotY = 35;
-    printSampleWaveform(plotX, plotY, DISPLAY_WIDTH - plotX, DISPLAY_HEIGHT - plotY, (int16_t*)drum_config[drumNote].drum_data, drum_config[drumNote].len);
-#endif
   }
 }
 
@@ -6790,17 +6782,31 @@ void UI_func_drums(uint8_t param)
         // set the currently selected drum sample
         // and refresh all editors.
         activesample = value;
-        ui.draw_editors(true);
+        //ui.draw_editors(true);
       },
       [](Editor* editor, bool refresh)
       {
         // render the current selected drum sample slot number and name
-        char number[] = "00:";
-        snprintf_P(number, sizeof(number), PSTR("%02d:"), activesample);
+        char header[25] = { " " };
+        sprintf(header, "%02i: %s", activesample, basename(drum_config[activesample].name));
+        
         display.setTextSize(2);
         setModeColor(editor->select_id);
-        show(editor->y, editor->x, 10, number);
-        show(editor->y, editor->x + 3, 20, basename(drum_config[activesample].name));
+        show(editor->y, editor->x, 25, header);
+
+#if defined(COMPILE_FOR_FLASH)
+      if (seq.running == false) {
+        // this makes MDT crash often (press two keys fast one after another)
+        // draw_waveform_overview_in_drums_page_step1(activesample);
+      }
+#endif
+#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+      static constexpr uint16_t plotX = 182;
+      static constexpr uint16_t plotY = 35;
+      static constexpr uint16_t plotW = 130;
+      static constexpr uint16_t plotH = 100;
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len);
+#endif
       });
 
     ui.setCursor(2, 4);
@@ -6846,14 +6852,11 @@ void UI_func_drums(uint8_t param)
   {
     ui.handle_input();
 
-    if (generic_temp_select_menu == 0 || generic_temp_select_menu == 6)
+    const bool editingFilter = (generic_temp_select_menu == 8);// adapt if layout changed
+    if (generic_temp_select_menu == 0 || editingFilter)
     {
-      if (generic_temp_select_menu == 0) {
-        drumChanged(activesample);
-      }
-
       display.setTextSize(1);
-      setCursor_textGrid_small(20, 9);
+      setCursor_textGrid_small(20, 11);
       if (seq.edit_state == 0) {
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       }
