@@ -6721,6 +6721,8 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
 }
 
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t *data, uint32_t length) {
+  display.console = true;
+
   display.fillRect(x, y, w, h, GREY3);
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
@@ -6732,6 +6734,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
     uint16_t lastY = y + halfHeight;
 
     for (uint16_t index = 0; index < w; index++) {
+      display.console = true;
       const uint32_t scaledIndex = index * scaleX;
       const int16_t value = scaleY * data[scaledIndex];
 
@@ -6739,9 +6742,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
       const uint16_t yCoord = y + halfHeight + value;
       const uint16_t height = std::abs(yCoord - lastY);
       if (height > 1) {
-        display.console = true; // does not work. plot on console is missing this
-        const uint16_t startY = std::min(yCoord, lastY);
-        display.drawFastVLine(xCoord, startY, height, PLOT_COLOR);
+        display.drawLine(xCoord, lastY, xCoord, yCoord, PLOT_COLOR); // drawFastYLine does not work for console
       }
       else {
         display.drawPixel(xCoord, yCoord, PLOT_COLOR);
