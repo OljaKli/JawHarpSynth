@@ -6756,10 +6756,8 @@ bool drumScreenActive = false;
 void drumChanged(uint8_t drumNote) {
   if (drumScreenActive) {
     const uint8_t newSample = constrain(drumNote, 0, NUM_DRUMSET_CONFIG - 1);
-    if (activesample != newSample) {
-      activesample = newSample;
-      ui.draw_editors(true);  // hack..not sure how to otherwise update all parameters when scrolling through samples
-    }
+    activesample = newSample;
+    ui.draw_editors(true);  // hack..not sure how to otherwise update all parameters when scrolling through samples
   }
 }
 
@@ -6783,7 +6781,7 @@ void UI_func_drums(uint8_t param)
         // set the currently selected drum sample
         // and refresh all editors.
         activesample = value;
-        //ui.draw_editors(true);
+        ui.draw_editors(true);
       },
       [](Editor* editor, bool refresh)
       {
@@ -6856,6 +6854,10 @@ void UI_func_drums(uint8_t param)
     const bool editingFilter = (generic_temp_select_menu == 8);// adapt if layout changed
     if (generic_temp_select_menu == 0 || editingFilter)
     {
+      if (generic_temp_select_menu == 0) {
+        drumChanged(activesample);
+      }
+      
       display.setTextSize(1);
       setCursor_textGrid_small(20, 11);
       if (seq.edit_state == 0) {
