@@ -1,5 +1,6 @@
 > NOTE: Microdexed-touch is capable of generating audio with a large dynamic range, the extremes of which can cause damage to loudspeakers or other components, and also to your hearing.
-> Please be specially careful when activating the MultiBand Compressor. Depending on it's settings, this easily can increase the perceived output loudness by 10x or even more.
+> Please be specially careful when activating the MultiBand Compressor. Depending on it's settings, this easily can increase the perceived output loudness by 10x or even more.<br>
+> Set the volume **on your amplifier to zero** and then increase the volume in slow steps, to avoid taking any risk hurting your ears or your equipment.
 
 # MicroDexed-touch
 
@@ -108,19 +109,25 @@ MicroDexed is licensed on the GPL v3. The msfa component (acronym for music synt
 
 A quick guide how the push Encoders are working:
 
-Usualy [SHORT PUSH] Encoder Left brings you back to the main menu or closer to the main menu one step.
+Encoder left will be referred to as ENC_L and encoder right will be referred to as ENC_R.
 
-Usualy [SHORT PUSH] Encoder Right selects or confirms an input/menu item/goes deeper into this item.
+[SHORT PUSH] means a simple, momentary push on the encoder.
 
-In most menu settings of dexed, [SHORT PUSH] Encoder Right, switches between the 2 dexed Instances.
+[LONG PUSH] means a push and hold down of the encoder for about 2 seconds.
 
-In microsynth, [LONG PUSH] Encoder Right, switches between the 2 microsynth Instances.
+Usually [SHORT PUSH] ENC_L brings you back to the main menu or closer to the main menu one step.
 
-in Voice select (dexed) : [SHORT PUSH] Encoder Right switches Instances, [LONG PUSH] Encoder Right switches betweens Banks and Sounds. [LONG PUSH] Encoder Left selects/unselects Sounds to the Favorites list.
+Usually [SHORT PUSH] ENC_R selects or confirms an input/menu item/goes deeper into this item.
 
-In Menus that need 2 Encoders, Encoder Right controls Y movement and Encoder Left controls X movement
-(for example in Song mode)
+In microsynth and in dexed voice page, [LONG PUSH] ENC_R, switches between the 2 Instances.
 
+In Menus that need 2 Encoders for naviation, ENC_R controls Y movement and ENC_L controls X movement (for example in Song mode)
+
+[LONG PUSH] ENC_L starts and stops the sequencer in most pages.
+ 
+## MDT MANUAL AND BUILD GUIDE
+
+https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/MicroDexed-touch-manual.pdf
 
 ## CONTRIBUTING
 
