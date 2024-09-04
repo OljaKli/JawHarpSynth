@@ -26,6 +26,7 @@
 */
 
 #include <Arduino.h>
+#include "arm_math.h" // float32_t
 
 #ifndef _DRUMS_H
 #define _DRUMS_H
@@ -40,6 +41,7 @@ typedef struct drum_config_s
   const uint8_t *drum_data;
   char shortname[2];     // 1 char name for sequencer
   uint32_t len;          // number of elements in drum_data
+  uint8_t numChannels;   // 1 for mono, 2 for stereo
   float32_t pitch;       // variable pitch per note for sequencer
   float32_t p_offset;    // "static" pitch offset to correct root note to root of other samples
   float32_t pan;         // Panorama (-1.0 - +1.0)

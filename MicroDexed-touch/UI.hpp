@@ -49,7 +49,8 @@ extern qix_s qix;
 extern bool touch_ic_found;
 
 #ifdef COMPILE_FOR_PSRAM
-extern void loadSample(newdigate::flashloader& loader, uint8_t i, const char* path); // not sure if this is ideal
+#include "psramloader.h"
+extern PsramLoader sampleLoader;
 #endif
 
 #include "synth_mda_epiano.h"
@@ -18012,8 +18013,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
                 strcpy(fm.sd_full_name, fm.sd_new_name);
                 strcat(fm.sd_full_name, "/");
                 strcat(fm.sd_full_name, fm.sd_temp_name);
-                newdigate::flashloader loader;
-                loadSample(loader, fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files, fm.sd_full_name);
+                sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files]);
                 strcpy(drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].filename, fm.sd_temp_name);
                 strip_extension(fm.sd_temp_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].name, 14);
 
