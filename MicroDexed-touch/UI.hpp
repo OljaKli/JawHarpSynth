@@ -6727,27 +6727,20 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
-    const float scaleX = length / float(w);
-    const float scaleY = h / 65535.0f;
-    const uint16_t halfHeight = h / 2;
+    const float binSize = length / float(w);
+    const float scaleY = h / 65536.0f;
+    const uint16_t halfHeight = y + (h / 2);
 
-    uint16_t lastY = y + halfHeight;
-
-    for (uint16_t index = 0; index < w; index++) {
-      display.console = true;
-      const uint32_t scaledIndex = index * scaleX;
-      const int16_t value = scaleY * data[scaledIndex];
-
-      const uint16_t xCoord = x + index;
-      const uint16_t yCoord = y + halfHeight + value;
-      const uint16_t height = std::abs(yCoord - lastY);
-      if (height > 1) {
-        display.drawLine(xCoord, lastY, xCoord, yCoord, PLOT_COLOR); // drawFastYLine does not work for console
+    for (uint16_t bin = 0; bin < w; bin++) {
+      int16_t binMin = +32767;
+      int16_t binMax = -32768;
+      for (uint32_t binSample = 0; binSample < binSize; binSample++) {
+        const uint32_t sampleNumber = (bin * binSize) + binSample;
+        binMin = std::min(binMin, data[sampleNumber]);
+        binMax = std::max(binMax, data[sampleNumber]);
       }
-      else {
-        display.drawPixel(xCoord, yCoord, PLOT_COLOR);
-      }
-      lastY = yCoord;
+      const uint16_t xCoord = x + bin;
+      display.drawLine(xCoord, halfHeight + binMin * scaleY, xCoord, halfHeight + binMax * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
     }
   }
 }
