@@ -92,7 +92,6 @@ using namespace TeensyTimerTool;
 #include "template_mixer.hpp"
 #include "UI.hpp"
 #include "drums.h"
-//#include "drumset.h"
 #include "synth_mda_epiano.h"
 #include "effect_stereo_panorama.h"
 
@@ -1543,8 +1542,7 @@ FLASHMEM void setup()
 FLASHMEM void load_custom_samples_to_psram()
 {
   // load CUSTOM samples
-  int i = NUM_STATIC_PITCHED_SAMPLES;
-  do {
+  for(int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
     char temp_name[36];
     strcpy(temp_name, "/CUSTOM/");
     strcat(temp_name, drum_config[i].filename);
@@ -1555,8 +1553,7 @@ FLASHMEM void load_custom_samples_to_psram()
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
     }
-    i++;
-  } while (i < NUM_CUSTOM_SAMPLES + NUM_STATIC_PITCHED_SAMPLES);
+  }
 }
 #endif
 
