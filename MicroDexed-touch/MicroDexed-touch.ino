@@ -30,7 +30,7 @@
 #include <MIDI.h>
 #include <SD.h>
 #include <SPI.h>
-#include <flashloader.h>
+#include "psramloader.h"
 
 #include "ILI9341_t3n.h"
 
@@ -60,6 +60,7 @@
 
 extern "C" uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
+PsramLoader sampleLoader(psram_free_bytes);
 
 #ifdef PSRAM
 #include "effect_delay_ext8.h"
@@ -105,7 +106,6 @@ void check_and_create_directories(void);
 void show_cpu_and_mem_usage(void);
 void initial_values(bool init);
 
-void loadSample(newdigate::flashloader& loader, uint8_t i, const char* path);
 void printLoadedSample(const uint8_t i, const char* name);
 
 #ifdef DEBUG
@@ -1455,14 +1455,13 @@ FLASHMEM void setup()
   display.setCursor(23 * CHAR_width, CHAR_height * 1);
   display.print(NUM_DRUMSET_CONFIG);
 
-  newdigate::flashloader loader;
   display.setTextSize(1);
   for (int i = 0; i < 6; i++) {  // load pitched samples
     char temp_name[36];
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
     strcat(temp_name, ".wav");
-    loadSample(loader, i, temp_name);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i]);
     printLoadedSample(i, temp_name);
   }
 
@@ -1472,7 +1471,7 @@ FLASHMEM void setup()
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
     strcat(temp_name, ".wav");
-    loadSample(loader, i, temp_name);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i]);
     printLoadedSample(i, temp_name);
   }
   display.setTextSize(2);
@@ -1544,13 +1543,12 @@ FLASHMEM void setup()
 FLASHMEM void load_custom_samples_to_psram()
 {
   // load CUSTOM samples
-  newdigate::flashloader loader;
   int i = NUM_STATIC_PITCHED_SAMPLES;
   do {
     char temp_name[36];
     strcpy(temp_name, "/CUSTOM/");
     strcat(temp_name, drum_config[i].filename);
-    loadSample(loader, i, temp_name);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i]);
     if (drum_config[i].len == 0 || drum_config[i].len > 10000000)
     {
       snprintf_P(temp_name, 12, PSTR("CUSTOM%02d"), i - NUM_STATIC_PITCHED_SAMPLES + 1);
@@ -2995,7 +2993,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               sidechain_trigger_b = true;
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-            Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, 1);
+            Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
 #endif
 
 #if defined(COMPILE_FOR_FLASH)
@@ -3081,19 +3079,6 @@ void printLoadedSample(const uint8_t i, const char* name) {
   display.setCursor(1 * CHAR_width, CHAR_height * 3);
   display.print(name);
   display.print(F("       "));
-}
-
-void loadSample(newdigate::flashloader& loader, uint8_t i, const char* path) {
-  newdigate::audiosample* sample = loader.loadSample(path);
-  if (sample != nullptr) {
-    psram_free_bytes -= sample->samplesize;
-    // NOTE: removing wav header by incrementing 44 bytes
-    static constexpr uint8_t wavHeaderLength = 44;// bytes
-    sample->sampledata += wavHeaderLength / 2;    // 16bit words
-    sample->samplesize -= wavHeaderLength;        // bytes
-    drum_config[i].drum_data = (uint8_t*)sample->sampledata;
-    drum_config[i].len = sample->samplesize / 2;  // 16bit words
-  }
 }
 
 void stop_all_drum_slots()
