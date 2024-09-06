@@ -307,7 +307,7 @@ bool generic_full_draw_required = false;
 
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
-extern AudioMixer<ALL_STATIC_DELAY_INSTR_OUT+NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
+extern AudioMixer<ALL_STATIC_DELAY_INSTR_OUT + NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
 extern AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 #ifdef PSRAM
@@ -6721,7 +6721,7 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t *data, uint32_t length) {
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length) {
   display.console = true;
 
   display.fillRect(x, y, w, h, GREY3);
@@ -6782,25 +6782,37 @@ void UI_func_drums(uint8_t param)
         // render the current selected drum sample slot number and name
         char header[25] = { " " };
         sprintf(header, "%02i: %s", activesample, basename(drum_config[activesample].name));
-        
+
         display.setTextSize(2);
         setModeColor(editor->select_id);
         show(editor->y, editor->x, 25, header);
 
+        display.setTextSize(1);
+        if (drum_config[activesample].numChannels == 1) // mono
+        {
+          setCursor_textGrid_small(22, 11);
+          show(1, 23, 6, "  MONO");
+        }
+        else //stereo
+        {
+          setCursor_textGrid_small(20, 11);
+          show(1, 23, 6, "STEREO");
+        }
+
 #if defined(COMPILE_FOR_FLASH)
-      if (seq.running == false) {
-        // this makes MDT crash often (press two keys fast one after another)
-        // draw_waveform_overview_in_drums_page_step1(activesample);
-      }
+        if (seq.running == false) {
+          // this makes MDT crash often (press two keys fast one after another)
+          // draw_waveform_overview_in_drums_page_step1(activesample);
+        }
 #endif
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
-      static constexpr uint16_t plotX = 182;
-      static constexpr uint16_t plotY = 35;
-      static constexpr uint16_t plotW = 130;
-      static constexpr uint16_t plotH = 100;
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len);
+        static constexpr uint16_t plotX = 182;
+        static constexpr uint16_t plotY = 35;
+        static constexpr uint16_t plotW = 130;
+        static constexpr uint16_t plotH = 100;
+        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len);
 #endif
-      });
+        });
 
     ui.setCursor(2, 4);
     // the parameter editors depend on activesample. We define them by sample index 0,
@@ -6840,7 +6852,7 @@ void UI_func_drums(uint8_t param)
       {
         seq.smartfilter = !seq.smartfilter;
       });
-  }
+      }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
@@ -6851,7 +6863,7 @@ void UI_func_drums(uint8_t param)
       if (generic_temp_select_menu == 0) {
         drumChanged(activesample);
       }
-      
+
       display.setTextSize(1);
       setCursor_textGrid_small(20, 11);
       if (seq.edit_state == 0) {
@@ -6879,7 +6891,7 @@ void UI_func_drums(uint8_t param)
     drumScreenActive = false;
     ui.clear();
   }
-}
+  }
 
 extern float get_sample_p_offset(uint8_t sample);
 extern void set_sample_pitch(uint8_t sample, float playbackspeed);
@@ -14404,7 +14416,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           break;
 
         case 4:
-         // pan
+          // pan
           master_effects_set_delay_panorama(0);
           print_small_panbar(6, 9, configuration.fx.delay_pan[0], 4);
           break;
@@ -14439,14 +14451,14 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           global_delay_in_mixer[0]->gain(6, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(6, 15, configuration.fx.ep_delay_send_1, 9, 1, 0);
           break;
-        
+
         case 10:
           // microsynth 1 delay1 level
           microsynth[0].delay_send[0] = constrain(microsynth[0].delay_send[0] + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
           global_delay_in_mixer[0]->gain(2, mapfloat(microsynth[0].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(6, 16, microsynth[0].delay_send[0], 10, 1, 0);
           break;
-        
+
         case 11:
           // microsynth 2 delay1 level
           microsynth[1].delay_send[0] = constrain(microsynth[1].delay_send[0] + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
@@ -14460,7 +14472,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           global_delay_in_mixer[0]->gain(4, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(6, 18, braids_osc.delay_send_1, 12, 1, 0);
           break;
-        
+
         case 13:
           // delay1 to delay2
           configuration.fx.delay1_to_delay2 = constrain(configuration.fx.delay1_to_delay2 + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
@@ -14475,7 +14487,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(6, 20, configuration.fx.delay_to_reverb[0], 14, 1, 0);
           break;
-        
+
         case 15:
           configuration.fx.delay_multiplier[1] = constrain(configuration.fx.delay_multiplier[1] + (factorChange * 1), 1, 4);
           if (configuration.fx.delay_sync[1] > 0) {
@@ -14483,14 +14495,14 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           }
           print_delay_multiplier(1, 15);
           break;
-        
+
         case 16:
           // delay time
           master_effects_set_delay_time(1);
           print_delay_time(1, 16);
           print_delay_sync_status(1);
           break;
-        
+
         case 17:
           master_effects_set_delay_feedback(1); // feedback
           print_small_intbar(22, 8, configuration.fx.delay_feedback[1], 17, 1, 0);
@@ -14525,7 +14537,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           global_delay_in_mixer[1]->gain(0, mapfloat(configuration.fx.delay_level[1], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
           print_small_intbar(22, 14, configuration.fx.delay_level[1], 22, 1, 0);
           break;
-        
+
         case 23:
           // ep send
           configuration.fx.ep_delay_send_2 = constrain(configuration.fx.ep_delay_send_2 + (factorChange * ENCODER[ENC_R].speed()), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
@@ -14533,14 +14545,14 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           global_delay_in_mixer[1]->gain(6, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(22, 15, configuration.fx.ep_delay_send_2, 23, 1, 0);
           break;
-        
+
         case 24:
           // microsynth 1 delay2 level
           microsynth[0].delay_send[1] = constrain(microsynth[0].delay_send[1] + (factorChange * ENCODER[ENC_R].speed()), DELAY_TIME_MIN, DELAY_LEVEL_MAX);
           global_delay_in_mixer[1]->gain(2, mapfloat(microsynth[0].delay_send[1], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(22, 16, microsynth[0].delay_send[1], 24, 1, 0);
           break;
-        
+
         case 25:
           // microsynth 2 delay2 level
           microsynth[1].delay_send[1] = constrain(microsynth[1].delay_send[1] + (factorChange * ENCODER[ENC_R].speed()), DELAY_TIME_MIN, DELAY_LEVEL_MAX);
@@ -14560,7 +14572,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           global_delay_in_mixer[0]->gain(7, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
           print_small_intbar(22, 19, configuration.fx.delay2_to_delay1, 27, 1, 0);
           break;
-        
+
         case 28:
           // delay2 to reverb
           configuration.fx.delay_to_reverb[1] = constrain(configuration.fx.delay_to_reverb[1] + (factorChange * ENCODER[ENC_R].speed()), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
@@ -14568,18 +14580,18 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY2, mapfloat(configuration.fx.delay_to_reverb[1], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
           print_small_intbar(22, 20, configuration.fx.delay_to_reverb[1], 28, 1, 0);
           break;
-        
+
         case 29:
           // reverb room size
           reverb_roomsize();
           print_small_intbar(43, 5, configuration.fx.reverb_roomsize, 29, 1, 0);
           break;
-        
+
         case 30:
           reverb_lowpass();
           print_small_intbar(43, 6, configuration.fx.reverb_lowpass, 30, 1, 0);
           break;
-        
+
         case 31:
           reverb_lodamp();
           print_small_intbar(43, 7, configuration.fx.reverb_lodamp, 31, 1, 0);
@@ -14594,22 +14606,22 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           reverb_diffusion();
           print_small_intbar(43, 9, configuration.fx.reverb_diffusion, 33, 1, 0);
           break;
-        
+
         case 34:
           reverb_level();
           print_small_intbar(43, 10, configuration.fx.reverb_level, 34, 1, 0);
           break;
-        
+
         case 35:
           master_effects_set_reverb_send(0);
           print_small_intbar(43, 14, configuration.fx.reverb_send[0], 35, 1, 0);
           break;
-        
+
         case 36:
           master_effects_set_reverb_send(1);
           print_small_intbar(43, 15, configuration.fx.reverb_send[1], 36, 1, 0);
           break;
-        
+
         case 37:
           // epiano reverb send
           configuration.fx.ep_reverb_send = constrain(configuration.fx.ep_reverb_send + (factorChange * ENCODER[ENC_R].speed()), REVERB_SEND_MIN, REVERB_SEND_MAX);
@@ -14618,13 +14630,13 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           reverb_mixer_l.gain(REVERB_MIX_CH_EPIANO, mapfloat(configuration.fx.ep_reverb_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, 1.0)); // EPiano Reverb-Send
           print_small_intbar(43, 16, configuration.fx.ep_reverb_send, 37, 1, 0);
           break;
-        
+
         case 38:
           microsynth[0].rev_send = constrain(microsynth[0].rev_send + (factorChange * ENCODER[ENC_R].speed()), REVERB_SEND_MIN, REVERB_SEND_MAX);
           microsynth_mixer_reverb.gain(0, volume_transform(mapfloat(microsynth[0].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
           print_small_intbar(43, 17, microsynth[0].rev_send, 38, 1, 0);
           break;
-        
+
         case 39:
           microsynth[1].rev_send = constrain(microsynth[1].rev_send + (factorChange * ENCODER[ENC_R].speed()), REVERB_SEND_MIN, REVERB_SEND_MAX);
           microsynth_mixer_reverb.gain(1, volume_transform(mapfloat(microsynth[1].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
@@ -17727,45 +17739,200 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     }
 
-// #ifdef COMPILE_FOR_FLASH
-//        if (LCDML.BT_checkEnter() && fm.active_window == 0) // left window, SDCARD
-// #endif
+    // #ifdef COMPILE_FOR_FLASH
+    //        if (LCDML.BT_checkEnter() && fm.active_window == 0) // left window, SDCARD
+    // #endif
 
-  if (LCDML.BT_checkEnter()) 
-      {
+    if (LCDML.BT_checkEnter())
+    {
 #ifdef COMPILE_FOR_FLASH
-        if (fm.sd_mode == FM_COPY_PRESETS) // copy presets dir from SD to flash
+      if (fm.sd_mode == FM_COPY_PRESETS) // copy presets dir from SD to flash
+      {
+        display.console = true;
+        display.fillRect(CHAR_width_small * 1, CHAR_height_small * 6, DISPLAY_WIDTH / 2 - CHAR_width_small, CHAR_height_small * 16, COLOR_BACKGROUND);
+        encoderDir[ENC_R].reset();
+        uint8_t screenline = 0;
+
+        File rootdir = SD.open("/DRUMS");
+        while (1)
         {
-          display.console = true;
-          display.fillRect(CHAR_width_small * 1, CHAR_height_small * 6, DISPLAY_WIDTH / 2 - CHAR_width_small, CHAR_height_small * 16, COLOR_BACKGROUND);
-          encoderDir[ENC_R].reset();
-          uint8_t screenline = 0;
+          // open a file from the SD card
+          File f = rootdir.openNextFile();
+          if (!f)
+            break;
+          const char* filename = f.name();
 
-          File rootdir = SD.open("/DRUMS");
-          while (1)
+          // filter out the ._ mac files
+          if (strstr(filename, "._") != NULL)
+            continue;
+
+          if (screenline > 10)
+            screenline = 0;
+          setCursor_textGrid_small(1, 6 + screenline);
+
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          // if (filename[0] != 46 && filename[1] != 95)
+          if (filename[0] != 46)
           {
-            // open a file from the SD card
-            File f = rootdir.openNextFile();
-            if (!f)
-              break;
-            const char* filename = f.name();
-
-            // filter out the ._ mac files
-            if (strstr(filename, "._") != NULL)
-              continue;
-
-            if (screenline > 10)
-              screenline = 0;
-            setCursor_textGrid_small(1, 6 + screenline);
-
-            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-            // if (filename[0] != 46 && filename[1] != 95)
-            if (filename[0] != 46)
+            display.print(filename);
+            fill_up_with_spaces_left_window_filemanager();
+            screenline++;
+          }
+          unsigned long length = f.size();
+          // check if this file is already on the Flash chip
+          if (SerialFlash.exists(filename))
+          {
+#ifdef DEBUG
+            LOG.println(F("  already exists on the Flash chip"));
+#endif
+            SerialFlashFile ff = SerialFlash.open(filename);
+            if (ff && ff.size() == f.size())
             {
-              display.print(filename);
-              fill_up_with_spaces_left_window_filemanager();
-              screenline++;
+#ifdef DEBUG
+              LOG.println(F("  size is the same, comparing data..."));
+#endif
+              if (compareFiles(f, ff) == true)
+              {
+#ifdef DEBUG
+                LOG.println(F("  files are identical :)"));
+#endif
+                f.close();
+                ff.close();
+                continue; // advance to next file
+              }
+              else
+              {
+#ifdef DEBUG
+                LOG.println(F("  files are different"));
+#endif
+              }
             }
+            else
+            {
+#ifdef DEBUG
+              LOG.print(F("  size is different, "));
+              LOG.print(ff.size());
+              LOG.println(F(" bytes"));
+#endif
+            }
+            // delete the copy on the Flash chip, if different
+#ifdef DEBUG
+            LOG.println(F("  delete file from Flash chip"));
+#endif
+            SerialFlash.remove(filename);
+          }
+          // if (filename[0] != 46 && filename[1] != 95)
+          if (filename[0] != 46)
+          {
+            // create the file on the Flash chip and copy data
+            if (SerialFlash.create(filename, length))
+            {
+              SerialFlashFile ff = SerialFlash.open(filename);
+              if (ff)
+              {
+#ifdef DEBUG
+                LOG.print(F("  copying"));
+#endif
+                // copy data loop
+                unsigned long count = 0;
+                display.console = true;
+                while (count < length)
+                {
+                  char buf[256];
+                  unsigned int n;
+                  n = f.read(buf, 256);
+                  ff.write(buf, n);
+                  count = count + n;
+                  if (count % 5120 == 0)
+                    display.fillRect(CHAR_width_small * 38, CHAR_height_small * 7, count / (f.size() / (14 * CHAR_width_small)), 8, RED);
+                }
+                ff.close();
+                display.fillRect(CHAR_width_small * 38 - 2, CHAR_height_small * 7, (14 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
+                flash_loadDirectory();
+                print_flash_stats();
+                flash_printDirectory();
+              }
+              else
+              {
+#ifdef DEBUG
+                LOG.println(F("  error opening freshly created file!"));
+#endif
+              }
+            }
+            else
+            {
+#ifdef DEBUG
+              LOG.println(F("  unable to create file"));
+#endif
+            }
+          }
+          f.close();
+        }
+        rootdir.close();
+        display.console = true;
+        display.fillRect(CHAR_width_small * 1, CHAR_height_small * 6, DISPLAY_WIDTH / 2 - CHAR_width_small, CHAR_height_small * 16, COLOR_BACKGROUND);
+        flash_loadDirectory();
+        print_flash_stats();
+        flash_printDirectory();
+#ifdef DEBUG
+        LOG.println(F("Finished All Files"));
+#endif
+      }
+      else
+#endif
+        if (fm.sd_is_folder && fm.sd_mode != FM_COPY_TO_PSRAM)
+        {
+          if (fm.sd_temp_name[0] == 0x2E && fm.sd_temp_name[1] == 0x2E) // return to parent folder
+          {
+            if (fm.sd_folder_depth < 2)
+            {
+              fm.sd_folder_depth = 0;
+              fm.sd_skip_files = 0;
+              strcpy(fm.sd_new_name, "/");
+            }
+            else
+            {
+              // path has at least one parent folder
+              for (uint8_t count = strlen(fm.sd_new_name); count > 0; count--)
+              {
+                if (fm.sd_new_name[count] == 0x2f)
+                {
+                  fm.sd_new_name[count] = '\0';
+                  break;
+                }
+              }
+              fm.sd_folder_depth--;
+            }
+          }
+          else if (fm.sd_mode != FM_COPY_TO_PSRAM)
+          {
+            fm.sd_skip_files = 0;
+            if (fm.sd_folder_depth > 0)
+              strcat(fm.sd_new_name, "/");
+            strcat(fm.sd_new_name, fm.sd_temp_name);
+            fm.sd_folder_depth++;
+          }
+          fm.sd_selected_file = 0;
+        }
+        else
+          // is a file
+        {
+          if (fm.sd_mode == FM_DELETE_FILE && fm.sd_mode != FM_COPY_TO_PSRAM)
+          {
+            strcpy(fm.sd_full_name, fm.sd_new_name);
+            strcat(fm.sd_full_name, "/");
+            strcat(fm.sd_full_name, fm.sd_temp_name);
+            SD.remove(fm.sd_full_name);
+            load_sd_directory();
+          }
+#ifdef COMPILE_FOR_FLASH
+          else if (fm.sd_mode == FM_COPY_TO_FLASH)
+          {
+            strcpy(fm.sd_full_name, fm.sd_new_name);
+            strcat(fm.sd_full_name, "/");
+            strcat(fm.sd_full_name, fm.flash_or_psram_temp_name);
+            File f = SD.open(fm.sd_full_name);
+            const char* filename = f.name();
             unsigned long length = f.size();
             // check if this file is already on the Flash chip
             if (SerialFlash.exists(filename))
@@ -17786,7 +17953,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #endif
                   f.close();
                   ff.close();
-                  continue; // advance to next file
                 }
                 else
                 {
@@ -17809,8 +17975,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #endif
               SerialFlash.remove(filename);
             }
-            // if (filename[0] != 46 && filename[1] != 95)
-            if (filename[0] != 46)
+            else
             {
               // create the file on the Flash chip and copy data
               if (SerialFlash.create(filename, length))
@@ -17832,13 +17997,9 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
                     ff.write(buf, n);
                     count = count + n;
                     if (count % 5120 == 0)
-                      display.fillRect(CHAR_width_small * 38, CHAR_height_small * 7, count / (f.size() / (14 * CHAR_width_small)), 8, RED);
+                      display.fillRect(241, 80, count / (f.size() / 240) - 2, 8, RED);
                   }
                   ff.close();
-                  display.fillRect(CHAR_width_small * 38 - 2, CHAR_height_small * 7, (14 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
-                  flash_loadDirectory();
-                  print_flash_stats();
-                  flash_printDirectory();
                 }
                 else
                 {
@@ -17846,186 +18007,37 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
                   LOG.println(F("  error opening freshly created file!"));
 #endif
                 }
-              }
-              else
-              {
-#ifdef DEBUG
-                LOG.println(F("  unable to create file"));
-#endif
+                f.close();
+                // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);
+                flash_loadDirectory();
+                print_flash_stats();
+                flash_printDirectory();
               }
             }
-            f.close();
           }
-          rootdir.close();
-          display.console = true;
-          display.fillRect(CHAR_width_small * 1, CHAR_height_small * 6, DISPLAY_WIDTH / 2 - CHAR_width_small, CHAR_height_small * 16, COLOR_BACKGROUND);
-          flash_loadDirectory();
-          print_flash_stats();
-          flash_printDirectory();
-#ifdef DEBUG
-          LOG.println(F("Finished All Files"));
 #endif
-        }
-        else
-#endif
-          if (fm.sd_is_folder && fm.sd_mode != FM_COPY_TO_PSRAM)
+
+#ifdef COMPILE_FOR_PSRAM
+          else if (fm.sd_mode == FM_COPY_TO_PSRAM) //copy from SD CUSTOM folder to PSRAM
           {
-            if (fm.sd_temp_name[0] == 0x2E && fm.sd_temp_name[1] == 0x2E) // return to parent folder
-            {
-              if (fm.sd_folder_depth < 2)
-              {
-                fm.sd_folder_depth = 0;
-                fm.sd_skip_files = 0;
-                strcpy(fm.sd_new_name, "/");
-              }
-              else
-              {
-                // path has at least one parent folder
-                for (uint8_t count = strlen(fm.sd_new_name); count > 0; count--)
-                {
-                  if (fm.sd_new_name[count] == 0x2f)
-                  {
-                    fm.sd_new_name[count] = '\0';
-                    break;
-                  }
-                }
-                fm.sd_folder_depth--;
-              }
-            }
-            else if (fm.sd_mode != FM_COPY_TO_PSRAM)
-            {
-              fm.sd_skip_files = 0;
-              if (fm.sd_folder_depth > 0)
-                strcat(fm.sd_new_name, "/");
-              strcat(fm.sd_new_name, fm.sd_temp_name);
-              fm.sd_folder_depth++;
-            }
-            fm.sd_selected_file = 0;
-          }
-          else
-            // is a file
-          {
-            if (fm.sd_mode == FM_DELETE_FILE && fm.sd_mode != FM_COPY_TO_PSRAM)
+            if (!fm.sd_is_folder && strstr(fm.sd_temp_name, ".wav") != NULL)
             {
               strcpy(fm.sd_full_name, fm.sd_new_name);
               strcat(fm.sd_full_name, "/");
               strcat(fm.sd_full_name, fm.sd_temp_name);
-              SD.remove(fm.sd_full_name);
-              load_sd_directory();
-            }
-#ifdef COMPILE_FOR_FLASH
-            else if (fm.sd_mode == FM_COPY_TO_FLASH)
-            {
-              strcpy(fm.sd_full_name, fm.sd_new_name);
-              strcat(fm.sd_full_name, "/");
-              strcat(fm.sd_full_name, fm.flash_or_psram_temp_name);
-              File f = SD.open(fm.sd_full_name);
-              const char* filename = f.name();
-              unsigned long length = f.size();
-              // check if this file is already on the Flash chip
-              if (SerialFlash.exists(filename))
-              {
-#ifdef DEBUG
-                LOG.println(F("  already exists on the Flash chip"));
-#endif
-                SerialFlashFile ff = SerialFlash.open(filename);
-                if (ff && ff.size() == f.size())
-                {
-#ifdef DEBUG
-                  LOG.println(F("  size is the same, comparing data..."));
-#endif
-                  if (compareFiles(f, ff) == true)
-                  {
-#ifdef DEBUG
-                    LOG.println(F("  files are identical :)"));
-#endif
-                    f.close();
-                    ff.close();
-                  }
-                  else
-                  {
-#ifdef DEBUG
-                    LOG.println(F("  files are different"));
-#endif
-                  }
-                }
-                else
-                {
-#ifdef DEBUG
-                  LOG.print(F("  size is different, "));
-                  LOG.print(ff.size());
-                  LOG.println(F(" bytes"));
-#endif
-                }
-                // delete the copy on the Flash chip, if different
-#ifdef DEBUG
-                LOG.println(F("  delete file from Flash chip"));
-#endif
-                SerialFlash.remove(filename);
-              }
-              else
-              {
-                // create the file on the Flash chip and copy data
-                if (SerialFlash.create(filename, length))
-                {
-                  SerialFlashFile ff = SerialFlash.open(filename);
-                  if (ff)
-                  {
-#ifdef DEBUG
-                    LOG.print(F("  copying"));
-#endif
-                    // copy data loop
-                    unsigned long count = 0;
-                    display.console = true;
-                    while (count < length)
-                    {
-                      char buf[256];
-                      unsigned int n;
-                      n = f.read(buf, 256);
-                      ff.write(buf, n);
-                      count = count + n;
-                      if (count % 5120 == 0)
-                        display.fillRect(241, 80, count / (f.size() / 240) - 2, 8, RED);
-                    }
-                    ff.close();
-                  }
-                  else
-                  {
-#ifdef DEBUG
-                    LOG.println(F("  error opening freshly created file!"));
-#endif
-                  }
-                  f.close();
-                  // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);
-                  flash_loadDirectory();
-                  print_flash_stats();
-                  flash_printDirectory();
-                }
-              }
-            }
-#endif
+              sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files]);
+              strcpy(drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].filename, fm.sd_temp_name);
+              strip_extension(fm.sd_temp_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].name, 14);
 
-#ifdef COMPILE_FOR_PSRAM
-            else if (fm.sd_mode == FM_COPY_TO_PSRAM) //copy from SD CUSTOM folder to PSRAM
-            {
-              if (!fm.sd_is_folder && strstr(fm.sd_temp_name, ".wav") != NULL)
-              {
-                strcpy(fm.sd_full_name, fm.sd_new_name);
-                strcat(fm.sd_full_name, "/");
-                strcat(fm.sd_full_name, fm.sd_temp_name);
-                sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files]);
-                strcpy(drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].filename, fm.sd_temp_name);
-                strip_extension(fm.sd_temp_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].name, 14);
-
-                print_psram_stats_filemanager();
-                psram_printCustomSamplesList();
-              }
-              //  f.close();
-              // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
+              print_psram_stats_filemanager();
+              psram_printCustomSamplesList();
             }
-#endif
+            //  f.close();
+            // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
           }
-      }
+#endif
+        }
+    }
     if (LCDML.BT_checkEnter() && fm.sd_mode == FM_PLAY_SAMPLE) // preview
     {
       preview_sample();
