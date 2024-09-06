@@ -809,7 +809,7 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
 FLASHMEM void create_audio_wav_preview_chain()
 {
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_SD, 0, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_SD);
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_SD, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_SD);
+  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_SD, 1, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_SD);
 #ifdef COMPILE_FOR_FLASH
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_FLASH, 0, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_FLASH, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
