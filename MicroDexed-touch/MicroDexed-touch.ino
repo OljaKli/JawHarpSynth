@@ -282,7 +282,7 @@ AudioPlayArrayResmp* Drum[NUM_DRUMS];
 #include "effect_delay_ext8.h"
 #endif
 
-AudioFilterBiquad* Drum_filter[NUM_DRUMS];
+//AudioFilterBiquad* Drum_filter[NUM_DRUMS];
 
 // test with envelopes for samples
 //AudioEffectEnvelope* sample_envelope[NUM_DRUMS];
@@ -766,28 +766,30 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   Drum[instance_id] = new AudioPlayArrayResmp();
 #endif
 
-  Drum_filter[instance_id] = new AudioFilterBiquad();
+  //Drum_filter[instance_id] = new AudioFilterBiquad();
   Drum[instance_id]->enableInterpolation(false);
   Drum[instance_id]->setPlaybackRate(1.0);
 
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_mixer_l, instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_l, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 8 + instance_id);
 
-//test with filters for samples
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_l, instance_id);
+  // photodo
+// test with filters for samples  // removed for now since the filter is mono and memory is not enough to have 2 for one stereo voice
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id);
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_l, instance_id);
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_l, instance_id);
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_l, instance_id);
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
-  ////photodo
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
 
-  Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
+  //Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
 
   // test with envelopes for samples
   // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *sample_envelope[instance_id], 0);
@@ -814,7 +816,7 @@ FLASHMEM void create_audio_wav_preview_chain()
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
+  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 1, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
 #endif
 
@@ -1542,7 +1544,7 @@ FLASHMEM void setup()
 FLASHMEM void load_custom_samples_to_psram()
 {
   // load CUSTOM samples
-  for(int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
+  for (int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
     char temp_name[36];
     strcpy(temp_name, "/CUSTOM/");
     strcat(temp_name, drum_config[i].filename);
@@ -2356,7 +2358,7 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
     if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
       if (WAV_preview_PSRAM.isPlaying())
         WAV_preview_PSRAM.stop();
-      WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, 1);
+      WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
       while (WAV_preview_PSRAM.isPlaying())
       {
         display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
@@ -2462,7 +2464,7 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance_id)
       if (inNumber >= msz[presetslot][y].low && inNumber <= msz[presetslot][y].high)
       {
 
-        Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
+        // Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
 
 
         float pan = mapfloat(msz[presetslot][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
@@ -2956,13 +2958,19 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           global_delay_in_mixer[1]->gain(slot + 8, drum_config[d].delay2 / 5);
 
           float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
-
-          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
-          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          if (drum_config[d].numChannels == 1) //mono
+          {
+            drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          }
+          else //stereo
+          {
+            drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+            drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          }
 
           drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
           drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
-
 
           if (sidechain_a_active && d == sidechain_a_sample_number)
             sidechain_trigger_a = true;
