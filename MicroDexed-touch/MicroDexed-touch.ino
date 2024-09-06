@@ -2471,12 +2471,26 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance_id)
         // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
         // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
 
-        drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.98)));
-        drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.98)));
+
+        if (drum_config[y].numChannels == 1) //mono
+        {
+          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
+
+        }
+        else //stereo
+        {
+          drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
+        }
+
 
         ts.msp_peak[presetslot] = (inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity) / 900000;
         drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[presetslot][y].rev, 0, 100, 0.0, 0.8)));
         drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[presetslot][y].rev, 0, 100, 0.0, 0.8)));
+
+        global_delay_in_mixer[0]->gain(slot + 8, drum_config[msz[presetslot][y].psram_entry_number].delay1 / 5);
+        global_delay_in_mixer[1]->gain(slot + 8, drum_config[msz[presetslot][y].psram_entry_number].delay2 / 5);
 
         msp_playmode_sample_slot[slot] = msz[presetslot][y].playmode;
 
@@ -2507,7 +2521,12 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance_id)
         Drum[slot]->playWav(msz[presetslot][y].filename);
 #endif
 #if  defined COMPILE_FOR_PSRAM
-        Drum[slot]->playRaw((int16_t*)drum_config[msz[presetslot][y].psram_entry_number].drum_data, drum_config[msz[presetslot][y].psram_entry_number].len, 1);
+
+        if ((drum_config[y].drum_data != NULL && drum_config[y].len > 0 && drum_config[y].len < 10000000 && y >= 0 && y < NUM_DRUMSET_CONFIG - 1) ||
+          (drum_config[y].drum_data != NULL && drum_config[y].len > 0 && drum_config[y].len < 10000000 && y >= 210 && y < 216))
+        {
+          Drum[slot]->playRaw((int16_t*)drum_config[msz[presetslot][y].psram_entry_number].drum_data, drum_config[msz[presetslot][y].psram_entry_number].len, drum_config[msz[presetslot][y].psram_entry_number].numChannels);
+        }
 #endif
 
         if (msz[presetslot][y].loop_type != 0)
