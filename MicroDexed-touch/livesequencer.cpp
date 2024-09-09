@@ -77,15 +77,18 @@ FLASHMEM const std::string LiveSequencer::getEventSource(EventSource source) {
 }
 
 FLASHMEM void LiveSequencer::start(void) {
+  DBG_LOG(printf("start\n"));
   handleStart();
 }
 
 FLASHMEM void LiveSequencer::stop(void) {
+  DBG_LOG(printf("stop\n"));
   handleStop();
 }
 
 FLASHMEM void LiveSequencer::onStopped(void) {
   data.isRunning = false;
+  DBG_LOG(printf("onStopped\n"));
 
   if (data.isSongMode) {
     onSongStopped();

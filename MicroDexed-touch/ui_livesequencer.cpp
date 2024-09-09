@@ -775,9 +775,9 @@ FLASHMEM void UI_LiveSequencer::drawBar(uint16_t x, uint16_t y, uint16_t w, uint
 
 FLASHMEM void UI_LiveSequencer::processBar(const float progress, const uint16_t y, ProgressBar &bar, const uint16_t color) {
   const uint8_t totalBarWidth = progress * BAR_WIDTH;
-  uint8_t drawWidth = totalBarWidth - bar.drawnLength;
+  int16_t drawWidth = totalBarWidth - bar.drawnLength;
 
-  if (bar.drawnLength > totalBarWidth) {
+  if (drawWidth < 0) { // bar ended
     drawBar(GRID_X[2] + bar.drawnLength, y, BAR_WIDTH - bar.drawnLength, BAR_HEIGHT, bar.currentPhase ? color : GREY2);
     bar.currentPhase = !bar.currentPhase;
     bar.drawnLength = 0;
@@ -816,8 +816,8 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         data.currentPattern = data.numberOfBars - 1; // show num bars
     }
 
-    const float progressPattern = timeMs / float(data.patternLengthMs);
-    const float progressTotal = (progressPattern + data.currentPattern) / float(data.numberOfBars);
+    const float progressPattern = std::min(1.0f, timeMs / float(data.patternLengthMs));
+    const float progressTotal = std::min(1.0f, (progressPattern + data.currentPattern) / float(data.numberOfBars));
 
     processBar(progressPattern, 15, barPattern, GREEN);
     processBar(progressTotal, 20, barTotal, RED);
