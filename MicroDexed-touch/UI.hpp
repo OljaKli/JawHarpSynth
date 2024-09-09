@@ -6721,18 +6721,19 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length) {
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels) {
   display.console = true;
 
   display.fillRect(x, y, w, h, GREY3);
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
-    const float binSize = length / float(w);
-    const float scaleY = h / 65536.0f;
-    const uint16_t halfHeight = y + (h / 2);
+    const float binSize = length / float(w * numChannels);
+    const uint8_t spacing = (numChannels == 1) ? 0 : 1; // stereo looks better with spacing for loud waves
+    const float scaleY = (h - 4 * spacing) / float(65536 * numChannels); // 4 is magic number to fit with spacing
+    uint16_t yZero = y + (h / 2);
 
-    for (uint16_t bin = 0; bin < w; bin++) {
+    for (uint16_t bin = 0; bin < (w * numChannels); bin++) {
       int16_t binMin = +32767;
       int16_t binMax = -32768;
       for (uint32_t binSample = 0; binSample < binSize; binSample++) {
@@ -6740,8 +6741,11 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         binMin = std::min(binMin, data[sampleNumber]);
         binMax = std::max(binMax, data[sampleNumber]);
       }
-      const uint16_t xCoord = x + bin;
-      display.drawLine(xCoord, halfHeight + binMin * scaleY, xCoord, halfHeight + binMax * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
+      const uint16_t xCoord = x + (bin / numChannels);
+      if(numChannels == 2) {
+        yZero = y + (h / 4) + (bin % 2) * ((h / 2) + spacing); // find zero for upper and lower plot
+      }
+      display.drawLine(xCoord, yZero + binMin * scaleY, xCoord, yZero + binMax * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
     }
   }
 }
@@ -6810,7 +6814,7 @@ void UI_func_drums(uint8_t param)
         static constexpr uint16_t plotY = 35;
         static constexpr uint16_t plotW = 130;
         static constexpr uint16_t plotH = 100;
-        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len);
+        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
 #endif
         });
 
