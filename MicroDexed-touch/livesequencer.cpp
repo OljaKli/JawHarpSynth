@@ -102,6 +102,7 @@ FLASHMEM void LiveSequencer::onStopped(void) {
 }
 
 FLASHMEM void LiveSequencer::onStarted(void) {
+  DBG_LOG(printf("onStarted\n"));
   data.startedFlag = true;
   data.isRunning = true;
   data.recordedToSong = false;
@@ -465,12 +466,14 @@ FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent& e, 
 }
 
 FLASHMEM void LiveSequencer::loadNextEvent(int timeMs) {
-  if (timeMs > 0) {
-    //LOG.printf("trigger in %ims\n", timeMs);
-    liveTimer.trigger(timeMs * 1000);
-  }
-  else {
-    playNextEvent();
+  if(data.isRunning) {
+    if (timeMs > 0) {
+      //LOG.printf("trigger in %ims\n", timeMs);
+      liveTimer.trigger(timeMs * 1000);
+    }
+    else {
+      playNextEvent();
+    }
   }
 }
 
