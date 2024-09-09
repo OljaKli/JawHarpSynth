@@ -13625,6 +13625,8 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
   static uint8_t mode;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     char tmp[10];
     if (seq.state_last_loadsave != 200) {
       temp_int = seq.state_last_loadsave;
@@ -13750,6 +13752,9 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
   static uint8_t mode;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
     char tmp[FILENAME_LEN];
     yesno = false;
     if (seq.state_last_loadsave != 200) {
@@ -13870,6 +13875,7 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
   {
     if (mode < 0xff)
     {
+      display.setTextColor(RED, COLOR_BACKGROUND);
       show(2, 1, 16, "Canceled.");
       delay(MESSAGE_WAIT_TIME);
     }
@@ -21392,6 +21398,8 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
   static uint8_t ui_select_name_state;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     mode = 0;

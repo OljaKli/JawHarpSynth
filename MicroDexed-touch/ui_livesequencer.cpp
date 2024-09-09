@@ -193,6 +193,14 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   [ this ] (auto *b) { // clickedHandler
     openScreen(UI_func_multiband_dynamics);
   }));
+  toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[4], GRID_Y[4],
+  [ ] (auto *b) { // drawHandler
+    b->draw("SEQ", "SETTING", TouchButton::BUTTON_ACTIVE);
+  },
+  [ ] (auto *b) { // clickedHandler
+    // open sequencer settings
+    openScreen(UI_func_seq_settings);
+  }));
 
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[0], GRID_Y[5],
   [ ] (auto *b) { // drawHandler
@@ -229,15 +237,14 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     deleteConfirming = !deleteConfirming;
     confirmDelete->drawNow();
   }));
+
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[3], GRID_Y[5],
   [ ] (auto *b) { // drawHandler
-    b->draw("SEQ", "SETTING", TouchButton::BUTTON_ACTIVE);
+    b->draw("NAME", "PERF", TouchButton::BUTTON_ACTIVE);
   },
   [ ] (auto *b) { // clickedHandler
-    // open sequencer settings
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    openScreen(UI_func_seq_settings);
+    // name
+    openScreen(UI_func_set_performance_name);
   }));
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[4], GRID_Y[5],
   [ ] (auto *b) { // drawHandler
@@ -245,8 +252,6 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   },
   [ this ] (auto *b) { // clickedHandler
     // load
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     openScreen(UI_func_load_performance, data.performanceID);
   }));
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[5], GRID_Y[5],
@@ -255,8 +260,6 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   },
   [ this ] (auto *b) { // clickedHandler
     // save
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     openScreen(UI_func_save_performance, data.performanceID);
   }));
 
