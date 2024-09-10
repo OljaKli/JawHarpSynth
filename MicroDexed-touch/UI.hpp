@@ -6728,24 +6728,33 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
-    const float binSize = length / float(w * numChannels);
+    const uint32_t binSize = length / float(w * numChannels);
     const uint8_t spacing = (numChannels == 1) ? 0 : 1; // stereo looks better with spacing for loud waves
     const float scaleY = (h - 4 * spacing) / float(65536 * numChannels); // 4 is magic number to fit with spacing
-    uint16_t yZero = y + (h / 2);
+    uint16_t yZero = 0;
 
-    for (uint16_t bin = 0; bin < (w * numChannels); bin++) {
-      int16_t binMin = +32767;
-      int16_t binMax = -32768;
-      for (uint32_t binSample = 0; binSample < binSize; binSample++) {
-        const uint32_t sampleNumber = (bin * binSize) + binSample;
-        binMin = std::min(binMin, data[sampleNumber]);
-        binMax = std::max(binMax, data[sampleNumber]);
+    int16_t binMin[numChannels] = { +32767 };
+    int16_t binMax[numChannels] = { -32768 };
+
+    uint32_t binSamples = 0;
+
+    for (uint32_t sample = 0; sample < length; sample += numChannels) {
+      for (uint8_t ch = 0; ch < numChannels; ch++) {
+        binMin[ch] = std::min(binMin[ch], data[sample + ch]);
+        binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
-      const uint16_t xCoord = x + (bin / numChannels);
-      if(numChannels == 2) {
-        yZero = y + (h / 4) + (bin % 2) * ((h / 2) + spacing); // find zero for upper and lower plot
+      binSamples++;
+      
+      if (binSamples == binSize) {
+        for (uint8_t ch = 0; ch < numChannels; ch++) {
+          yZero = y + (h / (2 * numChannels)) + ch * ((h / 2) + spacing); // find zero for upper and lower plot
+          display.drawLine(x, yZero + binMin[ch] * scaleY, x, yZero + binMax[ch] * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
+          binMin[ch] = +32767;
+          binMax[ch] = -32767;
+        }
+        x++;
+        binSamples = 0;
       }
-      display.drawLine(xCoord, yZero + binMin * scaleY, xCoord, yZero + binMax * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
     }
   }
 }
