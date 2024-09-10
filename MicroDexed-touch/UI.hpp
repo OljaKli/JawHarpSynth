@@ -6728,14 +6728,12 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
-    const uint32_t binSize = length / float(w * numChannels);
-    const uint8_t spacing = (numChannels == 1) ? 0 : 1; // stereo looks better with spacing for loud waves
-    const float scaleY = (h - 4 * spacing) / float(65536 * numChannels); // 4 is magic number to fit with spacing
-    uint16_t yZero = 0;
+    const uint32_t binSize = ceil(length / float(w * numChannels));
+    const uint8_t spacing = (numChannels - 1) * 4; // stereo looks better with spacing for loud waves
+    const float scaleY = (h - spacing) / float(65536 * numChannels);
 
     int16_t binMin[numChannels] = { +32767 };
     int16_t binMax[numChannels] = { -32768 };
-
     uint32_t binSamples = 0;
 
     for (uint32_t sample = 0; sample < length; sample += numChannels) {
@@ -6743,11 +6741,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         binMin[ch] = std::min(binMin[ch], data[sample + ch]);
         binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
-      binSamples++;
       
-      if (binSamples == binSize) {
+      if (++binSamples == binSize) {
         for (uint8_t ch = 0; ch < numChannels; ch++) {
-          yZero = y + (h / (2 * numChannels)) + ch * ((h / 2) + spacing); // find zero for upper and lower plot
+          const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
           display.drawLine(x, yZero + binMin[ch] * scaleY, x, yZero + binMax[ch] * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
           binMin[ch] = +32767;
           binMax[ch] = -32767;
