@@ -6734,7 +6734,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
     int16_t binMin[numChannels] = { +32767 };
     int16_t binMax[numChannels] = { -32768 };
-    uint32_t binSamples = 0;
+    uint32_t numBinSamples = 0;
 
     for (uint32_t sample = 0; sample < length; sample += numChannels) {
       for (uint8_t ch = 0; ch < numChannels; ch++) {
@@ -6742,15 +6742,17 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
       
-      if (++binSamples == binSize) {
+      if (++numBinSamples == binSize) {
         for (uint8_t ch = 0; ch < numChannels; ch++) {
           const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
-          display.drawLine(x, yZero + binMin[ch] * scaleY, x, yZero + binMax[ch] * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
+          const uint16_t yMax = yZero + binMax[ch] * scaleY;
+          const uint16_t yMin = yZero + binMin[ch] * scaleY;
+          display.drawLine(x, yMin, x, yMax, PLOT_COLOR); // drawFastVLine does not work for console
           binMin[ch] = +32767;
           binMax[ch] = -32767;
         }
         x++;
-        binSamples = 0;
+        numBinSamples = 0;
       }
     }
   }
