@@ -7779,7 +7779,8 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
   {
     // setup function
     registerTouchHandler(handle_touchscreen_sample_editor);
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+
+#ifdef COMPILE_FOR_PROGMEM
     fm.sample_source = 0;
 #endif
 
@@ -7789,6 +7790,10 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
 #ifdef COMPILE_FOR_FLASH
     fm.sample_source = 2;//default to MSP0
+#endif
+
+#ifdef COMPILE_FOR_PSRAM
+    fm.sample_source = 4;
 #endif
 
     menuhelper_redraw = true;
@@ -7835,7 +7840,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
       if (seq.edit_state == 0)
       {
-        if (fm.sample_source == 2 || fm.sample_source == 3)
+        if (fm.sample_source == 2 || fm.sample_source == 3 || fm.sample_source == 4)
           generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5);
         else
           generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 2);
@@ -7850,8 +7855,10 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           temp_int = calc_val[state_dir](temp_int, 1, 0, fm.sd_sum_files - 1);
         else if (fm.sample_source == 1)
           temp_int = calc_val[state_dir](temp_int, 1, 0, fm.flash_or_psram_sum_files - 1);
-        else if (fm.sample_source == 2 || fm.sample_source == 3)
+        else if (fm.sample_source == 2 || fm.sample_source == 3 )
           temp_int = calc_val[state_dir](temp_int, 1, 0, 7);
+           else if ( fm.sample_source == 4)
+            temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG-2);
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 1)
       {
@@ -7860,7 +7867,8 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       else if (seq.edit_state == 1 && generic_temp_select_menu == 2)
       {
         stop_all_drum_slots();
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+
+#ifdef COMPILE_FOR_PROGMEM
         fm.sample_source = 0;
 #endif
 
@@ -7871,6 +7879,11 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #ifdef COMPILE_FOR_FLASH
         fm.sample_source = calc_val[state_dir](fm.sample_source, 1, 0, 3);
 #endif
+
+#ifdef COMPILE_FOR_PSRAM
+    fm.sample_source = 4;
+#endif
+
         sample_editor_update_file_counts();
         print_available_loop_options();
         if (fm.sample_source != menuhelper_previous_val)
@@ -7930,9 +7943,10 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       display.print(F("MSP #0   "));
     else if (fm.sample_source == 3)
       display.print(F("MSP #1   "));
+       else if (fm.sample_source == 4)
+      display.print(F("PSRAM    "));
 
-    if (fm.sample_source == 2 || fm.sample_source == 3)  //loop available
-    {
+
       setModeColor(3);
       show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_start);
       setModeColor(4);
@@ -7945,15 +7959,8 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         display.print(F("REPEAT  "));
       else    if (msz[fm.sample_source - 2][temp_int].loop_type == 2)
         display.print(F("PINGPONG"));
-    }
-    else
-    { //no loop available
-      display.setTextColor(GREY2, COLOR_BACKGROUND);
-      show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, "0");
-      show_no_grid(5 * 11 - 5, CHAR_width_small * 13, 7, "0");
-      setCursor_textGrid_small(13, 6);
-      display.print(F("NO LOOP "));
-    }
+
+
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 #if defined(COMPILE_FOR_FLASH) || defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
     if (menuhelper_redraw)
@@ -7961,8 +7968,14 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       if (fm.sample_source > 1 && fm.sample_source < 4) // MSP
         draw_waveform_overview_in_sample_editor_step1(temp_int); //array starts with 0, not 1
       else
+ if (fm.sample_source ==4) // PSRAM, TEST
+ {
+   printSampleWaveform(0, 80, 318, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len);
+ }
+else
+{
         draw_waveform_overview_in_sample_editor_step1(temp_int + 1);
-
+}
       menuhelper_redraw = false;
     }
 #endif
