@@ -6752,7 +6752,13 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           }
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
-          display.drawLine(x, yMin, x, yMax, PLOT_COLOR); // drawFastVLine does not work for console
+          if(yMax == yMin) {
+            display.console = true;
+            display.drawPixel(x, yMin, PLOT_COLOR);
+          }
+          else {
+            display.drawLine(x, yMin, x, yMax, PLOT_COLOR); // drawFastVLine does not work for console
+          }
           binMin[ch] = +32767;
           binMax[ch] = -32767;
         }
