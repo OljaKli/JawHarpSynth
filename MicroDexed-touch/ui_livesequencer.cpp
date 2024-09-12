@@ -193,6 +193,14 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   [ this ] (auto *b) { // clickedHandler
     openScreen(UI_func_multiband_dynamics);
   }));
+  toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[4], GRID_Y[4],
+  [ ] (auto *b) { // drawHandler
+    b->draw("SEQ", "SETTING", TouchButton::BUTTON_ACTIVE);
+  },
+  [ ] (auto *b) { // clickedHandler
+    // open sequencer settings
+    openScreen(UI_func_seq_settings);
+  }));
 
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[0], GRID_Y[5],
   [ ] (auto *b) { // drawHandler
@@ -229,15 +237,14 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     deleteConfirming = !deleteConfirming;
     confirmDelete->drawNow();
   }));
+
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[3], GRID_Y[5],
   [ ] (auto *b) { // drawHandler
-    b->draw("SEQ", "SETTING", TouchButton::BUTTON_ACTIVE);
+    b->draw("NAME", "PERF", TouchButton::BUTTON_ACTIVE);
   },
   [ ] (auto *b) { // clickedHandler
-    // open sequencer settings
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    openScreen(UI_func_seq_settings);
+    // name
+    openScreen(UI_func_set_performance_name);
   }));
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[4], GRID_Y[5],
   [ ] (auto *b) { // drawHandler
@@ -245,8 +252,6 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   },
   [ this ] (auto *b) { // clickedHandler
     // load
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     openScreen(UI_func_load_performance, data.performanceID);
   }));
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[5], GRID_Y[5],
@@ -255,8 +260,6 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   },
   [ this ] (auto *b) { // clickedHandler
     // save
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     openScreen(UI_func_save_performance, data.performanceID);
   }));
 
@@ -772,9 +775,9 @@ FLASHMEM void UI_LiveSequencer::drawBar(uint16_t x, uint16_t y, uint16_t w, uint
 
 FLASHMEM void UI_LiveSequencer::processBar(const float progress, const uint16_t y, ProgressBar &bar, const uint16_t color) {
   const uint8_t totalBarWidth = progress * BAR_WIDTH;
-  uint8_t drawWidth = totalBarWidth - bar.drawnLength;
+  int16_t drawWidth = totalBarWidth - bar.drawnLength;
 
-  if (bar.drawnLength > totalBarWidth) {
+  if (drawWidth < 0) { // bar ended
     drawBar(GRID_X[2] + bar.drawnLength, y, BAR_WIDTH - bar.drawnLength, BAR_HEIGHT, bar.currentPhase ? color : GREY2);
     bar.currentPhase = !bar.currentPhase;
     bar.drawnLength = 0;
@@ -813,8 +816,8 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         data.currentPattern = data.numberOfBars - 1; // show num bars
     }
 
-    const float progressPattern = timeMs / float(data.patternLengthMs);
-    const float progressTotal = (progressPattern + data.currentPattern) / float(data.numberOfBars);
+    const float progressPattern = std::min(1.0f, timeMs / float(data.patternLengthMs));
+    const float progressTotal = std::min(1.0f, (progressPattern + data.currentPattern) / float(data.numberOfBars));
 
     processBar(progressPattern, 15, barPattern, GREEN);
     processBar(progressTotal, 20, barTotal, RED);

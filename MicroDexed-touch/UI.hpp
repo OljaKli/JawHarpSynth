@@ -6721,27 +6721,50 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length) {
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels) {
   display.console = true;
 
   display.fillRect(x, y, w, h, GREY3);
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
-    const float binSize = length / float(w);
-    const float scaleY = h / 65536.0f;
-    const uint16_t halfHeight = y + (h / 2);
+    const uint32_t binSize = ceil(length / float(w * numChannels));
+    const uint8_t spacing = 4; // stereo looks better with spacing for loud waves
+    const float scaleY = (h - spacing) / float(65536 * numChannels);
 
-    for (uint16_t bin = 0; bin < w; bin++) {
-      int16_t binMin = +32767;
-      int16_t binMax = -32768;
-      for (uint32_t binSample = 0; binSample < binSize; binSample++) {
-        const uint32_t sampleNumber = (bin * binSize) + binSample;
-        binMin = std::min(binMin, data[sampleNumber]);
-        binMax = std::max(binMax, data[sampleNumber]);
+    int16_t binMin[numChannels] = { +32767 };
+    int16_t binMax[numChannels] = { -32768 };
+    uint32_t numBinSamples = 0;
+
+    const uint16_t maxDitherIgnore = 1 / scaleY;
+
+    for (uint32_t sample = 0; sample < length; sample += numChannels) {
+      for (uint8_t ch = 0; ch < numChannels; ch++) {
+        binMin[ch] = std::min(binMin[ch], data[sample + ch]);
+        binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
-      const uint16_t xCoord = x + bin;
-      display.drawLine(xCoord, halfHeight + binMin * scaleY, xCoord, halfHeight + binMax * scaleY, PLOT_COLOR); // drawFastVLine does not work for console
+      
+      if (++numBinSamples == binSize) {
+        for (uint8_t ch = 0; ch < numChannels; ch++) {
+          const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
+          if((binMax[ch] - binMin[ch]) < maxDitherIgnore) {
+            binMax[ch] = binMin[ch]; // avoid drawing 2px height for dithering noise (eg. silence)
+          }
+          const uint16_t yMax = yZero + binMax[ch] * scaleY;
+          const uint16_t yMin = yZero + binMin[ch] * scaleY;
+          if(yMax == yMin) {
+            display.console = true;
+            display.drawPixel(x, yMin, PLOT_COLOR);
+          }
+          else {
+            display.drawLine(x, yMin, x, yMax, PLOT_COLOR); // drawFastVLine does not work for console
+          }
+          binMin[ch] = +32767;
+          binMax[ch] = -32767;
+        }
+        x++;
+        numBinSamples = 0;
+      }
     }
   }
 }
@@ -6810,7 +6833,7 @@ void UI_func_drums(uint8_t param)
         static constexpr uint16_t plotY = 35;
         static constexpr uint16_t plotW = 130;
         static constexpr uint16_t plotH = 100;
-        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len);
+        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
 #endif
         });
 
@@ -13638,6 +13661,8 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
   static uint8_t mode;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     char tmp[10];
     if (seq.state_last_loadsave != 200) {
       temp_int = seq.state_last_loadsave;
@@ -13763,6 +13788,9 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
   static uint8_t mode;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
     char tmp[FILENAME_LEN];
     yesno = false;
     if (seq.state_last_loadsave != 200) {
@@ -13883,6 +13911,7 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
   {
     if (mode < 0xff)
     {
+      display.setTextColor(RED, COLOR_BACKGROUND);
       show(2, 1, 16, "Canceled.");
       delay(MESSAGE_WAIT_TIME);
     }
@@ -21405,6 +21434,8 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
   static uint8_t ui_select_name_state;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     mode = 0;
