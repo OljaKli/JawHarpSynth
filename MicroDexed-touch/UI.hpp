@@ -6721,13 +6721,19 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels) {
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0, float to = 1.0, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3) {
+  uint32_t sampleOffset = from * (length / numChannels);
+  uint32_t zoomedLength = (to - from) * length;
+  if(numChannels == 2) {
+    sampleOffset &= ~0x01; // make even
+    zoomedLength &= ~0x01; // make even
+  }
+  data += sampleOffset;
+  length = zoomedLength;
+
   display.console = true;
-  if (x > 0)
-    display.fillRect(x - 1, y, w, h, GREY3);
-  else
-    display.fillRect(x, y, w, h, GREY3);
-  static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
+  display.fillRect(x, y, w, h, bgColor);
+  x++; // start drawing one to the right as remote's fillRect() is shifted by one
 
   if (w > 0 && data != nullptr) {
     const uint32_t binSize = ceil(length / float(w * numChannels));
@@ -6756,10 +6762,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
           if (yMax == yMin) {
             display.console = true;
-            display.drawPixel(x, yMin, PLOT_COLOR);
+            display.drawPixel(x, yMin, waveColor);
           }
           else {
-            display.drawLine(x, yMin, x, yMax, PLOT_COLOR); // drawFastVLine does not work for console
+            display.drawLine(x, yMin, x, yMax, waveColor); // drawFastVLine does not work for console
           }
           binMin[ch] = +32767;
           binMax[ch] = -32767;
@@ -6804,6 +6810,7 @@ void UI_func_drums(uint8_t param)
       },
       [](Editor* editor, bool refresh)
       {
+        DBG_LOG(printf("render me\n"));
         // render the current selected drum sample slot number and name
         char header[25] = { " " };
         sprintf(header, "%02i: %s", activesample, basename(drum_config[activesample].name));
@@ -6835,7 +6842,9 @@ void UI_func_drums(uint8_t param)
         static constexpr uint16_t plotY = 35;
         static constexpr uint16_t plotW = 130;
         static constexpr uint16_t plotH = 100;
-        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
+        const float from = 0.2;
+        const float to = 0.6;
+        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels, from, to);
 #endif
   });
 
