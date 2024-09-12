@@ -6729,12 +6729,14 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
   if (w > 0 && data != nullptr) {
     const uint32_t binSize = ceil(length / float(w * numChannels));
-    const uint8_t spacing = (numChannels - 1) * 4; // stereo looks better with spacing for loud waves
+    const uint8_t spacing = 4; // stereo looks better with spacing for loud waves
     const float scaleY = (h - spacing) / float(65536 * numChannels);
 
     int16_t binMin[numChannels] = { +32767 };
     int16_t binMax[numChannels] = { -32768 };
     uint32_t numBinSamples = 0;
+
+    const uint16_t maxDitherIgnore = 1 / scaleY;
 
     for (uint32_t sample = 0; sample < length; sample += numChannels) {
       for (uint8_t ch = 0; ch < numChannels; ch++) {
@@ -6745,6 +6747,9 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
       if (++numBinSamples == binSize) {
         for (uint8_t ch = 0; ch < numChannels; ch++) {
           const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
+          if((binMax[ch] - binMin[ch]) < maxDitherIgnore) {
+            binMax[ch] = binMin[ch]; // avoid drawing 2px height for dithering noise (eg. silence)
+          }
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
           display.drawLine(x, yMin, x, yMax, PLOT_COLOR); // drawFastVLine does not work for console
