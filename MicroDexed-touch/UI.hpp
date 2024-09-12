@@ -6721,10 +6721,10 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0, float to = 1.0, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3) {
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3) {
   uint32_t sampleOffset = from * (length / numChannels);
   uint32_t zoomedLength = (to - from) * length;
-  if(numChannels == 2) {
+  if (numChannels == 2) {
     sampleOffset &= ~0x01; // make even
     zoomedLength &= ~0x01; // make even
   }
