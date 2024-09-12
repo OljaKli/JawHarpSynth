@@ -6842,9 +6842,7 @@ void UI_func_drums(uint8_t param)
         static constexpr uint16_t plotY = 35;
         static constexpr uint16_t plotW = 130;
         static constexpr uint16_t plotH = 100;
-        const float from = 0.2;
-        const float to = 0.6;
-        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels, from, to);
+        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
 #endif
   });
 
