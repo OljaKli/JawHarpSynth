@@ -6723,8 +6723,10 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
 
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels) {
   display.console = true;
-
-  display.fillRect(x, y, w, h, GREY3);
+  if (x > 0)
+    display.fillRect(x - 1, y, w, h, GREY3);
+  else
+    display.fillRect(x, y, w, h, GREY3);
   static constexpr uint16_t PLOT_COLOR = COLOR_PITCHSMP;
 
   if (w > 0 && data != nullptr) {
@@ -6743,16 +6745,16 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         binMin[ch] = std::min(binMin[ch], data[sample + ch]);
         binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
-      
+
       if (++numBinSamples == binSize) {
         for (uint8_t ch = 0; ch < numChannels; ch++) {
           const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
-          if((binMax[ch] - binMin[ch]) < maxDitherIgnore) {
+          if ((binMax[ch] - binMin[ch]) < maxDitherIgnore) {
             binMax[ch] = binMin[ch]; // avoid drawing 2px height for dithering noise (eg. silence)
           }
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
-          if(yMax == yMin) {
+          if (yMax == yMin) {
             display.console = true;
             display.drawPixel(x, yMin, PLOT_COLOR);
           }
@@ -6826,7 +6828,7 @@ void UI_func_drums(uint8_t param)
         if (seq.running == false) {
           // this makes MDT crash often (press two keys fast one after another)
           // draw_waveform_overview_in_drums_page_step1(activesample);
-        }
+      }
 #endif
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
         static constexpr uint16_t plotX = 182;
@@ -6835,7 +6837,7 @@ void UI_func_drums(uint8_t param)
         static constexpr uint16_t plotH = 100;
         printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
 #endif
-        });
+  });
 
     ui.setCursor(2, 4);
     // the parameter editors depend on activesample. We define them by sample index 0,
@@ -6875,7 +6877,7 @@ void UI_func_drums(uint8_t param)
       {
         seq.smartfilter = !seq.smartfilter;
       });
-      }
+}
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
@@ -7878,10 +7880,10 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           temp_int = calc_val[state_dir](temp_int, 1, 0, fm.sd_sum_files - 1);
         else if (fm.sample_source == 1)
           temp_int = calc_val[state_dir](temp_int, 1, 0, fm.flash_or_psram_sum_files - 1);
-        else if (fm.sample_source == 2 || fm.sample_source == 3 )
+        else if (fm.sample_source == 2 || fm.sample_source == 3)
           temp_int = calc_val[state_dir](temp_int, 1, 0, 7);
-           else if ( fm.sample_source == 4)
-            temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG-2);
+        else if (fm.sample_source == 4)
+          temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG - 2);
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 1)
       {
@@ -7904,7 +7906,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
-    fm.sample_source = 4;
+        fm.sample_source = 4;
 #endif
 
         sample_editor_update_file_counts();
@@ -7966,22 +7968,22 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       display.print(F("MSP #0   "));
     else if (fm.sample_source == 3)
       display.print(F("MSP #1   "));
-       else if (fm.sample_source == 4)
+    else if (fm.sample_source == 4)
       display.print(F("PSRAM    "));
 
 
-      setModeColor(3);
-      show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_start);
-      setModeColor(4);
-      show_no_grid(5 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_end);
-      setModeColor(5);
-      setCursor_textGrid_small(13, 6);
-      if (msz[fm.sample_source - 2][temp_int].loop_type == 0)
-        display.print(F("NO LOOP "));
-      else    if (msz[fm.sample_source - 2][temp_int].loop_type == 1)
-        display.print(F("REPEAT  "));
-      else    if (msz[fm.sample_source - 2][temp_int].loop_type == 2)
-        display.print(F("PINGPONG"));
+    setModeColor(3);
+    show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_start);
+    setModeColor(4);
+    show_no_grid(5 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_end);
+    setModeColor(5);
+    setCursor_textGrid_small(13, 6);
+    if (msz[fm.sample_source - 2][temp_int].loop_type == 0)
+      display.print(F("NO LOOP "));
+    else    if (msz[fm.sample_source - 2][temp_int].loop_type == 1)
+      display.print(F("REPEAT  "));
+    else    if (msz[fm.sample_source - 2][temp_int].loop_type == 2)
+      display.print(F("PINGPONG"));
 
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -7991,14 +7993,14 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       if (fm.sample_source > 1 && fm.sample_source < 4) // MSP
         draw_waveform_overview_in_sample_editor_step1(temp_int); //array starts with 0, not 1
       else
- if (fm.sample_source ==4) // PSRAM, TEST
- {
-   printSampleWaveform(0, 80, 318, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len);
- }
-else
-{
-        draw_waveform_overview_in_sample_editor_step1(temp_int + 1);
-}
+        if (fm.sample_source == 4) // PSRAM, TEST
+        {
+          printSampleWaveform(0, 80, 318, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels);
+        }
+        else
+        {
+          draw_waveform_overview_in_sample_editor_step1(temp_int + 1);
+        }
       menuhelper_redraw = false;
     }
 #endif
@@ -13937,8 +13939,8 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
       LOG.print(midi_sync_delay_time, DEC);
       LOG.println(F("ms"));
 #endif
-    }
   }
+}
   else
   {
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
@@ -14409,7 +14411,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
     helptext_l(back_text);
     helptext_r("SELECT PARAM.");
-  }
+    }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     if (LCDML.BT_checkEnter()) {
@@ -14700,7 +14702,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 FLASHMEM void sysinfo_reload_prev_voice(DxPoolSettings settings)
 {
@@ -17373,7 +17375,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
         if ((zoneEdited->entry_number) - 1 >= 0)
           fill_msz(drum_config[zoneEdited->entry_number - 1].filename, seq.active_multisample, generic_temp_select_menu - 3, zoneEdited->entry_number - 1);
 #endif
-      }
+    }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 7) // tune/pitch
       {
         zoneEdited->tune = calc_val[state_dir](zoneEdited->tune, ENCODER[ENC_R].speed(), 1, 200);
@@ -17418,7 +17420,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
       {
         generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 11);
       }
-    }
+  }
 
     if (LCDML.BT_checkEnter())
     {
@@ -17518,7 +17520,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
           print_msp_zone(generic_temp_select_menu - 3, false);
       }
     }
-  }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -17919,7 +17921,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #ifdef DEBUG
         LOG.println(F("Finished All Files"));
 #endif
-      }
+  }
       else
 #endif
         if (fm.sd_is_folder && fm.sd_mode != FM_COPY_TO_PSRAM)
@@ -18055,8 +18057,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
                 print_flash_stats();
                 flash_printDirectory();
               }
-            }
           }
+        }
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -18078,7 +18080,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
           }
 #endif
-        }
+}
     }
     if (LCDML.BT_checkEnter() && fm.sd_mode == FM_PLAY_SAMPLE) // preview
     {
@@ -21243,12 +21245,12 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 
           mode = 0xff;
           break;
-        }
+      }
 
         LCDML.FUNC_goBackToMenu();
-      }
     }
   }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (mode < 0xff)
@@ -21394,9 +21396,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
             setCursor_textGrid(1, 2);
             display.print(F("Waiting...      "));
             /// Storing is done in SYSEX code
-          }
         }
       }
+    }
       else if (mode >= 1 && yesno == false)
       {
         LOG.println(mode, DEC);
@@ -21408,9 +21410,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
       }
-    }
-    encoderDir[ENC_R].reset();
   }
+    encoderDir[ENC_R].reset();
+}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -21626,7 +21628,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 #endif
           show(2, 1, 16, "Read error.");
           bank_number = 0xff;
-        }
+      }
         else
         {
           uint8_t bank_data[4104];
@@ -21647,7 +21649,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
           show(2, 1, 16, "Done.");
           bank_number = 0xff;
         }
-      }
+    }
       else
       {
         show(2, 1, 16, "No bank.");
@@ -21656,8 +21658,8 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 
       delay(MESSAGE_WAIT_TIME);
       LCDML.FUNC_goBackToMenu();
-    }
   }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -21765,7 +21767,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-          }
+        }
           else
           {
             uint8_t voice_data[155];
@@ -21793,7 +21795,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-        }
+      }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -21803,9 +21805,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
-      }
     }
   }
+}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -22196,7 +22198,7 @@ FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-  }
+}
   return (0);
 }
 
@@ -22661,7 +22663,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-    }
+  }
     else
     { // it was not a favorite
 
@@ -22670,7 +22672,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-  }
+}
   else
     return false;
 }
@@ -22914,8 +22916,8 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
       setCursor_textGrid(1, 2);
       display.print(F("                "));
 
-    }
   }
+}
 #endif
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -23346,7 +23348,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-    }
+  }
     else
     { // no favorites in bank stored
       return (false);
@@ -23354,7 +23356,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-  }
+}
   else
     return false;
 }
@@ -23514,7 +23516,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
 #ifdef DEBUG
     LOG.println("No match.");
 #endif
-  }
+}
 
 #ifdef DEBUG
   LOG.print(F("MSZ preset #"));
