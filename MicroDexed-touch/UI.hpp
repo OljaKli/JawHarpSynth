@@ -6810,7 +6810,6 @@ void UI_func_drums(uint8_t param)
       },
       [](Editor* editor, bool refresh)
       {
-        DBG_LOG(printf("render me\n"));
         // render the current selected drum sample slot number and name
         char header[25] = { " " };
         sprintf(header, "%02i: %s", activesample, basename(drum_config[activesample].name));
