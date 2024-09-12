@@ -270,6 +270,7 @@ extern void get_sd_performance_name_json(uint8_t number);
 extern bool save_sd_performance_json(uint8_t p);
 extern dexed_live_mod_t dexed_live_mod;
 uint8_t activesample;
+uint8_t previous_activesample=254;
 extern File frec;
 extern AudioRecordQueue record_queue_l;
 extern AudioRecordQueue record_queue_r;
@@ -6834,16 +6835,19 @@ void UI_func_drums(uint8_t param)
         if (seq.running == false) {
           // this makes MDT crash often (press two keys fast one after another)
           // draw_waveform_overview_in_drums_page_step1(activesample);
-      }
+        }
 #endif
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
-        static constexpr uint16_t plotX = 182;
-        static constexpr uint16_t plotY = 35;
-        static constexpr uint16_t plotW = 130;
-        static constexpr uint16_t plotH = 100;
-        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
+        if (previous_activesample != activesample) {
+          static constexpr uint16_t plotX = 182;
+          static constexpr uint16_t plotY = 35;
+          static constexpr uint16_t plotW = 130;
+          static constexpr uint16_t plotH = 100;
+          printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, drum_config[activesample].numChannels);
+          previous_activesample = activesample;
+        }
 #endif
-  });
+      });
 
     ui.setCursor(2, 4);
     // the parameter editors depend on activesample. We define them by sample index 0,
@@ -6883,7 +6887,7 @@ void UI_func_drums(uint8_t param)
       {
         seq.smartfilter = !seq.smartfilter;
       });
-}
+  }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
@@ -6920,9 +6924,10 @@ void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
     drumScreenActive = false;
+    previous_activesample =254;
     ui.clear();
   }
-  }
+}
 
 extern float get_sample_p_offset(uint8_t sample);
 extern void set_sample_pitch(uint8_t sample, float playbackspeed);
@@ -13945,8 +13950,8 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
       LOG.print(midi_sync_delay_time, DEC);
       LOG.println(F("ms"));
 #endif
+    }
   }
-}
   else
   {
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
@@ -14417,7 +14422,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
     helptext_l(back_text);
     helptext_r("SELECT PARAM.");
-    }
+  }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     if (LCDML.BT_checkEnter()) {
@@ -14708,7 +14713,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 FLASHMEM void sysinfo_reload_prev_voice(DxPoolSettings settings)
 {
@@ -17381,7 +17386,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
         if ((zoneEdited->entry_number) - 1 >= 0)
           fill_msz(drum_config[zoneEdited->entry_number - 1].filename, seq.active_multisample, generic_temp_select_menu - 3, zoneEdited->entry_number - 1);
 #endif
-    }
+      }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 7) // tune/pitch
       {
         zoneEdited->tune = calc_val[state_dir](zoneEdited->tune, ENCODER[ENC_R].speed(), 1, 200);
@@ -17426,7 +17431,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
       {
         generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 11);
       }
-  }
+    }
 
     if (LCDML.BT_checkEnter())
     {
@@ -17526,7 +17531,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
           print_msp_zone(generic_temp_select_menu - 3, false);
       }
     }
-}
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -17927,7 +17932,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #ifdef DEBUG
         LOG.println(F("Finished All Files"));
 #endif
-  }
+      }
       else
 #endif
         if (fm.sd_is_folder && fm.sd_mode != FM_COPY_TO_PSRAM)
@@ -18063,8 +18068,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
                 print_flash_stats();
                 flash_printDirectory();
               }
+            }
           }
-        }
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -18086,7 +18091,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
           }
 #endif
-}
+        }
     }
     if (LCDML.BT_checkEnter() && fm.sd_mode == FM_PLAY_SAMPLE) // preview
     {
@@ -21251,12 +21256,12 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 
           mode = 0xff;
           break;
-      }
+        }
 
         LCDML.FUNC_goBackToMenu();
+      }
     }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (mode < 0xff)
@@ -21402,9 +21407,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
             setCursor_textGrid(1, 2);
             display.print(F("Waiting...      "));
             /// Storing is done in SYSEX code
+          }
         }
       }
-    }
       else if (mode >= 1 && yesno == false)
       {
         LOG.println(mode, DEC);
@@ -21416,9 +21421,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
       }
-  }
+    }
     encoderDir[ENC_R].reset();
-}
+  }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -21634,7 +21639,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 #endif
           show(2, 1, 16, "Read error.");
           bank_number = 0xff;
-      }
+        }
         else
         {
           uint8_t bank_data[4104];
@@ -21655,7 +21660,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
           show(2, 1, 16, "Done.");
           bank_number = 0xff;
         }
-    }
+      }
       else
       {
         show(2, 1, 16, "No bank.");
@@ -21664,8 +21669,8 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 
       delay(MESSAGE_WAIT_TIME);
       LCDML.FUNC_goBackToMenu();
+    }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -21773,7 +21778,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t voice_data[155];
@@ -21801,7 +21806,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -21811,9 +21816,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
+      }
     }
   }
-}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -22204,7 +22209,7 @@ FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-}
+  }
   return (0);
 }
 
@@ -22669,7 +22674,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-  }
+    }
     else
     { // it was not a favorite
 
@@ -22678,7 +22683,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-}
+  }
   else
     return false;
 }
@@ -22922,8 +22927,8 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
       setCursor_textGrid(1, 2);
       display.print(F("                "));
 
+    }
   }
-}
 #endif
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -23354,7 +23359,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-  }
+    }
     else
     { // no favorites in bank stored
       return (false);
@@ -23362,7 +23367,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-}
+  }
   else
     return false;
 }
@@ -23522,7 +23527,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
 #ifdef DEBUG
     LOG.println("No match.");
 #endif
-}
+  }
 
 #ifdef DEBUG
   LOG.print(F("MSZ preset #"));
