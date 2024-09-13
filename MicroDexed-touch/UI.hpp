@@ -1589,77 +1589,6 @@ FLASHMEM bool touch_button_back_page() //modern pages with touch back button
     return false;
 }
 
-FLASHMEM void smart_filter(uint8_t dir)
-{
-  bool found = false;
-  // search backwards
-  if (dir == 0)
-  {
-    if (seq.smartfilter)
-    {
-      do
-      {
-        if (found == false)
-          activeSample = constrain(activeSample - 1, 0, NUM_DRUMSET_CONFIG - 2);
-        for (uint8_t d = 0; d < NUM_SEQ_PATTERN; d++)
-        {
-          if (seq.content_type[d] == 0)
-          {
-            for (uint8_t y = 0; y < 16; y++)
-            {
-              if ((drum_config[activeSample].midinote == seq.note_data[d][y] && seq.vel[d][y] < 210)
-                || (drum_config[activeSample].midinote == seq.vel[d][y] && seq.vel[d][y] > 209))
-              {
-                found = true;
-                // #ifdef DEBUG
-                //                 LOG.println(F("found used sample in pattern:"));
-                //                 LOG.println(d);
-                // #endif
-                break;
-              }
-            }
-          }
-        }
-      } while (found == false && activeSample > 0);
-    }
-    else
-      selectSample(constrain(activeSample - 1, 0, NUM_DRUMSET_CONFIG - 2));
-  }
-  else // search forwards
-  {
-    if (seq.smartfilter)
-    {
-      do
-      {
-        if (found == false)
-          activeSample = constrain(activeSample + 1, 0, NUM_DRUMSET_CONFIG - 2);
-        for (uint8_t d = 0; d < NUM_SEQ_PATTERN; d++)
-        {
-          if (seq.content_type[d] == 0)
-          {
-
-            for (uint8_t y = 0; y < 16; y++)
-            {
-              if ((drum_config[activeSample].midinote == seq.note_data[d][y] && seq.vel[d][y] < 210) ||
-                (drum_config[activeSample].midinote == seq.vel[d][y] && seq.vel[d][y] > 209))
-              {
-                found = true;
-                // #ifdef DEBUG
-                //                 LOG.println(F("found used sample in pattern:"));
-                //                 LOG.println(d);
-                // #endif
-                break;
-              }
-            }
-          }
-        }
-      } while (found == false && activeSample < NUM_DRUMSET_CONFIG - 2);
-    }
-    else
-      selectSample(constrain(activeSample + 1, 0, NUM_DRUMSET_CONFIG - 2));
-  }
-}
-
 FLASHMEM void border0() // main Border  default Colors = GREY2/4
 {
   display.console = true;
@@ -6472,49 +6401,29 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
+    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
     {
-      if (LCDML.BT_checkDown())
-      {
-        if (seq.edit_state == false)
-        {
-          generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 2 + NUM_CUSTOM_MIDI_MAPPINGS);
-          print_mapping_help_text();
-          draw_scrollbar_custom_mappings();
-        }
-        else if (seq.edit_state && generic_temp_select_menu == 0)
-        {
-          smart_filter(1);
-        }
-        else if (seq.edit_state && generic_temp_select_menu == 1)
-        {
-          generic_menu = constrain(generic_menu + 1, 0, MAX_CC_DEST - 1);
-        }
-        else if (seq.edit_state && generic_temp_select_menu == 2)
-        {
-          generic_menu = constrain(generic_menu + 1, 0, 7);
+      const int8_t direction = LCDML.BT_checkDown() ? +1 : -1;
+
+      if (seq.edit_state) {
+        switch (generic_temp_select_menu) {
+        case 0:
+          selectSample(findSmartFilteredSample(activeSample, direction));
+          break;
+
+        case 1:
+          generic_menu = constrain(generic_menu + direction, 0, MAX_CC_DEST - 1);
+          break;
+
+        case 2:
+          generic_menu = constrain(generic_menu + direction, 0, 7);
+          break;
         }
       }
-      else if (LCDML.BT_checkUp())
-      {
-        if (seq.edit_state == false)
-        {
-          generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 0, 2 + NUM_CUSTOM_MIDI_MAPPINGS);
-          print_mapping_help_text();
-          draw_scrollbar_custom_mappings();
-        }
-        else if (seq.edit_state && generic_temp_select_menu == 0)
-        {
-          smart_filter(0);
-        }
-        else if (seq.edit_state && generic_temp_select_menu == 1)
-        {
-          generic_menu = constrain(generic_menu - 1, 0, MAX_CC_DEST - 1);
-        }
-        else if (seq.edit_state && generic_temp_select_menu == 2)
-        {
-          generic_menu = constrain(generic_menu - 1, 0, 7);
-        }
+      else {
+        generic_temp_select_menu = constrain(generic_temp_select_menu + direction, 0, 2 + NUM_CUSTOM_MIDI_MAPPINGS);
+        print_mapping_help_text();
+        draw_scrollbar_custom_mappings();
       }
     }
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonPressed() && generic_temp_select_menu == 1)
@@ -6781,14 +6690,15 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
 
   if(direction != 0) {
     direction = constrain(direction, -1, +1);
-    const uint8_t boundary = (direction > 0) ? NUM_DRUMSET_CONFIG - 2 : 0;
 
     if (seq.smartfilter && direction != 0) {
       bool found = false;
 
-      DBG_LOG(printf("will search from %i in direction %i...\n", sample, direction));
-
-      for(uint8_t note = sample + direction; (found == false) && (note != boundary); note += direction) {
+      for(int16_t note = sample + direction; found == false; note += direction) {
+        const bool outOfBounds = (note < 0) || (note > NUM_DRUMSET_CONFIG - 2);
+        if (outOfBounds) {
+          break;
+        }
         for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++) {
           if (seq.content_type[pattern] == 0) {
             for (uint8_t step = 0; step < 16; step++) {
@@ -6796,15 +6706,18 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
                     || (drum_config[note].midinote == seq.vel[pattern][step] && seq.vel[pattern][step] > 209);
               if (found) {
                 result = note;
-                DBG_LOG(printf("smartly found note %i\n", result));
                 break;
               }
             }
           }
         }
       }
-    } else if (sample != boundary) {
-      result = sample + direction;
+    }
+    else {
+      const uint8_t boundary = (direction > 0) ? NUM_DRUMSET_CONFIG - 2 : 0;
+      if (sample != boundary) {
+        result = sample + direction;
+      }
     }
   }
   return result;
@@ -6817,6 +6730,8 @@ void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     drumScreenActive = true;
+    static bool inhibitRenderer = false;
+    inhibitRenderer = false;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
@@ -6831,11 +6746,15 @@ void UI_func_drums(uint8_t param)
       [](Editor* editor, int16_t value) {
         const int8_t direction = value - activeSample; // +1 = next / -1 = prev
         const uint8_t newValue = findSmartFilteredSample(activeSample, direction);
-        DBG_LOG(printf("%i -> %i\n", activeSample, newValue));
+        inhibitRenderer = (activeSample == newValue);
         activeSample = newValue;
       },
       [](Editor* editor, bool refresh) {
         // render the current selected drum sample slot number and name
+        if(inhibitRenderer) {
+          // encoder value changed but smart filter result did not change -> do not draw same sample again
+          return;
+        }
         DBG_LOG(printf("drawHandler\n"));
         char header[25] = { " " };
         sprintf(header, "%02i: %s", activeSample, basename(drum_config[activeSample].name));
@@ -7197,112 +7116,6 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
   {
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
-  }
-}
-
-void UI_func_drum_pan(uint8_t param)
-{
-  char displayname[8] = { 0, 0, 0, 0, 0, 0, 0 };
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    encoderDir[ENC_R].reset();
-    temp_int = mapfloat(drum_config[activeSample].pan, -1.0, 1.0, -99, 99);
-    setCursor_textGrid(1, 1);
-    display.print(F("DrmSmp. Panorama"));
-    setCursor_textGrid(2, 2);
-    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), activeSample);
-    display.print(displayname);
-    show(2, 5, 6, basename(drum_config[activeSample].name));
-  }
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    if (menu_select_toggle == false)
-    {
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-      {
-        if (LCDML.BT_checkDown())
-        {
-          smart_filter(1);
-        }
-        else if (LCDML.BT_checkUp())
-        {
-          smart_filter(0);
-        }
-      }
-    }
-    else
-    {
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-      {
-        if (LCDML.BT_checkDown())
-        {
-          temp_int = constrain(temp_int + ENCODER[ENC_R].speed(), -99, 99);
-        }
-        else if (LCDML.BT_checkUp())
-        {
-          temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), -99, 99);
-        }
-      }
-    }
-    if (LCDML.BT_checkEnter())
-    {
-      if (menu_select_toggle)
-      {
-        menu_select_toggle = false;
-      }
-      else
-      {
-        menu_select_toggle = true;
-      }
-    }
-    if (menu_select_toggle == false)
-    {
-      setCursor_textGrid(12, 2);
-      display.print(" ");
-      setCursor_textGrid(16, 2);
-      display.print(" ");
-      setCursor_textGrid(1, 2);
-      display.print("[");
-      setCursor_textGrid(4, 2);
-      display.print("]");
-      setCursor_textGrid(2, 2);
-      snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), activeSample);
-      display.print(displayname);
-      show(2, 5, 6, basename(drum_config[activeSample].name));
-    }
-    else
-    {
-      setCursor_textGrid(1, 2);
-      display.print(" ");
-      setCursor_textGrid(4, 2);
-      display.print(" ");
-      setCursor_textGrid(12, 2);
-      display.print("[");
-      setCursor_textGrid(16, 2);
-      display.print("]");
-      drum_config[activeSample].pan = mapfloat(temp_int, -99, 99, -1.0, 1.0);
-    }
-    temp_int = mapfloat(drum_config[activeSample].pan, -1.0, 1.0, -99, 99);
-    setCursor_textGrid(13, 2);
-    if (temp_int > 1)
-    {
-      display.print("R");
-    }
-    else if (temp_int < 0)
-    {
-      display.print("L");
-    }
-    else
-    {
-      display.print("C");
-    }
-    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), abs(temp_int));
-    setCursor_textGrid(14, 2);
-    display.print(displayname);
-  }
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    encoderDir[ENC_R].reset();
   }
 }
 
