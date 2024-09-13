@@ -6670,6 +6670,18 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   }
 }
 
+void drawDrumsSampleWave() {
+#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+  DBG_LOG(printf("draw sample wave()\n"));
+
+  static constexpr uint16_t plotX = 182;
+  static constexpr uint16_t plotY = 35;
+  static constexpr uint16_t plotW = 130;
+  static constexpr uint16_t plotH = 100;
+  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels);
+#endif
+}
+
 bool drumScreenActive = false;
 void selectSample(uint8_t sample) {
   const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
@@ -6678,6 +6690,7 @@ void selectSample(uint8_t sample) {
 
     if (drumScreenActive) {
       ui.draw_editors(true);  // force redraw all parameters as sample changed
+      drawDrumsSampleWave();
     }
   }
 }
@@ -6724,15 +6737,16 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
 // The drum UI needs to be redrawn if activesample changes.
 void UI_func_drums(uint8_t param)
 {
+  static uint8_t newSample = activeSample;
+
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     drumScreenActive = true;
-    static bool inhibitRenderer = false;
-    inhibitRenderer = false;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
     ui.setCursor(1, 1);
+    drawDrumsSampleWave();
 
     // the drum sample slot selector.
     // changes activesample and redraws all other editors as they depend on.
@@ -6741,18 +6755,10 @@ void UI_func_drums(uint8_t param)
         return activeSample;
       },
       [](Editor* editor, int16_t value) {
-        const int8_t direction = value - activeSample; // +1 = next / -1 = prev
-        const uint8_t newValue = findSmartFilteredSample(activeSample, direction);
-        inhibitRenderer = (activeSample == newValue);
-        activeSample = newValue;
+        newSample = findSmartFilteredSample(activeSample, (value - activeSample));
       },
-      [](Editor* editor, bool refresh) {
+      [](Editor* editor, bool refresh) { // TODO: still called twice on editor change
         // render the current selected drum sample slot number and name
-        if(inhibitRenderer) {
-          // encoder value changed but smart filter result did not change -> do not draw same sample again
-          return;
-        }
-        DBG_LOG(printf("drawHandler\n"));
         char header[25] = { " " };
         sprintf(header, "%02i: %s", activeSample, basename(drum_config[activeSample].name));
 
@@ -6769,23 +6775,8 @@ void UI_func_drums(uint8_t param)
           setCursor_textGrid_small(20, 11);
           show(1, 23, 6, "STEREO");
         }
-
-#if defined(COMPILE_FOR_FLASH)
-        if (seq.running == false) {
-          // this makes MDT crash often (press two keys fast one after another)
-          // draw_waveform_overview_in_drums_page_step1(activesample);
-        }
-#endif
-
-#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
-        static constexpr uint16_t plotX = 182;
-        static constexpr uint16_t plotY = 35;
-        static constexpr uint16_t plotW = 130;
-        static constexpr uint16_t plotH = 100;
-        printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels);
-#endif
       });
-
+      
     ui.setCursor(2, 4);
     // the parameter editors depend on activesample. We define them by sample index 0,
     // but they will act on current slot activesample later.
@@ -6828,6 +6819,10 @@ void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
+
+    if(newSample != activeSample) {
+      selectSample(newSample);
+    }
 
     const bool editingFilter = (generic_temp_select_menu == 8);// adapt if layout changed
     if (editingFilter) {
