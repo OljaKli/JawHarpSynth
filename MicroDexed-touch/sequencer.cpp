@@ -35,7 +35,7 @@ extern bool remote_active;
 
 extern config_t configuration;
 extern uint8_t drum_midi_channel;
-extern uint8_t activesample;
+extern uint8_t activeSample;
 extern uint8_t get_sample_note(uint8_t sample);
 extern void handleNoteOn(byte, byte, byte, byte);
 extern void handleNoteOff(byte, byte, byte, byte);
@@ -78,9 +78,9 @@ void seq_live_recording(void)
   if (seq.note_in > 0 && seq.recording == true && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
   {
     seq.note_data[seq.active_pattern][seq.step] = seq.note_in;
-    if (seq.content_type[seq.active_pattern] == 0 && get_sample_note(activesample) > 209) // pitched sample
+    if (seq.content_type[seq.active_pattern] == 0 && get_sample_note(activeSample) > 209) // pitched sample
     {
-      seq.vel[seq.active_pattern][seq.step] = get_sample_note(activesample);
+      seq.vel[seq.active_pattern][seq.step] = get_sample_note(activeSample);
     }
     else
       seq.vel[seq.active_pattern][seq.step] = seq.note_in_velocity;

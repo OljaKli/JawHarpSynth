@@ -56,7 +56,7 @@ extern bool legacy_touch_button_back_page();
 extern bool touch_button_back_page();
 extern void liveseq_listeditor_delete_element();
 
-extern uint8_t activesample;
+extern uint8_t activeSample;
 extern microsynth_t microsynth[NUM_MICROSYNTH];
 
 extern braids_t braids_osc;
@@ -1094,7 +1094,7 @@ FLASHMEM void handle_touchscreen_pattern_editor()
           if (seq.content_type[seq.active_pattern] == 0)
           {
             draw_button_on_grid(45, 16, "JUMP", "TOOLS", 2);
-            activesample = NUM_DRUMSET_CONFIG;
+            activeSample = NUM_DRUMSET_CONFIG;
             seq.menu = 0;
             seq.active_function = 0;
             pattern_editor_menu_0();
