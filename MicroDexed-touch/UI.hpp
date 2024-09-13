@@ -6433,13 +6433,9 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
     }
     else if (LCDML.BT_checkEnter())
     {
-
       if (generic_temp_select_menu < 3)
       {
-        if (seq.edit_state == false)
-          seq.edit_state = true;
-        else
-          seq.edit_state = false;
+        seq.edit_state = !seq.edit_state;
 
         if (seq.edit_state == false)
           helptext_r("SELECT MAPPING TYPE");
@@ -6676,10 +6672,11 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
 bool drumScreenActive = false;
 void selectSample(uint8_t sample) {
-  if (drumScreenActive) {
-    const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
-    if(newSample != activeSample) {
-      activeSample = newSample;
+  const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
+  if(newSample != activeSample) {
+    activeSample = newSample;
+
+    if (drumScreenActive) {
       ui.draw_editors(true);  // force redraw all parameters as sample changed
     }
   }
