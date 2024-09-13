@@ -1639,9 +1639,9 @@ FLASHMEM void sub_step_recording(bool touchinput, uint8_t touchparam)
 
         if (touchparam == 0)
         {
-          if (seq.content_type[seq.active_pattern] == 0 && get_sample_note(activesample) > 209 && ts.virtual_keyboard_instrument != 6) // pitched sample
+          if (seq.content_type[seq.active_pattern] == 0 && get_sample_note(activeSample) > 209 && ts.virtual_keyboard_instrument != 6) // pitched sample
           {
-            seq.vel[seq.active_pattern][cur_step] = get_sample_note(activesample);
+            seq.vel[seq.active_pattern][cur_step] = get_sample_note(activeSample);
           }
           else
             seq.vel[seq.active_pattern][cur_step] = seq.note_in_velocity;
@@ -2583,7 +2583,7 @@ FLASHMEM void learn_key(byte inChannel, byte inNumber)
       if (found != 199) // remap to new destination if it was already mapped before
       {
         custom_midi_map[found].in = inNumber;
-        custom_midi_map[found].out = drum_config[activesample].midinote;
+        custom_midi_map[found].out = drum_config[activeSample].midinote;
         custom_midi_map[found].type = 1;
         custom_midi_map[found].channel = drum_midi_channel;
       }
@@ -2601,7 +2601,7 @@ FLASHMEM void learn_key(byte inChannel, byte inNumber)
         if (found != 199) // else map to next empty slot if it was not mapped before
         {
           custom_midi_map[found].in = inNumber;
-          custom_midi_map[found].out = drum_config[activesample].midinote;
+          custom_midi_map[found].out = drum_config[activeSample].midinote;
           custom_midi_map[found].type = 1;
           custom_midi_map[found].channel = drum_midi_channel;
         }
@@ -2701,7 +2701,7 @@ FLASHMEM void learn_cc(byte inChannel, byte inNumber)
   print_custom_mappings();
 }
 
-uint8_t midiNoteToDrumNote(uint8_t note) {
+uint8_t midiNoteToSampleNote(uint8_t note) {
   // TODO: eliminate magic numbers
   const uint8_t offset = (note > 209) ? 210 : 18;
   return note - offset;
@@ -2710,8 +2710,8 @@ uint8_t midiNoteToDrumNote(uint8_t note) {
 void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device) {
   //drum played from input selects current drum note if drum screen open
   if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI) {
-    const uint8_t drumNote = midiNoteToDrumNote(inNumber);
-    drumChanged(drumNote);
+    const uint8_t sampleNote = midiNoteToSampleNote(inNumber);
+    selectSample(sampleNote);
   }
   // play note
   handleNoteOn(inChannel, inNumber, inVelocity, device);
@@ -2950,7 +2950,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           }
         }
 
-        const uint8_t d = midiNoteToDrumNote(inNumber);
+        const uint8_t d = midiNoteToSampleNote(inNumber);
 
 #ifdef COMPILE_FOR_FLASH
         char temp_name[26];
