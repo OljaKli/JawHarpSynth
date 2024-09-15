@@ -7642,70 +7642,62 @@ void clear_slices()
   }
 }
 
-FLASHMEM void print_slices()
+FLASHMEM void fill_slices()
 {
   if (num_slices != 0)
   {
-
-    selected_slice_sample = temp_int;
-
-    clear_slices();
-    if (num_slices == 0)
-      display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 150, 37, COLOR_BACKGROUND);
-    else
-    {
-      char tmp[10];
-      for (uint8_t y = 0; y < num_slices; y++)
-      {
-        slice_start[y] = (drum_config[temp_int].len / num_slices) * y;
-        slice_end[y] = (drum_config[temp_int].len / num_slices) * (y + 1);
-      }
-      for (uint8_t y = 0; y < 4; y++)
-      {
-
-        int slice_col;
-        if (y % 2 == 0)
-          slice_col = ColorHSV(y * 22, 180, 254);
-        else
-          slice_col = ColorHSV(y * 22, 250, 180);
-
-        setCursor_textGrid_small(26, y + 3);
-        display.setTextColor(GREY1, COLOR_BACKGROUND);
-        display.print("SLICE");
-        setCursor_textGrid_small(32, y + 3);
-        display.setTextColor(slice_col, COLOR_BACKGROUND);
-        snprintf_P(tmp, sizeof(tmp), PSTR("%02d"), y + 1);
-        display.print(tmp);
-
-        setCursor_textGrid_small(35, y + 3);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[y]);
-        display.print(tmp);
-
-        setCursor_textGrid_small(42, y + 3);
-        display.setTextColor(GREY1, COLOR_BACKGROUND);
-        display.print("-");
-
-        setCursor_textGrid_small(44, y + 3);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y]);
-        display.print(tmp);
-      }
-    }
-  }
-}
-
-FLASHMEM void print_updated_slices()
-{
-  if (num_slices != 0)
-  {
-    clear_slices();
-    char tmp[10];
     for (uint8_t y = 0; y < num_slices; y++)
     {
       slice_start[y] = (drum_config[temp_int].len / num_slices) * y;
       slice_end[y] = (drum_config[temp_int].len / num_slices) * (y + 1);
     }
+  }
+}
+FLASHMEM void print_slices_text()
+{
+  if (num_slices != 0)
+  {
+    selected_slice_sample = temp_int;
+    char tmp[10];
+
+    for (uint8_t y = 0; y < 4; y++)
+    {
+      int slice_col;
+      if (y % 2 == 0)
+        slice_col = ColorHSV(y * 22, 180, 254);
+      else
+        slice_col = ColorHSV(y * 22, 250, 180);
+      setCursor_textGrid_small(26, y + 3);
+      display.setTextColor(GREY1, COLOR_BACKGROUND);
+      display.print("SLICE");
+      setCursor_textGrid_small(32, y + 3);
+      display.setTextColor(slice_col, COLOR_BACKGROUND);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%02d"), y + 1);
+      display.print(tmp);
+
+      setCursor_textGrid_small(35, y + 3);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[y]);
+      display.print(tmp);
+
+      setCursor_textGrid_small(42, y + 3);
+      display.setTextColor(GREY1, COLOR_BACKGROUND);
+      display.print("-");
+
+      setCursor_textGrid_small(44, y + 3);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y]);
+      display.print(tmp);
+    }
+  }
+}
+
+FLASHMEM void print_updated_slices_text()
+{
+  if (num_slices != 0)
+  {
+    char tmp[10];
+
     uint8_t i = 0;
     uint8_t field_offset = 0;
 
@@ -7761,7 +7753,7 @@ FLASHMEM void print_updated_slices()
   }
 }
 
-FLASHMEM void draw_waveform_sample_editor()
+FLASHMEM void draw_header_sample_editor()
 {
   show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, drum_config[temp_int].name);
 
@@ -7770,14 +7762,40 @@ FLASHMEM void draw_waveform_sample_editor()
   display.print(drum_config[temp_int].len / 1024);
   display.setTextColor(GREY1, COLOR_BACKGROUND);
   display.print(" KB  ");
-  print_slices();
+}
 
+FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
+{
+
+  uint8_t from = 0;
+  uint8_t to = 0;
+
+  if (slice == 99) //all
+  {
+    from = 0;
+    to = num_slices;
+  }
+  else
+  {
+    if (slice == 0)
+      from = 0;
+    else
+      from = slice - 1;
+
+    if (slice == num_slices)
+      to = num_slices;
+    else
+      to = slice + 2;
+  }
+
+  print_slices_text();
   if (num_slices == 0)
     printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
       0, 1, COLOR_SYSTEXT, GREY4);
   else
   {
-    for (uint8_t y = 0; y < num_slices; y++)
+    // for (uint8_t y = 0; y < num_slices; y++)
+    for (uint8_t y = from; y < to; y++)
     {
       int slice_col;
       if (y % 2 == 0)
@@ -7785,11 +7803,20 @@ FLASHMEM void draw_waveform_sample_editor()
       else
         slice_col = ColorHSV(y * 22, 250, 180);
 
-      printSampleWaveform((DISPLAY_WIDTH / num_slices) * y, 72, DISPLAY_WIDTH / num_slices, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-        (float(1.0 / num_slices) * y), float(1.0 / num_slices) * (y + 1), slice_col, GREY3);
+      //    printSampleWaveform((DISPLAY_WIDTH / num_slices) * y, 72, DISPLAY_WIDTH / num_slices, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
+      //      (float(1.0 / num_slices) * y), float(1.0 / num_slices) * (y + 1), slice_col, GREY3);  // AUTO/All equal slices
 
-      display.setCursor((DISPLAY_WIDTH / num_slices) * y, 164);
-      display.setTextColor(slice_col, COLOR_BACKGROUND);
+      printSampleWaveform(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y]),
+        72, uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (slice_end[y] - slice_start[y]))+1, 100,
+        (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
+        ((float)1.00 / (float)drum_config[temp_int].len) * (float)slice_start[y], ((float)1.00 / (float)drum_config[temp_int].len) * (float)slice_end[y],
+        slice_col, GREY3);
+
+       display.console = true;
+       display.fillRect(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y]) - 2, 164, 2, 7, GREY3);
+       display.console = false;
+      display.setCursor(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y])+1, 164);
+      display.setTextColor(slice_col, GREY3);
       display.print(noteNames[(48 + y) % 12][0]);
       if (noteNames[(48 + y) % 12][1] != '\0')
       {
@@ -7830,7 +7857,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #endif
 
     menuhelper_redraw = true;
-    temp_int = 0;
+    //temp_int = 0;
     fm.flash_or_psram_sum_files = 0;
     fm.sd_sum_files = 0;
     seq.edit_state = 0;
@@ -7867,6 +7894,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     sample_editor_update_file_counts();
     print_available_loop_options();
+    draw_header_sample_editor();
   }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -7896,6 +7924,12 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           temp_int = calc_val[state_dir](temp_int, 1, 0, 7);
         else if (fm.sample_source == 4)
           temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG - 2);
+        draw_header_sample_editor();
+        if (num_slices != 0)
+        {
+          clear_slices();
+          fill_slices();
+        }
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 1)
       {
@@ -7950,9 +7984,42 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         stop_all_drum_slots();
         msz[fm.sample_source - 2][temp_int].loop_type = calc_val[state_dir](msz[fm.sample_source - 2][temp_int].loop_type, 1, 0, 2);
       }
+      else if (seq.edit_state == 1 && generic_temp_select_menu > 5)
+      {
+        if ((generic_temp_select_menu - 6) % 2 == 0)
+        {
+          if (LCDML.BT_checkDown())
+          {
+            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] + ENCODER[ENC_R].speed() * 10;
+            //
+            slice_end[(generic_temp_select_menu - 7) / 2] = slice_end[(generic_temp_select_menu - 7) / 2] + ENCODER[ENC_R].speed() * 10;
+          }
+          else if (LCDML.BT_checkUp())
+          {
+            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] - ENCODER[ENC_R].speed() * 10;
+            //
+             slice_end[(generic_temp_select_menu - 7) / 2] = slice_end[(generic_temp_select_menu - 7) / 2] - ENCODER[ENC_R].speed() * 10;
+          }
 
+        }
+        else
+        {
+          if (LCDML.BT_checkDown())
+          {
+            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] + ENCODER[ENC_R].speed() * 10;
+//
+ slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] + ENCODER[ENC_R].speed() * 10;
+          }
+          else if (LCDML.BT_checkUp())
+          {
+            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] - ENCODER[ENC_R].speed() * 10;
+//
+slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] - ENCODER[ENC_R].speed() * 10;
+          }
+        }
+        draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);  
+      }
     }
-
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())// handle button presses during menu >>>>>>>>>>>>>>>>
     {
       stop_all_drum_slots();
@@ -8009,7 +8076,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       else
         if (fm.sample_source == 4) // PSRAM
         {
-          draw_waveform_sample_editor();
+          draw_waveform_sample_editor(99);
         }
         else
         {
@@ -8020,7 +8087,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     if (fm.sample_source == 4)
     {
       draw_scrollbar_sample_editor();
-      print_updated_slices();
+      print_updated_slices_text();
     }
 #endif
   }

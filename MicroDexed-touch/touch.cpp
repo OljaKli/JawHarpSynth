@@ -1635,7 +1635,9 @@ FLASHMEM void handle_touchscreen_multiband()
 
 extern int temp_int;
 extern uint8_t num_slices;
-extern void draw_waveform_sample_editor();
+extern void draw_waveform_sample_editor(uint8_t sliceno);
+extern void fill_slices();
+extern void clear_slices();
 
 FLASHMEM void handle_touchscreen_sample_editor()
 {
@@ -1658,9 +1660,14 @@ FLASHMEM void handle_touchscreen_sample_editor()
         num_slices = num_slices * 2;
 
         if (num_slices > 16)
+        {
           num_slices = 0;
+           display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+          clear_slices();
+        }  
       }
-      draw_waveform_sample_editor();
+      fill_slices();  //will be skipped if slices = 0
+      draw_waveform_sample_editor(99);
       draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
     }
   }
