@@ -3090,7 +3090,6 @@ const uint8_t d = inNumber;
 
         if (slot != 99)
         {
-
           // if (drum_config[d].filter_mode == 0)
           //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
           // else if (drum_config[d].filter_mode == 1)
