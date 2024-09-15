@@ -6733,12 +6733,37 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
   return result;
 }
 
+FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
+  const bool isFilterSelected = (generic_temp_select_menu == 8); // adapt number when drums page layout changes
+  if(forceDraw || isFilterSelected) {
+    display.setTextSize(1);
+    setCursor_textGrid_small(20, 11);
+    const bool isEditingFilter = (seq.edit_state) && isFilterSelected;
+    const uint16_t color = isEditingFilter ? RED : COLOR_BACKGROUND;
+    display.setTextColor(COLOR_SYSTEXT, color);
+
+    switch (drum_config[activeSample].filter_mode) {
+    case 0:
+      display.print("OFF     ");
+      break;
+    case 1:
+      display.print("LOWPASS ");
+      break;
+    case 2:
+      display.print("BANDPASS");
+      break;
+    case 3:
+      display.print("HIGHPASS");
+      break;
+    }
+  }
+}
+
+
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
 void UI_func_drums(uint8_t param)
 {
-  static uint8_t newSample = activeSample;
-
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     drumScreenActive = true;
@@ -6755,7 +6780,7 @@ void UI_func_drums(uint8_t param)
         return activeSample;
       },
       [](Editor* editor, int16_t value) {
-        newSample = findSmartFilteredSample(activeSample, (value - activeSample));
+        selectSample(findSmartFilteredSample(activeSample, (value - activeSample)));
       },
       [](Editor* editor, bool refresh) { // TODO: still called twice on editor change
         // render the current selected drum sample slot number and name
@@ -6775,6 +6800,7 @@ void UI_func_drums(uint8_t param)
           setCursor_textGrid_small(20, 11);
           show(1, 23, 6, "STEREO");
         }
+        checkDrawFilterText(true); // force redraw filter text on active sample change
       });
       
     ui.setCursor(2, 4);
@@ -6819,34 +6845,7 @@ void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
-
-    if(newSample != activeSample) {
-      selectSample(newSample);
-    }
-
-    const bool editingFilter = (generic_temp_select_menu == 8);// adapt if layout changed
-    if (editingFilter) {
-      display.setTextSize(1);
-      setCursor_textGrid_small(20, 11);
-      if (seq.edit_state == 0) {
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      }
-
-      switch (drum_config[activeSample].filter_mode) {
-      case 0:
-        display.print("OFF     ");
-        break;
-      case 1:
-        display.print("LOWPASS ");
-        break;
-      case 2:
-        display.print("BANDPASS");
-        break;
-      case 3:
-        display.print("HIGHPASS");
-        break;
-      }
-    }
+    checkDrawFilterText();
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
