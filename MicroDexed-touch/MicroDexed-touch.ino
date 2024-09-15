@@ -3071,6 +3071,119 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         }
       }
 
+ //
+ // Sliced Samples - currently in testing, MIDI DRUM CHANNEL +1 
+ //
+
+#ifdef COMPILE_FOR_PSRAM
+
+      if (inChannel == drum_midi_channel+1 )
+      {
+        if (drum_counter >= NUM_DRUMS)
+          drum_counter = 0;
+
+      //  const uint8_t d = midiNoteToSampleNote(inNumber);
+
+const uint8_t d = inNumber;
+
+        uint8_t slot = drum_get_slot(drum_config[d].drum_class);
+
+        if (slot != 99)
+        {
+
+          // if (drum_config[d].filter_mode == 0)
+          //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+          // else if (drum_config[d].filter_mode == 1)
+          //   Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 1000, 0.5);
+          // else if (drum_config[d].filter_mode == 2)
+          //   Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 1000, 0.5);
+          // else if (drum_config[d].filter_mode == 3)
+          //   Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 1000, 0.5);
+
+          //global_delay_in_mixer[0]->gain(slot + 8, drum_config[d].delay1 / 5);
+          //global_delay_in_mixer[1]->gain(slot + 8, drum_config[d].delay2 / 5);
+
+          global_delay_in_mixer[0]->gain(slot + 8, 0);
+          global_delay_in_mixer[1]->gain(slot + 8, 0);
+
+
+          //float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
+          // if (drum_config[d].numChannels == 1) //mono
+          // {
+          //   drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          //   drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          // }
+          // else //stereo
+          // {
+          //   drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          //   drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
+          // }
+
+           if (drum_config[d].numChannels == 1) //mono
+          {
+            drum_mixer_r.gain(slot, 0.8);
+            drum_mixer_l.gain(slot, 0.8);
+          }
+          else //stereo
+          {
+            drum_mixer_r.gain(slot, 0.8);
+            drum_mixer_l.gain(slot, 0.8);
+          }
+
+
+          //drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
+          //drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
+
+          drum_reverb_send_mixer_r.gain(slot, 0);
+          drum_reverb_send_mixer_l.gain(slot,0);
+
+
+          // if (sidechain_a_active && d == sidechain_a_sample_number)
+          //   sidechain_trigger_a = true;
+          // if (sidechain_b_active && d == sidechain_b_sample_number)
+          //   sidechain_trigger_b = true;
+
+          if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
+            (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 210 && d < 216))
+          {
+
+
+            // if (drum_config[d].pitch != 0.0)
+            // {
+            //   Drum[slot]->enableInterpolation(true);
+            //   Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+            // }
+            // Drum[slot]->setLoopType(loop_type::looptype_none);
+
+            // test with envelopes for samples
+            //sample_envelope[slot]->noteOn();
+
+            // if (sidechain_a_active && d == sidechain_a_sample_number)
+            //   sidechain_trigger_a = true;
+            // if (sidechain_b_active && d == sidechain_b_sample_number)
+            //   sidechain_trigger_b = true;
+
+
+            //Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+
+            if (d-48 >=0 &&d-48<num_slices)
+            Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data+slice_start[d-48],
+            slice_end[d-48], drum_config[selected_slice_sample].numChannels);
+
+            // #ifdef DEBUG
+            //         char note_name[4];
+            //         getNoteName(note_name, inNumber);
+            //         LOG.print(F("=> Drum["));
+            //         LOG.print(slot, DEC);
+            //         LOG.print(F("]: "));
+            //         LOG.println(note_name);
+            // #endif
+
+          }    
+        }
+      }
+#endif
+
       //
       // E-Piano
       //
