@@ -903,7 +903,7 @@ extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 uint8_t drum_counter;
 uint8_t drum_type[NUM_DRUMS];
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
-
+uint8_t slices_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL+1;
 extern sequencer_t seq;
 extern void sequencer(void);
 extern uint8_t seq_prev_note[NUM_SEQ_TRACKS];
@@ -1567,7 +1567,7 @@ FLASHMEM void print_midi_channel_activity(uint8_t x, uint8_t y, float audio_vol)
   else
     display_val = uint8_t(audio_vol * 1024);
 
-  setCursor_textGrid(x, y);
+  setCursor_textGrid_small(x, y);
   display.setTextColor(ColorHSV(100, 250, display_val));
   display.print(">");
 }
@@ -1576,33 +1576,35 @@ FLASHMEM void handle_touchscreen_midi_channel_page()
 {
   if (seq.running)
   {
-    display.setTextSize(2);
-    print_midi_channel_activity(19, 3, microdexed_peak_0.read());
-    print_midi_channel_activity(19, 4, microdexed_peak_1.read());
-    print_midi_channel_activity(19, 5, (ep_peak_l.read() + ep_peak_r.read()) / 2);
+    display.setTextSize(1);
+    print_midi_channel_activity(39, 6, microdexed_peak_0.read());
+    print_midi_channel_activity(39, 7, microdexed_peak_1.read());
+    print_midi_channel_activity(39, 9, (ep_peak_l.read() + ep_peak_r.read()) / 2);
     if (microsynth_peak_osc_0.available())
-      print_midi_channel_activity(19, 6, microsynth_peak_osc_0.read());
+      print_midi_channel_activity(39, 11, microsynth_peak_osc_0.read());
     else
-      print_midi_channel_activity(19, 6, 0);
+      print_midi_channel_activity(39, 11, 0);
     if (microsynth_peak_osc_1.available())
-      print_midi_channel_activity(19, 7, microsynth_peak_osc_1.read());
+      print_midi_channel_activity(39, 12, microsynth_peak_osc_1.read());
     else
-      print_midi_channel_activity(19, 7, 0);
+      print_midi_channel_activity(39, 12, 0);
 
     if (braids_peak_l.available() && braids_peak_r.available())
-      print_midi_channel_activity(19, 8, (braids_peak_l.read() + braids_peak_r.read()) / 2);
+      print_midi_channel_activity(39, 14, (braids_peak_l.read() + braids_peak_r.read()) / 2);
     else
-      print_midi_channel_activity(19, 8, 0);
+      print_midi_channel_activity(39, 14, 0);
 
-    print_midi_channel_activity(19, 9, ts.msp_peak[0]);
-    print_midi_channel_activity(19, 10, ts.msp_peak[1]);
+    print_midi_channel_activity(39, 16, ts.msp_peak[0]);
+    print_midi_channel_activity(39, 17, ts.msp_peak[1]);
     ts.msp_peak[0] = ts.msp_peak[0] / 1.05;
     ts.msp_peak[1] = ts.msp_peak[1] / 1.05;
 
     if (drum_mixer_peak_r.available() && drum_mixer_peak_l.available())
-      print_midi_channel_activity(19, 11, (drum_mixer_peak_l.read() + drum_mixer_peak_r.read()) / 2);
+      print_midi_channel_activity(39, 18, (drum_mixer_peak_l.read() + drum_mixer_peak_r.read()) / 2);
     else
-      print_midi_channel_activity(19, 11, 0);
+      print_midi_channel_activity(39, 18, 0);
+
+//// sample slices activity is missing here phtodo
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
@@ -3070,24 +3072,24 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         }
       }
 
- //
- // Sliced Samples - currently in testing, MIDI DRUM CHANNEL +1 
- //
+      //
+      // Sliced Samples
+      //
 
 #ifdef COMPILE_FOR_PSRAM
 
-      if (inChannel == drum_midi_channel+1 )
+     // if (inChannel == slices_midi_channel || slices_midi_channel == MIDI_CHANNEL_OMNI)
+       if (inChannel == slices_midi_channel)
       {
         if (drum_counter >= NUM_DRUMS)
           drum_counter = 0;
 
-      //  const uint8_t d = midiNoteToSampleNote(inNumber);
-
-const uint8_t d = inNumber;
+       const uint8_t d = midiNoteToSampleNote(inNumber);
+        // const uint8_t d = selected_slice_sample;
 
         uint8_t slot = drum_get_slot(drum_config[d].drum_class);
 
-        if (slot != 99)
+        if (slot != 99 && num_slices !=0)
         {
           // if (drum_config[d].filter_mode == 0)
           //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
@@ -3098,53 +3100,32 @@ const uint8_t d = inNumber;
           // else if (drum_config[d].filter_mode == 3)
           //   Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 1000, 0.5);
 
-          //global_delay_in_mixer[0]->gain(slot + 8, drum_config[d].delay1 / 5);
-          //global_delay_in_mixer[1]->gain(slot + 8, drum_config[d].delay2 / 5);
+          global_delay_in_mixer[0]->gain(slot + 8, drum_config[selected_slice_sample].delay1 / 5);
+          global_delay_in_mixer[1]->gain(slot + 8, drum_config[selected_slice_sample].delay2 / 5);
 
-          global_delay_in_mixer[0]->gain(slot + 8, 0);
-          global_delay_in_mixer[1]->gain(slot + 8, 0);
-
-
-          //float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
-          // if (drum_config[d].numChannels == 1) //mono
-          // {
-          //   drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
-          //   drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
-          // }
-          // else //stereo
-          // {
-          //   drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
-          //   drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[d].vol_min, drum_config[d].vol_max)));
-          // }
-
-           if (drum_config[d].numChannels == 1) //mono
+          float pan = mapfloat(drum_config[selected_slice_sample].pan, -1.0, 1.0, 0.0, 1.0);
+          if (drum_config[d].numChannels == 1) //mono
           {
-            drum_mixer_r.gain(slot, 0.8);
-            drum_mixer_l.gain(slot, 0.8);
+            drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[selected_slice_sample].vol_min, drum_config[selected_slice_sample].vol_max)));
+            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[selected_slice_sample].vol_min, drum_config[selected_slice_sample].vol_max)));
           }
           else //stereo
           {
-            drum_mixer_r.gain(slot, 0.8);
-            drum_mixer_l.gain(slot, 0.8);
+            drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[selected_slice_sample].vol_min, drum_config[selected_slice_sample].vol_max)));
+            drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[selected_slice_sample].vol_min, drum_config[selected_slice_sample].vol_max)));
           }
 
-
-          //drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
-          //drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
-
-          drum_reverb_send_mixer_r.gain(slot, 0);
-          drum_reverb_send_mixer_l.gain(slot,0);
-
+          drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[selected_slice_sample].reverb_send));
+          drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[selected_slice_sample].reverb_send));
 
           // if (sidechain_a_active && d == sidechain_a_sample_number)
           //   sidechain_trigger_a = true;
           // if (sidechain_b_active && d == sidechain_b_sample_number)
           //   sidechain_trigger_b = true;
 
-          if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
-            (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 210 && d < 216))
+          if ((drum_config[selected_slice_sample].drum_data != NULL && drum_config[selected_slice_sample].len > 0 && 
+          drum_config[selected_slice_sample].len < 10000000 && selected_slice_sample >= 0 && selected_slice_sample < NUM_DRUMSET_CONFIG - 1))
           {
-
 
             // if (drum_config[d].pitch != 0.0)
             // {
@@ -3161,23 +3142,9 @@ const uint8_t d = inNumber;
             // if (sidechain_b_active && d == sidechain_b_sample_number)
             //   sidechain_trigger_b = true;
 
-
-            //Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-
-            if (d-48 >=0 &&d-48<num_slices)
-            Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data+slice_start[d-48],
-            slice_end[d-48], drum_config[selected_slice_sample].numChannels);
-
-            // #ifdef DEBUG
-            //         char note_name[4];
-            //         getNoteName(note_name, inNumber);
-            //         LOG.print(F("=> Drum["));
-            //         LOG.print(slot, DEC);
-            //         LOG.print(F("]: "));
-            //         LOG.println(note_name);
-            // #endif
-
-          }    
+              Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data + slice_start[d-30],
+                slice_end[d-30]-slice_start[d-30], drum_config[selected_slice_sample].numChannels);
+          }
         }
       }
 #endif

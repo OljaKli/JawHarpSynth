@@ -117,6 +117,7 @@ extern bool mb_solo_upper_mid;
 extern bool mb_solo_high;
 extern uint8_t mb_global_ratio;
 extern uint8_t drum_midi_channel;
+extern uint8_t slices_midi_channel;
 
 extern float midi_volume_transform(uint8_t midi_amp);
 extern void set_sample_pitch(uint8_t sample, float playbackspeed);
@@ -3114,6 +3115,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
         data_json["vel_variation"][pat] = seq.pat_vel_variation[pat];
       }
       data_json["drum_midi_channel"] = drum_midi_channel;
+      data_json["slices_midi_channel"] = slices_midi_channel;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -3480,6 +3482,8 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         seq.euclidean_offset = data_json["euclidean_offset"];
         if (data_json["drum_midi_channel"] > 0) //do not set to onmi when it was never saved before. Better to use the default channel in this case.
           drum_midi_channel = data_json["drum_midi_channel"];
+        if (data_json["slices_midi_channel"] > 0) //same as above
+          slices_midi_channel = data_json["slices_midi_channel"];
         AudioNoInterrupts();
         for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
         {
