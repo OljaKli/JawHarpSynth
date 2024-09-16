@@ -524,6 +524,7 @@ enum
 
 void selectSample(uint8_t sample);
 uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction);
+void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 
 void lcdml_menu_display(void);
 void lcdml_menu_clear(void);
@@ -6670,7 +6671,6 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   }
 }
 
-
 void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   DBG_LOG(printf("draw sample wave()\n"));
@@ -6679,7 +6679,7 @@ void drawDrumsSampleWave() {
   static constexpr uint16_t plotY = 35;
   static constexpr uint16_t plotW = 130;
   static constexpr uint16_t plotH = 100;
-  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels, 0, 1, COLOR_PITCHSMP, GREY3);
+  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels);
 #endif
 }
 
@@ -6734,12 +6734,37 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
   return result;
 }
 
+FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
+  const bool isFilterSelected = (generic_temp_select_menu == 8); // adapt number when drums page layout changes
+  if(forceDraw || isFilterSelected) {
+    display.setTextSize(1);
+    setCursor_textGrid_small(20, 11);
+    const bool isEditingFilter = (seq.edit_state) && isFilterSelected;
+    const uint16_t color = isEditingFilter ? RED : COLOR_BACKGROUND;
+    display.setTextColor(COLOR_SYSTEXT, color);
+
+    switch (drum_config[activeSample].filter_mode) {
+    case 0:
+      display.print("OFF     ");
+      break;
+    case 1:
+      display.print("LOWPASS ");
+      break;
+    case 2:
+      display.print("BANDPASS");
+      break;
+    case 3:
+      display.print("HIGHPASS");
+      break;
+    }
+  }
+}
+
+
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
 void UI_func_drums(uint8_t param)
 {
-  static uint8_t newSample = activeSample;
-
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     drumScreenActive = true;
@@ -6756,7 +6781,7 @@ void UI_func_drums(uint8_t param)
         return activeSample;
       },
       [](Editor* editor, int16_t value) {
-        newSample = findSmartFilteredSample(activeSample, (value - activeSample));
+        selectSample(findSmartFilteredSample(activeSample, (value - activeSample)));
       },
       [](Editor* editor, bool refresh) { // TODO: still called twice on editor change
         // render the current selected drum sample slot number and name
@@ -6776,6 +6801,7 @@ void UI_func_drums(uint8_t param)
           setCursor_textGrid_small(20, 11);
           show(1, 23, 6, "STEREO");
         }
+        checkDrawFilterText(true); // force redraw filter text on active sample change
       });
 
     ui.setCursor(2, 4);
@@ -6820,34 +6846,7 @@ void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
-
-    if (newSample != activeSample) {
-      selectSample(newSample);
-    }
-
-    const bool editingFilter = (generic_temp_select_menu == 8);// adapt if layout changed
-    if (editingFilter) {
-      display.setTextSize(1);
-      setCursor_textGrid_small(20, 11);
-      if (seq.edit_state == 0) {
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      }
-
-      switch (drum_config[activeSample].filter_mode) {
-      case 0:
-        display.print("OFF     ");
-        break;
-      case 1:
-        display.print("LOWPASS ");
-        break;
-      case 2:
-        display.print("BANDPASS");
-        break;
-      case 3:
-        display.print("HIGHPASS");
-        break;
-      }
-    }
+    checkDrawFilterText();
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
@@ -7766,7 +7765,7 @@ FLASHMEM void draw_header_sample_editor()
 
 FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
 {
-
+  const drum_config_t *sample = &drum_config[temp_int];
   uint8_t from = 0;
   uint8_t to = 0;
 
@@ -7790,8 +7789,7 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
 
   print_slices_text();
   if (num_slices == 0)
-    printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-      0, 1, COLOR_SYSTEXT, GREY4);
+    printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0.0f, 1.0f, COLOR_SYSTEXT, GREY4);
   else
   {
     // for (uint8_t y = 0; y < num_slices; y++)
@@ -7803,19 +7801,19 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
       else
         slice_col = ColorHSV(y * 22, 250, 180);
 
-      //    printSampleWaveform((DISPLAY_WIDTH / num_slices) * y, 72, DISPLAY_WIDTH / num_slices, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-      //      (float(1.0 / num_slices) * y), float(1.0 / num_slices) * (y + 1), slice_col, GREY3);  // AUTO/All equal slices
+      const uint16_t xCoord = uint16_t(DISPLAY_WIDTH / float(sample->len) * slice_start[y]);
+      const uint16_t yCoord = 72;
+      const uint16_t w = uint16_t(DISPLAY_WIDTH / float(sample->len) * (slice_end[y] - slice_start[y])) + 1;
+      const uint16_t h = 100;
+      const float from = slice_start[y] / float(sample->len);
+      const float to = slice_end[y] / float(sample->len);
 
-      printSampleWaveform(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y]),
-        72, uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (slice_end[y] - slice_start[y]))+1, 100,
-        (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-        ((float)1.00 / (float)drum_config[temp_int].len) * (float)slice_start[y], ((float)1.00 / (float)drum_config[temp_int].len) * (float)slice_end[y],
-        slice_col, GREY3);
+      printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
 
-       display.console = true;
-       display.fillRect(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y]) - 2, 164, 2, 7, GREY3);
-       display.console = false;
-      display.setCursor(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y])+1, 164);
+      display.console = true;
+      display.fillRect(xCoord - 2, 164, 2, 7, GREY3);
+      display.console = false;
+      display.setCursor(xCoord + 1, 164);
       display.setTextColor(slice_col, GREY3);
       display.print(noteNames[(48 + y) % 12][0]);
       if (noteNames[(48 + y) % 12][1] != '\0')

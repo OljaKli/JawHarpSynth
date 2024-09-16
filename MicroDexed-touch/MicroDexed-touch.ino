@@ -2963,7 +2963,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         if (slot != 99)
         {
-
           // if (drum_config[d].filter_mode == 0)
           //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
           // else if (drum_config[d].filter_mode == 1)
