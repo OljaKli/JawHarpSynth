@@ -6628,7 +6628,6 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
   display.console = true;
   display.fillRect(x, y, w, h, bgColor);
-  x++; // start drawing one to the right as remote's fillRect() is shifted by one
 
   if (w > 0 && data != nullptr) {
     const uint32_t binSize = ceil(length / float(w * numChannels));
@@ -6646,8 +6645,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         binMin[ch] = std::min(binMin[ch], data[sample + ch]);
         binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
+      const bool isFirstX = sample == (binSize - 1);
+      const bool isLastX = sample == (length - 1);
 
-      if (++numBinSamples == binSize) {
+      if ((++numBinSamples == binSize) || isLastX) { // draw last probably unfull bin
         for (uint8_t ch = 0; ch < numChannels; ch++) {
           const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
           if ((binMax[ch] - binMin[ch]) < maxDitherIgnore) {
@@ -6655,12 +6656,16 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           }
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
-          if (yMax == yMin) {
-            display.console = true;
-            display.drawPixel(x, yMin, waveColor);
+
+          const bool drawByPixel = isFirstX || isLastX || (yMax == yMin);
+          display.console = true;
+          if(drawByPixel) { // workaround console issues with drawLine(): off to the left / wont draw x0=x1 and y0=y1
+            for(uint16_t yDraw = yMin; yDraw <= yMax; yDraw++) {
+              display.drawPixel(x, yDraw, waveColor);
+            }
           }
           else {
-            display.drawLine(x, yMin, x, yMax, waveColor); // drawFastVLine does not work for console
+            display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
           }
           binMin[ch] = +32767;
           binMax[ch] = -32767;
@@ -7802,9 +7807,9 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
       else
         slice_col = ColorHSV(y * 22, 250, 180);
 
-      const uint16_t xCoord = uint16_t(DISPLAY_WIDTH / float(sample->len) * slice_start[y]);
+      const uint16_t xCoord = round((DISPLAY_WIDTH * slice_start[y]) / float(sample->len));
       const uint16_t yCoord = 72;
-      const uint16_t w = uint16_t(DISPLAY_WIDTH / float(sample->len) * (slice_end[y] - slice_start[y])) + 1;
+      const uint16_t w = round(DISPLAY_WIDTH * (slice_end[y] - slice_start[y]) / float(sample->len));
       const uint16_t h = 100;
       const float from = slice_start[y] / float(sample->len);
       const float to = slice_end[y] / float(sample->len);
