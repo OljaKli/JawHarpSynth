@@ -524,6 +524,7 @@ enum
 
 void selectSample(uint8_t sample);
 uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction);
+void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 
 void lcdml_menu_display(void);
 void lcdml_menu_clear(void);
@@ -6614,7 +6615,7 @@ void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3) {
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
   uint32_t sampleOffset = from * (length / numChannels);
   uint32_t zoomedLength = (to - from) * length;
   if (numChannels == 2) {
@@ -7764,7 +7765,7 @@ FLASHMEM void draw_header_sample_editor()
 
 FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
 {
-
+  const drum_config_t *sample = &drum_config[temp_int];
   uint8_t from = 0;
   uint8_t to = 0;
 
@@ -7788,8 +7789,7 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
 
   print_slices_text();
   if (num_slices == 0)
-    printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-      0, 1, COLOR_SYSTEXT, GREY4);
+    printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0.0f, 1.0f, COLOR_SYSTEXT, GREY4);
   else
   {
     // for (uint8_t y = 0; y < num_slices; y++)
@@ -7801,19 +7801,19 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
       else
         slice_col = ColorHSV(y * 22, 250, 180);
 
-      //    printSampleWaveform((DISPLAY_WIDTH / num_slices) * y, 72, DISPLAY_WIDTH / num_slices, 100, (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-      //      (float(1.0 / num_slices) * y), float(1.0 / num_slices) * (y + 1), slice_col, GREY3);  // AUTO/All equal slices
+      const uint16_t xCoord = uint16_t(DISPLAY_WIDTH / float(sample->len) * slice_start[y]);
+      const uint16_t yCoord = 72;
+      const uint16_t w = uint16_t(DISPLAY_WIDTH / float(sample->len) * (slice_end[y] - slice_start[y])) + 1;
+      const uint16_t h = 100;
+      const float from = slice_start[y] / float(sample->len);
+      const float to = slice_end[y] / float(sample->len);
 
-      printSampleWaveform(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y]),
-        72, uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (slice_end[y] - slice_start[y]))+1, 100,
-        (int16_t*)drum_config[temp_int].drum_data, drum_config[temp_int].len, drum_config[temp_int].numChannels,
-        ((float)1.00 / (float)drum_config[temp_int].len) * (float)slice_start[y], ((float)1.00 / (float)drum_config[temp_int].len) * (float)slice_end[y],
-        slice_col, GREY3);
+      printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
 
-       display.console = true;
-       display.fillRect(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y]) - 2, 164, 2, 7, GREY3);
-       display.console = false;
-      display.setCursor(uint16_t(((float)DISPLAY_WIDTH / (float)drum_config[temp_int].len) * (float)slice_start[y])+1, 164);
+      display.console = true;
+      display.fillRect(uint16_t(DISPLAY_WIDTH / float(sample->len * slice_start[y]) - 2), 164, 2, 7, GREY3);
+      display.console = false;
+      display.setCursor(uint16_t(DISPLAY_WIDTH / float(sample->len * slice_start[y]) + 1), 164);
       display.setTextColor(slice_col, GREY3);
       display.print(noteNames[(48 + y) % 12][0]);
       if (noteNames[(48 + y) % 12][1] != '\0')
