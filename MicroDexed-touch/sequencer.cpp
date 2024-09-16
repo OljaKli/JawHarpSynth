@@ -35,6 +35,7 @@ extern bool remote_active;
 
 extern config_t configuration;
 extern uint8_t drum_midi_channel;
+extern uint8_t slices_midi_channel;
 extern uint8_t activeSample;
 extern uint8_t get_sample_note(uint8_t sample);
 extern void handleNoteOn(byte, byte, byte, byte);
@@ -772,7 +773,6 @@ void sequencer_part1(void)
             }
           }
           else if (seq.track_type[d] == 3 && seq.ticks == 0) // Arp
-            //  else if (seq.track_type[d] == 3 ) // Arp
           {
             seq.arp_step = 0;
             seq.arp_num_notes_count = 0;
@@ -784,6 +784,18 @@ void sequencer_part1(void)
             seq.arp_note = seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12);
             seq.arp_chord = seq.vel[seq.current_pattern[d]][seq.step] - 200;
           }
+
+
+           if (seq.track_type[d] == 4)
+      { // sliced drums 
+#if NUM_DRUMS > 0
+        if (seq.note_data[seq.current_pattern[d]][seq.step] > 0)
+        {
+            if (check_probability(seq.current_pattern[d]))
+              handleNoteOn(slices_midi_channel, seq.note_data[seq.current_pattern[d]][seq.step], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+        }
+#endif
+      }
         }
         // after here not triggered by a key input -  arp only
 

@@ -1663,6 +1663,8 @@ FLASHMEM void set_track_type_color(uint8_t track)
     display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
   else if (seq.track_type[track] == 3) // Arp
     display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
+     else if (seq.track_type[track] == 4) // Sliced Sample
+    display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
 }
 
 FLASHMEM void sub_song_print_tracktypes()
@@ -1689,6 +1691,8 @@ FLASHMEM void sub_song_print_tracktypes()
       display.print(F("CHD"));
     else if (seq.track_type[x] == 3)
       display.print(F("ARP"));
+       else if (seq.track_type[x] == 4)
+      display.print(F("SLC"));
     // else if (seq.track_type[x] == 1 && seq.instrument[seq.selected_track] < 16) display.print(F("INS"));
     // else if (seq.track_type[x] == 2 && seq.instrument[seq.selected_track] < 16) display.print(F("CHD"));
     // else if (seq.track_type[x] == 3 && seq.instrument[seq.selected_track] < 16) display.print(F("ARP"));
@@ -1712,6 +1716,8 @@ FLASHMEM void set_track_type_color_inverted(uint8_t track)
     display.setTextColor(COLOR_BACKGROUND, COLOR_CHORDS);
   else if (seq.track_type[track] == 3) // Arp
     display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
+     else if (seq.track_type[track] == 4) // Sliced
+    display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
 }
 
 bool song_page_full_draw_pattern_complete = false;
@@ -11884,7 +11890,7 @@ FLASHMEM void UI_func_song(uint8_t param)
           }
           else if (seq.tracktype_or_instrument_assign == 6 && seq.loop_edit_step == 0) // tracktype change
           {
-            if (seq.track_type[seq.selected_track] < 3)
+            if (seq.track_type[seq.selected_track] < 4)
               seq.track_type[seq.selected_track]++;
           }
           else if (seq.tracktype_or_instrument_assign == 5 && seq.loop_edit_step == 0) // disable edit tracktype select
