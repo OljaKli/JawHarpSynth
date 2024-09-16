@@ -7811,9 +7811,9 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
       printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
 
       display.console = true;
-      display.fillRect(uint16_t(DISPLAY_WIDTH / float(sample->len * slice_start[y]) - 2), 164, 2, 7, GREY3);
+      display.fillRect(xCoord - 2, 164, 2, 7, GREY3);
       display.console = false;
-      display.setCursor(uint16_t(DISPLAY_WIDTH / float(sample->len * slice_start[y]) + 1), 164);
+      display.setCursor(xCoord + 1, 164);
       display.setTextColor(slice_col, GREY3);
       display.print(noteNames[(48 + y) % 12][0]);
       if (noteNames[(48 + y) % 12][1] != '\0')
