@@ -1663,7 +1663,7 @@ FLASHMEM void set_track_type_color(uint8_t track)
     display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
   else if (seq.track_type[track] == 3) // Arp
     display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-     else if (seq.track_type[track] == 4) // Sliced Sample
+  else if (seq.track_type[track] == 4) // Sliced Sample
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
 }
 
@@ -1691,7 +1691,7 @@ FLASHMEM void sub_song_print_tracktypes()
       display.print(F("CHD"));
     else if (seq.track_type[x] == 3)
       display.print(F("ARP"));
-       else if (seq.track_type[x] == 4)
+    else if (seq.track_type[x] == 4)
       display.print(F("SLC"));
     // else if (seq.track_type[x] == 1 && seq.instrument[seq.selected_track] < 16) display.print(F("INS"));
     // else if (seq.track_type[x] == 2 && seq.instrument[seq.selected_track] < 16) display.print(F("CHD"));
@@ -1716,7 +1716,7 @@ FLASHMEM void set_track_type_color_inverted(uint8_t track)
     display.setTextColor(COLOR_BACKGROUND, COLOR_CHORDS);
   else if (seq.track_type[track] == 3) // Arp
     display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
-     else if (seq.track_type[track] == 4) // Sliced
+  else if (seq.track_type[track] == 4) // Sliced
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
 }
 
@@ -6665,8 +6665,8 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
           const bool drawByPixel = isFirstX || isLastX || (yMax == yMin);
           display.console = true;
-          if(drawByPixel) { // workaround console issues with drawLine(): off to the left / wont draw x0=x1 and y0=y1
-            for(uint16_t yDraw = yMin; yDraw <= yMax; yDraw++) {
+          if (drawByPixel) { // workaround console issues with drawLine(): off to the left / wont draw x0=x1 and y0=y1
+            for (uint16_t yDraw = yMin; yDraw <= yMax; yDraw++) {
               display.drawPixel(x, yDraw, waveColor);
             }
           }
@@ -6748,7 +6748,7 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
 
 FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
   const bool isFilterSelected = (generic_temp_select_menu == 8); // adapt number when drums page layout changes
-  if(forceDraw || isFilterSelected) {
+  if (forceDraw || isFilterSelected) {
     display.setTextSize(1);
     setCursor_textGrid_small(20, 11);
     const bool isEditingFilter = (seq.edit_state) && isFilterSelected;
@@ -7777,7 +7777,7 @@ FLASHMEM void draw_header_sample_editor()
 
 FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
 {
-  const drum_config_t *sample = &drum_config[temp_int];
+  const drum_config_t* sample = &drum_config[temp_int];
   uint8_t from = 0;
   uint8_t to = 0;
 
@@ -8008,7 +8008,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           {
             slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] - ENCODER[ENC_R].speed() * 10;
             //
-             slice_end[(generic_temp_select_menu - 7) / 2] = slice_end[(generic_temp_select_menu - 7) / 2] - ENCODER[ENC_R].speed() * 10;
+            slice_end[(generic_temp_select_menu - 7) / 2] = slice_end[(generic_temp_select_menu - 7) / 2] - ENCODER[ENC_R].speed() * 10;
           }
 
         }
@@ -8017,17 +8017,17 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           if (LCDML.BT_checkDown())
           {
             slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] + ENCODER[ENC_R].speed() * 10;
-//
- slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] + ENCODER[ENC_R].speed() * 10;
+            //
+            slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] + ENCODER[ENC_R].speed() * 10;
           }
           else if (LCDML.BT_checkUp())
           {
             slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] - ENCODER[ENC_R].speed() * 10;
-//
-slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] - ENCODER[ENC_R].speed() * 10;
+            //
+            slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] - ENCODER[ENC_R].speed() * 10;
           }
         }
-        draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);  
+        draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);
       }
     }
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())// handle button presses during menu >>>>>>>>>>>>>>>>
@@ -8119,6 +8119,8 @@ void print_content_type()
     display.print(F("Instr.   "));
   else if (seq.content_type[seq.active_pattern] == 2)
     display.print(F("Chord/Arp"));
+  else if (seq.content_type[seq.active_pattern] == 3)
+    display.print(F("smpSlices"));
   display.setTextColor(GREY1, COLOR_BACKGROUND);
 }
 
@@ -8234,11 +8236,20 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
       else
         set_pattern_content_type_color(seq.active_pattern);
-      if (seq.content_type[seq.active_pattern] == 0) // Drum Track
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum Track or Slice Track
       {
-        if (seq.vel[seq.active_pattern][i] > 209) // it is a pitched Drum Sample
+        if (seq.vel[seq.active_pattern][i] > 209 && seq.content_type[seq.active_pattern] == 0) // it is a pitched Drum Sample
         {
           show_smallfont_noGrid(y, CHAR_width_small * 17, 10, basename(drum_config[seq.vel[seq.active_pattern][i] - 210].name));
+        }
+        else  if (seq.content_type[seq.active_pattern] == 3 && num_slices!=0) // it is a Slice
+        {
+          if (seq.note_data[seq.active_pattern][i] - 48 >=0 && seq.note_data[seq.active_pattern][i] - 48 <=  num_slices )
+          {
+            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample].name);
+          display.print("# ");
+          display.print(seq.note_data[seq.active_pattern][i] - 48+1); //phtodo  
+          }
         }
         else // else it is a regular Drum Sample
           show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
@@ -8379,7 +8390,7 @@ void UI_func_seq_vel_editor(uint8_t param)
       {
         if (seq.vel[seq.active_pattern][seq.menu - 1] < 210) // it is a normal sample
         {
-          if (seq.active_function == 0 && seq.content_type[seq.active_pattern] < 2)
+          if ((seq.active_function == 0 && seq.content_type[seq.active_pattern] < 2) || (seq.active_function == 0 && seq.content_type[seq.active_pattern] == 3))
           { // if is Drum or normal Instrument Track
             if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
             {
@@ -8420,15 +8431,24 @@ void UI_func_seq_vel_editor(uint8_t param)
       {
         prev_option = seq.note_editor_view;
         if (LCDML.BT_checkDown())
-          seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] + 1, 0, 2);
+          seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] + 1, 0, 3);
         else if (LCDML.BT_checkUp())
-          seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] - 1, 0, 2);
+          seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] - 1, 0, 3);
 
         seq_printAllSeqSteps();
-        if (seq.content_type[seq.active_pattern] == 0)
+        border3_clear();
+        if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
+        {
           seq.note_editor_view = 0;
+          print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
+
+        }
         else
+        {
           seq.note_editor_view = 1;
+          print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, seq.menu - 3, true);
+
+        }
       }
     }
 
@@ -8481,7 +8501,7 @@ void UI_func_seq_vel_editor(uint8_t param)
       setCursor_textGrid(0, 1);
       seq_printAllSeqSteps();
       seq_printVelGraphBar();
-      if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum Mode or Slices
       {
         if (seq.note_editor_view != 0)
         {
@@ -8579,7 +8599,7 @@ void UI_func_seq_vel_editor(uint8_t param)
     if (seq.menu > 0 && seq.menu < 17)
     {
       display.setTextSize(2);
-      if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum Mode or Slices
       {
         if (seq.menu - 1 == 0)
           print_track_steps_detailed(0, CHAR_height * 4 + 3, seq.menu - 1, false, true);
@@ -8594,7 +8614,7 @@ void UI_func_seq_vel_editor(uint8_t param)
       setCursor_textGrid(3, 0);
       if (seq.note_data[seq.active_pattern][seq.menu - 1] > 0)
       {
-        if (seq.content_type[seq.active_pattern] == 0) // is Drumtrack
+        if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // is Drumtrack or Slices
         {
           setCursor_textGrid(0, 0);
           if (seq.vel[seq.active_pattern][seq.menu - 1] < 210) // it is a normal sample
@@ -8653,7 +8673,7 @@ void UI_func_seq_vel_editor(uint8_t param)
         {
           if (seq.note_data[seq.active_pattern][seq.menu - 1] != 130) // note not latched
           {
-            if (seq.content_type[seq.active_pattern] < 2)
+            if (seq.content_type[seq.active_pattern] < 2 || seq.content_type[seq.active_pattern] == 3)
             {
               setCursor_textGrid(0, 0);
               display.print(F("Vel:"));
@@ -8679,7 +8699,7 @@ void UI_func_seq_vel_editor(uint8_t param)
             setCursor_textGrid(0, 0);
             display.print(F("latched note "));
           }
-          if (seq.content_type[seq.active_pattern] > 1) // is not drum or inst, print chord
+          if (seq.content_type[seq.active_pattern] > 1 && seq.content_type[seq.active_pattern] != 3) // is not drum or inst, print chord
           {
             setCursor_textGrid(0, 0);
             display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -8742,7 +8762,7 @@ void UI_func_seq_vel_editor(uint8_t param)
       seq_printVelGraphBar();
       if (seq.cycle_touch_element == 0) // touch keyboard is off
         border3_clear();
-      if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum Mode or Slices
       {
         print_track_steps_detailed(0, CHAR_height * 4 + 3, seq.menu - 1, true, true);
       }
@@ -8847,7 +8867,7 @@ void check_variable_samples_basespeed()
 
 void print_sample_type()
 {
-  if (activeSample < NUM_DRUMSET_CONFIG - 1)
+  if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] != 3)
   {
     if (drum_config[activeSample].drum_class == 0)
       display.print(F("none      "));
@@ -8877,9 +8897,14 @@ void print_sample_type()
       display.print(F("other     "));
     print_empty_spaces(6);
   }
+  else if (seq.content_type[seq.active_pattern] ==3) // sliced
+  {
+ display.print(F("SLICES     "));
+    print_empty_spaces(6);
+  }
 }
 
-void seq_sub_copy_swap()
+FLASHMEM void seq_sub_copy_swap()
 {
   if (seq.menu == 30 || seq.menu == 31)
   { // is in sub-function - swap pattern or copy pattern
@@ -8961,7 +8986,7 @@ void seq_sub_copy_swap()
       temp_int = seq.note_data[seq.active_pattern][0];
       seq_refresh_display_play_status();
       seq_printAllSeqSteps();
-      if (seq.content_type[seq.active_pattern] == 0)
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
         print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
       else
         print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, seq.menu - 1, true);
@@ -8969,7 +8994,7 @@ void seq_sub_copy_swap()
 
     if (seq.menu == 0 && seq.active_function == 0)
     {
-      if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 3) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 114))
+      if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 3) || (seq.content_type[seq.active_pattern] == 3 && activeSample == NUM_DRUMSET_CONFIG + 3) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 114))
       { // swap patterns: Active pattern <-> destination pattern
         setCursor_textGrid(0, 0);
         display.setTextSize(2);
@@ -8979,7 +9004,7 @@ void seq_sub_copy_swap()
           temp_int = 0;
         seq.menu = 30;
       }
-      else if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 2) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 113))
+      else if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 2) || (seq.content_type[seq.active_pattern] == 3 && activeSample == NUM_DRUMSET_CONFIG + 2) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 113))
       { // copy pattern
         setCursor_textGrid(0, 0);
         display.setTextSize(2);
@@ -9019,7 +9044,7 @@ void seq_sub_copy_swap()
   }
 }
 
-void seq_sub_pattern_fill()
+FLASHMEM void seq_sub_pattern_fill()
 {
   if (seq.menu == 33)
   { // is in sub-function - fill pattern
@@ -9039,7 +9064,7 @@ void seq_sub_pattern_fill()
   else if (seq.menu == 32)
   { // is in sub-function - fill pattern
     seq.active_function = 97;
-    if (seq.content_type[seq.active_pattern] == 0)
+    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
     {
       if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
       {
@@ -9076,7 +9101,7 @@ void seq_sub_pattern_fill()
     else if (seq.menu == 33 && seq.active_function == 95) // fill pattern every 1/4, 1/8, 1/16 step with active sample/note  step 2
     {
 
-      if (seq.content_type[seq.active_pattern] == 0)
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
       { // Drumtrack
         for (uint8_t i = 0; i < 16; i++)
         {
@@ -9112,14 +9137,14 @@ void seq_sub_pattern_fill()
       seq_refresh_display_play_status();
       seq_printAllSeqSteps();
       seq_printVelGraphBar();
-      if (seq.content_type[seq.active_pattern] == 0)
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
         print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
       else
         print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, seq.menu - 1, true);
     }
     else if (seq.menu == 0 && seq.active_function == 0)
     {
-      if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 4) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 115))
+      if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 4) || (seq.content_type[seq.active_pattern] == 3 && activeSample == NUM_DRUMSET_CONFIG + 4) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 115))
       { // fill patterns
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         setCursor_textGrid(0, 0);
@@ -9154,7 +9179,7 @@ void seq_sub_pattern_fill()
   }
   else if (seq.menu == 32) // editor step 1
   {                        // fill pattern
-    if (seq.content_type[seq.active_pattern] == 0)
+    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
     { // drum
       setCursor_textGrid(0, 1);
       display.setTextSize(2);
@@ -9204,7 +9229,7 @@ void seq_sub_pattern_fill()
   }
 }
 
-void seq_sub_pattern_transpose()
+FLASHMEM void seq_sub_pattern_transpose()
 {
   if (seq.menu == 34)
   { // is in transpose edit
@@ -9247,7 +9272,7 @@ void seq_sub_pattern_transpose()
     }
     if (seq.menu == 0 && seq.active_function == 0)
     {
-      if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 5) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 116))
+      if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG + 5) || (seq.content_type[seq.active_pattern] == 3 && activeSample == NUM_DRUMSET_CONFIG + 5) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 116))
       { // transpose pattern
         setCursor_textGrid(1, 0);
         display.setTextSize(2);
@@ -9288,7 +9313,7 @@ void seq_sub_pattern_transpose()
     display.print("]");
     for (uint8_t i = 0; i < 16; i++)
     {
-      if (seq.content_type[seq.active_pattern] == 0)
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
       {                                                                                                                                                    // drums
         if (seq.data_buffer[i] != 0 && seq.data_buffer[i] + temp_int >= 0 && seq.data_buffer[i] + temp_int < 254 && seq.vel[seq.active_pattern][i] >= 210) // pitched drums only
           seq.note_data[seq.active_pattern][i] = seq.data_buffer[i] + temp_int;
@@ -9302,14 +9327,14 @@ void seq_sub_pattern_transpose()
         }
     }
     seq_printAllSeqSteps();
-    if (seq.content_type[seq.active_pattern] == 0)
+    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
       print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
     else
       print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, seq.menu - 1, true);
   }
 }
 
-void seq_sub_clear_pattern_or_clear_all()
+FLASHMEM void seq_sub_clear_pattern_or_clear_all()
 {
   if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   {
@@ -9321,7 +9346,7 @@ void seq_sub_clear_pattern_or_clear_all()
         seq_printAllSeqSteps();
         print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
       }
-      else if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 111))
+      else if ((seq.content_type[seq.active_pattern] == 0 && activeSample == NUM_DRUMSET_CONFIG) || (seq.content_type[seq.active_pattern] == 3 && activeSample == NUM_DRUMSET_CONFIG) || (seq.content_type[seq.active_pattern] > 0 && temp_int == 111))
       { // clear pattern
         seq_clear_active_pattern();
         seq_printAllSeqSteps();
@@ -9333,7 +9358,7 @@ void seq_sub_clear_pattern_or_clear_all()
   // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 }
 
-void seq_sub_pitch_edit_pitched_sample()
+FLASHMEM void seq_sub_pitch_edit_pitched_sample()
 {
   if (seq.active_function == 40)
   { // pitch edit sample
@@ -9415,7 +9440,7 @@ void seq_sub_pitch_edit_pitched_sample()
   }
 }
 
-void print_current_sample_and_pitch_buffer()
+FLASHMEM void print_current_sample_and_pitch_buffer()
 {
   if (seq.cycle_touch_element == 0) // touch keyboard is off
   {
@@ -9471,45 +9496,6 @@ void set_sample_type_color_of(uint8_t samplekey)
     display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
 }
 
-// void seq_pattern_editor_update_disp_instr()
-//{
-//   if (seq.cycle_touch_element == 1)
-//   {
-//     display.setCursor(CHAR_width, 110);
-//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//     display.setTextSize(1);
-//     display.print(F("PATTERN "));
-//     display.setTextColor(GREEN, COLOR_BACKGROUND);
-//     print_formatted_number(seq.active_pattern, 2);
-//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//     display.print(F(" PLAYING:"));
-//     if (seq.content_type[seq.active_pattern] == 1) //Inst Pattern
-//     {
-//       //UI_draw_waveform(activesample);
-//
-//
-//       print_voice_settings_in_pattern_editor(12, 125);
-//     }
-//     else if (seq.content_type[seq.active_pattern] == 0)
-//     {
-//       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//       display.setCursor(CHAR_width, 125);
-//       display.setTextSize(2);
-//       display.print(F("DRUMS"));
-//       display.fillRect(CHAR_width * 6, 124, 129, CHAR_height, COLOR_BACKGROUND);
-//     }
-//     else
-//       display.fillRect(CHAR_width, 110, 70, 0, COLOR_PITCHSMP);
-//
-//   }
-//
-//   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
-//   {
-//     display.setCursor ( 240, 110  );
-//     virtual_keyboard_print_current_instrument();
-//   }
-// }
-
 FLASHMEM void virtual_keyboard_print_buttons()
 {
   // oct +- buttons
@@ -9546,7 +9532,7 @@ FLASHMEM void seq_pattern_editor_update_dynamic_elements()
     draw_button_on_grid(36, 22, "SONG", "EDITOR", 0);
     draw_button_on_grid(45, 22, "HUNT", "PATT", 0);
 
-    if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum Mode or Slices
     {
       print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
       seq.note_editor_view = 0;
@@ -9651,7 +9637,7 @@ FLASHMEM void pattern_editor_menu_0()
     display.print(" ");
     setCursor_textGrid(0, 0);
     display.print("[");
-    if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum Mode or Slices
     {
       // UI_draw_waveform(activesample);
       if (activeSample < NUM_DRUMSET_CONFIG - 1)
@@ -9660,8 +9646,19 @@ FLASHMEM void pattern_editor_menu_0()
           display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
         else
           display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-
+if (seq.content_type[seq.active_pattern] == 0 )
         show(0, 1, 9, basename(drum_config[activeSample].name));
+        else  if (seq.content_type[seq.active_pattern] == 3 && num_slices!=0)
+        {
+         show(0, 1, 6, basename(drum_config[selected_slice_sample].name));
+    display.print("#");
+            print_formatted_number(activeSample-selected_slice_sample+1, 2);
+        }
+         else 
+          {
+              setCursor_textGrid(1, 0);
+        display.print(F("NO SLICES"));
+          }
         if (seq.active_function != 99)
           display.setTextColor(RED, COLOR_BACKGROUND);
         else
@@ -9823,6 +9820,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 
     display.setTextSize(2);
   }
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     seq_sub_pitch_edit_pitched_sample();
@@ -9867,7 +9865,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
     }
     else if (seq.active_function == 0)
     {
-      if (seq.content_type[seq.active_pattern] == 0) // is in Drumedit mode
+      if (seq.content_type[seq.active_pattern] == 0) // is in Drumedit  mode 
       {
         if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
         {
@@ -9881,7 +9879,23 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           }
         }
       }
-      else // is in Instrument Mode
+      else  if (seq.content_type[seq.active_pattern] == 3 && num_slices !=0) // is in Slice mode 
+      {
+        if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+        {
+          if (LCDML.BT_checkDown())
+            activeSample = constrain(activeSample + 1, selected_slice_sample, selected_slice_sample +num_slices-1 );  //+5 for full menu options
+          else if (LCDML.BT_checkUp())
+            activeSample = constrain(activeSample - 1, selected_slice_sample, selected_slice_sample +num_slices-1 );  //+5 for full menu options
+
+          if (seq.running == false && activeSample+41 < NUM_DRUMSET_CONFIG - 1)
+           {
+           // handleNoteOn(slices_midi_channel, activeSample+41, 90, 0); //phtodo
+           ;
+          }
+        }
+      }
+      else if (seq.content_type[seq.active_pattern] != 3 )// is in Instrument Mode
       {
         if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
         {
@@ -9948,7 +9962,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         else
           seq.active_function = 99;
 
-        if (seq.content_type[seq.active_pattern] == 0) // drumtrack
+        if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // drumtrack or slice track
         {
           if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] < 210) // normal sample
           {
@@ -9979,7 +9993,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       {
         if (seq.active_function == 99)
         {
-          if (seq.content_type[seq.active_pattern] == 0)
+          if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
           { // Drumtrack
 
             if (drum_config[activeSample].midinote > 209) // it selected sample is a pitched sample
@@ -10087,6 +10101,15 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         show(0, 1, 9, basename(drum_config[activeSample].name));
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       }
+      else
+        if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] == 3 && num_slices !=0) //Slices
+        {
+          display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+          show(0, 1, 6, basename(drum_config[selected_slice_sample].name));
+           display.print("#");
+            print_formatted_number(activeSample-selected_slice_sample+1, 2);
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        }
     }
     if (seq.menu == 2)
     {
@@ -10109,7 +10132,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       setCursor_textGrid(17, 0);
       display.print("]");
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum or Slice Mode
       {
         setCursor_textGrid(0, 0); // Print current sample name when switching track and track is drum track
         display.print(" ");
@@ -10180,7 +10203,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
     }
     if (seq.menu > 2 && seq.menu < 19 && seq.active_function != 40)
     {
-      if (seq.content_type[seq.active_pattern] == 0) // Drum Mode
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // Drum or slice Mode
       {
         if (seq.cycle_touch_element != 1)
           print_track_steps_detailed(0, CHAR_height * 4 + 3, seq.menu - 3, false, false);
@@ -10233,7 +10256,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         display.print(" ");
         seq_print_current_note_from_step(seq.menu - 3);
       }
-      else if (seq.content_type[seq.active_pattern] == 0) // is drum pattern
+      else if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) // is drum or slice pattern
       {
         // print current sample name on active step if not empty
         if (seq.note_data[seq.active_pattern][seq.menu - 3] > 0)
@@ -18424,7 +18447,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     _show_midi_channel(buf, 18, drum_midi_channel);
 
     snprintf_P(buf, sizeof(buf), PSTR("%s"), F("DRUM SLICES"));
-    _show_midi_channel(buf, 19 , slices_midi_channel);
+    _show_midi_channel(buf, 19, slices_midi_channel);
 
   }
   if (LCDML.FUNC_loop())
@@ -18452,7 +18475,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
         msp[1].midi_channel = calc_val[state_dir](msp[1].midi_channel, 1, 0, 16);
       else if (generic_temp_select_menu == 8)
         drum_midi_channel = calc_val[state_dir](drum_midi_channel, 1, 0, 16);
-         else if (generic_temp_select_menu == 9)
+      else if (generic_temp_select_menu == 9)
         slices_midi_channel = calc_val[state_dir](slices_midi_channel, 1, 0, 16);
     }
     // handle button presses during menu
