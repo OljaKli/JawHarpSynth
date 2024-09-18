@@ -94,5 +94,6 @@ void UI_func_startup_page(uint8_t param);
 void UI_func_map_gamepad(uint8_t param);
 void UI_func_favorites(uint8_t param);
 void UI_func_epiano(uint8_t param);
+void UI_func_sample_editor(uint8_t param);
 
 #endif //_UI_H_

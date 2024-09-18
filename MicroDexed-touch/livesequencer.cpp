@@ -8,6 +8,7 @@
 
 extern sequencer_t seq;
 extern uint8_t drum_midi_channel;
+extern uint8_t slices_midi_channel;
 extern config_t configuration;
 extern microsynth_t microsynth[NUM_MICROSYNTH];
 extern multisample_s msp[NUM_MULTISAMPLES];
@@ -1079,6 +1080,11 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].screen = UI_func_braids;
         break;
 
+      case INSTR_SLC:
+        data.tracks[i].channel = slices_midi_channel;
+        data.tracks[i].screen = UI_func_sample_editor;
+        break;
+
       case INSTR_MSP1:
       case INSTR_MSP2:
         data.tracks[i].channel = msp[instrument - INSTR_MSP1].midi_channel;
@@ -1161,6 +1167,10 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
     case INSTR_MSP1:
     case INSTR_MSP2:
       sprintf(sub, "SP%i", instrument - INSTR_MSP1 + 1);
+      break;
+
+    case INSTR_SLC:
+      sprintf(sub, "SLC");
       break;
 
     default:
