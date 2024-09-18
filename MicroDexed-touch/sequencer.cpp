@@ -971,9 +971,9 @@ void set_pattern_content_type_color(uint8_t pattern)
     display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
   else if (seq.content_type[pattern] == 1) // Instrument Pattern
     display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  else if (seq.content_type[pattern] == 2) //  chord  pattern
+  else if (seq.content_type[pattern] == 2) //  chord / arp pattern
     display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
-  else if (seq.content_type[pattern] == 3) //   arp pattern
+  else if (seq.content_type[pattern] == 3) //   arp pattern / slices
     display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
   else
     display.setTextColor(GREY2, COLOR_BACKGROUND);

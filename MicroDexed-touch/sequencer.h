@@ -324,7 +324,7 @@ typedef struct sequencer_s
         {99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99} };
 
     uint8_t content_type[NUM_SEQ_PATTERN] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    // 0 = Drum pattern, 1 = Instrument pattern, 2 = Chord or Arpeggio
+    // 0 = Drum pattern, 1 = Instrument pattern, 2 = Chord or Arpeggio, 3 Slices
 
     uint8_t track_type[NUM_SEQ_TRACKS] = { 0, 0, 1, 1, 1, 1, 0, 0 }; // 0 = track is Drumtrack, 1 = Instrumenttrack, 2 = Chord, 3 = Arp
 
