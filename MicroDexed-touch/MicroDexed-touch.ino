@@ -903,7 +903,7 @@ extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 uint8_t drum_counter;
 uint8_t drum_type[NUM_DRUMS];
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
-uint8_t slices_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL+1;
+uint8_t slices_midi_channel = drum_midi_channel+1;
 extern sequencer_t seq;
 extern void sequencer(void);
 extern uint8_t seq_prev_note[NUM_SEQ_TRACKS];
@@ -3081,11 +3081,11 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
      // if (inChannel == slices_midi_channel || slices_midi_channel == MIDI_CHANNEL_OMNI)
        if (inChannel == slices_midi_channel)
       {
+
         if (drum_counter >= NUM_DRUMS)
           drum_counter = 0;
 
-       const uint8_t d = midiNoteToSampleNote(inNumber);
-        // const uint8_t d = selected_slice_sample;
+        const uint8_t d = inNumber-48;
 
         uint8_t slot = drum_get_slot(drum_config[d].drum_class);
 
@@ -3104,7 +3104,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           global_delay_in_mixer[1]->gain(slot + 8, drum_config[selected_slice_sample].delay2 / 5);
 
           float pan = mapfloat(drum_config[selected_slice_sample].pan, -1.0, 1.0, 0.0, 1.0);
-          if (drum_config[d].numChannels == 1) //mono
+          if (drum_config[selected_slice_sample].numChannels == 1) //mono
           {
             drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[selected_slice_sample].vol_min, drum_config[selected_slice_sample].vol_max)));
             drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, drum_config[selected_slice_sample].vol_min, drum_config[selected_slice_sample].vol_max)));
@@ -3124,7 +3124,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           //   sidechain_trigger_b = true;
 
           if ((drum_config[selected_slice_sample].drum_data != NULL && drum_config[selected_slice_sample].len > 0 && 
-          drum_config[selected_slice_sample].len < 10000000 && selected_slice_sample >= 0 && selected_slice_sample < NUM_DRUMSET_CONFIG - 1))
+         drum_config[selected_slice_sample].len < 10000000 && d >= 0 && d <= num_slices ))
           {
 
             // if (drum_config[d].pitch != 0.0)
@@ -3142,10 +3142,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             // if (sidechain_b_active && d == sidechain_b_sample_number)
             //   sidechain_trigger_b = true;
 
-              Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data + slice_start[d-30],
-                slice_end[d-30]-slice_start[d-30], drum_config[selected_slice_sample].numChannels);
+             Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data + slice_start[d],
+                slice_end[d]-slice_start[d], drum_config[selected_slice_sample].numChannels);
           }
-        }
+       }
       }
 #endif
 
