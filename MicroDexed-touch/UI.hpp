@@ -966,8 +966,8 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
       display.setTextColor(COLOR_BACKGROUND, GREEN);
     else if (seq.tracktype_or_instrument_assign == 1 && seq.selected_track != x && seq.track_type[x] != 0 && seq.track_type[x] != 4)
       display.setTextColor(MIDDLEGREEN, COLOR_BACKGROUND);
-    else if (seq.tracktype_or_instrument_assign == 1 && seq.selected_track == x && seq.track_type[x] == 0 ||
-      seq.tracktype_or_instrument_assign == 1 && seq.selected_track == x && seq.track_type[x] == 4)
+    else if ((seq.tracktype_or_instrument_assign == 1 && seq.selected_track == x && seq.track_type[x] == 0) ||
+      (seq.tracktype_or_instrument_assign == 1 && seq.selected_track == x && seq.track_type[x] == 4))
       display.setTextColor(COLOR_BACKGROUND, RED);
     else if (seq.tracktype_or_instrument_assign == 0 || seq.tracktype_or_instrument_assign == 5)
       display.setTextColor(front, back);
@@ -2372,7 +2372,8 @@ uint8_t num_slices = 0;  // for testing currently only for a single sample with 
 uint8_t selected_slice_sample = 0;
 uint32_t slice_start[16];
 uint32_t slice_end[16];
-
+uint16_t slices_scrollspeed = 1;
+bool slices_autoalign = true;
 
 FLASHMEM void print_live_probability_pattern_info()
 {
@@ -7431,36 +7432,36 @@ FLASHMEM void print_slices_text()
   if (num_slices != 0)
   {
     selected_slice_sample = temp_int;
-    char tmp[10];
+    /// char tmp[10];
 
     for (uint8_t y = 0; y < 4; y++)
     {
-      int slice_col;
-      if (y % 2 == 0)
-        slice_col = ColorHSV(y * 22, 180, 254);
-      else
-        slice_col = ColorHSV(y * 22, 250, 180);
+      //int slice_col;
+      // if (y % 2 == 0)
+      //   slice_col = ColorHSV(y * 22, 180, 254);
+      // else
+      //   slice_col = ColorHSV(y * 22, 250, 180);
       setCursor_textGrid_small(26, y + 3);
       display.setTextColor(GREY1, COLOR_BACKGROUND);
       display.print("SLICE");
-      setCursor_textGrid_small(32, y + 3);
-      display.setTextColor(slice_col, COLOR_BACKGROUND);
-      snprintf_P(tmp, sizeof(tmp), PSTR("%02d"), y + 1);
-      display.print(tmp);
+      // setCursor_textGrid_small(32, y + 3);
+      // display.setTextColor(slice_col, COLOR_BACKGROUND);
+      // snprintf_P(tmp, sizeof(tmp), PSTR("%02d"), y + 1);
+      // display.print(tmp);
 
-      setCursor_textGrid_small(35, y + 3);
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[y]);
-      display.print(tmp);
+      // setCursor_textGrid_small(35, y + 3);
+      // display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      // snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[y]);
+      // display.print(tmp);
 
       setCursor_textGrid_small(42, y + 3);
       display.setTextColor(GREY1, COLOR_BACKGROUND);
       display.print("-");
 
-      setCursor_textGrid_small(44, y + 3);
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y]);
-      display.print(tmp);
+      // setCursor_textGrid_small(44, y + 3);
+      // display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      // snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y]);
+      // display.print(tmp);
     }
   }
 }
@@ -7520,7 +7521,6 @@ FLASHMEM void print_updated_slices_text()
       setCursor_textGrid_small(44, y + 3);
       snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y + field_offset]);
       display.print(tmp);
-
       i++;
     }
   }
@@ -7562,6 +7562,7 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
   }
 
   print_slices_text();
+  print_updated_slices_text();
   if (num_slices == 0)
     printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0.0f, 1.0f, COLOR_SYSTEXT, GREY4);
   else
@@ -7629,7 +7630,12 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #endif
 
     menuhelper_redraw = true;
-    temp_int = 0;
+
+    if (selected_slice_sample != 0)
+      temp_int = selected_slice_sample;
+    else
+      temp_int = 0;
+
     fm.flash_or_psram_sum_files = 0;
     fm.sd_sum_files = 0;
     seq.edit_state = 0;
@@ -7656,11 +7662,12 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     char buf[3] = { 0, 0, 0 };
 
-    draw_button_on_grid(1, 23, "SAMPLE", "START", 0);
-    draw_button_on_grid(9, 23, "SAMPLE", "END", 0);
+    draw_button_on_grid(1, 23, "LOOP", "START", 0);
+    draw_button_on_grid(9, 23, "LOOP", "END", 0);
+    draw_button_on_grid(17, 23, "SCRLSP", itoa(slices_scrollspeed, buf, 10), 0);
 
-    draw_button_on_grid(17, 23, "LOOP", "START", 0);
-    draw_button_on_grid(25, 23, "LOOP", "END", 0);
+    draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1);
+
     draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
     draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
 
@@ -7684,7 +7691,6 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
         menuhelper_redraw = false;
       }
-
       else if (seq.edit_state == 1 && generic_temp_select_menu == 0)
       {
         stop_all_drum_slots();
@@ -7758,15 +7764,17 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         {
           if (LCDML.BT_checkDown())
           {
-            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] + ENCODER[ENC_R].speed() * 10;
+            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
             //
-            slice_end[(generic_temp_select_menu - 7) / 2] = slice_end[(generic_temp_select_menu - 7) / 2] + ENCODER[ENC_R].speed() * 10;
+            if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0)
+              slice_end[(generic_temp_select_menu - 7) / 2] = slice_start[(generic_temp_select_menu - 6) / 2];
           }
           else if (LCDML.BT_checkUp())
           {
-            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] - ENCODER[ENC_R].speed() * 10;
+            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
             //
-            slice_end[(generic_temp_select_menu - 7) / 2] = slice_end[(generic_temp_select_menu - 7) / 2] - ENCODER[ENC_R].speed() * 10;
+            if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0)
+              slice_end[(generic_temp_select_menu - 7) / 2] = slice_start[(generic_temp_select_menu - 6) / 2];
           }
 
         }
@@ -7774,15 +7782,16 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         {
           if (LCDML.BT_checkDown())
           {
-            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] + ENCODER[ENC_R].speed() * 10;
+            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
             //
-            slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] + ENCODER[ENC_R].speed() * 10;
+            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices)
+              slice_start[(generic_temp_select_menu - 5) / 2] = slice_end[(generic_temp_select_menu - 6) / 2];
           }
           else if (LCDML.BT_checkUp())
           {
-            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] - ENCODER[ENC_R].speed() * 10;
-            //
-            slice_start[(generic_temp_select_menu - 5) / 2] = slice_start[(generic_temp_select_menu - 5) / 2] - ENCODER[ENC_R].speed() * 10;
+            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
+            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices)
+              slice_start[(generic_temp_select_menu - 5) / 2] = slice_end[(generic_temp_select_menu - 6) / 2];
           }
         }
         draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);

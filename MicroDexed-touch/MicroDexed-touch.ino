@@ -903,7 +903,7 @@ extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 uint8_t drum_counter;
 uint8_t drum_type[NUM_DRUMS];
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
-uint8_t slices_midi_channel = drum_midi_channel+1;
+uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
 extern void sequencer(void);
 extern uint8_t seq_prev_note[NUM_SEQ_TRACKS];
@@ -1604,7 +1604,7 @@ FLASHMEM void handle_touchscreen_midi_channel_page()
     else
       print_midi_channel_activity(39, 18, 0);
 
-//// sample slices activity is missing here phtodo
+    //// sample slices activity is missing here phtodo
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
@@ -1913,7 +1913,7 @@ void update_sidechain()
   }
 }
 
-void preview_sample()
+FLASHMEM void preview_sample()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
   {
@@ -1979,7 +1979,26 @@ void preview_sample()
 
       }
     }
-    draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+
+#if defined(COMPILE_FOR_PSRAM)
+    else if (fm.sample_source == 4) // PSRAM
+    {
+      if (num_slices == 0)
+        playWAVFilePSRAM(temp_int);
+      else
+      {
+        if (generic_temp_select_menu < 6)
+          generic_temp_select_menu = 6;
+        seq.edit_state = 0;
+        print_updated_slices_text();
+        playWAVFilePSRAM((generic_temp_select_menu - 6) / 2);
+      }
+      if (num_slices == 0)
+        draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+      else
+        draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+    }
+#endif
   }
 }
 
@@ -2370,6 +2389,40 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
       display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
   }
+  else
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor))
+    {
+      if (num_slices == 0)
+      {
+        if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000)
+        {
+          if (WAV_preview_PSRAM.isPlaying())
+            WAV_preview_PSRAM.stop();
+          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+          while (WAV_preview_PSRAM.isPlaying())
+          {
+            delay(25);
+          }
+          delay(15);
+        }
+      }
+      else //sliced
+      {
+        if ((drum_config[selected_slice_sample].drum_data != NULL && drum_config[selected_slice_sample].len > 0 &&
+          drum_config[selected_slice_sample].len < 10000000 && d >= 0 && d <= num_slices))
+        {
+          if (WAV_preview_PSRAM.isPlaying())
+            WAV_preview_PSRAM.stop();
+          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample].drum_data + slice_start[d],
+            slice_end[d] - slice_start[d], drum_config[selected_slice_sample].numChannels);
+          while (WAV_preview_PSRAM.isPlaying())
+          {
+            delay(25);
+          }
+          delay(15);
+        }
+      }
+    }
 }
 #endif
 
@@ -3079,17 +3132,17 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #ifdef COMPILE_FOR_PSRAM
 
      // if (inChannel == slices_midi_channel || slices_midi_channel == MIDI_CHANNEL_OMNI)
-       if (inChannel == slices_midi_channel)
+      if (inChannel == slices_midi_channel)
       {
 
         if (drum_counter >= NUM_DRUMS)
           drum_counter = 0;
 
-        const uint8_t d = inNumber-48;
+        const uint8_t d = inNumber - 48;
 
         uint8_t slot = drum_get_slot(drum_config[d].drum_class);
 
-        if (slot != 99 && num_slices !=0)
+        if (slot != 99 && num_slices != 0)
         {
           // if (drum_config[d].filter_mode == 0)
           //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
@@ -3123,8 +3176,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           // if (sidechain_b_active && d == sidechain_b_sample_number)
           //   sidechain_trigger_b = true;
 
-          if ((drum_config[selected_slice_sample].drum_data != NULL && drum_config[selected_slice_sample].len > 0 && 
-         drum_config[selected_slice_sample].len < 10000000 && d >= 0 && d <= num_slices ))
+          if ((drum_config[selected_slice_sample].drum_data != NULL && drum_config[selected_slice_sample].len > 0 &&
+            drum_config[selected_slice_sample].len < 10000000 && d >= 0 && d <= num_slices))
           {
 
             // if (drum_config[d].pitch != 0.0)
@@ -3142,10 +3195,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             // if (sidechain_b_active && d == sidechain_b_sample_number)
             //   sidechain_trigger_b = true;
 
-             Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data + slice_start[d],
-                slice_end[d]-slice_start[d], drum_config[selected_slice_sample].numChannels);
+            Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample].drum_data + slice_start[d],
+              slice_end[d] - slice_start[d], drum_config[selected_slice_sample].numChannels);
           }
-       }
+        }
       }
 #endif
 

@@ -1638,11 +1638,14 @@ extern uint8_t num_slices;
 extern void draw_waveform_sample_editor(uint8_t sliceno);
 extern void fill_slices();
 extern void clear_slices();
+extern bool slices_autoalign;
+extern  uint16_t slices_scrollspeed;
 
 FLASHMEM void handle_touchscreen_sample_editor()
 {
   if (numTouchPoints > 0)
   {
+     char buf[4];
     if (check_button_on_grid(45, 23))
     {
       preview_sample();
@@ -1654,6 +1657,7 @@ FLASHMEM void handle_touchscreen_sample_editor()
       if (num_slices == 0)
       {
         num_slices = 1;
+        draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
       }
       else
       {
@@ -1662,13 +1666,29 @@ FLASHMEM void handle_touchscreen_sample_editor()
         if (num_slices > 16)
         {
           num_slices = 0;
-           display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+          draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+
+          generic_temp_select_menu = 6;
+          seq.edit_state = 0;
+          display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
           clear_slices();
-        }  
+        }
       }
       fill_slices();  //will be skipped if slices = 0
       draw_waveform_sample_editor(99);
       draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
+    }
+    if (check_button_on_grid(25, 23)) // auto align
+    {
+      slices_autoalign= !slices_autoalign;
+    draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1+slices_autoalign);
+    }
+     if (check_button_on_grid(17, 23)) // scrolling speed
+    {
+      slices_scrollspeed=slices_scrollspeed*2;
+      if (slices_scrollspeed>512)
+      slices_scrollspeed=1;
+       draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 0);
     }
   }
 }
