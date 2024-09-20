@@ -2369,7 +2369,7 @@ FLASHMEM void update_pattern_number_in_tracker(uint8_t tracknumber)
 }
 
 uint8_t num_slices = 0;  // for testing currently only for a single sample with up to 16 slices
-uint8_t selected_slice_sample = 0;
+uint8_t selected_slice_sample = 99; //init state, no slided sample created
 uint32_t slice_start[16];
 uint32_t slice_end[16];
 uint16_t slices_scrollspeed = 1;
@@ -2502,7 +2502,7 @@ FLASHMEM void print_track_steps_detailed_only_current_playing_note(int xpos, int
           else // else it is a regular Drum Sample
             show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
         }
-        else  if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0) // it is a Slice
+        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) // it is a Slice
         {
           if (seq.note_data[seq.active_pattern][i] - 48 >= 0 && seq.note_data[seq.active_pattern][i] - 48 <= num_slices)
           {
@@ -7333,38 +7333,6 @@ void draw_end_marking(uint16_t xspace)
   }
 }
 
-FLASHMEM void draw_waveform_overview_in_sample_editor_step2(uint8_t overview_buffer[], int end_zoomed_x_position, unsigned long filelength)
-{
-  if (wave_editor_skip_redraw_overview == false)
-  {
-    uint8_t xspace = 0;
-    uint32_t current_pos = 0;
-    int oldy = 50;
-
-    uint16_t overview_factor = 0;
-
-    overview_factor = (filelength / 140);
-    if (overview_factor % 2 != 0)
-      overview_factor = overview_factor - 1;
-    display.console = true;
-    if ((end_zoomed_x_position / overview_factor) + 169 < DISPLAY_WIDTH - 12 && end_zoomed_x_position / overview_factor > 169)
-      display.fillRect(169, 31, end_zoomed_x_position / overview_factor, 38, GREY2);
-    else
-      display.fillRect(169, 31, DISPLAY_WIDTH - 169 - 11, 38, GREY2);
-
-    if (169 + end_zoomed_x_position / overview_factor < DISPLAY_WIDTH - 30)
-      display.fillRect(169 + end_zoomed_x_position / overview_factor, 31, 140 - end_zoomed_x_position / overview_factor, 38, GREY4);
-
-    while (xspace < 140) // draw overview
-    {
-      display.drawLine(169 + (xspace - 1), oldy, 169 + xspace, overview_buffer[xspace], COLOR_SYSTEXT);
-      oldy = overview_buffer[xspace];
-      xspace = xspace + 1;
-      current_pos = current_pos + overview_factor;
-    }
-  }
-}
-
 FLASHMEM void sample_editor_update_file_counts()
 {
   if (fm.sample_source == 1) // source = FLASH
@@ -7418,7 +7386,7 @@ void clear_slices()
 
 FLASHMEM void fill_slices()
 {
-  if (num_slices != 0)
+  if (selected_slice_sample != 99)
   {
     for (uint8_t y = 0; y < num_slices; y++)
     {
@@ -7427,48 +7395,28 @@ FLASHMEM void fill_slices()
     }
   }
 }
-FLASHMEM void print_slices_text()
-{
-  if (num_slices != 0)
-  {
-    selected_slice_sample = temp_int;
-    /// char tmp[10];
 
+FLASHMEM void print_slices_static_text()
+{
+  if (selected_slice_sample != 99)
+  {
     for (uint8_t y = 0; y < 4; y++)
     {
-      //int slice_col;
-      // if (y % 2 == 0)
-      //   slice_col = ColorHSV(y * 22, 180, 254);
-      // else
-      //   slice_col = ColorHSV(y * 22, 250, 180);
       setCursor_textGrid_small(26, y + 3);
       display.setTextColor(GREY1, COLOR_BACKGROUND);
       display.print("SLICE");
-      // setCursor_textGrid_small(32, y + 3);
-      // display.setTextColor(slice_col, COLOR_BACKGROUND);
-      // snprintf_P(tmp, sizeof(tmp), PSTR("%02d"), y + 1);
-      // display.print(tmp);
-
-      // setCursor_textGrid_small(35, y + 3);
-      // display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      // snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[y]);
-      // display.print(tmp);
 
       setCursor_textGrid_small(42, y + 3);
       display.setTextColor(GREY1, COLOR_BACKGROUND);
       display.print("-");
 
-      // setCursor_textGrid_small(44, y + 3);
-      // display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      // snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y]);
-      // display.print(tmp);
     }
   }
 }
 
 FLASHMEM void print_updated_slices_text()
 {
-  if (num_slices != 0)
+  if (selected_slice_sample != 99)
   {
     char tmp[10];
 
@@ -7528,8 +7476,6 @@ FLASHMEM void print_updated_slices_text()
 
 FLASHMEM void draw_header_sample_editor()
 {
-  show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, drum_config[temp_int].name);
-
   setCursor_textGrid_small(32, 1);
   display.setTextColor(GREY1, COLOR_BACKGROUND);
   display.print(drum_config[temp_int].len / 1024);
@@ -7561,48 +7507,76 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
       to = slice + 2;
   }
 
-  print_slices_text();
+  print_slices_static_text();
   print_updated_slices_text();
-  if (num_slices == 0)
+  if (temp_int != selected_slice_sample)
     printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0.0f, 1.0f, COLOR_SYSTEXT, GREY4);
   else
   {
-    // for (uint8_t y = 0; y < num_slices; y++)
-    for (uint8_t y = from; y < to; y++)
+    if (sample->len != 0)
     {
-      int slice_col;
-      if (y % 2 == 0)
-        slice_col = ColorHSV(y * 22, 180, 254);
-      else
-        slice_col = ColorHSV(y * 22, 250, 180);
-
-      const uint16_t xCoord = round((DISPLAY_WIDTH * slice_start[y]) / float(sample->len));
-      const uint16_t yCoord = 72;
-      const uint16_t w = round(DISPLAY_WIDTH * (slice_end[y] - slice_start[y]) / float(sample->len));
-      const uint16_t h = 100;
-      const float from = slice_start[y] / float(sample->len);
-      const float to = slice_end[y] / float(sample->len);
-
-      printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
-
-      display.console = true;
-      display.fillRect(xCoord - 2, 164, 2, 7, GREY3);
-      display.console = false;
-      display.setCursor(xCoord + 1, 164);
-      display.setTextColor(slice_col, GREY3);
-      display.print(noteNames[(48 + y) % 12][0]);
-      if (noteNames[(48 + y) % 12][1] != '\0')
+      for (uint8_t y = from; y < to; y++)
       {
-        display.print(noteNames[(48 + y) % 12][1]);
+        int slice_col;
+        if (y % 2 == 0)
+          slice_col = ColorHSV(y * 22, 180, 254);
+        else
+          slice_col = ColorHSV(y * 22, 250, 180);
+
+        const uint16_t xCoord = round((DISPLAY_WIDTH * slice_start[y]) / float(sample->len));
+        const uint16_t yCoord = 72;
+        const uint16_t w = round(DISPLAY_WIDTH * (slice_end[y] - slice_start[y]) / float(sample->len));
+        const uint16_t h = 100;
+        const float from = slice_start[y] / float(sample->len);
+        const float to = slice_end[y] / float(sample->len);
+
+        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
+
+        display.console = true;
+        display.fillRect(xCoord - 2, 164, 2, 7, GREY3);
+        display.console = false;
+        display.setCursor(xCoord + 1, 164);
+        display.setTextColor(slice_col, GREY3);
+        display.print(noteNames[(48 + y) % 12][0]);
+        if (noteNames[(48 + y) % 12][1] != '\0')
+        {
+          display.print(noteNames[(48 + y) % 12][1]);
+        }
+        display.print(((48 + y) / 12) - 1);
       }
-      display.print(((48 + y) / 12) - 1);
     }
+    else // empty sample
+    {
+      display.console = true;
+      display.fillRect(0, 72, DISPLAY_WIDTH, 100, GREY3);
+      display.console = false;
+      display.setCursor(118, 120);
+      display.setTextColor(RED, GREY3);
+      display.print(F("EMPTY SAMPLE SLOT"));
+    }
+  }
+}
+
+FLASHMEM void print_sliced_status()
+{
+  char buf[4];
+  setModeColor(1);
+  setCursor_textGrid_small(44, 1);
+  if (selected_slice_sample != 99 && temp_int == selected_slice_sample)
+  {
+    display.print(F("SLICED"));
+    draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
+  }
+  else
+  {
+    display.print(F("NORMAL"));
+    draw_button_on_grid(33, 23, "SLICES", itoa(0, buf, 10), 1);
   }
 }
 
 FLASHMEM void draw_scrollbar_sample_editor()
 {
-  if (num_slices != 0)
+  if (selected_slice_sample != 99)
     drawScrollbar(DISPLAY_WIDTH - CHAR_width_small * 2 - 3, CHAR_height_small * 3 + 6, 4, num_slices * 2, generic_temp_select_menu - 6, 10);
 }
 
@@ -7631,7 +7605,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     menuhelper_redraw = true;
 
-    if (selected_slice_sample != 0)
+    if (selected_slice_sample != 99)
       temp_int = selected_slice_sample;
     else
       temp_int = 0;
@@ -7649,9 +7623,6 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     setCursor_textGrid_small(1, 1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(F("SAMPLE"));
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    setCursor_textGrid_small(43, 1);
-    display.print("SCALE:");
 
     setCursor_textGrid_small(1, 3);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -7701,12 +7672,50 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         else if (fm.sample_source == 2 || fm.sample_source == 3)
           temp_int = calc_val[state_dir](temp_int, 1, 0, 7);
         else if (fm.sample_source == 4)
-          temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG - 2);
-        draw_header_sample_editor();
-        if (num_slices != 0)
         {
-          clear_slices();
-          fill_slices();
+          temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG - 2);
+
+          draw_header_sample_editor();
+          print_sliced_status();
+        }
+
+      }
+      else if (seq.edit_state == 1 && generic_temp_select_menu == 1)
+      {
+        stop_all_drum_slots();
+        if (fm.sample_source == 4)
+        {
+          char buf[3] = { 0, 0, 0 };
+          if (num_slices == 0)
+          {
+            num_slices = 1;
+            selected_slice_sample = temp_int; // set sliced sample
+
+            draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+          }
+          else
+          {
+            if (num_slices != 0)
+            {
+              num_slices = 0;
+              selected_slice_sample = 99; // clear selected sliced sample
+
+              draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+
+              display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+              clear_slices();
+            }
+          }
+          // seq.edit_state = 0;
+          //  generic_temp_select_menu = 1;
+
+
+          fill_slices();  //will be skipped if slices = 0
+          draw_header_sample_editor();
+          draw_waveform_sample_editor(99);
+          print_sliced_status();
+
+
         }
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 2)
@@ -7808,10 +7817,14 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+    display.setTextSize(1);
     setCursor_textGrid_small(9, 1);
     setModeColor(0);
     print_formatted_number(temp_int + 1, 3);
-    setModeColor(1);
+    show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, drum_config[temp_int].name);
+
+    print_sliced_status();
+
     setModeColor(2);
     setCursor_textGrid_small(10, 3);
     if (fm.sample_source == 0)
@@ -8011,7 +8024,7 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
         {
           show_smallfont_noGrid(y, CHAR_width_small * 17, 10, basename(drum_config[seq.vel[seq.active_pattern][i] - 210].name));
         }
-        else  if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0) // it is a Slice
+        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) // it is a Slice
         {
           if (seq.note_data[seq.active_pattern][i] - 48 >= 0 && seq.note_data[seq.active_pattern][i] - 48 <= num_slices)
           {
@@ -9282,7 +9295,7 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
         fill_up_with_spaces_right_window();
       }
     }
-    else if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0)
+    else if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
     {
       display.print(basename(drum_config[selected_slice_sample].name));
       if (activeSample - 30 < num_slices && activeSample - 30 >= 0)
@@ -9481,7 +9494,7 @@ FLASHMEM void pattern_editor_menu_0()
           display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
         if (seq.content_type[seq.active_pattern] == 0)
           show(0, 1, 9, basename(drum_config[activeSample].name));
-        else  if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0)
+        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
         {
           seq_sub_pattern_editor_print_slicename_toprow();
         }
@@ -9710,7 +9723,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           }
         }
       }
-      else  if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0) // is in Slice mode 
+      else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) // is in Slice mode 
       {
         if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
         {
@@ -9932,7 +9945,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       }
       else
-        if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] == 3 && num_slices != 0) //Slices
+        if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) //Slices
         {
           seq_sub_pattern_editor_print_slicename_toprow();
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -9973,7 +9986,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
           display.print("  ");
         }
-        else  if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0)
+        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
         {
           //display.setTextSize(2);
          // seq_sub_pattern_editor_print_slicename_toprow();
@@ -10106,7 +10119,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           {
             if (seq.content_type[seq.active_pattern] == 0)
               show(0, 1, 9, seq_find_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
-            else if (seq.content_type[seq.active_pattern] == 3 && num_slices != 0)
+            else if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
               seq_sub_pattern_editor_print_slicename_toprow();
 
             // check if the same note is already there, if so ask to clear it
@@ -10153,7 +10166,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
             }
             else if (seq.note_data[seq.active_pattern][seq.menu - 3] != drum_config[activeSample].midinote &&
               seq.note_data[seq.active_pattern][seq.menu - 3] > 0 &&
-              seq.content_type[seq.active_pattern] == 3 && num_slices != 0) //sliced sample
+              seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) //sliced sample
             {
               display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
               display.setCursor(0, 3 * CHAR_height + 17);

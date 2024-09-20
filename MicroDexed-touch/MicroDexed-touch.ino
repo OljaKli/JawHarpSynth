@@ -3124,13 +3124,11 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         }
       }
-
       //
       // Sliced Samples
       //
 
 #ifdef COMPILE_FOR_PSRAM
-
      // if (inChannel == slices_midi_channel || slices_midi_channel == MIDI_CHANNEL_OMNI)
       if (inChannel == slices_midi_channel)
       {
@@ -3142,7 +3140,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         uint8_t slot = drum_get_slot(drum_config[d].drum_class);
 
-        if (slot != 99 && num_slices != 0)
+        if (slot != 99 && selected_slice_sample != 99)
         {
           // if (drum_config[d].filter_mode == 0)
           //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);

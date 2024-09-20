@@ -1640,55 +1640,56 @@ extern void fill_slices();
 extern void clear_slices();
 extern bool slices_autoalign;
 extern  uint16_t slices_scrollspeed;
+extern uint8_t selected_slice_sample;
+extern void print_sliced_status();
 
 FLASHMEM void handle_touchscreen_sample_editor()
 {
   if (numTouchPoints > 0)
   {
-     char buf[4];
+    char buf[4];
     if (check_button_on_grid(45, 23))
     {
       preview_sample();
     }
     if (check_button_on_grid(33, 23)) // num slices
     {
-      char buf[3] = { 0, 0, 0 };
-      draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 2);
       if (num_slices == 0)
       {
         num_slices = 1;
+        selected_slice_sample = temp_int; // set sliced sample
         draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
       }
       else
       {
         num_slices = num_slices * 2;
-
         if (num_slices > 16)
         {
           num_slices = 0;
+          selected_slice_sample = 99; // clear selected sliced sample
           draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
-
           generic_temp_select_menu = 6;
-          seq.edit_state = 0;
           display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
           clear_slices();
         }
       }
       fill_slices();  //will be skipped if slices = 0
+        print_sliced_status();
       draw_waveform_sample_editor(99);
       draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
     }
+
     if (check_button_on_grid(25, 23)) // auto align
     {
-      slices_autoalign= !slices_autoalign;
-    draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1+slices_autoalign);
+      slices_autoalign = !slices_autoalign;
+      draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1 + slices_autoalign);
     }
-     if (check_button_on_grid(17, 23)) // scrolling speed
+    if (check_button_on_grid(17, 23)) // scrolling speed
     {
-      slices_scrollspeed=slices_scrollspeed*2;
-      if (slices_scrollspeed>512)
-      slices_scrollspeed=1;
-       draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 0);
+      slices_scrollspeed = slices_scrollspeed * 2;
+      if (slices_scrollspeed > 512)
+        slices_scrollspeed = 1;
+      draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 0);
     }
   }
 }
