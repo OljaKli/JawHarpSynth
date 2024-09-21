@@ -2477,6 +2477,96 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
 
 #endif
 
+
+/******************************************************************************
+   SLICES
+ ******************************************************************************/
+
+#ifdef COMPILE_FOR_PSRAM
+
+extern uint8_t num_slices;
+extern uint8_t selected_slice_sample;
+extern uint32_t slice_start[16];
+extern uint32_t slice_end[16];
+extern uint16_t slices_scrollspeed;
+extern bool slices_autoalign;
+
+FLASHMEM bool load_sd_slices_json(uint8_t number)
+{
+  if (number < 0)
+    return (false);
+
+  if (sd_card > 0)
+  {
+    number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SLICES_CONFIG_NAME);
+
+    // first check if file exists...
+    AudioNoInterrupts();
+    if (SD.exists(filename))
+    {
+      // ... and if: load
+
+      json = SD.open(filename);
+      if (json)
+      {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        deserializeJson(data_json, json);
+        json.close();
+        AudioInterrupts();
+        num_slices = data_json["num_slices"];
+        selected_slice_sample = data_json["selected_slice_sample"];
+        slices_scrollspeed = data_json["slices_scrollspeed"];
+        slices_autoalign = data_json["slices_autoalign"];
+
+        for (int i = 0; i < 16; i++) {
+          slice_start[i] = data_json[i]["start"];
+          slice_end[i] = data_json[i]["end"];
+        }
+        return (true);
+      }
+    }
+  }
+  AudioInterrupts();
+  return (false);
+}
+
+FLASHMEM bool save_sd_slices_json(uint8_t number)
+{
+  if (sd_card > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SLICES_CONFIG_NAME);
+
+    AudioNoInterrupts();
+    SD.remove(filename);
+    json = SD.open(filename, FILE_WRITE);
+    if (json)
+    {
+      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      data_json["num_slices"] = num_slices;
+      data_json["selected_slice_sample"] = selected_slice_sample;
+      data_json["slices_scrollspeed"] = slices_scrollspeed;
+      data_json["slices_autoalign"] = slices_autoalign;
+
+      for (int i = 0; i < 16; i++) {
+        data_json[i]["start"] = slice_start[i];
+        data_json[i]["end"] = slice_end[i];
+      }
+
+      serializeJsonPretty(data_json, json);
+      json.close();
+      AudioInterrupts();
+      return (true);
+    }
+    json.close();
+  }
+  AudioInterrupts();
+  return (false);
+}
+
+#endif
+
+
 /******************************************************************************
    SD SIDECHAIN
  ******************************************************************************/
@@ -3048,6 +3138,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_livesequencer_json(number);
 #ifdef COMPILE_FOR_PSRAM
   save_sd_samples_json(number);
+  save_sd_slices_json(number);
 #endif
 
   for (uint8_t i = 0; i < MAX_DEXED; i++)
@@ -3396,6 +3487,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
   load_sd_sidechain_json(number);
 #ifdef COMPILE_FOR_PSRAM
   load_sd_samples_json(number);
+  load_sd_slices_json(number);
 #endif
 
   configuration.sys.performance_number = number;

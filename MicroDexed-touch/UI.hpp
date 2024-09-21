@@ -2369,7 +2369,7 @@ FLASHMEM void update_pattern_number_in_tracker(uint8_t tracknumber)
 }
 
 uint8_t num_slices = 0;  // for testing currently only for a single sample with up to 16 slices
-uint8_t selected_slice_sample = 99; //init state, no slided sample created
+uint8_t selected_slice_sample = 99; //init state, no sliced sample created
 uint32_t slice_start[16];
 uint32_t slice_end[16];
 uint16_t slices_scrollspeed = 1;
@@ -7386,7 +7386,7 @@ void clear_slices()
 
 FLASHMEM void fill_slices()
 {
-  if (selected_slice_sample != 99)
+  if (selected_slice_sample != 99 && selected_slice_sample == temp_int)
   {
     for (uint8_t y = 0; y < num_slices; y++)
     {
@@ -7398,7 +7398,7 @@ FLASHMEM void fill_slices()
 
 FLASHMEM void print_slices_static_text()
 {
-  if (selected_slice_sample != 99)
+  if (selected_slice_sample != 99 && selected_slice_sample == temp_int)
   {
     for (uint8_t y = 0; y < 4; y++)
     {
@@ -7416,7 +7416,7 @@ FLASHMEM void print_slices_static_text()
 
 FLASHMEM void print_updated_slices_text()
 {
-  if (selected_slice_sample != 99)
+  if (selected_slice_sample != 99 && selected_slice_sample == temp_int)
   {
     char tmp[10];
 
@@ -7472,6 +7472,13 @@ FLASHMEM void print_updated_slices_text()
       i++;
     }
   }
+  else  //is unsliced 
+  {
+    display.console = true;
+    display.fillRect(155, 30, 156, 38, COLOR_BACKGROUND);
+    display.console = false;
+  }
+
 }
 
 FLASHMEM void draw_header_sample_editor()
@@ -7567,10 +7574,26 @@ FLASHMEM void print_sliced_status()
     display.print(F("SLICED"));
     draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
   }
-  else
+  else if (selected_slice_sample != 99 && temp_int != selected_slice_sample)
+  {
+    display.print(F("NORMAL"));
+    draw_button_on_grid(33, 23, "SLICES", itoa(0, buf, 10), 0);
+  }
+  else if (selected_slice_sample == 99)
   {
     display.print(F("NORMAL"));
     draw_button_on_grid(33, 23, "SLICES", itoa(0, buf, 10), 1);
+  }
+}
+
+FLASHMEM void check_and_print_sliced_message()
+{
+  if (num_slices != 0 && selected_slice_sample != temp_int && selected_slice_sample != 99)
+  {
+    setCursor_textGrid_small(1, 16);
+    display.setTextColor(COLOR_SYSTEXT, RED);
+    display.print(F("SLICED SAMPLE IS CURRENTLY ASSIGNED TO SAMPLE: "));
+    display.print(selected_slice_sample + 1);
   }
 }
 
@@ -7639,7 +7662,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1);
 
-    draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
+    //draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
     draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
 
     sample_editor_update_file_counts();
@@ -7685,17 +7708,20 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         stop_all_drum_slots();
         if (fm.sample_source == 4)
         {
-          char buf[3] = { 0, 0, 0 };
-          if (num_slices == 0)
+          if (selected_slice_sample == 99)
           {
             num_slices = 1;
             selected_slice_sample = temp_int; // set sliced sample
 
             draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+            fill_slices();  //will be skipped if slices = 0
+            draw_header_sample_editor();
+            draw_waveform_sample_editor(99);
+            print_sliced_status();
           }
           else
           {
-            if (num_slices != 0)
+            if (selected_slice_sample == temp_int)
             {
               num_slices = 0;
               selected_slice_sample = 99; // clear selected sliced sample
@@ -7704,18 +7730,14 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
               display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
               clear_slices();
+              fill_slices();  //will be skipped if slices = 0
+              draw_header_sample_editor();
+              draw_waveform_sample_editor(99);
+              print_sliced_status();
             }
+            else
+              check_and_print_sliced_message();
           }
-          // seq.edit_state = 0;
-          //  generic_temp_select_menu = 1;
-
-
-          fill_slices();  //will be skipped if slices = 0
-          draw_header_sample_editor();
-          draw_waveform_sample_editor(99);
-          print_sliced_status();
-
-
         }
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 2)

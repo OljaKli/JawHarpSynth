@@ -353,6 +353,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define SIDECHAIN_CONFIG_NAME "sc"
 #define LIVESEQUENCER_CONFIG_NAME "liveseq"
 #define SAMPLES_CONFIG_NAME "samples"
+#define SLICES_CONFIG_NAME "slices"
 #define MAX_PERF_MOD 30
 
 // SerialFlash & SD CARD

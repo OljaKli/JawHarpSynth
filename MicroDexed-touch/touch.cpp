@@ -1642,7 +1642,7 @@ extern bool slices_autoalign;
 extern  uint16_t slices_scrollspeed;
 extern uint8_t selected_slice_sample;
 extern void print_sliced_status();
-
+extern void check_and_print_sliced_message();
 FLASHMEM void handle_touchscreen_sample_editor()
 {
   if (numTouchPoints > 0)
@@ -1654,13 +1654,13 @@ FLASHMEM void handle_touchscreen_sample_editor()
     }
     if (check_button_on_grid(33, 23)) // num slices
     {
-      if (num_slices == 0)
+      if (num_slices == 0 && selected_slice_sample == 99)
       {
         num_slices = 1;
         selected_slice_sample = temp_int; // set sliced sample
         draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
       }
-      else
+      else if (selected_slice_sample == temp_int)
       {
         num_slices = num_slices * 2;
         if (num_slices > 16)
@@ -1674,9 +1674,10 @@ FLASHMEM void handle_touchscreen_sample_editor()
         }
       }
       fill_slices();  //will be skipped if slices = 0
-        print_sliced_status();
+      print_sliced_status();
       draw_waveform_sample_editor(99);
-      draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
+
+      check_and_print_sliced_message();
     }
 
     if (check_button_on_grid(25, 23)) // auto align
@@ -1689,7 +1690,7 @@ FLASHMEM void handle_touchscreen_sample_editor()
       slices_scrollspeed = slices_scrollspeed * 2;
       if (slices_scrollspeed > 512)
         slices_scrollspeed = 1;
-      draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 0);
+      draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 1);
     }
   }
 }
