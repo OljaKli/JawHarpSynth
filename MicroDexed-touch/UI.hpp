@@ -14050,13 +14050,13 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
       LOG.println(F("ms"));
 #endif
     }
-    }
+  }
   else
   {
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
     delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
   }
-  }
+}
 
 FLASHMEM void print_sync_timing(uint8_t sync)
 {
@@ -17770,6 +17770,12 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   {
     registerTouchHandler(handle_touchscreen_file_manager);
     // handleStop(); //test 20/03/2023 for remote console crash when opening file manager while sequencer is playing
+
+    if (sd_card > 0)
+    {
+      if (!SD.exists("CUSTOM"))
+        SD.mkdir("CUSTOM");
+    }
     fm.sd_mode = FM_BROWSE_FILES;
     fm.active_window = 0;
     // fm.sd_skip_files = 0;
@@ -17891,7 +17897,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
 #endif
 
-      }
+    }
 
     // #ifdef COMPILE_FOR_FLASH
     //        if (LCDML.BT_checkEnter() && fm.active_window == 0) // left window, SDCARD
@@ -18190,8 +18196,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
           }
 #endif
-          }
         }
+    }
     if (LCDML.BT_checkEnter() && fm.sd_mode == FM_PLAY_SAMPLE) // preview
     {
       preview_sample();
@@ -18233,7 +18239,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     // display.setTextColor(fm.sd_is_folder ? GREY2 : GREEN);
     // display.print(F("FILE"));
     // display.setTextColor(fm.sd_is_folder ? COLOR_PITCHSMP : COLOR_SYSTEXT, COLOR_BACKGROUND);
-    }
+  }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -18242,7 +18248,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
-      }
+}
 
 FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
 {
@@ -23045,7 +23051,7 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 FLASHMEM void UI_func_test_mute(uint8_t param)
 {
@@ -23141,14 +23147,14 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
 #endif
     }
     // setCursor_textGrid(1, 2);
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 void sub_touchscreen_test_page_init()
 {
@@ -23476,10 +23482,10 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-    }
+  }
   else
     return false;
-  }
+}
 
 FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id)
 {
@@ -23550,8 +23556,8 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       LOG.println(F("Removed from Favorites..."));
 #endif
     }
-      }
-    }
+  }
+}
 
 FLASHMEM char* basename(const char* filename)
 {
