@@ -1634,15 +1634,62 @@ FLASHMEM void handle_touchscreen_multiband()
 }
 
 extern int temp_int;
-extern uint8_t num_slices;
+extern uint8_t num_slices[2];
 extern void draw_waveform_sample_editor(uint8_t sliceno);
 extern void fill_slices();
 extern void clear_slices();
 extern bool slices_autoalign;
 extern  uint16_t slices_scrollspeed;
-extern uint8_t selected_slice_sample;
+extern uint8_t selected_slice_sample[2];
 extern void print_sliced_status();
 extern void check_and_print_sliced_message();
+
+FLASHMEM void  assign_free_slices_or_increment()
+{
+  if (num_slices[0] == 0 && selected_slice_sample[0] == 99)
+  {
+    num_slices[0] = 1;
+    selected_slice_sample[0] = temp_int; // set sliced sample
+    draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+  }
+  else if (num_slices[1] == 0 && selected_slice_sample[1] == 99 && selected_slice_sample[0] != 99 && selected_slice_sample[0] != temp_int)
+  {
+    num_slices[1] = 1;
+    selected_slice_sample[1] = temp_int; // set sliced sample
+    draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+  }
+  else if (selected_slice_sample[0] == temp_int && selected_slice_sample[0] != 99 )
+  {
+    num_slices[0] = num_slices[0] * 2;
+    if (num_slices[0] > 16)
+    {
+      clear_slices();
+      num_slices[0] = 0;
+      selected_slice_sample[0] = 99; // clear selected sliced sample 1
+      draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+      //generic_temp_select_menu = 6;
+      display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+    }
+  }
+  else if (selected_slice_sample[1] == temp_int && selected_slice_sample[1] != 99 )
+  {
+    num_slices[1] = num_slices[1] * 2;
+    if (num_slices[1] > 16)
+    {
+      clear_slices();
+      num_slices[1] = 0;
+      selected_slice_sample[1] = 99; // clear selected sliced sample 2
+      draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+      //generic_temp_select_menu = 6;
+      display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+    }
+  }
+  fill_slices();
+  print_sliced_status();
+  draw_waveform_sample_editor(99);
+  check_and_print_sliced_message();
+}
+
 FLASHMEM void handle_touchscreen_sample_editor()
 {
   if (numTouchPoints > 0)
@@ -1654,30 +1701,9 @@ FLASHMEM void handle_touchscreen_sample_editor()
     }
     if (check_button_on_grid(33, 23)) // num slices
     {
-      if (num_slices == 0 && selected_slice_sample == 99)
-      {
-        num_slices = 1;
-        selected_slice_sample = temp_int; // set sliced sample
-        draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
-      }
-      else if (selected_slice_sample == temp_int)
-      {
-        num_slices = num_slices * 2;
-        if (num_slices > 16)
-        {
-          num_slices = 0;
-          selected_slice_sample = 99; // clear selected sliced sample
-          draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
-          generic_temp_select_menu = 6;
-          display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
-          clear_slices();
-        }
-      }
-      fill_slices();  //will be skipped if slices = 0
-      print_sliced_status();
-      draw_waveform_sample_editor(99);
+      assign_free_slices_or_increment();
 
-      check_and_print_sliced_message();
+
     }
 
     if (check_button_on_grid(25, 23)) // auto align

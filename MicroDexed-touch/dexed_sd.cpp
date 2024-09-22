@@ -2484,10 +2484,10 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
 
 #ifdef COMPILE_FOR_PSRAM
 
-extern uint8_t num_slices;
-extern uint8_t selected_slice_sample;
-extern uint32_t slice_start[16];
-extern uint32_t slice_end[16];
+extern uint8_t num_slices[2];
+extern uint8_t selected_slice_sample[2];
+extern uint32_t slice_start[2][16];
+extern uint32_t slice_end[2][16];
 extern uint16_t slices_scrollspeed;
 extern bool slices_autoalign;
 
@@ -2514,15 +2514,22 @@ FLASHMEM bool load_sd_slices_json(uint8_t number)
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
-        num_slices = data_json["num_slices"];
-        selected_slice_sample = data_json["selected_slice_sample"];
+
         slices_scrollspeed = data_json["slices_scrollspeed"];
         slices_autoalign = data_json["slices_autoalign"];
 
-        for (int i = 0; i < 16; i++) {
-          slice_start[i] = data_json[i]["start"];
-          slice_end[i] = data_json[i]["end"];
+        for (int j = 0; j < 2; j++)
+        {
+          num_slices[j] = data_json["num_slices"][j];
+          selected_slice_sample[j] = data_json["selected_slice_sample"][j];
+
+          for (int i = 0; i < 16; i++)
+          {
+            slice_start[j][i] = data_json["start"][j][i];
+            slice_end[j][i] = data_json["end"][j][i];
+          }
         }
+
         return (true);
       }
     }
@@ -2543,15 +2550,21 @@ FLASHMEM bool save_sd_slices_json(uint8_t number)
     if (json)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-      data_json["num_slices"] = num_slices;
-      data_json["selected_slice_sample"] = selected_slice_sample;
+
       data_json["slices_scrollspeed"] = slices_scrollspeed;
       data_json["slices_autoalign"] = slices_autoalign;
 
-      for (int i = 0; i < 16; i++) {
-        data_json[i]["start"] = slice_start[i];
-        data_json[i]["end"] = slice_end[i];
-      }
+        for (int j = 0; j < 2; j++)
+        {
+         data_json["num_slices"][j]= num_slices[j]  ;
+          data_json["selected_slice_sample"][j]= selected_slice_sample[j] ;
+
+          for (int i = 0; i < 16; i++)
+          {
+            data_json["start"][j][i]= slice_start[j][i];
+            data_json["end"][j][i]=slice_end[j][i];
+          }
+        }
 
       serializeJsonPretty(data_json, json);
       json.close();

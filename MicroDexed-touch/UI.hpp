@@ -404,6 +404,13 @@ bool remote_console_keystate_b;
 
 extern sdcard_t sdcard_infos;
 
+uint8_t num_slices[2] = { 0,0 };
+uint8_t selected_slice_sample[2] = { 99,99 };
+uint32_t slice_start[2][16];
+uint32_t slice_end[2][16];
+uint16_t slices_scrollspeed = 1;
+bool slices_autoalign = true;
+
 #ifdef COMPILE_FOR_FLASH
 extern flash_t flash_infos;
 #endif
@@ -2368,13 +2375,6 @@ FLASHMEM void update_pattern_number_in_tracker(uint8_t tracknumber)
   }
 }
 
-uint8_t num_slices = 0;  // for testing currently only for a single sample with up to 16 slices
-uint8_t selected_slice_sample = 99; //init state, no sliced sample created
-uint32_t slice_start[16];
-uint32_t slice_end[16];
-uint16_t slices_scrollspeed = 1;
-bool slices_autoalign = true;
-
 FLASHMEM void print_live_probability_pattern_info()
 {
   for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++) // print track numbers, patterns and currently playing notes/chords/drums
@@ -2485,8 +2485,8 @@ FLASHMEM void print_track_steps_detailed_only_current_playing_note(int xpos, int
         display.setCursor(CHAR_width_small * 12, y);
         print_formatted_number(seq.vel[seq.active_pattern][i], 3);
         // Long Name / Note
-
-        if ((array[1] == seq.menu - 3 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) || (array[1] == seq.menu - 1 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
+        if ((array[1] == seq.menu - 3 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) ||
+          (array[1] == seq.menu - 1 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
           display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
         else if (i == currentstep)
           display.setTextColor(COLOR_SYSTEXT, COLOR_PITCHSMP);
@@ -2502,13 +2502,20 @@ FLASHMEM void print_track_steps_detailed_only_current_playing_note(int xpos, int
           else // else it is a regular Drum Sample
             show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
         }
-        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) // it is a Slice
+        else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
+          (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99)) // it is a Slice
         {
-          if (seq.note_data[seq.active_pattern][i] - 48 >= 0 && seq.note_data[seq.active_pattern][i] - 48 <= num_slices)
+          if (seq.note_data[seq.active_pattern][i] - 48 >= 0 && seq.note_data[seq.active_pattern][i] - 48 <= num_slices[0] + num_slices[1])
           {
-            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample].name);
+            if (seq.note_data[seq.active_pattern][i] - 48 < num_slices[0])
+              show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample[0]].name);
+            else if (seq.note_data[seq.active_pattern][i] - 48 <= num_slices[0] + num_slices[1])
+              show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample[1]].name);
             display.print(" #");
-            display.print(seq.note_data[seq.active_pattern][i] - 48 + 1);
+            if (seq.note_data[seq.active_pattern][i] - 48 < num_slices[0])
+              display.print(seq.note_data[seq.active_pattern][i] - 48 + 1);
+            else
+              display.print(seq.note_data[seq.active_pattern][i] - 48 - num_slices[0] + 1);
           }
         }
 
@@ -7373,32 +7380,44 @@ FLASHMEM void print_available_loop_options()
   display.print(F("LOOP TYPE:"));
 }
 
+FLASHMEM uint8_t get_current_sliced_sample_in_ui()
+{
+  uint8_t sel = 0;
+  if (selected_slice_sample[0] == temp_int && selected_slice_sample[0] != 99)
+    sel = 0;
+  else if (selected_slice_sample[1] == temp_int && selected_slice_sample[1] != 99)
+    sel = 1;
+
+  return sel;
+}
+
 void clear_slices()
 {
-  for (uint8_t i = 0; i < 16; i++)
+  if (selected_slice_sample[get_current_sliced_sample_in_ui()] != 99)
   {
-    slice_start[i] = 0;
-    slice_end[i] = 0;
-    //  memset(slice_start[i], 0, sizeof(slice_start[i]));
-    //  memset(slice_end[i], 0, sizeof(slice_end[i]));
+    for (uint8_t i = 0; i < 16; i++)
+    {
+      slice_start[get_current_sliced_sample_in_ui()][i] = 0;
+      slice_end[get_current_sliced_sample_in_ui()][i] = 0;
+    }
   }
 }
 
 FLASHMEM void fill_slices()
 {
-  if (selected_slice_sample != 99 && selected_slice_sample == temp_int)
+  if (selected_slice_sample[get_current_sliced_sample_in_ui()] != 99 && selected_slice_sample[get_current_sliced_sample_in_ui()] == temp_int)
   {
-    for (uint8_t y = 0; y < num_slices; y++)
+    for (uint8_t y = 0; y < num_slices[get_current_sliced_sample_in_ui()]; y++)
     {
-      slice_start[y] = (drum_config[temp_int].len / num_slices) * y;
-      slice_end[y] = (drum_config[temp_int].len / num_slices) * (y + 1);
+      slice_start[get_current_sliced_sample_in_ui()][y] = (drum_config[temp_int].len / num_slices[get_current_sliced_sample_in_ui()]) * y;
+      slice_end[get_current_sliced_sample_in_ui()][y] = (drum_config[temp_int].len / num_slices[get_current_sliced_sample_in_ui()]) * (y + 1);
     }
   }
 }
 
 FLASHMEM void print_slices_static_text()
 {
-  if (selected_slice_sample != 99 && selected_slice_sample == temp_int)
+  if (selected_slice_sample[get_current_sliced_sample_in_ui()] != 99 && selected_slice_sample[get_current_sliced_sample_in_ui()] == temp_int)
   {
     for (uint8_t y = 0; y < 4; y++)
     {
@@ -7416,7 +7435,7 @@ FLASHMEM void print_slices_static_text()
 
 FLASHMEM void print_updated_slices_text()
 {
-  if (selected_slice_sample != 99 && selected_slice_sample == temp_int)
+  if (selected_slice_sample[get_current_sliced_sample_in_ui()] != 99 && selected_slice_sample[get_current_sliced_sample_in_ui()] == temp_int)
   {
     char tmp[10];
 
@@ -7454,7 +7473,7 @@ FLASHMEM void print_updated_slices_text()
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
       setCursor_textGrid_small(35, y + 3);
-      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[y + field_offset]);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_start[get_current_sliced_sample_in_ui()][y + field_offset]);
       display.print(tmp);
 
       i++;
@@ -7467,7 +7486,7 @@ FLASHMEM void print_updated_slices_text()
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
       setCursor_textGrid_small(44, y + 3);
-      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[y + field_offset]);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%06d"), slice_end[get_current_sliced_sample_in_ui()][y + field_offset]);
       display.print(tmp);
       i++;
     }
@@ -7499,7 +7518,7 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
   if (slice == 99) //all
   {
     from = 0;
-    to = num_slices;
+    to = num_slices[get_current_sliced_sample_in_ui()];
   }
   else
   {
@@ -7508,15 +7527,15 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
     else
       from = slice - 1;
 
-    if (slice == num_slices)
-      to = num_slices;
+    if (slice == num_slices[get_current_sliced_sample_in_ui()])
+      to = num_slices[get_current_sliced_sample_in_ui()];
     else
       to = slice + 2;
   }
 
   print_slices_static_text();
   print_updated_slices_text();
-  if (temp_int != selected_slice_sample)
+  if (temp_int != selected_slice_sample[get_current_sliced_sample_in_ui()])
     printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0.0f, 1.0f, COLOR_SYSTEXT, GREY4);
   else
   {
@@ -7530,12 +7549,12 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
         else
           slice_col = ColorHSV(y * 22, 250, 180);
 
-        const uint16_t xCoord = round((DISPLAY_WIDTH * slice_start[y]) / float(sample->len));
+        const uint16_t xCoord = round((DISPLAY_WIDTH * slice_start[get_current_sliced_sample_in_ui()][y]) / float(sample->len));
         const uint16_t yCoord = 72;
-        const uint16_t w = round(DISPLAY_WIDTH * (slice_end[y] - slice_start[y]) / float(sample->len));
+        const uint16_t w = round(DISPLAY_WIDTH * (slice_end[get_current_sliced_sample_in_ui()][y] - slice_start[get_current_sliced_sample_in_ui()][y]) / float(sample->len));
         const uint16_t h = 100;
-        const float from = slice_start[y] / float(sample->len);
-        const float to = slice_end[y] / float(sample->len);
+        const float from = slice_start[get_current_sliced_sample_in_ui()][y] / float(sample->len);
+        const float to = slice_end[get_current_sliced_sample_in_ui()][y] / float(sample->len);
 
         printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
 
@@ -7544,12 +7563,26 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
         display.console = false;
         display.setCursor(xCoord + 1, 164);
         display.setTextColor(slice_col, GREY3);
-        display.print(noteNames[(48 + y) % 12][0]);
-        if (noteNames[(48 + y) % 12][1] != '\0')
+
+        if (get_current_sliced_sample_in_ui() == 0)
         {
-          display.print(noteNames[(48 + y) % 12][1]);
+          display.print(noteNames[(48 + y) % 12][0]);
+          if (noteNames[(48 + y) % 12][1] != '\0')
+          {
+            display.print(noteNames[(48 + y) % 12][1]);
+          }
+          display.print(((48 + y) / 12) - 1);
         }
-        display.print(((48 + y) / 12) - 1);
+        else if (get_current_sliced_sample_in_ui() == 1)
+        {
+          display.print(noteNames[(48 + num_slices[0] + y) % 12][0]);
+          if (noteNames[(48 + num_slices[0] + y) % 12][1] != '\0')
+          {
+            display.print(noteNames[(48 + num_slices[0] + y) % 12][1]);
+          }
+          display.print(((48 + num_slices[0] + y) / 12) - 1);
+        }
+
       }
     }
     else // empty sample
@@ -7569,39 +7602,49 @@ FLASHMEM void print_sliced_status()
   char buf[4];
   setModeColor(1);
   setCursor_textGrid_small(44, 1);
-  if (selected_slice_sample != 99 && temp_int == selected_slice_sample)
+  if (selected_slice_sample[0] != 99 && temp_int == selected_slice_sample[0])
   {
-    display.print(F("SLICED"));
-    draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
+    display.print(F("SLICED1/2"));
+    draw_button_on_grid(33, 23, "SLICES", itoa(num_slices[0], buf, 10), 1);
   }
-  else if (selected_slice_sample != 99 && temp_int != selected_slice_sample)
+  else if (selected_slice_sample[0] != 99 && temp_int == selected_slice_sample[1])
   {
-    display.print(F("NORMAL"));
+    display.print(F("SLICED2/2"));
+    draw_button_on_grid(33, 23, "SLICES", itoa(num_slices[1], buf, 10), 1);
+  }
+  else if (selected_slice_sample[0] != 99 && temp_int != selected_slice_sample[0])
+  {
+    display.print(F("NORMAL   "));
     draw_button_on_grid(33, 23, "SLICES", itoa(0, buf, 10), 0);
   }
-  else if (selected_slice_sample == 99)
+  else if (selected_slice_sample[0] == 99)
   {
-    display.print(F("NORMAL"));
+    display.print(F("NORMAL   "));
     draw_button_on_grid(33, 23, "SLICES", itoa(0, buf, 10), 1);
   }
 }
 
 FLASHMEM void check_and_print_sliced_message()
 {
-  if (num_slices != 0 && selected_slice_sample != temp_int && selected_slice_sample != 99)
+  if (num_slices[0] != 0 && selected_slice_sample[0] != temp_int && selected_slice_sample[0] != 99 &&
+    num_slices[1] != 0 && selected_slice_sample[1] != temp_int && selected_slice_sample[1] != 99)
   {
     setCursor_textGrid_small(1, 16);
     display.setTextColor(COLOR_SYSTEXT, RED);
-    display.print(F("SLICED SAMPLE IS CURRENTLY ASSIGNED TO SAMPLE: "));
-    display.print(selected_slice_sample + 1);
+    display.print(F("SLICED SAMPLES ARE CURRENTLY ASSIGNED TO: "));
+    display.print(selected_slice_sample[0] + 1);
+    display.print(F(" AND "));
+    display.print(selected_slice_sample[1] + 1);
   }
 }
 
 FLASHMEM void draw_scrollbar_sample_editor()
 {
-  if (selected_slice_sample != 99)
-    drawScrollbar(DISPLAY_WIDTH - CHAR_width_small * 2 - 3, CHAR_height_small * 3 + 6, 4, num_slices * 2, generic_temp_select_menu - 6, 10);
+  if (selected_slice_sample[get_current_sliced_sample_in_ui()] != 99)
+    drawScrollbar(DISPLAY_WIDTH - CHAR_width_small * 2 - 3, CHAR_height_small * 3 + 6, 4, num_slices[0] * 2, generic_temp_select_menu - 6, 10);
 }
+
+extern void  assign_free_slices_or_increment();
 
 FLASHMEM void UI_func_sample_editor(uint8_t param)
 {
@@ -7628,8 +7671,8 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     menuhelper_redraw = true;
 
-    if (selected_slice_sample != 99)
-      temp_int = selected_slice_sample;
+    if (selected_slice_sample[0] != 99)
+      temp_int = selected_slice_sample[0];
     else
       temp_int = 0;
 
@@ -7679,7 +7722,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       if (seq.edit_state == 0)
       {
         if (fm.sample_source == 2 || fm.sample_source == 3 || fm.sample_source == 4)
-          generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5 + (num_slices * 2));
+          generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5 + (num_slices[0] * 2));
         else
           generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 2);
 
@@ -7708,36 +7751,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         stop_all_drum_slots();
         if (fm.sample_source == 4)
         {
-          if (selected_slice_sample == 99)
-          {
-            num_slices = 1;
-            selected_slice_sample = temp_int; // set sliced sample
-
-            draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
-            fill_slices();  //will be skipped if slices = 0
-            draw_header_sample_editor();
-            draw_waveform_sample_editor(99);
-            print_sliced_status();
-          }
-          else
-          {
-            if (selected_slice_sample == temp_int)
-            {
-              num_slices = 0;
-              selected_slice_sample = 99; // clear selected sliced sample
-
-              draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
-
-              display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
-              clear_slices();
-              fill_slices();  //will be skipped if slices = 0
-              draw_header_sample_editor();
-              draw_waveform_sample_editor(99);
-              print_sliced_status();
-            }
-            else
-              check_and_print_sliced_message();
-          }
+          assign_free_slices_or_increment();
         }
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 2)
@@ -7795,34 +7809,33 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         {
           if (LCDML.BT_checkDown())
           {
-            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
+            slice_start[0][(generic_temp_select_menu - 6) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
             //
             if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0)
-              slice_end[(generic_temp_select_menu - 7) / 2] = slice_start[(generic_temp_select_menu - 6) / 2];
+              slice_end[0][(generic_temp_select_menu - 7) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2];
           }
           else if (LCDML.BT_checkUp())
           {
-            slice_start[(generic_temp_select_menu - 6) / 2] = slice_start[(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
+            slice_start[0][(generic_temp_select_menu - 6) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
             //
             if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0)
-              slice_end[(generic_temp_select_menu - 7) / 2] = slice_start[(generic_temp_select_menu - 6) / 2];
+              slice_end[0][(generic_temp_select_menu - 7) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2];
           }
-
         }
         else
         {
           if (LCDML.BT_checkDown())
           {
-            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
+            slice_end[0][(generic_temp_select_menu - 6) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
             //
-            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices)
-              slice_start[(generic_temp_select_menu - 5) / 2] = slice_end[(generic_temp_select_menu - 6) / 2];
+            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices[0])
+              slice_start[0][(generic_temp_select_menu - 5) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2];
           }
           else if (LCDML.BT_checkUp())
           {
-            slice_end[(generic_temp_select_menu - 6) / 2] = slice_end[(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
-            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices)
-              slice_start[(generic_temp_select_menu - 5) / 2] = slice_end[(generic_temp_select_menu - 6) / 2];
+            slice_end[0][(generic_temp_select_menu - 6) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
+            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices[0])
+              slice_start[0][(generic_temp_select_menu - 5) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2];
           }
         }
         draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);
@@ -8046,13 +8059,19 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
         {
           show_smallfont_noGrid(y, CHAR_width_small * 17, 10, basename(drum_config[seq.vel[seq.active_pattern][i] - 210].name));
         }
-        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) // it is a Slice
+        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) // it is a Slice
         {
-          if (seq.note_data[seq.active_pattern][i] - 48 >= 0 && seq.note_data[seq.active_pattern][i] - 48 <= num_slices)
+          if (seq.note_data[seq.active_pattern][i] - 48 >= 0 && seq.note_data[seq.active_pattern][i] - 48 <= num_slices[0] + num_slices[1])
           {
-            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample].name);
+            if (seq.note_data[seq.active_pattern][i] - 48 < num_slices[0])
+              show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample[0]].name);
+            else if (seq.note_data[seq.active_pattern][i] - 48 <= num_slices[0] + num_slices[1])
+              show_smallfont_noGrid(y, CHAR_width_small * 17, 10, drum_config[selected_slice_sample[1]].name);
             display.print(" #");
-            display.print(seq.note_data[seq.active_pattern][i] - 48 + 1);
+            if (seq.note_data[seq.active_pattern][i] - 48 < num_slices[0])
+              display.print(seq.note_data[seq.active_pattern][i] - 48 + 1);
+            else
+              display.print(seq.note_data[seq.active_pattern][i] - 48 - num_slices[0] + 1);
           }
         }
         else // else it is a regular Drum Sample
@@ -8106,47 +8125,107 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
 
 FLASHMEM void seq_sub_pattern_editor_print_slicename_toprow()
 {
+  uint8_t sel = 0;
+
   display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-  show(0, 1, 6, basename(drum_config[selected_slice_sample].name));
-  if (activeSample - 30 >= 0 && activeSample - 30 < num_slices)
+  if (activeSample - 30 < num_slices[0])
+    sel = 0;
+  else
   {
+    sel = 1;
+  }
+
+
+  if (seq.menu == 0)
+  {
+    show(0, 1, 6, basename(drum_config[selected_slice_sample[sel]].name));
     display.print("#");
-    print_formatted_number(activeSample - 30 + 1, 2);//display slice numbers from 1-xx not from 0-xx
+
+    if (activeSample - 30 >= 0 && activeSample - 30 < num_slices[0] + num_slices[1])
+    {
+      if (activeSample - 30 >= num_slices[0]) // sliced sample2
+        print_formatted_number(activeSample - 30 - num_slices[0] + 1, 2);//display slice numbers from 1-xx not from 0-xx
+      else  // sliced sample1 
+        print_formatted_number(activeSample - 30 + 1, 2);//display slice numbers from 1-xx not from 0-xx
+    }
+  }
+  else
+  {
+    if (seq.note_data[seq.active_pattern][seq.menu - 3] - 48 >= 0 && seq.note_data[seq.active_pattern][seq.menu - 3] - 48 < num_slices[0])
+    {
+      show(0, 1, 6, basename(drum_config[selected_slice_sample[0]].name));
+      display.print("#");
+      print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 3] - 48 + 1, 2);
+    }
+    else  if (seq.note_data[seq.active_pattern][seq.menu - 3] - 48 >= 0 && seq.note_data[seq.active_pattern][seq.menu - 3] - 48 - num_slices[0] < num_slices[0] + num_slices[1])
+    {
+      show(0, 1, 6, basename(drum_config[selected_slice_sample[1]].name));
+      display.print("#");
+      print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 3] - 48 - num_slices[0] + 1, 2);
+    }
   }
 }
 
 FLASHMEM void seq_sub_velocity_editor_print_slicename_toprow()
 {
   display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-  show(0, 6, 5, basename(drum_config[selected_slice_sample].name));
-  if (activeSample - 30 >= 0 && activeSample - 30 < num_slices)
+  if (seq.note_data[seq.active_pattern][seq.menu - 1] - 48 >= 0 && seq.note_data[seq.active_pattern][seq.menu - 1] - 48 < num_slices[0])
   {
+    show(0, 6, 5, basename(drum_config[selected_slice_sample[0]].name));
     display.print("#");
-    print_formatted_number(activeSample - 30 + 1, 2);//display slice numbers from 1-xx not from 0-xx
+    print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 1] - 48 + 1, 2);
+  }
+  else  if (seq.note_data[seq.active_pattern][seq.menu - 1] - 48 >= 0 && seq.note_data[seq.active_pattern][seq.menu - 1] - 48 - num_slices[0] < num_slices[0] + num_slices[1])
+  {
+    show(0, 6, 5, basename(drum_config[selected_slice_sample[1]].name));
+    display.print("#");
+    print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 1] - 48 - num_slices[0] + 1, 2);
   }
 }
 
-FLASHMEM void seq_sub_pattern_editor_print_slicename_textonly()
+FLASHMEM void print_seq_step_slicename_textonly()
 {
   char name[10];
-  snprintf_P(name, 6, PSTR("%s"), basename(drum_config[selected_slice_sample].name));
-  display.print(name);
-  if (activeSample - 30 >= 0 && activeSample - 30 < num_slices)
+  if (seq.note_data[seq.active_pattern][seq.menu - 3] - 48 >= 0 && seq.note_data[seq.active_pattern][seq.menu - 3] - 48 < num_slices[0])
   {
-    snprintf_P(name, 6, PSTR("%s%02d"), "#", activeSample - 30 + 1);
+    snprintf_P(name, 6, PSTR("%s"), basename(drum_config[selected_slice_sample[0]].name));
     display.print(name);
+    display.print("#");
+    print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 3] - 48 + 1, 2);
   }
+  else  if (seq.note_data[seq.active_pattern][seq.menu - 3] - 48 >= 0 && seq.note_data[seq.active_pattern][seq.menu - 3] - 48 - num_slices[0] < num_slices[0] + num_slices[1])
+  {
+    snprintf_P(name, 6, PSTR("%s"), basename(drum_config[selected_slice_sample[1]].name));
+    display.print(name);
+    display.print("#");
+    print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 3] - 48 - num_slices[0] + 1, 2);
+
+  }
+
 }
 
-FLASHMEM void seq_sub_print_slicenumber_textonly(uint8_t slice)
+FLASHMEM void print_active_slice_textonly()
 {
   char name[10];
-  snprintf_P(name, 6, PSTR("%s"), basename(drum_config[selected_slice_sample].name));
-  display.print(name);
-  if (slice + 1 >= 0 && slice + 1 < num_slices)
+  uint8_t sel = 0;
+
+  if (activeSample - 30 < num_slices[0])
+    sel = 0;
+  else
   {
-    snprintf_P(name, 6, PSTR("%s%02d"), "#", slice + 1);
-    display.print(name);
+    sel = 1;
+  }
+
+  snprintf_P(name, 6, PSTR("%s"), basename(drum_config[selected_slice_sample[sel]].name));
+  display.print(name);
+  display.print("#");
+
+  if (activeSample - 30 >= 0 && activeSample - 30 < num_slices[0] + num_slices[1])
+  {
+    if (activeSample - 30 >= num_slices[0]) // sliced sample2
+      print_formatted_number(activeSample - 30 - num_slices[0] + 1, 2);//display slice numbers from 1-xx not from 0-xx
+    else  // sliced sample1 
+      print_formatted_number(activeSample - 30 + 1, 2);//display slice numbers from 1-xx not from 0-xx
   }
 }
 
@@ -9317,14 +9396,18 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
         fill_up_with_spaces_right_window();
       }
     }
-    else if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
+    else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) || (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99))
     {
-      display.print(basename(drum_config[selected_slice_sample].name));
-      if (activeSample - 30 < num_slices && activeSample - 30 >= 0)
-      {
-        display.print("#");
+      if (activeSample - 30 >= 0 && activeSample - 30 < num_slices[0])
+        display.print(basename(drum_config[selected_slice_sample[0]].name));
+      else
+        display.print(basename(drum_config[selected_slice_sample[1]].name));
+      display.print("#");
+      if (activeSample - 30 >= 0 && activeSample - 30 < num_slices[0])
         print_formatted_number(activeSample - 30 + 1, 2);
-      }
+      else if (activeSample - 30 - num_slices[0] >= 0 && activeSample - 30 - num_slices[0] < num_slices[0] + num_slices[1])
+        print_formatted_number(activeSample - 30 - num_slices[0] + 1, 2);
+
       fill_up_with_spaces_right_window();
     }
     display.setCursor(36 * CHAR_width_small, 6 * (CHAR_height_small + 2) + 10);
@@ -9516,7 +9599,7 @@ FLASHMEM void pattern_editor_menu_0()
           display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
         if (seq.content_type[seq.active_pattern] == 0)
           show(0, 1, 9, basename(drum_config[activeSample].name));
-        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
+        else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) || (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[1] != 99))
         {
           seq_sub_pattern_editor_print_slicename_toprow();
         }
@@ -9745,14 +9828,14 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           }
         }
       }
-      else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) // is in Slice mode 
+      else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) // is in Slice mode 
       {
         if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
         {
           if (LCDML.BT_checkDown())
-            activeSample = constrain(activeSample + 1, 30, num_slices - 1 + 30);
+            activeSample = constrain(activeSample + 1, 30, num_slices[0] + num_slices[1] - 1 + 30);
           else if (LCDML.BT_checkUp())
-            activeSample = constrain(activeSample - 1, 30, num_slices - 1 + 30);
+            activeSample = constrain(activeSample - 1, 30, num_slices[0] + num_slices[1] - 1 + 30);
 
           if (seq.running == false)
           {
@@ -9967,7 +10050,8 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       }
       else
-        if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) //Slices
+        if ((activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
+          (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[1] != 99)) //Slices
         {
           seq_sub_pattern_editor_print_slicename_toprow();
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -10008,12 +10092,13 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
           display.print("  ");
         }
-        else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
-        {
-          //display.setTextSize(2);
-         // seq_sub_pattern_editor_print_slicename_toprow();
-          ;
-        }
+        // else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
+        // (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[1] != 99 ))
+        // {
+        //   //display.setTextSize(2);
+        //  // seq_sub_pattern_editor_print_slicename_toprow();
+        //   ;
+        // }
 
         if (seq.note_editor_view != 0 && seq.cycle_touch_element != 1)
         {
@@ -10141,8 +10226,9 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           {
             if (seq.content_type[seq.active_pattern] == 0)
               show(0, 1, 9, seq_find_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
-            else if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99)
-              seq_sub_pattern_editor_print_slicename_toprow();
+            else if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
+              (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[1] != 99))
+              seq_sub_pattern_editor_print_slicename_toprow();  //phtodo
 
             // check if the same note is already there, if so ask to clear it
             if (seq.note_data[seq.active_pattern][seq.menu - 3] == drum_config[activeSample].midinote)
@@ -10156,7 +10242,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
               if (seq.content_type[seq.active_pattern] == 0)
                 display.print(basename(drum_config[activeSample].name));
               else
-                seq_sub_pattern_editor_print_slicename_textonly();
+                print_seq_step_slicename_textonly();
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(" FROM STEP ");
               display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -10188,7 +10274,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
             }
             else if (seq.note_data[seq.active_pattern][seq.menu - 3] != drum_config[activeSample].midinote &&
               seq.note_data[seq.active_pattern][seq.menu - 3] > 0 &&
-              seq.content_type[seq.active_pattern] == 3 && selected_slice_sample != 99) //sliced sample
+              seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) //sliced sample
             {
               display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
               display.setCursor(0, 3 * CHAR_height + 17);
@@ -10196,11 +10282,11 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F("REPLACE "));
               set_sample_type_color_of(seq.note_data[seq.active_pattern][seq.menu - 3]);
-              seq_sub_print_slicenumber_textonly(seq.note_data[seq.active_pattern][seq.menu - 3]);
+              print_seq_step_slicename_textonly();
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F(" WITH "));
               set_sample_type_color();
-              seq_sub_pattern_editor_print_slicename_textonly();
+              print_active_slice_textonly();
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F(" ?"));
               fill_up_with_spaces_left_window();
@@ -10268,8 +10354,8 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           if (seq.content_type[seq.active_pattern] == 0)
             display.print(basename(drum_config[activeSample].name));
           else
-            seq_sub_pattern_editor_print_slicename_textonly();
-          display.setTextColor(GREEN, COLOR_BACKGROUND);
+            //seq_sub_pattern_editor_print_slicename_textonly();phtodo
+            display.setTextColor(GREEN, COLOR_BACKGROUND);
           display.print(F(" IN STEP "));
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
           display.print(seq.menu - 2);
@@ -13964,13 +14050,13 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
       LOG.println(F("ms"));
 #endif
     }
-  }
+    }
   else
   {
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
     delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
   }
-}
+  }
 
 FLASHMEM void print_sync_timing(uint8_t sync)
 {
@@ -17805,7 +17891,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
 #endif
 
-    }
+      }
 
     // #ifdef COMPILE_FOR_FLASH
     //        if (LCDML.BT_checkEnter() && fm.active_window == 0) // left window, SDCARD
@@ -18104,8 +18190,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
           }
 #endif
+          }
         }
-    }
     if (LCDML.BT_checkEnter() && fm.sd_mode == FM_PLAY_SAMPLE) // preview
     {
       preview_sample();
@@ -18147,7 +18233,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     // display.setTextColor(fm.sd_is_folder ? GREY2 : GREEN);
     // display.print(F("FILE"));
     // display.setTextColor(fm.sd_is_folder ? COLOR_PITCHSMP : COLOR_SYSTEXT, COLOR_BACKGROUND);
-  }
+    }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -18156,7 +18242,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
-}
+      }
 
 FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
 {
@@ -22959,7 +23045,7 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 FLASHMEM void UI_func_test_mute(uint8_t param)
 {
@@ -23055,14 +23141,14 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
 #endif
     }
     // setCursor_textGrid(1, 2);
-  }
+    }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 void sub_touchscreen_test_page_init()
 {
@@ -23390,10 +23476,10 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-  }
+    }
   else
     return false;
-}
+  }
 
 FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id)
 {
@@ -23464,8 +23550,8 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       LOG.println(F("Removed from Favorites..."));
 #endif
     }
-  }
-}
+      }
+    }
 
 FLASHMEM char* basename(const char* filename)
 {
