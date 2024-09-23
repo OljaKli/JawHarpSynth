@@ -6667,7 +6667,6 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         binMin[ch] = std::min(binMin[ch], data[sample + ch]);
         binMax[ch] = std::max(binMax[ch], data[sample + ch]);
       }
-      const bool isFirstX = sample == (binSize - 1);
       const bool isLastX = sample == (length - 1);
 
       if ((++numBinSamples == binSize) || isLastX) { // draw last probably unfull bin
@@ -6679,16 +6678,9 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
 
-          const bool drawByPixel = isFirstX || isLastX || (yMax == yMin);
           display.console = true;
-          if (drawByPixel) { // workaround console issues with drawLine(): off to the left / wont draw x0=x1 and y0=y1
-            for (uint16_t yDraw = yMin; yDraw <= yMax; yDraw++) {
-              display.drawPixel(x, yDraw, waveColor);
-            }
-          }
-          else {
-            display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
-          }
+          display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
+          
           binMin[ch] = +32767;
           binMax[ch] = -32767;
         }
