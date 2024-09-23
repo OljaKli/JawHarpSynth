@@ -6725,14 +6725,18 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
     if (seq.smartfilter && direction != 0) {
       bool found = false;
 
-      for (int16_t note = sample + direction; found == false; note += direction) {
+      for (int16_t note = sample + direction; found == false; note += direction) 
+      {
         const bool outOfBounds = (note < 0) || (note > NUM_DRUMSET_CONFIG - 2);
         if (outOfBounds) {
           break;
         }
-        for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++) {
-          if (seq.content_type[pattern] == 0) {
-            for (uint8_t step = 0; step < 16; step++) {
+        for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++) 
+        {
+          if (seq.content_type[pattern] == 0) 
+          {
+            for (uint8_t step = 0; step < 16; step++) 
+            {
               found = (drum_config[note].midinote == seq.note_data[pattern][step] && seq.vel[pattern][step] < 210)
                 || (drum_config[note].midinote == seq.vel[pattern][step] && seq.vel[pattern][step] > 209);
               if (found) {
@@ -6741,6 +6745,20 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
               }
             }
           }
+
+          //  if (seq.content_type[pattern] == 3) 
+          // {
+          //   for (uint8_t step = 0; step < 16; step++) 
+          //   {
+          //     found = ( (drum_config[note].midinote+24 == seq.note_data[pattern][step]  )||
+          //    (drum_config[note].midinote+24 == seq.note_data[pattern][step]  ) );
+          //     if (found) {
+          //       result = note;
+          //       break;
+          //     }
+          //   }
+          // }
+
         }
       }
     }
@@ -6835,7 +6853,7 @@ void UI_func_drums(uint8_t param)
     addDrumParameterEditor((const char*)F("PITCH"), 0, 200, &drum_config[0].pitch);
     addDrumParameterEditor((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
     addDrumParameterEditor_int16_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
-    addDrumParameterEditor((const char*)F("FREQ"), 0, 220, &drum_config[0].filter_freq);
+    addDrumParameterEditor((const char*)F("FREQ"), 0, 100, &drum_config[0].filter_freq);
     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
 
     ui.setCursor(2, 15);

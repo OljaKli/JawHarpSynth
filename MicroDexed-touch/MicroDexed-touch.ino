@@ -282,7 +282,7 @@ AudioPlayArrayResmp* Drum[NUM_DRUMS];
 #include "effect_delay_ext8.h"
 #endif
 
-//AudioFilterBiquad* Drum_filter[NUM_DRUMS];
+AudioFilterBiquad* Drum_filter[NUM_DRUMS * 2];
 
 // test with envelopes for samples
 //AudioEffectEnvelope* sample_envelope[NUM_DRUMS];
@@ -614,7 +614,7 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   chorus_modulator[instance_id] = new AudioSynthWaveform();
 
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
-  global_delay_in_mixer[instance_id] = new AudioMixer<8 + NUM_DRUMS>();
+  global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS*2>();
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
 
 #ifdef PSRAM
@@ -742,6 +742,16 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
   }
 }
 
+
+FLASHMEM void create_filters()
+{
+  for (uint8_t x = 0; x < NUM_DRUMS * 2; x++)
+  {
+    //  Drum[x] = new AudioPlayArrayResmp();
+    Drum_filter[x] = new AudioFilterBiquad();
+  }
+}
+
 //
 // Dynamic patching of Drum objects
 //
@@ -770,26 +780,31 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   Drum[instance_id]->enableInterpolation(false);
   Drum[instance_id]->setPlaybackRate(1.0);
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 8 + instance_id);
+  //no filter code
+    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
+    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id);
+    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
+    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id);
+    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
+    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 8 + instance_id);
 
-  // photodo
-// test with filters for samples  // removed for now since the filter is mono and memory is not enough to have 2 for one stereo voice
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_l, instance_id);
+    // photodo
+  // test with filters for samples  // removed for now since the filter is mono and memory is not enough to have 2 for one stereo voice
 
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_l, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *Drum_filter[ NUM_DRUMS + instance_id ], 0);
 
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_mixer_l, instance_id);
 
-  //Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
+    dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
+    dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS +instance_id], 0, drum_reverb_send_mixer_l, instance_id);
+
+    dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
+   // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS +instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
+
+   Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
+   Drum_filter[NUM_DRUMS +instance_id]->setLowpass(0, 20000, 0.2); //phtodo
 
   // test with envelopes for samples
   // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *sample_envelope[instance_id], 0);
@@ -1136,6 +1151,10 @@ FLASHMEM void setup()
   // Initially the flanger effect is off.
   braids_flanger_r.voices(FLANGE_DELAY_PASSTHRU, 0, 0);
   braids_flanger_l.voices(FLANGE_DELAY_PASSTHRU, 0, 0);
+
+
+  // DRUM Filters
+  create_filters();
 
   // Setup (PROGMEM) sample drums
   // create dynamic Drum instances
@@ -2518,7 +2537,7 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance_id)
       if (inNumber >= msz[presetslot][y].low && inNumber <= msz[presetslot][y].high)
       {
 
-        // Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
+        Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
 
 
         float pan = mapfloat(msz[presetslot][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
@@ -3017,14 +3036,26 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         if (slot != 99)
         {
-          // if (drum_config[d].filter_mode == 0)
-          //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-          // else if (drum_config[d].filter_mode == 1)
-          //   Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 1000, 0.5);
-          // else if (drum_config[d].filter_mode == 2)
-          //   Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 1000, 0.5);
-          // else if (drum_config[d].filter_mode == 3)
-          //   Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 1000, 0.5);
+          if (drum_config[d].filter_mode == 0)
+          {
+            Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+          }
+          else if (drum_config[d].filter_mode == 1)
+          {
+            Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+          }
+          else if (drum_config[d].filter_mode == 2)
+          {
+            Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+          }
+          else if (drum_config[d].filter_mode == 3)
+          {
+            Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+          }
 
           global_delay_in_mixer[0]->gain(slot + 8, drum_config[d].delay1 / 5);
           global_delay_in_mixer[1]->gain(slot + 8, drum_config[d].delay2 / 5);
@@ -3150,15 +3181,27 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         if (slot != 99 && selected_slice_sample[s] != 99)
         {
-          // if (drum_config[d].filter_mode == 0)
-          //   Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-          // else if (drum_config[d].filter_mode == 1)
-          //   Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 1000, 0.5);
-          // else if (drum_config[d].filter_mode == 2)
-          //   Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 1000, 0.5);
-          // else if (drum_config[d].filter_mode == 3)
-          //   Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 1000, 0.5);
-
+          if (drum_config[selected_slice_sample[s]].filter_mode == 0)
+          {
+            Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+             Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+          }
+          else if (drum_config[selected_slice_sample[s]].filter_mode == 1)
+          {
+            Drum_filter[slot]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+               Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+          }
+          else if (drum_config[selected_slice_sample[s]].filter_mode == 2)
+          {
+            Drum_filter[slot]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+             Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+          }
+          else if (drum_config[selected_slice_sample[s]].filter_mode == 3)
+          {
+            Drum_filter[slot]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+          }
+  
           global_delay_in_mixer[0]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay1 / 5);
           global_delay_in_mixer[1]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay2 / 5);
 
@@ -4935,8 +4978,8 @@ void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
 
 void set_sample_filter_freq(uint8_t sample, float s_freq)
 {
-  if (s_freq > 2.195)
-    s_freq = 2.195;
+  if (s_freq > 0.999)
+    s_freq = 0.999;
   drum_config[sample].filter_freq = s_freq;
 }
 
