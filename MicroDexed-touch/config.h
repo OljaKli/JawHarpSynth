@@ -993,7 +993,8 @@ typedef struct sys_s
 typedef struct storage_file_s
 {
   char name[26];
-  uint16_t size;
+  //uint16_t size;
+  unsigned long size;
   bool isDirectory;
 } storage_file_t;
 

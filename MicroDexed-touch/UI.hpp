@@ -16790,21 +16790,21 @@ FLASHMEM void sd_printDirectory(bool forceReload)
       show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name);
       display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
       display.setCursor(CHAR_width_small * 20, f * 11 + 6 * 11);
-      if (sd_entry.size / 1024 / 1024 > 0)
+      // if (sd_entry.size / 1024 / 1024 > 0)
+      // {
+      //   snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), sd_entry.size / 1024 / 1024);
+      //   display.print(tmp);
+      //   display.print(" MB");
+      // }
+      if (int(sd_entry.size / 1024) > 0)
       {
-        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), int(sd_entry.size / 1024 / 1024));
-        display.print(tmp);
-        display.print(" MB");
-      }
-      else if (int(sd_entry.size / 1024) > 0)
-      {
-        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), int(sd_entry.size / 1024));
+        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), sd_entry.size / 1024);
         display.print(tmp);
         display.print(" KB");
       }
       else
       {
-        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), int(sd_entry.size));
+        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), sd_entry.size);
         display.print(tmp);
         display.print(" B ");
       }
@@ -17035,31 +17035,25 @@ FLASHMEM void psram_printCustomSamplesList()
     display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
     display.setCursor(CHAR_width_small * 45, i * 11);
 
-    if (drum_config[i + fm.flash_or_psram_skip_files].len > 10000000)
+    //   if (drum_config[i + fm.flash_or_psram_skip_files].len / 1024 / 1024 > 0)
+    // {
+    //   snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.flash_or_psram_skip_files].len / 1024 / 1024));
+    //   display.print(tmp);
+    //   display.print(" MB");
+    // }
+
+    if (int(drum_config[i + fm.flash_or_psram_skip_files].len / 1024) > 0)
     {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), 0);
-      display.print(tmp);
-      display.print(" B ");
-    }
-    else  if (drum_config[i + fm.flash_or_psram_skip_files].len / 1024 / 1024 > 0)
-    {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), int(drum_config[i + fm.flash_or_psram_skip_files].len / 1024 / 1024));
-      display.print(tmp);
-      display.print(" MB");
-    }
-    else if (int(drum_config[i + fm.flash_or_psram_skip_files].len / 1024) > 0)
-    {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), int(drum_config[i + fm.flash_or_psram_skip_files].len / 1024));
+      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), ((drum_config[i + fm.flash_or_psram_skip_files].len) / 1024)*2);
       display.print(tmp);
       display.print(" KB");
     }
     else
     {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), int(drum_config[i + fm.flash_or_psram_skip_files].len));
+      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.flash_or_psram_skip_files].len)*2);
       display.print(tmp);
       display.print(" B ");
     }
-
   }
   // else
   // {
@@ -17071,9 +17065,7 @@ FLASHMEM void psram_printCustomSamplesList()
   //   display.setCursor(CHAR_width_small * 31, 8 * 11);
   //   display.print(F("IS PLAYING"));
   // }
-
 }
-
 #endif
 
 FLASHMEM void print_sampler_keyboard(int x, int y)
