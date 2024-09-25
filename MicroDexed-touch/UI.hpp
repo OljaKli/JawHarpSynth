@@ -603,6 +603,7 @@ LCDMenuLib2 LCDML(LCDML_0, _LCDML_DISP_rows, _LCDML_DISP_cols, lcdml_menu_displa
 // To do this automatically, paste the code below beginning with the second line
 //  into the following command:
 // cat -n | sed -E 's/([0-9]+)([^0-9]+)([0-9]+)(.*+)/\2\1\4/'
+#include "UI_liveseq_pianoroll.h"
 
 LCDML_add(0, LCDML_0, 1, "Dexed", NULL);
 LCDML_add(1, LCDML_0_1, 1, "Select Voice", UI_func_voice_select);
@@ -628,7 +629,7 @@ LCDML_add(20, LCDML_0_8, 2, "Pattern Editor", UI_func_seq_pattern_editor);
 LCDML_add(21, LCDML_0_8, 3, "Vel./Chrd Edit", UI_func_seq_vel_editor);
 LCDML_add(22, LCDML_0_8, 4, "Live Sequencer", UI_func_livesequencer);
 LCDML_add(23, LCDML_0_8, 5, "Live Seq.Edit", UI_func_liveseq_listeditor);
-LCDML_add(24, LCDML_0_8, 6, "Live Seq.GrphEdit", UI_func_liveseq_pianoroll);
+LCDML_add(24, LCDML_0_8, 6, "Live Seq.Graphic", UI_LiveSeq_Graphic);
 LCDML_add(25, LCDML_0_8, 7, "Arpeggio", UI_func_arpeggio);
 LCDML_add(26, LCDML_0_8, 8, "Mute Matrix", UI_func_seq_mute_matrix);
 LCDML_add(27, LCDML_0_8, 9, "Tracker", UI_func_seq_tracker);

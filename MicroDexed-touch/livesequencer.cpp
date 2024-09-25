@@ -34,6 +34,7 @@ UI_LiveSequencer* ui_liveSeq;
 
 FLASHMEM LiveSequencer::LiveSequencer() {
   ui_liveSeq = new UI_LiveSequencer(*this, data);
+
   updateTrackChannels(true);
   data.isActive = false;
   playIterator = data.eventsList.end();

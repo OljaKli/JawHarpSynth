@@ -206,6 +206,7 @@ public:
 
   void addNotePair(MidiEvent noteOn, MidiEvent noteOff);
   std::vector<NotePair> getNotePairsFromTrack(uint8_t track);
+
   static void printNotePairs(std::vector<std::vector<NotePair>> notePairs);
   static void printEvent(int i, MidiEvent e);
   static const std::string getEventName(midi::MidiType event);
