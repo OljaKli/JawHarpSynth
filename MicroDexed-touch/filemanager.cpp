@@ -48,14 +48,15 @@ FLASHMEM void sd_sendDirectory(const char* path)
 #ifdef DEBUG
   LOG.printf("SENDDIR [%s]\n", path);
 #endif
-  delayMicroseconds(40);
   char filename[255];
+
   AudioNoInterrupts();
   File dir = SD.open(path);
 
   Serial.write(99);
   Serial.write(FM_START);
   Serial.write(88);
+  delayMicroseconds(800);
 
   while (true)
   {
@@ -70,7 +71,13 @@ FLASHMEM void sd_sendDirectory(const char* path)
     }
     Serial.write(99);
     Serial.write(FM_DIR);
-    delayMicroseconds(900);
+
+    // send file size in KB
+    uint16_t filesize = entry.size() / 1024;
+    Serial.write(filesize);
+    Serial.write(filesize >> 8);
+
+    // send file name and dir indicator
     strcpy(filename, entry.name());
     if (entry.isDirectory())
     {
@@ -79,7 +86,6 @@ FLASHMEM void sd_sendDirectory(const char* path)
     }
     Serial.write(strlen(filename));
     Serial.write(filename, strlen(filename));
-    delayMicroseconds(800);
 #ifdef DEBUG
     LOG.printf("FM dir file [%s]\n", filename);
 #endif
@@ -92,7 +98,7 @@ FLASHMEM void sd_sendDirectory(const char* path)
   Serial.write(99);
   Serial.write(FM_END);
   Serial.write(88);
-  delayMicroseconds(800);
+  delayMicroseconds(40);
   AudioInterrupts();
 #ifdef DEBUG
   LOG.println("SENDDIR done.");
@@ -110,6 +116,7 @@ FLASHMEM void sd_sendFile(const char* path)
   Serial.write(FM_START);
   Serial.write(88);
   delayMicroseconds(800);
+
   File myFile = SD.open(path);
   if (myFile)
   {
@@ -199,6 +206,7 @@ FLASHMEM void sd_receiveFile(const char* path)
     LOG.printf("RECV file size : %d\n", fileSize);
 #endif
     delayMicroseconds(900);
+
     // Process with chunks
     uint32_t currentChunk = 0;
     uint32_t countTotal = 0;
@@ -244,7 +252,7 @@ FLASHMEM void sd_receiveFile(const char* path)
         delayMicroseconds(900);
         currentChunk++;
       }
-    }
+  }
 
     // uint16_t count = 0;
     // while (countTotal < fileSize) {
@@ -289,8 +297,8 @@ FLASHMEM void sd_receiveFile(const char* path)
 #ifdef DEBUG
     LOG.println("RECV done.");
 #endif
+    }
   }
-}
 
 FLASHMEM void sd_deleteFile(const char* path)
 {
