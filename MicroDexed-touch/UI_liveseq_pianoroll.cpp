@@ -189,7 +189,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   const uint8_t lowestNote = view.startOctave * 12;
   const uint8_t highestNote = (lowestNote + view.numNotes);
   for(uint8_t note = lowestNote; note < highestNote; note++) {
-    const uint8_t noteIndex = note - lowestNote;
+    const uint8_t noteIndex = highestNote - note - 1;
     const uint16_t y = HEADER_HEIGHT + round(noteIndex * view.noteHeight);
     switch(note % 12) {
     case 1:
@@ -207,8 +207,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawContentArea(void) {
   const uint8_t lowestNote = view.startOctave * 12;
   const uint8_t highestNote = (lowestNote + view.numNotes);
   for(uint8_t note = lowestNote; note < highestNote; note++) {
-    const uint8_t noteIndex = note - lowestNote;
+    const uint8_t noteIndex = highestNote - note - 1;
     const uint16_t y = HEADER_HEIGHT + round(noteIndex * view.noteHeight);
+    
     const bool isPressed = keysPressed.find(note) != keysPressed.end();
     const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
     display.fillRect(ROLL_WIDTH, y, DISPLAY_WIDTH - ROLL_WIDTH, view.noteHeight, bgColor);
@@ -242,7 +243,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawContentArea(void) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note) {
   const uint16_t x = ROLL_WIDTH + midiEventTime(note.noteOn) * view.msToPix;
-  const uint16_t y = HEADER_HEIGHT + (note.noteOn.note_in - view.startOctave * 12) * view.noteHeight;
+  const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in + 1 - view.startOctave * 12) * view.noteHeight;
   const uint16_t h = view.noteHeight;
   const uint16_t w = (midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix;
   //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
