@@ -63,7 +63,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     for (auto *b : buttons) {
       b->drawNow();
     }
-    drawCursor();
   }
   if (LCDML.FUNC_loop()) {
     if (LCDML.BT_checkDown()) {
@@ -97,8 +96,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   if(drawFlags & DRAW_CURSOR) {
     drawCursor();
   }
-  if(drawFlags & DRAW_HORIZONTAL_BARS) {
-    drawHorizontalBars();
+  if(drawFlags & DRAW_BACKGROUND) {
+    drawBackground();
   }
   if(drawFlags & DRAW_VERTICAL_BARS) {
     drawVerticalBars();
@@ -129,16 +128,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
     default:
       break;
     }
-    drawFlags |= DRAW_HORIZONTAL_BARS | DRAW_VERTICAL_BARS | DRAW_NOTES;
+    drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
   }
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
   const uint16_t cursorX = ROLL_WIDTH + (data.currentPattern * data.patternLengthMs + data.patternTimer) * view.msToPix;
+  static const uint16_t yFrom = HEADER_HEIGHT - 3;
+  static const uint16_t yTo = HEADER_HEIGHT - 1;
   display.console = true;
-  display.drawLine(view.lastCursorPos, HEADER_HEIGHT - 2, view.lastCursorPos, HEADER_HEIGHT, HEADER_BG_COLOR);
+  display.drawLine(view.lastCursorPos, yFrom, view.lastCursorPos, yTo, HEADER_BG_COLOR);
   display.console = true;
-  display.drawLine(cursorX, HEADER_HEIGHT - 2, cursorX, HEADER_HEIGHT, RED);
+  display.drawLine(cursorX, yFrom, cursorX, yTo, RED);
   view.lastCursorPos = cursorX;
 }
 
@@ -159,6 +160,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setStartOctave(int8_t num) {
   view.startOctave = num;
+  view.lowestNote = view.startOctave * 12;
+  view.highestNote = (view.lowestNote + view.numNotes);
 }
 FLASHMEM void UI_LiveSeq_PianoRoll::setNumPatterns(int8_t num) {
   view.numPatterns = num;
@@ -169,32 +172,27 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setPatternStart(int8_t num) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
-  bool drawY = false;
-  bool drawX = false;
   switch(editMode) {
   case VIEW_ZOOM_Y:
-    drawY = hasConstrainedChanged(view.numOctaves, 2 * diff, 1, 5); // only change between 1, 3, 5 octaves
-    setNumOctaves(view.numOctaves);
-    drawX = drawY;
+    if(hasConstrainedChanged(view.numOctaves, 2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
+      setNumOctaves(view.numOctaves);
+      drawFlags |= DRAW_ALL;
+    }
     break;
 
   case VIEW_SCROLL_Y:
-    drawY = hasConstrainedChanged(view.startOctave, diff, 0, 6);
-    setStartOctave(view.startOctave);
-    drawX = drawY;
+    if(hasConstrainedChanged(view.startOctave, diff, 0, 6)) {
+      setStartOctave(view.startOctave);
+      drawFlags |= DRAW_BACKGROUND | DRAW_NOTES;
+    }
     break;
 
   case VIEW_ZOOM_X:
-    drawX = hasConstrainedChanged(view.numPatterns, diff, 1, data.numberOfBars);
-    setNumPatterns(view.numPatterns);
+    if(hasConstrainedChanged(view.numPatterns, diff, 1, data.numberOfBars)) {
+      setNumPatterns(view.numPatterns);
+      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+    }
     break;
-  }
-
-  if(drawX || drawY) {
-    drawFlags |= DRAW_HORIZONTAL_BARS | DRAW_NOTES;
-  }
-  if(drawY) {
-    drawFlags |= DRAW_VERTICAL_BARS | DRAW_PIANOROLL;
   }
 }
 
@@ -229,7 +227,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   }
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::drawHorizontalBars(void) {
+FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
   for(uint8_t note = view.lowestNote; note < view.highestNote; note++) {
     const uint8_t noteIndex = view.highestNote - note - 1;
     const uint16_t y = HEADER_HEIGHT + round(noteIndex * view.noteHeight);
@@ -315,7 +313,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     itoa(currentTrack + 1, temp_char, 10);
     b->draw("TRACK", temp_char, TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
-    drawFlags |= DRAW_NOTES;
+    drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
   }));
 
   buttons.push_back(new TouchButton(GRID_X[1], HEADER_HEIGHT + CONTENT_HEIGHT,

@@ -49,7 +49,7 @@ private:
   enum DrawFlags {
     DRAW_PIANOROLL = (1 << 0),
     DRAW_VERTICAL_BARS = (1 << 1),
-    DRAW_HORIZONTAL_BARS = (1 << 2),
+    DRAW_BACKGROUND = (1 << 2),
     DRAW_NOTES = (1 << 3),
     DRAW_CURSOR = (1 << 4),
     DRAW_ALL = 0xFFFF
@@ -69,7 +69,7 @@ private:
   void setPatternStart(int8_t num);
   void drawNotes(void);
   void drawGUI(void);
-  void drawHorizontalBars(void);
+  void drawBackground(void);
 
 
   uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
