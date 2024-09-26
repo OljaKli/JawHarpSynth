@@ -614,7 +614,7 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   chorus_modulator[instance_id] = new AudioSynthWaveform();
 
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
-  global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS*2>();
+  global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS * 2>();
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
 
 #ifdef PSRAM
@@ -792,19 +792,19 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   // test with filters for samples  // removed for now since the filter is mono and memory is not enough to have 2 for one stereo voice
 
   dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *Drum_filter[ NUM_DRUMS + instance_id ], 0);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *Drum_filter[NUM_DRUMS + instance_id], 0);
 
   dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id);
   dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_mixer_l, instance_id);
 
-    dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-    dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS +instance_id], 0, drum_reverb_send_mixer_l, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_reverb_send_mixer_l, instance_id);
 
-    dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-   // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS +instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
+  // dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS +instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
 
-   Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
-   Drum_filter[NUM_DRUMS +instance_id]->setLowpass(0, 20000, 0.2); //phtodo
+  Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
+  Drum_filter[NUM_DRUMS + instance_id]->setLowpass(0, 20000, 0.2); //phtodo
 
   // test with envelopes for samples
   // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *sample_envelope[instance_id], 0);
@@ -2147,7 +2147,7 @@ void loop()
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_recorder))
   {
     if (fm.wav_recorder_mode == 1) {
-      continueRecording();
+      continueWavRecording();
     }
   }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
@@ -3039,22 +3039,22 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           if (drum_config[d].filter_mode == 0)
           {
             Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
           }
           else if (drum_config[d].filter_mode == 1)
           {
             Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
           }
           else if (drum_config[d].filter_mode == 2)
           {
             Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+            Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
           }
           else if (drum_config[d].filter_mode == 3)
           {
             Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+            Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
           }
 
           global_delay_in_mixer[0]->gain(slot + 8, drum_config[d].delay1 / 5);
@@ -3184,24 +3184,24 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           if (drum_config[selected_slice_sample[s]].filter_mode == 0)
           {
             Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-             Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
           }
           else if (drum_config[selected_slice_sample[s]].filter_mode == 1)
           {
             Drum_filter[slot]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-               Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
           }
           else if (drum_config[selected_slice_sample[s]].filter_mode == 2)
           {
             Drum_filter[slot]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-             Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
           }
           else if (drum_config[selected_slice_sample[s]].filter_mode == 3)
           {
             Drum_filter[slot]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
           }
-  
+
           global_delay_in_mixer[0]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay1 / 5);
           global_delay_in_mixer[1]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay2 / 5);
 
