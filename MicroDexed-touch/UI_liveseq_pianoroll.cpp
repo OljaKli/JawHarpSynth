@@ -58,6 +58,19 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     display.print("LIVESEQ PIANOROLL");
     LCDML.FUNC_setLoopInterval(40); // 25Hz gui refresh
 
+    static constexpr uint16_t layerViewSize = (HEADER_HEIGHT - CURSOR_HEIGHT) / 2;
+    static constexpr uint16_t layerViewX = DISPLAY_WIDTH - 2 * layerViewSize;
+    static constexpr uint16_t layerViewY = 0;
+    for(uint8_t l = 0; l < 4; l++) {
+      const uint16_t x = layerViewX + (l % 2) * (layerViewSize);
+      const uint16_t y = layerViewY + (l / 2) * (layerViewSize);
+      display.fillRect(x, y, layerViewSize, layerViewSize, layerColors[l]);
+      display.setCursor(x + 2, y + 2);
+      display.setTextSize(0);
+      display.setTextColor(COLOR_BACKGROUND);
+      display.print(l + 1);
+    }
+
     drawFlags |= DRAW_ALL;
 
     for (auto *b : buttons) {
@@ -134,7 +147,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
   const uint16_t cursorX = ROLL_WIDTH + (data.currentPattern * data.patternLengthMs + data.patternTimer) * view.msToPix;
-  static const uint16_t yFrom = HEADER_HEIGHT - 3;
+  static const uint16_t yFrom = HEADER_HEIGHT - CURSOR_HEIGHT - 1;
   static const uint16_t yTo = HEADER_HEIGHT - 1;
   display.console = true;
   display.drawLine(view.lastCursorPos, yFrom, view.lastCursorPos, yTo, HEADER_BG_COLOR);

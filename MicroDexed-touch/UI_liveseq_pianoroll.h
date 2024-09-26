@@ -87,7 +87,7 @@ private:
   static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
   static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;
   static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y;
-    
+  static constexpr uint16_t CURSOR_HEIGHT = 2;
 };
 
 #endif // UI_LIVESEQ_PIANOROLL_H
