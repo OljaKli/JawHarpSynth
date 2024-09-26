@@ -39,7 +39,10 @@ private:
         int8_t startPattern;
         int8_t numPatterns;
         float msToPix;      // populated automatically
+        uint16_t lastCursorPos;
     } view;
+
+    static constexpr uint16_t HEADER_BG_COLOR = GREY3;
 
     void initGUI(void);
     void drawPianoRoll(void);
@@ -59,13 +62,14 @@ private:
     bool isRunningHere;
     bool isVisible = false;
 
+    ActiveValue currentValue = { nullptr, nullptr };
     uint8_t currentTrack = 0;
     std::vector<uint16_t> layerColors;
     std::vector<TouchButton*> buttons;
 
     static constexpr uint16_t ROLL_WIDTH = 20;
     static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
-    static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH; // divides nicely by 12
+    static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;
     static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y;
     
 };

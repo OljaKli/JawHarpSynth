@@ -1254,7 +1254,8 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
         if (sameTrack && sameLayer && sameNote && isNoteOff) {
           NotePair p = {
             .noteOn = *it,
-            .noteOff = *itOff
+            .noteOff = *itOff,
+            .isMuted = data.tracks[track].layerMutes & (1 << it->layer)
           };
           result.emplace_back(p);
           break;

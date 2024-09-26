@@ -202,6 +202,7 @@ public:
   struct NotePair {
     MidiEvent& noteOn;
     MidiEvent& noteOff;
+    bool isMuted;
   };
 
   void addNotePair(MidiEvent noteOn, MidiEvent noteOff);

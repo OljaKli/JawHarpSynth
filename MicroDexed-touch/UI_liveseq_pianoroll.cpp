@@ -50,19 +50,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
    
     // setup function
     display.fillScreen(COLOR_BACKGROUND);
-    display.fillRect(0, 0, DISPLAY_WIDTH, HEADER_HEIGHT, GREY3);
+    display.fillRect(0, 0, DISPLAY_WIDTH, HEADER_HEIGHT, HEADER_BG_COLOR);
     display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
     display.setTextSize(1);
     display.setCursor(0, 1);
     display.setTextColor(RED, COLOR_BACKGROUND);
     display.print("LIVESEQ PIANOROLL");
-    display.setTextColor(GREY1, COLOR_BACKGROUND);
-    display.setCursor(CHAR_width_small * 29, 0);
-    display.print(F("EVENT"));
-    display.setCursor(CHAR_width_small * 39, 0);
-    display.print(F("/"));
-    display.setCursor(CHAR_width_small * 46, 0);
-    display.print(F("TRACK"));
     LCDML.FUNC_setLoopInterval(40); // 25Hz gui refresh
 
     drawPianoRoll();
@@ -71,6 +64,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     for (auto *b : buttons) {
       b->drawNow();
     }
+    drawCursor();
   }
   if (LCDML.FUNC_loop()) {
     if (LCDML.BT_checkDown()) {
@@ -87,9 +81,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 
     if(isRunningHere != data.isRunning) {
       isRunningHere = data.isRunning;
-      if(isRunningHere) {
-        drawCursor();
-      }
+    }
+    if(isRunningHere) {
+      drawCursor();
     }
   }
   if (LCDML.FUNC_close()) {
@@ -100,23 +94,30 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType event) {
-  switch(event) {
-  case midi::NoteOn:
-    keysPressed.insert(key);
-    break;
+  if(isVisible) {
+    switch(event) {
+    case midi::NoteOn:
+      keysPressed.insert(key);
+      break;
 
-  case midi::NoteOff:
-    keysPressed.erase(key);
-    break;
+    case midi::NoteOff:
+      keysPressed.erase(key);
+      break;
 
-  default:
-    break;
+    default:
+      break;
+    }
+    drawContentArea();
   }
-  drawContentArea();
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-
+  const uint16_t cursorX = ROLL_WIDTH + (data.currentPattern * data.patternLengthMs + data.patternTimer) * view.msToPix;
+  display.console = true;
+  display.drawLine(view.lastCursorPos, HEADER_HEIGHT - 2, view.lastCursorPos, HEADER_HEIGHT, HEADER_BG_COLOR);
+  display.console = true;
+  display.drawLine(cursorX, HEADER_HEIGHT - 2, cursorX, HEADER_HEIGHT, RED);
+  view.lastCursorPos = cursorX;
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max) {
@@ -177,12 +178,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   const uint16_t numWhiteKeys = view.numOctaves * 7;
   const float keyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
   
+  display.console = true;
   display.fillRect(0, HEADER_HEIGHT, ROLL_WIDTH, CONTENT_HEIGHT, COLOR_SYSTEXT);
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
 
   for(uint8_t i = 1; i <= numWhiteKeys; i++) {
     const uint16_t y = round(HEADER_HEIGHT + i * keyHeight);
+    display.console = true;
     display.drawLine(0, y, ROLL_WIDTH, y, COLOR_BACKGROUND);
   }
 
@@ -197,6 +200,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
     case 6:
     case 8:
     case 10:
+      display.console = true;
       display.fillRect(0, y, 10, 0.8 * keyHeight, COLOR_BACKGROUND);
       break;
     }
@@ -212,12 +216,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawContentArea(void) {
     
     const bool isPressed = keysPressed.find(note) != keysPressed.end();
     const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
+    display.console = true;
     display.fillRect(ROLL_WIDTH, y, DISPLAY_WIDTH - ROLL_WIDTH, view.noteHeight, bgColor);
   }
-  const float patternWidth = CONTENT_WIDTH / float(view.numPatterns);
-  for(uint8_t i = 0; i < view.numPatterns; i++) {
-    const uint16_t x = ROLL_WIDTH + i * patternWidth;
-    display.drawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + CONTENT_HEIGHT, GREY2);
+  
+  // draw pattern lines
+  static constexpr uint8_t substeps = 4;
+  const float stepWidth = CONTENT_WIDTH / float(view.numPatterns * substeps);
+  for(uint8_t step = 0; step < view.numPatterns * substeps; step++) {
+    const uint16_t x = ROLL_WIDTH + step * stepWidth;
+    const uint16_t lineColor = (step % substeps == 0) ? GREY2 : GREY3;
+    display.console = true;
+    display.drawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + CONTENT_HEIGHT - 1, lineColor);
   }
 
   // draw notes...
@@ -242,12 +252,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawContentArea(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note) {
-  const uint16_t x = ROLL_WIDTH + midiEventTime(note.noteOn) * view.msToPix;
+  const uint16_t x = ROLL_WIDTH + round(midiEventTime(note.noteOn) * view.msToPix);
   const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in + 1 - view.startOctave * 12) * view.noteHeight;
   const uint16_t h = view.noteHeight;
-  const uint16_t w = (midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix;
+  const uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
   //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
-  display.fillRect(x, y, w, h, layerColors.at(note.noteOn.layer));
+  display.console = true;
+  if(note.isMuted) {
+    display.drawRect(x, y, w, h, layerColors.at(note.noteOn.layer));
+  } else {
+    display.fillRect(x, y, w, h, layerColors.at(note.noteOn.layer));
+  }
 }
 
 FLASHMEM uint32_t UI_LiveSeq_PianoRoll::midiEventTime(LiveSequencer::MidiEvent e) const {
@@ -261,13 +276,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     GRID_X[i] = i * (TouchButton::BUTTON_SIZE_X + BUTTON_SPACING);
   }
 
-  buttons.push_back(new TouchButton(GRID_X[0], HEADER_HEIGHT + CONTENT_HEIGHT,
-  [ this ] (auto *b) { // drawHandler
-    b->draw("FOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
+  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID_X[0], HEADER_HEIGHT + CONTENT_HEIGHT, currentTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, currentTrack, 
+  [ this ] (auto *b, auto *v) { // drawHandler
+    char temp_char[2];
+    itoa(currentTrack + 1, temp_char, 10);
+    b->draw("TRACK", temp_char, TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
-    liveSeq.setArpEnabled(!data.arpSettings.enabled);
-    b->drawNow();
+    ui_pianoroll->drawContentArea();
   }));
+
   buttons.push_back(new TouchButton(GRID_X[1], HEADER_HEIGHT + CONTENT_HEIGHT,
   [ this ] (auto *b) { // drawHandler
     b->draw("BAR", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
