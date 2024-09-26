@@ -15,11 +15,8 @@ extern void helptext_l(const char* str);
 #define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
 
 bool runningInBackground; // LiveSequencer stays active in instrument settings opened from here
-UI_LiveSeq_PianoRoll* ui_pianoRoll;
 
 FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData &d) : instance(this), liveSeq(sequencer), data(d) {
-  ui_pianoRoll = new UI_LiveSeq_PianoRoll(sequencer, data);
-
   const uint8_t BUTTON_SPACING = 4;  // center in screen
 
   for (uint8_t trackIndex = 0; trackIndex < LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN; trackIndex++) {

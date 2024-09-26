@@ -8,6 +8,7 @@
 #include "livesequencer.h"
 #include "touchbutton.h"
 #include "config.h"
+#include <set>
 
 void UI_LiveSeq_Graphic(uint8_t param);
 
@@ -17,8 +18,10 @@ public:
     UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
     void processLCDM(uint8_t param);
     void handleTouchScreen(void);
+    void handleKeyChanged(uint8_t key, midi::MidiType event);
 
 private:
+    std::set<uint8_t> keysPressed;
     enum ViewMode {
         VIEW_ZOOM_X,
         VIEW_ZOOM_Y,
@@ -29,11 +32,14 @@ private:
     uint8_t editMode = VIEW_ZOOM_X;
 
     struct ViewSettings {
-        int8_t startOctave = 3;
-        int8_t numOctaves = 3;
-        int8_t startPattern = 0;
-        int8_t numPatterns = 4;
-    } viewSettings;
+        int8_t startOctave;
+        int8_t numOctaves;
+        float noteHeight;   // populated automatically
+        uint8_t numNotes;   // populated automatically
+        int8_t startPattern;
+        int8_t numPatterns;
+        float msToPix;      // populated automatically
+    } view;
 
     void initGUI(void);
     void drawPianoRoll(void);
@@ -42,10 +48,16 @@ private:
     void drawCursor(void);
     void drawContentArea(void);
     void drawNote(LiveSequencer::NotePair note);
-    uint32_t midiEventTime(LiveSequencer::MidiEvent e);
+    void setNumOctaves(int8_t num);
+    void setStartOctave(int8_t num);
+    void setNumPatterns(int8_t num);
+    void setPatternStart(int8_t num);
+
+    uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
     LiveSequencer &liveSeq;
     LiveSequencer::LiveSeqData &data;
     bool isRunningHere;
+    bool isVisible = false;
 
     uint8_t currentTrack = 0;
     std::vector<uint16_t> layerColors;

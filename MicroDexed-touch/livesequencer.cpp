@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "TeensyTimerTool.h"
 #include "ui_livesequencer.h"
+#include "UI_liveseq_pianoroll.h"
 #include <map>
 
 extern sequencer_t seq;
@@ -31,9 +32,11 @@ OneShotTimer liveTimer(TCK);     // one tick timer of 20
 PeriodicTimer countInTimer(TCK); // one tick timer of 20
 
 UI_LiveSequencer* ui_liveSeq;
+UI_LiveSeq_PianoRoll* ui_pianoRoll;
 
 FLASHMEM LiveSequencer::LiveSequencer() {
   ui_liveSeq = new UI_LiveSequencer(*this, data);
+  ui_pianoRoll = new UI_LiveSeq_PianoRoll(*this, data);
 
   updateTrackChannels(true);
   data.isActive = false;
@@ -234,6 +237,7 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
 FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
   if (data.isActive) {
     if (data.instrumentChannels.count(inChannel) == 0) {
+      ui_pianoRoll->handleKeyChanged(note, event);
       // velocity adjustment for keyboard events (live playing or recording)
       const uint8_t velocitySetting = data.trackSettings[data.activeTrack].velocityLevel;
       const uint8_t velocityActive = (velocitySetting == 0) ? velocity : velocitySetting * 1.27f; // 100% * 1.27 = 127
