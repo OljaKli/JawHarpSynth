@@ -182,6 +182,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumPatterns(int8_t num) {
 }
 FLASHMEM void UI_LiveSeq_PianoRoll::setPatternStart(int8_t num) {
   view.startPattern = num;
+  DBG_LOG(printf("pattern from %i to %i\n", view.startPattern, view.startPattern + view.numPatterns));
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
@@ -194,15 +195,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     break;
 
   case VIEW_SCROLL_Y:
-    if(hasConstrainedChanged(view.startOctave, diff, 0, 6)) {
+    if(hasConstrainedChanged(view.startOctave, diff, 0, 7)) { // octaves 0 (note 24) upto 7 (note 119)
       setStartOctave(view.startOctave);
-      drawFlags |= DRAW_BACKGROUND | DRAW_NOTES;
+      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
     }
     break;
 
   case VIEW_ZOOM_X:
     if(hasConstrainedChanged(view.numPatterns, diff, 1, data.numberOfBars)) {
       setNumPatterns(view.numPatterns);
+      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+    }
+    break;
+
+  case VIEW_SCROLL_X:
+    if(hasConstrainedChanged(view.startPattern, -diff, 0, data.numberOfBars - view.numPatterns)) {
+      setPatternStart(view.startPattern);
       drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
     }
     break;
@@ -296,7 +304,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note) {
-  const uint16_t x = ROLL_WIDTH + round(midiEventTime(note.noteOn) * view.msToPix);
+  const uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startPattern * data.patternLengthMs) * view.msToPix);
   const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in + 1 - view.startOctave * 12) * view.noteHeight;
   const uint16_t h = view.noteHeight;
   const uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
