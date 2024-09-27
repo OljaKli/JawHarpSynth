@@ -146,7 +146,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-  const uint16_t cursorX = ROLL_WIDTH + (data.currentPattern * data.patternLengthMs + data.patternTimer) * view.msToPix;
+  const uint16_t cursorX = ROLL_WIDTH + ((data.currentPattern - view.startPattern) * data.patternLengthMs + data.patternTimer) * view.msToPix;
   static const uint16_t yFrom = HEADER_HEIGHT - CURSOR_HEIGHT - 1;
   static const uint16_t yTo = HEADER_HEIGHT - 1;
   display.console = true;
