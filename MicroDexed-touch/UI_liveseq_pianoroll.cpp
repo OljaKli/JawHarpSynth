@@ -45,7 +45,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 
     setNumOctaves(5);
     setStartOctave(3);
-    setNumPatterns(4);
+    setNumPatterns(data.numberOfBars);
     setPatternStart(0);
    
     // setup function
@@ -263,7 +263,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
 
   for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
     const uint8_t noteIndex = view.highestNote - note - 1;
-    const uint16_t y = HEADER_HEIGHT + round(noteIndex * view.noteHeight);
+    const uint16_t y = HEADER_HEIGHT + ceil(noteIndex * view.noteHeight); // ceil looks best rounded
     switch (note % 12) {
     case 1:
     case 3:
