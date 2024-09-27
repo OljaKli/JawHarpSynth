@@ -52,9 +52,11 @@ private:
     DRAW_BACKGROUND = (1 << 2),
     DRAW_NOTES = (1 << 3),
     DRAW_CURSOR = (1 << 4),
+    DRAW_SINGLE_NOTE = (1 << 5),
     DRAW_ALL = 0xFFFF
   };
   uint16_t drawFlags = 0;
+  int8_t singleNoteDraw = -1;
 
   void initGUI(void);
   void drawPianoRoll(void);

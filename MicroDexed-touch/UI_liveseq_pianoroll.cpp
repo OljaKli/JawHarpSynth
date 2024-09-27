@@ -125,6 +125,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
     drawPianoRoll();
   }
   drawFlags = 0;
+  singleNoteDraw = -1;
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType event) {
@@ -141,6 +142,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
     default:
       break;
     }
+    singleNoteDraw = key;
     drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
   }
 }
@@ -251,12 +253,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
   for(uint8_t note = view.lowestNote; note < view.highestNote; note++) {
-    const uint8_t noteIndex = view.highestNote - note - 1;
-    const uint16_t y = HEADER_HEIGHT + round(noteIndex * view.noteHeight);
-    const bool isPressed = keysPressed.find(note) != keysPressed.end();
-    const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
-    display.console = true;
-    display.fillRect(ROLL_WIDTH, y, DISPLAY_WIDTH - ROLL_WIDTH, view.noteHeight, bgColor);
+    if((singleNoteDraw == -1) || (singleNoteDraw == note)) {
+      const uint8_t noteIndex = view.highestNote - note - 1;
+      const uint16_t y = HEADER_HEIGHT + round(noteIndex * view.noteHeight);
+      const bool isPressed = keysPressed.find(note) != keysPressed.end();
+      const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
+      display.console = true;
+      display.fillRect(ROLL_WIDTH, y, DISPLAY_WIDTH - ROLL_WIDTH, view.noteHeight, bgColor);
+    }
   }
 }
 
@@ -305,16 +309,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note) {
-  const uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startPattern * data.patternLengthMs) * view.msToPix);
-  const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in + 1 - view.startOctave * 12) * view.noteHeight;
-  const uint16_t h = view.noteHeight;
-  const uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
-  //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
-  display.console = true;
-  if(note.isMuted) {
-    display.drawRect(x, y, w, h, layerColors.at(note.noteOn.layer));
-  } else {
-    display.fillRect(x, y, w, h, layerColors.at(note.noteOn.layer));
+  if((singleNoteDraw == -1) || (singleNoteDraw == note.noteOn.note_in)) {
+    const uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startPattern * data.patternLengthMs) * view.msToPix);
+    const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in + 1 - view.startOctave * 12) * view.noteHeight;
+    const uint16_t h = view.noteHeight;
+    const uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
+    //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
+    display.console = true;
+    if(note.isMuted) {
+      display.drawRect(x, y, w, h, layerColors.at(note.noteOn.layer));
+    } else {
+      display.fillRect(x, y, w, h, layerColors.at(note.noteOn.layer));
+    }
   }
 }
 
