@@ -16257,24 +16257,28 @@ void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCoun
 void startWavRecording()
 {
   display.setTextSize(2);
+
+  char fullpath[CONFIG_FILENAME_LEN * 2];
+  sprintf(fullpath, "/RECORDINGS/%s", filename);
+
   record_x_pos = 0;
   record_timer = 0;
   display.setTextColor(GREY2, COLOR_BACKGROUND);
-  setCursor_textGrid(11, 6);
+  setCursor_textGrid(11, 7);
   display.print(":");
-  setCursor_textGrid(14, 6);
+  setCursor_textGrid(14, 7);
   display.print(":");
-  setCursor_textGrid(17, 6);
+  setCursor_textGrid(17, 7);
   display.print("    ");
 
-  if (SD.exists(filename))
+  if (SD.exists(fullpath))
   {
     // The SD library writes new data to the end of the
     // file, so to start a new recording, the old file
     // must be deleted before new data is written.
-    SD.remove(filename);
+    SD.remove(fullpath);
   }
-  frec = SD.open(filename, FILE_WRITE);
+  frec = SD.open(fullpath, FILE_WRITE);
 
   // Write WAV header, "CD quality" 44.1KHz stereo
   writeWavHeader(frec, 44100, 2);
@@ -16328,8 +16332,8 @@ void continueWavRecording()
         record_x_pos = 0;
       }
 
-      display.drawLine(record_x_pos, 175 - 50, record_x_pos, 175 + 50, GREY4);
-      display.drawLine(record_x_pos, 175, record_x_pos, samplevalue / 500 + 175, GREEN);
+      display.drawLine(record_x_pos, 185 - 40, record_x_pos, 185 + 40, GREY4);
+      display.drawLine(record_x_pos, 185, record_x_pos, samplevalue / 100 + 185, GREEN);
     }
   }
 
@@ -16340,11 +16344,11 @@ void continueWavRecording()
   minutes %= 60;
 
   display.setTextColor(GREY2, COLOR_BACKGROUND);
-  setCursor_textGrid(9, 6);
+  setCursor_textGrid(9, 7);
   print_formatted_number(hours, 2);
-  setCursor_textGrid(12, 6);
+  setCursor_textGrid(12, 7);
   print_formatted_number(minutes, 2);
-  setCursor_textGrid(15, 6);
+  setCursor_textGrid(15, 7);
   print_formatted_number(seconds, 2);
 }
 
@@ -16362,7 +16366,7 @@ void stopWavRecording()
       writeWavStereoBlock();
     }
 
-    setCursor_textGrid(9, 6);
+    setCursor_textGrid(9, 7);
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.print("SAVED ");
     display.setTextColor(RED, COLOR_BACKGROUND);
@@ -16409,10 +16413,14 @@ FLASHMEM void UI_func_recorder(uint8_t param)
     setCursor_textGrid(1, 4);
     display.print(F("STATUS:"));
     setCursor_textGrid(1, 5);
+    display.print(F("PATH:"));
+    setCursor_textGrid(9, 5);
+    display.print(F("/RECORDINGS"));
+    setCursor_textGrid(1, 6);
     display.print(F("FILE:"));
 
     display.setTextColor(GREY2, COLOR_BACKGROUND);
-    setCursor_textGrid(9, 6);
+    setCursor_textGrid(9, 7);
     display.print("00:00:00");
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -16452,7 +16460,7 @@ FLASHMEM void UI_func_recorder(uint8_t param)
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     snprintf_P(filename, sizeof(filename), PSTR("MDT_REC_%03d.wav"), temp_int);
-    setCursor_textGrid(9, 5);
+    setCursor_textGrid(9, 6);
     display.print(filename);
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -17857,8 +17865,13 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     if (sd_card > 0)
     {
-      if (!SD.exists("CUSTOM"))
+      // Auto create missing folders if needed
+      if (!SD.exists("CUSTOM")) {
         SD.mkdir("CUSTOM");
+      }
+      if (!SD.exists("RECORDINGS")) {
+        SD.mkdir("RECORDINGS");
+      }
     }
     fm.sd_mode = FM_BROWSE_FILES;
     fm.active_window = 0;
