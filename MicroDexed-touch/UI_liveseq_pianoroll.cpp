@@ -64,6 +64,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     for (uint8_t l = 0; l < 4; l++) {
       const uint16_t x = layerViewX + (l % 2) * (layerViewSize);
       const uint16_t y = layerViewY + (l / 2) * (layerViewSize);
+      display.console = true;
       display.fillRect(x, y, layerViewSize, layerViewSize, layerColors[l]);
       display.setCursor(x + 2, y + 2);
       display.setTextSize(0);
@@ -250,7 +251,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
 
-  for (uint8_t i = 1; i <= numWhiteKeys; i++) {
+  for (uint8_t i = 1; i < numWhiteKeys; i++) {
     const uint16_t y = round(HEADER_HEIGHT + i * keyHeight);
     display.console = true;
     display.drawLine(0, y, ROLL_WIDTH, y, COLOR_BACKGROUND);
@@ -266,7 +267,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
     case 8:
     case 10:
       display.console = true;
-      display.fillRect(0, y, 10, 0.8 * keyHeight, COLOR_BACKGROUND);
+      display.fillRect(0, y, 14, 0.8 * keyHeight, COLOR_BACKGROUND);
       break;
     }
   }
@@ -280,7 +281,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
       const bool isPressed = keysPressed.find(note) != keysPressed.end();
       const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
       display.console = true;
-      display.fillRect(ROLL_WIDTH, y, DISPLAY_WIDTH - ROLL_WIDTH, view.noteHeight, bgColor);
+      display.fillRect(ROLL_WIDTH, y, CONTENT_WIDTH, view.noteHeight, bgColor);
     }
   }
 }
@@ -388,12 +389,14 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   const uint8_t BUTTON_SPACING = 4;  // center in screen
+  const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT;
+
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
   for (uint8_t i = 0; i < LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN; i++) {
     GRID_X[i] = i * (TouchButton::BUTTON_SIZE_X + BUTTON_SPACING);
   }
 
-  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID_X[0], HEADER_HEIGHT + CONTENT_HEIGHT, data.activeTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, data.activeTrack, 
+  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID_X[0], y, data.activeTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, data.activeTrack, 
   [ this ] (auto *b, auto *v) { // drawHandler
     char temp_char[2];
     itoa(data.activeTrack + 1, temp_char, 10);
@@ -402,7 +405,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
   }));
 
-  buttonView = new TouchButton(GRID_X[1], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
+  buttonView = new TouchButton(GRID_X[1], y,
   [ this ] (auto *b) { // drawHandler
     b->draw("VIEW", ui_pianoroll->getViewModeString(), (mode == MODE_VIEW) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
@@ -415,7 +418,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonView);
 
-  buttonEdit = new TouchButton(GRID_X[2], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
+  buttonEdit = new TouchButton(GRID_X[2], y,
   [ this ] (auto *b) { // drawHandler
     b->draw("EDIT", ui_pianoroll->getEditModeString(), (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
@@ -428,21 +431,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonEdit);
 
-  buttons.push_back(new TouchButton(GRID_X[3], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
+  buttons.push_back(new TouchButton(GRID_X[3], y,
   [ this ] (auto *b) { // drawHandler
     b->draw("YOU", (data.arpSettings.enabled == 0) ? "OFF" : "ON", TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     liveSeq.setArpEnabled(!data.arpSettings.enabled);
     b->drawNow();
   }));
-  buttons.push_back(new TouchButton(GRID_X[4], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
+  buttons.push_back(new TouchButton(GRID_X[4], y,
   [ this ] (auto *b) { // drawHandler
     b->draw("DOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     liveSeq.setArpEnabled(!data.arpSettings.enabled);
     b->drawNow();
   }));
-  buttons.push_back(new TouchButton(GRID_X[5], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
+  buttons.push_back(new TouchButton(GRID_X[5], y,
   [ this ] (auto *b) { // drawHandler
     b->draw("SOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
