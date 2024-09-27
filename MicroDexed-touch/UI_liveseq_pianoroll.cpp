@@ -62,7 +62,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     static constexpr uint16_t layerViewSize = (HEADER_HEIGHT - CURSOR_HEIGHT) / 2;
     static constexpr uint16_t layerViewX = DISPLAY_WIDTH - 2 * layerViewSize;
     static constexpr uint16_t layerViewY = 0;
-    for (uint8_t l = 0; l < 4; l++) {
+    for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
       const uint16_t x = layerViewX + (l % 2) * (layerViewSize);
       const uint16_t y = layerViewY + (l / 2) * (layerViewSize);
       display.console = true;
@@ -159,16 +159,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-  static constexpr int16_t CURSOR_MIN = ROLL_WIDTH;
-  static constexpr int16_t CURSOR_MAX = DISPLAY_WIDTH - 1;
+  static const uint16_t yTo = HEADER_HEIGHT - 1;
+  static const uint16_t yFrom = yTo - CURSOR_HEIGHT;
+
   uint16_t cursorX = ROLL_WIDTH + ((data.currentPattern - view.startPattern) * data.patternLengthMs + data.patternTimer) * view.msToPix;
   const bool offLeft = (data.currentPattern < view.startPattern);
   const bool offRight = (data.currentPattern >= (view.startPattern + view.numPatterns));
-  cursorX = offLeft ? CURSOR_MIN : cursorX;
-  cursorX = offRight ? CURSOR_MAX : cursorX;
+  cursorX = offLeft ? ROLL_WIDTH : cursorX;
+  cursorX = offRight ? DISPLAY_WIDTH - 1 : cursorX;
   const uint16_t cursorColor = (offLeft || offRight) ? RED : COLOR_SYSTEXT;
-  static const uint16_t yTo = HEADER_HEIGHT - 1;
-  static const uint16_t yFrom = yTo - CURSOR_HEIGHT;
+
   display.console = true;
   display.drawLine(view.lastCursorPos, yFrom, view.lastCursorPos, yTo, CURSOR_BG_COLOR);
   display.console = true;
@@ -244,7 +244,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     // TODO
     break;
   }
-  
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
