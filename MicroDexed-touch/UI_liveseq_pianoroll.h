@@ -70,7 +70,7 @@ private:
     DRAW_ALL = 0xFFFF
   };
   uint16_t drawFlags = 0;
-  int8_t singleNoteDraw = -1;
+  std::set<uint8_t> singleNoteDraw;
 
   void initGUI(void);
   void drawPianoRoll(void);
@@ -86,6 +86,7 @@ private:
   void drawNotes(void);
   void drawGUI(void);
   void drawBackground(void);
+
   std::string getViewModeString(void);
   std::string getEditModeString(void);
 
