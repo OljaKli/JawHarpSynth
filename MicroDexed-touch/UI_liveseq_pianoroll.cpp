@@ -39,7 +39,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(param);
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-    currentTrack = param;
+    data.activeTrack = param;
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
 
@@ -265,19 +265,26 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
-  // draw verticl pattern lines
+  // draw vertical pattern lines
   static constexpr uint8_t substeps = 4;
   const float stepWidth = CONTENT_WIDTH / float(view.numPatterns * substeps);
   for(uint8_t step = 0; step < view.numPatterns * substeps; step++) {
     const uint16_t x = ROLL_WIDTH + step * stepWidth;
     const uint16_t lineColor = (step % substeps == 0) ? GREY2 : GREY3;
     display.console = true;
-    display.drawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + CONTENT_HEIGHT - 1, lineColor);
+    if(singleNoteDraw == -1) {
+      display.drawLine(x, HEADER_HEIGHT, x, HEADER_HEIGHT + CONTENT_HEIGHT - 1, lineColor);
+    }
+    else {
+      // only draw lines where single note update is needed
+      const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (singleNoteDraw + 1 - view.startOctave * 12) * view.noteHeight;
+      display.drawLine(x, y, x, y + view.noteHeight - 1, lineColor);
+    }
   }
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
-  std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(currentTrack);
+  std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack);
   int drawNotes = 0;
   int hideNotes = 0;
 
@@ -335,10 +342,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     GRID_X[i] = i * (TouchButton::BUTTON_SIZE_X + BUTTON_SPACING);
   }
 
-  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID_X[0], HEADER_HEIGHT + CONTENT_HEIGHT, currentTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, currentTrack, 
+  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID_X[0], HEADER_HEIGHT + CONTENT_HEIGHT, data.activeTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, data.activeTrack, 
   [ this ] (auto *b, auto *v) { // drawHandler
     char temp_char[2];
-    itoa(currentTrack + 1, temp_char, 10);
+    itoa(data.activeTrack + 1, temp_char, 10);
     b->draw("TRACK", temp_char, TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;

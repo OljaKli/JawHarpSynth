@@ -81,7 +81,6 @@ private:
   bool isVisible = false;
 
   ActiveValue currentValue = { nullptr, nullptr };
-  uint8_t currentTrack = 0;
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
 
