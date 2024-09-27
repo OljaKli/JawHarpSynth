@@ -60,8 +60,6 @@ private:
     uint16_t lastCursorPos;
   } view;
 
-  static constexpr uint16_t HEADER_BG_COLOR = GREY3;
-
   enum DrawFlags {
     DRAW_PIANOROLL = (1 << 0),
     DRAW_VERTICAL_BARS = (1 << 1),
@@ -104,6 +102,8 @@ private:
   TouchButton *buttonView;
   TouchButton *buttonEdit;
 
+  static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
+  static constexpr uint16_t CURSOR_BG_COLOR = HEADER_BG_COLOR; // for now..
   static constexpr uint16_t ROLL_WIDTH = 20;
   static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
   static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;

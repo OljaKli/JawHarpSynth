@@ -49,12 +49,13 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     setPatternStart(0);
    
     // setup function
+    display.console = true;
     display.fillScreen(COLOR_BACKGROUND);
     display.fillRect(0, 0, DISPLAY_WIDTH, HEADER_HEIGHT, HEADER_BG_COLOR);
     display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
     display.setTextSize(1);
     display.setCursor(0, 1);
-    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.setTextColor(RED, HEADER_BG_COLOR);
     display.print("LIVESEQ PIANOROLL");
     LCDML.FUNC_setLoopInterval(40); // 25Hz gui refresh
 
@@ -131,9 +132,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   if (drawFlags & DRAW_NOTES) {
     drawNotes();
   }
-  if (drawFlags & DRAW_CURSOR) {
-    drawCursor();
-  }
   if (drawFlags & DRAW_PIANOROLL) {
     drawPianoRoll();
   }
@@ -161,13 +159,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-  const uint16_t cursorX = ROLL_WIDTH + ((data.currentPattern - view.startPattern) * data.patternLengthMs + data.patternTimer) * view.msToPix;
+  static constexpr int16_t CURSOR_MIN = ROLL_WIDTH;
+  static constexpr int16_t CURSOR_MAX = DISPLAY_WIDTH - 1;
+  uint16_t cursorX = ROLL_WIDTH + ((data.currentPattern - view.startPattern) * data.patternLengthMs + data.patternTimer) * view.msToPix;
+  const bool offLeft = (data.currentPattern < view.startPattern);
+  const bool offRight = (data.currentPattern + 1 > (view.numPatterns - view.startPattern));
+  DBG_LOG(printf("offright? %i > %i\n", data.currentPattern + 1, (view.numPatterns - view.startPattern)));
+  cursorX = offLeft ? CURSOR_MIN : cursorX;
+  cursorX = offRight ? CURSOR_MAX : cursorX;
+  const uint16_t cursorColor = (offLeft || offRight) ? RED : COLOR_SYSTEXT;
   static const uint16_t yTo = HEADER_HEIGHT - 1;
   static const uint16_t yFrom = yTo - CURSOR_HEIGHT;
   display.console = true;
-  display.drawLine(view.lastCursorPos, yFrom, view.lastCursorPos, yTo, HEADER_BG_COLOR);
+  display.drawLine(view.lastCursorPos, yFrom, view.lastCursorPos, yTo, CURSOR_BG_COLOR);
   display.console = true;
-  display.drawLine(cursorX, yFrom, cursorX, yTo, RED);
+  display.drawLine(cursorX, yFrom, cursorX, yTo, cursorColor);
   view.lastCursorPos = cursorX;
 }
 
@@ -267,7 +273,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
     case 8:
     case 10:
       display.console = true;
-      display.fillRect(0, y, 14, 0.8 * keyHeight, COLOR_BACKGROUND);
+      display.fillRect(0, y, 12, view.noteHeight, COLOR_BACKGROUND);
       break;
     }
   }
