@@ -85,8 +85,20 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       handleEncoderRight(+1);
     }
     if (LCDML.BT_checkEnter()) {
-      if(++editMode == VIEW_NUM) {
-        editMode = VIEW_ZOOM_X;
+      switch(mode) {
+      case MODE_VIEW:
+        if(++viewMode == VIEW_NUM) {
+          viewMode = VIEW_ZOOM_X;
+        }
+        buttonView->drawNow();
+        break;
+
+      case MODE_EDIT:
+        if(++editMode == EDIT_NUM) {
+          editMode = EDIT_SELECT_NOTE;
+        }
+        buttonEdit->drawNow();
+        break;
       }
     }
 
@@ -188,36 +200,45 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setPatternStart(int8_t num) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
-  switch(editMode) {
-  case VIEW_ZOOM_Y:
-    if(hasConstrainedChanged(view.numOctaves, 2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
-      setStartOctave(view.startOctave - diff); // zoom octave-centered
-      setNumOctaves(view.numOctaves);
-      drawFlags |= DRAW_ALL;
+  switch(mode) {
+  case MODE_VIEW:
+    switch(viewMode) {
+    case VIEW_ZOOM_Y:
+      if(hasConstrainedChanged(view.numOctaves, 2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
+        setStartOctave(view.startOctave - diff); // zoom octave-centered
+        setNumOctaves(view.numOctaves);
+        drawFlags |= DRAW_ALL;
+      }
+      break;
+
+    case VIEW_SCROLL_Y:
+      if(hasConstrainedChanged(view.startOctave, diff, 0, 7)) { // octaves 0 (note 24) upto 7 (note 119)
+        setStartOctave(view.startOctave);
+        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+      }
+      break;
+
+    case VIEW_ZOOM_X:
+      if(hasConstrainedChanged(view.numPatterns, diff, 1, data.numberOfBars)) {
+        setNumPatterns(view.numPatterns);
+        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+      }
+      break;
+
+    case VIEW_SCROLL_X:
+      if(hasConstrainedChanged(view.startPattern, -diff, 0, data.numberOfBars - view.numPatterns)) {
+        setPatternStart(view.startPattern);
+        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+      }
+      break;
     }
     break;
 
-  case VIEW_SCROLL_Y:
-    if(hasConstrainedChanged(view.startOctave, diff, 0, 7)) { // octaves 0 (note 24) upto 7 (note 119)
-      setStartOctave(view.startOctave);
-      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
-    }
-    break;
-
-  case VIEW_ZOOM_X:
-    if(hasConstrainedChanged(view.numPatterns, diff, 1, data.numberOfBars)) {
-      setNumPatterns(view.numPatterns);
-      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
-    }
-    break;
-
-  case VIEW_SCROLL_X:
-    if(hasConstrainedChanged(view.startPattern, -diff, 0, data.numberOfBars - view.numPatterns)) {
-      setPatternStart(view.startPattern);
-      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
-    }
+  case MODE_EDIT:
+    // TODO
     break;
   }
+  
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
@@ -328,6 +349,43 @@ FLASHMEM uint32_t UI_LiveSeq_PianoRoll::midiEventTime(LiveSequencer::MidiEvent e
   return e.patternNumber * data.patternLengthMs + e.patternMs;
 }
 
+FLASHMEM std::string UI_LiveSeq_PianoRoll::getViewModeString(void) {
+  switch(viewMode) {
+  case VIEW_SCROLL_X:
+    return "SCRL X";
+
+  case VIEW_SCROLL_Y:
+    return "SCRL Y";
+
+  case VIEW_ZOOM_X:
+    return "ZOOM X";
+
+  case VIEW_ZOOM_Y:
+    return "ZOOM Y";
+  }
+  return "NONE";
+}
+
+FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
+  switch(editMode) {
+  case EDIT_SELECT_NOTE:
+    return "SELECT";
+
+  case EDIT_NOTEON:
+    return "NOTEON";
+
+  case EDIT_VELOCITY:
+    return "VELOCTY";
+
+  case EDIT_NOTEOFF:
+    return "NOTEOFF";
+
+  case EDIT_DELETE:
+    return "DELETE";
+  }
+  return "NONE";
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   const uint8_t BUTTON_SPACING = 4;  // center in screen
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
@@ -344,37 +402,49 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
   }));
 
-  buttons.push_back(new TouchButton(GRID_X[1], HEADER_HEIGHT + CONTENT_HEIGHT,
+  buttonView = new TouchButton(GRID_X[1], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
   [ this ] (auto *b) { // drawHandler
-    b->draw("BAR", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
+    b->draw("VIEW", ui_pianoroll->getViewModeString(), (mode == MODE_VIEW) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
-    liveSeq.setArpEnabled(!data.arpSettings.enabled);
+    const bool modeChanged = mode != MODE_VIEW;
+    mode = MODE_VIEW;
+    if(modeChanged) {
+      buttonEdit->drawNow();
+    }
     b->drawNow();
-  }));  
-  buttons.push_back(new TouchButton(GRID_X[2], HEADER_HEIGHT + CONTENT_HEIGHT,
+  });
+  buttons.push_back(buttonView);
+
+  buttonEdit = new TouchButton(GRID_X[2], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
   [ this ] (auto *b) { // drawHandler
-    b->draw("BAZ", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
+    b->draw("EDIT", ui_pianoroll->getEditModeString(), (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
+  }, [ this ] (auto *b) { // clickedHandler
+    const bool modeChanged = mode != MODE_EDIT;
+    mode = MODE_EDIT;
+    if(modeChanged) {
+      buttonView->drawNow();
+    }
+    b->drawNow();
+  });
+  buttons.push_back(buttonEdit);
+
+  buttons.push_back(new TouchButton(GRID_X[3], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
+  [ this ] (auto *b) { // drawHandler
+    b->draw("YOU", (data.arpSettings.enabled == 0) ? "OFF" : "ON", TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     liveSeq.setArpEnabled(!data.arpSettings.enabled);
     b->drawNow();
   }));
-  buttons.push_back(new TouchButton(GRID_X[3], HEADER_HEIGHT + CONTENT_HEIGHT,
+  buttons.push_back(new TouchButton(GRID_X[4], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
   [ this ] (auto *b) { // drawHandler
-    b->draw("YOU", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
+    b->draw("DOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     liveSeq.setArpEnabled(!data.arpSettings.enabled);
     b->drawNow();
   }));
-  buttons.push_back(new TouchButton(GRID_X[4], HEADER_HEIGHT + CONTENT_HEIGHT,
+  buttons.push_back(new TouchButton(GRID_X[5], HEADER_HEIGHT + CONTENT_HEIGHT + 1,
   [ this ] (auto *b) { // drawHandler
-    b->draw("DOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
-  }, [ this ] (auto *b) { // clickedHandler
-    liveSeq.setArpEnabled(!data.arpSettings.enabled);
-    b->drawNow();
-  }));
-  buttons.push_back(new TouchButton(GRID_X[5], HEADER_HEIGHT + CONTENT_HEIGHT,
-  [ this ] (auto *b) { // drawHandler
-    b->draw("SOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", (data.arpSettings.enabled == 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
+    b->draw("SOO", (data.arpSettings.enabled == 0) ? "OFF" : "ON", TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     liveSeq.setArpEnabled(!data.arpSettings.enabled);
     b->drawNow();

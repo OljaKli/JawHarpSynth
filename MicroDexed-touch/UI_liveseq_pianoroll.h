@@ -29,7 +29,23 @@ private:
     VIEW_SCROLL_Y,
     VIEW_NUM
   };
-  uint8_t editMode = VIEW_ZOOM_X;
+  uint8_t viewMode = VIEW_ZOOM_X;
+
+  enum EditMode {
+    EDIT_SELECT_NOTE,
+    EDIT_NOTEON,
+    EDIT_VELOCITY,
+    EDIT_NOTEOFF,
+    EDIT_DELETE,
+    EDIT_NUM
+  };
+  uint8_t editMode = EDIT_SELECT_NOTE;
+
+  enum Mode {
+    MODE_VIEW,
+    MODE_EDIT,
+  };
+  uint8_t mode = MODE_VIEW;
 
   struct ViewSettings {
     int8_t startOctave;
@@ -72,7 +88,8 @@ private:
   void drawNotes(void);
   void drawGUI(void);
   void drawBackground(void);
-
+  std::string getViewModeString(void);
+  std::string getEditModeString(void);
 
   uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
   LiveSequencer &liveSeq;
@@ -83,6 +100,9 @@ private:
   ActiveValue currentValue = { nullptr, nullptr };
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
+
+  TouchButton *buttonView;
+  TouchButton *buttonEdit;
 
   static constexpr uint16_t ROLL_WIDTH = 20;
   static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
