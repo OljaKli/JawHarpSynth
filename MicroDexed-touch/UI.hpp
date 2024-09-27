@@ -6681,7 +6681,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
           display.console = true;
           display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
-          
+
           binMin[ch] = +32767;
           binMax[ch] = -32767;
         }
@@ -6726,17 +6726,17 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
     if (seq.smartfilter && direction != 0) {
       bool found = false;
 
-      for (int16_t note = sample + direction; found == false; note += direction) 
+      for (int16_t note = sample + direction; found == false; note += direction)
       {
         const bool outOfBounds = (note < 0) || (note > NUM_DRUMSET_CONFIG - 2);
         if (outOfBounds) {
           break;
         }
-        for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++) 
+        for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++)
         {
-          if (seq.content_type[pattern] == 0) 
+          if (seq.content_type[pattern] == 0)
           {
-            for (uint8_t step = 0; step < 16; step++) 
+            for (uint8_t step = 0; step < 16; step++)
             {
               found = (drum_config[note].midinote == seq.note_data[pattern][step] && seq.vel[pattern][step] < 210)
                 || (drum_config[note].midinote == seq.vel[pattern][step] && seq.vel[pattern][step] > 209);
@@ -16193,26 +16193,98 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
   }
 }
 
-void startRecording()
+uint32_t totalBytesWritten;
+
+void encodeUint16(File& file, uint16_t value) {
+  uint8_t bytes[] =
+  {
+      static_cast<uint8_t>(value & 0xFF),
+      static_cast<uint8_t>(value >> 8)
+  };
+  file.write(reinterpret_cast<const uint8_t*>(bytes), sizeof(bytes));
+}
+
+void encodeUint32(File& file, uint32_t value) {
+  uint8_t bytes[] =
+  {
+      static_cast<uint8_t> (value & 0x000000FF),
+      static_cast<uint8_t>((value & 0x0000FF00) >> 8),
+      static_cast<uint8_t>((value & 0x00FF0000) >> 16),
+      static_cast<uint8_t>((value & 0xFF000000) >> 24),
+  };
+  file.write(reinterpret_cast<const uint8_t*>(bytes), sizeof(bytes));
+}
+
+void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCount) {
+  // Write the main chunk ID
+  uint8_t mainChunkId[4] = { 'R', 'I', 'F', 'F' };
+  file.write(mainChunkId, sizeof(mainChunkId));
+
+  // Write the main chunk header
+  uint32_t mainChunkSize = 0; // placeholder, will be written on closing
+  encodeUint32(file, mainChunkSize);
+  uint8_t mainChunkFormat[4] = { 'W', 'A', 'V', 'E' };
+  file.write(mainChunkFormat, sizeof(mainChunkFormat));
+
+  // Write the sub-chunk 1 ("format") id and size
+  uint8_t fmtChunkId[4] = { 'f', 'm', 't', ' ' };
+  file.write(fmtChunkId, sizeof(fmtChunkId));
+  uint32_t fmtChunkSize = 16;
+  encodeUint32(file, fmtChunkSize);
+
+  // Write the format (PCM)
+  uint16_t format = 1;
+  encodeUint16(file, format);
+
+  // Write the sound attributes
+  encodeUint16(file, static_cast<uint16_t>(channelCount));
+  encodeUint32(file, static_cast<uint32_t>(sampleRate));
+  uint32_t byteRate = sampleRate * channelCount * 2;
+  encodeUint32(file, byteRate);
+  uint16_t blockAlign = channelCount * 2;
+  encodeUint16(file, blockAlign);
+  uint16_t bitsPerSample = 16;
+  encodeUint16(file, bitsPerSample);
+
+  // Write the sub-chunk 2 ("data") id and size
+  uint8_t dataChunkId[4] = { 'd', 'a', 't', 'a' };
+  file.write(dataChunkId, sizeof(dataChunkId));
+  uint32_t dataChunkSize = 0; // placeholder, will be written on closing
+  encodeUint32(file, dataChunkSize);
+
+  totalBytesWritten += 44;
+}
+
+void startWavRecording()
 {
   display.setTextSize(2);
+
+  char fullpath[CONFIG_FILENAME_LEN * 2];
+  sprintf(fullpath, "/RECORDINGS/%s", filename);
+
   record_x_pos = 0;
   record_timer = 0;
   display.setTextColor(GREY2, COLOR_BACKGROUND);
-  setCursor_textGrid(11, 6);
+  setCursor_textGrid(11, 7);
   display.print(":");
-  setCursor_textGrid(14, 6);
+  setCursor_textGrid(14, 7);
   display.print(":");
-  setCursor_textGrid(17, 6);
+  setCursor_textGrid(17, 7);
   display.print("    ");
-  if (SD.exists(filename))
+
+  if (SD.exists(fullpath))
   {
     // The SD library writes new data to the end of the
     // file, so to start a new recording, the old file
     // must be deleted before new data is written.
-    SD.remove(filename);
+    SD.remove(fullpath);
   }
-  frec = SD.open(filename, FILE_WRITE);
+  frec = SD.open(fullpath, FILE_WRITE);
+
+  // Write WAV header, "CD quality" 44.1KHz stereo
+  writeWavHeader(frec, 44100, 2);
+
+  // start record
   helptext_r("PUSH TO STOP");
 
   if (frec)
@@ -16223,39 +16295,46 @@ void startRecording()
   }
 }
 
+short writeWavStereoBlock() {
+  byte buffer[512];
+  byte bufferL[256];
+  byte bufferR[256];
+  memcpy(bufferL, record_queue_l.readBuffer(), 256);
+  memcpy(bufferR, record_queue_r.readBuffer(), 256);
+  record_queue_l.freeBuffer();
+  record_queue_r.freeBuffer();
+  int b = 0;
+  for (int i = 0; i < 512; i += 4)
+  {
+    buffer[i] = bufferL[b];
+    buffer[i + 1] = bufferL[b + 1];
+    buffer[i + 2] = bufferR[b];
+    buffer[i + 3] = bufferR[b + 1];
+    b = b + 2;
+  }
+  frec.write(buffer, 512);
+  totalBytesWritten += 512;
+
+  return (bufferL[1] * 256) + bufferL[0];
+}
+
 // write all 512 bytes to the SD card
-void continueRecording()
+void continueWavRecording()
 {
   if (record_queue_l.available() >= 2 && record_queue_r.available() >= 2)
   {
-    byte buffer[512];
-    byte bufferL[256];
-    byte bufferR[256];
-    memcpy(bufferL, record_queue_l.readBuffer(), 256);
-    memcpy(bufferR, record_queue_r.readBuffer(), 256);
-    record_queue_l.freeBuffer();
-    record_queue_r.freeBuffer();
-    int b = 0;
-    for (int i = 0; i < 512; i += 4)
-    {
-      buffer[i] = bufferL[b];
-      buffer[i + 1] = bufferL[b + 1];
-      buffer[i + 2] = bufferR[b];
-      buffer[i + 3] = bufferR[b + 1];
-      b = b + 2;
-    }
-    frec.write(buffer, 512);
+    short samplevalue = writeWavStereoBlock();
 
     if (record_timer % 6 == 0)
     {
       record_x_pos++;
       if (record_x_pos > DISPLAY_WIDTH - 1)
+      {
         record_x_pos = 0;
+      }
 
-      short samplevalue = 0;
-      samplevalue = ((bufferL[1] * 256) + bufferL[0]);
-      display.drawLine(record_x_pos, 175 - 50, record_x_pos, 175 + 50, GREY4);
-      display.drawLine(record_x_pos, 175, record_x_pos, samplevalue / 700 + 175, GREEN);
+      display.drawLine(record_x_pos, 185 - 40, record_x_pos, 185 + 40, GREY4);
+      display.drawLine(record_x_pos, 185, record_x_pos, samplevalue / 100 + 185, GREEN);
     }
   }
 
@@ -16266,15 +16345,15 @@ void continueRecording()
   minutes %= 60;
 
   display.setTextColor(GREY2, COLOR_BACKGROUND);
-  setCursor_textGrid(9, 6);
+  setCursor_textGrid(9, 7);
   print_formatted_number(hours, 2);
-  setCursor_textGrid(12, 6);
+  setCursor_textGrid(12, 7);
   print_formatted_number(minutes, 2);
-  setCursor_textGrid(15, 6);
+  setCursor_textGrid(15, 7);
   print_formatted_number(seconds, 2);
 }
 
-void stopRecording()
+void stopWavRecording()
 {
   char tmp[6];
 
@@ -16282,14 +16361,13 @@ void stopRecording()
   record_queue_r.end();
   if (fm.wav_recorder_mode == 1)
   {
+    // Flush all existing remaining data from the queues
     while (record_queue_l.available() > 0 && record_queue_r.available() > 0)
     {
-      record_queue_l.readBuffer();
-      record_queue_l.freeBuffer();
-      record_queue_r.readBuffer();
-      record_queue_r.freeBuffer();
+      writeWavStereoBlock();
     }
-    setCursor_textGrid(9, 6);
+
+    setCursor_textGrid(9, 7);
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.print("SAVED ");
     display.setTextColor(RED, COLOR_BACKGROUND);
@@ -16308,7 +16386,15 @@ void stopRecording()
       display.print(" KB  ");
     }
 
-    frec.close(); // close file
+    // Update the WAV header main chunk size and data sub-chunk size
+    uint32_t mainChunkSize = totalBytesWritten - 8;  // 8 bytes RIFF header
+    uint32_t dataChunkSize = totalBytesWritten - 44; // 44 bytes RIFF + WAVE headers
+    frec.seek(4);
+    encodeUint32(frec, mainChunkSize);
+    frec.seek(40);
+    encodeUint32(frec, dataChunkSize);
+
+    frec.close();
     fm.wav_recorder_mode = 0;
     // helptext_r ("PUSH TO RECORD");
     display.setTextColor(COLOR_SYSTEXT);
@@ -16328,10 +16414,14 @@ FLASHMEM void UI_func_recorder(uint8_t param)
     setCursor_textGrid(1, 4);
     display.print(F("STATUS:"));
     setCursor_textGrid(1, 5);
+    display.print(F("PATH:"));
+    setCursor_textGrid(9, 5);
+    display.print(F("/RECORDINGS"));
+    setCursor_textGrid(1, 6);
     display.print(F("FILE:"));
 
     display.setTextColor(GREY2, COLOR_BACKGROUND);
-    setCursor_textGrid(9, 6);
+    setCursor_textGrid(9, 7);
     display.print("00:00:00");
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -16350,9 +16440,9 @@ FLASHMEM void UI_func_recorder(uint8_t param)
       if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       {
         if (fm.wav_recorder_mode == 0)
-          startRecording();
+          startWavRecording();
         else if (fm.wav_recorder_mode == 1)
-          stopRecording();
+          stopWavRecording();
       }
     }
     helptext_r("+/- FILE, PUSH TO RECORD");
@@ -16370,8 +16460,8 @@ FLASHMEM void UI_func_recorder(uint8_t param)
     }
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    snprintf_P(filename, sizeof(filename), PSTR("REC_%03d.RAW"), temp_int);
-    setCursor_textGrid(9, 5);
+    snprintf_P(filename, sizeof(filename), PSTR("MDT_REC_%03d.wav"), temp_int);
+    setCursor_textGrid(9, 6);
     display.print(filename);
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -17063,13 +17153,13 @@ FLASHMEM void psram_printCustomSamplesList()
 
     if (int(drum_config[i + fm.flash_or_psram_skip_files].len / 1024) > 0)
     {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), ((drum_config[i + fm.flash_or_psram_skip_files].len) / 1024)*2);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), ((drum_config[i + fm.flash_or_psram_skip_files].len) / 1024) * 2);
       display.print(tmp);
       display.print(" KB");
     }
     else
     {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.flash_or_psram_skip_files].len)*2);
+      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.flash_or_psram_skip_files].len) * 2);
       display.print(tmp);
       display.print(" B ");
     }
@@ -17776,8 +17866,13 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     if (sd_card > 0)
     {
-      if (!SD.exists("CUSTOM"))
+      // Auto create missing folders if needed
+      if (!SD.exists("CUSTOM")) {
         SD.mkdir("CUSTOM");
+      }
+      if (!SD.exists("RECORDINGS")) {
+        SD.mkdir("RECORDINGS");
+      }
     }
     fm.sd_mode = FM_BROWSE_FILES;
     fm.active_window = 0;
