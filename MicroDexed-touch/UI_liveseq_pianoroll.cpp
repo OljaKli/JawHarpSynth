@@ -285,8 +285,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack);
-  int drawNotes = 0;
-  int hideNotes = 0;
 
   if(notePairs.size()) {
     for (LiveSequencer::NotePair note : notePairs) {
@@ -296,10 +294,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
                               note.noteOn.patternNumber <= (view.startPattern + view.numPatterns);
       if(isVisibleX && isVisibleY) {
         drawNote(note);
-        drawNotes++;
-      }
-      else {
-        hideNotes++;
       }
     }
   }
@@ -312,7 +306,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     display.setTextSize(0);
     display.print(text.c_str());
   }
-  DBG_LOG(printf("draw notes: %i, hide nodes: %i\n", drawNotes, hideNotes));
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note) {
