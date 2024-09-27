@@ -147,8 +147,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
   const uint16_t cursorX = ROLL_WIDTH + ((data.currentPattern - view.startPattern) * data.patternLengthMs + data.patternTimer) * view.msToPix;
-  static const uint16_t yFrom = HEADER_HEIGHT - CURSOR_HEIGHT - 1;
   static const uint16_t yTo = HEADER_HEIGHT - 1;
+  static const uint16_t yFrom = yTo - CURSOR_HEIGHT;
   display.console = true;
   display.drawLine(view.lastCursorPos, yFrom, view.lastCursorPos, yTo, HEADER_BG_COLOR);
   display.console = true;
@@ -189,6 +189,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
   switch(editMode) {
   case VIEW_ZOOM_Y:
     if(hasConstrainedChanged(view.numOctaves, 2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
+      setStartOctave(view.startOctave - diff); // zoom octave-centered
       setNumOctaves(view.numOctaves);
       drawFlags |= DRAW_ALL;
     }
