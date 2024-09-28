@@ -300,6 +300,23 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       }
       break;
 
+    case EDIT_NOTE:
+      if (selectedNote > -1) {
+        LiveSequencer::NotePair &p = notePairs.at(selectedNote);
+        int8_t note = p.noteOn.note_in;
+        int8_t notePrev = note;
+        if (hasConstrainedChanged(note, -diff, view.lowestNote, view.highestNote)) {
+          singleNoteDraw.insert(note);
+          p.noteOn.note_in = note;
+          p.noteOff.note_in = note;
+          singleNoteDraw.insert(notePrev);
+          singleNoteDraw.insert(note);
+          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        }
+        printActionValue();
+      }
+      break;
+
     default:
       // TODO
       break;
@@ -331,6 +348,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
 
     case EDIT_VELOCITY:
       display.print("VELOCITY:    ");
+      break;
+
+    case EDIT_NOTE:
+      display.print("NOTE:        ");
       break;
 
     case EDIT_DELETE:
@@ -370,6 +391,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
 
       case EDIT_VELOCITY:
         display.printf("%i       ", p.noteOn.note_in_velocity);
+        break;
+
+      case EDIT_NOTE:
+        display.printf("%i       ", p.noteOn.note_in);
         break;
 
       case EDIT_DELETE:
@@ -527,6 +552,9 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
   case EDIT_NOTEOFF:
     return "NOTEOFF";
 
+  case EDIT_NOTE:
+    return "NOTE";
+
   case EDIT_DELETE:
     return "DELETE";
   }
@@ -584,6 +612,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       ui_pianoroll->printActionValue();
     }
     if((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
+      // delete (invalidate) this note pair
       if(selectedNote > -1) {
         notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
         notePairs.at(selectedNote).noteOff.event = midi::InvalidType;

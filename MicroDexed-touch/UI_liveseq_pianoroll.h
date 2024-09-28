@@ -36,6 +36,7 @@ private:
     EDIT_NOTEON,
     EDIT_VELOCITY,
     EDIT_NOTEOFF,
+    EDIT_NOTE,
     EDIT_DELETE,
     EDIT_NUM
   };
