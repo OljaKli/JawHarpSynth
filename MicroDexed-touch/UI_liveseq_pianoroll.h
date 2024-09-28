@@ -78,7 +78,7 @@ private:
   bool hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max);
   void drawCursor(void);
   void drawVerticalBars(void);
-  void drawNote(LiveSequencer::NotePair note);
+  void drawNote(LiveSequencer::NotePair note, bool isSelected = false);
   void setNumOctaves(int8_t num);
   void setStartOctave(int8_t num);
   void setNumPatterns(int8_t num);
@@ -86,6 +86,9 @@ private:
   void drawNotes(void);
   void drawGUI(void);
   void drawBackground(void);
+
+  void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
+  int8_t selectedNote = -1; // index of notePairs or -1
 
   std::string getViewModeString(void);
   std::string getEditModeString(void);
@@ -95,6 +98,8 @@ private:
   LiveSequencer::LiveSeqData &data;
   bool isRunningHere;
   bool isVisible = false;
+
+  std::vector<LiveSequencer::NotePair> notePairs;
 
   ActiveValue currentValue = { nullptr, nullptr };
   std::vector<uint16_t> layerColors;

@@ -1241,7 +1241,7 @@ FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
   }
 }
 
-FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track) {
+FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t patternFrom, uint8_t patternTo) {
   std::vector<LiveSequencer::NotePair> result;
 
   for (std::list<MidiEvent>::iterator it = data.eventsList.begin(); it != data.eventsList.end(); it++) {
@@ -1257,7 +1257,9 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
             .noteOff = *itOff,
             .isMuted = data.tracks[track].layerMutes & (1 << it->layer)
           };
-          result.emplace_back(p);
+          if (it->patternNumber >= patternFrom && it->patternNumber <= patternTo) {
+            result.emplace_back(p);
+          }
           break;
         }
       }
