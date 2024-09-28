@@ -803,9 +803,12 @@ FLASHMEM void LiveSequencer::addPendingNotes(void) {
       ++it; // ignore notesOn at 0.0000, those were round up just before
     }
   }
-  // then add all notes to events and sort
-  if (sortRequested || data.pendingEvents.size()) {
+  if(sortRequested) {
     sortRequested = false;
+    data.eventsList.sort(sortMidiEvent);
+  }
+  // then add all notes to events and sort
+  if (data.pendingEvents.size()) {
     for (auto& e : data.pendingEvents) {
       data.eventsList.emplace_back(e);
     }

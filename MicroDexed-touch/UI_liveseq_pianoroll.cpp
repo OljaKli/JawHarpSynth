@@ -279,7 +279,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       if (selectedNote > -1) {
         LiveSequencer::MidiEvent &on = notePairs.at(selectedNote).noteOn;
         LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
-        bool isNoteOn = editMode == EDIT_NOTEON;
+        const bool isNoteOn = editMode == EDIT_NOTEON;
         uint16_t time = isNoteOn ? on.patternMs : off.patternMs;
         const uint16_t min = isNoteOn ? 0 : on.patternMs;
         const uint16_t max = isNoteOn ? data.patternLengthMs - (off.patternMs - on.patternMs) : data.patternLengthMs;
