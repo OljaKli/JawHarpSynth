@@ -277,12 +277,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     case EDIT_NOTEON:
     case EDIT_NOTEOFF:
       if (selectedNote > -1) {
-        LiveSequencer::MidiEvent &e = (editMode == EDIT_NOTEON) ? notePairs.at(selectedNote).noteOn : notePairs.at(selectedNote).noteOff;
-        if (hasConstrainedChanged(e.patternMs, -diff, 0, data.patternLengthMs)) {
-          singleNoteDraw.insert(e.note_in);
+        LiveSequencer::MidiEvent &on = notePairs.at(selectedNote).noteOn;
+        LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
+        bool isNoteOn = editMode == EDIT_NOTEON;
+        uint16_t time = isNoteOn ? on.patternMs : off.patternMs;
+        const uint16_t min = isNoteOn ? 0 : on.patternMs;
+        const uint16_t max = isNoteOn ? data.patternLengthMs - (off.patternMs - on.patternMs) : data.patternLengthMs;
+        if (hasConstrainedChanged(time, -diff, min, max)) {
+          singleNoteDraw.insert(on.note_in);
           drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
-          if(editMode == EDIT_NOTEON) {
-            liveSeq.requestSortEvents(); // re-sort events as times changed
+          if(isNoteOn) {
+            off.patternMs += (time - on.patternMs);
+            on.patternMs = time;
+            liveSeq.requestSortEvents(); // re-sort events as on time changed
+          } 
+          else {
+            off.patternMs = time;
           }
         }
       }
@@ -330,7 +340,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
 FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
   display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
   display.setTextSize(1);
-  display.setCursor(100, 1);
+  display.setCursor(150, 1);
   display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
   
   switch (mode) {
@@ -370,7 +380,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
 FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
   display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
   display.setTextSize(1);
-  display.setCursor(180, 1);
+  display.setCursor(150, 5 + CHAR_height_small);
   display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
   
   switch (mode) {
