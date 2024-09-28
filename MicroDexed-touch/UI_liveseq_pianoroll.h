@@ -76,6 +76,11 @@ private:
   void drawPianoRoll(void);
   void handleEncoderRight(int8_t diff);
   bool hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max);
+  bool hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max);
+
+  void printActionName(void);
+  void printActionValue(void);
+
   void drawCursor(void);
   void drawVerticalBars(void);
   void drawNote(LiveSequencer::NotePair note, bool isSelected = false);

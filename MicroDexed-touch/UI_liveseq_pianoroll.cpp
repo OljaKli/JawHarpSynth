@@ -46,6 +46,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     setStartOctave(3);
     setNumPatterns(data.numberOfBars);
     setPatternStart(0);
+    reloadNotes(view.startPattern, view.numPatterns);
    
     // setup function
     display.console = true;
@@ -78,7 +79,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       b->drawNow();
     }
 
-    reloadNotes();
   }
   if (LCDML.FUNC_loop()) {
     if (LCDML.BT_checkDown()) {
@@ -94,6 +94,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           viewMode = VIEW_ZOOM_X;
         }
         buttonView->drawNow();
+        printActionName();
+        printActionValue();
         break;
 
       case MODE_EDIT:
@@ -101,6 +103,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           editMode = EDIT_SELECT_NOTE;
         }
         buttonEdit->drawNow();
+        printActionName();
+        printActionValue();
         break;
       }
     }
@@ -189,6 +193,13 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(int8_t &value, int8_t 
   return changed;
 }
 
+FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max) {
+  const uint16_t newValue = constrain(value + diff, min, max);
+  const bool changed = newValue != value;
+  value = newValue;
+  return changed;
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
   view.numOctaves = num;
   view.numNotes = view.numOctaves * 12;
@@ -254,14 +265,39 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     case EDIT_SELECT_NOTE:
       if (hasConstrainedChanged(selectedNote, -diff, 0, notePairs.size() - 1)) {
         int8_t prev = selectedNote + diff;
-        if(prev < 0) {
+        if (prev < 0) {
           prev = 0; // make nicer
         }
         singleNoteDraw.insert(notePairs.at(prev).noteOn.note_in);
         singleNoteDraw.insert(notePairs.at(selectedNote).noteOn.note_in);
         drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
       }
-      
+      printActionValue();
+      break;
+
+    case EDIT_NOTEON:
+    case EDIT_NOTEOFF:
+      if (selectedNote > -1) {
+        LiveSequencer::MidiEvent &e = (editMode == EDIT_NOTEON) ? notePairs.at(selectedNote).noteOn : notePairs.at(selectedNote).noteOff;
+        if (hasConstrainedChanged(e.patternMs, -diff, 0, data.patternLengthMs)) {
+          singleNoteDraw.insert(e.note_in);
+          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        }
+        printActionValue();
+      }
+      break;
+
+    case EDIT_VELOCITY:
+      if (selectedNote > -1) {
+        LiveSequencer::MidiEvent &e = notePairs.at(selectedNote).noteOn;
+        int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
+        if (hasConstrainedChanged(velo, -diff, 0, 127)) {
+          e.note_in_velocity = velo;
+          singleNoteDraw.insert(e.note_in);
+          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        }
+        printActionValue();
+      }
       break;
 
     default:
@@ -270,6 +306,82 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     }
     
     break;
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
+  display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
+  display.setTextSize(1);
+  display.setCursor(100, 1);
+  display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
+  
+  switch (mode) {
+  case MODE_EDIT:
+    switch (editMode) {
+    case EDIT_SELECT_NOTE:
+      display.print("SELECT NOTE: ");
+      break;
+    case EDIT_NOTEON:
+      display.print("NOTE ON:     ");
+      break;
+
+    case EDIT_NOTEOFF:
+      display.print("NOTE OFF:    ");
+      break;
+
+    case EDIT_VELOCITY:
+      display.print("VELOCITY:    ");
+      break;
+
+    case EDIT_DELETE:
+      display.print("DELETE NOTE: ");
+      break;
+    }
+    break;
+
+  case MODE_VIEW:
+    break;
+
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
+  display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
+  display.setTextSize(1);
+  display.setCursor(180, 1);
+  display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
+  
+  switch (mode) {
+  case MODE_EDIT:
+    if(selectedNote > -1) {
+      LiveSequencer::NotePair &p = notePairs.at(selectedNote);
+      switch (editMode) {
+      case EDIT_SELECT_NOTE:
+        display.printf("[%i]     ", selectedNote);
+        break;
+
+      case EDIT_NOTEON:
+        display.printf("%ims     ", p.noteOn.patternMs);
+        break;
+
+      case EDIT_NOTEOFF:
+        display.printf("%ims     ", p.noteOff.patternMs);
+        break;
+
+      case EDIT_VELOCITY:
+        display.printf("%i       ", p.noteOn.note_in_velocity);
+        break;
+
+      case EDIT_DELETE:
+        display.print("CONFIRM");
+        break;
+      }
+      break;
+    }
+
+  case MODE_VIEW:
+    break;
+
   }
 }
 
@@ -346,10 +458,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     for (LiveSequencer::NotePair note : notePairs) {
       const bool isVisibleY = note.noteOn.note_in >= view.lowestNote &&
                               note.noteOn.note_in < view.highestNote;
-      const bool isVisibleX = note.noteOn.patternNumber >= view.startPattern &&
-                              note.noteOn.patternNumber <= (view.startPattern + view.numPatterns);
       bool isSelected = (index++ == selectedNote);
-      if (isVisibleX && isVisibleY) {
+      if (isVisibleY) {
         drawNote(note, isSelected);
       }
     }
@@ -438,7 +548,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     itoa(data.activeTrack + 1, temp_char, 10);
     b->draw("TRACK", temp_char, TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
-    ui_pianoroll->reloadNotes();
+    ui_pianoroll->reloadNotes(view.startPattern, view.numPatterns);
     drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
   }));
 
@@ -451,6 +561,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     if (modeChanged) {
       selectedNote = -1; // de-select note from edit
       buttonEdit->drawNow();
+      ui_pianoroll->printActionName();
+      ui_pianoroll->printActionValue();
     }
     b->drawNow();
   });
@@ -458,12 +570,27 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 
   buttonEdit = new TouchButton(GRID_X[2], y,
   [ this ] (auto *b) { // drawHandler
-    b->draw("EDIT", ui_pianoroll->getEditModeString(), (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
+    TouchButton::Color color = (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
+    if((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
+      color = TouchButton::BUTTON_RED;
+    }
+    b->draw("EDIT", ui_pianoroll->getEditModeString(), color);
   }, [ this ] (auto *b) { // clickedHandler
     const bool modeChanged = mode != MODE_EDIT;
     mode = MODE_EDIT;
     if (modeChanged) {
       buttonView->drawNow();
+      ui_pianoroll->printActionName();
+      ui_pianoroll->printActionValue();
+    }
+    if((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
+      if(selectedNote > -1) {
+        notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
+        notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
+        ui_pianoroll->reloadNotes(view.startPattern, view.numPatterns);
+        drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
+        editMode = EDIT_SELECT_NOTE;
+      }
     }
     b->drawNow();
   });
