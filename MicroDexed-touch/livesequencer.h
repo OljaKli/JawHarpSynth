@@ -198,6 +198,7 @@ public:
   void getInstrumentName(uint8_t device, uint8_t instrument, char *name, char *sub) const;
   void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument);
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
+  void requestSortEvents(void);
 
   struct NotePair {
     MidiEvent& noteOn;
@@ -219,6 +220,7 @@ private:
   std::set<uint8_t> pressedArpKeys;
   std::vector<ArpNote> activeArps;
   std::list<MidiEvent>::iterator playIterator;
+  bool sortRequested = false;
 
   void checkLoadNewArpNotes(void);
   void onSongStopped(void);

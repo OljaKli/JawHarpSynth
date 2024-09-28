@@ -804,7 +804,8 @@ FLASHMEM void LiveSequencer::addPendingNotes(void) {
     }
   }
   // then add all notes to events and sort
-  if (data.pendingEvents.size()) {
+  if (sortRequested || data.pendingEvents.size()) {
+    sortRequested = false;
     for (auto& e : data.pendingEvents) {
       data.eventsList.emplace_back(e);
     }
@@ -814,6 +815,10 @@ FLASHMEM void LiveSequencer::addPendingNotes(void) {
     data.trackSettings[data.activeTrack].layerCount++;
     ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
   }
+}
+
+FLASHMEM void LiveSequencer::requestSortEvents(void) {
+  sortRequested = true;
 }
 
 FLASHMEM void LiveSequencer::handlePatternBegin(void) {
@@ -882,7 +887,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
           applySongStartLayerMutes();
         }
       }
-      printEvents();
+      //printEvents();
       playIterator = data.eventsList.begin();
       loadNextEvent(timeToMs(playIterator->patternNumber, playIterator->patternMs));
     }

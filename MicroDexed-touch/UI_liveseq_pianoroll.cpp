@@ -281,6 +281,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         if (hasConstrainedChanged(e.patternMs, -diff, 0, data.patternLengthMs)) {
           singleNoteDraw.insert(e.note_in);
           drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+          if(editMode == EDIT_NOTEON) {
+            liveSeq.requestSortEvents(); // re-sort events as times changed
+          }
         }
       }
       break;
