@@ -272,7 +272,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         singleNoteDraw.insert(notePairs.at(selectedNote).noteOn.note_in);
         drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
       }
-      printActionValue();
       break;
 
     case EDIT_NOTEON:
@@ -283,7 +282,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           singleNoteDraw.insert(e.note_in);
           drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
         }
-        printActionValue();
       }
       break;
 
@@ -296,7 +294,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           singleNoteDraw.insert(e.note_in);
           drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
         }
-        printActionValue();
       }
       break;
 
@@ -313,16 +310,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           singleNoteDraw.insert(note);
           drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
         }
-        printActionValue();
       }
       break;
 
-    default:
-      // TODO
+    case EDIT_DELETE:
+      // nothing to do on encoder turn
       break;
     }
-    
     break;
+  }
+  if(drawFlags) {
+    printActionValue();
   }
 }
 
@@ -506,6 +504,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
     const uint16_t y = HEADER_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in + 1 - view.startOctave * 12) * view.noteHeight;
     const uint16_t h = view.noteHeight;
     const uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
+    //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
     //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
     const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
     display.console = true;
@@ -587,7 +586,13 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     const bool modeChanged = mode != MODE_VIEW;
     mode = MODE_VIEW;
     if (modeChanged) {
-      selectedNote = -1; // de-select note from edit
+      if(selectedNote > -1) { // de-select note from edit
+        //singleNoteDraw.insert(selectedNote); // fixme!
+        //DBG_LOG(printf("should update %i\n", selectedNote));
+        selectedNote = -1;
+        drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
+      }
+      editMode = EDIT_SELECT_NOTE;
       buttonEdit->drawNow();
       ui_pianoroll->printActionName();
       ui_pianoroll->printActionValue();

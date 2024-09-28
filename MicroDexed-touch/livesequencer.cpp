@@ -882,7 +882,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
           applySongStartLayerMutes();
         }
       }
-      //printEvents();
+      printEvents();
       playIterator = data.eventsList.begin();
       loadNextEvent(timeToMs(playIterator->patternNumber, playIterator->patternMs));
     }
