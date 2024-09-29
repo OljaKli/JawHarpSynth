@@ -23,10 +23,10 @@ public:
 private:
   std::set<uint8_t> keysPressed;
   enum ViewMode {
-    VIEW_ZOOM_X,
     VIEW_ZOOM_Y,
-    VIEW_SCROLL_X,
     VIEW_SCROLL_Y,
+    VIEW_ZOOM_X,
+    VIEW_SCROLL_X,
     VIEW_NUM
   };
   uint8_t viewMode = VIEW_ZOOM_X;
@@ -53,8 +53,8 @@ private:
     int8_t numOctaves;
     float noteHeight;   // populated automatically
     uint8_t numNotes;   // populated automatically
-    int8_t startPattern;
-    int8_t numPatterns;
+    int8_t startBar;
+    int8_t numBars;
     float msToPix;      // populated automatically
     uint8_t lowestNote; // populated automatically
     uint8_t highestNote;// populated automatically
@@ -72,6 +72,7 @@ private:
   };
   uint16_t drawFlags = 0;
   std::set<uint8_t> singleNoteDraw;
+  uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
   void initGUI(void);
   void drawPianoRoll(void);
@@ -87,11 +88,12 @@ private:
   void drawNote(LiveSequencer::NotePair note, bool isSelected = false);
   void setNumOctaves(int8_t num);
   void setStartOctave(int8_t num);
-  void setNumPatterns(int8_t num);
-  void setPatternStart(int8_t num);
+  void setNumBars(int8_t num);
+  void setBarStart(int8_t num);
   void drawNotes(void);
   void drawGUI(void);
   void drawBackground(void);
+  void drawAreaIndicator(void);
 
   void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
   int8_t selectedNote = -1; // index of notePairs or -1
@@ -114,13 +116,14 @@ private:
   TouchButton *buttonView;
   TouchButton *buttonEdit;
 
+  static constexpr uint16_t CURSOR_HEIGHT = 2;
   static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
   static constexpr uint16_t CURSOR_BG_COLOR = HEADER_BG_COLOR; // for now..
   static constexpr uint16_t ROLL_WIDTH = 20;
   static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
   static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;
-  static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y;
-  static constexpr uint16_t CURSOR_HEIGHT = 2;
+  static constexpr uint16_t LINE_HEIGHT = 1;
+  static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CURSOR_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y - LINE_HEIGHT;
 };
 
 #endif // UI_LIVESEQ_PIANOROLL_H
