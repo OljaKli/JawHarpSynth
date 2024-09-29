@@ -51,6 +51,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   const uint16_t y = layerViewY + 1 + hTotal - h - round(hTotal * view.startOctave / 8.0f); // we have 8 octaves here
   const uint16_t w = wTotal * (view.numBars) / float(data.numberOfBars);
   display.fillRect(x, y, w, h, RED);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setCursor(GRID_X[1], layerViewY + 4);
+  display.printf("BAR% 2i|% 2i", view.startBar + 1, view.startBar + view.numBars);
+  display.setCursor(GRID_X[1], layerViewY + CHAR_height_small + 6);
+  display.printf("OCT% 2i|% 2i", view.startOctave, view.startOctave + view.numOctaves - 1);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
@@ -86,6 +91,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     }
 
     drawAreaIndicator();
+
+    printActionName();
+    printActionValue();
 
     drawFlags |= DRAW_ALL;
 
@@ -361,7 +369,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
 FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
   display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
   display.setTextSize(1);
-  display.setCursor(GRID_X[1], CURSOR_HEIGHT + CONTENT_HEIGHT + 4);
+  display.setCursor(GRID_X[2], CURSOR_HEIGHT + CONTENT_HEIGHT + 4);
   display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
   
   switch (mode) {
@@ -401,7 +409,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
 FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
   display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
   display.setTextSize(1);
-  display.setCursor(GRID_X[1], CURSOR_HEIGHT + CONTENT_HEIGHT + 6 + CHAR_height_small);
+  display.setCursor(GRID_X[2], CURSOR_HEIGHT + CONTENT_HEIGHT + 6 + CHAR_height_small);
   display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
   
   switch (mode) {
@@ -526,7 +534,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     const uint16_t stringWidth = text.length() * CHAR_width_small;
     display.console = true;
     display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, DISPLAY_HEIGHT / 2);
-    display.setTextColor(COLOR_SYSTEXT);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(0);
     display.print(text.c_str());
   }
