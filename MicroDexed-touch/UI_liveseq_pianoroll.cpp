@@ -414,11 +414,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
       break;
       
     case EDIT_NOTEON:
-      display.print("TIME    ");
+      display.print("ON TIME ");
       break;
 
     case EDIT_DURATION:
-      display.print("DURATION");
+      display.print("OFF TIME");
       break;
 
     case EDIT_VELOCITY:
@@ -496,7 +496,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
 
   case MODE_VIEW:
     break;
-
   }
 }
 
@@ -600,7 +599,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     const std::string text = "TRACK HAS NO NOTES";
     const uint16_t stringWidth = text.length() * CHAR_width_small;
     display.console = true;
-    display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, DISPLAY_HEIGHT / 2);
+    display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(0);
     display.print(text.c_str());
@@ -773,7 +772,7 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
     return "VELOCTY";
 
   case EDIT_DURATION:
-    return "PERIOD"; // better word? duration is too long
+    return "OFF TIME";
 
   case EDIT_NOTE:
     return "NOTE";
