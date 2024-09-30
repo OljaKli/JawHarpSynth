@@ -766,13 +766,13 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
     return "SELECT";
 
   case EDIT_NOTEON:
-    return "NOTE ON";
+    return "ON";
 
   case EDIT_VELOCITY:
     return "VELOCTY";
 
   case EDIT_DURATION:
-    return "OFF TIME";
+    return "OFF";
 
   case EDIT_NOTE:
     return "NOTE";
