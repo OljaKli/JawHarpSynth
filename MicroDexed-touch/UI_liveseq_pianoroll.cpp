@@ -3,6 +3,7 @@
 #include "touch.h"
 #include "ILI9341_t3n.h"
 #include "LCDMenuLib2.h"
+#include "ui_livesequencer.h"
 
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
@@ -152,11 +153,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
         printActionValue();
         break;
 
-      case MODE_COPY:
-        if (++copyMode == COPY_NUM) {
-          copyMode = COPY_SELECT_PASTE_TIME;
+      case MODE_STEP:
+        if (++stepMode == STEP_NUM) {
+          stepMode = STEP_RECORD;
         }
-        buttonCopy->drawNow();
+        buttonStep->drawNow();
         printActionName();
         printActionValue();
         break;
@@ -390,6 +391,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       }
       break;
 
+    case EDIT_COPY:
+      // todo
+      break;
+
     case EDIT_DELETE:
       // nothing to do on encoder turn
       break;
@@ -429,6 +434,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
       display.print("NOTE    ");
       break;
 
+    case EDIT_COPY:
+      display.print("WHERE   ");
+      break;
+
     case EDIT_DELETE:
       display.print("DELETE  ");
       break;
@@ -438,8 +447,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
   case MODE_VIEW:
     break;
 
-  case MODE_COPY:
-    switch (copyMode) {
+  case MODE_STEP:
+    /*switch (copyMode) {
     case COPY_SELECT_PASTE_TIME:
       display.print("TIME    ");
       break;
@@ -447,7 +456,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
     case COPY_CONFIRM:
       display.print("ADD NOTE");
       break;
-    }
+    }*/
     break;
   }
 }
@@ -482,6 +491,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
 
       case EDIT_NOTE:
         sprintf(s, "%s", noteString);
+        break;
+
+      case EDIT_COPY:
+        sprintf(s, "%ims", p.noteOn.patternMs); // TODO
         break;
 
       case EDIT_DELETE:
@@ -638,7 +651,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 
   buttonPlay = new TouchButton(GRID_X[0], y, 
   [ this ] (auto *b) { // drawHandler
-    const TouchButton::Color playColor = data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
+    const TouchButton::Color playColor = data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
     b->draw((data.isRunning ? "STOP" : "START"), "", playColor);
   }, [ this ] (auto *b) { // clickedHandler
     if (data.isRunning) {
@@ -660,11 +673,30 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     if(mode == MODE_EDIT) {
       selectedNote = notePairs.size() ? 0 : -1;
     }
+    buttonInst->drawNow();
     drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
     ui_pianoroll->drawLayersIndicator();
   }));
 
-  buttonView = new TouchButton(GRID_X[2], y,
+  buttonInst = new TouchButton(GRID_X[2], y, 
+  [ this ] (auto *b) { // drawHandler
+    const uint8_t device = data.trackSettings[data.activeTrack].device;
+    const uint8_t instrument = data.trackSettings[data.activeTrack].instrument;
+    char name[10];
+    char sub[10];
+    liveSeq.getInstrumentName(device, instrument, name, sub);
+    b->draw(name, sub, TouchButton::BUTTON_ACTIVE);
+  }, [ this ] (auto *b) { // clickedHandler
+    // open instrument settings
+    if (data.tracks[data.activeTrack].screenSetupFn != nullptr) {
+      SetupFn f = (SetupFn)data.tracks[data.activeTrack].screenSetupFn;
+      f(0);
+    }
+    UI_LiveSequencer::openScreen(data.tracks[data.activeTrack].screen);
+  });
+  buttons.push_back(buttonInst);
+
+  buttonView = new TouchButton(GRID_X[3], y,
   [ this ] (auto *b) { // drawHandler
     b->draw("VIEW", ui_pianoroll->getViewModeString(), (mode == MODE_VIEW) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
@@ -677,7 +709,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
       }
       buttonEdit->drawNow();
-      buttonCopy->drawNow();
+      buttonStep->drawNow();
       ui_pianoroll->printActionName();
       ui_pianoroll->printActionValue();
     }
@@ -685,7 +717,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonView);
 
-  buttonEdit = new TouchButton(GRID_X[3], y,
+  buttonEdit = new TouchButton(GRID_X[4], y,
   [ this ] (auto *b) { // drawHandler
     TouchButton::Color color = (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
     if((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
@@ -702,7 +734,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
       }
       buttonView->drawNow();
-      buttonCopy->drawNow();
+      buttonStep->drawNow();
       ui_pianoroll->printActionName();
       ui_pianoroll->printActionValue();
     }
@@ -720,16 +752,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonEdit);
 
-  buttonCopy = new TouchButton(GRID_X[4], y,
+  buttonStep = new TouchButton(GRID_X[5], y,
   [ this ] (auto *b) { // drawHandler
-    TouchButton::Color color = (mode == MODE_COPY) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
-    if((mode == MODE_COPY) && (copyMode == COPY_CONFIRM)) {
-      color = TouchButton::BUTTON_RED;
-    }
-    b->draw("COPY", ui_pianoroll->getCopyModeString(), color);
+    b->draw("STEP", "RECORD", (mode == MODE_STEP) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
-    const bool modeChanged = mode != MODE_COPY;
-    mode = MODE_COPY;
+    const bool modeChanged = mode != MODE_STEP;
+    mode = MODE_STEP;
     if (modeChanged) {
       buttonView->drawNow();
       buttonEdit->drawNow();
@@ -740,7 +768,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     }
     b->drawNow();
   });
-  buttons.push_back(buttonCopy);
+  buttons.push_back(buttonStep);
 }
 
 FLASHMEM std::string UI_LiveSeq_PianoRoll::getViewModeString(void) {
@@ -766,16 +794,19 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
     return "SELECT";
 
   case EDIT_NOTEON:
-    return "ON";
+    return "ONTIME";
 
   case EDIT_VELOCITY:
     return "VELOCTY";
 
   case EDIT_DURATION:
-    return "OFF";
+    return "OFFTIME";
 
   case EDIT_NOTE:
     return "NOTE";
+
+  case EDIT_COPY:
+    return "COPY";
 
   case EDIT_DELETE:
     return "DELETE";
@@ -783,13 +814,13 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(void) {
   return "NONE";
 }
 
-FLASHMEM std::string UI_LiveSeq_PianoRoll::getCopyModeString(void) {
-  switch (copyMode) {
-  case COPY_SELECT_PASTE_TIME:
-    return "WHERE";
+FLASHMEM std::string UI_LiveSeq_PianoRoll::getStepModeString(void) {
+  switch (stepMode) {
+  case STEP_RECORD:
+    return "ADVANCE";
 
-  case COPY_CONFIRM:
-    return "CONFIRM";
+  case STEP_SIZE:
+    return "SIZE";
   }
   return "NONE";
 }

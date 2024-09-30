@@ -37,22 +37,23 @@ private:
     EDIT_VELOCITY,
     EDIT_DURATION,
     EDIT_NOTE,
+    EDIT_COPY,
     EDIT_DELETE,
     EDIT_NUM
   };
   uint8_t editMode = EDIT_SELECT_NOTE;
 
-  enum CopyMode {
-    COPY_SELECT_PASTE_TIME,
-    COPY_CONFIRM,
-    COPY_NUM
+  enum StepMode {
+    STEP_RECORD,
+    STEP_SIZE,
+    STEP_NUM
   };
-  uint8_t copyMode = COPY_SELECT_PASTE_TIME;
+  uint8_t stepMode = STEP_RECORD;
 
   enum Mode {
     MODE_VIEW,
     MODE_EDIT,
-    MODE_COPY
+    MODE_STEP
   };
   uint8_t mode = MODE_VIEW;
 
@@ -111,7 +112,7 @@ private:
 
   std::string getViewModeString(void);
   std::string getEditModeString(void);
-  std::string getCopyModeString(void);
+  std::string getStepModeString(void);
 
   uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
   LiveSequencer &liveSeq;
@@ -126,9 +127,10 @@ private:
   std::vector<TouchButton*> buttons;
 
   TouchButton *buttonPlay;
+  TouchButton *buttonInst;
   TouchButton *buttonView;
   TouchButton *buttonEdit;
-  TouchButton *buttonCopy;
+  TouchButton *buttonStep;
 
   static constexpr uint16_t CURSOR_HEIGHT = 2;
   static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
