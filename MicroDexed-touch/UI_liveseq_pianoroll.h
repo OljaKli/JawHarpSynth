@@ -29,22 +29,30 @@ private:
     VIEW_SCROLL_X,
     VIEW_NUM
   };
-  uint8_t viewMode = VIEW_ZOOM_X;
+  uint8_t viewMode = VIEW_ZOOM_Y;
 
   enum EditMode {
     EDIT_SELECT_NOTE,
     EDIT_NOTEON,
     EDIT_VELOCITY,
-    EDIT_NOTEOFF,
+    EDIT_DURATION,
     EDIT_NOTE,
     EDIT_DELETE,
     EDIT_NUM
   };
   uint8_t editMode = EDIT_SELECT_NOTE;
 
+  enum CopyMode {
+    COPY_SELECT_PASTE_TIME,
+    COPY_CONFIRM,
+    COPY_NUM
+  };
+  uint8_t copyMode = COPY_SELECT_PASTE_TIME;
+
   enum Mode {
     MODE_VIEW,
     MODE_EDIT,
+    MODE_COPY
   };
   uint8_t mode = MODE_VIEW;
 
@@ -94,6 +102,8 @@ private:
   void drawGUI(void);
   void drawBackground(void);
   void drawAreaIndicator(void);
+  void drawLayersIndicator(void);
+
   std::string getNoteString(uint8_t note);
 
   void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
@@ -101,6 +111,7 @@ private:
 
   std::string getViewModeString(void);
   std::string getEditModeString(void);
+  std::string getCopyModeString(void);
 
   uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
   LiveSequencer &liveSeq;
@@ -114,8 +125,10 @@ private:
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
 
+  TouchButton *buttonPlay;
   TouchButton *buttonView;
   TouchButton *buttonEdit;
+  TouchButton *buttonCopy;
 
   static constexpr uint16_t CURSOR_HEIGHT = 2;
   static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
