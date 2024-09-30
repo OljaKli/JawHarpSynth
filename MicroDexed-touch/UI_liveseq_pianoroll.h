@@ -94,6 +94,7 @@ private:
   void drawGUI(void);
   void drawBackground(void);
   void drawAreaIndicator(void);
+  std::string getNoteString(uint8_t note);
 
   void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
   int8_t selectedNote = -1; // index of notePairs or -1
