@@ -226,7 +226,7 @@ private:
   void onSongStopped(void);
   void updateTrackChannels(bool initial = false);
   void updateInstrumentChannels(void);
-  void addPendingNotes(void);
+  void addPendingNotes(bool incrementLayer = true);
   void refreshSongLength(void);
   void applySongStartLayerMutes(void);
   void printEvents();

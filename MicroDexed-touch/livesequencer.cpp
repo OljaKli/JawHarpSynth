@@ -237,7 +237,7 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
 FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
   if (data.isActive) {
     if (data.instrumentChannels.count(inChannel) == 0) {
-      ui_pianoRoll->handleKeyChanged(note, event);
+      ui_pianoRoll->handleKeyChanged(note, event, velocity);
       // velocity adjustment for keyboard events (live playing or recording)
       const uint8_t velocitySetting = data.trackSettings[data.activeTrack].velocityLevel;
       const uint8_t velocityActive = (velocitySetting == 0) ? velocity : velocitySetting * 1.27f; // 100% * 1.27 = 127
@@ -787,36 +787,40 @@ FLASHMEM void LiveSequencer::checkBpmChanged(void) {
   }
 }
 
-FLASHMEM void LiveSequencer::addPendingNotes(void) {
-  // finish active notes at end of all bars
-  for (auto it = data.notesOn.begin(); it != data.notesOn.end();) {
-    if (timeToMs(it->second.patternNumber, it->second.patternMs) != 0) {
-      data.pendingEvents.emplace_back(it->second);
-      it->second.event = midi::NoteOff;
-      it->second.note_in_velocity = 0;
-      it->second.patternNumber = data.numberOfBars - 1;
-      it->second.patternMs = data.patternLengthMs - 1;
-      data.pendingEvents.emplace_back(it->second);
-      data.notesOn.erase(it++);
+FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
+  if (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS) {
+    // finish active notes at end of all bars
+    for (auto it = data.notesOn.begin(); it != data.notesOn.end();) {
+      if (timeToMs(it->second.patternNumber, it->second.patternMs) != 0) {
+        data.pendingEvents.emplace_back(it->second);
+        it->second.event = midi::NoteOff;
+        it->second.note_in_velocity = 0;
+        it->second.patternNumber = data.numberOfBars - 1;
+        it->second.patternMs = data.patternLengthMs - 1;
+        data.pendingEvents.emplace_back(it->second);
+        data.notesOn.erase(it++);
+      }
+      else {
+        ++it; // ignore notesOn at 0.0000, those were round up just before
+      }
     }
-    else {
-      ++it; // ignore notesOn at 0.0000, those were round up just before
+    if(sortRequested) {
+      sortRequested = false;
+      data.eventsList.sort(sortMidiEvent);
     }
-  }
-  if(sortRequested) {
-    sortRequested = false;
-    data.eventsList.sort(sortMidiEvent);
-  }
-  // then add all notes to events and sort
-  if (data.pendingEvents.size()) {
-    for (auto& e : data.pendingEvents) {
-      data.eventsList.emplace_back(e);
+    // then add all notes to events and sort
+    if (data.pendingEvents.size()) {
+      for (auto& e : data.pendingEvents) {
+        data.eventsList.emplace_back(e);
+      }
+      data.pendingEvents.clear();
+      data.eventsList.sort(sortMidiEvent);
+      setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
+      if(incrementLayer) {
+        data.trackSettings[data.activeTrack].layerCount++;
+      }
+      ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
     }
-    data.pendingEvents.clear();
-    data.eventsList.sort(sortMidiEvent);
-    setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
-    data.trackSettings[data.activeTrack].layerCount++;
-    ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
   }
 }
 
@@ -1245,7 +1249,7 @@ FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
   data.pendingEvents.emplace_back(noteOn);
   data.pendingEvents.emplace_back(noteOff);
   if (data.isRunning == false) {
-    addPendingNotes();
+    addPendingNotes(false); // do not increment layer count
   }
 }
 

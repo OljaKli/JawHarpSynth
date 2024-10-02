@@ -18,7 +18,7 @@ public:
   UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
   void processLCDM(uint8_t param);
   void handleTouchScreen(void);
-  void handleKeyChanged(uint8_t key, midi::MidiType event);
+  void handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity);
 
 private:
   std::set<uint8_t> keysPressed;
@@ -37,7 +37,6 @@ private:
     EDIT_VELOCITY,
     EDIT_DURATION,
     EDIT_NOTE,
-    EDIT_COPY,
     EDIT_DELETE,
     EDIT_NUM
   };
@@ -46,6 +45,7 @@ private:
   enum StepMode {
     STEP_RECORD,
     STEP_SIZE,
+    STEP_LAYER,
     STEP_NUM
   };
   uint8_t stepMode = STEP_RECORD;
@@ -77,6 +77,7 @@ private:
     DRAW_NOTES = (1 << 3),
     DRAW_CURSOR = (1 << 4),
     DRAW_SINGLE_NOTE = (1 << 5),
+    DRAW_STEP_CURSOR = (1 << 6),
     DRAW_ALL = 0xFFFF
   };
   uint16_t drawFlags = 0;
@@ -93,6 +94,7 @@ private:
   void printActionValue(void);
 
   void drawCursor(void);
+  void drawStepCursor(void);
   void drawVerticalBars(void);
   void drawNote(LiveSequencer::NotePair note, bool isSelected = false);
   void setNumOctaves(int8_t num);
@@ -114,6 +116,8 @@ private:
   std::string getEditModeString(void);
   std::string getStepModeString(void);
 
+  bool step(int8_t diff);
+
   uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
   LiveSequencer &liveSeq;
   LiveSequencer::LiveSeqData &data;
@@ -125,6 +129,13 @@ private:
   ActiveValue currentValue = { nullptr, nullptr };
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
+
+  static constexpr uint8_t STEPS_MAX = 32;
+  int8_t stepRecordLayer = 0;
+  int8_t stepRecordSteps = 16;
+  uint16_t stepRecordStepSizeMs = 0;
+  int8_t stepCursorPositionIndex = 0;
+  uint16_t stepCursorPositionMs = 0;
 
   TouchButton *buttonPlay;
   TouchButton *buttonInst;
