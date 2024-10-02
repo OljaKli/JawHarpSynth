@@ -788,39 +788,36 @@ FLASHMEM void LiveSequencer::checkBpmChanged(void) {
 }
 
 FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
-  if (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS) {
-    // finish active notes at end of all bars
-    for (auto it = data.notesOn.begin(); it != data.notesOn.end();) {
-      if (timeToMs(it->second.patternNumber, it->second.patternMs) != 0) {
-        data.pendingEvents.emplace_back(it->second);
-        it->second.event = midi::NoteOff;
-        it->second.note_in_velocity = 0;
-        it->second.patternNumber = data.numberOfBars - 1;
-        it->second.patternMs = data.patternLengthMs - 1;
-        data.pendingEvents.emplace_back(it->second);
-        data.notesOn.erase(it++);
-      }
-      else {
-        ++it; // ignore notesOn at 0.0000, those were round up just before
-      }
+  // finish active notes at end of all bars
+  for (auto it = data.notesOn.begin(); it != data.notesOn.end();) {
+    if (timeToMs(it->second.patternNumber, it->second.patternMs) != 0) {
+      data.pendingEvents.emplace_back(it->second);
+      it->second.event = midi::NoteOff;
+      it->second.note_in_velocity = 0;
+      it->second.patternNumber = data.numberOfBars - 1;
+      it->second.patternMs = data.patternLengthMs - 1;
+      data.pendingEvents.emplace_back(it->second);
+      data.notesOn.erase(it++);
     }
-    if(sortRequested) {
-      sortRequested = false;
-      data.eventsList.sort(sortMidiEvent);
+    else {
+      ++it; // ignore notesOn at 0.0000, those were round up just before
     }
-    // then add all notes to events and sort
-    if (data.pendingEvents.size()) {
-      for (auto& e : data.pendingEvents) {
-        data.eventsList.emplace_back(e);
-      }
-      data.pendingEvents.clear();
-      data.eventsList.sort(sortMidiEvent);
+  }
+
+  // then add all notes to events and sort
+  if (data.pendingEvents.size()) {
+    for (auto& e : data.pendingEvents) {
+      data.eventsList.emplace_back(e);
+    }
+    data.pendingEvents.clear();
+    data.eventsList.sort(sortMidiEvent);
+    const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
+
+    if(canIncrementLayer && incrementLayer) {
       setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
-      if(incrementLayer) {
-        data.trackSettings[data.activeTrack].layerCount++;
-      }
-      ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
+      data.trackSettings[data.activeTrack].layerCount++;
     }
+    ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
   }
 }
 
@@ -870,6 +867,12 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
     if (data.isSongMode == false) {
       // first insert pending EVENT_PATT events to events and sort
       addPendingNotes();
+
+      // sort events was requested externally (on editing noteOn time)
+      if(sortRequested) {
+        sortRequested = false;
+        data.eventsList.sort(sortMidiEvent);
+      }
     }
 
     if (data.eventsList.size() > 0) {

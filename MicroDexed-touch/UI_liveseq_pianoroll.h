@@ -77,8 +77,7 @@ private:
     DRAW_NOTES = (1 << 3),
     DRAW_CURSOR = (1 << 4),
     DRAW_SINGLE_NOTE = (1 << 5),
-    DRAW_STEP_CURSOR = (1 << 6),
-    DRAW_ALL = 0xFFFF
+    DRAW_STEP_CURSOR = (1 << 6)
   };
   uint16_t drawFlags = 0;
   std::set<uint8_t> singleNoteDraw;
@@ -106,15 +105,16 @@ private:
   void drawBackground(void);
   void drawAreaIndicator(void);
   void drawLayersIndicator(void);
+  bool setMode(uint8_t newMode);
 
   std::string getNoteString(uint8_t note);
 
   void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
   int8_t selectedNote = -1; // index of notePairs or -1
 
-  std::string getViewModeString(void);
-  std::string getEditModeString(void);
-  std::string getStepModeString(void);
+  static std::string getViewModeString(uint8_t subMode);
+  static std::string getEditModeString(uint8_t subMode);
+  static std::string getStepModeString(uint8_t subMode);
 
   bool step(int8_t diff);
 
