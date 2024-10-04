@@ -195,7 +195,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-  DBG_LOG(printf("draw cursor...\n"));
   const uint16_t patternTime = data.isRunning ? ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) : 0;
   uint16_t cursorX = ROLL_WIDTH + round(patternTime * view.msToPix);
   const bool offLeft = (data.currentPattern < view.startBar);
