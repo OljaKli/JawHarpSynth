@@ -82,6 +82,13 @@ private:
   };
   uint16_t drawFlags = 0;
   std::set<uint8_t> singleNoteDraw;
+
+  struct SubUpdateX {
+    uint16_t fromX;
+    uint16_t toX;
+  };
+  std::vector<SubUpdateX> subUpdatesX;
+
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
   void initGUI(void);

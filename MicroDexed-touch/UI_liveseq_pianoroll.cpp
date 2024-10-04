@@ -215,6 +215,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   }
   drawFlags = 0;
   singleNoteDraw.clear();
+  subUpdatesX.clear();
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity) {
@@ -287,7 +288,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
-  const uint16_t x = ROLL_WIDTH + (stepCursorPositionMs * view.msToPix);
+  const uint16_t x = ROLL_WIDTH + round(stepCursorPositionMs * view.msToPix);
   display.drawLine(x, CURSOR_HEIGHT, x, CURSOR_HEIGHT + CONTENT_HEIGHT - 1, RED);
 }
 
@@ -644,7 +645,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
       const bool isPressed = keysPressed.find(note) != keysPressed.end();
       const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
       display.console = true;
-      display.fillRect(ROLL_WIDTH, y, CONTENT_WIDTH, view.noteHeight, bgColor);
+      if(subUpdatesX.size()) {
+        for(auto &u : subUpdatesX) {
+          DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
+          display.fillRect(u.fromX, y, u.toX - u.fromX, view.noteHeight, bgColor);
+        }
+      }
+      else {
+        display.fillRect(ROLL_WIDTH, y, CONTENT_WIDTH, view.noteHeight, bgColor);
+      }
       if(isPressed) {
         display.setTextColor(COLOR_SYSTEXT, GREY2);
         //display.setCursor(ROLL_WIDTH + 5, y);
@@ -652,14 +661,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
       }
     }
   }
-}  
+}
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
   // draw vertical pattern lines
   static constexpr uint8_t substeps = 4;
   const float stepWidth = CONTENT_WIDTH / float(view.numBars * substeps);
   for (uint8_t step = 0; step < view.numBars * substeps; step++) {
-    const uint16_t x = ROLL_WIDTH + step * stepWidth;
+    const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
     const uint16_t lineColor = (step % substeps == 0) ? GREY2 : GREY3;
     display.console = true;
     if (singleNoteDraw.empty()) {
@@ -704,18 +713,26 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) {
   if (singleNoteDraw.empty() || singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end()) {
-    const uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix);
+    uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix);
     const uint16_t y = CURSOR_HEIGHT + CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
     const uint16_t h = view.noteHeight;
-    const uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
+    uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
     //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
     //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
     const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
-    display.console = true;
-    if (note.isMuted) {
-      display.drawRect(x, y, w, h, color);
-    } else {
-      display.fillRect(x, y, w, h, color);
+    subUpdatesX.clear(); // TODO
+    if(subUpdatesX.empty()) {
+      display.console = true;
+      if (note.isMuted) {
+        display.drawRect(x, y, w, h, color);
+      } else {
+        display.fillRect(x, y, w, h, color);
+      }
+    }
+    else {
+      for(auto &e : subUpdatesX) {
+
+      }
     }
   }
 }
@@ -884,6 +901,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
   bool stepCursorChanged = false;
+  int8_t oldCursorPositionIndex = stepCursorPositionIndex;
   if (hasConstrainedChanged(stepCursorPositionIndex, diff, 0, stepRecordSteps)) {
     if(stepCursorPositionIndex == stepRecordSteps) {
       stepCursorPositionIndex = 0;
@@ -891,6 +909,10 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     stepCursorPositionMs = stepCursorPositionIndex * stepRecordStepSizeMs;
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
+    uint16_t oldX = ROLL_WIDTH + oldCursorPositionIndex * stepRecordStepSizeMs * view.msToPix;
+    uint16_t newX = ROLL_WIDTH + stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix;
+    subUpdatesX.push_back({ uint16_t(oldX - 1), uint16_t(oldX + 1) }); // FIXME pixel perfection
+    subUpdatesX.push_back({ uint16_t(newX - 1), uint16_t(newX + 1) }); // FIXME pixel perfection
   }
   return stepCursorChanged;
 }
