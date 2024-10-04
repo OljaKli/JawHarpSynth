@@ -15,6 +15,7 @@ UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequenc
   data(d),
   isRunningHere(d.isRunning) {
   ui_pianoroll = this;
+  view.cursorPositionX = ROLL_WIDTH;
   layerColors.push_back(COLOR_ARP); // layer 0
   layerColors.push_back(COLOR_CHORDS);
   layerColors.push_back(COLOR_DRUMS);
@@ -177,7 +178,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       buttonPlay->drawNow();
       buttonStep->drawNow(); // handle active state
     }
-    drawFlags |= isRunningHere ? DRAW_CURSOR : 0;
+
+    if(data.isRunning) {
+      drawRegionsX.push_back({ uint16_t(view.cursorPositionX - 5), uint16_t(view.cursorPositionX + 5) }); // FIXME: leaves cursor residuals when smaller
+      drawFlags |= DRAW_CONTENT_AREA | DRAW_CURSOR;
+    }
     
     drawGUI();
   }
@@ -188,6 +193,25 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   }
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
+  DBG_LOG(printf("draw cursor...\n"));
+  uint16_t cursorX = ROLL_WIDTH + round(((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) * view.msToPix);
+  const bool offLeft = (data.currentPattern < view.startBar);
+  const bool offRight = (data.currentPattern >= (view.startBar + view.numBars));
+  cursorX = offLeft ? ROLL_WIDTH : cursorX;
+  cursorX = offRight ? DISPLAY_WIDTH - 1 : cursorX;
+  const uint16_t cursorColor = (offLeft || offRight) ? RED : MIDDLEGREEN;
+  view.cursorPositionX = cursorX;
+  display.console = true;
+  display.drawLine(cursorX, 0, cursorX, CONTENT_HEIGHT - 1, cursorColor);
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
+  DBG_LOG(printf("draw step cursor...\n"));
+  const uint16_t x = ROLL_WIDTH + round(stepCursorPositionMs * view.msToPix);
+  display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, RED);
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(uint8_t patternFrom, uint8_t numBars) {
   notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack, patternFrom, patternFrom + numBars - 1);
   DBG_LOG(printf("%i/%i: got %i note pairs\n", patternFrom, patternFrom + numBars - 1, notePairs.size()));
@@ -195,8 +219,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(uint8_t patternFrom, uint8_t num
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   // NOTE: order of drawing is important
-  drawFlagsNext = 0;
-  drawRegionsXnext.clear();
   if (drawFlags & DRAW_CONTENT_FULL) {
     drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH }); // force redraw all
   }
@@ -218,9 +240,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   if (drawFlags & DRAW_PIANOROLL) {
     drawPianoRoll();
   }
-  drawFlags = drawFlagsNext;
+  drawFlags = 0;
   singleNoteDraw.clear();
-  drawRegionsX = drawRegionsXnext;
+  drawRegionsX.clear();
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity) {
@@ -272,28 +294,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
       }
     }    
   }
-}
-
-FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-  DBG_LOG(printf("draw cursor...\n"));
-  uint16_t cursorX = ROLL_WIDTH + ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) * view.msToPix;
-  const bool offLeft = (data.currentPattern < view.startBar);
-  const bool offRight = (data.currentPattern >= (view.startBar + view.numBars));
-  cursorX = offLeft ? ROLL_WIDTH : cursorX;
-  cursorX = offRight ? DISPLAY_WIDTH - 1 : cursorX;
-  const uint16_t cursorColor = (offLeft || offRight) ? RED : MIDDLEGREEN;
-
-  display.console = true;
-  display.drawLine(cursorX, 0, cursorX, CONTENT_HEIGHT - 1, cursorColor);
-  drawRegionsXnext.push_back({ uint16_t(cursorX - 5), uint16_t(cursorX + 3) }); // FIXME: leaves cursor residuals when smaller
-  drawFlagsNext |= DRAW_CONTENT_AREA;
-  view.lastCursorPos = cursorX;
-}
-
-FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
-  DBG_LOG(printf("draw step cursor...\n"));
-  const uint16_t x = ROLL_WIDTH + round(stepCursorPositionMs * view.msToPix);
-  display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, RED);
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max) {
@@ -930,9 +930,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
     uint16_t oldX = ROLL_WIDTH + round(oldCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
-    uint16_t newX = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
     drawRegionsX.push_back({ uint16_t(oldX - 1), uint16_t(oldX + 1) });
-    drawRegionsX.push_back({ uint16_t(newX - 1), uint16_t(newX + 1) });
   }
   return stepCursorChanged;
 }

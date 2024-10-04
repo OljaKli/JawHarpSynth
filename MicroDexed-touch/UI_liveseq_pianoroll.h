@@ -67,7 +67,7 @@ private:
     float msToPix;      // populated automatically
     uint8_t lowestNote; // populated automatically
     uint8_t highestNote;// populated automatically
-    uint16_t lastCursorPos;
+    uint16_t cursorPositionX;
   } view;
 
   enum DrawFlags {
@@ -89,10 +89,7 @@ private:
     uint16_t toX;
   };
   std::vector<SubUpdateX> drawRegionsX;
-  std::vector<SubUpdateX> drawRegionsXnext;
   
-  uint16_t drawFlagsNext = 0;
-
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
   void initGUI(void);
