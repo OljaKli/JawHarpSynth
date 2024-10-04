@@ -15,12 +15,13 @@ UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequenc
   data(d),
   isRunningHere(d.isRunning) {
   ui_pianoroll = this;
-  view.cursorPositionX = ROLL_WIDTH;
   layerColors.push_back(COLOR_ARP); // layer 0
   layerColors.push_back(COLOR_CHORDS);
   layerColors.push_back(COLOR_DRUMS);
   layerColors.push_back(COLOR_PITCHSMP);
   initGUI();
+  view.cursorPositionX = ROLL_WIDTH;
+
 }
 
 FLASHMEM void UI_LiveSeq_Graphic(uint8_t param) {  // for Livesequencer
@@ -172,14 +173,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
         break;
       }
     }
-
-    if (isRunningHere != data.isRunning) {
+    const bool runningChanged = isRunningHere != data.isRunning;
+    if (runningChanged) {
       isRunningHere = data.isRunning;
       buttonPlay->drawNow();
       buttonStep->drawNow(); // handle active state
     }
 
-    if(data.isRunning) {
+    if(data.isRunning || runningChanged) {
       drawRegionsX.push_back({ uint16_t(view.cursorPositionX - 5), uint16_t(view.cursorPositionX + 5) }); // FIXME: leaves cursor residuals when smaller
       drawFlags |= DRAW_CONTENT_AREA | DRAW_CURSOR;
     }
@@ -195,7 +196,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
   DBG_LOG(printf("draw cursor...\n"));
-  uint16_t cursorX = ROLL_WIDTH + round(((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) * view.msToPix);
+  const uint16_t patternTime = data.isRunning ? ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) : 0;
+  uint16_t cursorX = ROLL_WIDTH + round(patternTime * view.msToPix);
   const bool offLeft = (data.currentPattern < view.startBar);
   const bool offRight = (data.currentPattern >= (view.startBar + view.numBars));
   cursorX = offLeft ? ROLL_WIDTH : cursorX;
