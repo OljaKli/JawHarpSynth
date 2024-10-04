@@ -97,7 +97,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     data.activeTrack = param;
-    stepRecordStepSizeMs = data.numberOfBars * data.patternLengthMs / stepRecordSteps;
+    stepRecordStepSizeMs = data.numberOfBars * data.patternLengthMs / float(stepRecordSteps);
 
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
@@ -462,7 +462,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
 
     case STEP_SIZE:
       if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
-        stepRecordStepSizeMs = data.numberOfBars * data.patternLengthMs / stepRecordSteps;
+        stepRecordStepSizeMs = data.numberOfBars * data.patternLengthMs / float(stepRecordSteps);
         printActionValue();
         DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
       }
@@ -927,13 +927,13 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     if(stepCursorPositionIndex == stepRecordSteps) {
       stepCursorPositionIndex = 0;
     }
-    stepCursorPositionMs = stepCursorPositionIndex * stepRecordStepSizeMs;
+    stepCursorPositionMs = round(stepCursorPositionIndex * stepRecordStepSizeMs);
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
-    uint16_t oldX = ROLL_WIDTH + oldCursorPositionIndex * stepRecordStepSizeMs * view.msToPix;
-    uint16_t newX = ROLL_WIDTH + stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix;
-    drawRegionsX.push_back({ uint16_t(oldX - 1), uint16_t(oldX + 1) }); // FIXME pixel perfection
-    drawRegionsX.push_back({ uint16_t(newX - 1), uint16_t(newX + 1) }); // FIXME pixel perfection
+    uint16_t oldX = ROLL_WIDTH + round(oldCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
+    uint16_t newX = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
+    drawRegionsX.push_back({ uint16_t(oldX - 1), uint16_t(oldX + 1) });
+    drawRegionsX.push_back({ uint16_t(newX - 1), uint16_t(newX + 1) });
   }
   return stepCursorChanged;
 }

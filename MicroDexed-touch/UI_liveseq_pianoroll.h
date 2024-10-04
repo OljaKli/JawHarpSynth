@@ -144,7 +144,7 @@ private:
   static constexpr uint8_t STEPS_MAX = 32;
   int8_t stepRecordLayer = 0;
   int8_t stepRecordSteps = 16;
-  uint16_t stepRecordStepSizeMs = 0;
+  float stepRecordStepSizeMs = 0.0f;
   int8_t stepCursorPositionIndex = 0;
   uint16_t stepCursorPositionMs = 0;
 
