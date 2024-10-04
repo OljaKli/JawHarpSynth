@@ -197,6 +197,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   // NOTE: order of drawing is important
   drawFlagsNext = 0;
   drawRegionsXnext.clear();
+  if (drawFlags & DRAW_CONTENT_FULL) {
+    drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH }); // force redraw all
+  }
   if (drawFlags & DRAW_BACKGROUND) {
     drawBackground();
   }
@@ -347,32 +350,28 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       if (hasConstrainedChanged(view.numOctaves, -2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
         setStartOctave(view.startOctave + diff); // zoom octave-centered
         setNumOctaves(view.numOctaves);
-        drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH });
-        drawFlags |= DRAW_CONTENT_AREA | DRAW_PIANOROLL;
+        drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
       }
       break;
 
     case VIEW_SCROLL_Y:
       if (hasConstrainedChanged(view.startOctave, -diff, 0, 8 - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
         setStartOctave(view.startOctave);
-        drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH });
-        drawFlags |= DRAW_CONTENT_AREA;
+        drawFlags |= DRAW_CONTENT_FULL;
       }
       break;
 
     case VIEW_ZOOM_X:
       if (hasConstrainedChanged(view.numBars, -diff, 1, data.numberOfBars)) {
         setNumBars(view.numBars);
-        drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH });
-        drawFlags |= DRAW_CONTENT_AREA;
+        drawFlags |= DRAW_CONTENT_FULL;
       }
       break;
 
     case VIEW_SCROLL_X:
       if (hasConstrainedChanged(view.startBar, diff, 0, data.numberOfBars - view.numBars)) {
         setBarStart(view.startBar);
-        drawRegionsX.push_back({ ROLL_WIDTH, CONTENT_WIDTH });
-        drawFlags |= DRAW_CONTENT_AREA;
+        drawFlags |= DRAW_CONTENT_FULL;
       }
       break;
     }
@@ -842,7 +841,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       selectedNote = notePairs.size() ? 0 : -1;
     }
     buttonInst->drawNow();
-    drawFlags |= DRAW_CONTENT_AREA;
+    drawFlags |= DRAW_CONTENT_FULL;
     ui_pianoroll->drawLayersIndicator();
   }));
 
