@@ -123,7 +123,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     printActionName();
     printActionValue();
 
-    drawFlags |= DRAW_CONTENT_AREA | DRAW_PIANOROLL;
+    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
 
     for (auto *b : buttons) {
       b->drawNow();
@@ -221,6 +221,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(uint8_t patternFrom, uint8_t num
 FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   // NOTE: order of drawing is important
   if (drawFlags & DRAW_CONTENT_FULL) {
+    drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
     drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH }); // force redraw all
   }
   if (drawFlags & DRAW_BACKGROUND) {
@@ -264,7 +265,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
     const bool isStepRecording = (mode == MODE_STEP) && (stepMode == STEP_RECORD);
     if(isStepRecording == false) { // step record will draw itself
       singleNoteDraw.insert(key);
-      drawFlags |= DRAW_CONTENT_AREA;
+      drawFlags |= DRAW_CONTENT_FULL;
     }
     else {
       if((data.isRunning == false) && (event == midi::NoteOn)) {
@@ -677,14 +678,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
     const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
     const uint16_t lineColor = (step % substeps == 0) ? GREY2 : GREY3;
     display.console = true;
-    if (singleNoteDraw.empty()) {
+    if (singleNoteDraw.empty()) {// && keysPressed.empty()) {
       display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, lineColor);
     }
     else {
-      for(uint8_t note : singleNoteDraw) {
+      for (uint8_t note : singleNoteDraw) {
         if (note >= view.lowestNote && note < view.highestNote) {
           // only draw lines where single note update is needed and key *not* pressed
-          if(keysPressed.find(note) == keysPressed.end()) {
+          if (keysPressed.find(note) == keysPressed.end()) {
             const uint16_t y = CONTENT_HEIGHT - (note - view.lowestNote + 1) * view.noteHeight;
             display.drawLine(x, y, x, y + view.noteHeight - 1, lineColor);
           }
