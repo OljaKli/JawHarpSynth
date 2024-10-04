@@ -4052,7 +4052,6 @@ FLASHMEM bool save_sd_multisample_presets_json(uint8_t number)
           data_json[i]["zones"]["loop_start"][j] = msz[i][j].loop_start;
           data_json[i]["zones"]["loop_end"][j] = msz[i][j].loop_end;
 
-
         }
       }
 
