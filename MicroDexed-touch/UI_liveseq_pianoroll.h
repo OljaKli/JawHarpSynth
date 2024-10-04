@@ -88,6 +88,9 @@ private:
     uint16_t toX;
   };
   std::vector<SubUpdateX> subUpdatesX;
+  std::vector<SubUpdateX> subUpdatesXnext;
+  
+  uint16_t drawFlagsNext = 0;
 
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
@@ -151,14 +154,13 @@ private:
   TouchButton *buttonEdit;
   TouchButton *buttonStep;
 
-  static constexpr uint16_t CURSOR_HEIGHT = 2;
   static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
   static constexpr uint16_t CURSOR_BG_COLOR = HEADER_BG_COLOR; // for now..
   static constexpr uint16_t ROLL_WIDTH = 20;
   static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
   static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;
   static constexpr uint16_t LINE_HEIGHT = 1;
-  static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CURSOR_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y - LINE_HEIGHT;
+  static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y - LINE_HEIGHT;
 };
 
 #endif // UI_LIVESEQ_PIANOROLL_H
