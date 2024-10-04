@@ -160,7 +160,7 @@ public:
     uint8_t lastPlayedNote = 0;
     uint8_t remainingCountIns = 0;
 
-    bool startedFlag = false;
+    bool isStarting = false;
     bool isRunning = false;
     bool isRecording = false;
 

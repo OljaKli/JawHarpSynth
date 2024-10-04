@@ -108,8 +108,7 @@ FLASHMEM void LiveSequencer::onStopped(void) {
 
 FLASHMEM void LiveSequencer::onStarted(void) {
   DBG_LOG(printf("onStarted\n"));
-  data.startedFlag = true;
-  data.isRunning = true;
+  data.isStarting = true;
   data.recordedToSong = false;
   data.eventsList.remove_if([](MidiEvent& e) { return e.source == EventSource::EVENT_SONG; });
 }
@@ -828,8 +827,9 @@ FLASHMEM void LiveSequencer::requestSortEvents(void) {
 FLASHMEM void LiveSequencer::handlePatternBegin(void) {
   data.patternTimer = 0;
 
-  if (data.startedFlag) {
-    data.startedFlag = false;
+  if (data.isStarting) {
+    data.isStarting = false;
+    data.isRunning = true;
     // just started, do not increment
     data.currentPattern = 0;
     data.songPatternCount = 0;
