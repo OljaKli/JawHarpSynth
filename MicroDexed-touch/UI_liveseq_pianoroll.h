@@ -77,7 +77,8 @@ private:
     DRAW_NOTES = (1 << 3),
     DRAW_CURSOR = (1 << 4),
     DRAW_SINGLE_NOTE = (1 << 5),
-    DRAW_STEP_CURSOR = (1 << 6)
+    DRAW_STEP_CURSOR = (1 << 6),
+    DRAW_CONTENT_AREA = DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES
   };
   uint16_t drawFlags = 0;
   std::set<uint8_t> singleNoteDraw;

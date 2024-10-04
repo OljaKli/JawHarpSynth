@@ -121,7 +121,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     printActionName();
     printActionValue();
 
-    drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES | DRAW_PIANOROLL;
+    drawFlags |= DRAW_CONTENT_AREA | DRAW_PIANOROLL;
 
     for (auto *b : buttons) {
       b->drawNow();
@@ -158,6 +158,13 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       case MODE_STEP:
         if (++stepMode == STEP_NUM) {
           stepMode = STEP_RECORD;
+        }
+        if(stepMode == STEP_RECORD) {
+          drawFlags |= DRAW_STEP_CURSOR;
+        }
+        else {
+          // clear step cursor
+          drawFlags |= DRAW_CONTENT_AREA;
         }
         buttonStep->drawNow();
         printActionName();
@@ -228,7 +235,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
     const bool isStepRecording = (mode == MODE_STEP) && (stepMode == STEP_RECORD);
     if(isStepRecording == false) { // step record will draw itself
       singleNoteDraw.insert(key);
-      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+      drawFlags |= DRAW_CONTENT_AREA;
     }
     else {
       if((data.isRunning == false) && (event == midi::NoteOn)) {
@@ -338,28 +345,28 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       if (hasConstrainedChanged(view.numOctaves, -2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
         setStartOctave(view.startOctave + diff); // zoom octave-centered
         setNumOctaves(view.numOctaves);
-        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES | DRAW_PIANOROLL;
+        drawFlags |= DRAW_CONTENT_AREA | DRAW_PIANOROLL;
       }
       break;
 
     case VIEW_SCROLL_Y:
       if (hasConstrainedChanged(view.startOctave, -diff, 0, 8 - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
         setStartOctave(view.startOctave);
-        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        drawFlags |= DRAW_CONTENT_AREA;
       }
       break;
 
     case VIEW_ZOOM_X:
       if (hasConstrainedChanged(view.numBars, -diff, 1, data.numberOfBars)) {
         setNumBars(view.numBars);
-        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        drawFlags |= DRAW_CONTENT_AREA;
       }
       break;
 
     case VIEW_SCROLL_X:
       if (hasConstrainedChanged(view.startBar, diff, 0, data.numberOfBars - view.numBars)) {
         setBarStart(view.startBar);
-        drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        drawFlags |= DRAW_CONTENT_AREA;
       }
       break;
     }
@@ -376,7 +383,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           }
           singleNoteDraw.insert(notePairs.at(prev).noteOn.note_in);
           singleNoteDraw.insert(notePairs.at(selectedNote).noteOn.note_in);
-          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+          drawFlags |= DRAW_CONTENT_AREA;
         }
       }
       break;
@@ -392,7 +399,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         const uint16_t max = isNoteOn ? data.patternLengthMs - (off.patternMs - on.patternMs) : data.patternLengthMs;
         if (hasConstrainedChanged(time, diff, min, max)) {
           singleNoteDraw.insert(on.note_in);
-          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+          drawFlags |= DRAW_CONTENT_AREA;
           if(isNoteOn) {
             off.patternMs += (time - on.patternMs);
             on.patternMs = time;
@@ -412,7 +419,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         if (hasConstrainedChanged(velo, diff, 0, 127)) {
           e.note_in_velocity = velo;
           singleNoteDraw.insert(e.note_in);
-          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+          drawFlags |= DRAW_CONTENT_AREA;
         }
       }
       break;
@@ -428,7 +435,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           p.noteOff.note_in = note;
           singleNoteDraw.insert(notePrev);
           singleNoteDraw.insert(note);
-          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+          drawFlags |= DRAW_CONTENT_AREA;
         }
       }
       break;
@@ -731,13 +738,16 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
     case MODE_EDIT:
       buttonEdit->drawNow();
       if(selectedNote > -1) { // de-select note from edit
-        //singleNoteDraw.insert(ui_pianoroll->notePairs.at(selectedNote).noteOn.note_in);
+        singleNoteDraw.insert(ui_pianoroll->notePairs.at(selectedNote).noteOn.note_in);
         selectedNote = -1;
       }
       break;
 
     case MODE_STEP:
-      // TODO: clear step cursor
+      // reset step cursor
+      stepCursorPositionIndex = 0;
+      stepCursorPositionMs = 0;
+      drawFlags |= DRAW_CONTENT_AREA;
       buttonStep->drawNow();
       break;
     }
@@ -750,14 +760,17 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
     case MODE_EDIT:
       if((selectedNote == -1) && notePairs.size()) {
         selectedNote = 0; // auto select first note
-        singleNoteDraw.insert(notePairs.at(0).noteOn.note_in);
+        if(oldMode != MODE_STEP) {
+          singleNoteDraw.insert(notePairs.at(0).noteOn.note_in);
+        }
       }
       break;
 
     case MODE_STEP:
+      drawFlags |= DRAW_STEP_CURSOR;
       break;
     }
-    drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
+    drawFlags |= DRAW_CONTENT_AREA;
     ui_pianoroll->printActionName();
     ui_pianoroll->printActionValue();
   }
@@ -797,7 +810,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       selectedNote = notePairs.size() ? 0 : -1;
     }
     buttonInst->drawNow();
-    drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
+    drawFlags |= DRAW_CONTENT_AREA;
     ui_pianoroll->drawLayersIndicator();
   }));
 
@@ -843,7 +856,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
         notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
         ui_pianoroll->reloadNotes(view.startBar, view.numBars);
-        drawFlags |= DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
+        drawFlags |= DRAW_CONTENT_AREA;
         editMode = EDIT_SELECT_NOTE; // after delete, switch back to select mode
       }
     }
@@ -877,7 +890,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     }
     stepCursorPositionMs = stepCursorPositionIndex * stepRecordStepSizeMs;
     stepCursorChanged = true;
-    drawFlags |= DRAW_STEP_CURSOR | DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS;
+    drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
   }
   return stepCursorChanged;
 }
