@@ -87,8 +87,8 @@ private:
     uint16_t fromX;
     uint16_t toX;
   };
-  std::vector<SubUpdateX> subUpdatesX;
-  std::vector<SubUpdateX> subUpdatesXnext;
+  std::vector<SubUpdateX> drawRegionsX;
+  std::vector<SubUpdateX> drawRegionsXnext;
   
   uint16_t drawFlagsNext = 0;
 
