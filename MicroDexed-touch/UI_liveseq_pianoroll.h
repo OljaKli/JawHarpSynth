@@ -67,7 +67,9 @@ private:
     float msToPix;      // populated automatically
     uint8_t lowestNote; // populated automatically
     uint8_t highestNote;// populated automatically
-    uint16_t cursorPositionX;
+    uint16_t cursorPos;
+    uint16_t cursorPosPrev;
+    uint16_t cursorColor;
   } view;
 
   enum DrawFlags {

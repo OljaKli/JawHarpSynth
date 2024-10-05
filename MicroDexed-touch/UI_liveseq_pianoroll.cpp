@@ -20,8 +20,8 @@ UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequenc
   layerColors.push_back(COLOR_DRUMS);
   layerColors.push_back(COLOR_PITCHSMP);
   initGUI();
-  view.cursorPositionX = ROLL_WIDTH;
-
+  view.cursorPos = ROLL_WIDTH;
+  view.cursorPosPrev = ROLL_WIDTH;
 }
 
 FLASHMEM void UI_LiveSeq_Graphic(uint8_t param) {  // for Livesequencer
@@ -174,15 +174,34 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       }
     }
     const bool runningChanged = isRunningHere != data.isRunning;
+    const bool justStopped = isRunningHere && !data.isRunning;
     if (runningChanged) {
       isRunningHere = data.isRunning;
       buttonPlay->drawNow();
       buttonStep->drawNow(); // handle active state
     }
 
-    if(data.isRunning || runningChanged) {
-      drawRegionsX.push_back({ uint16_t(view.cursorPositionX - 5), uint16_t(view.cursorPositionX + 5) }); // FIXME: leaves cursor residuals when smaller
-      drawFlags |= DRAW_CONTENT_AREA | DRAW_CURSOR;
+    if(isRunningHere || justStopped) {
+      const uint16_t patternTime = isRunningHere ? ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) : 0;
+      view.cursorPos = ROLL_WIDTH + round(patternTime * view.msToPix);
+      const bool offLeft = (data.currentPattern < view.startBar);
+      const bool offRight = (data.currentPattern >= (view.startBar + view.numBars));
+      view.cursorPos = offLeft ? ROLL_WIDTH : view.cursorPos;
+      view.cursorPos = offRight ? DISPLAY_WIDTH - 1 : view.cursorPos;
+      const uint16_t color = (offLeft || offRight) ? RED : MIDDLEGREEN;
+      const bool colorChanged = color != view.cursorColor;
+      const bool cursorPosChanged = (view.cursorPos != view.cursorPosPrev);
+
+      if(justStopped || colorChanged || cursorPosChanged) {
+        drawRegionsX.push_back({ view.cursorPosPrev, view.cursorPosPrev });
+        drawFlags |= DRAW_CONTENT_AREA;
+
+        if(!justStopped) {
+          view.cursorColor = color;
+          drawFlags |= DRAW_CURSOR;
+        }
+        view.cursorPosPrev = view.cursorPos;
+      }
     }
     
     drawGUI();
@@ -195,21 +214,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
-  const uint16_t patternTime = data.isRunning ? ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) : 0;
-  uint16_t cursorX = ROLL_WIDTH + round(patternTime * view.msToPix);
-  const bool offLeft = (data.currentPattern < view.startBar);
-  const bool offRight = (data.currentPattern >= (view.startBar + view.numBars));
-  cursorX = offLeft ? ROLL_WIDTH : cursorX;
-  cursorX = offRight ? DISPLAY_WIDTH - 1 : cursorX;
-  const uint16_t cursorColor = (offLeft || offRight) ? RED : MIDDLEGREEN;
-  view.cursorPositionX = cursorX;
   display.console = true;
-  display.drawLine(cursorX, 0, cursorX, CONTENT_HEIGHT - 1, cursorColor);
+  display.drawLine(view.cursorPos, 0, view.cursorPos, CONTENT_HEIGHT - 1, view.cursorColor);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   DBG_LOG(printf("draw step cursor...\n"));
   const uint16_t x = ROLL_WIDTH + round(stepCursorPositionMs * view.msToPix);
+  display.console = true;
   display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, RED);
 }
 
@@ -645,7 +657,8 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getNoteString(uint8_t note) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
   for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
-    if (singleNoteDraw.empty() || (singleNoteDraw.find(note) != singleNoteDraw.end())) {
+    const bool drawSingleNote = singleNoteDraw.find(note) != singleNoteDraw.end();
+    if (drawRegionsX.size() && (singleNoteDraw.empty() || drawSingleNote)) {
       const uint8_t noteIndex = view.highestNote - note - 1;
       const uint16_t y = round(noteIndex * view.noteHeight);
       const bool isPressed = keysPressed.find(note) != keysPressed.end();
@@ -654,8 +667,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
       if(drawRegionsX.size()) {
         for(auto &u : drawRegionsX) {
           //DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
-          // FIXME
-          display.fillRect(std::max(ROLL_WIDTH, u.fromX), y, u.toX - u.fromX, view.noteHeight, bgColor);
+          const uint16_t width = u.toX - u.fromX;
+          const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
+          if(width > 1) {
+            display.fillRect(xFrom, y, u.toX - u.fromX, view.noteHeight, bgColor);
+          }
+          else {
+            display.drawLine(xFrom, y, xFrom, y + view.noteHeight - 1, bgColor);
+          }
         }
       }
       else {
