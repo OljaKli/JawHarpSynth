@@ -411,6 +411,9 @@ uint32_t slice_end[2][16];
 uint16_t slices_scrollspeed = 1;
 bool slices_autoalign = true;
 
+bool loop_start_button = false;
+bool loop_end_button = false;
+
 #ifdef COMPILE_FOR_FLASH
 extern flash_t flash_infos;
 #endif
@@ -999,7 +1002,7 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
       else if (seq.instrument[x] > 5 && seq.instrument[x] < 16)
       {
         display.setCursor(6 * CHAR_width_small + (4 * CHAR_width_small) * x, CHAR_height_small * 5);
-        display.print(F("SMP"));
+        display.print(F("MSP"));
         display.setCursor(6 * CHAR_width_small + (4 * CHAR_width_small) * x, CHAR_height_small * 6);
         display.print(F("#"));
         print_formatted_number(seq.instrument[x] - 6, 2);
@@ -7513,10 +7516,30 @@ FLASHMEM void print_updated_slices_text()
 
 FLASHMEM void draw_header_sample_editor()
 {
+  char tmp[7];
+  if (fm.sample_source == 2 || fm.sample_source == 3) //MSP
+  {
+    setCursor_textGrid_small(14, 2);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    if (drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len == 0 && strlen(msz[fm.sample_source - 2][temp_int].filename) > 2)
+    {
+      display.print(F("PLEASE RELOAD THIS SAMPLE IN MSP"));
+    }
+    else
+      display.print(F("                                "));
+
+    if (strlen(msz[fm.sample_source - 2][temp_int].filename) < 2)
+      snprintf_P(tmp, sizeof(tmp), PSTR("%04d"), 0);
+    else
+      snprintf_P(tmp, sizeof(tmp), PSTR("%04d"), drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len / 1024);
+  }
+  else //slice/normal sample
+  {
+    snprintf_P(tmp, sizeof(tmp), PSTR("%04d"), drum_config[temp_int].len / 1024);
+  }
   setCursor_textGrid_small(32, 1);
   display.setTextColor(GREY1, COLOR_BACKGROUND);
-  display.print(drum_config[temp_int].len / 1024);
-  display.setTextColor(GREY1, COLOR_BACKGROUND);
+  display.print(tmp);
   display.print(" KB  ");
 }
 
@@ -7608,6 +7631,46 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
   }
 }
 
+FLASHMEM void draw_waveform_loop_editor()
+{  // LOOP for samples in MSP (MultiSamplePlayer)
+
+  const drum_config_t* sample = &drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number];
+
+  int slice_col = GREY1;
+  if (sample->len != 0)
+  {
+    if (fm.sample_source == 2 || fm.sample_source == 3)
+    {
+      if (drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len != 0 && strlen(msz[fm.sample_source - 2][temp_int].filename) > 2)
+      {
+        //START
+        uint16_t xCoord = 0;
+        uint16_t yCoord = 72;
+        uint16_t w = round(DISPLAY_WIDTH * (msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
+        uint16_t h = 100;
+        float from = 0;
+        float to = msz[fm.sample_source - 2][temp_int].loop_start / float(sample->len);
+        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY2);
+
+        //LOOP
+        xCoord = round((DISPLAY_WIDTH * msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
+        w = round(DISPLAY_WIDTH * (msz[fm.sample_source - 2][temp_int].loop_end - msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
+        from = msz[fm.sample_source - 2][temp_int].loop_start / float(sample->len);
+        to = msz[fm.sample_source - 2][temp_int].loop_end / float(sample->len);
+        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, COLOR_SYSTEXT, RED);
+
+        //END
+        xCoord = round((DISPLAY_WIDTH * msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len));
+        w = round(DISPLAY_WIDTH * (float(sample->len) - msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len));
+        from = (msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len);
+        to = 1.0;
+        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY2);
+
+      }
+    }
+  }
+}
+
 FLASHMEM void print_sliced_status()
 {
   char buf[4];
@@ -7657,6 +7720,64 @@ FLASHMEM void draw_scrollbar_sample_editor()
 
 extern void  assign_free_slices_or_increment();
 
+FLASHMEM void print_empty_loop()
+{
+  setModeColor(3);
+  show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, "0");
+  setModeColor(4);
+  show_no_grid(5 * 11 - 5, CHAR_width_small * 13, 7, "0");
+  setModeColor(5);
+  setCursor_textGrid_small(13, 6);
+  display.print(F("NONE    "));
+}
+
+FLASHMEM void print_loop_data()
+{
+  if (fm.sample_source == 2 || fm.sample_source == 3)
+  { //MSP 1 or 2
+    if (strlen(msz[fm.sample_source - 2][temp_int].filename) > 0)
+    {
+      setModeColor(3);
+      show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_start);
+      setModeColor(4);
+      show_no_grid(5 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_end);
+      setModeColor(5);
+      setCursor_textGrid_small(13, 6);
+      if (msz[fm.sample_source - 2][temp_int].loop_type == 0)
+        display.print(F("NO LOOP "));
+      else    if (msz[fm.sample_source - 2][temp_int].loop_type == 1)
+        display.print(F("REPEAT  "));
+      else    if (msz[fm.sample_source - 2][temp_int].loop_type == 2)
+        display.print(F("PINGPONG"));
+      else
+        display.print(F("NONE    "));
+    }
+    else
+    { //MSP but empty slot
+      print_empty_loop();
+    }
+  }
+  else
+  { //psram - no loops
+    print_empty_loop();
+  }
+}
+
+FLASHMEM void draw_loop_buttons()
+{
+  if (fm.sample_source == 2 || fm.sample_source == 3)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 1 + loop_start_button);
+    draw_button_on_grid(9, 23, "LOOP", "END", 1 + loop_end_button);
+  }
+  else  if (fm.sample_source == 4)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 0);
+    draw_button_on_grid(9, 23, "LOOP", "END", 0);
+  }
+
+}
+
 FLASHMEM void UI_func_sample_editor(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -7705,16 +7826,12 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(F("SOURCE:"));
 
-    //display.console = true;
-    //display.drawRect(168, 30, 142, 40, GREY2); //overview
-
     char buf[3] = { 0, 0, 0 };
 
-    draw_button_on_grid(1, 23, "LOOP", "START", 0);
-    draw_button_on_grid(9, 23, "LOOP", "END", 0);
-    draw_button_on_grid(17, 23, "SCRLSP", itoa(slices_scrollspeed, buf, 10), 0);
+    draw_loop_buttons();
 
-    draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1);
+    draw_button_on_grid(17, 23, "SCRLSP", itoa(slices_scrollspeed, buf, 10), 1);
+    draw_button_on_grid(25, 23, "AUTO", "ALIGN", 0);
 
     //draw_button_on_grid(33, 23, "SLICES", itoa(num_slices, buf, 10), 1);
     draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
@@ -7732,7 +7849,9 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
       if (seq.edit_state == 0)
       {
-        if (fm.sample_source == 2 || fm.sample_source == 3 || fm.sample_source == 4)
+        if (fm.sample_source == 2 || fm.sample_source == 3)
+          generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5);
+        else  if (fm.sample_source == 4)
           generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5 + (num_slices[0] * 2));
         else
           generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 2);
@@ -7746,15 +7865,16 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           temp_int = calc_val[state_dir](temp_int, 1, 0, fm.sd_sum_files - 1);
         else if (fm.sample_source == 1)
           temp_int = calc_val[state_dir](temp_int, 1, 0, fm.flash_or_psram_sum_files - 1);
-        else if (fm.sample_source == 2 || fm.sample_source == 3)
+        else if (fm.sample_source == 2 || fm.sample_source == 3) //MSP
+        {
           temp_int = calc_val[state_dir](temp_int, 1, 0, 7);
+        }
         else if (fm.sample_source == 4)
         {
           temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG - 2);
-
-          draw_header_sample_editor();
           print_sliced_status();
         }
+        draw_header_sample_editor();
 
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 1)
@@ -7782,7 +7902,17 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
-        fm.sample_source = 4;
+        fm.sample_source = calc_val[state_dir](fm.sample_source, 1, 2, 4);
+        if (fm.sample_source == 2 || fm.sample_source == 3)
+        {
+          if (temp_int > 7)
+            temp_int = 7;
+          display.console = true;
+          display.fillRect(155, 30, 156, 38, COLOR_BACKGROUND);
+          display.console = false;
+        }
+        // fm.sample_source = 4;
+        draw_header_sample_editor();
 #endif
 
         sample_editor_update_file_counts();
@@ -7793,22 +7923,49 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           menuhelper_redraw = true;
         }
       }
-      // else if (seq.edit_state == 1 && generic_temp_select_menu == 3 && fm.sample_source > 1)
-      // {
-      //   stop_all_drum_slots();
-      //   msz[fm.sample_source - 2][temp_int].loop_start = calc_val[state_dir](msz[fm.sample_source - 2][temp_int].loop_start, ENCODER[ENC_R].speed()* seq.wave_spacing * 10, 0, msz[fm.sample_source - 2][temp_int].filelength);
-      //   if (msz[fm.sample_source - 2][temp_int].loop_end <= msz[fm.sample_source - 2][temp_int].loop_start)
-      //     msz[fm.sample_source - 2][temp_int].loop_end = msz[fm.sample_source - 2][temp_int].loop_start + 1;
-      // }
-      // else if (seq.edit_state == 1 && generic_temp_select_menu == 4 && fm.sample_source > 1)
-      // {
-      //   stop_all_drum_slots();
-      //   msz[fm.sample_source - 2][temp_int].loop_end = calc_val[state_dir](msz[fm.sample_source - 2][temp_int].loop_end, ENCODER[ENC_R].speed()* seq.wave_spacing * 10, 0, msz[fm.sample_source - 2][temp_int].filelength);
-      //   if (msz[fm.sample_source - 2][temp_int].loop_end < msz[fm.sample_source - 2][temp_int].loop_start)
-      //     msz[fm.sample_source - 2][temp_int].loop_start = msz[fm.sample_source - 2][temp_int].loop_end - 1;
-      //   if (msz[fm.sample_source - 2][temp_int].loop_start < 0 || msz[fm.sample_source - 2][temp_int].loop_start>msz[fm.sample_source - 2][temp_int].loop_end)
-      //     msz[fm.sample_source - 2][temp_int].loop_start = 0;
-      // }
+
+      else if (seq.edit_state == 1 && generic_temp_select_menu == 3 && fm.sample_source > 1 && fm.sample_source < 4)  // loop start
+      {
+        stop_all_drum_slots();
+        if (LCDML.BT_checkDown())
+        {
+          if (msz[fm.sample_source - 2][temp_int].loop_start < drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len)
+            msz[fm.sample_source - 2][temp_int].loop_start = msz[fm.sample_source - 2][temp_int].loop_start + slices_scrollspeed;
+        }
+        else if (LCDML.BT_checkUp())
+        {
+          if (msz[fm.sample_source - 2][temp_int].loop_start > 0)
+            msz[fm.sample_source - 2][temp_int].loop_start = msz[fm.sample_source - 2][temp_int].loop_start - slices_scrollspeed;
+        }
+        if (msz[fm.sample_source - 2][temp_int].loop_end <= msz[fm.sample_source - 2][temp_int].loop_start)
+          msz[fm.sample_source - 2][temp_int].loop_end = msz[fm.sample_source - 2][temp_int].loop_start + 1;
+        if (msz[fm.sample_source - 2][temp_int].loop_start < 0)
+          msz[fm.sample_source - 2][temp_int].loop_start = 0;
+
+        menuhelper_redraw = true;
+      }
+      else if (seq.edit_state == 1 && generic_temp_select_menu == 4 && fm.sample_source > 1 && fm.sample_source < 4) //loop end
+      {
+        stop_all_drum_slots();
+        if (LCDML.BT_checkDown())
+        {
+          if (msz[fm.sample_source - 2][temp_int].loop_end < drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len)
+            msz[fm.sample_source - 2][temp_int].loop_end = msz[fm.sample_source - 2][temp_int].loop_end + slices_scrollspeed;
+        }
+        else if (LCDML.BT_checkUp())
+        {
+          if (msz[fm.sample_source - 2][temp_int].loop_end > 1)
+            msz[fm.sample_source - 2][temp_int].loop_end = msz[fm.sample_source - 2][temp_int].loop_end - slices_scrollspeed;
+        }
+        if (msz[fm.sample_source - 2][temp_int].loop_end <= msz[fm.sample_source - 2][temp_int].loop_start)
+          msz[fm.sample_source - 2][temp_int].loop_start = msz[fm.sample_source - 2][temp_int].loop_end - 1;
+        if (msz[fm.sample_source - 2][temp_int].loop_start < 0 || msz[fm.sample_source - 2][temp_int].loop_start>msz[fm.sample_source - 2][temp_int].loop_end)
+          msz[fm.sample_source - 2][temp_int].loop_start = 0;
+        if (msz[fm.sample_source - 2][temp_int].loop_end <= 1)
+          msz[fm.sample_source - 2][temp_int].loop_end = 1;
+
+        menuhelper_redraw = true;
+      }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 5 && fm.sample_source > 1)
       {
         stop_all_drum_slots();
@@ -7860,6 +8017,8 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       else
         seq.edit_state = 0;
 
+      draw_loop_buttons();
+
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -7867,7 +8026,29 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     setCursor_textGrid_small(9, 1);
     setModeColor(0);
     print_formatted_number(temp_int + 1, 3);
-    show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, drum_config[temp_int].name);
+
+    if (fm.sample_source == 2 || fm.sample_source == 3)
+    {
+
+      if (strlen(msz[fm.sample_source - 2][temp_int].filename) < 2)
+      {
+        show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, "EMPTY  ");
+        display.console = true;
+        display.fillRect(0, 72, DISPLAY_WIDTH, 100, GREY3);
+        display.console = false;
+      }
+      else
+        if (strlen(msz[fm.sample_source - 2][temp_int].filename) > 1)
+          show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, msz[fm.sample_source - 2][temp_int].filename);
+
+      //  if (drum_config[ msz[fm.sample_source - 2][temp_int].psram_entry_number ].len==0 )
+      // {
+      //   }
+
+    }
+
+    else //psram
+      show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, drum_config[temp_int].name);
 
     print_sliced_status();
 
@@ -7878,28 +8059,13 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     else if (fm.sample_source == 1)
       display.print(F("EXT.FLASH"));
     else if (fm.sample_source == 2)
-      display.print(F("MSP #0   "));
-    else if (fm.sample_source == 3)
       display.print(F("MSP #1   "));
+    else if (fm.sample_source == 3)
+      display.print(F("MSP #2   "));
     else if (fm.sample_source == 4)
       display.print(F("PSRAM    "));
 
-
-    setModeColor(3);
-    show_no_grid(4 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_start);
-    setModeColor(4);
-    show_no_grid(5 * 11 - 5, CHAR_width_small * 13, 7, msz[fm.sample_source - 2][temp_int].loop_end);
-    setModeColor(5);
-    setCursor_textGrid_small(13, 6);
-    if (msz[fm.sample_source - 2][temp_int].loop_type == 0)
-      display.print(F("NO LOOP "));
-    else    if (msz[fm.sample_source - 2][temp_int].loop_type == 1)
-      display.print(F("REPEAT  "));
-    else    if (msz[fm.sample_source - 2][temp_int].loop_type == 2)
-      display.print(F("PINGPONG"));
-    else
-      display.print(F("NONE    "));
-
+    print_loop_data();
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 #if defined(COMPILE_FOR_FLASH) || defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
@@ -7912,10 +8078,10 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       {
         draw_waveform_sample_editor(99);
       }
-      else
-      {
-        // draw_waveform_overview_in_sample_editor_step1(temp_int + 1);
-      }
+      else if (fm.sample_source == 2 || fm.sample_source == 3) //MSP
+        draw_waveform_loop_editor();
+
+draw_loop_buttons();
       menuhelper_redraw = false;
     }
     if (fm.sample_source == 4)
@@ -17641,7 +17807,9 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
         msz[seq.active_multisample][generic_temp_select_menu - 3].low = 0;
         msz[seq.active_multisample][generic_temp_select_menu - 3].vol = 100;
         msz[seq.active_multisample][generic_temp_select_menu - 3].tune = 100;
+        //msz[seq.active_multisample][generic_temp_select_menu - 3].psram_entry_number = NUM_DRUMSET_CONFIG-1;
         msz[seq.active_multisample][generic_temp_select_menu - 3].psram_entry_number = 0;
+        memset(msz[seq.active_multisample][generic_temp_select_menu - 3].filename, 0, sizeof(msz[seq.active_multisample][generic_temp_select_menu - 3].filename));
       }
       if (seq.edit_state == false)
         seq.edit_state = true;
@@ -17669,7 +17837,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
       setCursor_textGrid(1, 1);
       if (generic_temp_select_menu == 0)
         setModeColor(0);
-      print_formatted_number(seq.active_multisample, 2);
+      print_formatted_number(seq.active_multisample + 1, 2);
       setCursor_textGrid(3, 1);
       display.setTextColor(GREY2, COLOR_BACKGROUND);
       display.print(F("["));
@@ -17743,7 +17911,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
     setCursor_textGrid(1, 1);
     display.setTextSize(1);
     display.setTextColor(RED, COLOR_BACKGROUND);
-    display.print(F("NOT AVAILABLE IN THIS VERSION"));
+    display.print(F("NOT AVAILABLE IN THIS FIRMWARE"));
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
 

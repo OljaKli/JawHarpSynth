@@ -2517,11 +2517,10 @@ uint8_t msp_playmode_sample_slot[NUM_DRUMS];
 
 #if defined(COMPILE_FOR_FLASH) || defined COMPILE_FOR_PSRAM
 
-void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance_id)
+void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
 {
 
   // find the MSP preset slot for this midi channel
-  byte presetslot = instance_id;
 
   if (drum_counter >= NUM_DRUMS)
     drum_counter = 0;
@@ -2534,102 +2533,95 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance_id)
     Drum[slot]->enableInterpolation(true);
     for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++)
     {
-      if (inNumber >= msz[presetslot][y].low && inNumber <= msz[presetslot][y].high)
+      if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high)
       {
 
         Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
 
 
-        float pan = mapfloat(msz[presetslot][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
+        float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
         // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
         // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
 
 
         if (drum_config[y].numChannels == 1) //mono
         {
-          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
-          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
 
         }
         else //stereo
         {
-          drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
-          drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
         }
 
 
-        ts.msp_peak[presetslot] = (inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity) / 900000;
-        drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[presetslot][y].rev, 0, 100, 0.0, 0.8)));
-        drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[presetslot][y].rev, 0, 100, 0.0, 0.8)));
+        ts.msp_peak[instance] = (inVelocity * msz[instance][y].vol * msp[instance].sound_intensity) / 900000;
+        drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
+        drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
 
-        global_delay_in_mixer[0]->gain(slot + 8, drum_config[msz[presetslot][y].psram_entry_number].delay1 / 5);
-        global_delay_in_mixer[1]->gain(slot + 8, drum_config[msz[presetslot][y].psram_entry_number].delay2 / 5);
+        global_delay_in_mixer[0]->gain(slot + 8, drum_config[msz[instance][y].psram_entry_number].delay1 / 5);
+        global_delay_in_mixer[1]->gain(slot + 8, drum_config[msz[instance][y].psram_entry_number].delay2 / 5);
 
-        msp_playmode_sample_slot[slot] = msz[presetslot][y].playmode;
+        msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
 
-        if (msz[presetslot][y].loop_type == 0)
+        if (msz[instance][y].loop_type == 0)
           Drum[slot]->setLoopType(loop_type::looptype_none);
-        else   if (msz[presetslot][y].loop_type == 1)
+        else   if (msz[instance][y].loop_type == 1)
           Drum[slot]->setLoopType(loop_type::looptype_repeat);
-        else if (msz[presetslot][y].loop_type == 2)
+        else if (msz[instance][y].loop_type == 2)
           Drum[slot]->setLoopType(loop_type::looptype_pingpong);
 
         note_buffer_msp[slot] = inNumber;
-        // Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[presetslot][y].rootnote) / 12.0) );
+        // Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) );
 
-        Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[presetslot][y].rootnote) / 12.0) * mapfloat(msz[presetslot][y].tune, 0, 200, 0.98, 1.02));
+        Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) * mapfloat(msz[instance][y].tune, 0, 200, 0.98, 1.02));
         // test with envelopes for samples
         //sample_envelope[slot]->noteOn();
 
-// uint8_t p=0;
-//   //pitched sample
-// if (inNumber>209)
-// {
-//   d=inNumber-210;
-// }
-// else
-//  d=inNumber-18;
-
 #if defined(COMPILE_FOR_FLASH)
-        Drum[slot]->playWav(msz[presetslot][y].filename);
+        Drum[slot]->playWav(msz[instance][y].filename);
 #endif
+
 #if  defined COMPILE_FOR_PSRAM
 
-        if ((drum_config[y].drum_data != NULL && drum_config[y].len > 0 && drum_config[y].len < 10000000 && y >= 0 && y < NUM_DRUMSET_CONFIG - 1) ||
-          (drum_config[y].drum_data != NULL && drum_config[y].len > 0 && drum_config[y].len < 10000000 && y >= 210 && y < 216))
+        if ((drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
+          drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 0 && y < NUM_DRUMSET_CONFIG - 1) ||
+          (drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
+            drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 210 && y < 216))
         {
-          Drum[slot]->playRaw((int16_t*)drum_config[msz[presetslot][y].psram_entry_number].drum_data, drum_config[msz[presetslot][y].psram_entry_number].len, drum_config[msz[presetslot][y].psram_entry_number].numChannels);
+          Drum[slot]->playRaw((int16_t*)drum_config[msz[instance][y].psram_entry_number].drum_data, drum_config[msz[instance][y].psram_entry_number].len,
+            drum_config[msz[instance][y].psram_entry_number].numChannels);
+
+          if (msz[instance][y].loop_type != 0)
+          {
+            //Drum[slot]->startLoop(msz[instance][y].loop_start);
+            Drum[slot]->setLoopStart(msz[instance][y].loop_start);
+            Drum[slot]->setLoopFinish(msz[instance][y].loop_end);
+          }
         }
 #endif
 
-        if (msz[presetslot][y].loop_type != 0)
-        {
-          Drum[slot]->setLoopStart(msz[presetslot][y].loop_start);
-          Drum[slot]->setLoopFinish(msz[presetslot][y].loop_end);
-        }
+        //     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
+        //     display.fillRect(0, 185 + y * 5, 2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5) - 1, 5, COLOR_BACKGROUND);
+        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
+        //                      (msz[instance][y].high - msz[instance][y].low) * 3.5 + 2.5, 5, RED);
 
-        //   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
-
-        //   display.fillRect(0, 185 + y * 5, 2 * CHAR_width_small + msz[presetslot][y].low * 3.5 - (24 * 3.5) - 1, 5, COLOR_BACKGROUND);
-
-        //   display.fillRect(2 * CHAR_width_small + msz[presetslot][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
-        //                    (msz[presetslot][y].high - msz[presetslot][y].low) * 3.5 + 2.5, 5, RED);
-
-        //   display.fillRect(2 * CHAR_width_small + msz[presetslot][y].high * 3.5 - (24 * 3.5) + 3.5, 185 + y * 5,
-        //                    DISPLAY_WIDTH - (msz[presetslot][y].high * 3.5) + (18 * 3.5), 5, COLOR_BACKGROUND);
-
-        //   display.fillRect(2 * CHAR_width_small + msz[presetslot][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
-        //                    3.5 + 1, 5 - 2, COLOR_SYSTEXT);
+        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].high * 3.5 - (24 * 3.5) + 3.5, 185 + y * 5,
+        //                      DISPLAY_WIDTH - (msz[instance][y].high * 3.5) + (18 * 3.5), 5, COLOR_BACKGROUND);
+        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
+        //                      3.5 + 1, 5 - 2, COLOR_SYSTEXT);
+        //   }
         // }
-      }
-      else
-      {
-        ;
-        //   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
-        //   display.fillRect(2 * CHAR_width_small + msz[presetslot][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
-        //                    (msz[presetslot][y].high - msz[presetslot][y].low) * 3.5 + 2.5, 5, get_multisample_zone_color(y));
-        //   display.fillRect(2 * CHAR_width_small + msz[presetslot][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
-        //                    3.5 + 1, 5 - 2, COLOR_SYSTEXT);
+        // else
+        // {
+        //     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
+        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
+        //                      (msz[instance][y].high - msz[instance][y].low) * 3.5 + 2.5, 5, get_multisample_zone_color(y));
+        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
+        //                      3.5 + 1, 5 - 2, COLOR_SYSTEXT);
+        //   }
         // }
       }
     }
@@ -3433,6 +3425,8 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
           //  (inNumber == note_buffer_msp[i] && note_buffer_msp[i] > 1 && seq.running == false && msp_playmode_sample_slot[i] != 0))
         {
           note_buffer_msp[i] = 0;
+          Drum[i]->setLoopType(loop_type::looptype_none);
+
           // test with envelopes for samples
           //sample_envelope[i]->noteOff();
 

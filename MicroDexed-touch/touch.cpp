@@ -1690,6 +1690,11 @@ FLASHMEM void  assign_free_slices_or_increment()
   check_and_print_sliced_message();
 }
 
+extern bool loop_start_button;
+extern bool loop_end_button;
+extern void draw_loop_buttons();
+extern void print_loop_data();
+
 FLASHMEM void handle_touchscreen_sample_editor()
 {
   if (numTouchPoints > 0)
@@ -1699,18 +1704,59 @@ FLASHMEM void handle_touchscreen_sample_editor()
     {
       preview_sample();
     }
-    if (check_button_on_grid(33, 23)) // num slices
+
+ if (check_button_on_grid(1,23) && fm.sample_source > 1  && fm.sample_source < 4 ) //loop start
     {
-      assign_free_slices_or_increment();
+      // draw_button_on_grid(1, 23, "LOOP", "START", 0);
+if (loop_start_button == false)
+{
+loop_start_button=true;
+loop_end_button=false;
+seq.edit_state = 1;
+generic_temp_select_menu = 3;
+}
+else
+{
+loop_start_button=false;
+seq.edit_state = 0;
+}
+      draw_loop_buttons();
+      print_loop_data();
+     
+    }
+else  if (check_button_on_grid(9,23) && fm.sample_source > 1  && fm.sample_source < 4)  //loop end
+    {
+       draw_button_on_grid(9, 23, "LOOP", "END", 0);
+if (loop_end_button == false)
+{
+loop_end_button=true;
+loop_start_button=false;
+seq.edit_state = 1;
+generic_temp_select_menu = 4;
 
-
+}
+else
+{
+  loop_end_button=false;
+  seq.edit_state = 0;
+}
+     draw_loop_buttons();
+     print_loop_data();
+      
     }
 
-    if (check_button_on_grid(25, 23)) // auto align
+  
+    if (check_button_on_grid(33, 23) && fm.sample_source == 4) // num slices
+    {
+      assign_free_slices_or_increment();
+    }
+
+    if (check_button_on_grid(25, 23) && fm.sample_source == 4) // auto align (slices only)
     {
       slices_autoalign = !slices_autoalign;
       draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1 + slices_autoalign);
     }
+
     if (check_button_on_grid(17, 23)) // scrolling speed
     {
       slices_scrollspeed = slices_scrollspeed * 2;
