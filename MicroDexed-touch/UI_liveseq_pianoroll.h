@@ -89,6 +89,7 @@ private:
   struct SubUpdateX {
     uint16_t fromX;
     uint16_t toX;
+    bool fullHeight;
   };
   std::vector<SubUpdateX> drawRegionsX;
   

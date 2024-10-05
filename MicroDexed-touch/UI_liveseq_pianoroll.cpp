@@ -167,7 +167,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           // clear step cursor
           drawFlags |= DRAW_CONTENT_AREA;
         }
-        drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition }); // refresh step cursor
+        drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // refresh step cursor
 
         buttonStep->drawNow();
         printActionName();
@@ -195,7 +195,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       const bool cursorPosChanged = (view.cursorPos != view.cursorPosPrev);
 
       if(justStopped || colorChanged || cursorPosChanged) {
-        drawRegionsX.push_back({ view.cursorPosPrev, view.cursorPosPrev });
+        drawRegionsX.push_back({ view.cursorPosPrev, view.cursorPosPrev, true });
         drawFlags |= DRAW_CONTENT_AREA;
 
         if(!justStopped) {
@@ -235,7 +235,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
   // NOTE: order of drawing is important
   if (drawFlags & DRAW_CONTENT_FULL) {
     drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
-    drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH }); // force redraw all
+    drawRegionsX.push_back({ ROLL_WIDTH, DISPLAY_WIDTH, false }); // force redraw all
   }
   if (drawFlags & DRAW_BACKGROUND) {
     drawBackground();
@@ -404,7 +404,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           }
           singleNoteDraw.insert(notePairs.at(prev).noteOn.note_in);
           singleNoteDraw.insert(notePairs.at(selectedNote).noteOn.note_in);
-          drawFlags |= DRAW_CONTENT_AREA;
+          drawFlags |= DRAW_CONTENT_FULL;
         }
       }
       break;
@@ -420,7 +420,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         const uint16_t max = isNoteOn ? data.patternLengthMs - (off.patternMs - on.patternMs) : data.patternLengthMs;
         if (hasConstrainedChanged(time, diff, min, max)) {
           singleNoteDraw.insert(on.note_in);
-          drawFlags |= DRAW_CONTENT_AREA;
+          drawFlags |= DRAW_CONTENT_FULL;
           if(isNoteOn) {
             off.patternMs += (time - on.patternMs);
             on.patternMs = time;
@@ -440,7 +440,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         if (hasConstrainedChanged(velo, diff, 0, 127)) {
           e.note_in_velocity = velo;
           singleNoteDraw.insert(e.note_in);
-          drawFlags |= DRAW_CONTENT_AREA;
+          drawFlags |= DRAW_CONTENT_FULL;
         }
       }
       break;
@@ -456,7 +456,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           p.noteOff.note_in = note;
           singleNoteDraw.insert(notePrev);
           singleNoteDraw.insert(note);
-          drawFlags |= DRAW_CONTENT_AREA;
+          drawFlags |= DRAW_CONTENT_FULL;
         }
       }
       break;
@@ -662,7 +662,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
     for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
       const bool drawSingleNote = singleNoteDraw.find(note) != singleNoteDraw.end();
       
-      if (singleNoteDraw.empty() || drawSingleNote) {
+      if (u.fullHeight || singleNoteDraw.empty() || drawSingleNote) {
         const uint8_t noteIndex = view.highestNote - note - 1;
         const uint16_t y = round(noteIndex * view.noteHeight);
         const bool isPressed = keysPressed.find(note) != keysPressed.end();
@@ -740,7 +740,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) {
   for(auto &u : drawRegionsX) {
     const bool drawSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
-    if (singleNoteDraw.empty() || drawSingleNote) {
+    if (u.fullHeight || singleNoteDraw.empty() || drawSingleNote) {
       uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix);
       const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
       const uint16_t h = view.noteHeight;
@@ -753,10 +753,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
       const bool touchTo = u.toX >= x && u.toX <= x + w;
       //if(touchFrom || touchTo) {
         display.console = true;
-        if (note.isMuted) {
-          display.drawRect(x, y, w, h, color);
-        } else {
-          display.fillRect(x, y, w, h, color);
+        if(w > 1) {
+          if (note.isMuted) {
+            display.drawRect(x, y, w, h, color);
+          } else {
+            display.fillRect(x, y, w, h, color);
+          }
+        }
+        else {
+          display.drawLine(x, y, x, y + h, color);
         }
       //}
     }
@@ -788,7 +793,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 
     case MODE_STEP:
       // reset step cursor
-      drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition }); // clear step cursor
+      drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // clear step cursor
       stepCursorPositionIndex = 0;
       stepCursorPosition = ROLL_WIDTH;
       buttonStep->drawNow();
@@ -937,7 +942,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     if(stepCursorPositionIndex == view.numBars * stepRecordSteps) {
       stepCursorPositionIndex = 0;
     }
-    drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition }); // clear step cursor
+    drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // clear step cursor
     stepCursorPosition = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
