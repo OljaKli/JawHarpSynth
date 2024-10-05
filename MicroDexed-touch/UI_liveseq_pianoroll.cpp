@@ -167,6 +167,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           // clear step cursor
           drawFlags |= DRAW_CONTENT_AREA;
         }
+        drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition }); // refresh step cursor
+
         buttonStep->drawNow();
         printActionName();
         printActionValue();
@@ -658,7 +660,8 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getNoteString(uint8_t note) {
 FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
   for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
     const bool drawSingleNote = singleNoteDraw.find(note) != singleNoteDraw.end();
-    if (drawRegionsX.size() && (singleNoteDraw.empty() || drawSingleNote)) {
+    
+    if (singleNoteDraw.empty() || drawSingleNote) {
       const uint8_t noteIndex = view.highestNote - note - 1;
       const uint16_t y = round(noteIndex * view.noteHeight);
       const bool isPressed = keysPressed.find(note) != keysPressed.end();
@@ -788,9 +791,9 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 
     case MODE_STEP:
       // reset step cursor
+      drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition }); // clear step cursor
       stepCursorPositionIndex = 0;
       stepCursorPosition = ROLL_WIDTH;
-      drawFlags |= DRAW_CONTENT_AREA;
       buttonStep->drawNow();
       break;
     }
@@ -937,7 +940,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     if(stepCursorPositionIndex == view.numBars * stepRecordSteps) {
       stepCursorPositionIndex = 0;
     }
-    drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition });
+    drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition }); // clear step cursor
     stepCursorPosition = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
