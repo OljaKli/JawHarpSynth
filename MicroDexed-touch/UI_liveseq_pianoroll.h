@@ -141,13 +141,6 @@ private:
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
 
-  static constexpr uint8_t STEPS_MAX = 32;
-  int8_t stepRecordLayer = 0;
-  int8_t stepRecordSteps = 16;
-  float stepRecordStepSizeMs = 0.0f;
-  int8_t stepCursorPositionIndex = 0;
-  uint16_t stepCursorPositionMs = 0;
-
   TouchButton *buttonPlay;
   TouchButton *buttonInst;
   TouchButton *buttonView;
@@ -161,6 +154,13 @@ private:
   static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;
   static constexpr uint16_t LINE_HEIGHT = 1;
   static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y - LINE_HEIGHT;
+
+  static constexpr uint8_t STEPS_MAX = 32;
+  int8_t stepRecordLayer = 0;
+  int8_t stepRecordSteps = 16;
+  float stepRecordStepSizeMs = 0.0f;
+  int8_t stepCursorPositionIndex = 0;
+  uint16_t stepCursorPosition = ROLL_WIDTH;
 };
 
 #endif // UI_LIVESEQ_PIANOROLL_H

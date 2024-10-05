@@ -99,7 +99,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     data.activeTrack = param;
-    stepRecordStepSizeMs = data.numberOfBars * data.patternLengthMs / float(stepRecordSteps);
+    stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
 
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
@@ -220,9 +220,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   DBG_LOG(printf("draw step cursor...\n"));
-  const uint16_t x = ROLL_WIDTH + round(stepCursorPositionMs * view.msToPix);
   display.console = true;
-  display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, RED);
+  display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(uint8_t patternFrom, uint8_t numBars) {
@@ -282,6 +281,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
     else {
       if((data.isRunning == false) && (event == midi::NoteOn)) {
         // record note and advance
+        const uint16_t stepCursorPositionMs = view.startBar * data.patternLengthMs + round(stepCursorPositionIndex * stepRecordStepSizeMs);
         LiveSequencer::MidiEvent on;
         on.source = LiveSequencer::EventSource::EVENT_PATTERN;
         on.event = midi::NoteOn;
@@ -475,7 +475,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
 
     case STEP_SIZE:
       if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
-        stepRecordStepSizeMs = data.numberOfBars * data.patternLengthMs / float(stepRecordSteps);
+        stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
         printActionValue();
         DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
       }
@@ -789,7 +789,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
     case MODE_STEP:
       // reset step cursor
       stepCursorPositionIndex = 0;
-      stepCursorPositionMs = 0;
+      stepCursorPosition = ROLL_WIDTH;
       drawFlags |= DRAW_CONTENT_AREA;
       buttonStep->drawNow();
       break;
@@ -933,16 +933,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
   bool stepCursorChanged = false;
-  int8_t oldCursorPositionIndex = stepCursorPositionIndex;
-  if (hasConstrainedChanged(stepCursorPositionIndex, diff, 0, stepRecordSteps)) {
-    if(stepCursorPositionIndex == stepRecordSteps) {
+  if (hasConstrainedChanged(stepCursorPositionIndex, diff, 0, view.numBars * stepRecordSteps)) {
+    if(stepCursorPositionIndex == view.numBars * stepRecordSteps) {
       stepCursorPositionIndex = 0;
     }
-    stepCursorPositionMs = round(stepCursorPositionIndex * stepRecordStepSizeMs);
+    drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition });
+    stepCursorPosition = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
-    uint16_t oldX = ROLL_WIDTH + round(oldCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
-    drawRegionsX.push_back({ oldX, oldX });
   }
   return stepCursorChanged;
 }
