@@ -664,26 +664,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
       const bool isPressed = keysPressed.find(note) != keysPressed.end();
       const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
       display.console = true;
-      if(drawRegionsX.size()) {
-        for(auto &u : drawRegionsX) {
-          //DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
-          const uint16_t width = u.toX - u.fromX;
-          const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
-          if(width > 1) {
-            display.fillRect(xFrom, y, u.toX - u.fromX, view.noteHeight, bgColor);
-          }
-          else {
-            display.drawLine(xFrom, y, xFrom, y + view.noteHeight - 1, bgColor);
-          }
+
+      for(auto &u : drawRegionsX) {
+        //DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
+        const uint16_t width = u.toX - u.fromX;
+        const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
+        if(width > 1) {
+          display.fillRect(xFrom, y, u.toX - u.fromX, view.noteHeight, bgColor);
         }
-      }
-      else {
-        display.fillRect(ROLL_WIDTH, y, CONTENT_WIDTH, view.noteHeight, bgColor);
-      }
-      if(isPressed) {
-        display.setTextColor(COLOR_SYSTEXT, GREY2);
-        //display.setCursor(ROLL_WIDTH + 5, y);
-        //display.print(getNoteString(note).c_str());
+        else {
+          display.drawLine(xFrom, y, xFrom, y + view.noteHeight - 1, bgColor);
+        }
       }
     }
   }
@@ -951,7 +942,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
     uint16_t oldX = ROLL_WIDTH + round(oldCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
-    drawRegionsX.push_back({ uint16_t(oldX - 1), uint16_t(oldX + 1) });
+    drawRegionsX.push_back({ oldX, oldX });
   }
   return stepCursorChanged;
 }
