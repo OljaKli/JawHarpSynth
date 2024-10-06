@@ -1976,3 +1976,16 @@ FLASHMEM void handle_touchscreen_liveseq_pianoroll()
   print_liveseq_playindicator();
 }
 
+// FLASHMEM void handle_touchscreen_drums()
+// {
+//   if (numTouchPoints > 0)
+//   {
+//    if (check_button_on_grid(45, 25))
+//       {    
+//         draw_button_on_grid(45, 25, "PLAY", "SAMPLE", 2);
+//         preview_sample();
+//        draw_button_on_grid(45, 25, "PLAY", "SAMPLE", 1);
+//       }
+
+//   }
+// }

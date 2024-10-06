@@ -42,7 +42,6 @@ typedef struct sampler_config_s
   float32_t pitch;       // play pitch
   float32_t pan;         // panorama (-1.0 - +1.0)
   float32_t vol_max;     // max. volume (0.0 - 1.0)
-  float32_t vol_min;     // min. volume (0.0 - 1.0, should be <= vol_max)
   float32_t reverb_send; // how much signal to send to the reverb (0.0 - 1.0)
 } sampler_config_t;
 
