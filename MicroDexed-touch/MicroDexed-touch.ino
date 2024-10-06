@@ -2502,23 +2502,20 @@ FLASHMEM void playWAVFile(const char* filename)
 }
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
-  // sample_envelope[instance_id]->delay(0);
- //  sample_envelope[instance_id+NUM_DRUMS]->delay(0);
+  sample_envelope[instance_id]->attack(drum_config[sample].env_attack*20);
+  sample_envelope[instance_id + NUM_DRUMS]->attack(drum_config[sample].env_attack*20);
 
-  sample_envelope[instance_id]->attack(drum_config[sample].env_attack);
-  sample_envelope[instance_id + NUM_DRUMS]->attack(drum_config[sample].env_attack);
+  sample_envelope[instance_id]->hold(drum_config[sample].env_hold * 8);
+  sample_envelope[instance_id + NUM_DRUMS]->hold(drum_config[sample].env_hold * 8);
 
-  sample_envelope[instance_id]->hold(drum_config[sample].env_hold * 4);
-  sample_envelope[instance_id + NUM_DRUMS]->hold(drum_config[sample].env_hold * 4);
-
-  sample_envelope[instance_id]->decay(drum_config[sample].env_decay * 4);
-  sample_envelope[instance_id + NUM_DRUMS]->decay(drum_config[sample].env_decay * 4);
+  sample_envelope[instance_id]->decay(drum_config[sample].env_decay * 8);
+  sample_envelope[instance_id + NUM_DRUMS]->decay(drum_config[sample].env_decay * 8);
 
   sample_envelope[instance_id]->sustain((float)drum_config[sample].env_sustain / 100);
   sample_envelope[instance_id + NUM_DRUMS]->sustain((float)drum_config[sample].env_sustain / 100);
 
-  sample_envelope[instance_id]->release(drum_config[sample].env_release * 4);
-  sample_envelope[instance_id + NUM_DRUMS]->release(drum_config[sample].env_release * 4);
+  sample_envelope[instance_id]->release(drum_config[sample].env_release * 28);
+  sample_envelope[instance_id + NUM_DRUMS]->release(drum_config[sample].env_release * 28);
 
 }
 
@@ -3433,7 +3430,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
           //  (inNumber == note_buffer_msp[i] && note_buffer_msp[i] > 1 && seq.running == false && msp_playmode_sample_slot[i] != 0))
         {
           note_buffer_msp[i] = 0;
-          Drum[i]->setLoopType(loop_type::looptype_none);
+          //Drum[i]->setLoopType(loop_type::looptype_none);
 
           // test with envelopes for samples
           sample_envelope[i]->noteOff();
