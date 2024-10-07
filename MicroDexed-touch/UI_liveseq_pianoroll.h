@@ -100,7 +100,7 @@ private:
   void handleEncoderRight(int8_t diff);
   bool hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max);
   bool hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max);
-  FLASHMEM void queueDrawNote(LiveSequencer::NotePair note);
+  void queueDrawNote(LiveSequencer::NotePair note);
 
   void printActionName(void);
   void printActionValue(void);

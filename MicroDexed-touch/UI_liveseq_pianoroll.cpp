@@ -265,10 +265,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
     switch (event) {
     case midi::NoteOn:
       keysPressed.insert(key);
+      drawFlags |= DRAW_CURSOR;
       break;
 
     case midi::NoteOff:
       keysPressed.erase(key);
+      drawFlags |= DRAW_CURSOR;
       break;
 
     default:
@@ -421,8 +423,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         const uint16_t min = isNoteOn ? 0 : on.patternMs;
         const uint16_t max = isNoteOn ? data.patternLengthMs - (off.patternMs - on.patternMs) : data.patternLengthMs;
         if (hasConstrainedChanged(time, diff, min, max)) {
-          queueDrawNote(notePairs.at(selectedNote));
- 
           if(isNoteOn) {
             off.patternMs += (time - on.patternMs);
             on.patternMs = time;
@@ -431,6 +431,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           else {
             off.patternMs = time;
           }
+          singleNoteDraw.insert(on.note_in);
+          drawFlags |= DRAW_CONTENT_FULL; // shifted note X..
+          //queueDrawNote(notePairs.at(selectedNote));
         }
       }
       break;
@@ -688,14 +691,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
   const float stepWidth = CONTENT_WIDTH / float(view.numBars * substeps);
   for (uint8_t step = 0; step < view.numBars * substeps; step++) {
     const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
-    bool drawLine = false;
+    bool drawLine = keysPressed.size();
     for(auto &u : drawRegionsX) {
       drawLine |= (x >= u.fromX) && (x <= u.toX);
     }
     if(drawLine) {
       const uint16_t lineColor = (step % substeps == 0) ? GREY2 : GREY3;
       display.console = true;
-      if (singleNoteDraw.empty()) {// && keysPressed.empty()) {
+      if (singleNoteDraw.empty()) {
         display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, lineColor);
       }
       else {
