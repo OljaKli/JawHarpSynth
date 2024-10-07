@@ -1272,7 +1272,7 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
             .noteOff = *itOff,
             .isMuted = data.tracks[track].layerMutes & (1 << it->layer)
           };
-          if (it->patternNumber >= patternFrom && it->patternNumber <= patternTo) {
+          if (itOff->patternNumber >= patternFrom && it->patternNumber <= patternTo) {
             result.emplace_back(p);
           }
           break;
