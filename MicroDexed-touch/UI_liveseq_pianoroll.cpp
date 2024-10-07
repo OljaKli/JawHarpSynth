@@ -748,20 +748,25 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) {
+  const bool drawSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
+  uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix);
+  const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
+  const uint16_t h = view.noteHeight;
+  uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
+
+  //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
+  //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
+
   for(auto &u : drawRegionsX) {
-    const bool drawSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
     if (u.fullHeight || singleNoteDraw.empty() || drawSingleNote) {
-      uint16_t x = ROLL_WIDTH + (round(midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix);
-      const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
-      const uint16_t h = view.noteHeight;
-      uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
-      //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
-      //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
-      const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
-    
-      //const bool isWithin = u.fromX <= x && u.toX >= x + w;
-      //if(isWithin) {
+
+      const bool isOutside = (x > u.toX) || ((x + w) < u.fromX);
+
+      if(isOutside == false) { // 
+        const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
+
         display.console = true;
+        DBG_LOG(printf("draw note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
         if(w > 1) {
           if (note.isMuted) {
             display.drawRect(x, y, w, h, color);
@@ -772,7 +777,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
         else {
           display.drawLine(x, y, x, y + h, color);
         }
-      //}
+      }
     }
   }
 }
