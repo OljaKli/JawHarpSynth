@@ -803,7 +803,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
     case MODE_EDIT:
       buttonEdit->drawNow();
       if(selectedNote > -1) { // de-select note from edit
-        singleNoteDraw.insert(ui_pianoroll->notePairs.at(selectedNote).noteOn.note_in);
+        queueDrawNote(notePairs.at(selectedNote));
         selectedNote = -1;
       }
       break;
@@ -826,7 +826,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       if((selectedNote == -1) && notePairs.size()) {
         selectedNote = 0; // auto select first note
         if(oldMode != MODE_STEP) {
-          singleNoteDraw.insert(notePairs.at(0).noteOn.note_in);
+          queueDrawNote(notePairs.at(0));
         }
       }
       break;
