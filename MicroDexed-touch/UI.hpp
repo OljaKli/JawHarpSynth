@@ -6699,10 +6699,10 @@ void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   DBG_LOG(printf("draw sample wave()\n"));
 
-  static constexpr uint16_t plotX = 182;
-  static constexpr uint16_t plotY = 35;
-  static constexpr uint16_t plotW = 130;
-  static constexpr uint16_t plotH = 100;
+  static constexpr uint16_t plotX = 122-8;
+  static constexpr uint16_t plotY = 19+8;
+  static constexpr uint16_t plotW = 200-2;
+  static constexpr uint16_t plotH = 67;
   printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels);
 #endif
 }
@@ -6777,26 +6777,26 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
 }
 
 FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
-  const bool isFilterSelected = (generic_temp_select_menu == 8); // adapt number when drums page layout changes
+  const bool isFilterSelected = (generic_temp_select_menu == 13); // adapt number when drums page layout changes
   if (forceDraw || isFilterSelected) {
     display.setTextSize(1);
-    setCursor_textGrid_small(20, 11);
+    setCursor_textGrid_small(43, 13);
     const bool isEditingFilter = (seq.edit_state) && isFilterSelected;
     const uint16_t color = isEditingFilter ? RED : COLOR_BACKGROUND;
     display.setTextColor(COLOR_SYSTEXT, color);
 
     switch (drum_config[activeSample].filter_mode) {
     case 0:
-      display.print("OFF     ");
+      display.print(F("OFF     "));
       break;
     case 1:
-      display.print("LOWPASS ");
+      display.print(F("LOWPASS "));
       break;
     case 2:
-      display.print("BANDPASS");
+      display.print(F("BANDPASS"));
       break;
     case 3:
-      display.print("HIGHPASS");
+      display.print(F("HIGHPASS"));
       break;
     }
   }
@@ -6805,7 +6805,7 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
 
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
-void UI_func_drums(uint8_t param)
+FLASHMEM void UI_func_drums(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
@@ -6813,8 +6813,9 @@ void UI_func_drums(uint8_t param)
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
-    ui.setCursor(1, 1);
+    ui.setCursor(1, 0);
     drawDrumsSampleWave();
+    //draw_button_on_grid(45, 25, "PLAY", "SAMPLE", 1);
 
     // the drum sample slot selector.
     // changes activesample and redraws all other editors as they depend on.
@@ -6837,18 +6838,20 @@ void UI_func_drums(uint8_t param)
         display.setTextSize(1);
         if (drum_config[activeSample].numChannels == 1) { // mono
           setCursor_textGrid_small(22, 11);
-          show(1, 23, 6, "  MONO");
+          show(0, 23, 6, "  MONO");
         }
         else { //stereo
           setCursor_textGrid_small(20, 11);
-          show(1, 23, 6, "STEREO");
+          show(0, 23, 6, "STEREO");
         }
         checkDrawFilterText(true); // force redraw filter text on active sample change
       });
 
-    ui.setCursor(2, 4);
+    ui.setCursor(2, 3);
+
     // the parameter editors depend on activesample. We define them by sample index 0,
     // but they will act on current slot activesample later.
+
     addDrumParameterEditor((const char*)F("VOLUME"), 0, 100, &drum_config[0].vol_max);
     addDrumParameterEditor((const char*)F("PAN"), -99, 99, &drum_config[0].pan);
     addDrumParameterEditor((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
@@ -6856,12 +6859,34 @@ void UI_func_drums(uint8_t param)
     addDrumParameterEditor((const char*)F("DELAY2"), 0, 100, &drum_config[0].delay2);
     addDrumParameterEditor((const char*)F("PITCH"), 0, 200, &drum_config[0].pitch);
     addDrumParameterEditor((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
-    addDrumParameterEditor_int16_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
-    addDrumParameterEditor((const char*)F("FREQ"), 0, 100, &drum_config[0].filter_freq);
-    addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
+   
+  setCursor_textGrid_small(2, 11);
+      display.setTextColor(RED);
+display.print("ENVELOPE");
 
-    ui.setCursor(2, 15);
-    ui.addEditor((const char*)F("DRUMS MAIN VOLUME"), 0, 100,
+ui.setCursor(2, 13);
+
+    addDrumParameterEditor_int16_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
+    addDrumParameterEditor_int16_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
+    addDrumParameterEditor_int16_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
+    addDrumParameterEditor_int16_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
+    addDrumParameterEditor_int16_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
+
+setCursor_textGrid_small(26, 11);
+  display.setTextColor(RED);
+display.print("FILTER");
+ ui.setCursor(26, 13);
+  addDrumParameterEditor_int16_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
+     addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
+      ui.setCursor(40,14);
+     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
+
+      display.setTextColor(RED);
+setCursor_textGrid_small(26, 16);
+display.print("GLOBAL");
+
+ ui.setCursor(26, 18);
+    ui.addEditor((const char*)F("DRM MAIN VOLUME"), 0, 100,
       [](Editor* editor) -> int16_t
       {
         return round(mapfloat(seq.drums_volume, 0.0, VOL_MAX_FLOAT, 0., 100.));
@@ -6872,9 +6897,9 @@ void UI_func_drums(uint8_t param)
         master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
         master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
       });
-    ui.addEditor((const char*)F("DRUMS MIDI CHANNEL"), 0, 16, &drum_midi_channel, NULL, NULL, midi_channel_renderer);
+    ui.addEditor((const char*)F("DRM MIDI CHANNEL"), 0, 16, &drum_midi_channel, NULL, NULL, midi_channel_renderer);
 
-    ui.setCursor(2, 17);
+    ui.setCursor(26, 20);
     ui.addEditor((const char*)F("SMART FILTER"), 0, 1,
       [](Editor* editor) -> int16_t
       {
@@ -7195,7 +7220,7 @@ void set_pattern_content_type_color_inverted(uint8_t pattern)
     display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
 }
 
-void print_performance_name(int x, int y)
+FLASHMEM void print_performance_name(int x, int y)
 {
   display.setTextSize(1);
   display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);

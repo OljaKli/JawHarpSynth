@@ -124,7 +124,6 @@ extern void set_sample_pitch(uint8_t sample, float playbackspeed);
 extern void set_sample_p_offset(uint8_t sample, float s_offset);
 extern void set_sample_pan(uint8_t sample, float s_pan);
 extern void set_sample_vol_max(uint8_t sample, float s_max);
-extern void set_sample_vol_min(uint8_t sample, float s_min);
 extern void set_sample_reverb_send(uint8_t sample, float s_reverb);
 
 extern void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode);
@@ -144,7 +143,6 @@ extern float get_sample_pitch(uint8_t sample);
 extern float get_sample_p_offset(uint8_t sample);
 extern float get_sample_pan(uint8_t sample);
 extern float get_sample_vol_max(uint8_t sample);
-extern float get_sample_vol_min(uint8_t sample);
 extern float get_sample_reverb_send(uint8_t sample);
 extern uint8_t get_sample_filter_mode(uint8_t sample);
 extern float get_sample_filter_freq(uint8_t sample);
@@ -152,6 +150,19 @@ extern float get_sample_filter_q(uint8_t sample);
 
 extern float get_sample_delay1(uint8_t sample);
 extern float get_sample_delay2(uint8_t sample);
+
+extern uint8_t get_sample_env_attack(uint8_t sample);
+extern uint8_t get_sample_env_hold(uint8_t sample);
+extern uint8_t get_sample_env_decay(uint8_t sample);
+extern uint8_t get_sample_env_sustain(uint8_t sample);
+extern uint8_t get_sample_env_release(uint8_t sample);
+
+extern uint8_t set_sample_env_attack(uint8_t sample, uint8_t value);
+extern uint8_t set_sample_env_hold(uint8_t sample, uint8_t value);
+extern uint8_t set_sample_env_decay(uint8_t sample, uint8_t value);
+extern uint8_t set_sample_env_sustain(uint8_t sample, uint8_t value);
+extern uint8_t set_sample_env_release(uint8_t sample, uint8_t value);
+
 
 extern multisample_t msp[NUM_MULTISAMPLES];
 extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
@@ -590,6 +601,92 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
 }
 
 /******************************************************************************
+   DRUM ENVELOPES
+ ******************************************************************************/
+
+
+FLASHMEM bool load_sd_envelopes_json(uint8_t number)
+{
+  if (number < 0)
+    return (false);
+
+  if (sd_card > 0)
+  {
+    number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, ENVELOPES_CONFIG_NAME);
+
+    // first check if file exists...
+    AudioNoInterrupts();
+    if (SD.exists(filename))
+    {
+      // ... and if: load
+
+      json = SD.open(filename);
+      if (json)
+      {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        deserializeJson(data_json, json);
+        json.close();
+        AudioInterrupts();
+
+        for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG - 1; i++)
+        {
+
+          if (data_json["env_attack"][i] > 0 || data_json["env_hold"][i] > 0 || data_json["env_decay"][i] > 0 ||
+            data_json["env_sus"][i] > 0 || data_json["env_rel"][i] > 0)
+          {
+            set_sample_env_attack(i, data_json["env_attack"][i]);
+            set_sample_env_hold(i, data_json["env_hold"][i]);
+            set_sample_env_decay(i, data_json["env_decay"][i]);
+            set_sample_env_sustain(i, data_json["env_sus"][i]);
+            set_sample_env_release(i, data_json["env_rel"][i]);
+          }
+        }
+
+
+        return (true);
+      }
+    }
+  }
+  AudioInterrupts();
+  return (false);
+}
+
+FLASHMEM bool save_sd_envelopes_json(uint8_t number)
+{
+  if (sd_card > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, ENVELOPES_CONFIG_NAME);
+
+    AudioNoInterrupts();
+    SD.remove(filename);
+    json = SD.open(filename, FILE_WRITE);
+    if (json)
+    {
+      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+
+      for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG - 1; i++)
+      {
+        data_json["env_attack"][i] = get_sample_env_attack(i);
+        data_json["env_hold"][i] = get_sample_env_hold(i);
+        data_json["env_decay"][i] = get_sample_env_decay(i);
+        data_json["env_sus"][i] = get_sample_env_sustain(i);
+        data_json["env_rel"][i] = get_sample_env_release(i);
+      }
+
+      serializeJsonPretty(data_json, json);
+      json.close();
+      AudioInterrupts();
+      return (true);
+    }
+    json.close();
+  }
+  AudioInterrupts();
+  return (false);
+}
+
+
+/******************************************************************************
    SD DRUM CUSTOM MAPPINGS
  ******************************************************************************/
 
@@ -813,7 +910,6 @@ FLASHMEM bool load_sd_drumsettings_json(uint8_t number)
           else {
             set_sample_vol_max(index, 1.00f);
           }
-          set_sample_vol_min(index, data_json["vol_min"][i]);
           set_sample_reverb_send(index, data_json["reverb_send"][i]);
           set_sample_filter_mode(index, data_json["f_mode"][i]);
           set_sample_filter_freq(index, data_json["f_freq"][i]);
@@ -897,13 +993,18 @@ FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
           data_json["p_offset"][i] = get_sample_p_offset(i);
           data_json["pan"][i] = get_sample_pan(i);
           data_json["vol_max"][i] = get_sample_vol_max(i);
-          data_json["vol_min"][i] = get_sample_vol_min(i);
           data_json["reverb_send"][i] = get_sample_reverb_send(i);
           data_json["f_mode"][i] = get_sample_filter_mode(i);
           data_json["f_freq"][i] = get_sample_filter_freq(i);
           data_json["f_q"][i] = get_sample_filter_q(i);
           data_json["d1"][i] = get_sample_delay1(i);
           data_json["d2"][i] = get_sample_delay2(i);
+
+          data_json["env_attack"][i] = get_sample_env_attack(i);
+          data_json["env_hold"][i] = get_sample_env_hold(i);
+          data_json["env_decay"][i] = get_sample_env_decay(i);
+          data_json["env_sus"][i] = get_sample_env_sustain(i);
+          data_json["env_rel"][i] = get_sample_env_release(i);
 
         }
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
@@ -2554,17 +2655,17 @@ FLASHMEM bool save_sd_slices_json(uint8_t number)
       data_json["slices_scrollspeed"] = slices_scrollspeed;
       data_json["slices_autoalign"] = slices_autoalign;
 
-        for (int j = 0; j < 2; j++)
-        {
-         data_json["num_slices"][j]= num_slices[j]  ;
-          data_json["selected_slice_sample"][j]= selected_slice_sample[j] ;
+      for (int j = 0; j < 2; j++)
+      {
+        data_json["num_slices"][j] = num_slices[j];
+        data_json["selected_slice_sample"][j] = selected_slice_sample[j];
 
-          for (int i = 0; i < 16; i++)
-          {
-            data_json["start"][j][i]= slice_start[j][i];
-            data_json["end"][j][i]=slice_end[j][i];
-          }
+        for (int i = 0; i < 16; i++)
+        {
+          data_json["start"][j][i] = slice_start[j][i];
+          data_json["end"][j][i] = slice_end[j][i];
         }
+      }
 
       serializeJsonPretty(data_json, json);
       json.close();
@@ -3149,6 +3250,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_multiband_json(number);
   save_sd_sidechain_json(number);
   save_sd_livesequencer_json(number);
+  save_sd_envelopes_json(number);
 #ifdef COMPILE_FOR_PSRAM
   save_sd_samples_json(number);
   save_sd_slices_json(number);
@@ -3498,6 +3600,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
   load_sd_braids_json(number);
   load_sd_multiband_json(number);
   load_sd_sidechain_json(number);
+  load_sd_envelopes_json(number);
 #ifdef COMPILE_FOR_PSRAM
   load_sd_samples_json(number);
   load_sd_slices_json(number);
