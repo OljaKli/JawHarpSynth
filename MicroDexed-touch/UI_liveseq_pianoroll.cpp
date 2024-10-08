@@ -419,19 +419,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         LiveSequencer::MidiEvent &on = notePairs.at(selectedNote).noteOn;
         LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
         const bool isNoteOn = editMode == EDIT_NOTEON;
-        uint16_t time = isNoteOn ? midiEventTime(on) : midiEventTime(off);
-        const uint16_t min = isNoteOn ? 0 : midiEventTime(on);
-        const uint16_t max = isNoteOn ? midiEventTime(off) : data.numberOfBars * data.patternLengthMs;
+        uint16_t time = isNoteOn ? getEventTime(on) : getEventTime(off);
+        const uint16_t min = isNoteOn ? 0 : getEventTime(on);
+        const uint16_t max = isNoteOn ? getEventTime(off) : data.numberOfBars * data.patternLengthMs;
         if (hasConstrainedChanged(time, 10 * diff, min, max)) {
           if (isNoteOn) {
-            on.patternNumber = time / data.patternLengthMs;
-            on.patternMs = time % data.patternLengthMs;
-            liveSeq.requestSortEvents(); // re-sort events as noteOn changed
+            // editing noteOn shifts whole note, renders better...
+            const uint32_t duration = getEventTime(off) - getEventTime(on);
+            setEventTime(on, time);
+            const uint32_t newOffTime = getEventTime(on) + duration;
+            setEventTime(off, newOffTime);
           }
           else {
-            off.patternNumber = time / data.patternLengthMs;
-            off.patternMs = time % data.patternLengthMs;
+            setEventTime(off, time);
           }
+          liveSeq.requestSortEvents(); // re-sort events as note time changed
           singleNoteDraw.insert(on.note_in);
           drawFlags |= DRAW_CONTENT_FULL; // shifted note X..
           //queueDrawNote(notePairs.at(selectedNote));
@@ -499,6 +501,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
   if(drawFlags) {
     printActionValue();
   }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent &e, uint32_t time) {
+  e.patternNumber = time / data.patternLengthMs;
+  e.patternMs = time % data.patternLengthMs;
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
@@ -570,11 +577,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
         break;
 
       case EDIT_NOTEON:
-        sprintf(s, "%lims", midiEventTime(p.noteOn));
+        sprintf(s, "%i:%ims", p.noteOn.patternNumber, p.noteOn.patternMs);
         break;
 
       case EDIT_NOTEOFF:
-        sprintf(s, "%lims", midiEventTime(p.noteOff));
+        sprintf(s, "%i:%ims", p.noteOff.patternNumber, p.noteOff.patternMs);
         break;
 
       case EDIT_VELOCITY:
@@ -744,8 +751,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   singleNoteDraw.insert(note.noteOn.note_in);
   DBG_LOG(printf("queue note draw: %i\n", note.noteOn.note_in));
   SubUpdateX coords;
-  coords.fromX = ROLL_WIDTH + round(midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix;
-  coords.toX = coords.fromX + round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix);
+  coords.fromX = ROLL_WIDTH + round(getEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix;
+  coords.toX = coords.fromX + round((getEventTime(note.noteOff) - getEventTime(note.noteOn)) * view.msToPix);
   coords.fullHeight = false;
   drawRegionsX.push_back(coords);
   drawFlags |= DRAW_CONTENT_AREA;
@@ -753,13 +760,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) {
   const bool drawSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
-  int16_t time = (midiEventTime(note.noteOn) - view.startBar * data.patternLengthMs);
-  uint16_t sub = (time < 0) ? -time : 0;
-  time = std::max(time, int16_t(0));
-  uint16_t x = ROLL_WIDTH + round(time * view.msToPix);
+  const uint32_t barStartTime = view.startBar * data.patternLengthMs;
+  int16_t timeOn = (getEventTime(note.noteOn) - barStartTime);
+  timeOn = std::max(timeOn, int16_t(0)); // handle noteOn not visible here
+  uint16_t x = ROLL_WIDTH + round(timeOn * view.msToPix);
   const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
   const uint16_t h = view.noteHeight;
-  uint16_t w = round((midiEventTime(note.noteOff) - midiEventTime(note.noteOn)) * view.msToPix) - sub;
+  uint32_t timeOff = round(getEventTime(note.noteOff) - barStartTime);
+  timeOff = std::min(timeOff, view.numBars * data.patternLengthMs); // handle noteOff not visible here
+  uint16_t w = round((timeOff - timeOn) * view.msToPix);
 
   //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
   //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
@@ -767,7 +776,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   for(auto &u : drawRegionsX) {
     if (u.fullHeight || singleNoteDraw.empty() || drawSingleNote) {
 
-      const bool isOutside = false;//(x > u.toX) || ((x + w) < u.fromX);
+      const bool isOutside = (x > u.toX) || ((x + w) < u.fromX);
 
       if(isOutside == false) { // 
         const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
@@ -789,7 +798,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   }
 }
 
-FLASHMEM uint32_t UI_LiveSeq_PianoRoll::midiEventTime(LiveSequencer::MidiEvent e) const {
+FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getEventTime(LiveSequencer::MidiEvent e) const {
   return e.patternNumber * data.patternLengthMs + e.patternMs;
 }
 

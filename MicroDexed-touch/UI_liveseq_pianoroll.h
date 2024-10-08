@@ -131,7 +131,9 @@ private:
 
   bool step(int8_t diff);
 
-  uint32_t midiEventTime(LiveSequencer::MidiEvent e) const;
+  uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
+  void setEventTime(LiveSequencer::MidiEvent &e, uint32_t time);
+
   LiveSequencer &liveSeq;
   LiveSequencer::LiveSeqData &data;
   bool isRunningHere;
