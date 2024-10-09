@@ -821,7 +821,12 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
 }
 
 FLASHMEM void LiveSequencer::requestSortEvents(void) {
-  sortRequested = true;
+  if (data.isRunning) {
+    sortRequested = true;
+  }
+  else {
+    data.eventsList.sort(sortMidiEvent);
+  }
 }
 
 FLASHMEM void LiveSequencer::handlePatternBegin(void) {

@@ -34,8 +34,8 @@ private:
   enum EditMode {
     EDIT_SELECT_NOTE,
     EDIT_NOTEON,
-    EDIT_VELOCITY,
     EDIT_NOTEOFF,
+    EDIT_VELOCITY,
     EDIT_NOTE,
     EDIT_DELETE,
     EDIT_NUM
@@ -104,6 +104,8 @@ private:
 
   void printActionName(void);
   void printActionValue(void);
+  void drawHeader(uint16_t modeFlags = 0);
+
 
   void drawCursor(void);
   void drawStepCursor(void);

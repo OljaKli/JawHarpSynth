@@ -120,8 +120,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     drawLayersIndicator();
     drawAreaIndicator();
 
-    printActionName();
-    printActionValue();
+    //printActionName();
+    //printActionValue();
+    drawHeader();
 
     drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
 
@@ -143,8 +144,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           viewMode = VIEW_ZOOM_Y;
         }
         buttonView->drawNow();
-        printActionName();
-        printActionValue();
+        //printActionName();
+        //printActionValue();
         break;
 
       case MODE_EDIT:
@@ -152,8 +153,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           editMode = EDIT_SELECT_NOTE;
         }
         buttonEdit->drawNow();
-        printActionName();
-        printActionValue();
+        drawHeader(editMode);
+        //printActionName();
+        //printActionValue();
         break;
 
       case MODE_STEP:
@@ -170,8 +172,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
         drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // refresh step cursor
 
         buttonStep->drawNow();
-        printActionName();
-        printActionValue();
+        //printActionName();
+        //printActionValue();
         break;
       }
     }
@@ -361,6 +363,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
+  uint16_t headerFlags = 0;
   switch (mode) {
   case MODE_VIEW:
     switch (viewMode) {
@@ -399,6 +402,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     break;
 
   case MODE_EDIT:
+    headerFlags |= (1 << editMode); // default update only current edit mode setting
     switch (editMode) {
     case EDIT_SELECT_NOTE:
       if(selectedNote > -1) {
@@ -409,6 +413,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           }
           queueDrawNote(notePairs.at(prev));
           queueDrawNote(notePairs.at(selectedNote));
+          headerFlags = 0; // update all
         }
       }
       break;
@@ -429,11 +434,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
             setEventTime(on, time);
             const uint32_t newOffTime = getEventTime(on) + duration;
             setEventTime(off, newOffTime);
+            headerFlags |= (1 << EDIT_NOTEOFF); // also update off time
           }
           else {
             setEventTime(off, time);
           }
           liveSeq.requestSortEvents(); // re-sort events as note time changed
+          //reloadNotes();
+
           singleNoteDraw.insert(on.note_in);
           drawFlags |= DRAW_CONTENT_FULL; // shifted note X..
           //queueDrawNote(notePairs.at(selectedNote));
@@ -447,7 +455,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
         if (hasConstrainedChanged(velo, diff, 0, 127)) {
           e.note_in_velocity = velo;
-          printActionValue();
+          
+          //printActionValue();
         }
       }
       break;
@@ -470,20 +479,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       // nothing to do on encoder turn
       break;
     }
+    
     break;
 
   case MODE_STEP:
     switch(stepMode) {
     case STEP_RECORD:
       if(step(diff)) {
-        printActionValue();
+        //printActionValue();
       }
       break;
 
     case STEP_SIZE:
       if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
         stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
-        printActionValue();
+        //printActionValue();
         DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
       }
       break;
@@ -492,15 +502,13 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         const uint8_t maxLayer = std::min(data.trackSettings[data.activeTrack].layerCount, uint8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1));
         if (hasConstrainedChanged(stepRecordLayer, diff, 0, maxLayer)) {
           DBG_LOG(printf("step record layer: %i\n", stepRecordLayer));
-          printActionValue();
+          //printActionValue();
         }
         break;
       }
     }
   }
-  if(drawFlags) {
-    printActionValue();
-  }
+  drawHeader(headerFlags);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent &e, uint32_t time) {
@@ -626,6 +634,57 @@ FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
   display.printf("%*s", whitespace, " "); // fill spaces
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
+  display.setTextSize(1);
+  display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
+  char s[10] = { "\0" };
+
+  const uint16_t drawFlags = (modeFlags == 0) ? 0xFFFF : modeFlags;
+
+  switch (mode) {
+  case MODE_EDIT:
+    if(selectedNote > -1) {
+      LiveSequencer::NotePair &p = notePairs.at(selectedNote);
+      std::string noteString = getNoteString(p.noteOn.note_in);
+      if(noteString.length() == 2) {
+        noteString.append(" ");
+      }
+
+      if(drawFlags & (1 << EDIT_SELECT_NOTE)) {
+        display.setCursor(GRID_X[2], CONTENT_HEIGHT + 4);
+        display.print("SELECT");
+        display.setCursor(GRID_X[2], CONTENT_HEIGHT + 6 + CHAR_height_small);
+        sprintf(s, "%i: %s", selectedNote + 1, noteString.c_str());
+        display.print(s);
+      }
+      if(drawFlags & (1 << EDIT_NOTEON)) {
+        display.setCursor(GRID_X[3], CONTENT_HEIGHT + 4);
+        sprintf(s, "%i:%4ims", p.noteOff.patternNumber, p.noteOn.patternMs);
+        display.print(s);
+      }
+      if(drawFlags & (1 << EDIT_NOTEOFF)) {
+        display.setCursor(GRID_X[3], CONTENT_HEIGHT + 6 + CHAR_height_small);
+        sprintf(s, "%i:%4ims", p.noteOff.patternNumber, p.noteOff.patternMs);
+        display.print(s);
+      }
+      if(drawFlags & (1 << EDIT_VELOCITY)) {
+        display.setCursor(GRID_X[4], CONTENT_HEIGHT + 4);
+        display.print("VELOCITY");
+        display.setCursor(GRID_X[4], CONTENT_HEIGHT + 6 + CHAR_height_small);
+        sprintf(s, "%03u", p.noteOn.note_in_velocity);
+        display.print(s);
+      }
+      if(drawFlags & (1 << EDIT_NOTE)) {
+        display.setCursor(GRID_X[5], CONTENT_HEIGHT + 4);
+        display.print("NOTE");
+        display.setCursor(GRID_X[5], CONTENT_HEIGHT + 6 + CHAR_height_small);
+        sprintf(s, "%s", noteString.c_str());
+        display.print(s);
+      }
+    }
+  }
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   const uint16_t numWhiteKeys = view.numOctaves * 7;
   const float keyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
@@ -728,10 +787,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   if (notePairs.size()) {
     uint16_t index = 0;
     for (LiveSequencer::NotePair note : notePairs) {
+      const bool isVisibleX = note.noteOff.patternNumber >= view.startBar &&
+                              note.noteOn.patternNumber <= view.startBar + view.numBars;
       const bool isVisibleY = note.noteOn.note_in >= view.lowestNote &&
                               note.noteOn.note_in < view.highestNote;
       bool isSelected = (index++ == selectedNote);
-      if (isVisibleY) {
+      if (isVisibleX && isVisibleY) {
         drawNote(note, isSelected);
       }
     }
@@ -771,7 +832,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   uint16_t w = round((timeOff - timeOn) * view.msToPix);
 
   //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
-  //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
+  DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
 
   for(auto &u : drawRegionsX) {
     if (u.fullHeight || singleNoteDraw.empty() || drawSingleNote) {
@@ -849,8 +910,9 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       break;
     }
     drawFlags |= DRAW_CONTENT_AREA;
-    ui_pianoroll->printActionName();
-    ui_pianoroll->printActionValue();
+    //ui_pianoroll->printActionName();
+    //ui_pianoroll->printActionValue();
+    ui_pianoroll->drawHeader();
   }
   return modeChanged;
 }
