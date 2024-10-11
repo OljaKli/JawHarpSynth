@@ -412,7 +412,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           }
           queueDrawNote(notePairs.at(prev));
           queueDrawNote(notePairs.at(selectedNote));
-          headerFlags = 0; // update all
+          headerFlags = HEADER_DRAW_ALL; // update all
         }
       }
       break;
