@@ -455,9 +455,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     case MODE_STEP:
       switch(stepMode) {
       case STEP_RECORD:
-        if(step(diff)) {
-          headerFlags |= (1 << STEP_RECORD);
-        }
+        step(diff);
         break;
 
       case STEP_SIZE:
@@ -730,22 +728,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(uint8_t note, SubUpdateX coord
   drawFlags |= DRAW_CONTENT_AREA;
 }
 
-FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time, bool *offLeft, bool *offRight) const {
+FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time) const {
   int32_t timeAbs = time - (view.startBar * data.patternLengthMs);
-
-  if(timeAbs < 0) {
-    timeAbs = 0;
-    if(offLeft) {
-      *offLeft = true;
-    }
-  }
-  const uint16_t maxTime = (view.startBar + view.numBars) * data.patternLengthMs;
-  if(timeAbs > maxTime) {
-    timeAbs = maxTime;
-    if(offRight) {
-      *offRight = true;
-    }
-  }
+  const int32_t maxTime = (view.startBar + view.numBars) * data.patternLengthMs;
+  timeAbs = std::max(int32_t(0), timeAbs);
+  timeAbs = std::min(timeAbs, maxTime);
   uint16_t coord = ROLL_WIDTH + round(timeAbs * view.msToPix);
   return coord;
 }
@@ -783,7 +770,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   const uint16_t xTo = getNoteCoord(getEventTime(note.noteOff));
   const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
   const uint16_t h = view.noteHeight;
-  uint16_t w = xTo - x;
+  uint16_t w = xTo - x; // rounds less nice than before but is much simpler
   
   //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
 
@@ -983,6 +970,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       const bool modeChanged = ui_pianoroll->setMode(MODE_STEP);
       if((modeChanged == false) && (stepMode == STEP_RECORD)) {
         ui_pianoroll->step(+1);
+
       }
       b->drawNow();
     }
@@ -1000,6 +988,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     stepCursorPosition = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
     stepCursorChanged = true;
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
+    drawHeader(1 << STEP_RECORD);
   }
   return stepCursorChanged;
 }
