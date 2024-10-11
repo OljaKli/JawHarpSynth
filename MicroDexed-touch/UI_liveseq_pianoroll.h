@@ -23,13 +23,13 @@ public:
 private:
   std::set<uint8_t> keysPressed;
   enum ViewMode {
-    VIEW_ZOOM_Y,
-    VIEW_SCROLL_Y,
     VIEW_ZOOM_X,
     VIEW_SCROLL_X,
+    VIEW_ZOOM_Y,
+    VIEW_SCROLL_Y,
     VIEW_NUM
   };
-  uint8_t viewMode = VIEW_ZOOM_Y;
+  uint8_t viewMode = VIEW_ZOOM_X;
 
   enum EditMode {
     EDIT_SELECT_NOTE,
@@ -153,6 +153,7 @@ private:
   TouchButton *buttonEdit;
   TouchButton *buttonStep;
 
+  static constexpr uint16_t HEADER_DRAW_ALL = 0xFFFF;
   static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
   static constexpr uint16_t CURSOR_BG_COLOR = HEADER_BG_COLOR; // for now..
   static constexpr uint16_t ROLL_WIDTH = 20;

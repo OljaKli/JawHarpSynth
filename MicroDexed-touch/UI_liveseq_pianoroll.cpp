@@ -83,7 +83,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   
   // draw content
   const uint16_t x = ROLL_WIDTH + 1 + round(wTotal * view.startBar / float(data.numberOfBars));
-  const uint16_t h = hTotal * view.numOctaves / 8.0f; // we have 8 octaves here
+  const uint16_t h = round(hTotal * view.numOctaves / 8.0f); // we have 8 octaves here
   const uint16_t y = layerViewY + 1 + hTotal - h - round(hTotal * view.startOctave / 8.0f); // we have 8 octaves here
   const uint16_t w = wTotal * (view.numBars) / float(data.numberOfBars);
   display.console = true;
@@ -120,7 +120,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     drawLayersIndicator();
     drawAreaIndicator();
 
-    drawHeader();
+    drawHeader(HEADER_DRAW_ALL);
 
     drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
 
@@ -142,7 +142,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       case MODE_VIEW:
         oldMode = viewMode;
         if (++viewMode == VIEW_NUM) {
-          viewMode = VIEW_ZOOM_Y;
+          viewMode = VIEW_ZOOM_X;
         }
         newMode = viewMode;
         buttonView->drawNow();
@@ -518,13 +518,26 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   
   char s[10] = { "\0" };
 
-  if(modeFlags == 0) {
-    // draw all
-    modeFlags = 0xFFFF;
+  if(modeFlags == HEADER_DRAW_ALL) {
     display.fillRect(GRID_X[2], CONTENT_HEIGHT + LINE_HEIGHT, DISPLAY_WIDTH - GRID_X[2], HEADER_HEIGHT, HEADER_BG_COLOR);
   }
 
   switch (mode) {
+  case MODE_VIEW:
+    if(modeFlags & (1 << VIEW_ZOOM_X)) {
+      drawHeaderSetting(GRID_X[2], "ZOOM X", "", (viewMode == VIEW_ZOOM_X), false);
+    }
+    if(modeFlags & (1 << VIEW_SCROLL_X)) {
+      drawHeaderSetting(GRID_X[3], "SCROLL X", "", (viewMode == VIEW_SCROLL_X), false);
+    }
+    if(modeFlags & (1 << VIEW_ZOOM_Y)) {
+      drawHeaderSetting(GRID_X[2], "", "ZOOM Y", false, (viewMode == VIEW_ZOOM_Y));
+    }
+    if(modeFlags & (1 << VIEW_SCROLL_Y)) {
+      drawHeaderSetting(GRID_X[3], "", "SCROLL Y", false, (viewMode == VIEW_SCROLL_Y));
+    }
+    break;
+
   case MODE_EDIT:
     if(selectedNote > -1) {
       LiveSequencer::NotePair &p = notePairs.at(selectedNote);
@@ -819,7 +832,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       break;
     }
     drawFlags |= DRAW_CONTENT_AREA;
-    ui_pianoroll->drawHeader();
+    ui_pianoroll->drawHeader(HEADER_DRAW_ALL);
   }
   return modeChanged;
 }
