@@ -121,15 +121,10 @@ private:
   bool setMode(uint8_t newMode);
   void setIsHighlighted(bool isActiveMode);
 
-
   std::string getNoteString(uint8_t note);
 
   void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
   int8_t selectedNote = -1; // index of notePairs or -1
-
-  static std::string getViewModeString(uint8_t subMode);
-  static std::string getEditModeString(uint8_t subMode);
-  static std::string getStepModeString(uint8_t subMode);
 
   bool step(int8_t diff);
 

@@ -900,7 +900,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 
   buttonView = new TouchButton(GRID_X[3], y,
   [ this ] (auto *b) { // drawHandler
-    b->draw("VIEW", getViewModeString(viewMode), (mode == MODE_VIEW) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
+    b->draw("VIEW", "MODE", (mode == MODE_VIEW) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
     ui_pianoroll->setMode(MODE_VIEW);
     b->drawNow();
@@ -913,7 +913,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     if((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
       color = TouchButton::BUTTON_RED;
     }
-    b->draw("EDIT", getEditModeString(editMode), color);
+    const std::string sub = (editMode == EDIT_DELETE) ? "DELETE" : "MODE";
+    b->draw("EDIT", sub.c_str(), color);
   }, [ this ] (auto *b) { // clickedHandler
     ui_pianoroll->setMode(MODE_EDIT);
     if(editMode == EDIT_DELETE) {
@@ -941,7 +942,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         color = TouchButton::BUTTON_RED;
       }
     }
-    b->draw("STEP", getStepModeString(stepMode), color);
+    b->draw("STEP", "RECORD", color);
   }, [ this ] (auto *b) { // clickedHandler
     if(data.isRunning == false) {
       const bool modeChanged = ui_pianoroll->setMode(MODE_STEP);
@@ -966,58 +967,4 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
     drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
   }
   return stepCursorChanged;
-}
-
-FLASHMEM std::string UI_LiveSeq_PianoRoll::getViewModeString(uint8_t subMode) {
-  switch (subMode) {
-  case VIEW_SCROLL_X:
-    return "SCRL X";
-
-  case VIEW_SCROLL_Y:
-    return "SCRL Y";
-
-  case VIEW_ZOOM_X:
-    return "ZOOM X";
-
-  case VIEW_ZOOM_Y:
-    return "ZOOM Y";
-  }
-  return "NONE";
-}
-
-FLASHMEM std::string UI_LiveSeq_PianoRoll::getEditModeString(uint8_t subMode) {
-  switch (subMode) {
-  case EDIT_SELECT_NOTE:
-    return "SELECT";
-
-  case EDIT_NOTEON:
-    return "ONTIME";
-
-  case EDIT_VELOCITY:
-    return "VELOCTY";
-
-  case EDIT_NOTEOFF:
-    return "OFFTIME";
-
-  case EDIT_NOTE:
-    return "NOTE";
-
-  case EDIT_DELETE:
-    return "DELETE";
-  }
-  return "NONE";
-}
-
-FLASHMEM std::string UI_LiveSeq_PianoRoll::getStepModeString(uint8_t subMode) {
-  switch (subMode) {
-  case STEP_RECORD:
-    return "RECORD";
-
-  case STEP_SIZE:
-    return "SIZE";
-
-  case STEP_LAYER:
-    return "LAYER";
-  }
-  return "NONE";
 }
