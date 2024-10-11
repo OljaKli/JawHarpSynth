@@ -476,7 +476,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       // nothing to do on encoder turn
       break;
     }
-    
     break;
 
   case MODE_STEP:
@@ -717,14 +716,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   if (notePairs.size()) {
-    uint16_t index = 0;
-    for (LiveSequencer::NotePair note : notePairs) {
+    for (size_t index = 0; index < notePairs.size(); index++) {
+      const LiveSequencer::NotePair note = notePairs.at(index);
       const bool isVisibleX = note.noteOff.patternNumber >= view.startBar &&
                               note.noteOn.patternNumber <= view.startBar + view.numBars;
       const bool isVisibleY = note.noteOn.note_in >= view.lowestNote &&
                               note.noteOn.note_in < view.highestNote;
+      
       if (isVisibleX && isVisibleY) {
-        const bool isSelected = (index++ == selectedNote);
+        const bool isSelected = (index == selectedNote);
         drawNote(note, isSelected);
       }
     }
