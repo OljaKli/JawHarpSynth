@@ -103,7 +103,7 @@ private:
 
   void queueDrawNote(LiveSequencer::NotePair note);
   void queueDrawNote(uint8_t note, SubUpdateX coords);
-  uint16_t getNoteCoord(uint32_t time, bool *offLeft = nullptr, bool *offRight = nullptr);
+  uint16_t getNoteCoord(uint32_t time, bool *offLeft = nullptr, bool *offRight = nullptr) const;
 
   void drawHeader(uint16_t modeFlags = 0);
   void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
@@ -111,7 +111,7 @@ private:
   void drawCursor(void);
   void drawStepCursor(void);
   void drawVerticalBars(void);
-  void drawNote(LiveSequencer::NotePair note, bool isSelected = false);
+  void drawNote(LiveSequencer::NotePair note, bool isSelected = false) const;
   void setNumOctaves(int8_t num);
   void setStartOctave(int8_t num);
   void setNumBars(int8_t num);

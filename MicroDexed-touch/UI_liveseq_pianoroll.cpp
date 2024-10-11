@@ -717,7 +717,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   queueDrawNote(note.noteOn.note_in, coords);
 }
 
-FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time, bool *offLeft, bool *offRight) {
+FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(uint8_t note, SubUpdateX coords) {
+  DBG_LOG(printf("queue note draw: %i from %i to %i\n", note, coords.fromX, coords.toX));
+  singleNoteDraw.insert(note);
+  drawRegionsX.push_back(coords);
+  drawFlags |= DRAW_CONTENT_AREA;
+}
+
+FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time, bool *offLeft, bool *offRight) const {
   int32_t timeAbs = time - (view.startBar * data.patternLengthMs);
 
   if(timeAbs < 0) {
@@ -735,13 +742,6 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time, bool *offLef
   }
   uint16_t coord = ROLL_WIDTH + round(timeAbs * view.msToPix);
   return coord;
-}
-
-FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(uint8_t note, SubUpdateX coords) {
-  DBG_LOG(printf("queue note draw: %i from %i to %i\n", note, coords.fromX, coords.toX));
-  singleNoteDraw.insert(note);
-  drawRegionsX.push_back(coords);
-  drawFlags |= DRAW_CONTENT_AREA;
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
@@ -770,7 +770,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   }
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) {
+FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) const {
   const bool foundSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
   
   const uint16_t x = getNoteCoord(getEventTime(note.noteOn));
@@ -798,7 +798,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
         }
       }
       else {
-        display.drawLine(x, y, x, y + h, color);
+        display.drawLine(x, y, x, y + h - 1, color);
       }
     }
     else {
