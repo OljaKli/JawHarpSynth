@@ -107,6 +107,9 @@ private:
 
   void drawHeader(uint16_t modeFlags = 0);
   void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
+  bool isSettingActivated = false;
+  void toggleSettingActivated(void);
+
 
   void drawCursor(void);
   void drawStepCursor(void);

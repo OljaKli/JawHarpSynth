@@ -136,45 +136,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       handleEncoderRight(-1);
     }
     if (LCDML.BT_checkEnter()) {
-      uint8_t oldMode = 0;
-      uint8_t newMode = 0;
-      switch (mode) {
-      case MODE_VIEW:
-        oldMode = viewMode;
-        if (++viewMode == VIEW_NUM) {
-          viewMode = VIEW_ZOOM_X;
-        }
-        newMode = viewMode;
-        buttonView->drawNow();
-        break;
-
-      case MODE_EDIT:
-        oldMode = editMode;
-        if (++editMode == EDIT_NUM) {
-          editMode = EDIT_SELECT_NOTE;
-        }
-        newMode = editMode;
-        buttonEdit->drawNow();
-        break;
-
-      case MODE_STEP:
-        oldMode = stepMode;
-        if (++stepMode == STEP_NUM) {
-          stepMode = STEP_RECORD;
-        }
-        newMode = stepMode;
-        if(stepMode == STEP_RECORD) {
-          drawFlags |= DRAW_STEP_CURSOR;
-        }
-        else {
-          // clear step cursor
-          drawFlags |= DRAW_CONTENT_AREA;
-        }
-        drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // refresh step cursor
-        buttonStep->drawNow();
-        break;
-      }
-      drawHeader((1 << oldMode) | (1 << newMode));
+      toggleSettingActivated();
     }
     const bool runningChanged = isRunningHere != data.isRunning;
     const bool justStopped = isRunningHere && !data.isRunning;
@@ -361,156 +323,200 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
   drawAreaIndicator();
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
+  isSettingActivated = !isSettingActivated;
+  drawHeader(HEADER_DRAW_ALL); // TODO
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
-  uint16_t headerFlags = 0;
-  switch (mode) {
-  case MODE_VIEW:
-    switch (viewMode) {
-    case VIEW_ZOOM_Y:
-      if (hasConstrainedChanged(view.numOctaves, -2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
-        setStartOctave(view.startOctave + diff); // zoom octave-centered
-        setNumOctaves(view.numOctaves);
-        drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
-      }
-      break;
-
-    case VIEW_SCROLL_Y:
-      if (hasConstrainedChanged(view.startOctave, -diff, 0, 8 - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
-        setStartOctave(view.startOctave);
-        drawFlags |= DRAW_CONTENT_FULL;
-      }
-      break;
-
-    case VIEW_ZOOM_X:
-      if (hasConstrainedChanged(view.numBars, -diff, 1, data.numberOfBars)) {
-        setNumBars(view.numBars);
-        drawFlags |= DRAW_CONTENT_FULL;
-      }
-      break;
-
-    case VIEW_SCROLL_X:
-      if (hasConstrainedChanged(view.startBar, diff, 0, data.numberOfBars - view.numBars)) {
-        setBarStart(view.startBar);
-        drawFlags |= DRAW_CONTENT_FULL;
-      }
-      break;
-    }
-    if(drawFlags && data.isRunning) {
-      drawFlags |= DRAW_CURSOR; // handle cursor off on viewport changed redraw
-    }
-    break;
-
-  case MODE_EDIT:
-    headerFlags |= (1 << editMode); // default update only current edit mode setting
-    switch (editMode) {
-    case EDIT_SELECT_NOTE:
-      if(selectedNote > -1) {
-        if (hasConstrainedChanged(selectedNote, diff, 0, notePairs.size() - 1)) {
-          int8_t prev = selectedNote - diff;
-          if (prev < 0) {
-            prev = 0; // make nicer
-          }
-          queueDrawNote(notePairs.at(prev));
-          queueDrawNote(notePairs.at(selectedNote));
-          headerFlags = HEADER_DRAW_ALL; // update all
+  if(isSettingActivated) {
+    uint16_t headerFlags = 0;
+    switch (mode) {
+    case MODE_VIEW:
+      switch (viewMode) {
+      case VIEW_ZOOM_Y:
+        if (hasConstrainedChanged(view.numOctaves, -2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
+          setStartOctave(view.startOctave + diff); // zoom octave-centered
+          setNumOctaves(view.numOctaves);
+          drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
         }
-      }
-      break;
+        break;
 
-    case EDIT_NOTEON:
-    case EDIT_NOTEOFF:
-      if (selectedNote > -1) {
-        LiveSequencer::MidiEvent &on = notePairs.at(selectedNote).noteOn;
-        LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
-        const bool isNoteOn = editMode == EDIT_NOTEON;
-        const uint32_t noteOnTime = getEventTime(on);
-        const uint32_t noteOffTime = getEventTime(off);
-        uint16_t time = isNoteOn ? noteOnTime : noteOffTime;
-        const uint16_t min = isNoteOn ? 0 : noteOnTime;
-        const uint16_t max = isNoteOn ? noteOffTime : data.numberOfBars * data.patternLengthMs;
-        if (hasConstrainedChanged(time, 10 * diff, min, max)) {
-          if (isNoteOn) {
-            // editing noteOn shifts whole note, renders better...
-            const uint32_t duration = noteOffTime - noteOnTime;
-            setEventTime(on, time);
-            setEventTime(off, time + duration);
-            headerFlags |= (1 << EDIT_NOTEON); // also update off time
-          }
-          else {
-            setEventTime(off, time);
-          }
-          headerFlags |= (1 << EDIT_NOTEOFF); // draw noteOff in both cases
-          liveSeq.requestSortEvents(); // re-sort events as note time changed
-
-          const uint16_t minTime = std::min(noteOnTime, getEventTime(on));
-          const uint16_t maxTime = std::max(noteOffTime, getEventTime(off));
-          SubUpdateX range = {
-            .fromX = getNoteCoord(minTime),
-            .toX = getNoteCoord(maxTime),
-            .fullHeight = false
-          };
-          queueDrawNote(on.note_in, range);
+      case VIEW_SCROLL_Y:
+        if (hasConstrainedChanged(view.startOctave, -diff, 0, 8 - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
+          setStartOctave(view.startOctave);
+          drawFlags |= DRAW_CONTENT_FULL;
         }
-      }
-      break;
+        break;
 
-    case EDIT_VELOCITY:
-      if (selectedNote > -1) {
-        LiveSequencer::MidiEvent &e = notePairs.at(selectedNote).noteOn;
-        int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
-        if (hasConstrainedChanged(velo, diff, 0, 127)) {
-          e.note_in_velocity = velo;
+      case VIEW_ZOOM_X:
+        if (hasConstrainedChanged(view.numBars, -diff, 1, data.numberOfBars)) {
+          setNumBars(view.numBars);
+          drawFlags |= DRAW_CONTENT_FULL;
         }
-      }
-      break;
+        break;
 
-    case EDIT_NOTE:
-      if (selectedNote > -1) {
-        LiveSequencer::NotePair &thisNote = notePairs.at(selectedNote);
-        int8_t prevNote = thisNote.noteOn.note_in;
-        int8_t note = thisNote.noteOn.note_in;
-        if (hasConstrainedChanged(note, diff, view.lowestNote, view.highestNote)) {
-          thisNote.noteOn.note_in = note;
-          thisNote.noteOff.note_in = note;
-          queueDrawNote(thisNote);
-          singleNoteDraw.insert(prevNote);
-        }
-      }
-      break;
-
-    case EDIT_DELETE:
-      // nothing to do on encoder turn
-      break;
-    }
-    break;
-
-  case MODE_STEP:
-    switch(stepMode) {
-    case STEP_RECORD:
-      if(step(diff)) {
-        headerFlags |= (1 << STEP_RECORD);
-      }
-      break;
-
-    case STEP_SIZE:
-      if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
-        stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
-        headerFlags |= (1 << STEP_SIZE);
-        DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
-      }
-      break;
-
-    case STEP_LAYER: {
-        const uint8_t maxLayer = std::min(data.trackSettings[data.activeTrack].layerCount, uint8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1));
-        if (hasConstrainedChanged(stepRecordLayer, diff, 0, maxLayer)) {
-          DBG_LOG(printf("step record layer: %i\n", stepRecordLayer));
-          headerFlags |= (1 << STEP_LAYER);
+      case VIEW_SCROLL_X:
+        if (hasConstrainedChanged(view.startBar, diff, 0, data.numberOfBars - view.numBars)) {
+          setBarStart(view.startBar);
+          drawFlags |= DRAW_CONTENT_FULL;
         }
         break;
       }
+      if(drawFlags && data.isRunning) {
+        drawFlags |= DRAW_CURSOR; // handle cursor off on viewport changed redraw
+      }
+      break;
+
+    case MODE_EDIT:
+      headerFlags |= (1 << editMode); // default update only current edit mode setting
+      switch (editMode) {
+      case EDIT_SELECT_NOTE:
+        if(selectedNote > -1) {
+          if (hasConstrainedChanged(selectedNote, diff, 0, notePairs.size() - 1)) {
+            int8_t prev = selectedNote - diff;
+            if (prev < 0) {
+              prev = 0; // make nicer
+            }
+            queueDrawNote(notePairs.at(prev));
+            queueDrawNote(notePairs.at(selectedNote));
+            headerFlags = HEADER_DRAW_ALL; // update all
+          }
+        }
+        break;
+
+      case EDIT_NOTEON:
+      case EDIT_NOTEOFF:
+        if (selectedNote > -1) {
+          LiveSequencer::MidiEvent &on = notePairs.at(selectedNote).noteOn;
+          LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
+          const bool isNoteOn = editMode == EDIT_NOTEON;
+          const uint32_t noteOnTime = getEventTime(on);
+          const uint32_t noteOffTime = getEventTime(off);
+          uint16_t time = isNoteOn ? noteOnTime : noteOffTime;
+          const uint16_t min = isNoteOn ? 0 : noteOnTime;
+          const uint16_t max = isNoteOn ? noteOffTime : data.numberOfBars * data.patternLengthMs;
+          if (hasConstrainedChanged(time, 10 * diff, min, max)) {
+            if (isNoteOn) {
+              // editing noteOn shifts whole note, renders better...
+              const uint32_t duration = noteOffTime - noteOnTime;
+              setEventTime(on, time);
+              setEventTime(off, time + duration);
+              headerFlags |= (1 << EDIT_NOTEON); // also update off time
+            }
+            else {
+              setEventTime(off, time);
+            }
+            headerFlags |= (1 << EDIT_NOTEOFF); // draw noteOff in both cases
+            liveSeq.requestSortEvents(); // re-sort events as note time changed
+
+            const uint16_t minTime = std::min(noteOnTime, getEventTime(on));
+            const uint16_t maxTime = std::max(noteOffTime, getEventTime(off));
+            SubUpdateX range = {
+              .fromX = getNoteCoord(minTime),
+              .toX = getNoteCoord(maxTime),
+              .fullHeight = false
+            };
+            queueDrawNote(on.note_in, range);
+          }
+        }
+        break;
+
+      case EDIT_VELOCITY:
+        if (selectedNote > -1) {
+          LiveSequencer::MidiEvent &e = notePairs.at(selectedNote).noteOn;
+          int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
+          if (hasConstrainedChanged(velo, diff, 0, 127)) {
+            e.note_in_velocity = velo;
+          }
+        }
+        break;
+
+      case EDIT_NOTE:
+        if (selectedNote > -1) {
+          LiveSequencer::NotePair &thisNote = notePairs.at(selectedNote);
+          int8_t prevNote = thisNote.noteOn.note_in;
+          int8_t note = thisNote.noteOn.note_in;
+          if (hasConstrainedChanged(note, diff, view.lowestNote, view.highestNote)) {
+            thisNote.noteOn.note_in = note;
+            thisNote.noteOff.note_in = note;
+            queueDrawNote(thisNote);
+            singleNoteDraw.insert(prevNote);
+          }
+        }
+        break;
+
+      case EDIT_DELETE:
+        // nothing to do on encoder turn
+        break;
+      }
+      break;
+
+    case MODE_STEP:
+      switch(stepMode) {
+      case STEP_RECORD:
+        if(step(diff)) {
+          headerFlags |= (1 << STEP_RECORD);
+        }
+        break;
+
+      case STEP_SIZE:
+        if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
+          stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
+          headerFlags |= (1 << STEP_SIZE);
+          DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
+        }
+        break;
+
+      case STEP_LAYER: {
+          const uint8_t maxLayer = std::min(data.trackSettings[data.activeTrack].layerCount, uint8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1));
+          if (hasConstrainedChanged(stepRecordLayer, diff, 0, maxLayer)) {
+            DBG_LOG(printf("step record layer: %i\n", stepRecordLayer));
+            headerFlags |= (1 << STEP_LAYER);
+          }
+          break;
+        }
+      }
+    }
+    drawHeader(headerFlags);
+  }
+  else {
+    uint8_t oldMode = 0;
+    uint8_t newMode = 0;
+    switch (mode) {
+    case MODE_VIEW:
+      oldMode = viewMode;
+      newMode = constrain(viewMode + diff, 0, VIEW_NUM - 1);
+      viewMode = newMode;
+      buttonView->drawNow();
+      break;
+
+    case MODE_EDIT:
+      oldMode = editMode;
+      newMode = constrain(editMode + diff, 0, EDIT_NUM - 1);
+      editMode = newMode;
+      buttonEdit->drawNow();
+      break;
+
+    case MODE_STEP:
+      oldMode = stepMode;
+      newMode = constrain(stepMode + diff, 0, STEP_NUM - 1);
+      stepMode = newMode;
+      if(stepMode == STEP_RECORD) {
+        drawFlags |= DRAW_STEP_CURSOR;
+      }
+      else {
+        // clear step cursor
+        drawFlags |= DRAW_CONTENT_AREA;
+      }
+      drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // refresh step cursor
+      buttonStep->drawNow();
+      break;
+    }
+    if(oldMode != newMode) {
+      drawHeader((1 << oldMode) | (1 << newMode));
     }
   }
-  drawHeader(headerFlags);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent &e, uint32_t time) {
@@ -606,8 +612,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeaderSetting(uint16_t x, const char *to
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setIsHighlighted(bool isHighlighted) {
-  const uint16_t textColor = isHighlighted ? HEADER_BG_COLOR : COLOR_SYSTEXT;
-  const uint16_t bgColor = isHighlighted ? COLOR_SYSTEXT : HEADER_BG_COLOR;
+  const uint16_t textColor = isHighlighted ? (isSettingActivated ? COLOR_SYSTEXT : HEADER_BG_COLOR) : COLOR_SYSTEXT;
+  const uint16_t bgColor = isHighlighted ? (isSettingActivated ? RED : COLOR_SYSTEXT) : HEADER_BG_COLOR;
   display.setTextColor(textColor, bgColor);
 }
 
@@ -815,6 +821,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
   const uint8_t oldMode = mode;
   const bool modeChanged = oldMode != newMode;
   if(modeChanged) {
+    isSettingActivated = false;
     mode = newMode;
     // leaving old mode actions
     switch (oldMode) {
