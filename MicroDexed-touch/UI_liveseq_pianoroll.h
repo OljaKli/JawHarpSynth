@@ -100,7 +100,10 @@ private:
   void handleEncoderRight(int8_t diff);
   bool hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max);
   bool hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max);
+
   void queueDrawNote(LiveSequencer::NotePair note);
+  void queueDrawNote(uint8_t note, SubUpdateX coords);
+  uint16_t getNoteCoord(uint32_t time, bool *offLeft = nullptr, bool *offRight = nullptr);
 
   void drawHeader(uint16_t modeFlags = 0);
   void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
@@ -128,7 +131,7 @@ private:
 
   bool step(int8_t diff);
 
-  uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
+  const uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
   void setEventTime(LiveSequencer::MidiEvent &e, uint32_t time);
 
   LiveSequencer &liveSeq;
