@@ -102,10 +102,8 @@ private:
   bool hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max);
   void queueDrawNote(LiveSequencer::NotePair note);
 
-  void printActionName(void);
-  void printActionValue(void);
   void drawHeader(uint16_t modeFlags = 0);
-
+  void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
 
   void drawCursor(void);
   void drawStepCursor(void);
@@ -121,6 +119,8 @@ private:
   void drawAreaIndicator(void);
   void drawLayersIndicator(void);
   bool setMode(uint8_t newMode);
+  void setIsHighlighted(bool isActiveMode);
+
 
   std::string getNoteString(uint8_t note);
 
@@ -165,7 +165,7 @@ private:
   int8_t stepRecordLayer = 0;
   int8_t stepRecordSteps = 16;
   float stepRecordStepSizeMs = 0.0f;
-  int8_t stepCursorPositionIndex = 0;
+  uint16_t stepCursorPositionIndex = 0;
   uint16_t stepCursorPosition = ROLL_WIDTH;
 };
 

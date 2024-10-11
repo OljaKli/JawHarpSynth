@@ -120,8 +120,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     drawLayersIndicator();
     drawAreaIndicator();
 
-    //printActionName();
-    //printActionValue();
     drawHeader();
 
     drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
@@ -138,30 +136,33 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       handleEncoderRight(-1);
     }
     if (LCDML.BT_checkEnter()) {
+      uint8_t oldMode = 0;
+      uint8_t newMode = 0;
       switch (mode) {
       case MODE_VIEW:
+        oldMode = viewMode;
         if (++viewMode == VIEW_NUM) {
           viewMode = VIEW_ZOOM_Y;
         }
+        newMode = viewMode;
         buttonView->drawNow();
-        //printActionName();
-        //printActionValue();
         break;
 
       case MODE_EDIT:
+        oldMode = editMode;
         if (++editMode == EDIT_NUM) {
           editMode = EDIT_SELECT_NOTE;
         }
+        newMode = editMode;
         buttonEdit->drawNow();
-        drawHeader(editMode);
-        //printActionName();
-        //printActionValue();
         break;
 
       case MODE_STEP:
+        oldMode = stepMode;
         if (++stepMode == STEP_NUM) {
           stepMode = STEP_RECORD;
         }
+        newMode = stepMode;
         if(stepMode == STEP_RECORD) {
           drawFlags |= DRAW_STEP_CURSOR;
         }
@@ -170,12 +171,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
           drawFlags |= DRAW_CONTENT_AREA;
         }
         drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // refresh step cursor
-
         buttonStep->drawNow();
-        //printActionName();
-        //printActionValue();
         break;
       }
+      drawHeader((1 << oldMode) | (1 << newMode));
     }
     const bool runningChanged = isRunningHere != data.isRunning;
     const bool justStopped = isRunningHere && !data.isRunning;
@@ -455,8 +454,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
         if (hasConstrainedChanged(velo, diff, 0, 127)) {
           e.note_in_velocity = velo;
-          
-          //printActionValue();
         }
       }
       break;
@@ -486,14 +483,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     switch(stepMode) {
     case STEP_RECORD:
       if(step(diff)) {
-        //printActionValue();
+        headerFlags |= (1 << STEP_RECORD);
       }
       break;
 
     case STEP_SIZE:
       if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
         stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
-        //printActionValue();
+        headerFlags |= (1 << STEP_SIZE);
         DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
       }
       break;
@@ -502,7 +499,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         const uint8_t maxLayer = std::min(data.trackSettings[data.activeTrack].layerCount, uint8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1));
         if (hasConstrainedChanged(stepRecordLayer, diff, 0, maxLayer)) {
           DBG_LOG(printf("step record layer: %i\n", stepRecordLayer));
-          //printActionValue();
+          headerFlags |= (1 << STEP_LAYER);
         }
         break;
       }
@@ -516,127 +513,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent &e, ui
   e.patternMs = time % data.patternLengthMs;
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::printActionName(void) {
-  display.setTextSize(1);
-  display.setCursor(GRID_X[2], CONTENT_HEIGHT + 4);
-  display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
-  
-  switch (mode) {
-  case MODE_EDIT:
-    switch (editMode) {
-    case EDIT_SELECT_NOTE:
-      display.print("SELECT  ");
-      break;
-      
-    case EDIT_NOTEON:
-      display.print("ON TIME ");
-      break;
-
-    case EDIT_NOTEOFF:
-      display.print("OFF TIME");
-      break;
-
-    case EDIT_VELOCITY:
-      display.print("VELOCITY");
-      break;
-
-    case EDIT_NOTE:
-      display.print("NOTE    ");
-      break;
-
-    case EDIT_DELETE:
-      display.print("DELETE  ");
-      break;
-    }
-    break;
-
-  case MODE_VIEW:
-    display.print("        ");
-    break;
-
-  case MODE_STEP:
-    switch(stepMode) {
-    case STEP_RECORD:
-      display.print("REC/ADV ");
-      break;
-
-    case STEP_SIZE:
-      display.print("STEPSIZE");
-      break;
-
-    case STEP_LAYER:
-      display.print("TO LAYER");
-      break;
-    }
-    break;
-  }
-}
-
-FLASHMEM void UI_LiveSeq_PianoRoll::printActionValue(void) {
-  char s[10] = { "\0" };
-  switch (mode) {
-  case MODE_EDIT:
-    if(selectedNote > -1) {
-      LiveSequencer::NotePair &p = notePairs.at(selectedNote);
-      const char *noteString = getNoteString(p.noteOn.note_in).c_str();
-      switch (editMode) {
-      case EDIT_SELECT_NOTE:
-        sprintf(s, "%i: %s", selectedNote + 1, noteString);
-        break;
-
-      case EDIT_NOTEON:
-        sprintf(s, "%i:%ims", p.noteOn.patternNumber, p.noteOn.patternMs);
-        break;
-
-      case EDIT_NOTEOFF:
-        sprintf(s, "%i:%ims", p.noteOff.patternNumber, p.noteOff.patternMs);
-        break;
-
-      case EDIT_VELOCITY:
-        sprintf(s, "%i", p.noteOn.note_in_velocity);
-        break;
-
-      case EDIT_NOTE:
-        sprintf(s, "%s", noteString);
-        break;
-
-      case EDIT_DELETE:
-        sprintf(s, "CONFIRM");
-        break;
-      }      
-      break;
-    }
-
-  case MODE_VIEW:
-    break;
-
-  case MODE_STEP:
-    switch (stepMode) {
-    case STEP_RECORD:
-      sprintf(s, "1/%i", stepRecordSteps);
-      break;
-
-    case STEP_SIZE:
-      sprintf(s, "1/%i", stepRecordSteps);
-      break;
-
-    case STEP_LAYER:
-      sprintf(s, "%i", stepRecordLayer + 1);
-      break;
-    }
-    break;
-  }
-  display.setTextSize(1);
-  display.setCursor(GRID_X[2], CONTENT_HEIGHT + 6 + CHAR_height_small);
-  display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
-  const uint8_t whitespace = 8 - (sizeof(s) / sizeof(char*));
-  display.print(s);
-  display.printf("%*s", whitespace, " "); // fill spaces
-}
-
 FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextSize(1);
-  display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
+  
   char s[10] = { "\0" };
 
   if(modeFlags == 0) {
@@ -655,38 +534,63 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       }
 
       if(modeFlags & (1 << EDIT_SELECT_NOTE)) {
-        display.setCursor(GRID_X[2], CONTENT_HEIGHT + 4);
-        display.print("SELECT");
-        display.setCursor(GRID_X[2], CONTENT_HEIGHT + 6 + CHAR_height_small);
         sprintf(s, "%i: %s", selectedNote + 1, noteString.c_str());
-        display.print(s);
+        drawHeaderSetting(GRID_X[2], "SELECT", s, false, (editMode == EDIT_SELECT_NOTE));
       }
       if(modeFlags & (1 << EDIT_NOTEON)) {
-        display.setCursor(GRID_X[3], CONTENT_HEIGHT + 4);
         sprintf(s, "/ %i.%04i", p.noteOff.patternNumber, p.noteOn.patternMs);
-        display.print(s);
+        drawHeaderSetting(GRID_X[3], s, "", (editMode == EDIT_NOTEON), false);
       }
       if(modeFlags & (1 << EDIT_NOTEOFF)) {
-        display.setCursor(GRID_X[3], CONTENT_HEIGHT + 6 + CHAR_height_small);
         sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
-        display.print(s);
+        drawHeaderSetting(GRID_X[3], "", s, false, (editMode == EDIT_NOTEOFF));
       }
       if(modeFlags & (1 << EDIT_VELOCITY)) {
-        display.setCursor(GRID_X[4], CONTENT_HEIGHT + 4);
-        display.print("VELOCITY");
-        display.setCursor(GRID_X[4], CONTENT_HEIGHT + 6 + CHAR_height_small);
         sprintf(s, "%03u", p.noteOn.note_in_velocity);
-        display.print(s);
+        drawHeaderSetting(GRID_X[4], "VELOCITY", s, false, (editMode == EDIT_VELOCITY));
       }
       if(modeFlags & (1 << EDIT_NOTE)) {
-        display.setCursor(GRID_X[5], CONTENT_HEIGHT + 4);
-        display.print("NOTE");
-        display.setCursor(GRID_X[5], CONTENT_HEIGHT + 6 + CHAR_height_small);
         sprintf(s, "%s", noteString.c_str());
-        display.print(s);
+        drawHeaderSetting(GRID_X[5], "NOTE", s, false, (editMode == EDIT_NOTE));
       }
     }
+    break;
+
+  case MODE_STEP:
+    if(modeFlags & (1 << STEP_RECORD)) {
+      sprintf(s, "%02i/%02i", stepCursorPositionIndex % stepRecordSteps, stepRecordSteps);
+      drawHeaderSetting(GRID_X[2], "REC/ADV", s, false, (stepMode == STEP_RECORD));
+    }
+    if(modeFlags & (1 << STEP_SIZE)) {
+      sprintf(s, "1/%02i", stepRecordSteps);
+      drawHeaderSetting(GRID_X[3], "STEPSIZE", s, false, (stepMode == STEP_SIZE));
+
+    }
+    if(modeFlags & (1 << STEP_LAYER)) {
+      sprintf(s, "%i", stepRecordLayer + 1);
+      drawHeaderSetting(GRID_X[4], "TO LAYER", s, false, (stepMode == STEP_LAYER));
+    }
+    break;
   }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted) {
+  if(topText != 0) {
+    setIsHighlighted(topHighlighted);
+    display.setCursor(x, CONTENT_HEIGHT + 4);
+    display.print(topText);
+  }
+  if(bottomText != 0) {
+    setIsHighlighted(bottomHighlighted);
+    display.setCursor(x, CONTENT_HEIGHT + 6 + CHAR_height_small);
+    display.print(bottomText);
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::setIsHighlighted(bool isHighlighted) {
+  const uint16_t textColor = isHighlighted ? HEADER_BG_COLOR : COLOR_SYSTEXT;
+  const uint16_t bgColor = isHighlighted ? COLOR_SYSTEXT : HEADER_BG_COLOR;
+  display.setTextColor(textColor, bgColor);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
@@ -844,7 +748,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
       const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
       
       display.console = true;
-      DBG_LOG(printf("draw note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
+      //DBG_LOG(printf("draw note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
       if(w > 1) {
         if (note.isMuted) {
           display.drawRect(x, y, w, h, color);
@@ -857,7 +761,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
       }
     }
     else {
-      DBG_LOG(printf("not drawing note note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
+      //DBG_LOG(printf("not drawing note note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
     }
   }
 }
@@ -878,6 +782,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       break;
 
     case MODE_EDIT:
+      editMode = EDIT_SELECT_NOTE;
       buttonEdit->drawNow();
       if(selectedNote > -1) { // de-select note from edit
         queueDrawNote(notePairs.at(selectedNote));
@@ -887,10 +792,11 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 
     case MODE_STEP:
       // reset step cursor
+      stepMode = STEP_RECORD;
+      buttonStep->drawNow();
       drawRegionsX.push_back({ stepCursorPosition, stepCursorPosition, true }); // clear step cursor
       stepCursorPositionIndex = 0;
       stepCursorPosition = ROLL_WIDTH;
-      buttonStep->drawNow();
       break;
     }
 
@@ -913,8 +819,6 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       break;
     }
     drawFlags |= DRAW_CONTENT_AREA;
-    //ui_pianoroll->printActionName();
-    //ui_pianoroll->printActionValue();
     ui_pianoroll->drawHeader();
   }
   return modeChanged;
