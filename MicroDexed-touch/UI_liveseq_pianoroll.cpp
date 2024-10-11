@@ -394,16 +394,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           const uint16_t max = isNoteOn ? noteOffTime : data.numberOfBars * data.patternLengthMs;
           if (hasConstrainedChanged(time, 10 * diff, min, max)) {
             if (isNoteOn) {
-              // editing noteOn shifts whole note, renders better...
-              const uint32_t duration = noteOffTime - noteOnTime;
               setEventTime(on, time);
-              setEventTime(off, time + duration);
               headerFlags |= (1 << EDIT_NOTEON); // also update off time
             }
             else {
               setEventTime(off, time);
+              headerFlags |= (1 << EDIT_NOTEOFF); // draw noteOff in both cases
             }
-            headerFlags |= (1 << EDIT_NOTEOFF); // draw noteOff in both cases
+            
             liveSeq.requestSortEvents(); // re-sort events as note time changed
 
             const uint16_t minTime = std::min(noteOnTime, getEventTime(on));
