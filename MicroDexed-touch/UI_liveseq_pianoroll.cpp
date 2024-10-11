@@ -658,7 +658,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
         const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
         display.console = true;
 
-        //DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
+        DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
         const uint16_t width = u.toX - u.fromX;
         const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
         if(width > 1) {
@@ -707,7 +707,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   singleNoteDraw.insert(note.noteOn.note_in);
   DBG_LOG(printf("queue note draw: %i\n", note.noteOn.note_in));
   SubUpdateX coords;
-  coords.fromX = ROLL_WIDTH + round(getEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix;
+  coords.fromX = ROLL_WIDTH + round((getEventTime(note.noteOn) - (view.startBar * data.patternLengthMs)) * view.msToPix);
   coords.toX = coords.fromX + round((getEventTime(note.noteOff) - getEventTime(note.noteOn)) * view.msToPix);
   coords.fullHeight = false;
   drawRegionsX.push_back(coords);
@@ -716,17 +716,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   if (notePairs.size()) {
-    for (size_t index = 0; index < notePairs.size(); index++) {
-      const LiveSequencer::NotePair note = notePairs.at(index);
+    int16_t noteIndex = 0;
+    for (LiveSequencer::NotePair &note : notePairs) {
       const bool isVisibleX = note.noteOff.patternNumber >= view.startBar &&
                               note.noteOn.patternNumber <= view.startBar + view.numBars;
       const bool isVisibleY = note.noteOn.note_in >= view.lowestNote &&
                               note.noteOn.note_in < view.highestNote;
       
       if (isVisibleX && isVisibleY) {
-        const bool isSelected = (index == selectedNote);
-        drawNote(note, isSelected);
+        drawNote(note, (noteIndex == selectedNote));
       }
+      noteIndex++;
     }
   }
   else {
@@ -761,7 +761,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
       const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
       
       display.console = true;
-      //DBG_LOG(printf("draw note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
+      DBG_LOG(printf("draw note %i: %i-%i, selected: %i\n", note.noteOn.note_in, x, x + w, isSelected));
       if(w > 1) {
         if (note.isMuted) {
           display.drawRect(x, y, w, h, color);
