@@ -639,7 +639,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
   char s[10] = { "\0" };
 
-  const uint16_t drawFlags = (modeFlags == 0) ? 0xFFFF : modeFlags;
+  if(modeFlags == 0) {
+    // draw all
+    modeFlags = 0xFFFF;
+    display.fillRect(GRID_X[2], CONTENT_HEIGHT + LINE_HEIGHT, DISPLAY_WIDTH - GRID_X[2], HEADER_HEIGHT, HEADER_BG_COLOR);
+  }
 
   switch (mode) {
   case MODE_EDIT:
@@ -650,31 +654,31 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
         noteString.append(" ");
       }
 
-      if(drawFlags & (1 << EDIT_SELECT_NOTE)) {
+      if(modeFlags & (1 << EDIT_SELECT_NOTE)) {
         display.setCursor(GRID_X[2], CONTENT_HEIGHT + 4);
         display.print("SELECT");
         display.setCursor(GRID_X[2], CONTENT_HEIGHT + 6 + CHAR_height_small);
         sprintf(s, "%i: %s", selectedNote + 1, noteString.c_str());
         display.print(s);
       }
-      if(drawFlags & (1 << EDIT_NOTEON)) {
+      if(modeFlags & (1 << EDIT_NOTEON)) {
         display.setCursor(GRID_X[3], CONTENT_HEIGHT + 4);
-        sprintf(s, "%i:%4ims", p.noteOff.patternNumber, p.noteOn.patternMs);
+        sprintf(s, "/ %i.%04i", p.noteOff.patternNumber, p.noteOn.patternMs);
         display.print(s);
       }
-      if(drawFlags & (1 << EDIT_NOTEOFF)) {
+      if(modeFlags & (1 << EDIT_NOTEOFF)) {
         display.setCursor(GRID_X[3], CONTENT_HEIGHT + 6 + CHAR_height_small);
-        sprintf(s, "%i:%4ims", p.noteOff.patternNumber, p.noteOff.patternMs);
+        sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
         display.print(s);
       }
-      if(drawFlags & (1 << EDIT_VELOCITY)) {
+      if(modeFlags & (1 << EDIT_VELOCITY)) {
         display.setCursor(GRID_X[4], CONTENT_HEIGHT + 4);
         display.print("VELOCITY");
         display.setCursor(GRID_X[4], CONTENT_HEIGHT + 6 + CHAR_height_small);
         sprintf(s, "%03u", p.noteOn.note_in_velocity);
         display.print(s);
       }
-      if(drawFlags & (1 << EDIT_NOTE)) {
+      if(modeFlags & (1 << EDIT_NOTE)) {
         display.setCursor(GRID_X[5], CONTENT_HEIGHT + 4);
         display.print("NOTE");
         display.setCursor(GRID_X[5], CONTENT_HEIGHT + 6 + CHAR_height_small);
@@ -834,7 +838,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
 
   for(auto &u : drawRegionsX) {
-    if (u.fullHeight || singleNoteDraw.empty() || foundSingleNote) {
+    const bool isInsideX = (x <= u.toX) && ((x + w) >= u.fromX); // FIXME: selected 0 with noteOn far left does not highlight
+    const bool isInsideY = u.fullHeight || singleNoteDraw.empty() || foundSingleNote;
+    if (isInsideX && isInsideY) {
       const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
       
       display.console = true;
@@ -849,6 +855,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
       else {
         display.drawLine(x, y, x, y + h, color);
       }
+    }
+    else {
+      DBG_LOG(printf("not drawing note note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
     }
   }
 }
