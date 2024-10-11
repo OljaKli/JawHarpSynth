@@ -84,15 +84,13 @@ private:
     DRAW_CONTENT_FULL = 1 << 7 // force full redraw
   };
   uint16_t drawFlags = 0;
-  std::set<uint8_t> singleNoteDraw;
 
   struct SubUpdateX {
     uint16_t fromX;
     uint16_t toX;
-    bool fullHeight;
+    uint8_t note; // 255 = all
   };
   std::vector<SubUpdateX> drawRegionsX;
-  
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
   void initGUI(void);
@@ -109,7 +107,6 @@ private:
   void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
   bool isSettingActivated = false;
   void toggleSettingActivated(void);
-
 
   void drawCursor(void);
   void drawStepCursor(void);
