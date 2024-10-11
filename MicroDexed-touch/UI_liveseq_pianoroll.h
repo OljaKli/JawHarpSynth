@@ -12,7 +12,6 @@
 
 void UI_LiveSeq_Graphic(uint8_t param);
 
-
 class UI_LiveSeq_PianoRoll {
 public:
   UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
