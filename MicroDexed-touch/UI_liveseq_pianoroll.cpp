@@ -783,6 +783,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
   }
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) {
+  singleNoteDraw.insert(note.noteOn.note_in);
+  DBG_LOG(printf("queue note draw: %i\n", note.noteOn.note_in));
+  SubUpdateX coords;
+  coords.fromX = ROLL_WIDTH + round(getEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix;
+  coords.toX = coords.fromX + round((getEventTime(note.noteOff) - getEventTime(note.noteOn)) * view.msToPix);
+  coords.fullHeight = false;
+  drawRegionsX.push_back(coords);
+  drawFlags |= DRAW_CONTENT_AREA;
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   if (notePairs.size()) {
     uint16_t index = 0;
@@ -791,8 +802,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
                               note.noteOn.patternNumber <= view.startBar + view.numBars;
       const bool isVisibleY = note.noteOn.note_in >= view.lowestNote &&
                               note.noteOn.note_in < view.highestNote;
-      bool isSelected = (index++ == selectedNote);
       if (isVisibleX && isVisibleY) {
+        const bool isSelected = (index++ == selectedNote);
         drawNote(note, isSelected);
       }
     }
@@ -808,19 +819,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   }
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) {
-  singleNoteDraw.insert(note.noteOn.note_in);
-  DBG_LOG(printf("queue note draw: %i\n", note.noteOn.note_in));
-  SubUpdateX coords;
-  coords.fromX = ROLL_WIDTH + round(getEventTime(note.noteOn) - view.startBar * data.patternLengthMs) * view.msToPix;
-  coords.toX = coords.fromX + round((getEventTime(note.noteOff) - getEventTime(note.noteOn)) * view.msToPix);
-  coords.fullHeight = false;
-  drawRegionsX.push_back(coords);
-  drawFlags |= DRAW_CONTENT_AREA;
-}
-
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) {
-  const bool drawSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
+  const bool foundSingleNote = singleNoteDraw.find(note.noteOn.note_in) != singleNoteDraw.end();
   const uint32_t barStartTime = view.startBar * data.patternLengthMs;
   int16_t timeOn = (getEventTime(note.noteOn) - barStartTime);
   timeOn = std::max(timeOn, int16_t(0)); // handle noteOn not visible here
@@ -831,29 +831,23 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   timeOff = std::min(timeOff, view.numBars * data.patternLengthMs); // handle noteOff not visible here
   uint16_t w = round((timeOff - timeOn) * view.msToPix);
 
-  //DBG_LOG(printf("draw note %i\n", note.noteOn.note_in));
-  DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
+  //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
 
   for(auto &u : drawRegionsX) {
-    if (u.fullHeight || singleNoteDraw.empty() || drawSingleNote) {
-
-      const bool isOutside = (x > u.toX) || ((x + w) < u.fromX);
-
-      if(isOutside == false) { // 
-        const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
-
-        display.console = true;
-        DBG_LOG(printf("draw note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
-        if(w > 1) {
-          if (note.isMuted) {
-            display.drawRect(x, y, w, h, color);
-          } else {
-            display.fillRect(x, y, w, h, color);
-          }
+    if (u.fullHeight || singleNoteDraw.empty() || foundSingleNote) {
+      const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
+      
+      display.console = true;
+      DBG_LOG(printf("draw note %i: %i-%i\n", note.noteOn.note_in, x, x + w));
+      if(w > 1) {
+        if (note.isMuted) {
+          display.drawRect(x, y, w, h, color);
+        } else {
+          display.fillRect(x, y, w, h, color);
         }
-        else {
-          display.drawLine(x, y, x, y + h, color);
-        }
+      }
+      else {
+        display.drawLine(x, y, x, y + h, color);
       }
     }
   }
