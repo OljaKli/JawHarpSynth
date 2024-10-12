@@ -381,6 +381,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         }
         break;
 
+      case EDIT_LAYER:
+        if(selectedNote > -1) {
+          int8_t layer = notePairs.at(selectedNote).noteOn.layer;
+          if (hasConstrainedChanged(layer, diff, 0, data.trackSettings[data.activeTrack].layerCount -1)) {
+            notePairs.at(selectedNote).noteOn.layer = layer;
+            notePairs.at(selectedNote).noteOff.layer = layer;
+            headerFlags |= (1 << EDIT_LAYER);
+            queueDrawNote(notePairs.at(selectedNote));
+          }
+        }
+        break;
+
       case EDIT_NOTEON:
       case EDIT_NOTEOFF:
         if (selectedNote > -1) {
@@ -554,24 +566,28 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       }
 
       if(modeFlags & (1 << EDIT_SELECT_NOTE)) {
-        sprintf(s, "%i: %s", selectedNote + 1, noteString.c_str());
-        drawHeaderSetting(GRID_X[2], "SELECT", s, false, (editMode == EDIT_SELECT_NOTE));
+        sprintf(s, "%03i", selectedNote + 1);
+        drawHeaderSetting(GRID_X[2], "SEL", s, false, (editMode == EDIT_SELECT_NOTE));
+      }
+      if(modeFlags & (1 << EDIT_LAYER)) {
+        sprintf(s, "%i", p.noteOn.layer + 1);
+        drawHeaderSetting(GRID_X[2] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
       }
       if(modeFlags & (1 << EDIT_NOTEON)) {
-        sprintf(s, "/ %i.%04i", p.noteOff.patternNumber, p.noteOn.patternMs);
-        drawHeaderSetting(GRID_X[3], s, "", (editMode == EDIT_NOTEON), false);
+        sprintf(s, "%i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+        drawHeaderSetting(GRID_X[3], "ON", s, false, (editMode == EDIT_NOTEON));
       }
       if(modeFlags & (1 << EDIT_NOTEOFF)) {
-        sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
-        drawHeaderSetting(GRID_X[3], "", s, false, (editMode == EDIT_NOTEOFF));
+        sprintf(s, "%i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
+        drawHeaderSetting(GRID_X[4], "OFF", s, false, (editMode == EDIT_NOTEOFF));
       }
       if(modeFlags & (1 << EDIT_VELOCITY)) {
         sprintf(s, "%03u", p.noteOn.note_in_velocity);
-        drawHeaderSetting(GRID_X[4], "VELOCITY", s, false, (editMode == EDIT_VELOCITY));
+        drawHeaderSetting(GRID_X[5], "VEL", s, false, (editMode == EDIT_VELOCITY));
       }
       if(modeFlags & (1 << EDIT_NOTE)) {
         sprintf(s, "%s", noteString.c_str());
-        drawHeaderSetting(GRID_X[5], "NOTE", s, false, (editMode == EDIT_NOTE));
+        drawHeaderSetting(GRID_X[5] + 25, "NOTE", s, false, (editMode == EDIT_NOTE));
       }
     }
     break;
@@ -939,6 +955,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         ui_pianoroll->reloadNotes(view.startBar, view.numBars);
         drawFlags |= DRAW_CONTENT_FULL;
         editMode = EDIT_SELECT_NOTE; // after delete, switch back to select mode
+        ui_pianoroll->drawHeader(1 << EDIT_SELECT_NOTE);
       }
     }
     b->drawNow();

@@ -32,6 +32,7 @@ private:
 
   enum EditMode {
     EDIT_SELECT_NOTE,
+    EDIT_LAYER,
     EDIT_NOTEON,
     EDIT_NOTEOFF,
     EDIT_VELOCITY,
