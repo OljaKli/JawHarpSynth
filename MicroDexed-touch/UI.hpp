@@ -516,11 +516,7 @@ enum
   BLOCKBAR,
   METERBAR
 };
-enum
-{
-  ENC_R,
-  ENC_L
-};
+
 enum
 {
   MENU_VOICE_POOL,

@@ -4,9 +4,11 @@
 #include "ILI9341_t3n.h"
 #include "LCDMenuLib2.h"
 #include "ui_livesequencer.h"
+#include "MD_REncoder.h"
 
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
+extern MD_REncoder ENCODER[NUM_ENCODER];
 
 UI_LiveSeq_PianoRoll* ui_pianoroll;
 
@@ -404,7 +406,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           uint16_t time = isNoteOn ? noteOnTime : noteOffTime;
           const uint16_t min = isNoteOn ? 0 : noteOnTime;
           const uint16_t max = isNoteOn ? noteOffTime : data.numberOfBars * data.patternLengthMs;
-          if (hasConstrainedChanged(time, 10 * diff, min, max)) {
+          if (hasConstrainedChanged(time, ENCODER[ENC_R].speed() * diff, min, max)) {
             if (isNoteOn) {
               setEventTime(on, time);
               headerFlags |= (1 << EDIT_NOTEON); // also update off time
@@ -432,7 +434,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         if (selectedNote > -1) {
           LiveSequencer::MidiEvent &e = notePairs.at(selectedNote).noteOn;
           int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
-          if (hasConstrainedChanged(velo, diff, 0, 127)) {
+          if (hasConstrainedChanged(velo, ENCODER[ENC_R].speed() * diff, 0, 127)) {
             e.note_in_velocity = velo;
           }
         }
