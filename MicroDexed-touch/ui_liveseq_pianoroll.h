@@ -146,6 +146,8 @@ private:
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
 
+  EditableValueVector<uint8_t> *recordSteps;
+
   TouchButton *buttonPlay;
   TouchButton *buttonInst;
   TouchButton *buttonView;
@@ -163,7 +165,7 @@ private:
 
   static constexpr uint8_t STEPS_MAX = 32;
   int8_t stepRecordLayer = 0;
-  int8_t stepRecordSteps = 16;
+  uint8_t stepRecordSteps = 16;
   float stepRecordStepSizeMs = 0.0f;
   uint16_t stepCursorPositionIndex = 0;
   uint16_t stepCursorPosition = ROLL_WIDTH;

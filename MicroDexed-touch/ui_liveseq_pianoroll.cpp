@@ -12,7 +12,7 @@ extern MD_REncoder ENCODER[NUM_ENCODER];
 
 UI_LiveSeq_PianoRoll* ui_pianoroll;
 
-UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d) :
+FLASHMEM UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d) :
   liveSeq(sequencer),
   data(d),
   isRunningHere(d.isRunning) {
@@ -22,8 +22,19 @@ UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequenc
   layerColors.push_back(COLOR_DRUMS);
   layerColors.push_back(COLOR_PITCHSMP);
   initGUI();
+
+  // initial view settings
   view.cursorPos = ROLL_WIDTH;
   view.cursorPosPrev = ROLL_WIDTH;
+  view.startBar = 0;
+  view.startOctave = 0;
+  view.numOctaves = 5;
+  view.numNotes = view.numOctaves * 12;
+  view.noteHeight = CONTENT_HEIGHT / float(view.numNotes);
+  view.lowestNote = 24 + view.startOctave * 12;
+  view.highestNote = (view.lowestNote + view.numNotes);
+
+  recordSteps = new EditableValueVector<uint8_t>(stepRecordSteps, { 1, 2, 4, 6, 8, 12, 16, 24, 32, 48, 64 }, 16, [](auto *v){});
 }
 
 FLASHMEM void UI_func_liveseq_graphic(uint8_t param) {  // for Livesequencer
@@ -101,21 +112,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     data.activeTrack = param;
-    stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
 
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
 
-    // initial view settings
-    view.startBar = 0;
     view.numBars = data.numberOfBars;
-    view.startOctave = 0;
-    view.numOctaves = 5;
     view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
-    view.numNotes = view.numOctaves * 12;
-    view.noteHeight = CONTENT_HEIGHT / float(view.numNotes);
-    view.lowestNote = 24 + view.startOctave * 12;
-    view.highestNote = (view.lowestNote + view.numNotes);
     reloadNotes(view.startBar, view.numBars, true);
    
     // setup function
@@ -494,11 +496,19 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         step(diff);
         break;
 
-      case STEP_SIZE:
-        if (hasConstrainedChanged(stepRecordSteps, diff, 1, 32)) {
-          stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
-          headerFlags |= (1 << STEP_SIZE);
-          DBG_LOG(printf("step size ms: %i\n", stepRecordStepSizeMs));
+      case STEP_SIZE: {
+          bool changed = false;
+          if (diff > 0) {
+            changed = recordSteps->next();
+          }
+          if (diff < 0) {
+            changed = recordSteps->previous();
+          }
+          if (changed) {
+            stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
+            headerFlags |= (1 << STEP_SIZE);
+            DBG_LOG(printf("steps: %i, size ms: %i\n", stepRecordSteps, int(stepRecordStepSizeMs)));
+          }
         }
         break;
 
@@ -620,7 +630,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
 
   case MODE_STEP:
     if(modeFlags & (1 << STEP_RECORD)) {
-      sprintf(s, "%02i/%02i", stepCursorPositionIndex % stepRecordSteps, stepRecordSteps);
+      const uint8_t pattern = (stepCursorPositionIndex / stepRecordSteps);
+      sprintf(s, "P%i %02i/%02i", pattern, stepCursorPositionIndex % stepRecordSteps, stepRecordSteps);
       drawHeaderSetting(GRID_X[2], "REC/ADV", s, false, (stepMode == STEP_RECORD));
     }
     if(modeFlags & (1 << STEP_SIZE)) {
@@ -883,6 +894,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       break;
 
     case MODE_STEP:
+      stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
       drawFlags |= DRAW_STEP_CURSOR;
       break;
     }
