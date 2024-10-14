@@ -4,7 +4,7 @@
 #include "sequencer.h"
 #include "livesequencer.h"
 #include "touch.h"
-#include "UI_liveseq_pianoroll.h"
+#include "ui_liveseq_pianoroll.h"
 
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
@@ -79,7 +79,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
         instance->onTrackButtonPressed(trackOffset + trackIndex);
       },
       [ this, trackIndex ] (auto *b) { // longPressHandler
-        openScreen(UI_LiveSeq_Graphic, (trackOffset + trackIndex));
+        openScreen(UI_func_liveseq_graphic, (trackOffset + trackIndex));
       }));
   }
 

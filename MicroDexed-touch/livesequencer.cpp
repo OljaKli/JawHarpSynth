@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "TeensyTimerTool.h"
 #include "ui_livesequencer.h"
-#include "UI_liveseq_pianoroll.h"
+#include "ui_liveseq_pianoroll.h"
 #include <map>
 
 extern sequencer_t seq;
