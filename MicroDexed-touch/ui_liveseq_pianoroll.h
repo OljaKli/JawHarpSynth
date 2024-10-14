@@ -102,6 +102,7 @@ private:
   void queueDrawNote(LiveSequencer::NotePair note);
   void queueDrawNote(UpdateRange coords);
   uint16_t getNoteCoord(uint32_t time) const;
+  uint16_t getRelativeNoteTime(uint32_t time) const;
   void deleteSelectedNote(void);
 
   void drawHeader(uint16_t modeFlags = 0);

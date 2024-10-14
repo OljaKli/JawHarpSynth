@@ -775,12 +775,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(UpdateRange coords) {
 }
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time) const {
-  int32_t timeAbs = time - (view.startBar * data.patternLengthMs);
-  const int32_t maxTime = (view.startBar + view.numBars) * data.patternLengthMs;
-  timeAbs = std::max(int32_t(0), timeAbs); // clamp noteOn offscreen left
-  timeAbs = std::min(timeAbs, maxTime);    // clamp noteOff offscreen right
+  const uint16_t timeAbs = getRelativeNoteTime(time);
   uint16_t coord = ROLL_WIDTH + round(timeAbs * view.msToPix);
   return coord;
+}
+
+FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const {
+  int32_t timeRel = time - (view.startBar * data.patternLengthMs);
+  const int32_t maxTime = (view.startBar + view.numBars) * data.patternLengthMs;
+  timeRel = std::max(int32_t(0), timeRel); // clamp noteOn offscreen left
+  timeRel = std::min(timeRel, maxTime);    // clamp noteOff offscreen right
+  return timeRel;
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
@@ -810,12 +815,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) const {
-  const uint16_t x = getNoteCoord(getEventTime(note.noteOn));
-  const uint16_t xTo = getNoteCoord(getEventTime(note.noteOff));
+  const uint16_t timeOn = getEventTime(note.noteOn);
+  const uint16_t timeOff = getEventTime(note.noteOff);
+  const uint16_t x = getNoteCoord(timeOn);
+  const uint16_t w = (getRelativeNoteTime(timeOff) - getRelativeNoteTime(timeOn)) * view.msToPix;
   const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
   const uint16_t h = view.noteHeight;
-  uint16_t w = xTo - x; // rounds less nice than before but is much simpler
-  // uint16_t w = round((getEventTime(note.noteOff) - getEventTime(note.noteOn)) * view.msToPix);
   //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
 
   for (auto &u : drawRegionsX) {
