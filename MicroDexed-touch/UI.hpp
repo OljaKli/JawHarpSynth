@@ -12730,7 +12730,7 @@ FLASHMEM void print_keyboard_livesequencer(int ypos, uint8_t octave)
 
 FLASHMEM void liveseq_get_lowest_note()
 {
-  std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(temp_int);
+  std::vector<LiveSequencer::NotePair> notePairs;// = liveSeq.getNotePairsFromTrack(temp_int);
 
   // find lowest note
   liveseq_pianoroll_lowest_note = 254;
@@ -12765,7 +12765,7 @@ FLASHMEM uint8_t get_octave(uint8_t in)
 
 FLASHMEM  void liveseq_pianoroll_draw_graphics()
 {
-  std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(temp_int);
+  std::vector<LiveSequencer::NotePair> notePairs;// = liveSeq.getNotePairsFromTrack(temp_int);
 
   pat_len = (DISPLAY_WIDTH - xoff) / 4 * 33 / xscaler;
 
@@ -12946,7 +12946,7 @@ bool liveseq_note_copy_state = false;
 
 FLASHMEM  void buttons_liveseq_pianoroll()
 {
-  std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(temp_int);
+  std::vector<LiveSequencer::NotePair> notePairs;// = liveSeq.getNotePairsFromTrack(temp_int);
 
   char buf[5] = { 0, 0, 0, 0,0 };
 
@@ -13088,7 +13088,7 @@ FLASHMEM  void buttons_liveseq_pianoroll()
 
 FLASHMEM void UI_func_liveseq_pianoroll(uint8_t param)
 {  // for Livesequencer
-  std::vector<LiveSequencer::NotePair> notePairs = liveSeq.getNotePairsFromTrack(param);
+  std::vector<LiveSequencer::NotePair> notePairs;// = liveSeq.getNotePairsFromTrack(param);
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_liveseq_pianoroll);

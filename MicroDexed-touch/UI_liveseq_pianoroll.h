@@ -88,7 +88,7 @@ private:
   struct SubUpdateX {
     uint16_t fromX;
     uint16_t toX;
-    uint8_t note; // 255 = all
+    std::set<uint8_t> notes; // empty = all
   };
   std::vector<SubUpdateX> drawRegionsX;
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
@@ -100,8 +100,9 @@ private:
   bool hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max);
 
   void queueDrawNote(LiveSequencer::NotePair note);
-  void queueDrawNote(uint8_t note, SubUpdateX coords);
+  void queueDrawNote(SubUpdateX coords);
   uint16_t getNoteCoord(uint32_t time) const;
+  void deleteSelectedNote(void);
 
   void drawHeader(uint16_t modeFlags = 0);
   void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
@@ -126,7 +127,7 @@ private:
 
   std::string getNoteString(uint8_t note);
 
-  void reloadNotes(uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
+  void reloadNotes(uint8_t patternFrom, uint8_t patternTo, bool autoAdaptView = false);
   int8_t selectedNote = -1; // index of notePairs or -1
 
   bool step(int8_t diff);
