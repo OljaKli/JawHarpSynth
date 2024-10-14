@@ -85,12 +85,12 @@ private:
   };
   uint16_t drawFlags = 0;
 
-  struct SubUpdateX {
+  struct UpdateRange {
     uint16_t fromX;
     uint16_t toX;
     std::set<uint8_t> notes; // empty = all
   };
-  std::vector<SubUpdateX> drawRegionsX;
+  std::vector<UpdateRange> drawRegionsX;
   uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
   void initGUI(void);
@@ -100,7 +100,7 @@ private:
   bool hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max);
 
   void queueDrawNote(LiveSequencer::NotePair note);
-  void queueDrawNote(SubUpdateX coords);
+  void queueDrawNote(UpdateRange coords);
   uint16_t getNoteCoord(uint32_t time) const;
   void deleteSelectedNote(void);
 
