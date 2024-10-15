@@ -1001,19 +1001,19 @@ FLASHMEM void setup()
   touch_ic_found = true;
 #endif
 
-// #if defined GENERIC_DISPLAY
-//   delay(10);  // have seen some boot issues with old display without this delay 2024/06/19 
-// #endif
-// #if defined(PSRAM)
-//   delay(10); // FIXME: this somehow workarounds capacitive build with PSRAM not booting reliably
-//   // 2024/4/14
-//   // However it is reported that it is not necessary with 16MB psram and even making boot problems
-//   // after testing with my only mdt with 8MB psram and capacitive touch, the delay makes boot problems after COLD BOOT
-//   // will disable delay, until any non-working combination is reported
-//   // 2024/8/16 after being stuck in bootloops for hours, i put back in the delay and it just booted up with psram
-// #endif
+  // #if defined GENERIC_DISPLAY
+  //   delay(10);  // have seen some boot issues with old display without this delay 2024/06/19 
+  // #endif
+  // #if defined(PSRAM)
+  //   delay(10); // FIXME: this somehow workarounds capacitive build with PSRAM not booting reliably
+  //   // 2024/4/14
+  //   // However it is reported that it is not necessary with 16MB psram and even making boot problems
+  //   // after testing with my only mdt with 8MB psram and capacitive touch, the delay makes boot problems after COLD BOOT
+  //   // will disable delay, until any non-working combination is reported
+  //   // 2024/8/16 after being stuck in bootloops for hours, i put back in the delay and it just booted up with psram
+  // #endif
 
-delay(10); //2024/10/14  had another bootloop issue with 2.8" cap. screen, inserting delay fixed it. Now put it in for every config.
+  delay(10); //2024/10/14  had another bootloop issue with 2.8" cap. screen, inserting delay fixed it. Now put it in for every config.
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))
@@ -2503,8 +2503,8 @@ FLASHMEM void playWAVFile(const char* filename)
 }
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
-  sample_envelope[instance_id]->attack(drum_config[sample].env_attack*20);
-  sample_envelope[instance_id + NUM_DRUMS]->attack(drum_config[sample].env_attack*20);
+  sample_envelope[instance_id]->attack(drum_config[sample].env_attack * 20);
+  sample_envelope[instance_id + NUM_DRUMS]->attack(drum_config[sample].env_attack * 20);
 
   sample_envelope[instance_id]->hold(drum_config[sample].env_hold * 8);
   sample_envelope[instance_id + NUM_DRUMS]->hold(drum_config[sample].env_hold * 8);
@@ -2794,477 +2794,479 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
-
-  if ((device == 4 || braids_osc.midi_channel == MIDI_CHANNEL_OMNI || braids_osc.midi_channel == inChannel) && inNumber < 119)
+  if (inChannel != MIDI_CHANNEL_OFF)
   {
-    braids_slot++;
-    if (braids_slot > NUM_BRAIDS - 1)
-      braids_slot = 0;
+    if ((device == 4 || braids_osc.midi_channel == MIDI_CHANNEL_OMNI || braids_osc.midi_channel == inChannel) && inNumber < 119)
+    {
+      braids_slot++;
+      if (braids_slot > NUM_BRAIDS - 1)
+        braids_slot = 0;
 
-    if (braids_osc.filter_mode == 0)
-      braids_mixer_filter[braids_slot]->gain(3, volume_transform(mapfloat(inVelocity, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.5, 1.2)));
-    else
-      braids_mixer_filter[braids_slot]->gain(braids_osc.filter_mode - 1, volume_transform(mapfloat(inVelocity, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.5, 1.2)));
+      if (braids_osc.filter_mode == 0)
+        braids_mixer_filter[braids_slot]->gain(3, volume_transform(mapfloat(inVelocity, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.5, 1.2)));
+      else
+        braids_mixer_filter[braids_slot]->gain(braids_osc.filter_mode - 1, volume_transform(mapfloat(inVelocity, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.5, 1.2)));
 
-    braids_filter_state[braids_slot] = braids_osc.filter_freq_from;
+      braids_filter_state[braids_slot] = braids_osc.filter_freq_from;
 
-    braids_lfo_direction[braids_slot] = false;
-    braids_filter_lfo_count[braids_slot] = 0;
+      braids_lfo_direction[braids_slot] = false;
+      braids_filter_lfo_count[braids_slot] = 0;
 
-    braids_filter[braids_slot]->setLowpass(0, braids_osc.filter_freq_from, braids_osc.filter_resonance / 10);
+      braids_filter[braids_slot]->setLowpass(0, braids_osc.filter_freq_from, braids_osc.filter_resonance / 10);
 
-    synthBraids[braids_slot]->set_braids_pitch((inNumber + braids_osc.coarse) << 7);
-    braids_envelope[braids_slot]->noteOn();
-    braids_osc.note_buffer[braids_slot] = inNumber;
-  }
+      synthBraids[braids_slot]->set_braids_pitch((inNumber + braids_osc.coarse) << 7);
+      braids_envelope[braids_slot]->noteOn();
+      braids_osc.note_buffer[braids_slot] = inNumber;
+    }
 
 #ifdef MIDI_DEVICE_USB_HOST
-  if (device == 1)
-    midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
+    if (device == 1)
+      midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
 #endif
 
 #ifdef MIDI_DEVICE_DIN
-  if (device == 2)
-  {
-    midi_serial.sendNoteOn(inNumber, inVelocity, inChannel);
-    //    #ifdef DEBUG
-    //        LOG.print(F(" DIN OUT Channel:"));
-    //        LOG.print(inChannel);
-    //        LOG.println(F);
-    //        LOG.print(F(" DIN inNumber:"));
-    //        LOG.print(inNumber);
-    //        LOG.println();
-    //        LOG.print(F(" DIN inVelocity:"));
-    //        LOG.print(inVelocity);
-    //        LOG.println();
-    //    #endif
-  }
-#endif
-
-  if (device == 3) //internal Micro USB
-    usbMIDI.sendNoteOn(inNumber, inVelocity, inChannel);
-
-  if (device == 0)
-  {
-
-    // check custom midi UI KEY mapping
-    if (seq.midi_learn_active == false)
+    if (device == 2)
     {
-      for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
-      {
-        if (inNumber == custom_midi_map[c].in && custom_midi_map[c].type == 3)
-        {
-          remote_MIDI_CC = custom_midi_map[c].out;
-          remote_MIDI_CC_value = 127;
-          break;
-        }
-      }
-    }
-
-#if defined(COMPILE_FOR_FLASH) || defined COMPILE_FOR_PSRAM
-    // Multisamples
-    for (uint8_t instance_id = 0; instance_id < NUM_MULTISAMPLES; instance_id++)
-    {
-      if (msp[instance_id].midi_channel == MIDI_CHANNEL_OMNI || msp[instance_id].midi_channel == inChannel)
-      {
-        Multi_Sample_Player(inNumber, inVelocity, instance_id);
-      }
+      midi_serial.sendNoteOn(inNumber, inVelocity, inChannel);
+      //    #ifdef DEBUG
+      //        LOG.print(F(" DIN OUT Channel:"));
+      //        LOG.print(inChannel);
+      //        LOG.println(F);
+      //        LOG.print(F(" DIN inNumber:"));
+      //        LOG.print(inNumber);
+      //        LOG.println();
+      //        LOG.print(F(" DIN inVelocity:"));
+      //        LOG.print(inVelocity);
+      //        LOG.println();
+      //    #endif
     }
 #endif
 
-    if (seq.midi_learn_active && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings))
-      learn_key(inChannel, inNumber);
+    if (device == 3) //internal Micro USB
+      usbMIDI.sendNoteOn(inNumber, inVelocity, inChannel);
 
-    // if (activesample < 6 && seq.running == false && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) // live play pitched sample
-    // {
-    //   if (drum_counter >= NUM_DRUMS)
-    //     drum_counter = 0;
-    //   uint8_t slot = drum_get_slot(drum_config[activesample].drum_class);
-    //   float pan = mapfloat(drum_config[activesample].pan, -1.0, 1.0, 0.0, 1.0);
-    //   drum_mixer_r.gain(slot, (1.0 - pan) * drum_config[activesample].vol_max);
-    //   drum_mixer_l.gain(slot, pan * drum_config[activesample].vol_max);
-    //   drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[activesample].reverb_send));
-    //   drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[activesample].reverb_send));
-    //   // if (drum_config[activesample].drum_data != NULL && drum_config[activesample].len > 0)
-    //   // {
-    //   //        Drum[slot]->enableInterpolation(true);
-    //   //        Drum[slot]->setPlaybackRate(  (float)pow (2, (inNumber - 72) / 12.00) * drum_config[activesample].p_offset   );
-    //   //        Drum[slot]->playRaw((int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, 1);
-    //   // }
-    // }
-
-    // Ignore the note when playing & recording the same note into the sequencer
-    if (seq.recording == false || (seq.recording && inNumber != seq.note_in))
+    if (device == 0)
     {
-      // Check for MicroDexed
-      for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
+
+      // check custom midi UI KEY mapping
+      if (seq.midi_learn_active == false)
       {
-        if (checkMidiChannelDexed(inChannel, instance_id))
-        {
-          if (inNumber >= configuration.dexed[instance_id].lowest_note && inNumber <= configuration.dexed[instance_id].highest_note)
-          {
-            if (configuration.dexed[instance_id].polyphony > 0)
-              MicroDexed[instance_id]->keydown(inNumber, uint8_t(float(configuration.dexed[instance_id].velocity_level / 127.0) * inVelocity + 0.5));
-
-            midi_voices[instance_id]++;
-
-            if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_select))
-            {
-              midi_decay_timer_dexed = 0;
-              midi_decay_dexed[instance_id] = min(inVelocity / 5, 8);
-            }
-
-            // #ifdef DEBUG
-            //                 char note_name[4];
-            //                 getNoteName(note_name, inNumber);
-            //                 LOG.print(F("Keydown "));
-            //                 LOG.print(note_name);
-            //                 LOG.print(F(" instance "));
-            //                 LOG.print(instance_id, DEC);
-            //                 LOG.print(F(" MIDI-channel "));
-            //                 LOG.print(inChannel, DEC);
-            //                 LOG.println();
-            // #endif
-            //  return;
-          }
-        }
-      }
-
-      // Check for MicroSynth
-      for (uint8_t instance_id = 0; instance_id < NUM_MICROSYNTH; instance_id++)
-      {
-        // if (microsynth[instance_id].midi_channel == MIDI_CHANNEL_OMNI || microsynth[instance_id].midi_channel == inChannel) {
-        // hanging notes when playing notes manually with omni - noteoff issue not fixed for now
-        if (microsynth[instance_id].midi_channel == inChannel)
-        {
-          if (inNumber == MIDI_C8) // is noise only, mute osc
-          {
-            microsynth_mixer_l[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
-            microsynth_mixer_r[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
-
-            microsynth_mixer_l[instance_id].gain(0, 0);
-            microsynth_mixer_r[instance_id].gain(0, 0);
-            microsynth_noise[instance_id].amplitude(0.9);
-            microsynth_envelope_noise[instance_id].noteOn();
-          }
-          else
-          {
-            if (microsynth[instance_id].trigger_noise_with_osc)
-            {
-              microsynth_noise[instance_id].amplitude(0.9);
-              microsynth_mixer_l[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
-              microsynth_mixer_r[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
-
-              microsynth_envelope_noise[instance_id].noteOn();
-              microsynth_mixer_l[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
-              microsynth_mixer_r[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
-            }
-            else
-            {
-              //  without noise
-              microsynth_mixer_l[instance_id].gain(1, 0);
-              microsynth_mixer_r[instance_id].gain(1, 0);
-              microsynth_noise[instance_id].amplitude(0.0);
-              microsynth_mixer_l[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
-              microsynth_mixer_r[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
-            }
-          }
-          if (microsynth[instance_id].wave == 4 || microsynth[instance_id].wave == 7)
-          {
-            microsynth_waveform[instance_id].pulseWidth(microsynth[instance_id].pwm_from / 2000.1);
-            microsynth[instance_id].pwm_current = microsynth[instance_id].pwm_from;
-          }
-          microsynth_filter_osc[instance_id].frequency(microsynth[instance_id].filter_osc_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_osc / 20.1)));
-          microsynth[instance_id].filter_osc_freq_current = microsynth[instance_id].filter_osc_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_osc / 20.1));
-          microsynth_filter_noise[instance_id].frequency(microsynth[instance_id].filter_noise_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_noise / 20.1)));
-          microsynth[instance_id].filter_noise_freq_current = microsynth[instance_id].filter_noise_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_noise / 20.1));
-
-          float noteFreq = tune_frequencies2_PGM[inNumber + microsynth[instance_id].coarse];
-          float tunedFreq = 0;
-          if (microsynth[instance_id].detune < 0)
-          {
-            float prevSemitoneFreq = tune_frequencies2_PGM[inNumber + microsynth[instance_id].coarse - 1];
-            tunedFreq = (noteFreq - prevSemitoneFreq) * microsynth[instance_id].detune * 0.01;
-          }
-          else
-          {
-            float nextSemitoneFreq = tune_frequencies2_PGM[inNumber + microsynth[instance_id].coarse + 1];
-            tunedFreq = (nextSemitoneFreq - noteFreq) * microsynth[instance_id].detune * 0.01;
-          }
-          microsynth_waveform[instance_id].frequency(noteFreq + tunedFreq);
-          microsynth[instance_id].osc_freq_current = noteFreq + tunedFreq;
-
-          microsynth_envelope_osc[instance_id].noteOn();
-          microsynth_delay_timer[instance_id] = 0;
-          microsynth[instance_id].lfo_fade = 0;
-          if (microsynth[instance_id].lfo_mode > 0) // If LFO in 1up or 1down
-            microsynth[instance_id].lfo_value = 0;
-          if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth))
-          {
-            midi_decay_timer_microsynth = 0;
-            midi_decay_microsynth[instance_id] = min(inVelocity / 5, 8);
-          }
-        }
-      }
-
-      // Check for Drum
-      if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI)
-      {
-        if (drum_counter >= NUM_DRUMS)
-          drum_counter = 0;
-
-        // check custom midi mapping
         for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
         {
-          if (inNumber == custom_midi_map[c].in && custom_midi_map[c].type == 1)
+          if (inNumber == custom_midi_map[c].in && custom_midi_map[c].type == 3)
           {
-            inNumber = custom_midi_map[c].out;
+            remote_MIDI_CC = custom_midi_map[c].out;
+            remote_MIDI_CC_value = 127;
             break;
           }
         }
+      }
 
-        const uint8_t d = midiNoteToSampleNote(inNumber);
+#if defined(COMPILE_FOR_FLASH) || defined COMPILE_FOR_PSRAM
+      // Multisamples
+      for (uint8_t instance_id = 0; instance_id < NUM_MULTISAMPLES; instance_id++)
+      {
+        if (msp[instance_id].midi_channel == MIDI_CHANNEL_OMNI || msp[instance_id].midi_channel == inChannel)
+        {
+          Multi_Sample_Player(inNumber, inVelocity, instance_id);
+        }
+      }
+#endif
+
+      if (seq.midi_learn_active && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings))
+        learn_key(inChannel, inNumber);
+
+      // if (activesample < 6 && seq.running == false && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) // live play pitched sample
+      // {
+      //   if (drum_counter >= NUM_DRUMS)
+      //     drum_counter = 0;
+      //   uint8_t slot = drum_get_slot(drum_config[activesample].drum_class);
+      //   float pan = mapfloat(drum_config[activesample].pan, -1.0, 1.0, 0.0, 1.0);
+      //   drum_mixer_r.gain(slot, (1.0 - pan) * drum_config[activesample].vol_max);
+      //   drum_mixer_l.gain(slot, pan * drum_config[activesample].vol_max);
+      //   drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[activesample].reverb_send));
+      //   drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[activesample].reverb_send));
+      //   // if (drum_config[activesample].drum_data != NULL && drum_config[activesample].len > 0)
+      //   // {
+      //   //        Drum[slot]->enableInterpolation(true);
+      //   //        Drum[slot]->setPlaybackRate(  (float)pow (2, (inNumber - 72) / 12.00) * drum_config[activesample].p_offset   );
+      //   //        Drum[slot]->playRaw((int16_t*)drum_config[activesample].drum_data, drum_config[activesample].len, 1);
+      //   // }
+      // }
+
+      // Ignore the note when playing & recording the same note into the sequencer
+      if (seq.recording == false || (seq.recording && inNumber != seq.note_in))
+      {
+        // Check for MicroDexed
+        for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
+        {
+          if (checkMidiChannelDexed(inChannel, instance_id))
+          {
+            if (inNumber >= configuration.dexed[instance_id].lowest_note && inNumber <= configuration.dexed[instance_id].highest_note)
+            {
+              if (configuration.dexed[instance_id].polyphony > 0)
+                MicroDexed[instance_id]->keydown(inNumber, uint8_t(float(configuration.dexed[instance_id].velocity_level / 127.0) * inVelocity + 0.5));
+
+              midi_voices[instance_id]++;
+
+              if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_select))
+              {
+                midi_decay_timer_dexed = 0;
+                midi_decay_dexed[instance_id] = min(inVelocity / 5, 8);
+              }
+
+              // #ifdef DEBUG
+              //                 char note_name[4];
+              //                 getNoteName(note_name, inNumber);
+              //                 LOG.print(F("Keydown "));
+              //                 LOG.print(note_name);
+              //                 LOG.print(F(" instance "));
+              //                 LOG.print(instance_id, DEC);
+              //                 LOG.print(F(" MIDI-channel "));
+              //                 LOG.print(inChannel, DEC);
+              //                 LOG.println();
+              // #endif
+              //  return;
+            }
+          }
+        }
+
+        // Check for MicroSynth
+        for (uint8_t instance_id = 0; instance_id < NUM_MICROSYNTH; instance_id++)
+        {
+          // if (microsynth[instance_id].midi_channel == MIDI_CHANNEL_OMNI || microsynth[instance_id].midi_channel == inChannel) {
+          // hanging notes when playing notes manually with omni - noteoff issue not fixed for now
+          if (microsynth[instance_id].midi_channel == inChannel)
+          {
+            if (inNumber == MIDI_C8) // is noise only, mute osc
+            {
+              microsynth_mixer_l[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
+              microsynth_mixer_r[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
+
+              microsynth_mixer_l[instance_id].gain(0, 0);
+              microsynth_mixer_r[instance_id].gain(0, 0);
+              microsynth_noise[instance_id].amplitude(0.9);
+              microsynth_envelope_noise[instance_id].noteOn();
+            }
+            else
+            {
+              if (microsynth[instance_id].trigger_noise_with_osc)
+              {
+                microsynth_noise[instance_id].amplitude(0.9);
+                microsynth_mixer_l[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
+                microsynth_mixer_r[instance_id].gain(1, mapfloat((microsynth[instance_id].noise_vol / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.25f));
+
+                microsynth_envelope_noise[instance_id].noteOn();
+                microsynth_mixer_l[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
+                microsynth_mixer_r[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
+              }
+              else
+              {
+                //  without noise
+                microsynth_mixer_l[instance_id].gain(1, 0);
+                microsynth_mixer_r[instance_id].gain(1, 0);
+                microsynth_noise[instance_id].amplitude(0.0);
+                microsynth_mixer_l[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
+                microsynth_mixer_r[instance_id].gain(0, mapfloat((microsynth[instance_id].sound_intensity / 127.0) * inVelocity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0f, 0.15f));
+              }
+            }
+            if (microsynth[instance_id].wave == 4 || microsynth[instance_id].wave == 7)
+            {
+              microsynth_waveform[instance_id].pulseWidth(microsynth[instance_id].pwm_from / 2000.1);
+              microsynth[instance_id].pwm_current = microsynth[instance_id].pwm_from;
+            }
+            microsynth_filter_osc[instance_id].frequency(microsynth[instance_id].filter_osc_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_osc / 20.1)));
+            microsynth[instance_id].filter_osc_freq_current = microsynth[instance_id].filter_osc_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_osc / 20.1));
+            microsynth_filter_noise[instance_id].frequency(microsynth[instance_id].filter_noise_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_noise / 20.1)));
+            microsynth[instance_id].filter_noise_freq_current = microsynth[instance_id].filter_noise_freq_from + (inVelocity * (microsynth[instance_id].vel_mod_filter_noise / 20.1));
+
+            float noteFreq = tune_frequencies2_PGM[inNumber + microsynth[instance_id].coarse];
+            float tunedFreq = 0;
+            if (microsynth[instance_id].detune < 0)
+            {
+              float prevSemitoneFreq = tune_frequencies2_PGM[inNumber + microsynth[instance_id].coarse - 1];
+              tunedFreq = (noteFreq - prevSemitoneFreq) * microsynth[instance_id].detune * 0.01;
+            }
+            else
+            {
+              float nextSemitoneFreq = tune_frequencies2_PGM[inNumber + microsynth[instance_id].coarse + 1];
+              tunedFreq = (nextSemitoneFreq - noteFreq) * microsynth[instance_id].detune * 0.01;
+            }
+            microsynth_waveform[instance_id].frequency(noteFreq + tunedFreq);
+            microsynth[instance_id].osc_freq_current = noteFreq + tunedFreq;
+
+            microsynth_envelope_osc[instance_id].noteOn();
+            microsynth_delay_timer[instance_id] = 0;
+            microsynth[instance_id].lfo_fade = 0;
+            if (microsynth[instance_id].lfo_mode > 0) // If LFO in 1up or 1down
+              microsynth[instance_id].lfo_value = 0;
+            if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth))
+            {
+              midi_decay_timer_microsynth = 0;
+              midi_decay_microsynth[instance_id] = min(inVelocity / 5, 8);
+            }
+          }
+        }
+
+        // Check for Drum
+        if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI)
+        {
+          if (drum_counter >= NUM_DRUMS)
+            drum_counter = 0;
+
+          // check custom midi mapping
+          for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
+          {
+            if (inNumber == custom_midi_map[c].in && custom_midi_map[c].type == 1)
+            {
+              inNumber = custom_midi_map[c].out;
+              break;
+            }
+          }
+
+          const uint8_t d = midiNoteToSampleNote(inNumber);
 
 #ifdef COMPILE_FOR_FLASH
-        char temp_name[26];
+          char temp_name[26];
 #endif
 
 #ifdef COMPILE_FOR_SDCARD
-        char temp_name[26];
+          char temp_name[26];
 #endif
-        uint8_t slot = drum_get_slot(drum_config[d].drum_class);
+          uint8_t slot = drum_get_slot(drum_config[d].drum_class);
 
-        if (slot != 99)
-        {
-
-          if (drum_config[d].filter_mode == 0)
+          if (slot != 99)
           {
-            Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
-          }
-          else if (drum_config[d].filter_mode == 1)
-          {
-            Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
-            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
-          }
-          else if (drum_config[d].filter_mode == 2)
-          {
-            Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
-            Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
-          }
-          else if (drum_config[d].filter_mode == 3)
-          {
-            Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
-            Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
-          }
 
-          global_delay_in_mixer[0]->gain(slot + 8, drum_config[d].delay1 / 5);
-          global_delay_in_mixer[1]->gain(slot + 8, drum_config[d].delay2 / 5);
-
-          float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
-          if (drum_config[d].numChannels == 1) //mono
-          {
-            drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-          }
-          else //stereo
-          {
-            drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-            drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-          }
-
-          drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
-          drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
-
-          if (sidechain_a_active && d == sidechain_a_sample_number)
-            sidechain_trigger_a = true;
-          if (sidechain_b_active && d == sidechain_b_sample_number)
-            sidechain_trigger_b = true;
-
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-          if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
-            (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 210 && d < 216))
-          {
-#endif
-
-
-
-            if (drum_config[d].pitch != 0.0)
+            if (drum_config[d].filter_mode == 0)
             {
-              Drum[slot]->enableInterpolation(true);
-              Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+              Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
             }
-            Drum[slot]->setLoopType(loop_type::looptype_none);
+            else if (drum_config[d].filter_mode == 1)
+            {
+              Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+            }
+            else if (drum_config[d].filter_mode == 2)
+            {
+              Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+            }
+            else if (drum_config[d].filter_mode == 3)
+            {
+              Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+            }
 
-            set_stereo_envelopes(slot, d);
-            sample_envelope[slot]->noteOn();
-            sample_envelope[slot + NUM_DRUMS]->noteOn();
+            global_delay_in_mixer[0]->gain(slot + 8, drum_config[d].delay1 / 5);
+            global_delay_in_mixer[1]->gain(slot + 8, drum_config[d].delay2 / 5);
+
+            float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
+            if (drum_config[d].numChannels == 1) //mono
+            {
+              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
+              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
+            }
+            else //stereo
+            {
+              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
+              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
+            }
+
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
+
+            if (sidechain_a_active && d == sidechain_a_sample_number)
+              sidechain_trigger_a = true;
+            if (sidechain_b_active && d == sidechain_b_sample_number)
+              sidechain_trigger_b = true;
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-            Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+            if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
+              (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 210 && d < 216))
+            {
+#endif
+
+
+
+              if (drum_config[d].pitch != 0.0)
+              {
+                Drum[slot]->enableInterpolation(true);
+                Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+              }
+              Drum[slot]->setLoopType(loop_type::looptype_none);
+
+              set_stereo_envelopes(slot, d);
+              sample_envelope[slot]->noteOn();
+              sample_envelope[slot + NUM_DRUMS]->noteOn();
+
+#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+              Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
 #endif
 
 #if defined(COMPILE_FOR_FLASH)
-            snprintf_P(temp_name, sizeof(temp_name), PSTR("%s.wav"), drum_config[d].filename);
-            Drum[slot]->playWav(temp_name);
-            // Drum[slot]->playWav("DMpop.wav");  //Test
+              snprintf_P(temp_name, sizeof(temp_name), PSTR("%s.wav"), drum_config[d].filename);
+              Drum[slot]->playWav(temp_name);
+              // Drum[slot]->playWav("DMpop.wav");  //Test
 #endif
 
 #ifdef COMPILE_FOR_SDCARD
-            strcpy(temp_name, "/DRUMS/");
-            strcat(temp_name, drum_config[d].name);
-            strcat(temp_name, ".wav");
+              strcpy(temp_name, "/DRUMS/");
+              strcat(temp_name, drum_config[d].name);
+              strcat(temp_name, ".wav");
 
-            Drum[slot]->playWav(temp_name);
+              Drum[slot]->playWav(temp_name);
 #endif
 
-            // #ifdef DEBUG
-            //         char note_name[4];
-            //         getNoteName(note_name, inNumber);
-            //         LOG.print(F("=> Drum["));
-            //         LOG.print(slot, DEC);
-            //         LOG.print(F("]: "));
-            //         LOG.println(note_name);
-            // #endif
+              // #ifdef DEBUG
+              //         char note_name[4];
+              //         getNoteName(note_name, inNumber);
+              //         LOG.print(F("=> Drum["));
+              //         LOG.print(slot, DEC);
+              //         LOG.print(F("]: "));
+              //         LOG.println(note_name);
+              // #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-          }
+            }
 #endif
-          // #ifdef DEBUG
-          //                 LOG.print(F("Drum "));
-          //                 LOG.print(drum_config[d].shortname);
-          //                 LOG.print(F(" ["));
-          //                 LOG.print(drum_config[d].name);
-          //                 LOG.print(F("], Slot "));
-          //                 LOG.print(slot);
-          //                 LOG.print(F(": V"));
-          //                 LOG.print(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max), 2);
-          //                 LOG.print(F(" P"));
-          //                 LOG.print(drum_config[d].pan, 2);
-          //                 LOG.print(F(" PAN"));
-          //                 LOG.print(pan, 2);
-          //                 LOG.print(F(" RS"));
-          //                 LOG.println(drum_config[d].reverb_send, 2);
-          // #endif
+            // #ifdef DEBUG
+            //                 LOG.print(F("Drum "));
+            //                 LOG.print(drum_config[d].shortname);
+            //                 LOG.print(F(" ["));
+            //                 LOG.print(drum_config[d].name);
+            //                 LOG.print(F("], Slot "));
+            //                 LOG.print(slot);
+            //                 LOG.print(F(": V"));
+            //                 LOG.print(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max), 2);
+            //                 LOG.print(F(" P"));
+            //                 LOG.print(drum_config[d].pan, 2);
+            //                 LOG.print(F(" PAN"));
+            //                 LOG.print(pan, 2);
+            //                 LOG.print(F(" RS"));
+            //                 LOG.println(drum_config[d].reverb_send, 2);
+            // #endif
 
+          }
         }
-      }
-      //
-      // Sliced Samples
-      //
+        //
+        // Sliced Samples
+        //
 
 #ifdef COMPILE_FOR_PSRAM
      // if (inChannel == slices_midi_channel || slices_midi_channel == MIDI_CHANNEL_OMNI)
-      if (inChannel == slices_midi_channel)
-      {
-
-        if (drum_counter >= NUM_DRUMS)
-          drum_counter = 0;
-
-        uint8_t d = inNumber - 48;
-        uint8_t s = 0;
-
-        if (d < num_slices[0])
-          s = 0;
-        else
+        if (inChannel == slices_midi_channel)
         {
-          s = 1;
-          d = d - num_slices[0];
-        }
 
-        uint8_t slot = drum_get_slot(drum_config[d].drum_class);
+          if (drum_counter >= NUM_DRUMS)
+            drum_counter = 0;
 
-        if (slot != 99 && selected_slice_sample[s] != 99)
-        {
-          if (drum_config[selected_slice_sample[s]].filter_mode == 0)
+          uint8_t d = inNumber - 48;
+          uint8_t s = 0;
+
+          if (d < num_slices[0])
+            s = 0;
+          else
           {
-            Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
-          }
-          else if (drum_config[selected_slice_sample[s]].filter_mode == 1)
-          {
-            Drum_filter[slot]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-            Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-          }
-          else if (drum_config[selected_slice_sample[s]].filter_mode == 2)
-          {
-            Drum_filter[slot]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-            Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-          }
-          else if (drum_config[selected_slice_sample[s]].filter_mode == 3)
-          {
-            Drum_filter[slot]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-            Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            s = 1;
+            d = d - num_slices[0];
           }
 
-          global_delay_in_mixer[0]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay1 / 5);
-          global_delay_in_mixer[1]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay2 / 5);
+          uint8_t slot = drum_get_slot(drum_config[d].drum_class);
 
-          float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -1.0, 1.0, 0.0, 1.0);
-          if (drum_config[selected_slice_sample[s]].numChannels == 1) //mono
+          if (slot != 99 && selected_slice_sample[s] != 99)
           {
-            drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-          }
-          else //stereo
-          {
-            drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-            drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-          }
+            if (drum_config[selected_slice_sample[s]].filter_mode == 0)
+            {
+              Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+            }
+            else if (drum_config[selected_slice_sample[s]].filter_mode == 1)
+            {
+              Drum_filter[slot]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            }
+            else if (drum_config[selected_slice_sample[s]].filter_mode == 2)
+            {
+              Drum_filter[slot]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            }
+            else if (drum_config[selected_slice_sample[s]].filter_mode == 3)
+            {
+              Drum_filter[slot]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+            }
 
-          drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
-          drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
+            global_delay_in_mixer[0]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay1 / 5);
+            global_delay_in_mixer[1]->gain(slot + 8, drum_config[selected_slice_sample[s]].delay2 / 5);
 
-          // if (sidechain_a_active && d == sidechain_a_sample_number)
-          //   sidechain_trigger_a = true;
-          // if (sidechain_b_active && d == sidechain_b_sample_number)
-          //   sidechain_trigger_b = true;
+            float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -1.0, 1.0, 0.0, 1.0);
+            if (drum_config[selected_slice_sample[s]].numChannels == 1) //mono
+            {
+              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+            }
+            else //stereo
+            {
+              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+            }
 
-          if ((drum_config[selected_slice_sample[s]].drum_data != NULL && drum_config[selected_slice_sample[s]].len > 0 &&
-            drum_config[selected_slice_sample[s]].len < 10000000 && d >= 0 && d <= num_slices[s]))
-          {
-
-            // if (drum_config[d].pitch != 0.0)
-            // {
-            //   Drum[slot]->enableInterpolation(true);
-            //   Drum[slot]->setPlaybackRate(drum_config[d].pitch);
-            // }
-            // Drum[slot]->setLoopType(loop_type::looptype_none);
-
-            set_stereo_envelopes(slot, d);
-            sample_envelope[slot]->noteOn();
-            sample_envelope[slot + NUM_DRUMS]->noteOn();
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
 
             // if (sidechain_a_active && d == sidechain_a_sample_number)
             //   sidechain_trigger_a = true;
             // if (sidechain_b_active && d == sidechain_b_sample_number)
             //   sidechain_trigger_b = true;
 
-            Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample[s]].drum_data + slice_start[s][d],
-              slice_end[s][d] - slice_start[s][d], drum_config[selected_slice_sample[s]].numChannels);
+            if ((drum_config[selected_slice_sample[s]].drum_data != NULL && drum_config[selected_slice_sample[s]].len > 0 &&
+              drum_config[selected_slice_sample[s]].len < 10000000 && d >= 0 && d <= num_slices[s]))
+            {
+
+              // if (drum_config[d].pitch != 0.0)
+              // {
+              //   Drum[slot]->enableInterpolation(true);
+              //   Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+              // }
+              // Drum[slot]->setLoopType(loop_type::looptype_none);
+
+              set_stereo_envelopes(slot, d);
+              sample_envelope[slot]->noteOn();
+              sample_envelope[slot + NUM_DRUMS]->noteOn();
+
+              // if (sidechain_a_active && d == sidechain_a_sample_number)
+              //   sidechain_trigger_a = true;
+              // if (sidechain_b_active && d == sidechain_b_sample_number)
+              //   sidechain_trigger_b = true;
+
+              Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample[s]].drum_data + slice_start[s][d],
+                slice_end[s][d] - slice_start[s][d], drum_config[selected_slice_sample[s]].numChannels);
+            }
           }
         }
-      }
 #endif
 
-      //
-      // E-Piano
-      //
-      if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
-      {
-        if (inNumber >= configuration.epiano.lowest_note && inNumber <= configuration.epiano.highest_note)
+        //
+        // E-Piano
+        //
+        if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
         {
-          ep.noteOn(inNumber + configuration.epiano.transpose - 24, inVelocity);
-          // #ifdef DEBUG
-          //               char note_name[4];
-          //               getNoteName(note_name, inNumber);
-          //               LOG.print(F("KeyDown "));
-          //               LOG.print(note_name);
-          //               LOG.print(F(" EPIANO "));
-          //               LOG.print(F(" MIDI - channel "));
-          //               LOG.print(inChannel, DEC);
-          //               LOG.println();
-          // #endif
+          if (inNumber >= configuration.epiano.lowest_note && inNumber <= configuration.epiano.highest_note)
+          {
+            ep.noteOn(inNumber + configuration.epiano.transpose - 24, inVelocity);
+            // #ifdef DEBUG
+            //               char note_name[4];
+            //               getNoteName(note_name, inNumber);
+            //               LOG.print(F("KeyDown "));
+            //               LOG.print(note_name);
+            //               LOG.print(F(" EPIANO "));
+            //               LOG.print(F(" MIDI - channel "));
+            //               LOG.print(inChannel, DEC);
+            //               LOG.println();
+            // #endif
+          }
         }
       }
     }
@@ -4780,7 +4782,7 @@ FLASHMEM void check_configuration_dexed(uint8_t instance_id)
 {
   configuration.dexed[instance_id].bank = constrain(configuration.dexed[instance_id].bank, 0, MAX_BANKS - 1);
   configuration.dexed[instance_id].voice = constrain(configuration.dexed[instance_id].voice, 0, MAX_VOICES - 1);
-  configuration.dexed[instance_id].midi_channel = constrain(configuration.dexed[instance_id].midi_channel, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX);
+  configuration.dexed[instance_id].midi_channel = constrain(configuration.dexed[instance_id].midi_channel, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
   configuration.dexed[instance_id].lowest_note = constrain(configuration.dexed[instance_id].lowest_note, INSTANCE_LOWEST_NOTE_MIN, INSTANCE_LOWEST_NOTE_MAX);
   configuration.dexed[instance_id].highest_note = constrain(configuration.dexed[instance_id].highest_note, INSTANCE_HIGHEST_NOTE_MIN, INSTANCE_HIGHEST_NOTE_MAX);
   configuration.dexed[instance_id].sound_intensity = constrain(configuration.dexed[instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
@@ -4831,7 +4833,7 @@ FLASHMEM void check_configuration_epiano(void)
   configuration.epiano.sound_intensity = constrain(configuration.epiano.sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
   configuration.epiano.pan = constrain(configuration.epiano.pan, PANORAMA_MIN, PANORAMA_MAX);
   configuration.epiano.velocity_sense = constrain(configuration.epiano.velocity_sense, EP_VELOCITY_SENSE_MIN, EP_VELOCITY_SENSE_MAX);
-  configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel, EP_MIDI_CHANNEL_MIN, EP_MIDI_CHANNEL_MAX);
+  configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel, EP_MIDI_CHANNEL_MIN, EP_MIDI_CHANNEL_MAX + 1);
 }
 
 FLASHMEM void init_configuration(void)
@@ -5919,7 +5921,7 @@ FLASHMEM void show_patch(uint8_t instance_id)
   LOG.println(F("                       | "));
   LOG.println(F(" += == == == == += == == == == += == == == == += == == == == += == == == == = += == == == == = += == == == == += == == == == == == == == == == == == == == == == = +"));
   LOG.println(F(" += == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == == = +"));
-  }
+}
 
 FLASHMEM void SerialPrintFormatInt3(uint8_t num)
 {
