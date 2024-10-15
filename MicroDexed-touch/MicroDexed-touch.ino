@@ -1001,18 +1001,19 @@ FLASHMEM void setup()
   touch_ic_found = true;
 #endif
 
-#if defined GENERIC_DISPLAY
-  delay(10);  // have seen some boot issues with old display without this delay 2024/06/19 
-#endif
+// #if defined GENERIC_DISPLAY
+//   delay(10);  // have seen some boot issues with old display without this delay 2024/06/19 
+// #endif
+// #if defined(PSRAM)
+//   delay(10); // FIXME: this somehow workarounds capacitive build with PSRAM not booting reliably
+//   // 2024/4/14
+//   // However it is reported that it is not necessary with 16MB psram and even making boot problems
+//   // after testing with my only mdt with 8MB psram and capacitive touch, the delay makes boot problems after COLD BOOT
+//   // will disable delay, until any non-working combination is reported
+//   // 2024/8/16 after being stuck in bootloops for hours, i put back in the delay and it just booted up with psram
+// #endif
 
-#if defined(PSRAM)
-  delay(10); // FIXME: this somehow workarounds capacitive build with PSRAM not booting reliably
-  // 2024/4/14
-  // However it is reported that it is not necessary with 16MB psram and even making boot problems
-  // after testing with my only mdt with 8MB psram and capacitive touch, the delay makes boot problems after COLD BOOT
-  // will disable delay, until any non-working combination is reported
-  // 2024/8/16 after being stuck in bootloops for hours, i put back in the delay and it just booted up with psram
-#endif
+delay(10); //2024/10/14  had another bootloop issue with 2.8" cap. screen, inserting delay fixed it. Now put it in for every config.
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))

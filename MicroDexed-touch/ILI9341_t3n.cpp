@@ -565,7 +565,8 @@ static const uint8_t PROGMEM init_commands[] = { 4, 0xEF, 0x03, 0x80, 0x02,
                                                 2, ILI9341_PWCTR1, 0x23,       // Power control
                                                 2, ILI9341_PWCTR2, 0x10,       // Power control
                                                 3, ILI9341_VMCTR1, 0x3e, 0x28, // VCM control
-                                                2, ILI9341_VMCTR2, 0xb7,       // VCM control2
+                                                //2, ILI9341_VMCTR2, 0x86,       // VCM control2 b7
+                                                2, ILI9341_VMCTR2, 0xb7,       // VCM control2 
                                                 2, ILI9341_MADCTL, 0x48,       // Memory Access Control
                                                 2, ILI9341_PIXFMT, 0x55,
                                                 3, ILI9341_FRMCTR1, 0x00, 0x18,
