@@ -116,7 +116,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
 
+    view.startBar = 0;
     view.numBars = data.numberOfBars;
+
     view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
     reloadNotes(view.startBar, view.numBars, true);
    
@@ -786,7 +788,11 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time) const {
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const {
   int32_t timeRel = time - (view.startBar * data.patternLengthMs);
   const int32_t maxTime = (view.startBar + view.numBars) * data.patternLengthMs;
-  timeRel = std::max(int32_t(0), timeRel); // clamp noteOn offscreen left
+  if(timeRel < 0) {
+    DBG_LOG(printf("clamp %i to 0\n", timeRel));
+    timeRel = 0;
+  }
+  //timeRel = std::max(int32_t(0), timeRel); // clamp noteOn offscreen left
   timeRel = std::min(timeRel, maxTime);    // clamp noteOff offscreen right
   return timeRel;
 }
@@ -815,7 +821,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   const uint16_t timeOff = getEventTime(note.noteOff);
   const uint16_t x = getNoteCoord(timeOn);
   const uint16_t w = (getRelativeNoteTime(timeOff) - getRelativeNoteTime(timeOn)) * view.msToPix;
-  //DBG_LOG(printf("x: %i, y: %i, w: %i, h: %i\n", x, y, w, h));
+  DBG_LOG(printf("note: %i, x: %i, ton: %i, toff: %i, w: %i\n", note.noteOn.note_in, x, timeOn, timeOff, w));
 
   for (auto &u : drawRegionsX) {
     const bool isInsideX = (x <= u.toX) && ((x + w) >= u.fromX); // FIXME: selected 0 with noteOn far left does not highlight
