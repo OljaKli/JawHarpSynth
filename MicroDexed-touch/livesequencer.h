@@ -160,7 +160,7 @@ public:
     uint8_t lastPlayedNote = 0;
     uint8_t remainingCountIns = 0;
 
-    bool startedFlag = false;
+    bool isStarting = false;
     bool isRunning = false;
     bool isRecording = false;
 
@@ -198,14 +198,18 @@ public:
   void getInstrumentName(uint8_t device, uint8_t instrument, char *name, char *sub) const;
   void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument);
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
+  void requestSortEvents(void);
+  void setActiveTrack(uint8_t track);
 
   struct NotePair {
     MidiEvent& noteOn;
     MidiEvent& noteOff;
+    bool isMuted;
   };
 
   void addNotePair(MidiEvent noteOn, MidiEvent noteOff);
-  std::vector<NotePair> getNotePairsFromTrack(uint8_t track);
+  std::vector<NotePair> getNotePairsFromTrack(uint8_t track, uint8_t &lowestNote, uint8_t &highestNote, uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
+
   static void printNotePairs(std::vector<std::vector<NotePair>> notePairs);
   static void printEvent(int i, MidiEvent e);
   static const std::string getEventName(midi::MidiType event);
@@ -217,12 +221,13 @@ private:
   std::set<uint8_t> pressedArpKeys;
   std::vector<ArpNote> activeArps;
   std::list<MidiEvent>::iterator playIterator;
+  bool sortRequested = false;
 
   void checkLoadNewArpNotes(void);
   void onSongStopped(void);
   void updateTrackChannels(bool initial = false);
   void updateInstrumentChannels(void);
-  void addPendingNotes(void);
+  void addPendingNotes(bool incrementLayer = true);
   void refreshSongLength(void);
   void applySongStartLayerMutes(void);
   void printEvents();

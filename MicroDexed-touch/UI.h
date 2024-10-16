@@ -96,4 +96,10 @@ void UI_func_favorites(uint8_t param);
 void UI_func_epiano(uint8_t param);
 void UI_func_sample_editor(uint8_t param);
 
+enum
+{
+  ENC_R,
+  ENC_L
+};
+
 #endif //_UI_H_

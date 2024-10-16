@@ -4,13 +4,12 @@
 #include "sequencer.h"
 #include "livesequencer.h"
 #include "touch.h"
+#include "ui_liveseq_pianoroll.h"
 
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
 extern bool remote_active;
 extern int numTouchPoints;
-
-
 extern void helptext_l(const char* str);
 
 #define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
@@ -80,7 +79,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
         instance->onTrackButtonPressed(trackOffset + trackIndex);
       },
       [ this, trackIndex ] (auto *b) { // longPressHandler
-        openScreen(UI_func_liveseq_pianoroll, (trackOffset + trackIndex));
+        openScreen(UI_func_liveseq_graphic, (trackOffset + trackIndex));
       }));
   }
 
@@ -506,7 +505,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     resetProgressBars();
     redrawScreen();
     // setup function
-    LCDML.FUNC_setLoopInterval(40); // 25Hz gui refresh
+    LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
@@ -520,7 +519,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
           clearBottomArea();
           drawUpdates(drawLayerButtons);
         }
-      } 
+      }
     }
     if (LCDML.BT_checkUp()) {
       if (currentValue.valueBase != nullptr) {
@@ -618,7 +617,7 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
   }
   else {
     const uint8_t activeOld = data.activeTrack;
-    data.activeTrack = track;
+    liveSeq.setActiveTrack(track);
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
@@ -816,8 +815,8 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         data.currentPattern = data.numberOfBars - 1; // show num bars
     }
 
-    const float progressPattern = std::min(1.0f, timeMs / float(data.patternLengthMs));
-    const float progressTotal = std::min(1.0f, (progressPattern + data.currentPattern) / float(data.numberOfBars));
+    const float progressPattern = timeMs / float(data.patternLengthMs);
+    const float progressTotal = (progressPattern + data.currentPattern) / float(data.numberOfBars);
 
     processBar(progressPattern, 15, barPattern, GREEN);
     processBar(progressTotal, 20, barTotal, RED);

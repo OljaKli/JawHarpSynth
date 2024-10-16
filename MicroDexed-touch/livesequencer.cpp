@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "TeensyTimerTool.h"
 #include "ui_livesequencer.h"
+#include "ui_liveseq_pianoroll.h"
 #include <map>
 
 extern sequencer_t seq;
@@ -31,9 +32,12 @@ OneShotTimer liveTimer(TCK);     // one tick timer of 20
 PeriodicTimer countInTimer(TCK); // one tick timer of 20
 
 UI_LiveSequencer* ui_liveSeq;
+UI_LiveSeq_PianoRoll* ui_pianoRoll;
 
 FLASHMEM LiveSequencer::LiveSequencer() {
   ui_liveSeq = new UI_LiveSequencer(*this, data);
+  ui_pianoRoll = new UI_LiveSeq_PianoRoll(*this, data);
+
   updateTrackChannels(true);
   data.isActive = false;
   playIterator = data.eventsList.end();
@@ -104,8 +108,7 @@ FLASHMEM void LiveSequencer::onStopped(void) {
 
 FLASHMEM void LiveSequencer::onStarted(void) {
   DBG_LOG(printf("onStarted\n"));
-  data.startedFlag = true;
-  data.isRunning = true;
+  data.isStarting = true;
   data.recordedToSong = false;
   data.eventsList.remove_if([](MidiEvent& e) { return e.source == EventSource::EVENT_SONG; });
 }
@@ -233,6 +236,7 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
 FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
   if (data.isActive) {
     if (data.instrumentChannels.count(inChannel) == 0) {
+      ui_pianoRoll->handleKeyChanged(note, event, velocity);
       // velocity adjustment for keyboard events (live playing or recording)
       const uint8_t velocitySetting = data.trackSettings[data.activeTrack].velocityLevel;
       const uint8_t velocityActive = (velocitySetting == 0) ? velocity : velocitySetting * 1.27f; // 100% * 1.27 = 127
@@ -782,7 +786,7 @@ FLASHMEM void LiveSequencer::checkBpmChanged(void) {
   }
 }
 
-FLASHMEM void LiveSequencer::addPendingNotes(void) {
+FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
   // finish active notes at end of all bars
   for (auto it = data.notesOn.begin(); it != data.notesOn.end();) {
     if (timeToMs(it->second.patternNumber, it->second.patternMs) != 0) {
@@ -798,6 +802,7 @@ FLASHMEM void LiveSequencer::addPendingNotes(void) {
       ++it; // ignore notesOn at 0.0000, those were round up just before
     }
   }
+
   // then add all notes to events and sort
   if (data.pendingEvents.size()) {
     for (auto& e : data.pendingEvents) {
@@ -805,17 +810,31 @@ FLASHMEM void LiveSequencer::addPendingNotes(void) {
     }
     data.pendingEvents.clear();
     data.eventsList.sort(sortMidiEvent);
-    setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
-    data.trackSettings[data.activeTrack].layerCount++;
+    const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
+
+    if(canIncrementLayer && incrementLayer) {
+      setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
+      data.trackSettings[data.activeTrack].layerCount++;
+    }
     ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
+  }
+}
+
+FLASHMEM void LiveSequencer::requestSortEvents(void) {
+  if (data.isRunning) {
+    sortRequested = true;
+  }
+  else {
+    data.eventsList.sort(sortMidiEvent);
   }
 }
 
 FLASHMEM void LiveSequencer::handlePatternBegin(void) {
   data.patternTimer = 0;
 
-  if (data.startedFlag) {
-    data.startedFlag = false;
+  if (data.isStarting) {
+    data.isStarting = false;
+    data.isRunning = true;
     // just started, do not increment
     data.currentPattern = 0;
     data.songPatternCount = 0;
@@ -853,6 +872,12 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
     if (data.isSongMode == false) {
       // first insert pending EVENT_PATT events to events and sort
       addPendingNotes();
+
+      // sort events was requested externally (on editing noteOn time)
+      if(sortRequested) {
+        sortRequested = false;
+        data.eventsList.sort(sortMidiEvent);
+      }
     }
 
     if (data.eventsList.size() > 0) {
@@ -940,6 +965,11 @@ FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool is
       DBG_LOG(printf("record muted %i at %i of song pattern count %i\n", isMuted, timeToMs(data.currentPattern, data.patternTimer), data.songPatternCount));
     }
   }
+}
+
+FLASHMEM void LiveSequencer::setActiveTrack(uint8_t track) {
+  data.activeTrack = track;
+  ui_liveSeq->updateTrackChannelSetupButtons(track);
 }
 
 FLASHMEM void LiveSequencer::checkAddMetronome(void) {
@@ -1232,31 +1262,45 @@ FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
   data.pendingEvents.emplace_back(noteOn);
   data.pendingEvents.emplace_back(noteOff);
   if (data.isRunning == false) {
-    addPendingNotes();
+    addPendingNotes(false); // do not increment layer count
   }
 }
 
-FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track) {
+FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t &lowestNote, uint8_t &highestNote, uint8_t patternFrom, uint8_t patternTo) {
   std::vector<LiveSequencer::NotePair> result;
+  uint8_t lowestFound = 0xFF;
+  uint8_t highestFound = 0x00;
 
-  for (std::list<MidiEvent>::iterator it = data.eventsList.begin(); it != data.eventsList.end(); it++) {
-    if (it->track == track && it->event == midi::NoteOn) {
-      for (std::list<MidiEvent>::iterator itOff = it; itOff != data.eventsList.end(); itOff++) {
-        const bool sameNote = itOff->note_in == it->note_in;
-        const bool sameTrack = itOff->track == it->track;
-        const bool sameLayer = itOff->layer == it->layer;
-        const bool isNoteOff = itOff->event == midi::NoteOff;
-        if (sameTrack && sameLayer && sameNote && isNoteOff) {
-          NotePair p = {
-            .noteOn = *it,
-            .noteOff = *itOff
-          };
-          result.emplace_back(p);
-          break;
+  for (std::list<MidiEvent>::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
+    if (itOn->track == track && itOn->event == midi::NoteOn) {
+      for (std::list<MidiEvent>::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
+        const bool isWithinY = (itOn->note_in >= lowestNote) && (itOn->note_in <= highestNote);
+        if (isWithinY) {
+          const bool sameNote = itOff->note_in == itOn->note_in;
+          const bool sameTrack = itOff->track == itOn->track;
+          const bool sameLayer = itOff->layer == itOn->layer;
+          const bool isNoteOff = itOff->event == midi::NoteOff;
+
+          if (sameTrack && sameLayer && sameNote && isNoteOff) {
+            const bool isInside = (patternTo >= itOn->patternNumber) && (patternFrom <= itOff->patternNumber);
+            if(isInside) {
+              NotePair p = {
+                .noteOn = *itOn,
+                .noteOff = *itOff,
+                .isMuted = data.tracks[track].layerMutes & (1 << itOn->layer)
+              };
+              highestFound = std::max(highestFound, itOn->note_in);
+              lowestFound = std::min(lowestFound, itOn->note_in);
+              result.emplace_back(p);
+            }
+            break;
+          }
         }
       }
     }
   }
+  lowestNote = lowestFound;
+  highestNote = highestFound;
   return result;
 }
 

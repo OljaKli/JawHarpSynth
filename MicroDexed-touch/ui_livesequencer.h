@@ -30,6 +30,8 @@ public:
   void drawSingleLayer(uint8_t track, uint8_t layer); // used for layer mute GUI updates
   void drawTrackLayers(uint8_t track);
   void drawUpdates(uint16_t flags);
+  static void openScreen(LCDML_FuncPtr_pu8 screen, uint8_t p_param = 0);
+  void updateTrackChannelSetupButtons(uint8_t track);
 
 private:
   uint16_t guiUpdateFlags = 0;
@@ -102,7 +104,6 @@ private:
  
   static constexpr uint8_t BAR_WIDTH = 104; // 2 * BUTTON_WIDTH + spacing
   static constexpr uint8_t BAR_HEIGHT = 3;
-  static void openScreen(LCDML_FuncPtr_pu8 screen, uint8_t p_param = 0);
   void onTrackButtonPressed(uint8_t track);
   void clearBottomArea(void);
   void selectTools(Tools tools);
@@ -116,7 +117,6 @@ private:
   void handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color &color);
   void resetProgressBars(void);
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
-  void updateTrackChannelSetupButtons(uint8_t track);
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
 };
