@@ -215,11 +215,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(uint8_t patternFrom, uint8_t num
   }
   notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack, lowestNote, highestNote, patternFrom, patternFrom + numBars - 1);
   if (autoAdaptView && notePairs.size()) {
-    uint8_t octLow = (lowestNote - 24) / 12;
-    uint8_t octHi = (highestNote - 24) / 12;
-    setStartOctave(octLow);
-    DBG_LOG(printf("low/high: %i/%i\n", octLow, octHi));
-    drawFlags |= DRAW_CONTENT_FULL;
+    view.startOctave = (lowestNote - 24) / 12;
+    setNumOctaves(5); // full zoom out
+    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
   }
   DBG_LOG(printf("%i/%i: got %i note pairs\n", patternFrom, patternFrom + numBars - 1, notePairs.size()));
 }
@@ -366,7 +364,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       switch (viewMode) {
       case VIEW_ZOOM_Y:
         if (hasConstrainedChanged(view.numOctaves, -2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
-          setStartOctave(view.startOctave + diff); // zoom octave-centered
+          view.startOctave += diff; // zoom octave-centered
           setNumOctaves(view.numOctaves);
           drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
         }

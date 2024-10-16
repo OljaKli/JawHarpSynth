@@ -505,7 +505,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     resetProgressBars();
     redrawScreen();
     // setup function
-    LCDML.FUNC_setLoopInterval(40); // 25Hz gui refresh
+    LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
