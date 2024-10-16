@@ -751,6 +751,8 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define EP_MIDI_CHANNEL_MAX 16
 #define EP_MIDI_CHANNEL_DEFAULT DEFAULT_EP_MIDI_CHANNEL
 
+#define MIDI_CHANNEL_OFF 17
+
 // Number of samples in each delay line
 #define BRAIDS_FLANGE_DELAY_LENGTH (6 * AUDIO_BLOCK_SAMPLES)
 
