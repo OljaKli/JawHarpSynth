@@ -348,7 +348,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
   view.startBar = num;
-  DBG_LOG(printf("pattern from %i to %i\n", view.startBar, view.startBar + view.numBars));
+  DBG_LOG(printf("pattern from %i to %i\n", view.startBar, view.startBar + view.numBars - 1));
   reloadNotes(view.startBar, view.numBars);
   drawAreaIndicator();
 }
@@ -788,11 +788,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time) const {
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const {
   int32_t timeRel = time - (view.startBar * data.patternLengthMs);
   const int32_t maxTime = (view.startBar + view.numBars) * data.patternLengthMs;
-  if(timeRel < 0) {
-    DBG_LOG(printf("clamp %i to 0\n", timeRel));
-    timeRel = 0;
-  }
-  //timeRel = std::max(int32_t(0), timeRel); // clamp noteOn offscreen left
+  timeRel = std::max(int32_t(0), timeRel); // clamp noteOn offscreen left
   timeRel = std::min(timeRel, maxTime);    // clamp noteOff offscreen right
   return timeRel;
 }
@@ -806,7 +802,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     }
   }
   else {
-    const std::string text = "TRACK HAS NO NOTES";
+    const std::string text = "SELECTION HAS NO NOTES";
     const uint16_t stringWidth = text.length() * CHAR_width_small;
     display.console = true;
     display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);

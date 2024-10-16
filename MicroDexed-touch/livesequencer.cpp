@@ -1266,25 +1266,28 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
 
-  for (std::list<MidiEvent>::iterator it = data.eventsList.begin(); it != data.eventsList.end(); it++) {
-    if (it->track == track && it->event == midi::NoteOn) {
-      for (std::list<MidiEvent>::iterator itOff = it; itOff != data.eventsList.end(); itOff++) {
-        const bool isWithinX = itOff->patternNumber >= patternFrom && it->patternNumber <= patternTo;
-        const bool isWithinY = (it->note_in >= lowestNote) && (it->note_in <= highestNote);
-        if (isWithinX && isWithinY) {
-          const bool sameNote = itOff->note_in == it->note_in;
-          const bool sameTrack = itOff->track == it->track;
-          const bool sameLayer = itOff->layer == it->layer;
+  for (std::list<MidiEvent>::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
+    if (itOn->track == track && itOn->event == midi::NoteOn) {
+      for (std::list<MidiEvent>::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
+        const bool isWithinY = (itOn->note_in >= lowestNote) && (itOn->note_in <= highestNote);
+        if (isWithinY) {
+          const bool sameNote = itOff->note_in == itOn->note_in;
+          const bool sameTrack = itOff->track == itOn->track;
+          const bool sameLayer = itOff->layer == itOn->layer;
           const bool isNoteOff = itOff->event == midi::NoteOff;
+
           if (sameTrack && sameLayer && sameNote && isNoteOff) {
-            NotePair p = {
-              .noteOn = *it,
-              .noteOff = *itOff,
-              .isMuted = data.tracks[track].layerMutes & (1 << it->layer)
-            };
-            highestFound = std::max(highestFound, it->note_in);
-            lowestFound = std::min(lowestFound, it->note_in);
-            result.emplace_back(p);
+            const bool isInside = (patternTo >= itOn->patternNumber) && (patternFrom <= itOff->patternNumber);
+            if(isInside) {
+              NotePair p = {
+                .noteOn = *itOn,
+                .noteOff = *itOff,
+                .isMuted = data.tracks[track].layerMutes & (1 << itOn->layer)
+              };
+              highestFound = std::max(highestFound, itOn->note_in);
+              lowestFound = std::min(lowestFound, itOn->note_in);
+              result.emplace_back(p);
+            }
             break;
           }
         }
