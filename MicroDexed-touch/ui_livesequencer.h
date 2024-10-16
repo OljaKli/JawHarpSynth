@@ -31,6 +31,7 @@ public:
   void drawTrackLayers(uint8_t track);
   void drawUpdates(uint16_t flags);
   static void openScreen(LCDML_FuncPtr_pu8 screen, uint8_t p_param = 0);
+  void updateTrackChannelSetupButtons(uint8_t track);
 
 private:
   uint16_t guiUpdateFlags = 0;
@@ -116,7 +117,6 @@ private:
   void handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color &color);
   void resetProgressBars(void);
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
-  void updateTrackChannelSetupButtons(uint8_t track);
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
 };

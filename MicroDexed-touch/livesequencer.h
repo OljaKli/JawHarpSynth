@@ -199,6 +199,7 @@ public:
   void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument);
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
   void requestSortEvents(void);
+  void setActiveTrack(uint8_t track);
 
   struct NotePair {
     MidiEvent& noteOn;

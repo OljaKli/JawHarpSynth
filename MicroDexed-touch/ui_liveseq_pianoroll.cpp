@@ -111,7 +111,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
 FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-    data.activeTrack = param;
+    liveSeq.setActiveTrack(param);
 
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
@@ -962,6 +962,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     buttonInst->drawNow();
     drawFlags |= DRAW_CONTENT_FULL;
     ui_pianoroll->drawLayersIndicator();
+    liveSeq.setActiveTrack(data.activeTrack);
   }));
 
   buttonInst = new TouchButton(GRID_X[2], y, 

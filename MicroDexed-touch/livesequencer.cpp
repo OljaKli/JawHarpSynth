@@ -967,6 +967,11 @@ FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool is
   }
 }
 
+FLASHMEM void LiveSequencer::setActiveTrack(uint8_t track) {
+  data.activeTrack = track;
+  ui_liveSeq->updateTrackChannelSetupButtons(track);
+}
+
 FLASHMEM void LiveSequencer::checkAddMetronome(void) {
   // always assure we have a drum track with some tempo to begin
   if (data.eventsList.empty()) {

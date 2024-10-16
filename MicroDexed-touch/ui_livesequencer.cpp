@@ -617,7 +617,7 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
   }
   else {
     const uint8_t activeOld = data.activeTrack;
-    data.activeTrack = track;
+    liveSeq.setActiveTrack(track);
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
