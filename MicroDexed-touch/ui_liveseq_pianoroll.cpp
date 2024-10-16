@@ -796,9 +796,19 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   if (notePairs.size()) {
     int16_t noteIndex = 0;
+    LiveSequencer::NotePair *selected = nullptr;
     for (LiveSequencer::NotePair &note : notePairs) {
-      drawNote(note, (noteIndex == selectedNote));
+      if(noteIndex == selectedNote) {
+        // draw selected (highlighted) note after all others
+        selected = &note;
+      }
+      else {
+        drawNote(note, false);
+      }
       noteIndex++;
+    }
+    if(selected != nullptr) {
+      drawNote(*selected, true);
     }
   }
   else {
