@@ -798,7 +798,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     int16_t noteIndex = 0;
     LiveSequencer::NotePair *selected = nullptr;
     for (LiveSequencer::NotePair &note : notePairs) {
-      if(noteIndex == selectedNote) {
+      if (noteIndex == selectedNote) {
         // draw selected (highlighted) note after all others
         selected = &note;
       }
@@ -807,7 +807,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
       }
       noteIndex++;
     }
-    if(selected != nullptr) {
+    if (selected != nullptr) {
       drawNote(*selected, true);
     }
   }
