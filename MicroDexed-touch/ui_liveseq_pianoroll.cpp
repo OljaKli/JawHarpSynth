@@ -407,10 +407,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       switch (editMode) {
       case EDIT_SELECT_NOTE:
         if (selectedNote > -1) {
-          int8_t prev = selectedNote;
-          if (hasConstrainedChanged(selectedNote, diff, 0, notePairs.size() - 1)) {
-            queueDrawNote(notePairs.at(prev));
+          uint16_t note = selectedNote;
+          if (hasConstrainedChanged(note, diff, 0, notePairs.size() - 1)) {
+            queueDrawNote(notePairs.at(note));
             queueDrawNote(notePairs.at(selectedNote));
+            selectedNote = note;
             headerFlags = HEADER_DRAW_ALL; // update all
           }
         }
