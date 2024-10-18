@@ -109,8 +109,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
+  if (LCDML.FUNC_setup()) { // ****** SETUP *********
+    openendFromLiveSequencer = data.isActive;
+    if (openendFromLiveSequencer == false) {
+      data.isActive = true;
+    }
     liveSeq.setActiveTrack(param);
 
     isVisible = true;
@@ -189,6 +192,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     drawGUI();
   }
   if (LCDML.FUNC_close()) {
+    if (openendFromLiveSequencer == false) {
+      data.isActive = false;
+    }
     isVisible = false;
     unregisterTouchHandler();
     display.fillScreen(COLOR_BACKGROUND);
@@ -267,9 +273,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
       break;
     }
 
+    queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, { key } }); // fullwidth highlight key bar
+
     if ((data.isRunning == false) && (mode == MODE_STEP) && (stepMode == STEP_RECORD)) { // step record will draw itself
       if (event == midi::NoteOn) {
-        // record note and advance
+        // record note
         const uint16_t stepCursorPositionMs = view.startBar * data.patternLengthMs + round(stepCursorPositionIndex * stepRecordStepSizeMs);
         LiveSequencer::MidiEvent on;
         on.source = LiveSequencer::EventSource::EVENT_PATTERN;
@@ -283,23 +291,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
         LiveSequencer::MidiEvent off = on;
         off.event = midi::NoteOff;
         off.patternMs += stepRecordStepSizeMs / 2; // half step note length
+        if (notePairs.empty()) {
+          drawFlags |= DRAW_CONTENT_FULL; // clear "no notes" text
+        }
         if (stepRecordLayer + 1 > data.trackSettings[data.activeTrack].layerCount) {
           data.trackSettings[data.activeTrack].layerCount++;
           drawLayersIndicator();
         }
         liveSeq.addNotePair(on, off);
         reloadNotes(view.startBar, view.numBars);
-        drawFlags |= DRAW_NOTES;
       }
       else if (keysPressed.empty()) {
         // advance on last key released
         step(+1);
       }
     }
-    else {
-      queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH - 1, { key } });
-      drawFlags |= DRAW_CONTENT_AREA;
-    }    
   }
 }
 
@@ -828,7 +834,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   //DBG_LOG(printf("note: %i, x: %i, ton: %i, toff: %i, w: %i\n", note.noteOn.note_in, x, timeOn, timeOff, w));
 
   for (auto &u : drawRegionsX) {
-    const bool isInsideX = (x <= u.toX) && ((x + w) >= u.fromX); // FIXME: selected 0 with noteOn far left does not highlight
+    const bool isInsideX = (x <= u.toX) && ((x + w) >= u.fromX);
     const bool isInsideY = u.notes.count(note.noteOn.note_in) || u.notes.empty();
 
     if (isInsideX && isInsideY) {
@@ -921,10 +927,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
     notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
     notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
     ui_pianoroll->reloadNotes(view.startBar, view.numBars);
+    const uint16_t notesCount = notePairs.size();
+    if (notesCount == 0) {
+      selectedNote = -1;
+      ui_pianoroll->drawHeader(HEADER_DRAW_ALL);
+    }
+    else {
+      selectedNote = std::min(selectedNote - 1, notesCount - 1);
+      ui_pianoroll->drawHeader(1 << EDIT_SELECT_NOTE);
+    }
     drawFlags |= DRAW_CONTENT_FULL;
     editMode = EDIT_SELECT_NOTE; // after delete, switch back to select mode
-    ui_pianoroll->drawHeader(1 << EDIT_SELECT_NOTE);
-    selectedNote = notePairs.empty() ? -1 : 0;
     buttonEdit->drawNow();
   }
 }

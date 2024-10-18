@@ -14,7 +14,7 @@ extern void helptext_l(const char* str);
 
 #define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
 
-bool runningInBackground; // LiveSequencer stays active in instrument settings opened from here
+bool runningInBackground; // LiveSequencer stays active for pages opened from here
 
 FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData &d) : instance(this), liveSeq(sequencer), data(d) {
   const uint8_t BUTTON_SPACING = 4;  // center in screen

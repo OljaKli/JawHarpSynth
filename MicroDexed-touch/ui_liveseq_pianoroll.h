@@ -140,6 +140,7 @@ private:
   LiveSequencer::LiveSeqData &data;
   bool isRunningHere;
   bool isVisible = false;
+  bool openendFromLiveSequencer = false;
 
   std::vector<LiveSequencer::NotePair> notePairs;
 
