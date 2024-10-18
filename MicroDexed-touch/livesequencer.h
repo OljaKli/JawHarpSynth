@@ -142,7 +142,7 @@ public:
     uint8_t numberOfBars = 4;
 
     // volatile
-    bool isActive;
+    bool processMidiIn;
     std::string performanceName;
     std::unordered_set<uint8_t> instrumentChannels;
     Track tracks[LIVESEQUENCER_NUM_TRACKS];

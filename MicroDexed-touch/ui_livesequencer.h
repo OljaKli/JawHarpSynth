@@ -34,6 +34,7 @@ public:
   void updateTrackChannelSetupButtons(uint8_t track);
 
 private:
+  bool isVisible = false;
   uint16_t guiUpdateFlags = 0;
   uint8_t layerUpdates[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN] = { 0 };
 

@@ -110,9 +110,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_setup()) { // ****** SETUP *********
-    openendFromLiveSequencer = data.isActive;
+    openendFromLiveSequencer = data.processMidiIn;
     if (openendFromLiveSequencer == false) {
-      data.isActive = true;
+      data.processMidiIn = true;
     }
     liveSeq.setActiveTrack(param);
 
@@ -193,7 +193,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   }
   if (LCDML.FUNC_close()) {
     if (openendFromLiveSequencer == false) {
-      data.isActive = false;
+      data.processMidiIn = false;
     }
     isVisible = false;
     unregisterTouchHandler();
