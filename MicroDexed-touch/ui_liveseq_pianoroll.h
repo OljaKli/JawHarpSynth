@@ -129,7 +129,7 @@ private:
   std::string getNoteString(uint8_t note);
 
   void reloadNotes(uint8_t patternFrom, uint8_t patternTo, bool autoAdaptView = false);
-  int8_t selectedNote = -1; // index of notePairs or -1
+  int16_t selectedNote = -1; // index of notePairs or -1
 
   bool step(int8_t diff);
 
@@ -140,6 +140,7 @@ private:
   LiveSequencer::LiveSeqData &data;
   bool isRunningHere;
   bool isVisible = false;
+  bool openendFromLiveSequencer = false;
 
   std::vector<LiveSequencer::NotePair> notePairs;
 

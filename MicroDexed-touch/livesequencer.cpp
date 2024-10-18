@@ -39,7 +39,7 @@ FLASHMEM LiveSequencer::LiveSequencer() {
   ui_pianoRoll = new UI_LiveSeq_PianoRoll(*this, data);
 
   updateTrackChannels(true);
-  data.isActive = false;
+  data.processMidiIn = false;
   playIterator = data.eventsList.end();
 }
 
@@ -234,7 +234,7 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
 }
 
 FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
-  if (data.isActive) {
+  if (data.processMidiIn) {
     if (data.instrumentChannels.count(inChannel) == 0) {
       ui_pianoRoll->handleKeyChanged(note, event, velocity);
       // velocity adjustment for keyboard events (live playing or recording)

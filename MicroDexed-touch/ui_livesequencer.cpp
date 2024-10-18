@@ -12,9 +12,9 @@ extern bool remote_active;
 extern int numTouchPoints;
 extern void helptext_l(const char* str);
 
-#define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
+bool openingScreen = false;
 
-bool runningInBackground; // LiveSequencer stays active in instrument settings opened from here
+#define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
 
 FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData &d) : instance(this), liveSeq(sequencer), data(d) {
   const uint8_t BUTTON_SPACING = 4;  // center in screen
@@ -24,7 +24,6 @@ FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequen
     GRID_X[trackIndex] = trackIndex * (TouchButton::BUTTON_SIZE_X + BUTTON_SPACING);
     GRID_Y[trackIndex] = trackIndex * (TouchButton::BUTTON_SIZE_Y + BUTTON_SPACING) + OFFSET_Y;
   }
-  runningInBackground = false;
 }
 
 FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
@@ -480,7 +479,7 @@ FLASHMEM void UI_LiveSequencer::resetProgressBars(void) {
 }
 
 FLASHMEM void UI_LiveSequencer::onStopped(void) {
-  if (data.isActive && (runningInBackground == false)) {
+  if (isVisible) {
     resetProgressBars();
     drawUpdates(drawActiveNotes | drawTime);
     drawGUI(guiUpdateFlags);
@@ -491,8 +490,8 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
 // ****** SETUP *********
   if (LCDML.FUNC_setup()) {
     registerTouchHandler(handle_touchscreen_live_sequencer);
-    data.isActive = true;
-    runningInBackground = false;
+    isVisible = true;
+    data.processMidiIn = true;
     display.fillScreen(COLOR_BACKGROUND);
     numberOfBarsTemp = data.numberOfBars;
     liveSeq.onGuiInit();
@@ -554,9 +553,9 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
   // ****** STABLE END *********
   if (LCDML.FUNC_close()) {
     unregisterTouchHandler();
-    if (runningInBackground == false) {
-      data.isActive = false;
-    }
+    data.processMidiIn = openingScreen;
+    openingScreen = false;
+    isVisible = false;
     data.isRecording = false;
     showingHowTo = false;
     display.fillScreen(COLOR_BACKGROUND);
@@ -585,7 +584,7 @@ FLASHMEM void UI_LiveSequencer::redrawScreen(void) {
 
 FLASHMEM void UI_LiveSequencer::openScreen(LCDML_FuncPtr_pu8 screen, uint8_t param) {
   // stay active in background and keep processing midi inputs for screens opened in LiveSequencer
-  runningInBackground = true; 
+  openingScreen = true; 
   LCDML.FUNC_setGBAToLastFunc();
   LCDML.OTHER_jumpToFunc(screen, param);
 }
@@ -642,7 +641,7 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
   if (showingHowTo) {
     if (TouchButton::isPressed(GRID_X[5], GRID_Y[5])) {
       openScreen(UI_func_midi_channels);
-      runningInBackground = false; // do not process midi in background
+      data.processMidiIn = false; // do not process midi in background
     }
     return;
   }
