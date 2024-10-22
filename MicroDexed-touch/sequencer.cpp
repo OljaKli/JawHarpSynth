@@ -266,10 +266,8 @@ void handle_pattern_end_in_song_mode()
   }
 }
 
-
 void arp_track(uint8_t d)
 {
-
   if ((seq.track_type[d] == 3 && seq.arp_num_notes_count < seq.arp_num_notes_max && seq.euclidean_active == false) ||
     (seq.track_type[d] == 3 && seq.arp_num_notes_count < seq.arp_num_notes_max && seq.euclidean_active && seq.euclidean_state[seq.step]))
   { // Arp
@@ -327,7 +325,6 @@ void arp_track(uint8_t d)
             handleNoteOn(seq.instrument[d] - 31, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step + seq.element_shift], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 2);
         }
 #endif
-
         else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) // track is for internal Micro MIDI
         {
           if (check_probability(seq.current_pattern[d]))
@@ -798,8 +795,6 @@ void sequencer_part1(void)
       }
         }
         // after here not triggered by a key input -  arp only
-
-
       }
     }
     seq.noteoffsent[d] = false;
@@ -848,9 +843,9 @@ void sequencer_part2(void)
           }
           seq.noteoffsent[d] = true;
         }
-        if (seq.track_type[d] == 2) // Chords
-        {
-          if (seq.prev_vel[d] > 199)
+        if (seq.track_type[d] == 2  ) // Chords
+        { //&& seq.note_data[seq.current_pattern[d]][seq.step] != 130
+          if (seq.prev_vel[d] > 199 )
           {
             for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
             {

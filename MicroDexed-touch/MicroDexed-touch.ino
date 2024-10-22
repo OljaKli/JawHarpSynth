@@ -156,9 +156,11 @@ AudioSynthEPiano ep(NUM_EPIANO_VOICES);
 AudioAnalyzePeak ep_peak_r;
 AudioAnalyzePeak ep_peak_l;
 
-//bitcrusher
-// AudioEffectBitcrusher bitcrusher_r;
-// AudioEffectBitcrusher bitcrusher_l;
+// Sidechain
+AudioEffectFade fade_sidechain_r;
+AudioEffectFade fade_sidechain_l;
+AudioMixer<12> sidechain_mixer_r;
+AudioMixer<12> sidechain_mixer_l;
 
 AudioSynthBraids* synthBraids[NUM_BRAIDS];
 AudioMixer<NUM_BRAIDS> braids_mixer;
@@ -239,8 +241,8 @@ AudioMixer<8> reverb_mixer_l;
 
 AudioEffectPlateReverb reverb;
 
-AudioMixer<11> master_mixer_r;
-AudioMixer<11> master_mixer_l;
+AudioMixer<12> master_mixer_r;
+AudioMixer<12> master_mixer_l;
 
 AudioAmplifier volume_r;
 AudioAmplifier volume_l;
@@ -392,201 +394,215 @@ AudioConnection patchCord[] = {
   // Audio chain tail
   {reverb_mixer_r, 0, reverb, 0},
   {reverb_mixer_l, 0, reverb, 1},
-  {reverb, 0, master_mixer_r, MASTER_MIX_CH_REVERB},
-  {reverb, 1, master_mixer_l, MASTER_MIX_CH_REVERB},
-  {master_mixer_l, volume_l},
-  {master_mixer_r, volume_r},
-  {volume_l, 0, stereo2mono, 1},
-  {volume_r, 0, stereo2mono, 0},
 
-  {master_mixer_l, 0, master_peak_l, 0},
-  {master_mixer_r, 0, master_peak_r, 0},
+  //normal reverb
+   {reverb, 0, master_mixer_r, MASTER_MIX_CH_REVERB},
+   {reverb, 1, master_mixer_l, MASTER_MIX_CH_REVERB},
 
-  {master_mixer_l, 0, mb_before_l, 0},
-  {master_mixer_r, 0, mb_before_r, 0},
-
-  {mb_mixer_l, 0, mb_after_l, 0},
-  {mb_mixer_r, 0, mb_after_r, 0},
-
-  // Realtime Scope
-  {master_mixer_l, 0, scope, 0},
-
-  // Outputs
-  #if defined(TEENSY_AUDIO_BOARD)
-  #ifndef SGTL5000_AUDIO_THRU
-
-      {stereo2mono, 0, finalized_mixer_l, 0},
-      {stereo2mono, 1, finalized_mixer_r, 0},
-
-      {master_mixer_l, 0, mb_filter_l_0, 0},
-      {master_mixer_r, 0, mb_filter_r_0, 0},
-
-      {master_mixer_l, 0, mb_filter_l_1, 0},
-      {master_mixer_r, 0, mb_filter_r_1, 0},
-
-      {master_mixer_l, 0, mb_filter_l_2, 0},
-      {master_mixer_r, 0, mb_filter_r_2, 0},
-
-      {master_mixer_l, 0, mb_filter_l_3, 0},
-      {master_mixer_r, 0, mb_filter_r_3, 0},
-
-      {mb_mixer_l, 0, finalized_mixer_l, 1},
-      {mb_mixer_r, 0, finalized_mixer_r, 1},
-
-      {finalized_mixer_l, 0, i2s1, 0},
-      {finalized_mixer_r, 0, i2s1, 1},
-
-  #endif
-  #elif defined(I2S_AUDIO_ONLY)
-
-      {stereo2mono, 0, finalized_mixer_l, 0},
-      {stereo2mono, 1, finalized_mixer_r, 0},
-
-      {master_mixer_l, 0, mb_filter_l_0, 0},
-      {master_mixer_r, 0, mb_filter_r_0, 0},
-
-      {master_mixer_l, 0, mb_filter_l_1, 0},
-      {master_mixer_r, 0, mb_filter_r_1, 0},
-
-      {master_mixer_l, 0, mb_filter_l_2, 0},
-      {master_mixer_r, 0, mb_filter_r_2, 0},
-
-      {master_mixer_l, 0, mb_filter_l_3, 0},
-      {master_mixer_r, 0, mb_filter_r_3, 0},
-
-      {mb_mixer_l, 0, finalized_mixer_l, 1},
-      {mb_mixer_r, 0, finalized_mixer_r, 1},
+   //sidechain start
+    {reverb, 0, sidechain_mixer_r, MASTER_MIX_CH_REVERB},
+     {reverb, 1, sidechain_mixer_l, MASTER_MIX_CH_REVERB},
+     //sidechain end
 
 
-      {finalized_mixer_l, 0, i2s1, 0},
-      {finalized_mixer_r, 0, i2s1, 1},
+       {master_mixer_l, volume_l},
+       {master_mixer_r, volume_r},
+       {volume_l, 0, stereo2mono, 1},
+       {volume_r, 0, stereo2mono, 0},
 
-      //  {finalized_mixer_l, 0, bitcrusher_l, 0},
-      //  {finalized_mixer_r, 0, bitcrusher_r, 0},
+       {master_mixer_l, 0, master_peak_l, 0},
+       {master_mixer_r, 0, master_peak_r, 0},
 
-  //bitcrusher master
-    // {bitcrusher_l, 0, i2s1, 0},
-    // {bitcrusher_r, 0, i2s1, 1},
+       {master_mixer_l, 0, mb_before_l, 0},
+       {master_mixer_r, 0, mb_before_r, 0},
 
-        // WAV RECORDER
-        {finalized_mixer_l, 0, record_queue_l, 0},
-        {finalized_mixer_r, 0, record_queue_r, 0},
+       {mb_mixer_l, 0, mb_after_l, 0},
+       {mb_mixer_r, 0, mb_after_r, 0},
+
+       // Realtime Scope
+       {master_mixer_l, 0, scope, 0},
+
+       // Outputs
+       #if defined(TEENSY_AUDIO_BOARD)
+       #ifndef SGTL5000_AUDIO_THRU
+
+           {stereo2mono, 0, finalized_mixer_l, 0},
+           {stereo2mono, 1, finalized_mixer_r, 0},
+
+           {master_mixer_l, 0, mb_filter_l_0, 0},
+           {master_mixer_r, 0, mb_filter_r_0, 0},
+
+           {master_mixer_l, 0, mb_filter_l_1, 0},
+           {master_mixer_r, 0, mb_filter_r_1, 0},
+
+           {master_mixer_l, 0, mb_filter_l_2, 0},
+           {master_mixer_r, 0, mb_filter_r_2, 0},
+
+           {master_mixer_l, 0, mb_filter_l_3, 0},
+           {master_mixer_r, 0, mb_filter_r_3, 0},
+
+           {mb_mixer_l, 0, finalized_mixer_l, 1},
+           {mb_mixer_r, 0, finalized_mixer_r, 1},
+
+           {finalized_mixer_l, 0, i2s1, 0},
+           {finalized_mixer_r, 0, i2s1, 1},
+
+       #endif
+       #elif defined(I2S_AUDIO_ONLY)
+
+           {stereo2mono, 0, finalized_mixer_l, 0},
+           {stereo2mono, 1, finalized_mixer_r, 0},
+
+           {master_mixer_l, 0, mb_filter_l_0, 0},
+           {master_mixer_r, 0, mb_filter_r_0, 0},
+
+           {master_mixer_l, 0, mb_filter_l_1, 0},
+           {master_mixer_r, 0, mb_filter_r_1, 0},
+
+           {master_mixer_l, 0, mb_filter_l_2, 0},
+           {master_mixer_r, 0, mb_filter_r_2, 0},
+
+           {master_mixer_l, 0, mb_filter_l_3, 0},
+           {master_mixer_r, 0, mb_filter_r_3, 0},
+
+           {mb_mixer_l, 0, finalized_mixer_l, 1},
+           {mb_mixer_r, 0, finalized_mixer_r, 1},
 
 
-    #endif
+           {finalized_mixer_l, 0, i2s1, 0},
+           {finalized_mixer_r, 0, i2s1, 1},
+
+           //  {finalized_mixer_l, 0, bitcrusher_l, 0},
+           //  {finalized_mixer_r, 0, bitcrusher_r, 0},
+
+             // WAV RECORDER
+             {finalized_mixer_l, 0, record_queue_l, 0},
+             {finalized_mixer_r, 0, record_queue_r, 0},
 
 
-    #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
-        {stereo2mono, 0, audio_thru_mixer_r, 0},
-        {stereo2mono, 1, audio_thru_mixer_l, 0},
-        {audio_thru_mixer_r, 0, i2s1, 0},
-        {audio_thru_mixer_l, 0, i2s1, 1},
-    #endif
+         #endif
 
-        {drum_reverb_send_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_DRUMS},
-        {drum_reverb_send_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_DRUMS},
-        {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
-        {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
-        {drum_mixer_r, 0, drum_mixer_peak_r, 0},
-        {drum_mixer_l, 0, drum_mixer_peak_l, 0},
 
-        {reverb, 0, reverb_return_peak_r, 0},
-        {reverb, 1, reverb_return_peak_l, 0},
+         #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
+             {stereo2mono, 0, audio_thru_mixer_r, 0},
+             {stereo2mono, 1, audio_thru_mixer_l, 0},
+             {audio_thru_mixer_r, 0, i2s1, 0},
+             {audio_thru_mixer_l, 0, i2s1, 1},
+         #endif
 
-        {ep, 0, ep_stereo_panorama, 0},
-        {ep, 1, ep_stereo_panorama, 1},
-        {ep_stereo_panorama, 0, ep_peak_r, 0},
-        {ep_stereo_panorama, 1, ep_peak_l, 0},
-        {ep_stereo_panorama, 0, ep_chorus_mixer_r, 0},
-        {ep_stereo_panorama, 1, ep_chorus_mixer_l, 0},
-        {ep_stereo_panorama, 0, ep_modchorus, 0},
-        {ep_stereo_panorama, 1, ep_modchorus, 1},
-        {ep_chorus_modulator, 0, ep_modchorus_filter, 0},
-        {ep_modchorus_filter, 0, ep_modchorus, 2},
-        {ep_modchorus, 0, ep_chorus_mixer_r, 1},
-        {ep_modchorus, 1, ep_chorus_mixer_l, 1},
-        {ep_chorus_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_EPIANO},
-        {ep_chorus_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_EPIANO},
-        {ep_chorus_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_EPIANO},
-        {ep_chorus_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_EPIANO},
+             {drum_reverb_send_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_DRUMS},
+             {drum_reverb_send_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_DRUMS},
+             {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
+             {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
+             {drum_mixer_r, 0, drum_mixer_peak_r, 0},
+             {drum_mixer_l, 0, drum_mixer_peak_l, 0},
 
-        {microsynth_noise[0], 0, microsynth_envelope_noise[0], 0}, // noise generator to envelope
-        {microsynth_noise[1], 0, microsynth_envelope_noise[1], 0},
+             {reverb, 0, reverb_return_peak_r, 0},
+             {reverb, 1, reverb_return_peak_l, 0},
 
-        {microsynth_envelope_noise[0], 0, microsynth_filter_noise[0], 0}, // noise envelope to filter
-        {microsynth_envelope_noise[1], 0, microsynth_filter_noise[1], 0},
+             {ep, 0, ep_stereo_panorama, 0},
+             {ep, 1, ep_stereo_panorama, 1},
+             {ep_stereo_panorama, 0, ep_peak_r, 0},
+             {ep_stereo_panorama, 1, ep_peak_l, 0},
+             {ep_stereo_panorama, 0, ep_chorus_mixer_r, 0},
+             {ep_stereo_panorama, 1, ep_chorus_mixer_l, 0},
+             {ep_stereo_panorama, 0, ep_modchorus, 0},
+             {ep_stereo_panorama, 1, ep_modchorus, 1},
+             {ep_chorus_modulator, 0, ep_modchorus_filter, 0},
+             {ep_modchorus_filter, 0, ep_modchorus, 2},
+             {ep_modchorus, 0, ep_chorus_mixer_r, 1},
+             {ep_modchorus, 1, ep_chorus_mixer_l, 1},
+             {ep_chorus_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_EPIANO},
+             {ep_chorus_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_EPIANO},
+             {ep_chorus_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_EPIANO},
+             {ep_chorus_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_EPIANO},
 
-        {microsynth_filter_noise[0], 0, microsynth_mixer_filter_noise[0], 0}, // noise filter to mixer
-        {microsynth_filter_noise[0], 1, microsynth_mixer_filter_noise[0], 1},
-        {microsynth_filter_noise[0], 2, microsynth_mixer_filter_noise[0], 2},
+             {ep_chorus_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_EPIANO},
+             {ep_chorus_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_EPIANO},
 
-        {microsynth_filter_noise[1], 0, microsynth_mixer_filter_noise[1], 0},
-        {microsynth_filter_noise[1], 1, microsynth_mixer_filter_noise[1], 1},
-        {microsynth_filter_noise[1], 2, microsynth_mixer_filter_noise[1], 2},
+             {microsynth_noise[0], 0, microsynth_envelope_noise[0], 0}, // noise generator to envelope
+             {microsynth_noise[1], 0, microsynth_envelope_noise[1], 0},
 
-        {microsynth_envelope_noise[0], 0, microsynth_mixer_filter_noise[0], 3}, // unfiltered noise to mixer
-        {microsynth_envelope_noise[1], 0, microsynth_mixer_filter_noise[1], 3},
+             {microsynth_envelope_noise[0], 0, microsynth_filter_noise[0], 0}, // noise envelope to filter
+             {microsynth_envelope_noise[1], 0, microsynth_filter_noise[1], 0},
 
-        {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 0}, // noise to panorama 0
-        {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 1},
+             {microsynth_filter_noise[0], 0, microsynth_mixer_filter_noise[0], 0}, // noise filter to mixer
+             {microsynth_filter_noise[0], 1, microsynth_mixer_filter_noise[0], 1},
+             {microsynth_filter_noise[0], 2, microsynth_mixer_filter_noise[0], 2},
 
-        {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 0}, // noise to panorama 1
-        {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 1},
+             {microsynth_filter_noise[1], 0, microsynth_mixer_filter_noise[1], 0},
+             {microsynth_filter_noise[1], 1, microsynth_mixer_filter_noise[1], 1},
+             {microsynth_filter_noise[1], 2, microsynth_mixer_filter_noise[1], 2},
 
-        {microsynth_waveform[0], 0, microsynth_envelope_osc[0], 0}, // osc waveform to envelope
-        {microsynth_waveform[1], 0, microsynth_envelope_osc[1], 0},
+             {microsynth_envelope_noise[0], 0, microsynth_mixer_filter_noise[0], 3}, // unfiltered noise to mixer
+             {microsynth_envelope_noise[1], 0, microsynth_mixer_filter_noise[1], 3},
 
-        {microsynth_envelope_osc[0], 0, microsynth_filter_osc[0], 0}, // osc envelope to filter
-        {microsynth_envelope_osc[1], 0, microsynth_filter_osc[1], 0},
+             {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 0}, // noise to panorama 0
+             {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 1},
 
-        {microsynth_envelope_osc[0], 0, microsynth_mixer_filter_osc[0], 3}, // osc env to mixer for bypass
-        {microsynth_envelope_osc[1], 0, microsynth_mixer_filter_osc[1], 3},
+             {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 0}, // noise to panorama 1
+             {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 1},
 
-        {microsynth_filter_osc[0], 0, microsynth_mixer_filter_osc[0], 0}, // osc filter 0 to mixer 0
-        {microsynth_filter_osc[0], 1, microsynth_mixer_filter_osc[0], 1},
-        {microsynth_filter_osc[0], 2, microsynth_mixer_filter_osc[0], 2},
+             {microsynth_waveform[0], 0, microsynth_envelope_osc[0], 0}, // osc waveform to envelope
+             {microsynth_waveform[1], 0, microsynth_envelope_osc[1], 0},
 
-        {microsynth_filter_osc[1], 0, microsynth_mixer_filter_osc[1], 0}, // osc filter 1 to mixer 1
-        {microsynth_filter_osc[1], 1, microsynth_mixer_filter_osc[1], 1},
-        {microsynth_filter_osc[1], 2, microsynth_mixer_filter_osc[1], 2},
+             {microsynth_envelope_osc[0], 0, microsynth_filter_osc[0], 0}, // osc envelope to filter
+             {microsynth_envelope_osc[1], 0, microsynth_filter_osc[1], 0},
 
-        {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 0}, // mixer 0 to panorama 0
-        {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 1},
+             {microsynth_envelope_osc[0], 0, microsynth_mixer_filter_osc[0], 3}, // osc env to mixer for bypass
+             {microsynth_envelope_osc[1], 0, microsynth_mixer_filter_osc[1], 3},
 
-        {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 0}, // mixer 1 to panorama 1
-        {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 1},
+             {microsynth_filter_osc[0], 0, microsynth_mixer_filter_osc[0], 0}, // osc filter 0 to mixer 0
+             {microsynth_filter_osc[0], 1, microsynth_mixer_filter_osc[0], 1},
+             {microsynth_filter_osc[0], 2, microsynth_mixer_filter_osc[0], 2},
 
-        {microsynth_stereo_panorama_osc[0], 0, microsynth_mixer_r[0], 0}, // osc 0 pan to internal mixer
-        {microsynth_stereo_panorama_osc[0], 1, microsynth_mixer_l[0], 0},
+             {microsynth_filter_osc[1], 0, microsynth_mixer_filter_osc[1], 0}, // osc filter 1 to mixer 1
+             {microsynth_filter_osc[1], 1, microsynth_mixer_filter_osc[1], 1},
+             {microsynth_filter_osc[1], 2, microsynth_mixer_filter_osc[1], 2},
 
-        {microsynth_stereo_panorama_osc[1], 0, microsynth_mixer_r[1], 0}, // osc 1 pan to internal mixer
-        {microsynth_stereo_panorama_osc[1], 1, microsynth_mixer_l[1], 0},
+             {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 0}, // mixer 0 to panorama 0
+             {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 1},
 
-        {microsynth_stereo_panorama_noise[0], 0, microsynth_mixer_r[0], 1}, // noise 0 to mixer
-        {microsynth_stereo_panorama_noise[0], 1, microsynth_mixer_l[0], 1},
+             {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 0}, // mixer 1 to panorama 1
+             {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 1},
 
-        {microsynth_stereo_panorama_noise[1], 0, microsynth_mixer_r[1], 1}, // noise 1 to mixer
-        {microsynth_stereo_panorama_noise[1], 1, microsynth_mixer_l[1], 1},
+             {microsynth_stereo_panorama_osc[0], 0, microsynth_mixer_r[0], 0}, // osc 0 pan to internal mixer
+             {microsynth_stereo_panorama_osc[0], 1, microsynth_mixer_l[0], 0},
 
-        {microsynth_mixer_r[0], 0, microsynth_main_mixer_r, 0},
-        {microsynth_mixer_l[0], 0, microsynth_main_mixer_l, 0},
+             {microsynth_stereo_panorama_osc[1], 0, microsynth_mixer_r[1], 0}, // osc 1 pan to internal mixer
+             {microsynth_stereo_panorama_osc[1], 1, microsynth_mixer_l[1], 0},
 
-        {microsynth_mixer_r[1], 0, microsynth_main_mixer_r, 1},
-        {microsynth_mixer_l[1], 0, microsynth_main_mixer_l, 1},
+             {microsynth_stereo_panorama_noise[0], 0, microsynth_mixer_r[0], 1}, // noise 0 to mixer
+             {microsynth_stereo_panorama_noise[0], 1, microsynth_mixer_l[0], 1},
 
-        {microsynth_main_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_MICROSYNTH},
-        {microsynth_main_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+             {microsynth_stereo_panorama_noise[1], 0, microsynth_mixer_r[1], 1}, // noise 1 to mixer
+             {microsynth_stereo_panorama_noise[1], 1, microsynth_mixer_l[1], 1},
 
-        {microsynth_mixer_r[0], 0, microsynth_mixer_reverb, 0},
-        {microsynth_mixer_r[1], 0, microsynth_mixer_reverb, 1},
+             {microsynth_mixer_r[0], 0, microsynth_main_mixer_r, 0},
+             {microsynth_mixer_l[0], 0, microsynth_main_mixer_l, 0},
 
-        {microsynth_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_MICROSYNTH},
-        {microsynth_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_MICROSYNTH},
+             {microsynth_mixer_r[1], 0, microsynth_main_mixer_r, 1},
+             {microsynth_mixer_l[1], 0, microsynth_main_mixer_l, 1},
 
-        {microsynth_mixer_filter_osc[0], 0, microsynth_peak_osc_0, 0},     // osc 1 (inst1) to peak analyzer
-        {microsynth_mixer_filter_osc[1], 0, microsynth_peak_osc_1, 0},     // osc 2 (inst2) to peak analyzer
-        {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
-        {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
+             {microsynth_main_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_MICROSYNTH},
+             {microsynth_main_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+
+             //sidechain
+
+             {microsynth_main_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_MICROSYNTH},
+             {microsynth_main_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+             //sidechain end
+
+                {microsynth_mixer_r[0], 0, microsynth_mixer_reverb, 0},
+                {microsynth_mixer_r[1], 0, microsynth_mixer_reverb, 1},
+
+                {microsynth_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_MICROSYNTH},
+                {microsynth_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_MICROSYNTH},
+
+                {microsynth_mixer_filter_osc[0], 0, microsynth_peak_osc_0, 0},     // osc 1 (inst1) to peak analyzer
+                {microsynth_mixer_filter_osc[1], 0, microsynth_peak_osc_1, 0},     // osc 2 (inst2) to peak analyzer
+                {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
+                {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
 };
 
 AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
@@ -600,7 +616,10 @@ AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 //
 
 uint8_t nDynamic = 0;
-AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16];
+
+//AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16];
+AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16 + 8];
+
 
 FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 {
@@ -628,6 +647,13 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   if (instance_id == 0)
   {
     dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_0, 0);
+
+    dynamicConnections[nDynamic++] = new AudioConnection(sidechain_mixer_r, 0, fade_sidechain_r, 0);
+    dynamicConnections[nDynamic++] = new AudioConnection(sidechain_mixer_l, 0, fade_sidechain_l, 0);
+
+    dynamicConnections[nDynamic++] = new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN);
+    dynamicConnections[nDynamic++] = new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN);
+
   }
   else
     dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_1, 0);
@@ -641,11 +667,20 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dynamicConnections[nDynamic++] = new AudioConnection(*dexed_chorus[instance_id], 0, dexed_chorus_mixer_r[instance_id], 1);
   dynamicConnections[nDynamic++] = new AudioConnection(*dexed_chorus[instance_id], 0, dexed_chorus_mixer_l[instance_id], 1);
 
+  //normal
   dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_r[instance_id], 0, master_mixer_r, instance_id);
   dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_l[instance_id], 0, master_mixer_l, instance_id);
 
+  //test fades with sidechain mixer
+
+  dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_r[instance_id], 0, sidechain_mixer_r, instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_l[instance_id], 0, sidechain_mixer_l, instance_id);
+
+  //test fades sidechain mixer
+
   dynamicConnections[nDynamic++] = new AudioConnection(*global_delay_in_mixer[instance_id], 0, global_delay_filter[instance_id], 0);
   dynamicConnections[nDynamic++] = new AudioConnection(*global_delay_in_mixer[instance_id], 0, global_delay_filter_mixer[instance_id], 0); // bypass
+
   dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter[instance_id], 0, global_delay_filter_mixer[instance_id], 1);    // low
   dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter[instance_id], 1, global_delay_filter_mixer[instance_id], 2);    // band
   dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter[instance_id], 2, global_delay_filter_mixer[instance_id], 3);    // hi
@@ -677,8 +712,6 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dynamicConnections[nDynamic++] = new AudioConnection(*dexed_dry_mono2stereo[instance_id], 0, dexed_chorus_mixer_r[instance_id], 0);
   dynamicConnections[nDynamic++] = new AudioConnection(*dexed_dry_mono2stereo[instance_id], 1, dexed_chorus_mixer_l[instance_id], 0);
 
-  // dynamicConnections[nDynamic++] = new AudioConnection(*dexed_dry_mono2stereo[instance_id], 0, master_mixer_r, instance_id);
-  // dynamicConnections[nDynamic++] = new AudioConnection(*dexed_dry_mono2stereo[instance_id], 1, master_mixer_l, instance_id);
 
   // delay outs as sends to reverb
   dynamicConnections[nDynamic++] = new AudioConnection(*delay_mixer[instance_id], 0, reverb_mixer_r, REVERB_MIX_CH_AUX_DELAY1 + instance_id);
@@ -687,6 +720,10 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   // master out
   dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 0, master_mixer_r, MASTER_MIX_CH_DELAY1 + instance_id);
   dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 1, master_mixer_l, MASTER_MIX_CH_DELAY1 + instance_id);
+
+  // sidechain
+  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 0, sidechain_mixer_r, MASTER_MIX_CH_DELAY1 + instance_id);
+  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 1, sidechain_mixer_l, MASTER_MIX_CH_DELAY1 + instance_id);
 
   if (instance_id == 1)
   {
@@ -723,8 +760,15 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
     dynamicConnections[nDynamic++] = new AudioConnection(braids_stereo_panorama, 0, braids_flanger_r, 0);
     dynamicConnections[nDynamic++] = new AudioConnection(braids_stereo_panorama, 1, braids_flanger_l, 0);
 
+    //normal
     dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_r, 0, master_mixer_r, MASTER_MIX_CH_BRAIDS);
     dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_l, 0, master_mixer_l, MASTER_MIX_CH_BRAIDS);
+
+    // sidechain mixer
+    dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_r, 0, sidechain_mixer_r, MASTER_MIX_CH_BRAIDS);
+    dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_l, 0, sidechain_mixer_l, MASTER_MIX_CH_BRAIDS);
+
+    // sidechain mixer end
 
     dynamicConnections[nDynamic++] = new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 0 };
     dynamicConnections[nDynamic++] = new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 1 };
@@ -856,17 +900,11 @@ elapsedMillis cpu_mem_millis;
 #endif
 uint32_t cpumax = 0;
 
-bool sidechain_a_active = false;
-bool sidechain_b_active = false;
-
-bool sidechain_trigger_a;
-bool sidechain_trigger_b;
-
-uint8_t sidechain_a_sample_number = NUM_DRUMSET_CONFIG - 1;
-uint8_t sidechain_b_sample_number = NUM_DRUMSET_CONFIG - 1;
-
-uint8_t sidechain_a_speed = 0;
-uint8_t sidechain_b_speed = 0;
+bool sidechain_active = false;
+bool sidechain_trigger;
+uint8_t sidechain_sample_number = NUM_DRUMSET_CONFIG - 1;
+int sidechain_speed = 0;
+uint8_t sidechain_steps = 4;
 
 sdcard_t sdcard_infos;
 
@@ -1013,7 +1051,13 @@ FLASHMEM void setup()
   //   // 2024/8/16 after being stuck in bootloops for hours, i put back in the delay and it just booted up with psram
   // #endif
 
-  delay(10); //2024/10/14  had another bootloop issue with 2.8" cap. screen, inserting delay fixed it. Now put it in for every config.
+  //delay(10); //2024/10/14  had another bootloop issue with 2.8" cap. screen, inserting delay fixed it. Now put it in for every config.
+
+//2024/10/22 Added configurations in platformio.ini to create version with and without the boot-delay until this is figured out
+#ifdef BOOT_DELAY
+  delay(10);
+#endif
+
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))
@@ -1379,6 +1423,9 @@ FLASHMEM void setup()
 
   }
 
+  master_mixer_r.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
+  master_mixer_l.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
+
   master_mixer_r.gain(MASTER_MIX_CH_REVERB, VOL_MAX_FLOAT);
   master_mixer_l.gain(MASTER_MIX_CH_REVERB, VOL_MAX_FLOAT);
 
@@ -1537,6 +1584,9 @@ FLASHMEM void setup()
           break;
         case 9:
           LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
+          break;
+        case 10:
+          LCDML.FUNC_goBackToMenu();
           break;
         case 50:
           LCDML.OTHER_jumpToFunc(UI_func_information);
@@ -1729,34 +1779,58 @@ float pseudo_log_curve(float value)
   return (pow(value, 2.2));
 }
 
-float sc_dexed1_current = 1.0;
-float sc_dexed2_current = 1.0;
-
-uint8_t sc_dexed1_target_a = 0;
-uint8_t sc_dexed2_target_a = 0;
-
-uint8_t sc_dexed1_target_b = 0;
-uint8_t sc_dexed2_target_b = 0;
-
-float sc_braids_current = 1.0;
-
-uint8_t sc_braids_target_a = 0;
-uint8_t sc_braids_target_b = 0;
-
-float sc_delay_a_current = 1.0;
-float sc_delay_b_current = 1.0;
-
-uint8_t sc_delay_a_target_a = 0;
-uint8_t sc_delay_a_target_b = 0;
-uint8_t sc_delay_b_target_a = 0;
-uint8_t sc_delay_b_target_b = 0;
-
-float sc_reverb_current = 1.0;
-
-uint8_t sc_reverb_target_a = 0;
-uint8_t sc_reverb_target_b = 0;
-
 uint8_t sc_seq_step_displayed;
+
+FLASHMEM void set_sidechain_levels()
+{
+
+  for (uint8_t i = 0; i < NUM_DEXED; i++)
+  {
+    //dexed 
+    master_mixer_r.gain(MASTER_MIX_CH_DEXED1 + i, VOL_MAX_FLOAT - mapfloat(configuration.dexed[i].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+    master_mixer_l.gain(MASTER_MIX_CH_DEXED1 + i, VOL_MAX_FLOAT - mapfloat(configuration.dexed[i].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+    sidechain_mixer_r.gain(MASTER_MIX_CH_DEXED1 + i, mapfloat(configuration.dexed[i].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+    sidechain_mixer_l.gain(MASTER_MIX_CH_DEXED1 + i, mapfloat(configuration.dexed[i].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  }
+
+  //microsynth
+  master_mixer_r.gain(MASTER_MIX_CH_MICROSYNTH, VOL_MAX_FLOAT - mapfloat(microsynth[0].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  master_mixer_l.gain(MASTER_MIX_CH_MICROSYNTH, VOL_MAX_FLOAT - mapfloat(microsynth[0].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_r.gain(MASTER_MIX_CH_MICROSYNTH, mapfloat(microsynth[0].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_l.gain(MASTER_MIX_CH_MICROSYNTH, mapfloat(microsynth[0].sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+  //epiano 
+  master_mixer_r.gain(MASTER_MIX_CH_EPIANO, VOL_MAX_FLOAT - mapfloat(configuration.epiano.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  master_mixer_l.gain(MASTER_MIX_CH_EPIANO, VOL_MAX_FLOAT - mapfloat(configuration.epiano.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_r.gain(MASTER_MIX_CH_EPIANO, mapfloat(configuration.epiano.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_l.gain(MASTER_MIX_CH_EPIANO, mapfloat(configuration.epiano.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+  //braids 
+  master_mixer_r.gain(MASTER_MIX_CH_BRAIDS, VOL_MAX_FLOAT - mapfloat(braids_osc.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  master_mixer_l.gain(MASTER_MIX_CH_BRAIDS, VOL_MAX_FLOAT - mapfloat(braids_osc.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_r.gain(MASTER_MIX_CH_BRAIDS, mapfloat(braids_osc.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_l.gain(MASTER_MIX_CH_BRAIDS, mapfloat(braids_osc.sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+  //delay1 
+  master_mixer_r.gain(MASTER_MIX_CH_DELAY1, VOL_MAX_FLOAT - mapfloat(configuration.fx.delay1_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  master_mixer_l.gain(MASTER_MIX_CH_DELAY1, VOL_MAX_FLOAT - mapfloat(configuration.fx.delay1_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_r.gain(MASTER_MIX_CH_DELAY1, mapfloat(configuration.fx.delay1_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_l.gain(MASTER_MIX_CH_DELAY1, mapfloat(configuration.fx.delay1_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+  //delay2 
+  master_mixer_r.gain(MASTER_MIX_CH_DELAY2, VOL_MAX_FLOAT - mapfloat(configuration.fx.delay2_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  master_mixer_l.gain(MASTER_MIX_CH_DELAY2, VOL_MAX_FLOAT - mapfloat(configuration.fx.delay2_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_r.gain(MASTER_MIX_CH_DELAY2, mapfloat(configuration.fx.delay2_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_l.gain(MASTER_MIX_CH_DELAY2, mapfloat(configuration.fx.delay2_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+  //reverb
+  master_mixer_r.gain(MASTER_MIX_CH_REVERB, VOL_MAX_FLOAT - mapfloat(configuration.fx.reverb_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  master_mixer_l.gain(MASTER_MIX_CH_REVERB, VOL_MAX_FLOAT - mapfloat(configuration.fx.reverb_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+  sidechain_mixer_r.gain(MASTER_MIX_CH_REVERB, mapfloat(configuration.fx.reverb_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+  sidechain_mixer_l.gain(MASTER_MIX_CH_REVERB, mapfloat(configuration.fx.reverb_sidechain_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT));
+
+}
 
 void update_sidechain()
 {
@@ -1765,7 +1839,7 @@ void update_sidechain()
     display.setTextSize(1);
     display.setTextColor(RED, COLOR_BACKGROUND);
     setCursor_textGrid_small(28, 4);
-    if (sidechain_trigger_a)
+    if (sidechain_trigger)
     {
       display.print(F("T"));
       sc_seq_step_displayed = seq.step;
@@ -1778,142 +1852,60 @@ void update_sidechain()
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
 
-  if (sidechain_trigger_a)
+  if (sidechain_trigger)
   {
 
-    if (sc_dexed1_target_a != 0)
-    {
-      sc_dexed1_current = VOL_MAX_FLOAT - (float)sc_dexed1_target_a / 100;
-      if (sc_dexed1_current < 0.0)
-        sc_dexed1_current = 0.0;
-      master_mixer_r.gain(MASTER_MIX_CH_DEXED1, sc_dexed1_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DEXED1, sc_dexed1_current);
-    }
+    AudioNoInterrupts();
+    fade_sidechain_r.fadeOut(2);
+    fade_sidechain_l.fadeOut(2);
+    AudioInterrupts();
+    delay(3);
 
-    if (sc_dexed2_target_a != 0)
-    {
-      sc_dexed2_current = VOL_MAX_FLOAT - (float)sc_dexed2_target_a / 100;
-      if (sc_dexed2_current < 0.0)
-        sc_dexed2_current = 0.0;
-      master_mixer_r.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
-    }
+    AudioNoInterrupts();
+    fade_sidechain_r.fadeIn(sidechain_speed);
+    fade_sidechain_l.fadeIn(sidechain_speed);
+    AudioInterrupts();
 
-    if (sc_braids_target_a != 0)
-    {
-      sc_braids_current = VOL_MAX_FLOAT - (float)sc_braids_target_a / 100;
-      if (sc_braids_current < 0.0)
-        sc_braids_current = 0.0;
-      master_mixer_r.gain(MASTER_MIX_CH_BRAIDS, sc_braids_current);
-      master_mixer_l.gain(MASTER_MIX_CH_BRAIDS, sc_braids_current);
-    }
+    //  }
+      // if (sc_dexed2_target_a != 0)
+      // {
+      //   sc_dexed2_current = VOL_MAX_FLOAT - (float)sc_dexed2_target_a / 100;
+      //   if (sc_dexed2_current < 0.0)
+      //     sc_dexed2_current = 0.0;
+      //   master_mixer_r.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
+      //   master_mixer_l.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
+      // }
+      // if (sc_delay_a_target_a != 0)
+      // {
+      //   sc_delay_a_current = VOL_MAX_FLOAT - (float)sc_delay_a_target_a / 100;
+      //   if (sc_delay_a_current < 0.0)
+      //     sc_delay_a_current = 0.0;
+      //   master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
+      //   master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
+      // }
+      // if (sc_delay_b_target_a != 0)
+      // {
+      //   sc_delay_b_current = VOL_MAX_FLOAT - (float)sc_delay_b_target_a / 100;
+      //   if (sc_delay_b_current < 0.0)
+      //     sc_delay_b_current = 0.0;
+      //   master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_b_current);
+      //   master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_b_current);
+      // }
+      // if (sc_reverb_target_a != 0)
+      // {
+      //   sc_reverb_current = VOL_MAX_FLOAT - (float)sc_reverb_target_a / 100;
+      //   if (sc_reverb_current < 0.0)
+      //     sc_reverb_current = 0.0;
+      //   master_mixer_r.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
+      //   master_mixer_l.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
+      // }
 
-    if (sc_delay_a_target_a != 0)
-    {
-
-      sc_delay_a_current = VOL_MAX_FLOAT - (float)sc_delay_a_target_a / 100;
-      if (sc_delay_a_current < 0.0)
-        sc_delay_a_current = 0.0;
-      master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
-    }
-
-    if (sc_delay_b_target_a != 0)
-    {
-
-      sc_delay_b_current = VOL_MAX_FLOAT - (float)sc_delay_b_target_a / 100;
-      if (sc_delay_b_current < 0.0)
-        sc_delay_b_current = 0.0;
-      master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_b_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_b_current);
-    }
-
-    if (sc_reverb_target_a != 0)
-    {
-
-      sc_reverb_current = VOL_MAX_FLOAT - (float)sc_reverb_target_a / 100;
-      if (sc_reverb_current < 0.0)
-        sc_reverb_current = 0.0;
-      master_mixer_r.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
-      master_mixer_l.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
-    }
-
-    sidechain_trigger_a = false;
+    sidechain_trigger = false;
   }
 
-  if (seq.running && control_rate > CONTROL_RATE_MS)
-  {
-    if (sc_dexed1_current < VOL_MAX_FLOAT && sc_dexed1_target_a != 0)
-    {
-      sc_dexed1_current = sc_dexed1_current + (float)0.002 * sidechain_a_speed;
-
-      if (sc_dexed1_current >= VOL_MAX_FLOAT)
-        sc_dexed1_current = VOL_MAX_FLOAT;
-
-      master_mixer_r.gain(MASTER_MIX_CH_DEXED1, sc_dexed1_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DEXED1, sc_dexed1_current);
-    }
-
-    if (sc_dexed2_current < VOL_MAX_FLOAT && sc_dexed2_target_a != 0)
-    {
-
-      sc_dexed2_current = sc_dexed2_current + (float)0.002 * sidechain_a_speed;
-
-      if (sc_dexed2_current >= VOL_MAX_FLOAT)
-        sc_dexed2_current = VOL_MAX_FLOAT;
-
-      master_mixer_r.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
-    }
-
-    if (seq.running && sc_braids_current < VOL_MAX_FLOAT && sc_braids_target_a != 0)
-    {
-
-      sc_braids_current = sc_braids_current + (float)0.002 * sidechain_a_speed;
-
-      if (sc_braids_current >= VOL_MAX_FLOAT)
-        sc_braids_current = VOL_MAX_FLOAT;
-
-      master_mixer_r.gain(MASTER_MIX_CH_BRAIDS, sc_braids_current);
-      master_mixer_l.gain(MASTER_MIX_CH_BRAIDS, sc_braids_current);
-    }
-
-    if (sc_delay_a_current < VOL_MAX_FLOAT && sc_delay_a_target_a != 0)
-    {
-
-      sc_delay_a_current = sc_delay_a_current + (float)0.002 * sidechain_a_speed;
-
-      if (sc_delay_a_current >= VOL_MAX_FLOAT)
-        sc_delay_a_current = VOL_MAX_FLOAT;
-
-      master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
-    }
-
-    if (sc_delay_b_current < VOL_MAX_FLOAT && sc_delay_b_target_a != 0)
-    {
-
-      sc_delay_b_current = sc_delay_b_current + (float)0.002 * sidechain_b_speed;
-
-      if (sc_delay_b_current >= VOL_MAX_FLOAT)
-        sc_delay_b_current = VOL_MAX_FLOAT;
-
-      master_mixer_r.gain(MASTER_MIX_CH_DELAY2, sc_delay_b_current);
-      master_mixer_l.gain(MASTER_MIX_CH_DELAY2, sc_delay_b_current);
-    }
-
-    if (sc_reverb_current < VOL_MAX_FLOAT && sc_reverb_target_a != 0)
-    {
-
-      sc_reverb_current = sc_reverb_current + (float)0.002 * sidechain_a_speed;
-
-      if (sc_reverb_current >= VOL_MAX_FLOAT)
-        sc_reverb_current = VOL_MAX_FLOAT;
-
-      master_mixer_r.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
-      master_mixer_l.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
-    }
-  }
+  // if (seq.running && control_rate > CONTROL_RATE_MS)
+  // {
+  // }
 
   if (control_rate > CONTROL_RATE_MS && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sidechain))
   {
@@ -2207,9 +2199,9 @@ void loop()
 
   if (seq.running)
   {
-    if (sidechain_a_active || sidechain_b_active)
+    if (sidechain_active)
       ;
-    //update_sidechain();  //work in progress
+    update_sidechain();  //work in progress
   }
 
   if (control_rate > CONTROL_RATE_MS)
@@ -3026,6 +3018,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
           const uint8_t d = midiNoteToSampleNote(inNumber);
 
+          if (sidechain_active && d == sidechain_sample_number)
+            sidechain_trigger = true;
+
+
 #ifdef COMPILE_FOR_FLASH
           char temp_name[26];
 #endif
@@ -3077,10 +3073,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
             drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
 
-            if (sidechain_a_active && d == sidechain_a_sample_number)
-              sidechain_trigger_a = true;
-            if (sidechain_b_active && d == sidechain_b_sample_number)
-              sidechain_trigger_b = true;
+
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
             if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
@@ -3216,10 +3209,9 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
             drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
 
-            // if (sidechain_a_active && d == sidechain_a_sample_number)
-            //   sidechain_trigger_a = true;
-            // if (sidechain_b_active && d == sidechain_b_sample_number)
-            //   sidechain_trigger_b = true;
+            // if (sidechain_active && d == sidechain_sample_number)
+            //   sidechain_trigger = true;
+
 
             if ((drum_config[selected_slice_sample[s]].drum_data != NULL && drum_config[selected_slice_sample[s]].len > 0 &&
               drum_config[selected_slice_sample[s]].len < 10000000 && d >= 0 && d <= num_slices[s]))
@@ -3236,10 +3228,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               sample_envelope[slot]->noteOn();
               sample_envelope[slot + NUM_DRUMS]->noteOn();
 
-              // if (sidechain_a_active && d == sidechain_a_sample_number)
-              //   sidechain_trigger_a = true;
-              // if (sidechain_b_active && d == sidechain_b_sample_number)
-              //   sidechain_trigger_b = true;
 
               Drum[slot]->playRaw((int16_t*)drum_config[selected_slice_sample[s]].drum_data + slice_start[s][d],
                 slice_end[s][d] - slice_start[s][d], drum_config[selected_slice_sample[s]].numChannels);
@@ -4407,10 +4395,7 @@ void handleStart(void)
   {
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
   }
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
-  {
-    display.fillRect(174, 14, DISPLAY_WIDTH - 174 - 11, 38, COLOR_BACKGROUND);
-  }
+
 
 }
 
@@ -4444,11 +4429,7 @@ void handleStop(void)
       if (seq.clock == 0 || seq.clock == 2)
         sequencer_timer.stop();
 
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
-      {
-        display.fillRect(174, 14, DISPLAY_WIDTH - 174 - 11, 38, COLOR_BACKGROUND);
-      }
-      else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song))
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song))
       {
         clear_song_playhead();
         sub_song_print_tracknumbers();
@@ -4776,6 +4757,9 @@ FLASHMEM void check_configuration_fx(void)
   configuration.fx.ep_chorus_depth = constrain(configuration.fx.ep_chorus_depth, EP_CHORUS_DEPTH_MIN, EP_CHORUS_DEPTH_MAX);
   configuration.fx.ep_chorus_level = constrain(configuration.fx.ep_chorus_level, EP_CHORUS_LEVEL_MIN, EP_CHORUS_LEVEL_MAX);
   configuration.fx.ep_reverb_send = constrain(configuration.fx.ep_reverb_send, REVERB_SEND_MIN, REVERB_SEND_MAX);
+
+  set_sidechain_levels();
+
 }
 
 FLASHMEM void check_configuration_dexed(uint8_t instance_id)
@@ -5286,12 +5270,12 @@ FLASHMEM float midi_volume_transform(uint8_t midi_amp)
   LOG.print(F(" transformed_midi_amp = "));
   LOG.println(powf(midi_amp / 127.0, 4), 3);
 #endif
-  return powf(midi_amp / 127.0, 4);
+  return powf(midi_amp / 127.0, 2); //4
 }
 
 FLASHMEM float volume_transform(float amp)
 {
-  return powf(amp, 4);
+  return powf(amp, 2); //4
 }
 
 FLASHMEM uint32_t crc32(byte* calc_start, uint16_t calc_bytes) // base code from https://www.arduino.cc/en/Tutorial/EEPROMCrc

@@ -167,18 +167,10 @@ extern uint8_t set_sample_env_release(uint8_t sample, uint8_t value);
 extern multisample_t msp[NUM_MULTISAMPLES];
 extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 
-extern bool sidechain_a_active;
-extern bool sidechain_b_active;
-extern uint8_t sidechain_a_sample_number;
-extern uint8_t sidechain_b_sample_number;
-extern uint8_t sidechain_a_speed;
-extern uint8_t sidechain_b_speed;
-extern uint8_t sc_dexed1_target_a;
-extern uint8_t sc_dexed2_target_a;
-extern uint8_t sc_dexed1_target_b;
-extern uint8_t sc_dexed2_target_b;
-extern uint8_t sc_reverb_target_a;
-extern uint8_t sc_reverb_target_b;
+extern bool sidechain_active;
+extern uint8_t sidechain_sample_number;
+extern int sidechain_speed;
+extern uint8_t sidechain_steps;
 
 File json;
 char filename[CONFIG_FILENAME_LEN];
@@ -1110,6 +1102,7 @@ FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
         configuration.dexed[instance_id].portamento_time = data_json["portamento_time"];
         configuration.dexed[instance_id].op_enabled = data_json["op_enabled"];
         configuration.dexed[instance_id].midi_channel = data_json["midi_channel"];
+ configuration.dexed[instance_id].sidechain_send = data_json["sidechain_send"];
 
         check_configuration_dexed(instance_id);
         set_voiceconfig_params(instance_id);
@@ -1191,6 +1184,7 @@ FLASHMEM bool save_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
       data_json["portamento_time"] = configuration.dexed[instance_id].portamento_time;
       data_json["op_enabled"] = configuration.dexed[instance_id].op_enabled;
       data_json["midi_channel"] = configuration.dexed[instance_id].midi_channel;
+       data_json["sidechain_send"] = configuration.dexed[instance_id].sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -1283,6 +1277,8 @@ FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
         microsynth[instance_id].vel_mod_filter_osc = data_json["vel_mod_filter_osc"];
         microsynth[instance_id].vel_mod_filter_noise = data_json["vel_mod_filter_noise"];
 
+         microsynth[instance_id].sidechain_send = data_json["sidechain_send"];
+
         microsynth_update_all_settings(instance_id);
 
         return (true);
@@ -1360,6 +1356,8 @@ FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
       data_json["pan"] = microsynth[instance_id].pan;
       data_json["vel_mod_filter_osc"] = microsynth[instance_id].vel_mod_filter_osc;
       data_json["vel_mod_filter_noise"] = microsynth[instance_id].vel_mod_filter_noise;
+
+      data_json["sidechain_send"]=  microsynth[instance_id].sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -1464,6 +1462,10 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         configuration.fx.ep_delay_send_1 = data_json["ep_delay1"];
         configuration.fx.ep_delay_send_2 = data_json["ep_delay2"];
 
+        configuration.fx.delay1_sidechain_send =data_json["delay1_sidechain_send"];
+        configuration.fx.delay2_sidechain_send =data_json["delay2_sidechain_send"];
+        configuration.fx.reverb_sidechain_send =data_json["reverb_sidechain_send"];
+
         check_configuration_fx();
         set_fx_params();
 
@@ -1549,6 +1551,10 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
       data_json["ep_delay1"] = configuration.fx.ep_delay_send_1;
       data_json["ep_delay2"] = configuration.fx.ep_delay_send_2;
 
+      data_json["delay1_sidechain_send"]=  configuration.fx.delay1_sidechain_send ;
+      data_json["delay2_sidechain_send"]=  configuration.fx.delay2_sidechain_send ;
+       data_json["reverb_sidechain_send"]=  configuration.fx.reverb_sidechain_send ;
+
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
       serializeJsonPretty(data_json, Serial);
@@ -1624,6 +1630,7 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
         configuration.epiano.sound_intensity = data_json["sound_intensity"];
         configuration.epiano.pan = data_json["pan"];
         configuration.epiano.midi_channel = data_json["midi_channel"];
+        configuration.epiano.sidechain_send = data_json["sidechain_send"];
 
         check_configuration_epiano();
         set_epiano_params();
@@ -1687,6 +1694,7 @@ FLASHMEM bool save_sd_epiano_json(uint8_t number)
       data_json["sound_intensity"] = configuration.epiano.sound_intensity;
       data_json["pan"] = configuration.epiano.pan;
       data_json["midi_channel"] = configuration.epiano.midi_channel;
+       data_json["sidechain_send"]=configuration.epiano.sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -2220,6 +2228,7 @@ FLASHMEM bool load_sd_braids_json(uint8_t number)
         braids_osc.delay_send_2 = data_json["delay_2"];
         braids_osc.midi_channel = data_json["midi"];
         braids_osc.pan = data_json["pan"];
+        braids_osc.sidechain_send = data_json["sidechain_send"];
 
         braids_update_all_settings();
         return (true);
@@ -2284,6 +2293,7 @@ FLASHMEM bool save_sd_braids_json(uint8_t number)
       data_json["delay_2"] = braids_osc.delay_send_2;
       data_json["midi"] = braids_osc.midi_channel;
       data_json["pan"] = braids_osc.pan;
+      data_json["sidechain_send"] = braids_osc.sidechain_send;
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
       serializeJsonPretty(data_json, Serial);
@@ -2718,18 +2728,13 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
         LOG.println();
 #endif
 
-        sidechain_a_active = data_json["a_active"];
-        sidechain_b_active = data_json["b_active"];
-        sidechain_a_sample_number = data_json["a_sample_number"];
-        sidechain_b_sample_number = data_json["b_sample_number"];
-        sidechain_a_speed = data_json["a_speed"];
-        sidechain_b_speed = data_json["b_speed"];
-        sc_dexed1_target_a = data_json["dexed1_target_a"];
-        sc_dexed2_target_a = data_json["dexed2_target_a"];
-        sc_dexed1_target_b = data_json["dexed1_target_b"];
-        sc_dexed2_target_b = data_json["dexed2_target_b"];
-        sc_reverb_target_a = data_json["reverb_target_a"];
-        sc_reverb_target_b = data_json["reverb_target_b"];
+        sidechain_active = data_json["active"];
+        sidechain_sample_number = data_json["sample_number"];
+        if (data_json["speed"]>0)
+        sidechain_speed = data_json["speed"];
+          if (data_json["steps"]>0)
+         sidechain_steps = data_json["steps"];
+       
         return (true);
       }
 #ifdef DEBUG
@@ -2772,18 +2777,13 @@ FLASHMEM bool save_sd_sidechain_json(uint8_t number)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
-      data_json["a_active"] = sidechain_a_active;
-      data_json["b_active"] = sidechain_b_active;
-      data_json["a_sample_number"] = sidechain_a_sample_number;
-      data_json["b_sample_number"] = sidechain_b_sample_number;
-      data_json["a_speed"] = sidechain_a_speed;
-      data_json["b_speed"] = sidechain_b_speed;
-      data_json["dexed1_target_a"] = sc_dexed1_target_a;
-      data_json["dexed2_target_a"] = sc_dexed2_target_a;
-      data_json["dexed1_target_b"] = sc_dexed1_target_b;
-      data_json["dexed2_target_b"] = sc_dexed2_target_b;
-      data_json["reverb_target_a"] = sc_reverb_target_a;
-      data_json["reverb_target_b"] = sc_reverb_target_b;
+      data_json["active"] = sidechain_active;
+  
+      data_json["sample_number"] = sidechain_sample_number;
+ 
+      data_json["speed"] = sidechain_speed;
+      data_json["steps"] = sidechain_steps;
+ 
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));

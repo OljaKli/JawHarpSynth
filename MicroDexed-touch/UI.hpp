@@ -76,17 +76,11 @@ struct DxPoolSettings {
   uint8_t transpose;
 };
 
-int sample_editor_scale_end;
-
 // sidechains
-extern uint8_t sidechain_a_sample_number;
-extern uint8_t sidechain_b_sample_number;
-
-extern uint8_t sidechain_a_speed;
-extern uint8_t sidechain_b_speed;
-
-extern bool sidechain_a_active;
-extern bool sidechain_b_active;
+extern uint8_t sidechain_sample_number;
+extern int sidechain_speed;
+extern bool sidechain_active;
+extern uint8_t sidechain_steps;
 
 elapsedMillis gamepad_millis;
 int gamepad_accelerate;
@@ -195,32 +189,6 @@ extern XPT2046_Touchscreen touch;
 #ifdef CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
 #endif
-
-extern float sc_dexed1_current;
-extern float sc_dexed2_current;
-
-extern float sc_braids_current;
-
-extern uint8_t sc_dexed1_target_a;
-extern uint8_t sc_dexed2_target_a;
-
-extern uint8_t sc_dexed1_target_b;
-extern uint8_t sc_dexed2_target_b;
-
-extern float sc_reverb_current;
-extern uint8_t sc_reverb_target_a;
-extern uint8_t sc_reverb_target_b;
-
-extern uint8_t sc_braids_target_a;
-extern uint8_t sc_braids_target_b;
-
-extern float sc_delay_a_current;
-extern float sc_delay_b_current;
-
-extern uint8_t sc_delay_a_target_a;
-extern uint8_t sc_delay_a_target_b;
-extern uint8_t sc_delay_b_target_a;
-extern uint8_t sc_delay_b_target_b;
 
 extern void sequencer(void);
 extern void preview_sample(void);
@@ -385,8 +353,8 @@ extern AudioEffectDelay ep_delay_fx_l;
 extern AudioMixer<2> ep_delay_mixer_r;
 extern AudioMixer<2> ep_delay_mixer_l;
 
-extern AudioMixer<11> master_mixer_r;
-extern AudioMixer<11> master_mixer_l;
+extern AudioMixer<12> master_mixer_r;
+extern AudioMixer<12> master_mixer_l;
 
 extern AudioEffectStereoMono stereo2mono;
 extern AudioAnalyzePeak master_peak_r;
@@ -3350,7 +3318,7 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
     display.print(input_value ? F("ON ") : F("OFF"));
   else if (zero_name != NULL && input_value == 0)
     display.print(zero_name);
-    else if (zero_name != NULL && input_value == 17)
+  else if (zero_name != NULL && input_value == 17)
     display.print(zero_name);
   else if (limit_min < 0)
     print_formatted_number_signed(input_value, 2);
@@ -6290,112 +6258,6 @@ uint16_t get_overview_factor(unsigned long filelength)
   return overview_factor;
 }
 
-
-#if defined(COMPILE_FOR_FLASH)
-void draw_waveform_overview_in_drums_page_step2(uint8_t overview_buffer[], int end_zoomed_x_position, unsigned long filelength)
-{
-  uint8_t xspace = 0;
-  uint32_t current_pos = 0;
-  int oldy = 50;
-  uint8_t x_offset = 174;
-  uint16_t overview_factor = 0;
-  display.console = true;
-  display.fillRect(x_offset, 14, DISPLAY_WIDTH - x_offset - 11, 38, GREY4);
-
-  while (xspace < 133) // draw overview
-  {
-    display.drawLine(x_offset + 1 + (xspace - 1), oldy - 16, x_offset + 1 + xspace, overview_buffer[xspace] - 16, COLOR_SYSTEXT);
-    oldy = overview_buffer[xspace];
-    xspace = xspace + 1;
-    current_pos = current_pos + overview_factor;
-  }
-}
-#endif
-
-
-#if defined(COMPILE_FOR_FLASH)
-void draw_waveform_overview_in_drums_page_step1(int samplenumber)
-{
-  display.console = true;
-  uint8_t overview_buffer[142];
-  uint16_t xspace = 1;
-  short samplevalue = 0;
-  uint32_t current_pos = 0;
-  int end_zoomed_x_position = 0;
-  uint16_t overview_factor = 0;
-  char filename[26];
-  uint32_t filesize;
-
-  SerialFlash.opendir();
-  if (samplenumber > 0)
-  {
-    for (int f = 0; f < samplenumber; f++)
-    {
-      if (SerialFlash.readdir(filename, sizeof(filename), filesize))
-        ;
-      else
-        break;
-    }
-  }
-  SerialFlashFile f = SerialFlash.open(filename);
-  unsigned long filelength = f.size();
-
-  f.seek(44);
-  char buf[256];
-  overview_factor = get_overview_factor(filelength);
-
-  end_zoomed_x_position = current_pos;
-  //draw_end_marking(xspace);
-  xspace = 0;
-  current_pos = 0;
-  while (xspace < 140) // generate overview
-  {
-    f.read(buf, 256);
-    samplevalue = ((buf[1] * 256) + buf[0]);
-    overview_buffer[xspace] = samplevalue / 1800 + 50;
-    xspace = xspace + 1;
-    current_pos = current_pos + overview_factor;
-    f.seek(44 + current_pos);
-  }
-  draw_waveform_overview_in_drums_page_step2(overview_buffer, end_zoomed_x_position, filelength);
-
-  f.close();
-
-  // else if (fm.sample_source == 0) // SD
-  // {
-  //   File f;
-  //   File myDir = SD.open("/DRUMS");
-  //   for (uint16_t i = 0; i < samplenumber; i++)
-  //   {
-  //     f.close();
-  //     f = myDir.openNextFile();
-  //     // if (! f)  break;
-  //   }
-  //   unsigned long filelength = f.size();
-  //   f.seek(44);
-  //   char buf[256];
-  //   overview_factor = get_overview_factor(filelength);
-  //   end_zoomed_x_position = current_pos;
-  //   //draw_end_marking(xspace);
-  //   xspace = 0;
-  //   current_pos = 0;
-  //   while (xspace < 140) // generate overview
-  //   {
-  //     f.read(buf, 256);
-  //     samplevalue = ((buf[1] * 256) + buf[0]);
-  //     overview_buffer[xspace] = samplevalue / 1800 + 50;
-  //     xspace = xspace + 1;
-  //     current_pos = current_pos + overview_factor;
-  //     f.seek(44 + current_pos);
-  //   }
-  //   draw_waveform_overview_in_drums_page_step2(overview_buffer, end_zoomed_x_position, filelength);
-  //   f.close();
-  //   myDir.close();
-  // }
-
-}
-#endif
-
 FLASHMEM void UI_func_custom_mappings(uint8_t param)
 {
   char displayname[8] = { 0, 0, 0, 0, 0, 0, 0 };
@@ -7361,25 +7223,6 @@ void seq_printVelGraphBar_single_step(uint8_t step, int color)
 
 bool wave_editor_skip_redraw_overview = false;
 
-//#if defined(COMPILE_FOR_FLASH)
-
-void draw_end_marking(uint16_t xspace)
-{
-  if (xspace < DISPLAY_WIDTH - 1)
-  {
-    display.console = true;
-    display.fillRect(xspace + 1, 72, DISPLAY_WIDTH - xspace - 2, 101, COLOR_BACKGROUND);
-    display.drawLine(xspace, 74, xspace, 170, RED);
-    display.drawLine(xspace, 120, DISPLAY_WIDTH - 1, 120, GREY2);
-  }
-  if (xspace < DISPLAY_WIDTH - CHAR_width_small * 3 - 3)
-  {
-    display.setCursor(xspace + 3, 173 - CHAR_height_small);
-    display.print("END");
-    sample_editor_scale_end = xspace + 3;
-  }
-}
-
 FLASHMEM void sample_editor_update_file_counts()
 {
   if (fm.sample_source == 1) // source = FLASH
@@ -8097,9 +7940,6 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #if defined(COMPILE_FOR_FLASH) || defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
     if (menuhelper_redraw)
     {
-      // if (fm.sample_source > 1 && fm.sample_source < 4) // MSP
-        // draw_waveform_overview_in_sample_editor_step1(temp_int); //array starts with 0, not 1
-      // else
       if (fm.sample_source == 4) // PSRAM
       {
         draw_waveform_sample_editor(99);
@@ -8432,7 +8272,7 @@ FLASHMEM void print_active_slice_textonly()
   }
 }
 
-void UI_func_seq_vel_editor(uint8_t param)
+FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
 {
   char tmp[5];
   uint8_t prev_option = 99; // avoid screen flicker at start / end of menu options
@@ -8936,13 +8776,13 @@ void UI_func_seq_vel_editor(uint8_t param)
   }
 }
 
-void seq_clear_active_pattern()
+FLASHMEM void seq_clear_active_pattern()
 {
   memset(seq.note_data[seq.active_pattern], 0, sizeof(seq.note_data[seq.active_pattern]));
   memset(seq.vel[seq.active_pattern], 0, sizeof(seq.vel[seq.active_pattern]));
 }
 
-void seq_clear_all_patterns()
+FLASHMEM void seq_clear_all_patterns()
 {
   for (uint8_t i = 0; i < NUM_SEQ_PATTERN - 1; i++)
   {
@@ -12647,7 +12487,7 @@ FLASHMEM void UI_func_song(uint8_t param)
   // }
 //}
 
-void arp_refresh_display_play_status()
+FLASHMEM void arp_refresh_display_play_status()
 {
   if (seq.running == false)
   {
@@ -14030,7 +13870,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     if (size != 0) {
       sprintf(text1, "%d MB PSRAM CHIP FOUND, MAX DELAY: 2x %d MS", size, DELAY_MAX_TIME);
       display.print(text1);
-  }
+    }
     else {
       display.print(F("NO VALID PSRAM CHIP FOUND"));
     }
@@ -14051,7 +13891,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
     helptext_l(back_text);
     helptext_r("SELECT PARAM.");
-}
+  }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     if (LCDML.BT_checkEnter()) {
@@ -14362,7 +14202,7 @@ FLASHMEM void sysinfo_reload_prev_voice(DxPoolSettings settings)
   }
 }
 
-void UI_func_information(uint8_t param)
+FLASHMEM void UI_func_information(uint8_t param)
 {
   static uint16_t loopMs = 0;
   static uint8_t sysinfo_logo_version = 0;
@@ -14372,6 +14212,7 @@ void UI_func_information(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+
     registerScope(180, 150, 128, 50);
     sysinfo_chord_state = 0;
     char version_string[display_cols + 10 + 1];
@@ -15302,7 +15143,7 @@ void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCoun
   totalBytesWritten += 44;
 }
 
-void startWavRecording()
+FLASHMEM void startWavRecording()
 {
   display.setTextSize(2);
 
@@ -15400,7 +15241,7 @@ void continueWavRecording()
   print_formatted_number(seconds, 2);
 }
 
-void stopWavRecording()
+FLASHMEM void stopWavRecording()
 {
   char tmp[6];
 
@@ -15521,7 +15362,7 @@ FLASHMEM void UI_func_recorder(uint8_t param)
   }
 }
 
-void print_braids_static_texts()
+FLASHMEM void print_braids_static_texts()
 {
   display.setTextSize(1);
   seq.edit_state = 0;
@@ -16161,7 +16002,7 @@ FLASHMEM void print_flash_stats()
   display.print(tmp);
   display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
   display.print(" KB");
-  }
+}
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -16579,7 +16420,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
     display.print(F("FILENAME"));
 
     print_msp_all_zones();
-    }
+  }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     multisample_zone_t* zoneEdited = &msz[seq.active_multisample][generic_temp_select_menu - 3];
@@ -17194,7 +17035,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #ifdef DEBUG
         LOG.println(F("Finished All Files"));
 #endif
-  }
+      }
       else
 #endif
         if (fm.sd_is_folder && fm.sd_mode != FM_COPY_TO_PSRAM)
@@ -17329,9 +17170,9 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
                 flash_loadDirectory();
                 print_flash_stats();
                 flash_printDirectory();
-        }
-}
-}
+              }
+            }
+          }
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -17891,16 +17732,12 @@ FLASHMEM void _render_misc_settings()
   print_formatted_number(configuration.sys.gamepad_speed, 3);
   setCursor_textGrid_small(46, 7);
   display.print(F("ms"));
-
   setCursor_textGrid_small(2, 13);
   display.print(F("SKIP BOOT ANIMATION"));
   setCursor_textGrid_small(2, 14);
   display.print(F("INVERT COLORS (EXPERIMENTAL)"));
   setCursor_textGrid_small(2, 15);
   display.print(F("DEXED ENGINE"));
-  // setCursor_textGrid_small(2, 15);
-  // display.print(F("DELAY_COMPENSATION (TESTING)"));
-
   setCursor_textGrid_small(42, 8);
   display.print(configuration.sys.screen_saver_start);
   setCursor_textGrid_small(42, 9);
@@ -18502,26 +18339,18 @@ FLASHMEM void UI_func_mixer(uint8_t param)
   }
 }
 
-void print_sidechain_static_texts()
+FLASHMEM void print_sidechain_static_texts()
 {
   setCursor_textGrid_small(1, 1);
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(F("DUAL SIDECHAIN"));
+  display.print(F("SIDECHAIN"));
   helptext_l(back_text);
   helptext_r("< > SELECT PARAM");
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
   setCursor_textGrid_small(1, 4);
   display.print(F("TRIGGER"));
-  setCursor_textGrid_small(11, 4);
-  display.setTextColor(RED, COLOR_BACKGROUND);
-  display.print(F("A"));
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  setCursor_textGrid_small(33, 4);
-  display.setTextColor(RED, COLOR_BACKGROUND);
-  display.print(F("B"));
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
   setCursor_textGrid_small(1, 5);
   display.print(F("SOURCE"));
@@ -18529,20 +18358,20 @@ void print_sidechain_static_texts()
   setCursor_textGrid_small(1, 6);
   display.print(F("SPEED"));
 
+  setCursor_textGrid_small(19, 6);
+  display.print(F("OR"));
+  setCursor_textGrid_small(25, 6);
+  display.print(F("/16 STEPS"));
+
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   setCursor_textGrid_small(1, 8);
   display.print(F("TARGETS"));
 
   display.setTextColor(GREY2, COLOR_BACKGROUND);
   setCursor_textGrid_small(11, 8);
-  display.print(F("STRENGTH"));
-  setCursor_textGrid_small(21, 8);
-  display.print(F("REDUCTION"));
-
-  setCursor_textGrid_small(33, 8);
-  display.print(F("STRENGTH"));
-  setCursor_textGrid_small(43, 8);
-  display.print(F("REDUCTION"));
+  display.print(F("COMPRESSED"));
+  setCursor_textGrid_small(23, 8);
+  display.print(F("UNCOMPRESSED"));
 
   setCursor_textGrid_small(1, 10);
   display.print(F("DEXED1"));
@@ -18556,46 +18385,18 @@ void print_sidechain_static_texts()
   display.print(F("MSYNTH2"));
   setCursor_textGrid_small(1, 15);
   display.print(F("BRAIDS"));
-  setCursor_textGrid_small(1, 16);
-  display.print(F("MSP1"));
   setCursor_textGrid_small(1, 17);
-  display.print(F("MSP1"));
-  setCursor_textGrid_small(1, 19);
   display.print(F("DELAY A"));
-  setCursor_textGrid_small(1, 20);
+  setCursor_textGrid_small(1, 18);
   display.print(F("DELAY B"));
-  setCursor_textGrid_small(1, 21);
+  setCursor_textGrid_small(1, 19);
   display.print(F("REVERB"));
-
-  print_small_intbar(33, 10, sc_dexed1_target_b, 17, 1, 1);
-  print_small_intbar(33, 11, sc_dexed2_target_b, 18, 1, 1);
-
-  print_small_intbar(33, 12, 0, 19, 1, 1);
-  print_small_intbar(33, 13, 0, 20, 1, 1);
-  print_small_intbar(33, 14, 0, 21, 1, 1);
-  print_small_intbar(33, 15, sc_braids_target_b, 22, 1, 1);
-  print_small_intbar(33, 16, 0, 23, 1, 1);
-  print_small_intbar(33, 17, 0, 24, 1, 1);
-
-  print_small_intbar(33, 19, sc_delay_a_target_b, 25, 1, 1);
-  print_small_intbar(33, 20, sc_delay_b_target_b, 26, 1, 1);
-  print_small_intbar(33, 21, sc_reverb_target_b, 27, 1, 1);
 
   // display.setTextSize(2);
 
   setModeColor(0);
-  setCursor_textGrid_small(15, 4);
-  if (sidechain_a_active)
-  {
-    display.print(F("ON "));
-  }
-  else
-  {
-    display.print(F("OFF"));
-  }
-  setModeColor(14);
-  setCursor_textGrid_small(37, 4);
-  if (sidechain_b_active)
+  setCursor_textGrid_small(11, 4);
+  if (sidechain_active)
   {
     display.print(F("ON "));
   }
@@ -18606,65 +18407,63 @@ void print_sidechain_static_texts()
 
   setModeColor(1);
   setCursor_textGrid_small(11, 5);
-  print_formatted_number(sidechain_a_sample_number, 3);
-  show_no_grid(6 * CHAR_height_small + 2, 15 * CHAR_width_small, 14, basename(drum_config[sidechain_a_sample_number].name));
+  print_formatted_number(sidechain_sample_number, 3);
+  show_no_grid(6 * CHAR_height_small + 2, 15 * CHAR_width_small, 14, basename(drum_config[sidechain_sample_number].name));
 
-  setModeColor(15);
-  setCursor_textGrid_small(33, 5);
-  print_formatted_number(sidechain_b_sample_number, 3);
-  show_no_grid(6 * CHAR_height_small + 2, 37 * CHAR_width_small, 14, basename(drum_config[sidechain_b_sample_number].name));
+  print_small_intbar(11, 10, configuration.dexed[0].sidechain_send, 3, 1, 1);
+  print_small_intbar(11, 11, configuration.dexed[1].sidechain_send, 4, 1, 1);
+  print_small_intbar(11, 12, configuration.epiano.sidechain_send, 5, 1, 1);
+  print_small_intbar(11, 13, microsynth[0].sidechain_send, 6, 1, 1);
+  print_small_intbar(11, 14, microsynth[0].sidechain_send, 7, 1, 1);
+  print_small_intbar(11, 15, braids_osc.sidechain_send, 8, 1, 1);
 
-  print_small_intbar(11, 6, sidechain_a_speed, 2, 1, 1); // sidechain a speed
+  print_small_intbar(11, 17, configuration.fx.delay1_sidechain_send, 9, 1, 1);
+  print_small_intbar(11, 18, configuration.fx.delay2_sidechain_send, 10, 1, 1);
+  print_small_intbar(11, 19, configuration.fx.reverb_sidechain_send, 11, 1, 1);
 
-  print_small_intbar(11, 10, sc_dexed1_target_a, 3, 1, 1);
-  print_small_intbar(11, 11, sc_dexed2_target_a, 4, 1, 1);
+  print_small_intbar(23, 10, 100 - configuration.dexed[0].sidechain_send, 3, 1, 1);
+  print_small_intbar(23, 11, 100 - configuration.dexed[1].sidechain_send, 4, 1, 1);
+  print_small_intbar(23, 12, 100 - microsynth[0].sidechain_send, 5, 1, 1);
+  print_small_intbar(23, 13, 100 - microsynth[0].sidechain_send, 6, 1, 1);
+  print_small_intbar(23, 14, 100 - configuration.epiano.sidechain_send, 7, 1, 1);
+  print_small_intbar(23, 15, 100 - braids_osc.sidechain_send, 8, 1, 1);
+  print_small_intbar(23, 17, 100 - configuration.fx.delay1_sidechain_send, 9, 1, 1);
+  print_small_intbar(23, 18, 100 - configuration.fx.delay2_sidechain_send, 10, 1, 1);
+  print_small_intbar(23, 19, 100 - configuration.fx.reverb_sidechain_send, 11, 1, 1);
 
-  print_small_intbar(11, 12, 0, 5, 1, 1);
-  print_small_intbar(11, 13, 0, 6, 1, 1);
-  print_small_intbar(11, 14, 0, 7, 1, 1);
-  print_small_intbar(11, 15, sc_braids_target_a, 8, 1, 1);
-  print_small_intbar(11, 16, 0, 9, 1, 1);
-  print_small_intbar(11, 17, 0, 10, 1, 1);
-
-  print_small_intbar(11, 19, sc_delay_a_target_a, 11, 1, 1);
-  print_small_intbar(11, 20, sc_delay_b_target_a, 12, 1, 1);
-  print_small_intbar(11, 21, sc_reverb_target_a, 13, 1, 1);
-
-  // b
-  display.setTextSize(1);
-  print_small_intbar(33, 6, sidechain_b_speed, 16, 1, 1); // sidechain b speed
 
   char displayname[8] = { 0, 0, 0, 0, 0, 0, 0 };
-  setCursor_textGrid_small(21, 6);
-  //snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), (seq.tempo_ms / 1000) * (sidechain_a_speed / 10));
-  snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), 1000 - sidechain_a_speed * 10);
-
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  setCursor_textGrid_small(11, 6);
+  snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), sidechain_speed);
   display.print(displayname);
-  setCursor_textGrid_small(26, 6);
-  display.setTextColor(GREY2, COLOR_BACKGROUND);
+
+  setCursor_textGrid_small(16, 6);
+  display.setTextColor(GREY1, COLOR_BACKGROUND);
   display.print("MS");
 
-  setCursor_textGrid_small(43, 6);
-  // snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), (seq.tempo_ms / 1000) * (sidechain_b_speed / 10));
-  snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), 1000 - sidechain_b_speed * 10);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  setCursor_textGrid_small(23, 6);
+  snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), sidechain_steps);
   display.print(displayname);
-  setCursor_textGrid_small(48, 6);
-  display.setTextColor(GREY2, COLOR_BACKGROUND);
-  display.print("MS");
+
+  setCursor_textGrid_small(36, 6);
+  display.setTextColor(GREY1, COLOR_BACKGROUND);
+  print_formatted_number(seq.bpm, 3);
+  setCursor_textGrid_small(40, 6);
+  display.setTextColor(GREY1, COLOR_BACKGROUND);
+  display.print("BPM");
+
 
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
 
-void print_sidechain_editor_values()
+FLASHMEM void print_sidechain_editor_values()
 {
   char displayname[8] = { 0, 0, 0, 0, 0, 0, 0 };
   if (menu_item_check(0))
   {
     setModeColor(0);
-    setCursor_textGrid_small(15, 4);
-    if (sidechain_a_active)
+    setCursor_textGrid_small(11, 4);
+    if (sidechain_active)
     {
       display.print(F("ON "));
     }
@@ -18678,176 +18477,119 @@ void print_sidechain_editor_values()
   {
     setModeColor(1);
     setCursor_textGrid_small(11, 5);
-    print_formatted_number(sidechain_a_sample_number, 3);
-    show_no_grid(6 * CHAR_height_small + 2, 15 * CHAR_width_small, 14, basename(drum_config[sidechain_a_sample_number].name));
+    print_formatted_number(sidechain_sample_number, 3);
+    show_no_grid(6 * CHAR_height_small + 2, 15 * CHAR_width_small, 14, basename(drum_config[sidechain_sample_number].name));
   }
-  if (menu_item_check(2))
-  {
 
-    print_small_intbar(11, 6, sidechain_a_speed, 2, 1, 1); // sidechain a speed
-    setCursor_textGrid_small(21, 6);
-    //  snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), (seq.tempo_ms / 1000) * (sidechain_a_speed / 10));
-    snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), 1000 - sidechain_a_speed * 10);
-    display.print(displayname);
-  }
   if (menu_item_check(3))
   {
-    print_small_intbar(11, 10, sc_dexed1_target_a, 3, 1, 1);
-  }
-  if (menu_item_check(4))
-  {
-    print_small_intbar(11, 11, sc_dexed2_target_a, 4, 1, 1);
+    setModeColor(3);
+    setCursor_textGrid_small(23, 6);
+    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), sidechain_steps);
+    display.print(displayname);
+
+    setCursor_textGrid_small(11, 6);
+    snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), sidechain_speed);
+    display.print(displayname);
   }
 
+  if (menu_item_check(2))
+  {
+    setModeColor(2);
+    setCursor_textGrid_small(11, 6);
+    snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), sidechain_speed);
+    display.print(displayname);
+  }
+
+
+
+  if (menu_item_check(4))
+  {
+    setModeColor(4);
+    print_small_intbar(11, 10, configuration.dexed[0].sidechain_send, 4, 1, 1);
+
+    print_small_intbar(23, 10, 100 - configuration.dexed[0].sidechain_send, 99, 1, 1);
+
+  }
   if (menu_item_check(5))
   {
-    print_small_intbar(11, 12, 0, 5, 1, 1);
+    setModeColor(5);
+    print_small_intbar(11, 11, configuration.dexed[1].sidechain_send, 5, 1, 1);
+
+    print_small_intbar(23, 11, 100 - configuration.dexed[1].sidechain_send, 99, 1, 1);
   }
+
   if (menu_item_check(6))
   {
-    print_small_intbar(11, 13, 0, 6, 1, 1);
+    setModeColor(6);
+    print_small_intbar(11, 12, configuration.epiano.sidechain_send, 6, 1, 1);
+    print_small_intbar(23, 12, 100 - configuration.epiano.sidechain_send, 99, 1, 1);
   }
+
   if (menu_item_check(7))
   {
-    print_small_intbar(11, 14, 0, 7, 1, 1);
+    setModeColor(7);
+    print_small_intbar(11, 13, microsynth[0].sidechain_send, 7, 1, 1);
+    print_small_intbar(23, 13, 100 - microsynth[0].sidechain_send, 99, 1, 1);
+
+    print_small_intbar(11, 14, microsynth[0].sidechain_send, 99, 1, 1);
+    print_small_intbar(23, 14, 100 - microsynth[0].sidechain_send, 99, 1, 1);
   }
+
   if (menu_item_check(8))
   {
-    print_small_intbar(11, 15, sc_braids_target_a, 8, 1, 1);
+    setModeColor(8);
+    print_small_intbar(11, 14, microsynth[0].sidechain_send, 8, 1, 1);
+    print_small_intbar(23, 14, 100 - microsynth[0].sidechain_send, 99, 1, 1);
+
+    print_small_intbar(11, 13, microsynth[0].sidechain_send, 7, 99, 1);
+    print_small_intbar(23, 13, 100 - microsynth[0].sidechain_send, 99, 1, 1);
+
   }
+
   if (menu_item_check(9))
   {
-    print_small_intbar(11, 16, 0, 9, 1, 1);
+    setModeColor(9);
+    print_small_intbar(11, 15, braids_osc.sidechain_send, 9, 1, 1);
+    print_small_intbar(23, 15, 100 - braids_osc.sidechain_send, 99, 1, 1);
   }
+
   if (menu_item_check(10))
   {
-    print_small_intbar(11, 17, 0, 10, 1, 1);
+    setModeColor(10);
+    print_small_intbar(11, 17, configuration.fx.delay1_sidechain_send, 10, 1, 1);
+    print_small_intbar(23, 17, 100 - configuration.fx.delay1_sidechain_send, 99, 1, 1);
   }
   if (menu_item_check(11))
   {
-    print_small_intbar(11, 19, sc_delay_a_target_a, 11, 1, 1);
+    setModeColor(11);
+    print_small_intbar(11, 18, configuration.fx.delay2_sidechain_send, 11, 1, 1);
+    print_small_intbar(23, 18, 100 - configuration.fx.delay2_sidechain_send, 99, 1, 1);
   }
   if (menu_item_check(12))
   {
-    print_small_intbar(11, 20, sc_delay_b_target_a, 12, 1, 1);
-  }
-  if (menu_item_check(13))
-  {
-    print_small_intbar(11, 21, sc_reverb_target_a, 13, 1, 1);
+    setModeColor(12);
+    print_small_intbar(11, 19, configuration.fx.reverb_sidechain_send, 12, 1, 1);
+    print_small_intbar(23, 19, 100 - configuration.fx.reverb_sidechain_send, 99, 1, 1);
   }
 
-  /// COMPRESSOR B
-
-  if (menu_item_check(14))
-  {
-    setModeColor(14);
-    setCursor_textGrid_small(37, 4);
-    if (sidechain_b_active)
-    {
-      display.print(F("ON "));
-    }
-    else
-    {
-      display.print(F("OFF"));
-    }
-  }
-  if (menu_item_check(15))
-  {
-    setModeColor(15);
-    setCursor_textGrid_small(33, 5);
-    print_formatted_number(sidechain_b_sample_number, 3);
-    show_no_grid(6 * CHAR_height_small + 2, 37 * CHAR_width_small, 14, basename(drum_config[sidechain_b_sample_number].name));
-  }
-  if (menu_item_check(16))
-  {
-    print_small_intbar(33, 6, sidechain_b_speed, 16, 1, 1); // sidechain b speed
-    setCursor_textGrid_small(43, 6);
-    // snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), (seq.tempo_ms / 1000) * (sidechain_b_speed / 10));
-    snprintf_P(displayname, sizeof(displayname), PSTR("%04d"), 1000 - sidechain_b_speed * 10);
-    display.print(displayname);
-  }
-
-  if (menu_item_check(17))
-  {
-    print_small_intbar(33, 10, sc_dexed1_target_b, 17, 1, 1);
-  }
-  if (menu_item_check(18))
-  {
-    print_small_intbar(33, 11, sc_dexed2_target_b, 18, 1, 1);
-  }
-
-  if (menu_item_check(19))
-  {
-    print_small_intbar(33, 12, 0, 19, 1, 1);
-  }
-  if (menu_item_check(20))
-  {
-    print_small_intbar(33, 13, 0, 20, 1, 1);
-  }
-  if (menu_item_check(21))
-  {
-    print_small_intbar(33, 14, 0, 21, 1, 1);
-  }
-  if (menu_item_check(22))
-  {
-    print_small_intbar(33, 15, sc_braids_target_b, 22, 1, 1);
-  }
-  if (menu_item_check(23))
-  {
-    print_small_intbar(33, 16, 0, 23, 1, 1);
-  }
-  if (menu_item_check(24))
-  {
-    print_small_intbar(33, 17, 0, 24, 1, 1);
-  }
-  if (menu_item_check(25))
-  {
-    print_small_intbar(33, 19, 0, 25, 1, 1);
-  }
-  if (menu_item_check(26))
-  {
-    print_small_intbar(33, 20, 0, 26, 1, 1);
-  }
-  if (menu_item_check(27))
-  {
-    print_small_intbar(33, 21, sc_reverb_target_b, 27, 1, 1);
-  }
 }
 
 void print_sidechain_level_indicators()
 {
-  if (sidechain_a_active && seq.running)
-  {
-    print_fast_level_indicator(17, 10, 100 - (float)sc_dexed1_current * 100, 0, 100);
-    print_fast_level_indicator(17, 11, 100 - (float)sc_dexed2_current * 100, 0, 100);
-    print_fast_level_indicator(17, 15, 100 - (float)sc_braids_current * 100, 0, 100);
-
-    print_fast_level_indicator(17, 19, 100 - (float)sc_delay_a_current * 100, 0, 100);
-    print_fast_level_indicator(17, 20, 100 - (float)sc_delay_b_current * 100, 0, 100);
-
-    print_fast_level_indicator(17, 21, 100 - (float)sc_reverb_current * 100, 0, 100);
-  }
-
+  // if (sidechain_active && seq.running)
+  // {
+  //   // print_fast_level_indicator(17, 10, 100 - (float)sc_dexed1_current * 100, 0, 100);
+  //   // print_fast_level_indicator(17, 11, 100 - (float)sc_dexed2_current * 100, 0, 100);
+  //   // print_fast_level_indicator(17, 15, 100 - (float)sc_braids_current * 100, 0, 100);
+  // }
   // print_fast_level_indicator(17, 12, random(100), 0, 100);
   // print_fast_level_indicator(17, 13, random(100), 0, 100);
   // print_fast_level_indicator(17, 14, random(100), 0, 100);
 
-  // print_fast_level_indicator(17, 16, random(100), 0, 100);
-  // print_fast_level_indicator(17, 17, random(100), 0, 100);
-
-  //  print_fast_level_indicator(39, 10, random(100), 0, 100);
-  //  print_fast_level_indicator(39, 11, random(100), 0, 100);
-  // print_fast_level_indicator(39, 12, random(100), 0, 100);
-  // print_fast_level_indicator(39, 13, random(100), 0, 100);
-  // print_fast_level_indicator(39, 14, random(100), 0, 100);
-  // print_fast_level_indicator(39, 15, random(100), 0, 100);
-  // print_fast_level_indicator(39, 16, random(100), 0, 100);
-  // print_fast_level_indicator(39, 17, random(100), 0, 100);
-
-  // print_fast_level_indicator(39, 19, random(100), 0, 100);
-  // print_fast_level_indicator(39, 20, random(100), 0, 100);
-  // print_fast_level_indicator(39, 21, random(100), 0, 100);
 }
+
+extern void set_sidechain_levels();
 
 FLASHMEM void UI_func_sidechain(uint8_t param)
 {
@@ -18872,147 +18614,110 @@ FLASHMEM void UI_func_sidechain(uint8_t param)
       if (!seq.edit_state)
       {
         if (LCDML.BT_checkDown())
-          generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 27);
+          generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 12);
         else if (LCDML.BT_checkUp())
-          generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 0, 27);
+          generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 0, 12);
       }
 
       else if (seq.edit_state)
       {
 
-        if (generic_temp_select_menu == 0) // sidechain a on/off
+        if (generic_temp_select_menu == 0) // sidechain on/off
         {
           if (LCDML.BT_checkDown())
-            sidechain_a_active = !sidechain_a_active;
+            sidechain_active = !sidechain_active;
           else if (LCDML.BT_checkUp())
-            sidechain_a_active = !sidechain_a_active;
-        }
-        else if (generic_temp_select_menu == 14) // sidechain b on/off
-        {
-          if (LCDML.BT_checkDown())
-            sidechain_b_active = !sidechain_b_active;
-          else if (LCDML.BT_checkUp())
-            sidechain_b_active = !sidechain_b_active;
-        }
-        else
-
-          if (generic_temp_select_menu == 1) // sidechain a sample
-          {
-            if (LCDML.BT_checkDown())
-              sidechain_a_sample_number = constrain(sidechain_a_sample_number + 1, 0, NUM_DRUMSET_CONFIG - 1);
-            else if (LCDML.BT_checkUp())
-              sidechain_a_sample_number = constrain(sidechain_a_sample_number - 1, 0, NUM_DRUMSET_CONFIG - 1);
-          }
-          else if (generic_temp_select_menu == 15) // sidechain b sample
-          {
-            if (LCDML.BT_checkDown())
-              sidechain_b_sample_number = constrain(sidechain_b_sample_number + 1, 0, NUM_DRUMSET_CONFIG - 1);
-            else if (LCDML.BT_checkUp())
-              sidechain_b_sample_number = constrain(sidechain_b_sample_number - 1, 0, NUM_DRUMSET_CONFIG - 1);
-          }
-
-        if (generic_temp_select_menu == 2) // sidechain a speed
-        {
-          if (LCDML.BT_checkDown())
-            sidechain_a_speed = constrain(sidechain_a_speed + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            sidechain_a_speed = constrain(sidechain_a_speed - ENCODER[ENC_R].speed(), 0, 100);
-        }
-        else if (generic_temp_select_menu == 16) // sidechain b speed
-        {
-          if (LCDML.BT_checkDown())
-            sidechain_b_speed = constrain(sidechain_b_speed + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            sidechain_b_speed = constrain(sidechain_b_speed - ENCODER[ENC_R].speed(), 0, 100);
-        }
-        else if (generic_temp_select_menu == 3) // dexed 0 target A
-        {
-          if (LCDML.BT_checkDown())
-            sc_dexed1_target_a = constrain(sc_dexed1_target_a + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            sc_dexed1_target_a = constrain(sc_dexed1_target_a - ENCODER[ENC_R].speed(), 0, 100);
-        }
-        else if (generic_temp_select_menu == 4) // dexed 1 target A
-        {
-          if (LCDML.BT_checkDown())
-            sc_dexed2_target_a = constrain(sc_dexed2_target_a + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            sc_dexed2_target_a = constrain(sc_dexed2_target_a - ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_active = !sidechain_active;
         }
 
-        else if (generic_temp_select_menu == 8) // braids target A
+        else  if (generic_temp_select_menu == 1) // sidechain sample
         {
           if (LCDML.BT_checkDown())
-            sc_braids_target_a = constrain(sc_braids_target_a + ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_sample_number = constrain(sidechain_sample_number + 1, 0, NUM_DRUMSET_CONFIG - 1);
           else if (LCDML.BT_checkUp())
-            sc_braids_target_a = constrain(sc_braids_target_a - ENCODER[ENC_R].speed(), 0, 100);
-        }
-        else if (generic_temp_select_menu == 22) // braids target B
-        {
-          if (LCDML.BT_checkDown())
-            sc_braids_target_b = constrain(sc_braids_target_b + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            sc_braids_target_b = constrain(sc_braids_target_b - ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_sample_number = constrain(sidechain_sample_number - 1, 0, NUM_DRUMSET_CONFIG - 1);
         }
 
-        else if (generic_temp_select_menu == 11) // delay A target A
+        if (generic_temp_select_menu == 2) // sidechain speed
         {
           if (LCDML.BT_checkDown())
-            sc_delay_a_target_a = constrain(sc_delay_a_target_a + ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_speed = constrain(sidechain_speed + ENCODER[ENC_R].speed(), 0, 5000);
           else if (LCDML.BT_checkUp())
-            sc_delay_a_target_a = constrain(sc_delay_a_target_a - ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_speed = constrain(sidechain_speed - ENCODER[ENC_R].speed(), 0, 5000);
         }
-        else if (generic_temp_select_menu == 12) // delay B target A
+        if (generic_temp_select_menu == 3) // sidechain 1/16 steps
         {
           if (LCDML.BT_checkDown())
-            sc_delay_b_target_a = constrain(sc_delay_b_target_a + ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_steps = constrain(sidechain_steps + 1, 1, 16);
           else if (LCDML.BT_checkUp())
-            sc_delay_b_target_a = constrain(sc_delay_b_target_a - ENCODER[ENC_R].speed(), 0, 100);
+            sidechain_steps = constrain(sidechain_steps - 1, 1, 16);
+
+          sidechain_speed = uint16_t(60000 / seq.bpm / 4) * sidechain_steps;
         }
 
-        else if (generic_temp_select_menu == 25) // delay A target B
+        else if (generic_temp_select_menu == 4) // dexed 0 target 
         {
           if (LCDML.BT_checkDown())
-            sc_delay_a_target_b = constrain(sc_delay_a_target_b + ENCODER[ENC_R].speed(), 0, 100);
+            configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
           else if (LCDML.BT_checkUp())
-            sc_delay_a_target_b = constrain(sc_delay_a_target_b - ENCODER[ENC_R].speed(), 0, 100);
+            configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
         }
-        else if (generic_temp_select_menu == 26) // delay B target B
+        else if (generic_temp_select_menu == 5) // dexed 1 target 
         {
           if (LCDML.BT_checkDown())
-            sc_delay_b_target_b = constrain(sc_delay_b_target_b + ENCODER[ENC_R].speed(), 0, 100);
+            configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
           else if (LCDML.BT_checkUp())
-            sc_delay_b_target_b = constrain(sc_delay_b_target_b - ENCODER[ENC_R].speed(), 0, 100);
+            configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
         }
-
-        else if (generic_temp_select_menu == 13) // reverb target A
+        else if (generic_temp_select_menu == 6) // epiano target 
         {
           if (LCDML.BT_checkDown())
-            sc_reverb_target_a = constrain(sc_reverb_target_a + ENCODER[ENC_R].speed(), 0, 100);
+            configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
           else if (LCDML.BT_checkUp())
-            sc_reverb_target_a = constrain(sc_reverb_target_a - ENCODER[ENC_R].speed(), 0, 100);
-        }
-        else if (generic_temp_select_menu == 27) // reverb target B
-        {
-          if (LCDML.BT_checkDown())
-            sc_reverb_target_b = constrain(sc_reverb_target_b + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            sc_reverb_target_b = constrain(sc_reverb_target_b - ENCODER[ENC_R].speed(), 0, 100);
+            configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
         }
 
-        else if (generic_temp_select_menu == 17) // dexed 0 target B
+        else if (generic_temp_select_menu == 7) // microsynth1 target 
         {
           if (LCDML.BT_checkDown())
-            sc_dexed1_target_b = constrain(sc_dexed1_target_b + ENCODER[ENC_R].speed(), 0, 100);
+            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
           else if (LCDML.BT_checkUp())
-            sc_dexed1_target_b = constrain(sc_dexed1_target_b - ENCODER[ENC_R].speed(), 0, 100);
+            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
         }
-        else if (generic_temp_select_menu == 18) // dexed 1 target B
+        else if (generic_temp_select_menu == 8) // microsynth2 target 
         {
           if (LCDML.BT_checkDown())
-            sc_dexed2_target_b = constrain(sc_dexed2_target_b + ENCODER[ENC_R].speed(), 0, 100);
+            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
           else if (LCDML.BT_checkUp())
-            sc_dexed2_target_b = constrain(sc_dexed2_target_b - ENCODER[ENC_R].speed(), 0, 100);
+            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+        }
+        else if (generic_temp_select_menu == 9) // braids target 
+        {
+          if (LCDML.BT_checkDown())
+            braids_osc.sidechain_send = constrain(braids_osc.sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
+          else if (LCDML.BT_checkUp())
+            braids_osc.sidechain_send = constrain(braids_osc.sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+        }
+        else if (generic_temp_select_menu == 10) // delay 1 target 
+        {
+          if (LCDML.BT_checkDown())
+            configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
+          else if (LCDML.BT_checkUp())
+            configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+        }
+        else if (generic_temp_select_menu == 11) // delay 2 target 
+        {
+          if (LCDML.BT_checkDown())
+            configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
+          else if (LCDML.BT_checkUp())
+            configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+        }
+        else if (generic_temp_select_menu == 12) // reverb target 
+        {
+          if (LCDML.BT_checkDown())
+            configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
+          else if (LCDML.BT_checkUp())
+            configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
         }
       }
     }
@@ -19020,145 +18725,19 @@ FLASHMEM void UI_func_sidechain(uint8_t param)
     if (LCDML.BT_checkEnter())
     {
       seq.edit_state = !seq.edit_state;
-      //     if (!seq.edit_state) {
-      //       display.setTextSize(2);
-      //       setCursor_textGrid(1, 1);
-      //       display.print(F("SIDECHAIN"));
-      //     }
+
     } // buttons END
-
-    // else if (seq.temp_active_menu == 2)  //epiano
-    //       {
-    //         if (LCDML.BT_checkDown()) {
-    //           configuration.epiano.sidechain_time = constrain(configuration.epiano.sidechain_time + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //           // ep.setVolume(mapfloat(configuration.epiano.sidechain_time, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 1.0));
-    //         } else if (LCDML.BT_checkUp()) {
-    //           configuration.epiano.sidechain_time = constrain(configuration.epiano.sidechain_time - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //           // ep.setVolume(mapfloat(configuration.epiano.sidechain_time, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 1.0));
-    //         }
-
-    //       } else if (seq.temp_active_menu > 2 && seq.temp_active_menu < 5)  //microsynth
-    //       {
-    //         if (LCDML.BT_checkDown())
-    //           microsynth[seq.temp_active_menu - 3].sidechain_time = constrain(microsynth[seq.temp_active_menu - 3].sidechain_time + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //         else if (LCDML.BT_checkUp())
-    //           microsynth[seq.temp_active_menu - 3].sidechain_time = constrain(microsynth[seq.temp_active_menu - 3].sidechain_time - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //       } else if (seq.temp_active_menu == 5)  // braids
-    //       {
-    //         if (LCDML.BT_checkDown()) {
-    //           braids_osc.sidechain_time = constrain(braids_osc.sidechain_time + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //           // update_braids_volume();
-    //         } else if (LCDML.BT_checkUp()) {
-    //           braids_osc.sidechain_time = constrain(braids_osc.sidechain_time - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //           // update_braids_volume();
-    //         }
-    //       } else if (seq.temp_active_menu == 6)  // msp1
-    //       {
-    //         if (LCDML.BT_checkDown())
-    //           msp[0].sidechain_time = constrain(msp[0].sidechain_time + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //         else if (LCDML.BT_checkUp())
-    //           msp[0].sidechain_time = constrain(msp[0].sidechain_time - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //       } else if (seq.temp_active_menu == 7)  // msp2
-    //       {
-    //         if (LCDML.BT_checkDown())
-    //           msp[1].sidechain_time = constrain(msp[1].sidechain_time + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //         else if (LCDML.BT_checkUp())
-    //           msp[1].sidechain_time = constrain(msp[1].sidechain_time - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //       }
-    //       // else if (seq.temp_active_menu == 8)  //drums/samples
-    //       // {
-    //       //   if (LCDML.BT_checkDown())
-    //       //     temp_int = constrain(temp_int + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //       //   else if (LCDML.BT_checkUp())
-    //       //     temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //       //   seq.drums_volume = mapfloat(temp_int, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0, VOL_MAX_FLOAT);
-    //       // }
-    //       else if (seq.temp_active_menu == 9)  //reverb level
-    //       {
-    //         if (LCDML.BT_checkDown())
-    //           configuration.fx.reverb_sidechain_time = constrain(configuration.fx.reverb_sidechain_time + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //         else if (LCDML.BT_checkUp())
-    //           configuration.fx.reverb_sidechain_time = constrain(configuration.fx.reverb_sidechain_time - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-    //       }
-    //     }
 
     print_sidechain_editor_values();
     print_sidechain_level_indicators();
+    set_sidechain_levels();
 
     //   if (seq.edit_state)
     //     helptext_r("SIDECHAIN TIME");
     //   else
     //     helptext_r("< > SELECT INST");
     //   display.setTextSize(2);
-    //   if (seq.temp_active_menu < 2 && seq.edit_state)  // dexed 0 or dexed 1 instance selected
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     display_bar_int("", configuration.dexed[seq.temp_active_menu].sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
-    //     setCursor_textGrid(1, 1);
-    //     display.print("DEXED #");
-    //     display.print(seq.temp_active_menu + 1);
-    //     //MD_sendControlChange(configuration.dexed[seq.temp_active_menu].midi_channel, 7, configuration.dexed[seq.temp_active_menu].sidechain_time);
-    //     //MicroDexed[seq.temp_active_menu]->setGain(midi_volume_transform(map(configuration.dexed[seq.temp_active_menu].sidechain_time, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
-    //   } else if (seq.temp_active_menu == 2 && seq.edit_state)  // epiano
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     display_bar_int("", configuration.epiano.sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
-    //     setCursor_textGrid(1, 1);
-    //     display.print("EP");
-    //   } else if (seq.temp_active_menu > 2 && seq.temp_active_menu < 5 && seq.edit_state)  //microsynth
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     display_bar_int("", microsynth[seq.temp_active_menu - 3].sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
 
-    //     setCursor_textGrid(1, 1);
-    //     display.print("MICROSYNTH #");
-    //     display.print(seq.temp_active_menu - 2);
-    //   } else if (seq.temp_active_menu == 5 && seq.edit_state)  // braids
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     display_bar_int("", braids_osc.sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
-    //     setCursor_textGrid(1, 1);
-    //     display.print("BRAIDS");
-    //   } else if (seq.temp_active_menu == 6 && seq.edit_state)  // msp0
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     display_bar_int("", msp[0].sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
-    //     setCursor_textGrid(1, 1);
-    //     display.print("MULTISAMPLE #");
-    //     display.print(seq.temp_active_menu - 5);
-    //   } else if (seq.temp_active_menu == 7 && seq.edit_state)  // msp1
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     display_bar_int("", msp[1].sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
-    //     setCursor_textGrid(1, 1);
-    //     display.print("MULTISAMPLE #");
-    //     display.print(seq.temp_active_menu - 5);
-    //   }
-    //   //  else if (seq.temp_active_menu == 8 && seq.edit_state)  // drums
-    //   // {
-    //   //   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //   //   temp_int = mapfloat(seq.drums_volume, 0.0, VOL_MAX_FLOAT, 0, 100);
-    //   //   display_bar_int("DRUMS VOLUME", temp_int, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, true);
-    //   //   master_mixer_r.gain(3, volume_transform(mapfloat(temp_int, 0, 100, 0.0, VOL_MAX_FLOAT)));
-    //   //   master_mixer_l.gain(3, volume_transform(mapfloat(temp_int, 0, 100, 0.0, VOL_MAX_FLOAT)));
-    //   // }
-    //   else if (seq.temp_active_menu == 9 && seq.edit_state)  // reverb level
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     setCursor_textGrid(1, 1);
-    //     display.print(F("REVERB SC TIME"));
-    //     display_bar_int("", configuration.fx.reverb_sidechain_time, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
-    //     // master_mixer_r.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
-    //     // master_mixer_l.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
-    //   } else if (seq.temp_active_menu == 10 && seq.edit_state)  // master volume
-    //   {
-    //     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //     setCursor_textGrid(1, 1);
-    //     display.print(F("MASTER VOLUME"));
-    //     display_bar_int("", configuration.sys.vol, 1.0, VOLUME_MIN, VOLUME_MAX, 3, false, false, false);
-    //     set_volume(configuration.sys.vol, configuration.sys.mono);
-    //   }
-    //   display.setTextSize(1);
   }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -21234,7 +20813,7 @@ FLASHMEM void UI_func_startup_page(uint8_t param)
       if (LCDML.BT_checkDown())
       {
         configuration.sys.load_at_startup_page++;
-        if (configuration.sys.load_at_startup_page > 9)
+        if (configuration.sys.load_at_startup_page > 10)
           configuration.sys.load_at_startup_page = 50; // System Info Page
       }
       else if (LCDML.BT_checkUp())
@@ -21242,7 +20821,7 @@ FLASHMEM void UI_func_startup_page(uint8_t param)
         if (configuration.sys.load_at_startup_page > 0)
         {
           if (configuration.sys.load_at_startup_page == 50) // System Info Page
-            configuration.sys.load_at_startup_page = 9;
+            configuration.sys.load_at_startup_page = 10;
           else
             configuration.sys.load_at_startup_page--;
         }
@@ -21277,6 +20856,8 @@ FLASHMEM void UI_func_startup_page(uint8_t param)
       show(2, 1, 17, "Master Mixer");
     else if (configuration.sys.load_at_startup_page == 9)
       show(2, 1, 17, "Live Sequencer");
+    else if (configuration.sys.load_at_startup_page == 10)
+      show(2, 1, 17, "Main Menu");
     else if (configuration.sys.load_at_startup_page == 50)
       show(2, 1, 17, "System Info");
   }
@@ -22214,8 +21795,8 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
       setCursor_textGrid(1, 2);
       display.print(F("                "));
 
+    }
   }
-}
 #endif
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -22259,7 +21840,7 @@ FLASHMEM void UI_func_test_mute(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 FLASHMEM void UI_func_test_psram(uint8_t param)
 {

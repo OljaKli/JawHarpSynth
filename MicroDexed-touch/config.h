@@ -802,6 +802,7 @@ typedef struct dexed_s
   uint8_t portamento_time;
   uint8_t op_enabled;
   uint8_t midi_channel;
+  uint8_t sidechain_send;
 } dexed_t;
 
 typedef struct fx_s
@@ -846,6 +847,9 @@ typedef struct fx_s
   uint8_t ep_reverb_send;
   uint8_t ep_delay_send_1;
   uint8_t ep_delay_send_2;
+  uint8_t reverb_sidechain_send;
+  uint8_t delay1_sidechain_send;
+  uint8_t delay2_sidechain_send;
 } fx_t;
 
 typedef struct epiano_s
@@ -868,6 +872,7 @@ typedef struct epiano_s
   uint8_t sound_intensity;
   uint8_t pan;
   uint8_t midi_channel;
+  uint8_t sidechain_send;
 } epiano_t;
 
 typedef struct microsynth_s
@@ -917,6 +922,7 @@ typedef struct microsynth_s
   uint8_t delay_send[NUM_MICROSYNTH];
   uint8_t vel_mod_filter_osc = 0;
   uint8_t vel_mod_filter_noise = 0;
+  uint8_t sidechain_send;
 } microsynth_t;
 
 typedef struct braids_s
@@ -945,6 +951,7 @@ typedef struct braids_s
   uint8_t midi_channel;
   uint8_t pan;
   uint8_t note_buffer[NUM_BRAIDS];
+  uint8_t sidechain_send;
 } braids_t;
 
 typedef struct multisample_s
@@ -1047,6 +1054,7 @@ enum master_mixer_ports
   MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM,
   MASTER_MIX_CH_DELAY1,
   MASTER_MIX_CH_DELAY2,
+  MASTER_MIX_CH_SIDECHAIN,
 };
 
 enum reverb_mixer_ports
