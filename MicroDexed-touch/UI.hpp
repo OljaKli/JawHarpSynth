@@ -15604,13 +15604,13 @@ FLASHMEM void UI_func_braids(uint8_t param)
       else if (seq.edit_state != 0)
       {
         if (generic_temp_select_menu == 0)
-          braids_osc.sound_intensity = calc_val[state_dir](braids_osc.sound_intensity, 1, 0, 100);
+          braids_osc.sound_intensity = calc_val[state_dir](braids_osc.sound_intensity, ENCODER[ENC_R].speed(), 0, 100);
         else if (generic_temp_select_menu == 1)
           braids_osc.algo = calc_val[state_dir](braids_osc.algo, 1, 0, 42);
         else if (generic_temp_select_menu == 2)
-          braids_osc.color = calc_val[state_dir](braids_osc.color, 1, 0, 255);
+          braids_osc.color = calc_val[state_dir](braids_osc.color, ENCODER[ENC_R].speed(), 0, 255);
         else if (generic_temp_select_menu == 3)
-          braids_osc.timbre = calc_val[state_dir](braids_osc.timbre, 1, 0, 255);
+          braids_osc.timbre = calc_val[state_dir](braids_osc.timbre, ENCODER[ENC_R].speed(), 0, 255);
         else if (generic_temp_select_menu == 4)
           braids_osc.coarse = calc_val[state_dir](braids_osc.coarse, 1, -36, 36);
         else if (generic_temp_select_menu == 5)
@@ -19463,7 +19463,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
         if (generic_temp_select_menu == 4)
         {
-          configuration.dexed[selected_instance_id].sound_intensity = calc_val[state_dir](configuration.dexed[selected_instance_id].sound_intensity, 1, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          configuration.dexed[selected_instance_id].sound_intensity = calc_val[state_dir](configuration.dexed[selected_instance_id].sound_intensity, ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, configuration.dexed[selected_instance_id].sound_intensity);
           MicroDexed[selected_instance_id]->setGain(midi_volume_transform(map(configuration.dexed[selected_instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
         }
