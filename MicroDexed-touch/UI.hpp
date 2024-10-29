@@ -13957,7 +13957,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           break;
 
         case 7:
-          configuration.fx.delay_filter_freq[0] = constrain(configuration.fx.delay_filter_freq[0] + (factorChange * 50), 0, 9999);
+          configuration.fx.delay_filter_freq[0] = constrain(configuration.fx.delay_filter_freq[0] + (factorChange * 50 * ENCODER[ENC_R].speed()), 0, 9999);
           print_delay_filter_freq(0, 7);
           break;
 
@@ -14050,7 +14050,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           break;
 
         case 21:
-          configuration.fx.delay_filter_freq[1] = constrain(configuration.fx.delay_filter_freq[1] + (factorChange * 50), 0, 9999);
+          configuration.fx.delay_filter_freq[1] = constrain(configuration.fx.delay_filter_freq[1] + (factorChange * 50 * ENCODER[ENC_R].speed()), 0, 9999);
           print_delay_filter_freq(1, 21);
           break;
 
