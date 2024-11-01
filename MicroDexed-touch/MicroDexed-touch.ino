@@ -89,6 +89,7 @@ using namespace TeensyTimerTool;
 #include "effect_stereo_mono.h"
 #include "effect_mono_stereo.h"
 #include "effect_platervbstereo.h"
+#include "effect_gate.h"
 #include "template_mixer.hpp"
 #include "UI.hpp"
 #include "drums.h"
@@ -118,6 +119,9 @@ int FreeMem(void);
 bool checkMidiChannelDexed(byte inChannel, uint8_t instance_id);
 bool bootup_performance_loading = true;
 bool remote_active = false;
+bool back_button_touch_page_check_and_init_done = false;
+bool current_page_has_touch_back_button = false;
+uint8_t gate_state_old[2];
 
 ILI9341_t3n display = ILI9341_t3n(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
 
@@ -205,6 +209,8 @@ extern elapsedMillis microsynth_delay_timer[2];
 AudioSynthWaveform* chorus_modulator[NUM_DEXED];
 
 AudioEffectModulatedDelay* dexed_chorus[NUM_DEXED];
+
+AudioEffectGate* Gate[NUM_DEXED];  //noise gate for delay feedback channels A+B
 
 AudioMixer<8 + NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
 AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
@@ -618,7 +624,7 @@ AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 uint8_t nDynamic = 0;
 
 //AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16];
-AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16 + 8];
+AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16 + 8 + 4];
 
 
 FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
@@ -633,6 +639,7 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
   global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS * 2>();
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
+  Gate[instance_id] = new AudioEffectGate();
 
 #ifdef PSRAM
   delay_fx[instance_id] = new AudioEffectDelayExternal8(AUDIO_MEMORY8_EXTMEM, DELAY_MAX_TIME);
@@ -688,9 +695,21 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_fb_mixer[instance_id], 0);
   dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_mixer[instance_id], 0);
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *delay_fx[instance_id], 0);
+  //dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *delay_fx[instance_id], 0);
+
+  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 0);
+  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 1);
+
+
+  dynamicConnections[nDynamic++] = new AudioConnection(*Gate[instance_id], 0, *delay_fx[instance_id], 0);
+
+
   dynamicConnections[nDynamic++] = new AudioConnection(*delay_fx[instance_id], 0, *delay_fb_mixer[instance_id], 1);
+
+  //dynamicConnections[nDynamic++] = new AudioConnection(DC_OffsetWaveForm, 0, *delay_fb_mixer[instance_id], 2);
+
   dynamicConnections[nDynamic++] = new AudioConnection(*delay_fx[instance_id], 0, *delay_mixer[instance_id], 1);
+
   dynamicConnections[nDynamic++] = new AudioConnection(*delay_mixer[instance_id], 0, *delay_mono2stereo[instance_id], 0);
 
   dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_r, instance_id);
@@ -1866,40 +1885,6 @@ void update_sidechain()
     fade_sidechain_l.fadeIn(sidechain_speed);
     AudioInterrupts();
 
-    //  }
-      // if (sc_dexed2_target_a != 0)
-      // {
-      //   sc_dexed2_current = VOL_MAX_FLOAT - (float)sc_dexed2_target_a / 100;
-      //   if (sc_dexed2_current < 0.0)
-      //     sc_dexed2_current = 0.0;
-      //   master_mixer_r.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
-      //   master_mixer_l.gain(MASTER_MIX_CH_DEXED2, sc_dexed2_current);
-      // }
-      // if (sc_delay_a_target_a != 0)
-      // {
-      //   sc_delay_a_current = VOL_MAX_FLOAT - (float)sc_delay_a_target_a / 100;
-      //   if (sc_delay_a_current < 0.0)
-      //     sc_delay_a_current = 0.0;
-      //   master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
-      //   master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_a_current);
-      // }
-      // if (sc_delay_b_target_a != 0)
-      // {
-      //   sc_delay_b_current = VOL_MAX_FLOAT - (float)sc_delay_b_target_a / 100;
-      //   if (sc_delay_b_current < 0.0)
-      //     sc_delay_b_current = 0.0;
-      //   master_mixer_r.gain(MASTER_MIX_CH_DELAY1, sc_delay_b_current);
-      //   master_mixer_l.gain(MASTER_MIX_CH_DELAY1, sc_delay_b_current);
-      // }
-      // if (sc_reverb_target_a != 0)
-      // {
-      //   sc_reverb_current = VOL_MAX_FLOAT - (float)sc_reverb_target_a / 100;
-      //   if (sc_reverb_current < 0.0)
-      //     sc_reverb_current = 0.0;
-      //   master_mixer_r.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
-      //   master_mixer_l.gain(MASTER_MIX_CH_REVERB, sc_reverb_current);
-      // }
-
     sidechain_trigger = false;
   }
 
@@ -2058,8 +2043,17 @@ FLASHMEM void preview_sample()
 //     glow_count = glow_smoothness_pts / 2;
 // }
 
-bool back_button_touch_page_check_and_init_done = false;
-bool current_page_has_touch_back_button = false;
+void print_gate_state(uint8_t g)
+{
+  if (Gate[g]->get_state() == 0)
+    display.print("BYPASS ");
+  else if (Gate[g]->get_state() == 1)
+    display.print("ATTACK ");
+  else if (Gate[g]->get_state() == 2)
+    display.print("HOLD   ");
+  else if (Gate[g]->get_state() == 3)
+    display.print("RELEASE");
+}
 
 void loop()
 {
@@ -2130,6 +2124,28 @@ void loop()
     if (fm.wav_recorder_mode == 1) {
       continueWavRecording();
     }
+  }
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
+  {
+
+    if (Gate[0]->get_state() != gate_state_old[0])
+    {
+      display.setTextSize(1);
+      setCursor_textGrid_small(1 + 5, 6);
+      display.setTextColor(GREEN, GREY4);
+      print_gate_state(0);
+      gate_state_old[0] = Gate[0]->get_state();
+    }
+
+    if (Gate[1]->get_state() != gate_state_old[1])
+    {
+      display.setTextSize(1);
+      setCursor_textGrid_small(17 + 5, 6);
+      display.setTextColor(GREEN, GREY3);
+      print_gate_state(1);
+      gate_state_old[1] = Gate[1]->get_state();
+    }
+
   }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
@@ -2333,7 +2349,7 @@ void loop()
 #endif
       save_sys = 0;
     }
-  }
+    }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2364,7 +2380,7 @@ void loop()
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-}
+  }
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -2492,7 +2508,7 @@ FLASHMEM void playWAVFile(const char* filename)
     delay(15);
     display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
   }
-}
+    }
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
   sample_envelope[instance_id]->attack(drum_config[sample].env_attack * 20);
@@ -3502,8 +3518,8 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
       }
     }
-  }
-}
+      }
+    }
 
 void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
 {
@@ -3732,7 +3748,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           break;
         case 106: // CC 106: delay feedback
           configuration.fx.delay_feedback[instance_id] = map(inValue, 0, 0x7f, DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX);
-          delay_fb_mixer[instance_id]->gain(1, mapfloat(configuration.fx.delay_feedback[instance_id], DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX, 0, 0.7));
+          delay_fb_mixer[instance_id]->gain(1, mapfloat(configuration.fx.delay_feedback[instance_id], DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX, 0, 0.8));
           // delay_fb_mixer[instance_id]->gain(1, midi_volume_transform(map(configuration.fx.delay_feedback[instance_id], DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX, 0, 127))); // amount of feedback
 
           // if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_delay_feedback)) {
@@ -3785,14 +3801,14 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           MicroDexed[0]->panic();
           MicroDexed[1]->panic();
           break;
-        }
       }
     }
   }
+}
 
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
     ep.processMidiController(inCtrl, inValue);
-}
+  }
 
 void handleAfterTouch(byte inChannel, byte inPressure)
 {
@@ -4054,7 +4070,7 @@ void handleSystemExclusive(byte* sysex, unsigned len)
         default:
           MicroDexed[instance_id]->setVoiceDataElement(sysex[4], sysex[5]); // set function parameter
           break;
-        }
+      }
         MicroDexed[instance_id]->ControllersRefresh();
       }
 #ifdef DEBUG
@@ -4131,7 +4147,7 @@ void handleSystemExclusive(byte* sysex, unsigned len)
         LCDML.OTHER_updateFunc();
         LCDML.loop_menu();
       }
-    }
+      }
     else if (len == 4104)
     {
       if (strlen(receive_bank_filename) > 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_receive_bank))
@@ -4672,7 +4688,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
     LOG.println(F("OK, loaded!"));
 #endif
-  }
+    }
   else
   { // boot without performance - set some defaults
     configuration.dexed[0].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST0;
@@ -4694,7 +4710,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
   show_configuration();
 #endif
-}
+    }
 
 FLASHMEM void check_configuration(void)
 {
@@ -5357,7 +5373,7 @@ FLASHMEM uint8_t check_sd_cards(void)
       break;
     default:
       strcpy(sdcard_infos.type, "UKNW");
-    }
+  }
     snprintf_P(sd_string, sizeof(sd_string), PSTR("%-5s"), sdcard_infos.type);
 #ifdef DEBUG
     LOG.println(sdcard_infos.type);
@@ -5370,7 +5386,7 @@ FLASHMEM uint8_t check_sd_cards(void)
 #endif
       ret = 0;
     }
-  }
+    }
 
   if (ret > 0)
   {
@@ -5396,7 +5412,7 @@ FLASHMEM uint8_t check_sd_cards(void)
 #endif
 
   return ret;
-}
+  }
 
 FLASHMEM void check_and_create_directories(void)
 {
@@ -5435,8 +5451,8 @@ FLASHMEM void check_and_create_directories(void)
 #endif
           SD.mkdir(tmp);
         }
+        }
       }
-    }
 
     // 2022/11/19 update SD: move banks into /DEXED
     File sysex_dir;
@@ -5593,11 +5609,11 @@ FLASHMEM void check_and_create_directories(void)
 
     //   SD.rmdir("/FAVCFG");
     // }
-  }
+    }
 #ifdef DEBUG
   LOG.println(F("SD card check end"));
 #endif
-}
+    }
 
 /******************************************************************************
   DEBUG HELPER

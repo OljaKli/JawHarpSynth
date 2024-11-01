@@ -13469,18 +13469,18 @@ FLASHMEM void print_delay_sync_status(uint8_t instance)
   {
     if (instance == 0)
     {
-      setCursor_textGrid_small(6, 6);
+      setCursor_textGrid_small(6, 5);
     }
     else
     {
-      setCursor_textGrid_small(22, 6);
+      setCursor_textGrid_small(22, 5);
     }
     display.setTextColor(GREY1, GREY2);
     display.print(F("ON "));
     if (instance == 0)
-      setCursor_textGrid_small(10, 6);
+      setCursor_textGrid_small(10, 5);
     else
-      setCursor_textGrid_small(26, 6);
+      setCursor_textGrid_small(26, 5);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     print_sync_timing(configuration.fx.delay_sync[instance]);
   }
@@ -13488,11 +13488,11 @@ FLASHMEM void print_delay_sync_status(uint8_t instance)
   {
     if (instance == 0)
     {
-      setCursor_textGrid_small(6, 6);
+      setCursor_textGrid_small(6, 5);
     }
     else
     {
-      setCursor_textGrid_small(22, 6);
+      setCursor_textGrid_small(22, 5);
     }
     display.setTextColor(GREY2, GREY3);
     display.print(F("OFF"));
@@ -13517,15 +13517,17 @@ FLASHMEM void print_static_text_master_effects()
   display.print(F("DELAY A"));
 
   display.setTextColor(GREY1, GREY4);
-  setCursor_textGrid_small(1, 4);
-  display.print(F("MULTIPLIER"));
-  setCursor_textGrid_small(1, 5);
-  display.print(F("TIME"));
-  setCursor_textGrid_small(13, 5);
-  display.print(F("MS"));
-  setCursor_textGrid_small(1, 6);
-  display.print(F("SYNC"));
 
+  setCursor_textGrid_small(1, 4);
+  display.print(F("TIME"));
+  setCursor_textGrid_small(13, 4);
+  display.print(F("MS"));
+  setCursor_textGrid_small(1, 5);
+  display.print(F("SYNC"));
+ setCursor_textGrid_small(1, 6);
+  display.print(F("GATE"));
+setCursor_textGrid_small(1, 7);
+  display.print(F("THRD"));
   display.setTextColor(GREY1, GREY4);
   setCursor_textGrid_small(1, 8);
   display.print(F("FDBK"));
@@ -13542,15 +13544,17 @@ FLASHMEM void print_static_text_master_effects()
   setCursor_textGrid_small(17, 3);
   display.print(F("DELAY B"));
   display.setTextColor(GREY1, GREY3);
-  setCursor_textGrid_small(17, 4);
-  display.print(F("MULTIPLIER"));
-  setCursor_textGrid_small(17, 5);
-  display.print(F("TIME"));
-  setCursor_textGrid_small(29, 5);
-  display.print(F("MS"));
-  setCursor_textGrid_small(17, 6);
-  display.print(F("SYNC"));
 
+  setCursor_textGrid_small(17, 4);
+  display.print(F("TIME"));
+  setCursor_textGrid_small(29, 4);
+  display.print(F("MS"));
+  setCursor_textGrid_small(17, 5);
+  display.print(F("SYNC"));
+  setCursor_textGrid_small(17, 6);
+  display.print(F("GATE"));
+setCursor_textGrid_small(17, 7);
+  display.print(F("THRD"));
   display.setTextColor(GREY1, GREY3);
   setCursor_textGrid_small(17, 8);
   display.print(F("FDBK"));
@@ -13633,15 +13637,26 @@ FLASHMEM void print_static_text_master_effects()
   display.print(F("MS2"));
   setCursor_textGrid_small(33, 19);
   display.print(F("BRD"));
+
+display.setTextColor(GREEN, GREY4);
+    
+      display.setTextSize(1);
+      setCursor_textGrid_small(1 + 5, 6);
+    display.print(F("STATE"));
+display.setTextColor(GREEN, GREY3);
+      setCursor_textGrid_small(17 + 5, 6);
+   display.print(F("STATE"));
+   
+
 }
 
 FLASHMEM void print_delay_time(uint8_t instance, uint8_t param)
 {
   setModeColor(param);
   if (instance == 0)
-    setCursor_textGrid_small(6, 5);
+    setCursor_textGrid_small(6+3, 4);
   else
-    setCursor_textGrid_small(22, 5);
+    setCursor_textGrid_small(22+3, 4);
 
   if (configuration.fx.delay_sync[instance] > 0)
   {
@@ -13736,14 +13751,16 @@ FLASHMEM void print_delay_multiplier(uint8_t instance, uint8_t param)
   setModeColor(param);
 
   if (instance == 0)
-    setCursor_textGrid_small(6 + 7, 4);
+    setCursor_textGrid_small(6 , 4);
   else
-    setCursor_textGrid_small(22 + 7, 4);
+    setCursor_textGrid_small(22 , 4);
   display.print(configuration.fx.delay_multiplier[instance]);
   display.print(F("x"));
   print_delay_time(instance, 99);
   set_global_delay_filter(instance);
 }
+
+extern AudioEffectGate *Gate[NUM_DEXED];
 
 FLASHMEM void update_selective_values_master_effects()
 {
@@ -13846,8 +13863,14 @@ FLASHMEM void update_selective_values_master_effects()
     print_small_intbar(43, 18, microsynth[1].rev_send, 39, 1, 0);
   if (menu_item_check(40))
     print_small_intbar(43, 19, braids_osc.rev_send, 40, 1, 0);
-}
 
+  display.setTextColor(COLOR_SYSTEXT, GREY3);
+  setCursor_textGrid_small(1+5, 7);
+  display.print(Gate[0]->get_threshold());
+ setCursor_textGrid_small(22, 7);
+   display.setTextColor(COLOR_SYSTEXT, GREY2);
+  display.print(Gate[1]->get_threshold());
+}
 // #ifdef PSRAM
 extern "C" uint8_t external_psram_size;
 // #endif
@@ -13856,13 +13879,13 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    registerScope(258, 4, 55, 42);
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
 
     setCursor_textGrid_small(1, 22);
     display.setTextColor(GREY2);
     display.setTextSize(1);
-
 
 #ifdef PSRAM
     char text1[30];
@@ -14179,6 +14202,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+     unregisterScope();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
