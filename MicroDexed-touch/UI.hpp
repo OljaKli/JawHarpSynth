@@ -3425,7 +3425,6 @@ FLASHMEM int16_t encoder_change(bool fast)
   if (LCDML.BT_checkUp())
     dir = -1;
 
-  // if(fast) return dir * (ENCODER[ENC_R].speed() + ENCODER[ENC_L].speed());
   if (fast)
     return dir * (ENCODER[ENC_R].speed());
   else

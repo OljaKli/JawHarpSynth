@@ -304,7 +304,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 
 // Encoders with push button
-// #define ENCODER_USE_INTERRUPTS
+
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A 32
 #define ENC_L_PIN_B 31

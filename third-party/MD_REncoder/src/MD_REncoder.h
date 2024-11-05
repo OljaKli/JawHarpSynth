@@ -166,7 +166,7 @@ speed = ClickCount * (1000 / period)
  a whole fraction of 1000 (ie 100, 200, 500, 1000). Longer periods provide some hysteresis 
  which is useful when the encoder is being turned by hand.
  */
-#define DEFAULT_PERIOD    500
+#define DEFAULT_PERIOD    1000
 
 //  Direction values returned by read() method 
 /**
