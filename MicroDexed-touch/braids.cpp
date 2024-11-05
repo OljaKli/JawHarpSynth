@@ -25,7 +25,7 @@ extern int braids_flanger_idx;
 extern int braids_flanger_depth;
 extern double braids_flanger_freq;
 extern uint8_t generic_temp_select_menu;
-extern AudioMixer<ALL_STATIC_DELAY_INSTR_OUT+NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
+extern AudioMixer<2*NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
 
 extern float volume_transform(float amp);
 

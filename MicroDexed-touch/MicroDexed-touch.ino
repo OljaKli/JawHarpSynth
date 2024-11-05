@@ -212,7 +212,7 @@ AudioEffectModulatedDelay* dexed_chorus[NUM_DEXED];
 
 AudioEffectGate* Gate[NUM_DEXED];  //noise gate for delay feedback channels A+B
 
-AudioMixer<8 + NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
+AudioMixer<2 * NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
 AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 AudioFilterStateVariable global_delay_filter[NUM_DEXED];
@@ -966,7 +966,7 @@ int16_t* ep_delayline_l;
 
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 uint8_t drum_counter;
-uint8_t drum_type[NUM_DRUMS];
+//uint8_t drum_type[NUM_DRUMS];
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
@@ -1003,6 +1003,16 @@ bool touch_ic_found = false;
    SETUP
  ***********************************************************************/
 
+void updateEncoderL(void)
+{
+  ENCODER[ENC_L].update();
+}
+
+void updateEncoderR(void)
+{
+  ENCODER[ENC_R].update();
+}
+
 FLASHMEM void setup()
 {
 
@@ -1031,6 +1041,11 @@ FLASHMEM void setup()
 
   pinMode(BUT_R_PIN, INPUT_PULLUP);
   pinMode(BUT_L_PIN, INPUT_PULLUP);
+
+  attachInterrupt(ENC_L_PIN_A, updateEncoderL, CHANGE);
+  attachInterrupt(ENC_L_PIN_B, updateEncoderL, CHANGE);
+  attachInterrupt(ENC_R_PIN_A, updateEncoderR, CHANGE);
+  attachInterrupt(ENC_R_PIN_B, updateEncoderR, CHANGE);
 
 #ifdef ONBOARD_BUTTON_INTERFACE
   pinMode(BI_UP, INPUT_PULLUP);
@@ -2055,6 +2070,9 @@ void print_gate_state(uint8_t g)
     display.print("RELEASE");
 }
 
+bool display_buffer_envelopes[NUM_DRUMS];
+bool display_buffer_samples[NUM_DRUMS];
+
 void loop()
 {
 
@@ -2079,7 +2097,8 @@ void loop()
 
   LCDML.loop();
 
-  if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found) {
+  if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found) 
+  {
     touchReadTimer = 0;
     updateTouchScreen();
     const TouchFn touchHandler = getCurrentTouchHandler();
@@ -2125,34 +2144,83 @@ void loop()
       continueWavRecording();
     }
   }
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
-  {
-
-    if (Gate[0]->get_state() != gate_state_old[0])
+  else
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
     {
       display.setTextSize(1);
-      setCursor_textGrid_small(1 + 5, 6);
-      display.setTextColor(GREEN, GREY4);
-      print_gate_state(0);
-      gate_state_old[0] = Gate[0]->get_state();
-    }
+      for (uint8_t d = 0; d < NUM_DRUMS; d++)
+      {
 
-    if (Gate[1]->get_state() != gate_state_old[1])
+        // if (  sample_envelope[d]->isActive() != display_buffer_envelopes[d])
+        // {
+        //   if (d < NUM_DRUMS / 2)
+        //     setCursor_textGrid_small(12 + d * 2, 19);
+        //   else
+        //     setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
+        //   if (sample_envelope[d]->isActive() )
+        //   {
+        //     display.setTextColor(GREEN, COLOR_BACKGROUND);
+        //     display.print("o");
+        //   }
+        //   else
+        //   {
+        //     display.setTextColor(GREY2, COLOR_BACKGROUND);
+        //     display.print("-");
+        //   }
+        //    display_buffer_envelopes[d] = sample_envelope[d]->isActive();
+        // }
+
+
+ if (Drum[d]->isPlaying() != display_buffer_samples[d])
+        {
+        
+          if (d < NUM_DRUMS / 2)
+            setCursor_textGrid_small(12 + d * 2, 19);
+          else
+            setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
+
+          if (Drum[d]->isPlaying() )
+          {
+            display.setTextColor(GREEN, COLOR_BACKGROUND);
+            display.print("o");
+          }
+          else
+          {
+            display.setTextColor(GREY2, COLOR_BACKGROUND);
+            display.print("-");
+          }
+            display_buffer_samples[d] = Drum[d]->isPlaying();
+        }
+
+      }
+    }
+    else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
     {
-      display.setTextSize(1);
-      setCursor_textGrid_small(17 + 5, 6);
-      display.setTextColor(GREEN, GREY3);
-      print_gate_state(1);
-      gate_state_old[1] = Gate[1]->get_state();
-    }
+      if (Gate[0]->get_state() != gate_state_old[0])
+      {
+        display.setTextSize(1);
+        setCursor_textGrid_small(1 + 5, 6);
+        display.setTextColor(GREEN, GREY4);
+        print_gate_state(0);
+        gate_state_old[0] = Gate[0]->get_state();
+      }
 
-  }
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
-  {
-    if (seq.running == false) {
-      sub_step_recording(false, 0);
+      if (Gate[1]->get_state() != gate_state_old[1])
+      {
+        display.setTextSize(1);
+        setCursor_textGrid_small(17 + 5, 6);
+        display.setTextColor(GREEN, GREY3);
+        print_gate_state(1);
+        gate_state_old[1] = Gate[1]->get_state();
+      }
+
     }
-  }
+    else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
+    {
+      if (seq.running == false) {
+        sub_step_recording(false, 0);
+      }
+    }
 
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
   {
@@ -2349,7 +2417,7 @@ void loop()
 #endif
       save_sys = 0;
     }
-    }
+  }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2380,7 +2448,7 @@ void loop()
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-  }
+}
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -2508,9 +2576,11 @@ FLASHMEM void playWAVFile(const char* filename)
     delay(15);
     display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
   }
-    }
+}
+
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
+  AudioNoInterrupts();
   sample_envelope[instance_id]->attack(drum_config[sample].env_attack * 20);
   sample_envelope[instance_id + NUM_DRUMS]->attack(drum_config[sample].env_attack * 20);
 
@@ -2525,7 +2595,7 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 
   sample_envelope[instance_id]->release(drum_config[sample].env_release * 28);
   sample_envelope[instance_id + NUM_DRUMS]->release(drum_config[sample].env_release * 28);
-
+  AudioInterrupts();
 }
 
 uint8_t msp_playmode_sample_slot[NUM_DRUMS];
@@ -2544,16 +2614,19 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
   if (slot != 99)
   {
 
-    drum_type[slot] = DRUM_POLY;
+    //drum_type[slot] = DRUM_POLY;
     Drum[slot]->enableInterpolation(true);
     for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++)
     {
       if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high)
       {
 
+        ts.msp_peak[instance] = (inVelocity * msz[instance][y].vol * msp[instance].sound_intensity) / 900000;
+        float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
+
+        AudioNoInterrupts();
         Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
 
-        float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
         // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
         // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
 
@@ -2569,8 +2642,6 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
           drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
         }
 
-
-        ts.msp_peak[instance] = (inVelocity * msz[instance][y].vol * msp[instance].sound_intensity) / 900000;
         drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
         drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
 
@@ -2590,9 +2661,10 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         // Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) );
 
         Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) * mapfloat(msz[instance][y].tune, 0, 200, 0.98, 1.02));
-
+        set_stereo_envelopes(slot, msz[instance][y].psram_entry_number);
         sample_envelope[slot]->noteOn();
         sample_envelope[slot + NUM_DRUMS]->noteOn();
+        AudioInterrupts();
 
 #if defined(COMPILE_FOR_FLASH)
         Drum[slot]->playWav(msz[instance][y].filename);
@@ -2605,7 +2677,7 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
           (drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
             drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 210 && y < 216))
         {
-          set_stereo_envelopes(slot, msz[instance][y].psram_entry_number);
+
           Drum[slot]->playRaw((int16_t*)drum_config[msz[instance][y].psram_entry_number].drum_data, drum_config[msz[instance][y].psram_entry_number].len,
             drum_config[msz[instance][y].psram_entry_number].numChannels);
 
@@ -3293,11 +3365,9 @@ void stop_all_drum_slots()
   {
     if (Drum[i]->isPlaying())
     {
-      // test with envelopes for samples
       sample_envelope[i]->noteOff();
       sample_envelope[i + NUM_DRUMS]->noteOff();
 
-      drum_type[i] = DRUM_NONE;
       Drum[i]->stop();
       Drum[i]->enableInterpolation(false);
       Drum[i]->setPlaybackRate(1.0);
@@ -3315,11 +3385,16 @@ uint8_t drum_get_slot(uint8_t dt)
   {
     if (Drum[i]->isPlaying() == false && found == false)
     {
-      drum_type[i] = DRUM_NONE;
+      //drum_type[i] = DRUM_NONE;
+
       Drum[i]->enableInterpolation(false);
       Drum[i]->setPlaybackRate(1.0);
+
       // Drum[i]->setLoopType(loop_type::looptype_none);
-       // sample_envelope[i]->noteOff();
+
+        // sample_envelope[i]->noteOff();
+        // sample_envelope[i + NUM_DRUMS]->noteOff();
+
       found = true;
       return (i);
     }
@@ -3327,13 +3402,19 @@ uint8_t drum_get_slot(uint8_t dt)
 
   if (found == false && drum_counter < NUM_DRUMS)
   {
-    Drum[drum_counter]->stop();
+
     // sample_envelope[drum_counter]->noteOff();
-    drum_type[drum_counter] = DRUM_NONE;
+    // sample_envelope[drum_counter + NUM_DRUMS]->noteOff();
+
+    Drum[drum_counter]->stop();
+
     Drum[drum_counter]->enableInterpolation(false);
     Drum[drum_counter]->setPlaybackRate(1.0);
+
     // Drum[drum_counter]->setLoopType(loop_type::looptype_none);
-    drum_type[drum_counter % NUM_DRUMS] = dt;
+
+    //drum_type[drum_counter] = DRUM_NONE;
+    //drum_type[drum_counter % NUM_DRUMS] = dt;
 
     // #ifdef DEBUG
     //     LOG.print(F("Stopping sample "));
@@ -3341,7 +3422,7 @@ uint8_t drum_get_slot(uint8_t dt)
     //     LOG.print(F(" type "));
     //     LOG.println(dt);
     // #endif
-
+//delay(2);
     drum_counter++;
     return (drum_counter - 1 % NUM_DRUMS);
   }
@@ -3386,36 +3467,6 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     }
   }
 
-  // following code breaks dexed release when playing live via MIDI and only when in Main Menu 15/04/2023
-
-    // if ((seq.running == false && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) || (seq.running == false && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_velocity_level)))
-    // {
-    //   // is in pattern editor and sequencer is not running, play the actual sound that will be used for the pattern
-    //   // dexed instance 0+1,  2 = epiano , 3+4 = MicroSynth, 5-20 = MIDI OUT USB, 21-36 MIDI OUT DIN
-
-    //   if (seq.current_track_type_of_active_pattern == 0) // drums
-    //     inChannel = drum_midi_channel;
-    //   else
-    //   {
-    //     uint8_t trk = 0;
-    //     trk = seq.instrument[find_track_in_song_where_pattern_is_used(seq.active_pattern)];
-    //     if (trk == 0)
-    //       inChannel = configuration.dexed[0].midi_channel;
-    //     else if (trk == 1)
-    //       inChannel = configuration.dexed[1].midi_channel;
-    //     else if (trk == 2)
-    //       inChannel = configuration.epiano.midi_channel;
-    //     else if (trk == 3)
-    //       inChannel = microsynth[0].midi_channel;
-    //     else if (trk == 4)
-    //       inChannel = microsynth[1].midi_channel;
-    //     else if (trk == 5)
-    //       inChannel = msp[0].midi_channel;
-    //     else if (trk == 6)
-    //       inChannel = msp[1].midi_channel;
-    //   }
-    // }
-
   if (device == 4 || braids_osc.midi_channel == MIDI_CHANNEL_OMNI || braids_osc.midi_channel == inChannel)
   {
     for (uint8_t i = 0; i < NUM_BRAIDS; i++)
@@ -3439,13 +3490,13 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
           note_buffer_msp[i] = 0;
           //Drum[i]->setLoopType(loop_type::looptype_none);
 
-          // test with envelopes for samples
           sample_envelope[i]->noteOff();
           sample_envelope[i + NUM_DRUMS]->noteOff();
+          //delay(3);
 
-          // Drum[i]->stop();///xxxyy
-           // Drum[i]->enableInterpolation(false);
-           // Drum[i]->setPlaybackRate(1.0);
+                    //Drum[i]->stop();
+                     // Drum[i]->enableInterpolation(false);
+                     // Drum[i]->setPlaybackRate(1.0);
           break;
         }
       }
@@ -3518,8 +3569,8 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
       }
     }
-      }
-    }
+  }
+}
 
 void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
 {
@@ -3801,14 +3852,14 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           MicroDexed[0]->panic();
           MicroDexed[1]->panic();
           break;
+        }
       }
     }
   }
-}
 
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
     ep.processMidiController(inCtrl, inValue);
-  }
+}
 
 void handleAfterTouch(byte inChannel, byte inPressure)
 {
@@ -4070,7 +4121,7 @@ void handleSystemExclusive(byte* sysex, unsigned len)
         default:
           MicroDexed[instance_id]->setVoiceDataElement(sysex[4], sysex[5]); // set function parameter
           break;
-      }
+        }
         MicroDexed[instance_id]->ControllersRefresh();
       }
 #ifdef DEBUG
@@ -4147,7 +4198,7 @@ void handleSystemExclusive(byte* sysex, unsigned len)
         LCDML.OTHER_updateFunc();
         LCDML.loop_menu();
       }
-      }
+    }
     else if (len == 4104)
     {
       if (strlen(receive_bank_filename) > 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_receive_bank))
@@ -4688,7 +4739,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
     LOG.println(F("OK, loaded!"));
 #endif
-    }
+  }
   else
   { // boot without performance - set some defaults
     configuration.dexed[0].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST0;
@@ -4710,7 +4761,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
   show_configuration();
 #endif
-    }
+}
 
 FLASHMEM void check_configuration(void)
 {
@@ -5373,7 +5424,7 @@ FLASHMEM uint8_t check_sd_cards(void)
       break;
     default:
       strcpy(sdcard_infos.type, "UKNW");
-  }
+    }
     snprintf_P(sd_string, sizeof(sd_string), PSTR("%-5s"), sdcard_infos.type);
 #ifdef DEBUG
     LOG.println(sdcard_infos.type);
@@ -5386,7 +5437,7 @@ FLASHMEM uint8_t check_sd_cards(void)
 #endif
       ret = 0;
     }
-    }
+  }
 
   if (ret > 0)
   {
@@ -5412,7 +5463,7 @@ FLASHMEM uint8_t check_sd_cards(void)
 #endif
 
   return ret;
-  }
+}
 
 FLASHMEM void check_and_create_directories(void)
 {
@@ -5451,8 +5502,8 @@ FLASHMEM void check_and_create_directories(void)
 #endif
           SD.mkdir(tmp);
         }
-        }
       }
+    }
 
     // 2022/11/19 update SD: move banks into /DEXED
     File sysex_dir;
@@ -5609,11 +5660,11 @@ FLASHMEM void check_and_create_directories(void)
 
     //   SD.rmdir("/FAVCFG");
     // }
-    }
+  }
 #ifdef DEBUG
   LOG.println(F("SD card check end"));
 #endif
-    }
+}
 
 /******************************************************************************
   DEBUG HELPER
