@@ -2091,10 +2091,6 @@ void loop()
   // MIDI input handling
   check_midi_devices();
 
-  // check encoder
-  ENCODER[ENC_L].update();
-  ENCODER[ENC_R].update();
-
   LCDML.loop();
 
   if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found) 
