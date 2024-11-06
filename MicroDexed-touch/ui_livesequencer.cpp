@@ -186,12 +186,19 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   }));
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[3], GRID_Y[4],
   [ ] (auto *b) { // drawHandler
+    b->draw("SIDE", "CHAIN", TouchButton::BUTTON_ACTIVE);
+  },
+  [ this ] (auto *b) { // clickedHandler
+    openScreen(UI_func_sidechain);
+  }));
+  toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[4], GRID_Y[4],
+  [ ] (auto *b) { // drawHandler
     b->draw("MULTI", "BAND", TouchButton::BUTTON_ACTIVE);
   },
   [ this ] (auto *b) { // clickedHandler
     openScreen(UI_func_multiband_dynamics);
   }));
-  toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[4], GRID_Y[4],
+  toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID_X[5], GRID_Y[4],
   [ ] (auto *b) { // drawHandler
     b->draw("SEQ", "SETTING", TouchButton::BUTTON_ACTIVE);
   },

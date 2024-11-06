@@ -273,7 +273,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
       break;
     }
 
-    queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, { key } }); // fullwidth highlight key bar
+    if ((key >= view.lowestNote) && (key <= view.highestNote)) {
+      queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, { key } }); // fullwidth highlight key bar
+    }
 
     if ((data.isRunning == false) && (mode == MODE_STEP) && (stepMode == STEP_RECORD)) { // step record will draw itself
       if (event == midi::NoteOn) {
