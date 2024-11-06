@@ -273,7 +273,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
       break;
     }
 
-    if(key >= view.lowestNote && key <= view.highestNote) {
+    if ((key >= view.lowestNote) && (key <= view.highestNote)) {
       queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, { key } }); // fullwidth highlight key bar
     }
 
