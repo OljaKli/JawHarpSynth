@@ -596,6 +596,8 @@ FLASHMEM void UI_LiveSequencer::openScreen(LCDML_FuncPtr_pu8 screen, uint8_t par
   LCDML.OTHER_jumpToFunc(screen, param);
 }
 
+extern void livesequencerBeforeTrackChange(uint8_t instrument);
+
 FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
   if (track == data.activeTrack) {
     if (data.isRecording) {
@@ -622,8 +624,10 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
     }
   }
   else {
+    livesequencerBeforeTrackChange(selectedTrackSetup.instrument);
     const uint8_t activeOld = data.activeTrack;
     liveSeq.setActiveTrack(track);
+    
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 

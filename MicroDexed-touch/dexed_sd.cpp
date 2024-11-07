@@ -1102,7 +1102,7 @@ FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
         configuration.dexed[instance_id].portamento_time = data_json["portamento_time"];
         configuration.dexed[instance_id].op_enabled = data_json["op_enabled"];
         configuration.dexed[instance_id].midi_channel = data_json["midi_channel"];
- configuration.dexed[instance_id].sidechain_send = data_json["sidechain_send"];
+        configuration.dexed[instance_id].sidechain_send = data_json["sidechain_send"];
 
         check_configuration_dexed(instance_id);
         set_voiceconfig_params(instance_id);
@@ -1184,7 +1184,7 @@ FLASHMEM bool save_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
       data_json["portamento_time"] = configuration.dexed[instance_id].portamento_time;
       data_json["op_enabled"] = configuration.dexed[instance_id].op_enabled;
       data_json["midi_channel"] = configuration.dexed[instance_id].midi_channel;
-       data_json["sidechain_send"] = configuration.dexed[instance_id].sidechain_send;
+      data_json["sidechain_send"] = configuration.dexed[instance_id].sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -1277,7 +1277,7 @@ FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
         microsynth[instance_id].vel_mod_filter_osc = data_json["vel_mod_filter_osc"];
         microsynth[instance_id].vel_mod_filter_noise = data_json["vel_mod_filter_noise"];
 
-         microsynth[instance_id].sidechain_send = data_json["sidechain_send"];
+        microsynth[instance_id].sidechain_send = data_json["sidechain_send"];
 
         microsynth_update_all_settings(instance_id);
 
@@ -1357,7 +1357,7 @@ FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
       data_json["vel_mod_filter_osc"] = microsynth[instance_id].vel_mod_filter_osc;
       data_json["vel_mod_filter_noise"] = microsynth[instance_id].vel_mod_filter_noise;
 
-      data_json["sidechain_send"]=  microsynth[instance_id].sidechain_send;
+      data_json["sidechain_send"] = microsynth[instance_id].sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -1462,9 +1462,9 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         configuration.fx.ep_delay_send_1 = data_json["ep_delay1"];
         configuration.fx.ep_delay_send_2 = data_json["ep_delay2"];
 
-        configuration.fx.delay1_sidechain_send =data_json["delay1_sidechain_send"];
-        configuration.fx.delay2_sidechain_send =data_json["delay2_sidechain_send"];
-        configuration.fx.reverb_sidechain_send =data_json["reverb_sidechain_send"];
+        configuration.fx.delay1_sidechain_send = data_json["delay1_sidechain_send"];
+        configuration.fx.delay2_sidechain_send = data_json["delay2_sidechain_send"];
+        configuration.fx.reverb_sidechain_send = data_json["reverb_sidechain_send"];
 
         check_configuration_fx();
         set_fx_params();
@@ -1551,9 +1551,9 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
       data_json["ep_delay1"] = configuration.fx.ep_delay_send_1;
       data_json["ep_delay2"] = configuration.fx.ep_delay_send_2;
 
-      data_json["delay1_sidechain_send"]=  configuration.fx.delay1_sidechain_send ;
-      data_json["delay2_sidechain_send"]=  configuration.fx.delay2_sidechain_send ;
-       data_json["reverb_sidechain_send"]=  configuration.fx.reverb_sidechain_send ;
+      data_json["delay1_sidechain_send"] = configuration.fx.delay1_sidechain_send;
+      data_json["delay2_sidechain_send"] = configuration.fx.delay2_sidechain_send;
+      data_json["reverb_sidechain_send"] = configuration.fx.reverb_sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -1694,7 +1694,7 @@ FLASHMEM bool save_sd_epiano_json(uint8_t number)
       data_json["sound_intensity"] = configuration.epiano.sound_intensity;
       data_json["pan"] = configuration.epiano.pan;
       data_json["midi_channel"] = configuration.epiano.midi_channel;
-       data_json["sidechain_send"]=configuration.epiano.sidechain_send;
+      data_json["sidechain_send"] = configuration.epiano.sidechain_send;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -2045,6 +2045,12 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.load_at_startup_page = data_json["load_at_startup_page"];
         configuration.sys.screen_saver_start = data_json["screen_saver_start"];
         configuration.sys.screen_saver_mode = data_json["screen_saver_mode"];
+
+        if (data_json["brightness"] == 0)
+          configuration.sys.brightness = 183;
+        else
+          configuration.sys.brightness = data_json["brightness"];
+
         if (data_json.containsKey("display_rotation"))
         {
           configuration.sys.display_rotation = data_json["display_rotation"];
@@ -2128,6 +2134,7 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["invert_colors"] = configuration.sys.invert_colors;
       data_json["screen_saver_start"] = configuration.sys.screen_saver_start;
       data_json["screen_saver_mode"] = configuration.sys.screen_saver_mode;
+      data_json["brightness"] = configuration.sys.brightness;
       data_json["gp_speed"] = configuration.sys.gamepad_speed;
       if (GAMEPAD_BUTTON_A != GAMEPAD_BUTTON_B)
       {
@@ -2730,11 +2737,11 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
 
         sidechain_active = data_json["active"];
         sidechain_sample_number = data_json["sample_number"];
-        if (data_json["speed"]>0)
-        sidechain_speed = data_json["speed"];
-          if (data_json["steps"]>0)
-         sidechain_steps = data_json["steps"];
-       
+        if (data_json["speed"] > 0)
+          sidechain_speed = data_json["speed"];
+        if (data_json["steps"] > 0)
+          sidechain_steps = data_json["steps"];
+
         return (true);
       }
 #ifdef DEBUG
@@ -2778,12 +2785,12 @@ FLASHMEM bool save_sd_sidechain_json(uint8_t number)
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
       data_json["active"] = sidechain_active;
-  
+
       data_json["sample_number"] = sidechain_sample_number;
- 
+
       data_json["speed"] = sidechain_speed;
       data_json["steps"] = sidechain_steps;
- 
+
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));

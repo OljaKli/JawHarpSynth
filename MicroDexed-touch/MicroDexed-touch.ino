@@ -1502,12 +1502,6 @@ FLASHMEM void setup()
   finalized_mixer_l.gain(1, 0);
   finalized_mixer_r.gain(1, 0);
 
-  //bitcrusher
-  // bitcrusher_l.bits(6);
-  //   bitcrusher_r.bits(6);
-  //   bitcrusher_l.sampleRate(44100/3);
-  //   bitcrusher_r.sampleRate(44100/3);
-
   global_delay_in_mixer[0]->gain(7, 0.0);
   global_delay_in_mixer[1]->gain(7, 0.0);
 
@@ -2093,7 +2087,7 @@ void loop()
 
   LCDML.loop();
 
-  if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found) 
+  if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found)
   {
     touchReadTimer = 0;
     updateTouchScreen();
@@ -2167,15 +2161,15 @@ void loop()
         // }
 
 
- if (Drum[d]->isPlaying() != display_buffer_samples[d])
+        if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
-        
+
           if (d < NUM_DRUMS / 2)
             setCursor_textGrid_small(12 + d * 2, 19);
           else
             setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
 
-          if (Drum[d]->isPlaying() )
+          if (Drum[d]->isPlaying())
           {
             display.setTextColor(GREEN, COLOR_BACKGROUND);
             display.print("o");
@@ -2185,7 +2179,7 @@ void loop()
             display.setTextColor(GREY2, COLOR_BACKGROUND);
             display.print("-");
           }
-            display_buffer_samples[d] = Drum[d]->isPlaying();
+          display_buffer_samples[d] = Drum[d]->isPlaying();
         }
 
       }
@@ -4549,6 +4543,41 @@ void handleStop(void)
   }
 }
 
+ FLASHMEM void dexed_allkeysup(uint8_t instance_id)
+ {
+ for (uint8_t i = 12; i < 109; i++)
+    {
+      MicroDexed[instance_id]->keyup(i);
+    }
+ }
+
+FLASHMEM void livesequencerBeforeTrackChange(uint8_t inst)
+{ //turn off all active notes when changing track in livesequencer while keys are held down on MIDI input Device, meaning missing their NOTE OFF
+
+  if (inst == 1)
+   dexed_allkeysup(0);
+  else  if (inst == 2)
+   dexed_allkeysup(1);
+  else  if (inst == 4)
+  {
+    microsynth_envelope_osc[0].noteOff();
+    microsynth_envelope_noise[0].noteOff();
+  }
+  else  if (inst == 5)
+  {
+    microsynth_envelope_osc[1].noteOff();
+    microsynth_envelope_noise[1].noteOff();
+  }
+  else  if (inst == 6)
+  {
+    for (uint8_t i = 0; i < NUM_BRAIDS; i++)
+    {
+      if (braids_envelope[i]->isActive())
+        braids_envelope[i]->noteOff();
+    }
+  }
+}
+
 void handleActiveSensing(void)
 {
   ;
@@ -4780,7 +4809,7 @@ FLASHMEM void check_configuration_sys(void)
   configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
   configuration.sys.ui_reverse = constrain(configuration.sys.ui_reverse, false, true);
   configuration.sys.boot_anim_skip = constrain(configuration.sys.boot_anim_skip, false, true);
-
+  configuration.sys.brightness = constrain(configuration.sys.brightness, 100, 200);
   setup_screensaver();
 
   configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed, 60, 500);
@@ -5319,6 +5348,9 @@ FLASHMEM void set_sys_params(void)
 {
   // set initial volume
   set_volume(configuration.sys.vol, configuration.sys.mono);
+#ifdef CAPACITIVE_TOUCH_DISPLAY
+  display.brightness(configuration.sys.brightness);
+#endif
 }
 
 /******************************************************************************

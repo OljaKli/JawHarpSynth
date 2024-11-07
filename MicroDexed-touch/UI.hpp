@@ -17711,9 +17711,18 @@ FLASHMEM void print_screensaver_mode()
     display.print(F("ERROR  "));
 }
 
-FLASHMEM void _dexed_engine_mode()
+FLASHMEM void _system_settings_long_help_texts()
 {
   display.setTextColor(GREY1, COLOR_BACKGROUND);
+
+  if (generic_temp_select_menu==8){
+    setCursor_textGrid_small(2, 17);
+    display.print(F("DEFAULT VALUE IS 183. DO NOT TOUCH UNLESS YOUR "));
+    setCursor_textGrid_small(2, 18);
+    display.print(F("DISPLAY IS UNCOMMON. RESULTS VARY WITH RUNTIME!"));
+  }
+
+else if (generic_temp_select_menu==9){
 
   if (MicroDexed[0]->getEngineType() == 0)
   {
@@ -17736,6 +17745,7 @@ FLASHMEM void _dexed_engine_mode()
     setCursor_textGrid_small(2, 18);
     display.print(F("THE REVERSED ENGINEERED OPL FAMILY CHIPS, 8-BIT"));
   }
+  }
 }
 
 FLASHMEM void _render_misc_settings()
@@ -17750,44 +17760,50 @@ FLASHMEM void _render_misc_settings()
   draw_button_on_grid(42, 1, "TOUCH", "TEST", 0);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
-  setCursor_textGrid_small(2, 7);
+  setCursor_textGrid_small(2, 6);
   display.print(F("GAMEPAD/NATIVE KEY SPEED"));
-  setCursor_textGrid_small(2, 8);
+  setCursor_textGrid_small(2, 7);
   display.print(F("SCREENSAVER START"));
-  setCursor_textGrid_small(2, 9);
+  setCursor_textGrid_small(2, 8);
   display.print(F("SCREENSAVER MODE"));
-  setCursor_textGrid_small(2, 10);
+  setCursor_textGrid_small(2, 9);
   display.print(F("DISPLAY ROTATION"));
-  setCursor_textGrid_small(2, 11);
+  setCursor_textGrid_small(2, 10);
   display.print(F("TOUCH SCREEN ROTATION"));
-  setCursor_textGrid_small(2, 12);
+  setCursor_textGrid_small(2, 11);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
   display.print(F("REVERSE UI (ENCODERS ON TOP)"));
-  setCursor_textGrid_small(42, 7);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  setCursor_textGrid_small(42, 6);
   print_formatted_number(configuration.sys.gamepad_speed, 3);
-  setCursor_textGrid_small(46, 7);
+  setCursor_textGrid_small(46, 6);
   display.print(F("ms"));
-  setCursor_textGrid_small(2, 13);
+  setCursor_textGrid_small(2, 12);
   display.print(F("SKIP BOOT ANIMATION"));
-  setCursor_textGrid_small(2, 14);
+  setCursor_textGrid_small(2, 13);
   display.print(F("INVERT COLORS (EXPERIMENTAL)"));
+  setCursor_textGrid_small(2, 14);
+  display.print(F("DISPLAY BRIGHTNESS"));
   setCursor_textGrid_small(2, 15);
   display.print(F("DEXED ENGINE"));
-  setCursor_textGrid_small(42, 8);
+  setCursor_textGrid_small(42, 7);
   display.print(configuration.sys.screen_saver_start);
-  setCursor_textGrid_small(42, 9);
+  setCursor_textGrid_small(42, 8);
   print_screensaver_mode();
-  setCursor_textGrid_small(42, 10);
+  setCursor_textGrid_small(42, 9);
   display.print(configuration.sys.display_rotation);
-  setCursor_textGrid_small(42, 11);
+  setCursor_textGrid_small(42, 10);
   display.print(configuration.sys.touch_rotation);
-  setCursor_textGrid_small(42, 12);
+  setCursor_textGrid_small(42, 11);
   display.print(configuration.sys.ui_reverse ? F("ON ") : F("OFF"));
-  setCursor_textGrid_small(42, 13);
+  setCursor_textGrid_small(42, 12);
   display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO "));
-  setCursor_textGrid_small(42, 14);
+  setCursor_textGrid_small(42, 13);
   display.print(configuration.sys.invert_colors ? F("YES") : F("NO "));
+  setCursor_textGrid_small(42, 14);
+  print_formatted_number(configuration.sys.brightness, 3);
 
-  _dexed_engine_mode();
+  _system_settings_long_help_texts();
 }
 
 FLASHMEM void UI_func_system_settings(uint8_t param)
@@ -17809,7 +17825,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
       if (generic_active_function == 0) {
         // navigate through menu
-        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 8);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 9);
       }
       else {
         // handle setting change and load save timer
@@ -17845,17 +17861,17 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           break;
 
         case 5:
-          configuration.sys.ui_reverse = !configuration.sys.ui_reverse;
-          configuration.sys.display_rotation = configuration.sys.ui_reverse ? DISPLAY_ROTATION_INVERTED : DISPLAY_ROTATION_DEFAULT;
-          configuration.sys.touch_rotation = configuration.sys.ui_reverse ? TOUCH_ROTATION_INVERTED : TOUCH_ROTATION_DEFAULT;
+          // configuration.sys.ui_reverse = !configuration.sys.ui_reverse;
+          // configuration.sys.display_rotation = configuration.sys.ui_reverse ? DISPLAY_ROTATION_INVERTED : DISPLAY_ROTATION_DEFAULT;
+          // configuration.sys.touch_rotation = configuration.sys.ui_reverse ? TOUCH_ROTATION_INVERTED : TOUCH_ROTATION_DEFAULT;
 
-          // set hardware rotations for display/touch and pins for encoders
-          _setup_rotation_and_encoders(false);
+          // // set hardware rotations for display/touch and pins for encoders
+          // _setup_rotation_and_encoders(false);
 
-          // Re render the page
-          generic_active_function = 0;
-          generic_temp_select_menu = 0;
-          _render_misc_settings();
+          // // Re render the page
+          // generic_active_function = 0;
+          // generic_temp_select_menu = 0;
+          // _render_misc_settings();
           break;
 
         case 6:
@@ -17868,14 +17884,18 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           break;
 
         case 8:
+          configuration.sys.brightness = constrain(configuration.sys.brightness + (factorChange * ENCODER[ENC_R].speed()), 100, 200);
+          break;
+
+        case 9:
           configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (factorChange * 1), 0, 2);
           for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
             MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
-          _dexed_engine_mode();
           break;
         }
       }
       set_sys_params();
+       _system_settings_long_help_texts();
     }
 
     // handle button presses during menu
@@ -17891,45 +17911,49 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
     // Gamepad settings
     setModeColor(0);
-    setCursor_textGrid_small(42, 7);
+    setCursor_textGrid_small(42, 6);
     print_formatted_number(configuration.sys.gamepad_speed, 3);
-    setCursor_textGrid_small(46, 7);
+    setCursor_textGrid_small(46, 6);
     display.print(F("ms"));
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
     // Screen saver starts after xx seconds
     setModeColor(1);
-    setCursor_textGrid_small(42, 8);
+    setCursor_textGrid_small(42, 7);
     print_formatted_number(configuration.sys.screen_saver_start, 2);
-    setCursor_textGrid_small(45, 8);
+    setCursor_textGrid_small(45, 7);
     display.print(configuration.sys.screen_saver_start > 1 ? F("MINS") : F("MIN "));
 
     setModeColor(2);
-    setCursor_textGrid_small(42, 9);
+    setCursor_textGrid_small(42, 8);
     print_screensaver_mode();
 
     setModeColor(3);
-    setCursor_textGrid_small(42, 10);
+    setCursor_textGrid_small(42, 9);
     display.print(configuration.sys.display_rotation);
 
     // Touch rotation
     setModeColor(4);
-    setCursor_textGrid_small(42, 11);
+    setCursor_textGrid_small(42, 10);
     display.print(configuration.sys.touch_rotation);
 
     // UI reverse
     setModeColor(5);
-    setCursor_textGrid_small(42, 12);
+    setCursor_textGrid_small(42, 11);
     display.print(configuration.sys.ui_reverse ? F("ON ") : F("OFF"));
 
     setModeColor(6);
-    setCursor_textGrid_small(42, 13);
+    setCursor_textGrid_small(42, 12);
     display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO "));
     setModeColor(7);
-    setCursor_textGrid_small(42, 14);
+    setCursor_textGrid_small(42, 13);
     display.print(configuration.sys.invert_colors ? F("YES") : F("NO "));
 
     setModeColor(8);
+    setCursor_textGrid_small(42, 14);
+    print_formatted_number(configuration.sys.brightness, 3);
+
+    setModeColor(9);
     setCursor_textGrid_small(42, 15);
 
     if (MicroDexed[0]->getEngineType() == 0)

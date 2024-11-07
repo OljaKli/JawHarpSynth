@@ -450,6 +450,18 @@ void ILI9341_t3n::invertDisplay(boolean i)
   endSPITransaction();
 }
 
+void ILI9341_t3n::brightness(uint8_t value)
+{
+  beginSPITransaction(_SPI_CLOCK);
+  writecommand_cont(ILI9341_VMCTR2);
+  writedata8_last(value);
+  endSPITransaction();
+}
+
+
+
+
+
 ///============================================================================
 // writeRect1BPP - 	write 1 bit per pixel paletted bitmap
 //					bitmap data in array at pixels, 4 bits per

@@ -150,6 +150,7 @@ public:
 
   void setRotation(uint8_t r);
   void invertDisplay(boolean i);
+  void brightness(uint8_t value);
   void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
   // Pass 8-bit (each) R,G,B, get back 16-bit packed color
   static uint16_t color565(uint8_t r, uint8_t g, uint8_t b)

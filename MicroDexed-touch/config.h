@@ -996,6 +996,7 @@ typedef struct sys_s
   bool ui_reverse;
   bool boot_anim_skip;
   bool invert_colors;
+  uint8_t brightness;
 } sys_t;
 
 typedef struct storage_file_s
