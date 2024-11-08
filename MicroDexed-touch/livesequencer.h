@@ -218,7 +218,8 @@ public:
 
 private:
   LiveSeqData data;
-  std::set<uint8_t> pressedArpKeys;
+  std::set<uint8_t> activeArpKeys;
+  std::set<uint8_t> pressedKeys;
   std::vector<ArpNote> activeArps;
   std::list<MidiEvent>::iterator playIterator;
   bool sortRequested = false;

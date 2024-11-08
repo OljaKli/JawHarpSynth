@@ -102,7 +102,7 @@ FLASHMEM void LiveSequencer::onStopped(void) {
   playIterator = data.eventsList.end();
   allNotesOff();
   ui_liveSeq->onStopped();
-  pressedArpKeys.clear();
+  activeArpKeys.clear();
   data.arpSettings.arpNotes.clear();
 }
 
@@ -300,12 +300,12 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
       if (arpSamplesKeyboard) {
         switch (event) {
         case midi::NoteOn:
-          pressedArpKeys.insert(note);
+          activeArpKeys.insert(note);
           data.arpSettings.keysChanged = true;
           break;
 
         case midi::NoteOff:
-          pressedArpKeys.erase(note);
+          activeArpKeys.erase(note);
           data.arpSettings.keysChanged = true;
           break;
 
@@ -322,7 +322,8 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           break;
 
         case midi::NoteOn:
-          //DBG_LOG(printf("play on ch%i of device %i\n", ch, device));
+          pressedKeys.insert(note);
+          DBG_LOG(printf("noteOn on ch%i of device %i\n", ch, device));
           handleNoteOnInput(ch, note, velocityActive, device);
 
           if (data.lastPlayedNote != note) {
@@ -332,7 +333,11 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           break;
 
         case midi::NoteOff:
-          handleNoteOff(ch, note, velocityActive, device);
+          if(pressedKeys.count(note) > 0) {
+            DBG_LOG(printf("noteOff on ch%i of device %i\n", ch, device));
+            pressedKeys.erase(note);
+            handleNoteOff(ch, note, velocityActive, device);
+          }
           break;
 
         default:
@@ -503,7 +508,7 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
       if (isMuted == false) {
         // erase one instance of this note going off
         if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
-          pressedArpKeys.erase(playIterator->note_in);
+          activeArpKeys.erase(playIterator->note_in);
           data.arpSettings.keysChanged = true;
         }
         else {
@@ -519,7 +524,7 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
     case midi::NoteOn:
       if (isMuted == false) {
         if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
-          pressedArpKeys.insert(playIterator->note_in);
+          activeArpKeys.insert(playIterator->note_in);
           data.arpSettings.keysChanged = true;
         }
         else {
@@ -555,7 +560,7 @@ FLASHMEM void LiveSequencer::checkLoadNewArpNotes(void) {
   bool reloadArpNotes = false;
 
   if (data.arpSettings.latch) {
-    reloadArpNotes = data.arpSettings.keysChanged && pressedArpKeys.size();
+    reloadArpNotes = data.arpSettings.keysChanged && activeArpKeys.size();
   }
   else {
     reloadArpNotes = data.arpSettings.keysChanged; // TODO: maybe immediadely stop playing with no latch?
@@ -563,7 +568,7 @@ FLASHMEM void LiveSequencer::checkLoadNewArpNotes(void) {
   data.arpSettings.keysChanged = false;
 
   if (reloadArpNotes) {
-    data.arpSettings.arpNotesIn.assign(pressedArpKeys.begin(), pressedArpKeys.end());
+    data.arpSettings.arpNotesIn.assign(activeArpKeys.begin(), activeArpKeys.end());
   }
 
   if (reloadArpNotes || data.arpSettings.arpSettingsChanged) {
@@ -968,6 +973,10 @@ FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool is
 }
 
 FLASHMEM void LiveSequencer::setActiveTrack(uint8_t track) {
+  for (uint8_t key : pressedKeys) { // noteOff all pressed keys before switching active track
+    handleMidiEvent(0xFF, midi::NoteOff, key, 127);
+  }
+  data.pendingEvents.clear(); // avoid wrong track events / layer issue
   data.activeTrack = track;
   ui_liveSeq->updateTrackChannelSetupButtons(track);
 }
