@@ -4551,33 +4551,6 @@ void handleStop(void)
     }
  }
 
-FLASHMEM void livesequencerBeforeTrackChange(uint8_t inst)
-{ //turn off all active notes when changing track in livesequencer while keys are held down on MIDI input Device, meaning missing their NOTE OFF
-
-  if (inst == 1)
-   dexed_allkeysup(0);
-  else  if (inst == 2)
-   dexed_allkeysup(1);
-  else  if (inst == 4)
-  {
-    microsynth_envelope_osc[0].noteOff();
-    microsynth_envelope_noise[0].noteOff();
-  }
-  else  if (inst == 5)
-  {
-    microsynth_envelope_osc[1].noteOff();
-    microsynth_envelope_noise[1].noteOff();
-  }
-  else  if (inst == 6)
-  {
-    for (uint8_t i = 0; i < NUM_BRAIDS; i++)
-    {
-      if (braids_envelope[i]->isActive())
-        braids_envelope[i]->noteOff();
-    }
-  }
-}
-
 void handleActiveSensing(void)
 {
   ;
