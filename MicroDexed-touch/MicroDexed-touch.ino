@@ -4543,14 +4543,6 @@ void handleStop(void)
   }
 }
 
- FLASHMEM void dexed_allkeysup(uint8_t instance_id)
- {
- for (uint8_t i = 12; i < 109; i++)
-    {
-      MicroDexed[instance_id]->keyup(i);
-    }
- }
-
 void handleActiveSensing(void)
 {
   ;
