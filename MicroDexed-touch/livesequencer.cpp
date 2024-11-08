@@ -976,6 +976,7 @@ FLASHMEM void LiveSequencer::setActiveTrack(uint8_t track) {
   for(uint8_t key : pressedKeys) { // noteOff all pressed keys before switching active track
     handleMidiEvent(0xFF, midi::NoteOff, key, 127);
   }
+  data.pendingEvents.clear(); // avoid wrong track events / layer issue
   data.activeTrack = track;
   ui_liveSeq->updateTrackChannelSetupButtons(track);
 }
