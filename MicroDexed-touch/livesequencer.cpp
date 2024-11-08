@@ -383,8 +383,13 @@ FLASHMEM void LiveSequencer::changeNumberOfBars(uint8_t num) {
 }
 
 FLASHMEM void LiveSequencer::deleteLiveSequencerData(void) {
+  allNotesOff();
   data.pendingEvents.clear();
-  data.eventsList.clear();
+  for (auto& e : data.eventsList) {
+    if (e.source == EVENT_PATTERN) {
+      e.event = midi::InvalidType; // mark as invalid
+    }
+  }
   deleteAllSongEvents();
   for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
     data.trackSettings[track].layerCount = 0;
@@ -395,6 +400,7 @@ FLASHMEM void LiveSequencer::deleteLiveSequencerData(void) {
 }
 
 FLASHMEM void LiveSequencer::deleteAllSongEvents(void) {
+  allNotesOff();
   data.songEvents.clear();
   data.lastSongEventPattern = 0;
   data.songLayerCount = 0;
