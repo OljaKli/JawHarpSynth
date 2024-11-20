@@ -684,9 +684,12 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   const bool recPressed = TouchButton::isPressed(GRID_X[1], GRID_Y[0]);
   if (recPressed) {
+    if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
+      trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
+      drawTrackLayers(data.activeTrack);
+    }
     data.isRecording = !data.isRecording;
     drawUpdates(drawTopButtons | drawTrackButtons);
-    trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
 
     if (isLayerViewActive && data.isSongMode) {
       drawUpdates(drawLayerButtons);
