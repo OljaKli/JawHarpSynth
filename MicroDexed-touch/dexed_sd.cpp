@@ -992,12 +992,6 @@ FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
           data_json["d1"][i] = get_sample_delay1(i);
           data_json["d2"][i] = get_sample_delay2(i);
 
-          data_json["env_attack"][i] = get_sample_env_attack(i);
-          data_json["env_hold"][i] = get_sample_env_hold(i);
-          data_json["env_decay"][i] = get_sample_env_decay(i);
-          data_json["env_sus"][i] = get_sample_env_sustain(i);
-          data_json["env_rel"][i] = get_sample_env_release(i);
-
         }
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
         LOG.println(F("Write JSON data:"));
@@ -4338,3 +4332,4 @@ FLASHMEM void load_sd_directory()
 
   qsort(sdcard_infos.files, fm.sd_sum_files, sizeof(storage_file_t), compare_files_by_name);
 }
+

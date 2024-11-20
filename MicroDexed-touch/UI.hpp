@@ -541,6 +541,7 @@ void locate_next_non_favorite();
 void locate_random_non_favorite();
 void UI_func_drums(uint8_t param);
 void UI_func_format_flash(uint8_t param);
+void UI_func_midiplayer(uint8_t param);
 void UI_func_test_mute(uint8_t param);
 void UI_func_test_psram(uint8_t param);
 void UI_func_test_touchscreen(uint8_t param);
@@ -637,6 +638,7 @@ LCDML_add(57, LCDML_0_15, 10, "TEST Touchscreen", UI_func_test_touchscreen);
 LCDML_add(58, LCDML_0_15, 11, "TEST Audio Mute", UI_func_test_mute);
 LCDML_add(59, LCDML_0_15, 12, "TEST PSRAM", UI_func_test_psram);
 LCDML_add(60, LCDML_0_15, 13, "FORMAT FLASH", UI_func_format_flash);
+//LCDML_add(61, LCDML_0, 16, "MIDI FILE Player", UI_func_midiplayer);
 LCDML_add(61, LCDML_0, 16, "Info", UI_func_information);
 LCDML_addAdvanced(62, LCDML_0, 17, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(63, LCDML_0, 18, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
@@ -6671,12 +6673,12 @@ FLASHMEM void UI_func_drums(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-   
+
     drumScreenActive = true;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
- display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
       if (d < NUM_DRUMS / 2)
@@ -7887,7 +7889,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         }
         draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);
       }
-      }
+    }
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())// handle button presses during menu >>>>>>>>>>>>>>>>
     {
       stop_all_drum_slots();
@@ -7966,14 +7968,14 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       print_updated_slices_text();
     }
 #endif
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     unregisterTouchHandler();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 void print_content_type()
 {
@@ -13430,7 +13432,7 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
       LOG.println(F("ms"));
 #endif
     }
-}
+  }
   else
   {
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
@@ -16036,7 +16038,7 @@ FLASHMEM void print_flash_stats()
   display.print(tmp);
   display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
   display.print(" KB");
-      }
+}
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -16505,7 +16507,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
         if ((zoneEdited->entry_number) - 1 >= 0)
           fill_msz(drum_config[zoneEdited->entry_number - 1].filename, seq.active_multisample, generic_temp_select_menu - 3, zoneEdited->entry_number - 1);
 #endif
-    }
+      }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 7) // tune/pitch
       {
         zoneEdited->tune = calc_val[state_dir](zoneEdited->tune, ENCODER[ENC_R].speed(), 1, 200);
@@ -16550,7 +16552,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
       {
         generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 11);
       }
-  }
+    }
 
     if (LCDML.BT_checkEnter())
     {
@@ -16806,6 +16808,9 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
       if (!SD.exists("RECORDINGS")) {
         SD.mkdir("RECORDINGS");
+      }
+      if (!SD.exists("MIDI")) {
+        SD.mkdir("MIDI");
       }
     }
     fm.sd_mode = FM_BROWSE_FILES;
@@ -17069,7 +17074,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #ifdef DEBUG
         LOG.println(F("Finished All Files"));
 #endif
-    }
+      }
       else
 #endif
         if (fm.sd_is_folder && fm.sd_mode != FM_COPY_TO_PSRAM)
@@ -17198,15 +17203,15 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #ifdef DEBUG
                   LOG.println(F("  error opening freshly created file!"));
 #endif
-  }
+                }
                 f.close();
                 // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);
                 flash_loadDirectory();
                 print_flash_stats();
                 flash_printDirectory();
-}
-    }
-  }
+              }
+            }
+          }
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -17228,7 +17233,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             // display.fillRect(241, 80, 238, 8, COLOR_BACKGROUND);            
           }
 #endif
-}
+        }
     }
     if (LCDML.BT_checkEnter() && fm.sd_mode == FM_PLAY_SAMPLE) // preview
     {
@@ -17715,36 +17720,36 @@ FLASHMEM void _system_settings_long_help_texts()
 {
   display.setTextColor(GREY1, COLOR_BACKGROUND);
 
-  if (generic_temp_select_menu==8){
+  if (generic_temp_select_menu == 8) {
     setCursor_textGrid_small(2, 17);
     display.print(F("DEFAULT VALUE IS 183. DO NOT TOUCH UNLESS YOUR "));
     setCursor_textGrid_small(2, 18);
     display.print(F("DISPLAY IS UNCOMMON. RESULTS VARY WITH RUNTIME!"));
   }
 
-else if (generic_temp_select_menu==9){
+  else if (generic_temp_select_menu == 9) {
 
-  if (MicroDexed[0]->getEngineType() == 0)
-  {
-    setCursor_textGrid_small(2, 17);
-    display.print(F("MODERN: THIS IS THE ORIGINAL 24-BIT MUSIC-     "));
-    setCursor_textGrid_small(2, 18);
-    display.print(F("SYNTHESIZER-FOR-ANDROID IMPLEMENTATION         "));
-  }
-  else if (MicroDexed[0]->getEngineType() == 1)
-  {
-    setCursor_textGrid_small(2, 17);
-    display.print(F("MARK I: BASED ON THE OPL SERIES BUT AT A HIGHER"));
-    setCursor_textGrid_small(2, 18);
-    display.print(F("RESOLUTION. TARGET IS TO BE CLOSEST TO REAL DX7"));
-  }
-  else if (MicroDexed[0]->getEngineType() == 2)
-  {
-    setCursor_textGrid_small(2, 17);
-    display.print(F("OPL: THIS IS AN EXPERIMENTAL IMPLEMENTATION OF "));
-    setCursor_textGrid_small(2, 18);
-    display.print(F("THE REVERSED ENGINEERED OPL FAMILY CHIPS, 8-BIT"));
-  }
+    if (MicroDexed[0]->getEngineType() == 0)
+    {
+      setCursor_textGrid_small(2, 17);
+      display.print(F("MODERN: THIS IS THE ORIGINAL 24-BIT MUSIC-     "));
+      setCursor_textGrid_small(2, 18);
+      display.print(F("SYNTHESIZER-FOR-ANDROID IMPLEMENTATION         "));
+    }
+    else if (MicroDexed[0]->getEngineType() == 1)
+    {
+      setCursor_textGrid_small(2, 17);
+      display.print(F("MARK I: BASED ON THE OPL SERIES BUT AT A HIGHER"));
+      setCursor_textGrid_small(2, 18);
+      display.print(F("RESOLUTION. TARGET IS TO BE CLOSEST TO REAL DX7"));
+    }
+    else if (MicroDexed[0]->getEngineType() == 2)
+    {
+      setCursor_textGrid_small(2, 17);
+      display.print(F("OPL: THIS IS AN EXPERIMENTAL IMPLEMENTATION OF "));
+      setCursor_textGrid_small(2, 18);
+      display.print(F("THE REVERSED ENGINEERED OPL FAMILY CHIPS, 8-BIT"));
+    }
   }
 }
 
@@ -17771,9 +17776,9 @@ FLASHMEM void _render_misc_settings()
   setCursor_textGrid_small(2, 10);
   display.print(F("TOUCH SCREEN ROTATION"));
   setCursor_textGrid_small(2, 11);
-    display.setTextColor(GREY2, COLOR_BACKGROUND);
+  display.setTextColor(GREY2, COLOR_BACKGROUND);
   display.print(F("REVERSE UI (ENCODERS ON TOP)"));
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   setCursor_textGrid_small(42, 6);
   print_formatted_number(configuration.sys.gamepad_speed, 3);
   setCursor_textGrid_small(46, 6);
@@ -17895,7 +17900,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         }
       }
       set_sys_params();
-       _system_settings_long_help_texts();
+      _system_settings_long_help_texts();
     }
 
     // handle button presses during menu
@@ -20331,8 +20336,8 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
             setCursor_textGrid(1, 2);
             display.print(F("Waiting...      "));
             /// Storing is done in SYSEX code
+          }
         }
-      }
       }
       else if (mode >= 1 && yesno == false)
       {
@@ -20531,7 +20536,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
       if (LCDML.BT_checkDown())
       {
         bank_number = constrain(bank_number + ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
-    }
+      }
       else if (LCDML.BT_checkUp())
       {
         bank_number = constrain(bank_number - ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
@@ -21853,8 +21858,8 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
       setCursor_textGrid(1, 2);
       display.print(F("                "));
 
+    }
   }
-}
 #endif
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -21863,6 +21868,349 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
   }
 }
+
+FLASHMEM void load_sd_directory_files_only()
+{
+
+  File sd_root = SD.open("/MIDI");
+
+  fm.sd_sum_files = 0;
+
+  while (true)
+  {
+    File sd_entry = sd_root.openNextFile();
+    if (!sd_entry)
+      break;
+
+    if (sd_entry.isDirectory() == false && strstr(sd_entry.name(), "._") == NULL)
+    {
+      strcpy(sdcard_infos.files[fm.sd_sum_files].name, sd_entry.name());
+      sdcard_infos.files[fm.sd_sum_files].size = sd_entry.size();
+      sdcard_infos.files[fm.sd_sum_files].isDirectory = sd_entry.isDirectory();
+
+      fm.sd_sum_files++;
+    }
+    sd_entry.close();
+  }
+  sd_root.close();
+
+  // clear all the unused files in array
+  for (uint8_t i = fm.sd_sum_files; i < MAX_FILES; i++)
+  {
+    strcpy(sdcard_infos.files[i].name, "");
+    sdcard_infos.files[i].size = 0;
+    sdcard_infos.files[i].isDirectory = false;
+  }
+
+  qsort(sdcard_infos.files, fm.sd_sum_files, sizeof(storage_file_t), compare_files_by_name);
+}
+
+// #include "midireader.h"
+
+// FLASHMEM void play_midi_file()
+// {
+
+//   snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+
+//   midireader reader;
+//   reader.open(filename);
+//   //   setCursor_textGrid_small(0, 0);
+//   //    display.print(filename);
+//   // display.print("   ");
+
+//   if (reader.getNumTracks() != 0)
+//   {
+//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//     show_smallfont_noGrid(CHAR_height_small * 3 + 5, CHAR_width_small * 35, 16, sdcard_infos.files[generic_menu].name);
+//     setCursor_textGrid_small(35, 4);
+//     temp_int = reader.getNumTracks() - 1;
+//     display.print(temp_int);
+//     display.print("  ");
+//   }
+//   else
+//   {
+//     display.setTextColor(RED, COLOR_BACKGROUND);
+//     show_smallfont_noGrid(CHAR_height_small * 3 + 5, CHAR_width_small * 35, 16, "NOT A MIDI FILE");
+//     setCursor_textGrid_small(35, 4);
+//     display.print("0 ");
+//   }
+
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//   double microsPerTick = reader.get_microseconds_per_tick();
+
+//   reader.setTrackNumber(generic_temp_select_menu);
+//   int i = 0;
+
+//   long totalTicks = 0;
+//   long microseconds = 0;
+//   uint8_t line = 11;
+//   char tmp[55];
+//   display.setTextSize(1);
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+//   smfmidimessage* message;
+//   while ((message = reader.read()) != nullptr)
+//   {
+//     if (generic_active_function != 3 && line > 22)
+//       break;
+
+//     totalTicks += message->delta_ticks;
+//     microseconds += microsPerTick * message->delta_ticks;
+
+//     switch (message->getMessageType())
+//     {
+//     case smftype_channelvoicemessage:
+//     {
+//       smfchannelvoicemessage* channelvoicemessage = (smfchannelvoicemessage*)message;
+
+// if (generic_active_function == 3)
+//  {
+//  delay(channelvoicemessage->delta_ticks );
+//  }
+//       snprintf_P(tmp, sizeof(tmp), PSTR("[%04d]%05d DELTA %03d ST 0x%2x DATA1 %03d DATA2 %03d"),
+//         i,
+//         totalTicks,
+//         channelvoicemessage->delta_ticks,
+//         channelvoicemessage->status,
+//         channelvoicemessage->data1,
+//         channelvoicemessage->data2);
+
+//       if (channelvoicemessage->status == 0x90 + generic_temp_select_menu - 1)
+//       {
+//         display.setCursor(2, line * 9);
+//         display.setTextColor(GREEN, COLOR_BACKGROUND);
+//         display.print(tmp);
+//         if (generic_active_function == 2)
+//         {
+//           handleNoteOn(configuration.dexed[0].midi_channel, channelvoicemessage->data1, channelvoicemessage->data2, 0);
+//         }
+//         line++;
+//       }
+//       else   if (channelvoicemessage->status == 0x80 + generic_temp_select_menu - 1)
+//       {
+//         snprintf_P(tmp, sizeof(tmp), PSTR("[%04d]%05d DELTA %03d ST 0x%2x DATA1 %03d DATA2 %03d"),
+//           i,
+//           totalTicks,
+//           channelvoicemessage->delta_ticks,
+//           channelvoicemessage->status,
+//           channelvoicemessage->data1,
+//           channelvoicemessage->data2);
+
+//         display.setTextColor(GREY2, COLOR_BACKGROUND);
+//         display.setCursor(2, line * 9);
+//         display.print(tmp);
+//         if (generic_active_function == 2)
+//         {
+//           handleNoteOff(configuration.dexed[0].midi_channel, channelvoicemessage->data1, channelvoicemessage->data2, 0);
+//         }
+//         line++;
+//       }
+
+//  if (generic_active_function == 3)
+//  {
+//    display.flushSysEx();
+//  }
+//       break;
+//     }
+//     case smftype_settempomessage:
+//     {
+//       Serial.printf("tempo change: %f\n", ((smfsettempomessage*)message)->getTempo());
+//       break;
+//     }
+
+//     default:
+//       break;
+//     }
+
+//     if (generic_active_function == 3)
+//     {
+//       if (line > 23)
+//         line = 11;
+//     }
+//     delete message;
+//     i++;
+//   }
+//    if (generic_active_function == 3)
+//   generic_active_function=1;
+// }
+
+
+// FLASHMEM void UI_func_midiplayer(uint8_t param)
+// {
+//   if (LCDML.FUNC_setup()) // ****** SETUP *********
+//   {
+//     if (sd_card > 0)
+//     {
+//       // Auto create missing folders if needed
+//       if (!SD.exists("MIDI"))
+//       {
+//         SD.mkdir("MIDI");
+//       }
+//     }
+//     seq.edit_state=0;
+//      generic_menu = 0;
+//      generic_temp_select_menu=0;
+//      generic_active_function=0;
+//     fm.sd_mode = FM_BROWSE_FILES;
+//     fm.active_window = 0;
+//     fm.sd_cap_rows = 3;
+
+//     display.fillScreen(COLOR_BACKGROUND);
+//     encoderDir[ENC_R].reset();
+//     helptext_r("SELECT MIDI FILE");
+//     helptext_l(back_text);
+//     display.setTextColor(RED, COLOR_BACKGROUND);
+//     display.setTextSize(1);
+//     setCursor_textGrid_small(1, 1);
+//     display.print(F("MIDI FILE PLAYER"));
+
+//     setCursor_textGrid_small(1, 3);
+//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//     display.print(F("FILE BROWSER"));
+//     display.setTextColor(GREY1, COLOR_BACKGROUND);
+//     setCursor_textGrid_small(23, 3);
+//     display.print(F("SONG:"));
+
+//     setCursor_textGrid_small(23, 4);
+//     display.print(F("TRACKS:"));
+
+//     setCursor_textGrid_small(23, 6);
+//     display.print(F("PLAY TRACK:"));
+
+//     setCursor_textGrid_small(23, 7);
+//     display.print(F("BY:"));
+
+//      setCursor_textGrid_small(23, 8);
+//     display.print(F("START PLAYING"));
+
+//     display.setTextColor(GREEN, COLOR_BACKGROUND);
+//     show_smallfont_noGrid(CHAR_height_small * 8 + 5, CHAR_width_small * 35, 16, "DEXED1");
+
+//   }
+//   if (LCDML.FUNC_loop()) // ****** LOOP *********
+//   {
+
+
+//     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || LCDML.BT_checkEnter())
+//     {
+//       if (LCDML.BT_checkDown())
+//       {
+// if (seq.edit_state==1)
+// {
+//         if (generic_active_function == 0)
+//         {
+//           if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
+//             fm.sd_skip_files++;
+//           fm.sd_selected_file = constrain(fm.sd_selected_file + 1, 0, fm.sd_cap_rows);
+//         }
+//         else if (generic_active_function == 1)
+//         {
+//           generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 1, temp_int);
+//         }
+//       }
+//       else
+// {
+//   if (seq.edit_state==0)
+//  generic_active_function = constrain(generic_active_function + 1, 0, 3);
+// }
+//       }
+//       else if (LCDML.BT_checkUp())
+//       {
+// if (seq.edit_state==1)
+// {
+//         if (generic_active_function == 0)
+//         {
+//           if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
+//             fm.sd_skip_files--;
+//           fm.sd_selected_file = constrain(fm.sd_selected_file - 1, 0, fm.sd_cap_rows);
+//         }
+//         else if (generic_active_function == 1)
+//         {
+//           generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 1, temp_int);
+//         }
+// }
+// else
+// {
+// if (seq.edit_state==0)
+//  generic_active_function = constrain(generic_active_function  -1, 0, 3);
+// }
+//       }
+//       if (LCDML.BT_checkEnter())
+//       {
+// seq.edit_state=!seq.edit_state;
+
+//         // generic_active_function++;
+//         // if (generic_active_function > 2)
+//         //   generic_active_function = 0;
+
+//         if (generic_active_function == 3 && seq.edit_state)
+//           play_midi_file();
+
+//       }
+//     }
+
+//     // strcpy(fm.sd_prev_dir, "");
+//     //    strcpy(fm.sd_new_name, "/");
+//     if (generic_active_function == 0)
+//     {
+//       load_sd_directory_files_only();
+//     }
+
+
+//     for (uint8_t f = 0; f < 4; f++)
+//     {
+
+//       storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
+
+//       if (f == fm.sd_selected_file && fm.sd_parent_folder == false   && seq.edit_state && generic_active_function == 0)
+//       {
+//         display.setTextColor(COLOR_SYSTEXT, RED);
+//         generic_menu = fm.sd_skip_files + f;
+//       }
+//       else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_active_function == 0  )
+//       {
+//         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+//         generic_menu = fm.sd_skip_files + f;
+//       }
+//        else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_active_function != 0  )
+//       {
+//         display.setTextColor(COLOR_BACKGROUND, GREY1);
+//         generic_menu = fm.sd_skip_files + f;
+//       }
+//       else if ( fm.sd_parent_folder == false  && generic_active_function == 0 )
+//         {
+//           display.setTextColor( COLOR_SYSTEXT,COLOR_BACKGROUND);
+//           generic_menu = fm.sd_skip_files + f;
+//         }
+
+       
+//       show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name);
+//     }
+
+//     if (generic_active_function == 1 && seq.edit_state)
+//       display.setTextColor(COLOR_SYSTEXT, RED);
+//     else
+//     if (generic_active_function == 1 )
+//       display.setTextColor( COLOR_BACKGROUND,COLOR_SYSTEXT);
+//     else
+//       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+//     setCursor_textGrid_small(35, 6);
+//     display.print(generic_temp_select_menu);
+//     display.print(" ");
+
+//     play_midi_file();
+
+
+//   }
+
+//   if (LCDML.FUNC_close()) // ****** STABLE END *********
+//   {
+//     encoderDir[ENC_R].reset();
+//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//     display.fillScreen(COLOR_BACKGROUND);
+//   }
+// }
 
 FLASHMEM void UI_func_test_mute(uint8_t param)
 {
@@ -22335,7 +22683,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Added to Favorites..."));
 #endif
-      }
+    }
     else
     { // delete the file, is no longer a favorite
       SD.remove(tmp);
@@ -22348,7 +22696,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d/%d.fav"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, i);
         if (SD.exists(tmp))
           countfavs++;
-    }
+      }
       if (countfavs == 0)
       {
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b);
@@ -22465,7 +22813,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
   LOG.print(F(" root: "));
   LOG.println(msz[preset_number][zone_number].rootnote);
 #endif
-  }
+}
 #endif
 
 /*************************************************************************

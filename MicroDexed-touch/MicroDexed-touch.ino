@@ -98,8 +98,7 @@ using namespace TeensyTimerTool;
 
 #include "livesequencer.h"
 #include <vector>
-
-elapsedMillis midi_start_delay;
+//#include "MidiReader.h"
 
 uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
