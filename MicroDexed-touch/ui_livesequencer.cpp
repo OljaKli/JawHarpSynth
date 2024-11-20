@@ -624,12 +624,14 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
   else {
     const uint8_t activeOld = data.activeTrack;
     liveSeq.setActiveTrack(track);
-    
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
     updateTrackChannelSetupButtons(track);
-    trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
+    if(trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
+      drawTrackLayers(activeOld);
+      trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
+    }
     DBG_LOG(printf("active track now is %i\n", track + 1));
   }
 }
@@ -682,9 +684,12 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   const bool recPressed = TouchButton::isPressed(GRID_X[1], GRID_Y[0]);
   if (recPressed) {
+    if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
+      trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
+      drawTrackLayers(data.activeTrack);
+    }
     data.isRecording = !data.isRecording;
     drawUpdates(drawTopButtons | drawTrackButtons);
-    trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
 
     if (isLayerViewActive && data.isSongMode) {
       drawUpdates(drawLayerButtons);
