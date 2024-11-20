@@ -624,12 +624,14 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
   else {
     const uint8_t activeOld = data.activeTrack;
     liveSeq.setActiveTrack(track);
-    
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
     updateTrackChannelSetupButtons(track);
-    trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
+    if(trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
+      drawTrackLayers(activeOld);
+      trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
+    }
     DBG_LOG(printf("active track now is %i\n", track + 1));
   }
 }
