@@ -647,10 +647,6 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
   else {
     const uint8_t activeOld = data.activeTrack;
     liveSeq.setActiveTrack(track);
-<<<<<<< HEAD
-=======
-
->>>>>>> 42a508d (test virtual keyb in liveseq#1)
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
