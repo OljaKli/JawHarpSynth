@@ -26,6 +26,7 @@ public:
   void showDirectMappingWarning(uint8_t inChannel);
   void processLCDM(void);
   void handleTouchscreen(void);
+  void show_hide_virtual_keyboard();
   void onStopped(void);
   void drawSingleLayer(uint8_t track, uint8_t layer); // used for layer mute GUI updates
   void drawTrackLayers(uint8_t track);

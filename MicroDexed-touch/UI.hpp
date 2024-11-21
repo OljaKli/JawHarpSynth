@@ -9512,6 +9512,13 @@ FLASHMEM void virtual_keyboard_print_buttons()
   draw_button_on_grid(37, 16, "INSTR.", "+", 0);
 }
 
+FLASHMEM void virtual_keyboard_print_buttons_livesequencer()
+{
+  // oct +- buttons
+  draw_button_on_grid(1, 16, "OCTAVE", "-", 0);
+  draw_button_on_grid(45, 16, "OCTAVE", "+", 0);
+}
+
 FLASHMEM void seq_pattern_editor_update_dynamic_elements()
 {
   if (seq.running == false)

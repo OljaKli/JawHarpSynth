@@ -212,16 +212,17 @@ FLASHMEM void LiveSequencer::startCountIn(void) {
   data.remainingCountIns = 4;
   const int intervalMS = data.patternLengthMs / 4;
 
-  countInTimer.begin([ this, intervalMS ] {
+  countInTimer.begin([this, intervalMS] {
     if (data.remainingCountIns > 1) {
       handleNoteOn(drum_midi_channel, 73, 127, DEVICE_INTERNAL); // rim
       ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawTopButtons);
-    } else {
+    }
+    else {
       countInTimer.stop();
       handleStart();
     }
     data.remainingCountIns--;
-  }, intervalMS * 1000);
+    }, intervalMS * 1000);
 }
 
 FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
@@ -243,7 +244,6 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
 
       if ((data.isRecording && data.isRunning) || data.remainingCountIns > 0) {
         const EventSource source = data.isSongMode ? EVENT_SONG : EVENT_PATTERN;
-
         MidiEvent newEvent = { source, uint16_t(data.patternTimer), data.currentPattern, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, event, note, velocityActive };
         if (data.isSongMode) {
           if (data.songLayerCount < LIVESEQUENCER_NUM_LAYERS) {
@@ -333,7 +333,7 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           break;
 
         case midi::NoteOff:
-          if(pressedKeys.count(note) > 0) {
+          if (pressedKeys.count(note) > 0) {
             DBG_LOG(printf("noteOff on ch%i of device %i\n", ch, device));
             pressedKeys.erase(note);
             handleNoteOff(ch, note, velocityActive, device);
@@ -482,7 +482,7 @@ FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent& e, 
 }
 
 FLASHMEM void LiveSequencer::loadNextEvent(int timeMs) {
-  if(data.isRunning) {
+  if (data.isRunning) {
     if (timeMs > 0) {
       //LOG.printf("trigger in %ims\n", timeMs);
       liveTimer.trigger(timeMs * 1000);
@@ -823,7 +823,7 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
     data.eventsList.sort(sortMidiEvent);
     const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
 
-    if(canIncrementLayer && incrementLayer) {
+    if (canIncrementLayer && incrementLayer) {
       setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
       data.trackSettings[data.activeTrack].layerCount++;
     }
@@ -885,7 +885,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       addPendingNotes();
 
       // sort events was requested externally (on editing noteOn time)
-      if(sortRequested) {
+      if (sortRequested) {
         sortRequested = false;
         data.eventsList.sort(sortMidiEvent);
       }
@@ -1032,7 +1032,7 @@ FLASHMEM void LiveSequencer::loadOldTrackInstruments(void) {
   const uint8_t loadTrackNumber = std::min(uint8_t(NUM_SEQ_TRACKS), LIVESEQUENCER_NUM_TRACKS);
   for (uint8_t i = 0; i < loadTrackNumber; i++) {
     data.trackSettings[i].device = DEVICE_INTERNAL;
-    
+
     switch (seq.track_type[i]) {
     case 0:
       data.trackSettings[i].instrument = INSTR_DRUM;
@@ -1152,7 +1152,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
   }
 }
 
-FLASHMEM void LiveSequencer::getDeviceName(uint8_t device, char *name, char *sub) const {
+FLASHMEM void LiveSequencer::getDeviceName(uint8_t device, char* name, char* sub) const {
   switch (device) {
   case DEVICE_INTERNAL:
     sprintf(name, "DEVICE");
@@ -1181,7 +1181,7 @@ FLASHMEM void LiveSequencer::getDeviceName(uint8_t device, char *name, char *sub
   }
 }
 
-FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrument, char *name, char *sub) const {
+FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrument, char* name, char* sub) const {
   switch (device) {
   case DEVICE_INTERNAL:
     sprintf(name, "INSTR");
@@ -1223,7 +1223,7 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
       break;
     }
     break;
-  
+
   case DEVICE_MIDI_USB:
     sprintf(name, "CHANNEL");
     sprintf(sub, "USB %02i", (instrument + 1));
@@ -1281,7 +1281,7 @@ FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
   }
 }
 
-FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t &lowestNote, uint8_t &highestNote, uint8_t patternFrom, uint8_t patternTo) {
+FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo) {
   std::vector<LiveSequencer::NotePair> result;
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
@@ -1298,7 +1298,7 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
 
           if (sameTrack && sameLayer && sameNote && isNoteOff) {
             const bool isInside = (patternTo >= itOn->patternNumber) && (patternFrom <= itOff->patternNumber);
-            if(isInside) {
+            if (isInside) {
               NotePair p = {
                 .noteOn = *itOn,
                 .noteOff = *itOff,

@@ -364,7 +364,13 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   display.setTextSize(2);
   display.setCursor(17 * CHAR_width_small, 18 * CHAR_height_small + 1);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  if (ts.virtual_keyboard_instrument == 1)
+
+  if (ts.virtual_keyboard_instrument == 0)
+  {
+    display.print(F("LIVESEQ "));
+    ts.virtual_keyboard_midi_channel = 20;  //fake channel for livesequence
+  }
+  else if (ts.virtual_keyboard_instrument == 1)
   {
     display.print(F("DEXED1  "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[0].midi_channel;
@@ -412,6 +418,8 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 extern void play_sample_on_virtual_drumpads(uint8_t note);
+extern  void UI_func_livesequencer(uint8_t param);
+
 
 FLASHMEM void print_virtual_keyboard_octave()
 {
@@ -435,14 +443,18 @@ FLASHMEM void print_virtual_keyboard_octave()
   }
   else
   { //drumpads
-    display.setCursor(29 * CHAR_width_small, 18 * CHAR_height_small + 1);
+    uint8_t xoffset = 0;
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))
+      xoffset = 4;
+
+    display.setCursor((29 + xoffset) * CHAR_width_small, 18 * CHAR_height_small + 1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print("OCT");
-    display.setCursor(29 * CHAR_width_small, 19 * CHAR_height_small + 1);
+    display.setCursor((29 + xoffset) * CHAR_width_small, 19 * CHAR_height_small + 1);
     display.print("AVE");
-    display.setCursor(29 * CHAR_width_small, 19 * CHAR_height_small + 1);
+    display.setCursor((29 + xoffset) * CHAR_width_small, 19 * CHAR_height_small + 1);
     display.setTextSize(2);
-    display.setCursor(33 * CHAR_width_small, 18 * CHAR_height_small + 1);
+    display.setCursor((33 + xoffset) * CHAR_width_small, 18 * CHAR_height_small + 1);
     display.print(ts.virtual_keyboard_octave);
     display.setTextSize(1);
   }
@@ -527,8 +539,9 @@ FLASHMEM void handleVirtualKeyboardKeys()
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
             handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, ts.virtual_keyboard_velocity);
           }
-          else {
+          else {///xx
             handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 120);
+
           }
         }
         display.console = true;
@@ -587,7 +600,7 @@ FLASHMEM void handleVirtualKeyboardKeys()
 
   else  if (ts.current_virtual_keyboard_display_mode == 1 && numTouchPoints > 0)
   {
-    if (ts.virtual_keyboard_instrument == 6)
+    if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0)
     {
       for (uint8_t x = 0; x < 6; x++)
       {
@@ -613,6 +626,8 @@ FLASHMEM void handleVirtualKeyboardKeys()
 
 extern void print_drumpads();
 extern uint8_t microsynth_selected_instance;
+
+extern  void UI_func_livesequencer(uint8_t param);
 
 FLASHMEM void virtual_keyboard_smart_preselect_mode()
 {
@@ -651,6 +666,12 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
     ts.current_virtual_keyboard_display_mode = 0;
     ts.virtual_keyboard_instrument = microsynth_selected_instance + 3;
   }
+  // else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))
+  // {
+  //   ts.current_virtual_keyboard_display_mode = 0;
+  //   ts.virtual_keyboard_instrument = 0;
+  // }
+
   // else if (LCDML.FUNC_getID() == 255)
   // {
   //   ts.current_virtual_keyboard_display_mode = 0;
@@ -660,6 +681,9 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
 
 FLASHMEM void virtual_keyboard()
 {
+
+  if (ts.virtual_keyboard_instrument == 0 && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))
+    ts.virtual_keyboard_instrument = 1;
 
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
@@ -733,26 +757,26 @@ FLASHMEM void touch_button_oct_up()
   {
     ts.virtual_keyboard_octave = 8;
   }
-
   else
   {
     if (ts.virtual_keyboard_octave > 8) {
       ts.virtual_keyboard_octave = 8;
     }
   }
-
-  if (ts.virtual_keyboard_instrument == 6)
+  if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0)
     virtual_keyboard();
   print_virtual_keyboard_octave();
 }
+
 FLASHMEM void touch_button_oct_down()
 {
   if (ts.virtual_keyboard_octave > 1)
     ts.virtual_keyboard_octave--;
-  if (ts.virtual_keyboard_instrument == 6)
+  if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0)
     virtual_keyboard();
   print_virtual_keyboard_octave();
 }
+
 FLASHMEM void touch_button_inst_up()
 {
   ts.virtual_keyboard_instrument++;
@@ -768,13 +792,23 @@ FLASHMEM void touch_button_inst_up()
 }
 FLASHMEM void touch_button_inst_down()
 {
-  ts.virtual_keyboard_instrument--;
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))
+  {
+    if (ts.virtual_keyboard_instrument > 0)
+      ts.virtual_keyboard_instrument--;
+  }
+  else
+  {
+    if (ts.virtual_keyboard_instrument > 1)
+      ts.virtual_keyboard_instrument--;
+  }
+
   if (ts.virtual_keyboard_instrument == 6 && ts.virtual_keyboard_octave > 6)
   {
     ts.virtual_keyboard_octave = 6;
   }
-  if (ts.virtual_keyboard_instrument < 1)
-    ts.virtual_keyboard_instrument = 1;
+  // if (ts.virtual_keyboard_instrument < 1)
+  //   ts.virtual_keyboard_instrument = 0;
 
   set_virtual_keyboard_display_mode();
 
@@ -796,6 +830,26 @@ FLASHMEM void touch_check_all_keyboard_buttons()
       touch_button_inst_up();
   }
 }
+
+FLASHMEM void touch_check_all_keyboard_buttons_livesequencer()
+{
+  if (seq.cycle_touch_element == 1)
+  {
+    if (check_button_on_grid(1, 16))
+    {
+      touch_button_oct_down();
+      ts.p.x = 1000;
+      delay(150);
+    }
+    else if (check_button_on_grid(45, 16))
+    {
+      touch_button_oct_up();
+      ts.p.x = 1000;
+      delay(150);
+    }
+  }
+}
+
 
 extern uint8_t dexed_onscreen_algo;
 
@@ -1658,7 +1712,7 @@ FLASHMEM void  assign_free_slices_or_increment()
     selected_slice_sample[1] = temp_int; // set sliced sample
     draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
   }
-  else if (selected_slice_sample[0] == temp_int && selected_slice_sample[0] != 99 )
+  else if (selected_slice_sample[0] == temp_int && selected_slice_sample[0] != 99)
   {
     num_slices[0] = num_slices[0] * 2;
     if (num_slices[0] > 16)
@@ -1671,7 +1725,7 @@ FLASHMEM void  assign_free_slices_or_increment()
       display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
     }
   }
-  else if (selected_slice_sample[1] == temp_int && selected_slice_sample[1] != 99 )
+  else if (selected_slice_sample[1] == temp_int && selected_slice_sample[1] != 99)
   {
     num_slices[1] = num_slices[1] * 2;
     if (num_slices[1] > 16)
@@ -1705,47 +1759,47 @@ FLASHMEM void handle_touchscreen_sample_editor()
       preview_sample();
     }
 
- if (check_button_on_grid(1,23) && fm.sample_source > 1  && fm.sample_source < 4 ) //loop start
+    if (check_button_on_grid(1, 23) && fm.sample_source > 1 && fm.sample_source < 4) //loop start
     {
       // draw_button_on_grid(1, 23, "LOOP", "START", 0);
-if (loop_start_button == false)
-{
-loop_start_button=true;
-loop_end_button=false;
-seq.edit_state = 1;
-generic_temp_select_menu = 3;
-}
-else
-{
-loop_start_button=false;
-seq.edit_state = 0;
-}
+      if (loop_start_button == false)
+      {
+        loop_start_button = true;
+        loop_end_button = false;
+        seq.edit_state = 1;
+        generic_temp_select_menu = 3;
+      }
+      else
+      {
+        loop_start_button = false;
+        seq.edit_state = 0;
+      }
       draw_loop_buttons();
       print_loop_data();
-     
+
     }
-else  if (check_button_on_grid(9,23) && fm.sample_source > 1  && fm.sample_source < 4)  //loop end
+    else  if (check_button_on_grid(9, 23) && fm.sample_source > 1 && fm.sample_source < 4)  //loop end
     {
-       draw_button_on_grid(9, 23, "LOOP", "END", 0);
-if (loop_end_button == false)
-{
-loop_end_button=true;
-loop_start_button=false;
-seq.edit_state = 1;
-generic_temp_select_menu = 4;
+      draw_button_on_grid(9, 23, "LOOP", "END", 0);
+      if (loop_end_button == false)
+      {
+        loop_end_button = true;
+        loop_start_button = false;
+        seq.edit_state = 1;
+        generic_temp_select_menu = 4;
 
-}
-else
-{
-  loop_end_button=false;
-  seq.edit_state = 0;
-}
-     draw_loop_buttons();
-     print_loop_data();
-      
+      }
+      else
+      {
+        loop_end_button = false;
+        seq.edit_state = 0;
+      }
+      draw_loop_buttons();
+      print_loop_data();
+
     }
 
-  
+
     if (check_button_on_grid(33, 23) && fm.sample_source == 4) // num slices
     {
       assign_free_slices_or_increment();

@@ -194,8 +194,8 @@ public:
   void cleanEvents(void);
   uint32_t timeToMs(uint8_t patternNumber, uint16_t patternMs) const;
   void startCountIn(void);
-  void getDeviceName(uint8_t device, char *name, char *sub) const;
-  void getInstrumentName(uint8_t device, uint8_t instrument, char *name, char *sub) const;
+  void getDeviceName(uint8_t device, char* name, char* sub) const;
+  void getInstrumentName(uint8_t device, uint8_t instrument, char* name, char* sub) const;
   void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument);
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
   void requestSortEvents(void);
@@ -208,7 +208,7 @@ public:
   };
 
   void addNotePair(MidiEvent noteOn, MidiEvent noteOff);
-  std::vector<NotePair> getNotePairsFromTrack(uint8_t track, uint8_t &lowestNote, uint8_t &highestNote, uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
+  std::vector<NotePair> getNotePairsFromTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
 
   static void printNotePairs(std::vector<std::vector<NotePair>> notePairs);
   static void printEvent(int i, MidiEvent e);
