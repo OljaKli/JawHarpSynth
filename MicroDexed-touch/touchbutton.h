@@ -41,6 +41,7 @@ public:
   static void drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color);
   static bool isPressed(uint16_t x, uint16_t y);
   static bool isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+  static bool isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
   static ColorCombo getColors(Color color);
   static void clearButton(uint16_t x, uint16_t y, uint16_t color);
 
