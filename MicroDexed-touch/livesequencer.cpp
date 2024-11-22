@@ -236,6 +236,7 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
 
 FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
   if (data.processMidiIn) {
+    DBG_LOG(printf("got midi note %i\n", note));
     if (data.instrumentChannels.count(inChannel) == 0) {
       ui_pianoRoll->handleKeyChanged(note, event, velocity);
       // velocity adjustment for keyboard events (live playing or recording)

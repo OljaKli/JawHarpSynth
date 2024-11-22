@@ -33,7 +33,7 @@ extern void flash_printDirectory();
 extern void sd_printDirectory(bool forceReload);
 extern uint8_t find_longest_chain();
 extern void print_formatted_number(uint16_t v, uint8_t l);
-extern void virtual_keyboard_print_buttons();
+extern void virtual_keyboard_print_buttons(bool showInstrumentButtons);
 extern void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
 extern void seq_pattern_editor_update_dynamic_elements();
 extern void microsynth_refresh_lower_screen_static_text();
@@ -418,6 +418,7 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 extern void play_sample_on_virtual_drumpads(uint8_t note);
+extern void play_sample_off_virtual_drumpads(uint8_t note);
 extern  void UI_func_livesequencer(uint8_t param);
 
 
@@ -501,13 +502,13 @@ FLASHMEM void virtual_keyboard_key_off_black(uint8_t x)
 
 FLASHMEM void handleVirtualKeyboardKeys()
 {
+  bool isPressed = numTouchPoints > 0;
+
   if (ts.current_virtual_keyboard_display_mode == 0)
   {
     uint8_t halftones = 0;
     display.setTextColor(COLOR_SYSTEXT);
     display.setTextSize(1);
-
-    bool isPressed = numTouchPoints > 0;
 
     // draw white keys
     bool isWithinWhiteY = ts.p.y > VIRT_KEYB_YPOS + 36;
@@ -598,21 +599,22 @@ FLASHMEM void handleVirtualKeyboardKeys()
     }
   }
 
-  else  if (ts.current_virtual_keyboard_display_mode == 1 && numTouchPoints > 0)
-  {
-    if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0)
-    {
-      for (uint8_t x = 0; x < 6; x++)
-      {
-        if (check_button_on_grid(x * 9 + 1, 21))
-        {
-          // sub_step_recording(true, 3,x + ts.virtual_keyboard_octave * 12);
+  else if (ts.current_virtual_keyboard_display_mode == 1) {
+    if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0) {
+      for (uint8_t x = 0; x < 12; x++) {
+        const uint16_t padX = (x >= 6) ? (x - 6) * 9 + 1 : x * 9 + 1;
+        const uint16_t padY = (x >= 6) ? 26 : 21;
+        bool isWithinPad = isPressed && (ts.p.x > padX * CHAR_width_small && ts.p.x < (padX + button_size_x) * CHAR_width_small && ts.p.y > padY * CHAR_height_small && ts.p.y < (padY + button_size_y) * CHAR_height_small);
+        bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
+        bool isPadRelease = (ts.virtual_keyboard_state_white & (1 << x)) != 0 && !isWithinPad;
+
+        if (isPadPress) {
+          ts.virtual_keyboard_state_white |= (1 << x);
           play_sample_on_virtual_drumpads(x + ts.virtual_keyboard_octave * 12);
         }
-        if (check_button_on_grid(x * 9 + 1, 26))
-        {
-          //  sub_step_recording(true, 3,x+6 + ts.virtual_keyboard_octave * 12);
-          play_sample_on_virtual_drumpads(x + 6 + ts.virtual_keyboard_octave * 12);
+        if (isPadRelease) {
+          ts.virtual_keyboard_state_white &= ~(1 << x);
+          play_sample_off_virtual_drumpads(x + ts.virtual_keyboard_octave * 12);
         }
       }
     }
@@ -626,8 +628,6 @@ FLASHMEM void handleVirtualKeyboardKeys()
 
 extern void print_drumpads();
 extern uint8_t microsynth_selected_instance;
-
-extern  void UI_func_livesequencer(uint8_t param);
 
 FLASHMEM void virtual_keyboard_smart_preselect_mode()
 {
