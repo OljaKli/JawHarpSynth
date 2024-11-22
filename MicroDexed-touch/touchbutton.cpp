@@ -37,11 +37,15 @@ FLASHMEM bool TouchButton::isPressed(uint16_t x, uint16_t y) {
   return result;
 }
 
+FLASHMEM bool TouchButton::isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  return (ts.p.x >= x && ts.p.x < (x + w) && ts.p.y >= y && ts.p.y < (y + h));
+}
+
 FLASHMEM bool TouchButton::isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   bool result = false;
   if(numTouchPoints > 0) {
     if(isButtonTouched == false) {
-      if(ts.p.x > x && ts.p.x < (x + w) && ts.p.y > y && ts.p.y < (y + h)) {
+      if(isInArea(x, y, w, h)) {
         result = true;
         isButtonTouched = true;
       }
@@ -99,11 +103,11 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
 }
 
 FLASHMEM void TouchButton::processPressed() {
-  const bool isInArea = (ts.p.x > x && ts.p.x < (x + BUTTON_SIZE_X) && ts.p.y > y && ts.p.y < (y + BUTTON_SIZE_Y));
+  const bool inArea = isInArea(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y);
 
   switch (pressedState) {
   case NOT_PRESSED:
-    if(numTouchPoints && isInArea) {
+    if(numTouchPoints && inArea) {
       pressedState = PRESSED;
       pressedMs = 0;
     }
@@ -111,7 +115,7 @@ FLASHMEM void TouchButton::processPressed() {
 
   case PRESSED:
     if(longPressedHandler && numTouchPoints) {
-      if(isInArea) {
+      if(inArea) {
         pressedMs += TOUCH_MAX_REFRESH_RATE_MS;
         if(pressedMs >= LONGPRESS_TIME_MS) {
           longPressedHandler(this);
