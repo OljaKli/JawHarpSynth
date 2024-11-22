@@ -94,10 +94,9 @@ private:
     TOOLS_SONG,
     TOOLS_ARP,
     TOOLS_SEQ,
+    TOOLS_KEYBOARD,
     TOOLS_NUM
   };
-
-  bool isVirtualKeyboardShown = false;
 
   std::vector<TouchButton*> toolsPages[TOOLS_NUM];
   std::vector<TouchButton*> trackButtons;
@@ -124,7 +123,7 @@ private:
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
-  void show_hide_virtual_keyboard();
+  void drawVirtualKeyboard();
 };
 
 #endif //UI_LIVESEQUENCER_H

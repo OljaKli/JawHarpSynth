@@ -839,13 +839,13 @@ FLASHMEM void touch_check_all_keyboard_buttons_livesequencer()
     {
       touch_button_oct_down();
       ts.p.x = 1000;
-      delay(150);
+      delay(150); // REMOVE ME
     }
     else if (check_button_on_grid(45, 16))
     {
       touch_button_oct_up();
       ts.p.x = 1000;
-      delay(150);
+      delay(150); // REMOVE ME
     }
   }
 }
