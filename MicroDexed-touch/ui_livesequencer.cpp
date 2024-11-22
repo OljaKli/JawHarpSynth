@@ -771,6 +771,11 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
     b->processPressed();
   }
 
+  if(isVirtualKeyboardShown) {
+    // early abort as bottom part is handled by virtual keyboard
+    return;
+  }
+
   if (isLayerViewActive) {
     for (uint8_t trackIndex = 0; trackIndex < LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN; trackIndex++) {
       const uint8_t track = trackOffset + trackIndex;
