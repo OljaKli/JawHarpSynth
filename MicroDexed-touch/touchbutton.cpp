@@ -33,10 +33,15 @@ FLASHMEM void TouchButton::setSelected(bool selected) {
 
 static bool isButtonTouched = false;
 FLASHMEM bool TouchButton::isPressed(uint16_t x, uint16_t y) {
+  bool result = isAreaPressed(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y);
+  return result;
+}
+
+FLASHMEM bool TouchButton::isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   bool result = false;
   if(numTouchPoints > 0) {
     if(isButtonTouched == false) {
-      if(ts.p.x > x && ts.p.x < (x + BUTTON_SIZE_X) && ts.p.y > y && ts.p.y < (y + BUTTON_SIZE_Y)) {
+      if(ts.p.x > x && ts.p.x < (x + w) && ts.p.y > y && ts.p.y < (y + h)) {
         result = true;
         isButtonTouched = true;
       }

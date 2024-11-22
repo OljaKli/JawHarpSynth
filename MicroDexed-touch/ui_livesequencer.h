@@ -26,7 +26,6 @@ public:
   void showDirectMappingWarning(uint8_t inChannel);
   void processLCDM(void);
   void handleTouchscreen(void);
-  void show_hide_virtual_keyboard();
   void onStopped(void);
   void drawSingleLayer(uint8_t track, uint8_t layer); // used for layer mute GUI updates
   void drawTrackLayers(uint8_t track);
@@ -98,6 +97,8 @@ private:
     TOOLS_NUM
   };
 
+  bool isVirtualKeyboardShown = false;
+
   std::vector<TouchButton*> toolsPages[TOOLS_NUM];
   std::vector<TouchButton*> trackButtons;
 
@@ -106,6 +107,8 @@ private:
  
   static constexpr uint8_t BAR_WIDTH = 104; // 2 * BUTTON_WIDTH + spacing
   static constexpr uint8_t BAR_HEIGHT = 3;
+  static constexpr uint8_t BUTTON_SPACING = 4;  // center in screen
+
   void onTrackButtonPressed(uint8_t track);
   void clearBottomArea(void);
   void selectTools(Tools tools);
@@ -121,6 +124,7 @@ private:
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
+  void show_hide_virtual_keyboard();
 };
 
 #endif //UI_LIVESEQUENCER_H

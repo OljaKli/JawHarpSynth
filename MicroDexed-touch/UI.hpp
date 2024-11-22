@@ -9501,22 +9501,17 @@ void set_sample_type_color_of(uint8_t samplekey)
     display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
 }
 
-FLASHMEM void virtual_keyboard_print_buttons()
+FLASHMEM void virtual_keyboard_print_buttons(bool showInstrumentButtons)
 {
   // oct +- buttons
   draw_button_on_grid(1, 16, "OCTAVE", "-", 0);
   draw_button_on_grid(45, 16, "OCTAVE", "+", 0);
 
-  // instrument buttons
-  draw_button_on_grid(9, 16, "INSTR.", "-", 0);
-  draw_button_on_grid(37, 16, "INSTR.", "+", 0);
-}
-
-FLASHMEM void virtual_keyboard_print_buttons_livesequencer()
-{
-  // oct +- buttons
-  draw_button_on_grid(1, 16, "OCTAVE", "-", 0);
-  draw_button_on_grid(45, 16, "OCTAVE", "+", 0);
+  if(showInstrumentButtons) {
+    // instrument buttons
+    draw_button_on_grid(9, 16, "INSTR.", "-", 0);
+    draw_button_on_grid(37, 16, "INSTR.", "+", 0);
+  }
 }
 
 FLASHMEM void seq_pattern_editor_update_dynamic_elements()
@@ -9784,9 +9779,12 @@ FLASHMEM void pattern_editor_menu_0()
   }
 }
 
-FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note)
-{
+FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note) {
   handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
+}
+
+FLASHMEM void play_sample_off_virtual_drumpads(uint8_t note) {
+  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
 }
 
 FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)

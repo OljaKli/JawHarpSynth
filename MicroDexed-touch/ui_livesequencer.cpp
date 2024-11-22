@@ -11,14 +11,14 @@ extern ILI9341_t3n display;
 extern bool remote_active;
 extern int numTouchPoints;
 extern void helptext_l(const char* str);
+extern sequencer_t seq;
+extern ts_t ts;
 
 bool openingScreen = false;
 
 #define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
 
 FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d) : instance(this), liveSeq(sequencer), data(d) {
-  const uint8_t BUTTON_SPACING = 4;  // center in screen
-
   for (uint8_t trackIndex = 0; trackIndex < LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN; trackIndex++) {
     const uint8_t OFFSET_Y = (trackIndex > 1) ? 10 : 0; // separate areas a bit
     GRID_X[trackIndex] = trackIndex * (TouchButton::BUTTON_SIZE_X + BUTTON_SPACING);
@@ -494,14 +494,6 @@ FLASHMEM void UI_LiveSequencer::onStopped(void) {
   }
 }
 
-extern void virtual_keyboard_smart_preselect_mode();
-extern void virtual_keyboard();
-extern void  handleVirtualKeyboardKeys();
-extern void touch_check_all_keyboard_buttons_livesequencer();
-extern void virtual_keyboard_print_buttons_livesequencer();
-extern void virtual_keyboard_print_current_instrument();
-extern sequencer_t seq;
-
 FLASHMEM void UI_LiveSequencer::processLCDM(void) {
   // ****** SETUP *********
   if (LCDML.FUNC_setup()) {
@@ -521,10 +513,6 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     redrawScreen();
     // setup function
     LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
-
-    if (seq.cycle_touch_element == 1)
-      show_hide_virtual_keyboard();
-
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
@@ -567,16 +555,14 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
       lastNoteLabel->drawNow();
     }
 
-    if (showingHowTo == false) {
-      drawGUI(guiUpdateFlags);
-    }
-
-    if (seq.cycle_touch_element == 1)
-    {
+    if (isVirtualKeyboardShown) {
       handleVirtualKeyboardKeys();
       touch_check_all_keyboard_buttons_livesequencer();
     }
 
+    if (showingHowTo == false) {
+      drawGUI(guiUpdateFlags);
+    }
   }
 
   // ****** STABLE END *********
@@ -651,7 +637,14 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
     updateTrackChannelSetupButtons(track);
-    if(trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
+    if (isVirtualKeyboardShown) {
+      const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
+      // only redraw if PADs / KEYs view needs redrawing
+      if(ts.current_virtual_keyboard_display_mode != isDrumsActive) {
+        show_hide_virtual_keyboard();
+      }
+    }
+    if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
       drawTrackLayers(activeOld);
       trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
     }
@@ -668,30 +661,17 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   if ((isLayerViewActive == false) && (currentTools == TOOLS_SEQ)) {
     drawUpdates(drawTools);
   }
-
-  show_hide_virtual_keyboard();
 }
 
-extern ts_t ts;
-
-void UI_LiveSequencer::show_hide_virtual_keyboard()
-{
-  if (seq.cycle_touch_element == 1)
-  {
-    if (selectedTrackSetup.instrument == 0)
-      ts.current_virtual_keyboard_display_mode = 1;
-    else
-      ts.current_virtual_keyboard_display_mode = 0;
-
+void UI_LiveSequencer::show_hide_virtual_keyboard() {
+  if (isVirtualKeyboardShown) { // show keyboard
+    const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
+    ts.current_virtual_keyboard_display_mode = isDrumsActive ? 1 : 0;
     ts.virtual_keyboard_instrument = 0;
 
     virtual_keyboard();
     virtual_keyboard_print_current_instrument();
-    virtual_keyboard_print_buttons_livesequencer();
-  }
-  else
-  {
-    redrawScreen();
+    virtual_keyboard_print_buttons(false);
   }
 }
 
@@ -745,26 +725,19 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
     }
   }
 
-
-  const bool virtualKeyboardPressed1 = TouchButton::isPressed(GRID_X[2], GRID_Y[0]);
-  if (virtualKeyboardPressed1)
-  {
-    if (seq.cycle_touch_element == 1)
-      seq.cycle_touch_element = 0;
-    else
-      seq.cycle_touch_element = 1;
+  const bool isVirtualKeyboardPressed = TouchButton::isAreaPressed(GRID_X[2], GRID_Y[0], 2 * TouchButton::BUTTON_SIZE_X + BUTTON_SPACING, TouchButton::BUTTON_SIZE_Y);
+  if(isVirtualKeyboardPressed) {
+    
+    isVirtualKeyboardShown = !isVirtualKeyboardShown;
+    seq.cycle_touch_element = isVirtualKeyboardShown;
+    
+    if (isVirtualKeyboardShown) {
+      clearBottomArea();
+    } else {
+      redrawScreen();
+    }
     show_hide_virtual_keyboard();
   }
-
-  const bool virtualKeyboardPressed2 = TouchButton::isPressed(GRID_X[3], GRID_Y[0]);
-  if (virtualKeyboardPressed2) {
-    if (seq.cycle_touch_element == 1)
-      seq.cycle_touch_element = 0;
-    else
-      seq.cycle_touch_element = 1;
-    show_hide_virtual_keyboard();
-  }
-
 
   const bool toolsPressed = TouchButton::isPressed(GRID_X[4], GRID_Y[0]);
   if (toolsPressed) {
@@ -796,6 +769,11 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   for (TouchButton* b : trackButtons) {
     b->processPressed();
+  }
+
+  if(isVirtualKeyboardShown) {
+    // early abort as bottom part is handled by virtual keyboard
+    return;
   }
 
   if (isLayerViewActive) {
@@ -942,6 +920,12 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     for (TouchButton* b : trackButtons) {
       b->drawNow();
     }
+  }
+
+  if(isVirtualKeyboardShown) {
+    // early return as bottom part is reserved by keyboard
+    guiFlags = 0;
+    return;
   }
 
   if (isLayerViewActive) {

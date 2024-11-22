@@ -40,6 +40,7 @@ void splash_screen2_anim(uint8_t sysinfo_sound_state);
 void draw_logo_instant(uint8_t yoffset);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
+void virtual_keyboard_print_buttons(bool showInstrumentButtons = true);
 
 void UI_func_stereo_mono(uint8_t param);
 void UI_func_dexed_audio(uint8_t param);
