@@ -7,6 +7,7 @@
 #include <Audio.h>
 #include "template_mixer.hpp"
 #include "UI.h"
+#include "touchbutton.h"
 
 extern ILI9341_t3n display;
 extern config_t configuration;
@@ -607,9 +608,7 @@ FLASHMEM void handleVirtualKeyboardKeys()
   else if (ts.current_virtual_keyboard_display_mode == 1) {
     if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0) {
       for (uint8_t x = 0; x < 12; x++) {
-        const uint16_t padX = (x >= 6) ? (x - 6) * 9 + 1 : x * 9 + 1;
-        const uint16_t padY = (x >= 6) ? 26 : 21;
-        bool isWithinPad = isPressed && (ts.p.x > padX * CHAR_width_small && ts.p.x < (padX + button_size_x) * CHAR_width_small && ts.p.y > padY * CHAR_height_small && ts.p.y < (padY + button_size_y) * CHAR_height_small);
+        bool isWithinPad = TouchButton::isPressed(TouchButton::GRID_X(x % 6), TouchButton::GRID_Y(4 + (x / 6)));
         bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
         bool isPadRelease = (ts.virtual_keyboard_state_white & (1 << x)) != 0 && !isWithinPad;
 
@@ -820,41 +819,32 @@ FLASHMEM void touch_button_inst_down()
   print_virtual_keyboard_octave();
 }
 
+FLASHMEM void processOctaveButtons() {
+  if (seq.cycle_touch_element == 1) {
+    if(TouchButton::isPressed(TouchButton::GRID_X(0), TouchButton::GRID_Y(3))) {
+      touch_button_oct_down();
+    }
+    if(TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(3))) {
+      touch_button_oct_up();
+    }
+  }
+}
+
 FLASHMEM void touch_check_all_keyboard_buttons()
 {
 
   if (seq.cycle_touch_element == 1 || ts.keyb_in_menu_activated)
   {
-    if (check_button_on_grid(1, 16))
-      touch_button_oct_down();
-    else if (check_button_on_grid(45, 16))
-      touch_button_oct_up();
-    else  if (check_button_on_grid(9, 16))
+    processOctaveButtons();
+
+    if(TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(3))) {
       touch_button_inst_down();
-    else if (check_button_on_grid(37, 16))
+    }
+    if(TouchButton::isPressed(TouchButton::GRID_X(4), TouchButton::GRID_Y(3))) {
       touch_button_inst_up();
-  }
-}
-
-FLASHMEM void touch_check_all_keyboard_buttons_livesequencer()
-{
-  if (seq.cycle_touch_element == 1)
-  {
-    if (check_button_on_grid(1, 16))
-    {
-      touch_button_oct_down();
-      ts.p.x = 1000;
-      delay(150); // REMOVE ME
-    }
-    else if (check_button_on_grid(45, 16))
-    {
-      touch_button_oct_up();
-      ts.p.x = 1000;
-      delay(150); // REMOVE ME
     }
   }
 }
-
 
 extern uint8_t dexed_onscreen_algo;
 

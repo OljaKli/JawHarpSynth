@@ -14,6 +14,15 @@ static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { COLOR_SYSTEXT, COLOR_BACKGROUND } // COLOR_LABEL
 };
 
+FLASHMEM uint16_t TouchButton::GRID_X(uint8_t x) {
+  return x * (BUTTON_SIZE_X + BUTTON_SPACING);
+}
+
+FLASHMEM uint16_t TouchButton::GRID_Y(uint8_t y) {
+  const uint16_t offset = y > 2 ? 10 : 0;
+  return offset + y * (BUTTON_SIZE_Y + BUTTON_SPACING);
+}
+
 FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed) : x(x_coord), y(y_coord), 
   drawHandler{draw},
   clickedHandler{clicked},

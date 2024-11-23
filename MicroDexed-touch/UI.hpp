@@ -9504,13 +9504,13 @@ void set_sample_type_color_of(uint8_t samplekey)
 FLASHMEM void virtual_keyboard_print_buttons(bool showInstrumentButtons)
 {
   // oct +- buttons
-  draw_button_on_grid(1, 16, "OCTAVE", "-", 0);
-  draw_button_on_grid(45, 16, "OCTAVE", "+", 0);
+  TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(3), "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
 
   if(showInstrumentButtons) {
     // instrument buttons
-    draw_button_on_grid(9, 16, "INSTR.", "-", 0);
-    draw_button_on_grid(37, 16, "INSTR.", "+", 0);
+    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "INSTR.", "-", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(3), "INSTR.", "+", TouchButton::BUTTON_NORMAL);
   }
 }
 
@@ -19191,25 +19191,19 @@ FLASHMEM void print_perfmod_buttons()
 
 FLASHMEM void print_drumpads()
 {
-  uint8_t offset = 18;
+  static constexpr uint8_t offset = 18;
+  static constexpr uint8_t LINECHARS = 7;
   if (seq.cycle_touch_element == 1 || ts.keyb_in_menu_activated) {
-    char tmp[14];
-    char tmp2[14];
-    for (uint8_t x = 0; x < 6; x++)
-    {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%.6s"), drum_config[x + ts.virtual_keyboard_octave * 12 - offset].name);
-      snprintf_P(tmp2, sizeof(tmp2), PSTR("%.6s"), &drum_config[x + ts.virtual_keyboard_octave * 12 - offset].name[6]);
-      if (x + ts.virtual_keyboard_octave * 12 - offset < NUM_DRUMSET_CONFIG && x + ts.virtual_keyboard_octave * 12 - offset >= 0)
-        draw_button_on_grid(x * 9 + 1, 21, tmp, tmp2, 1);
-      else
-        draw_button_on_grid(x * 9 + 1, 21, "", "", 1);
-
-      snprintf_P(tmp, sizeof(tmp), PSTR("%.6s"), drum_config[x + 6 + ts.virtual_keyboard_octave * 12 - offset].name);
-      snprintf_P(tmp2, sizeof(tmp2), PSTR("%.6s"), &drum_config[x + 6 + ts.virtual_keyboard_octave * 12 - offset].name[6]);
-      if (x + 6 + ts.virtual_keyboard_octave * 12 - offset < NUM_DRUMSET_CONFIG && x + ts.virtual_keyboard_octave * 12 - offset >= -6)
-        draw_button_on_grid(x * 9 + 1, 26, tmp, tmp2, 1);
-      else
-        draw_button_on_grid(x * 9 + 1, 26, "", "", 1);
+    
+    for (uint8_t x = 0; x < 12; x++) {
+      std::string line1;
+      std::string line2;
+      const int16_t sampleIndex = x + ts.virtual_keyboard_octave * 12 - offset;
+      if(sampleIndex >= 0 && sampleIndex < NUM_DRUMSET_CONFIG) {
+        line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
+        line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
+      }
+      TouchButton::drawButton(TouchButton::GRID_X(x % 6), TouchButton::GRID_Y(4 + (x / 6)), std::string(line1), std::string(line2), TouchButton::BUTTON_ACTIVE);
     }
   }
 }

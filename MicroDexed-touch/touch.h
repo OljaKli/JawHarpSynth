@@ -102,7 +102,7 @@ TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
 void virtual_keyboard();
 void handleVirtualKeyboardKeys();
-void touch_check_all_keyboard_buttons_livesequencer(); // TODO: remove me
+void processOctaveButtons();
 void virtual_keyboard_print_current_instrument();
 
 void handle_touchscreen_braids(void);
