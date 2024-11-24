@@ -98,7 +98,14 @@ using namespace TeensyTimerTool;
 
 #include "livesequencer.h"
 #include <vector>
+
 //#include "MidiReader.h"
+
+
+
+
+
+
 
 uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
@@ -1248,6 +1255,9 @@ FLASHMEM void setup()
     sample_envelope[instance_id]->releaseNoteOn(0);
     sample_envelope[instance_id + NUM_DRUMS]->releaseNoteOn(0);
 
+SMF.begin(&(SdFat &)SD);
+SMF.setMidiHandler(midiCallback);
+
   }
 
   // Setup EPiano
@@ -2065,6 +2075,7 @@ void print_gate_state(uint8_t g)
 
 bool display_buffer_envelopes[NUM_DRUMS];
 bool display_buffer_samples[NUM_DRUMS];
+bool smf_playing=false;
 
 void loop()
 {
@@ -2210,7 +2221,15 @@ void loop()
         sub_step_recording(false, 0);
       }
     }
-
+else if(smf_playing)
+{
+   if (!SMF.isEOF())
+      {
+        if (SMF.getNextEvent()) {
+        }
+      }
+}
+   
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
   {
     microsynth_control_rate = 0;

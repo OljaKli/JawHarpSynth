@@ -638,11 +638,11 @@ LCDML_add(57, LCDML_0_15, 10, "TEST Touchscreen", UI_func_test_touchscreen);
 LCDML_add(58, LCDML_0_15, 11, "TEST Audio Mute", UI_func_test_mute);
 LCDML_add(59, LCDML_0_15, 12, "TEST PSRAM", UI_func_test_psram);
 LCDML_add(60, LCDML_0_15, 13, "FORMAT FLASH", UI_func_format_flash);
-//LCDML_add(61, LCDML_0, 16, "MIDI FILE Player", UI_func_midiplayer);
-LCDML_add(61, LCDML_0, 16, "Info", UI_func_information);
-LCDML_addAdvanced(62, LCDML_0, 17, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(63, LCDML_0, 18, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(64, LCDML_0, 19, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(61, LCDML_0, 16, "MIDI FILE Player", UI_func_midiplayer);
+LCDML_add(62, LCDML_0, 17, "Info", UI_func_information);
+LCDML_addAdvanced(63, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(64, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(65, LCDML_0, 20, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 
 struct ScopeSettings {
   bool enabled;
@@ -9507,7 +9507,7 @@ FLASHMEM void virtual_keyboard_print_buttons(bool showInstrumentButtons)
   draw_button_on_grid(1, 16, "OCTAVE", "-", 0);
   draw_button_on_grid(45, 16, "OCTAVE", "+", 0);
 
-  if(showInstrumentButtons) {
+  if (showInstrumentButtons) {
     // instrument buttons
     draw_button_on_grid(9, 16, "INSTR.", "-", 0);
     draw_button_on_grid(37, 16, "INSTR.", "+", 0);
@@ -21876,9 +21876,7 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
 
 FLASHMEM void load_sd_directory_files_only()
 {
-
   File sd_root = SD.open("/MIDI");
-
   fm.sd_sum_files = 0;
 
   while (true)
@@ -21910,312 +21908,333 @@ FLASHMEM void load_sd_directory_files_only()
   qsort(sdcard_infos.files, fm.sd_sum_files, sizeof(storage_file_t), compare_files_by_name);
 }
 
-// #include "midireader.h"
+#include "MD_MIDIFile.h"
+MD_MIDIFile SMF;
+uint8_t smf_line = 12;
+extern bool smf_playing;
+bool smf_track_state[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
 
-// FLASHMEM void play_midi_file()
-// {
+FLASHMEM void midiCallback(midi_event* pev)
+// Called by the MIDIFile library when a file event needs to be processed
+// thru the midi communications interface.
+// This callback is set up in the setup() function.
+{
+  char tmp[10];
 
-//   snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+  //if ((pev->data[0] >= 0x80) && (pev->data[0] <= 0xe0) && smf_track_state[pev->channel] ==1 )
+  if ((pev->data[0] >= 0x80) && (pev->data[0] <= 0xa0) && smf_track_state[pev->channel] ==1 )
+  {
+    //Serial.write(pev->data[0] | pev->channel);
+    //Serial.write(&pev->data[1], pev->size-1);
 
-//   midireader reader;
-//   reader.open(filename);
-//   //   setCursor_textGrid_small(0, 0);
-//   //    display.print(filename);
-//   // display.print("   ");
+    snprintf_P(tmp, sizeof(tmp), PSTR("%-2s"), noteNames[pev->data[1] % 12]);
+    if (pev->data[0] >= 0x90)
+    {
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+      {
+        display.setTextColor(GREEN, COLOR_BACKGROUND);
+display.setCursor(pev->channel * (CHAR_width_small * 3) +(CHAR_width_small * 1), smf_line * 9);
+ display.print(tmp);
+        smf_line++;
 
-//   if (reader.getNumTracks() != 0)
-//   {
-//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//     show_smallfont_noGrid(CHAR_height_small * 3 + 5, CHAR_width_small * 35, 16, sdcard_infos.files[generic_menu].name);
-//     setCursor_textGrid_small(35, 4);
-//     temp_int = reader.getNumTracks() - 1;
-//     display.print(temp_int);
-//     display.print("  ");
-//   }
-//   else
-//   {
-//     display.setTextColor(RED, COLOR_BACKGROUND);
-//     show_smallfont_noGrid(CHAR_height_small * 3 + 5, CHAR_width_small * 35, 16, "NOT A MIDI FILE");
-//     setCursor_textGrid_small(35, 4);
-//     display.print("0 ");
-//   }
+      }
+      handleNoteOn(configuration.dexed[0].midi_channel, pev->data[1], pev->data[2], 0);
+    }
+    else if (pev->data[0] >= 0x80 && pev->data[0] < 0x90)
+    {
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+      {
+        display.setTextColor(GREY2, COLOR_BACKGROUND);
+display.setCursor(pev->channel * (CHAR_width_small * 3)+(CHAR_width_small * 1), smf_line * 9);
+ display.print(tmp);
+        smf_line++;
+      }
+      handleNoteOff(configuration.dexed[0].midi_channel, pev->data[1], pev->data[2], 0);
+    }
 
-//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//   double microsPerTick = reader.get_microseconds_per_tick();
+if (remote_active)
+ display.flushSysEx();
+    
+    if (smf_line > 23)
+      smf_line = 12;
 
-//   reader.setTrackNumber(generic_temp_select_menu);
-//   int i = 0;
+    //--------------------
+       // usbMIDI.send(pev->data[0], pev->data[1],pev->data[2],pev->channel, 0);
+  }
+}
 
-//   long totalTicks = 0;
-//   long microseconds = 0;
-//   uint8_t line = 11;
-//   char tmp[55];
-//   display.setTextSize(1);
-//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+FLASHMEM void _print_smf_track_state()
+{
+   for (uint8_t f = 0; f < 16; f++)
+    {
+      display.setCursor(f * (CHAR_width_small * 3)+(CHAR_width_small * 1) , 11 * CHAR_height_small + 5);
 
-//   smfmidimessage* message;
-//   while ((message = reader.read()) != nullptr)
-//   {
-//     if (generic_active_function != 3 && line > 22)
-//       break;
+if (generic_temp_select_menu==f+2)
+{
+    if (smf_track_state[f])
+ display.setTextColor(COLOR_BACKGROUND, GREEN);
+ else
+ display.setTextColor(COLOR_BACKGROUND, RED);
+}
+else if (seq.edit_state == 0)
+{
+      if (smf_track_state[f])
+        display.setTextColor(GREEN, COLOR_BACKGROUND);
+        else
+display.setTextColor(RED, COLOR_BACKGROUND);
+}
+     print_formatted_number(f + 1, 2);
+    }
+}
 
-//     totalTicks += message->delta_ticks;
-//     microseconds += microsPerTick * message->delta_ticks;
+FLASHMEM void midiSilence(void)
+// Turn everything off on every channel.
+// Some midi files are badly behaved and leave notes hanging, so between songs turn
+// off all the notes and sound
+{
+  midi_event ev;
 
-//     switch (message->getMessageType())
-//     {
-//     case smftype_channelvoicemessage:
-//     {
-//       smfchannelvoicemessage* channelvoicemessage = (smfchannelvoicemessage*)message;
+  // All sound off
+  // When All Sound Off is received all oscillators will turn off, and their volume
+  // envelopes are set to zero as soon as possible.
+  ev.size = 0;
+  ev.data[ev.size++] = 0xb0;
+  ev.data[ev.size++] = 120;
+  ev.data[ev.size++] = 0;
 
-// if (generic_active_function == 3)
-//  {
-//  delay(channelvoicemessage->delta_ticks );
-//  }
-//       snprintf_P(tmp, sizeof(tmp), PSTR("[%04d]%05d DELTA %03d ST 0x%2x DATA1 %03d DATA2 %03d"),
-//         i,
-//         totalTicks,
-//         channelvoicemessage->delta_ticks,
-//         channelvoicemessage->status,
-//         channelvoicemessage->data1,
-//         channelvoicemessage->data2);
-
-//       if (channelvoicemessage->status == 0x90 + generic_temp_select_menu - 1)
-//       {
-//         display.setCursor(2, line * 9);
-//         display.setTextColor(GREEN, COLOR_BACKGROUND);
-//         display.print(tmp);
-//         if (generic_active_function == 2)
-//         {
-//           handleNoteOn(configuration.dexed[0].midi_channel, channelvoicemessage->data1, channelvoicemessage->data2, 0);
-//         }
-//         line++;
-//       }
-//       else   if (channelvoicemessage->status == 0x80 + generic_temp_select_menu - 1)
-//       {
-//         snprintf_P(tmp, sizeof(tmp), PSTR("[%04d]%05d DELTA %03d ST 0x%2x DATA1 %03d DATA2 %03d"),
-//           i,
-//           totalTicks,
-//           channelvoicemessage->delta_ticks,
-//           channelvoicemessage->status,
-//           channelvoicemessage->data1,
-//           channelvoicemessage->data2);
-
-//         display.setTextColor(GREY2, COLOR_BACKGROUND);
-//         display.setCursor(2, line * 9);
-//         display.print(tmp);
-//         if (generic_active_function == 2)
-//         {
-//           handleNoteOff(configuration.dexed[0].midi_channel, channelvoicemessage->data1, channelvoicemessage->data2, 0);
-//         }
-//         line++;
-//       }
-
-//  if (generic_active_function == 3)
-//  {
-//    display.flushSysEx();
-//  }
-//       break;
-//     }
-//     case smftype_settempomessage:
-//     {
-//       Serial.printf("tempo change: %f\n", ((smfsettempomessage*)message)->getTempo());
-//       break;
-//     }
-
-//     default:
-//       break;
-//     }
-
-//     if (generic_active_function == 3)
-//     {
-//       if (line > 23)
-//         line = 11;
-//     }
-//     delete message;
-//     i++;
-//   }
-//    if (generic_active_function == 3)
-//   generic_active_function=1;
-// }
+  for (ev.channel = 0; ev.channel < 16; ev.channel++)
+    midiCallback(&ev);
+}
 
 
-// FLASHMEM void UI_func_midiplayer(uint8_t param)
-// {
-//   if (LCDML.FUNC_setup()) // ****** SETUP *********
-//   {
-//     if (sd_card > 0)
-//     {
-//       // Auto create missing folders if needed
-//       if (!SD.exists("MIDI"))
-//       {
-//         SD.mkdir("MIDI");
-//       }
-//     }
-//     seq.edit_state=0;
-//      generic_menu = 0;
-//      generic_temp_select_menu=0;
-//      generic_active_function=0;
-//     fm.sd_mode = FM_BROWSE_FILES;
-//     fm.active_window = 0;
-//     fm.sd_cap_rows = 3;
+FLASHMEM void play_midi_file()
+{
+  snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+  // SMF.load("/MIDI/HIDNSEEK.mid");
+  SMF.load(filename);
+}
+FLASHMEM void print_smf_parameters()
+{
 
-//     display.fillScreen(COLOR_BACKGROUND);
-//     encoderDir[ENC_R].reset();
-//     helptext_r("SELECT MIDI FILE");
-//     helptext_l(back_text);
-//     display.setTextColor(RED, COLOR_BACKGROUND);
-//     display.setTextSize(1);
-//     setCursor_textGrid_small(1, 1);
-//     display.print(F("MIDI FILE PLAYER"));
+  if ( smf_playing==false)
+{
+ display.setTextColor(GREY2, COLOR_BACKGROUND);
+        setCursor_textGrid_small(33, 3);
+display.print(F("-"));
+  setCursor_textGrid_small(49, 3);
+display.print(F("-"));
+  setCursor_textGrid_small(33, 4);
+display.print(F("-"));
+  setCursor_textGrid_small(49, 4);
+display.print(F("-/-"));
+}
+else
+{
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        setCursor_textGrid_small(33, 3);
+display.print(SMF.getFormat());
+  setCursor_textGrid_small(49, 3);
+display.print(SMF.getTrackCount());
+  setCursor_textGrid_small(33, 4);
+display.print(SMF.getTempo());
+  setCursor_textGrid_small(49, 4);
+display.print(SMF.getTimeSignature()>>8);
+display.print("/");
+display.print(SMF.getTimeSignature() & 0xf);
+}
+}
 
-//     setCursor_textGrid_small(1, 3);
-//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//     display.print(F("FILE BROWSER"));
-//     display.setTextColor(GREY1, COLOR_BACKGROUND);
-//     setCursor_textGrid_small(23, 3);
-//     display.print(F("SONG:"));
+FLASHMEM void UI_func_midiplayer(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    if (sd_card > 0)
+    {
+      // Auto create missing folders if needed
+      if (!SD.exists("MIDI"))
+      {
+        SD.mkdir("MIDI");
+      }
+    }
+    seq.edit_state = 0;
+    generic_menu = 0;
 
-//     setCursor_textGrid_small(23, 4);
-//     display.print(F("TRACKS:"));
+       if (smf_playing)
+    generic_temp_select_menu = 1;
+    else
+    generic_temp_select_menu = 0;
 
-//     setCursor_textGrid_small(23, 6);
-//     display.print(F("PLAY TRACK:"));
+    fm.sd_mode = FM_BROWSE_FILES;
+    fm.active_window = 0;
+    fm.sd_cap_rows = 3;
 
-//     setCursor_textGrid_small(23, 7);
-//     display.print(F("BY:"));
+    display.fillScreen(COLOR_BACKGROUND);
+    encoderDir[ENC_R].reset();
+    helptext_r("SELECT MIDI FILE");
+    helptext_l(back_text);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.setTextSize(1);
+    setCursor_textGrid_small(1, 1);
+    display.print(F("MIDI FILE PLAYER"));
 
-//      setCursor_textGrid_small(23, 8);
-//     display.print(F("START PLAYING"));
+    setCursor_textGrid_small(1, 3);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.print(F("FILE BROWSER"));
 
-//     display.setTextColor(GREEN, COLOR_BACKGROUND);
-//     show_smallfont_noGrid(CHAR_height_small * 8 + 5, CHAR_width_small * 35, 16, "DEXED1");
+    setCursor_textGrid_small(20, 1);
+    display.print(F("SONG NAME:"));
 
-//   }
-//   if (LCDML.FUNC_loop()) // ****** LOOP *********
-//   {
+    setCursor_textGrid_small(20, 3);
+    display.print(F("MIDI FORMAT:"));
+      setCursor_textGrid_small(37, 3);
+    display.print(F("NUM.TRACKS:"));
+      setCursor_textGrid_small(20, 4);
+    display.print(F("SONG TEMPO:"));
+      setCursor_textGrid_small(37, 4);
+    display.print(F("TIME SIG:"));
+
+    setCursor_textGrid_small(20, 6);
+    display.print(F("STATUS:"));
+
+ print_smf_parameters();
+
+    // display.setTextColor(GREEN, COLOR_BACKGROUND);
+    // show_smallfont_noGrid(CHAR_height_small * 8 + 5, CHAR_width_small * 35, 16, "DEXED1");
+
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
+
+_print_smf_track_state();
+
+    load_sd_directory_files_only();
+  }
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+    {
+      set_state_dir();
+
+      if (seq.edit_state == 0)
+      {
+        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 17);
+      }
+      else  if (seq.edit_state == 1)
+      {
+        if (generic_temp_select_menu == 0)
+        {
+          if (LCDML.BT_checkDown())
+          {
+            if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
+              fm.sd_skip_files++;
+          }
+          else if (LCDML.BT_checkUp())
+          {
+            if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
+              fm.sd_skip_files--;
+          }
+          fm.sd_selected_file = calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows);
+        }
+      }
+    }
+    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) // handle button presses during menu
+    {
+      if (generic_temp_select_menu >1)
+ {
+ smf_track_state[generic_temp_select_menu-2]=!smf_track_state[generic_temp_select_menu-2];
+ }
+ else
+      seq.edit_state = !seq.edit_state;
+
+      if (generic_temp_select_menu == 1 && seq.edit_state && smf_playing==false)
+      {
+        play_midi_file();
+        smf_playing = true;
+        seq.edit_state=false;
+        print_smf_parameters();
+           helptext_r("STOP PLAYING");
+      }
+      else if (generic_temp_select_menu == 1 && smf_playing)
+      {
+   //midiSilence();
+        MicroDexed[0]->panic();
+      MicroDexed[1]->panic();
+
+         SMF.close();
+        smf_playing = false;
+        seq.edit_state=false;
+        print_smf_parameters();
+           helptext_r("START PLAYING");
+      }
+    }
+
+    for (uint8_t f = 0; f < 4; f++)
+    {
+      storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
+
+      if (f == fm.sd_selected_file && fm.sd_parent_folder == false && seq.edit_state && generic_temp_select_menu == 0)
+      {
+        display.setTextColor(COLOR_SYSTEXT, RED);
+        generic_menu = fm.sd_skip_files + f;
+      }
+      else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu == 0)
+      {
+        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+        generic_menu = fm.sd_skip_files + f;
+      }
+       else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
+       {
+         display.setTextColor(COLOR_BACKGROUND, GREY1);
+        generic_menu = fm.sd_skip_files + f;
+       }
+      else
+      {
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        // generic_menu = fm.sd_skip_files + f;
+      }
+
+      show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name);
+    }
+
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    snprintf_P(filename, sizeof(filename), PSTR("%s"), sdcard_infos.files[generic_menu].name);
+    //snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+    show_smallfont_noGrid(CHAR_height_small * 1+2 , CHAR_width_small * 33, 18, filename);
+
+ if ( generic_temp_select_menu == 0&&seq.edit_state==false)
+    helptext_r("SELECT MIDI FILE");
+ if ( generic_temp_select_menu == 1&&seq.edit_state==false)
+  helptext_r("START/STOP PLAYING");
+
+    if (seq.edit_state && generic_temp_select_menu == 1)
+      display.setTextColor(COLOR_SYSTEXT, RED);
+    else   if (seq.edit_state == false && generic_temp_select_menu == 1)
+      display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+
+    else
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+     setCursor_textGrid_small(33, 6);
+if (smf_playing)
+ display.print("PLAYING");
+ else
+    display.print("STOPPED");
 
 
-//     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || LCDML.BT_checkEnter())
-//     {
-//       if (LCDML.BT_checkDown())
-//       {
-// if (seq.edit_state==1)
-// {
-//         if (generic_active_function == 0)
-//         {
-//           if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
-//             fm.sd_skip_files++;
-//           fm.sd_selected_file = constrain(fm.sd_selected_file + 1, 0, fm.sd_cap_rows);
-//         }
-//         else if (generic_active_function == 1)
-//         {
-//           generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 1, temp_int);
-//         }
-//       }
-//       else
-// {
-//   if (seq.edit_state==0)
-//  generic_active_function = constrain(generic_active_function + 1, 0, 3);
-// }
-//       }
-//       else if (LCDML.BT_checkUp())
-//       {
-// if (seq.edit_state==1)
-// {
-//         if (generic_active_function == 0)
-//         {
-//           if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
-//             fm.sd_skip_files--;
-//           fm.sd_selected_file = constrain(fm.sd_selected_file - 1, 0, fm.sd_cap_rows);
-//         }
-//         else if (generic_active_function == 1)
-//         {
-//           generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 1, temp_int);
-//         }
-// }
-// else
-// {
-// if (seq.edit_state==0)
-//  generic_active_function = constrain(generic_active_function  -1, 0, 3);
-// }
-//       }
-//       if (LCDML.BT_checkEnter())
-//       {
-// seq.edit_state=!seq.edit_state;
+_print_smf_track_state();
 
-//         // generic_active_function++;
-//         // if (generic_active_function > 2)
-//         //   generic_active_function = 0;
+    // display.print(generic_temp_select_menu);
+    // display.print(" ");
+    // display.print(seq.edit_state);
+    // display.print(" ");
 
-//         if (generic_active_function == 3 && seq.edit_state)
-//           play_midi_file();
+  }
 
-//       }
-//     }
-
-//     // strcpy(fm.sd_prev_dir, "");
-//     //    strcpy(fm.sd_new_name, "/");
-//     if (generic_active_function == 0)
-//     {
-//       load_sd_directory_files_only();
-//     }
-
-
-//     for (uint8_t f = 0; f < 4; f++)
-//     {
-
-//       storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
-
-//       if (f == fm.sd_selected_file && fm.sd_parent_folder == false   && seq.edit_state && generic_active_function == 0)
-//       {
-//         display.setTextColor(COLOR_SYSTEXT, RED);
-//         generic_menu = fm.sd_skip_files + f;
-//       }
-//       else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_active_function == 0  )
-//       {
-//         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-//         generic_menu = fm.sd_skip_files + f;
-//       }
-//        else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_active_function != 0  )
-//       {
-//         display.setTextColor(COLOR_BACKGROUND, GREY1);
-//         generic_menu = fm.sd_skip_files + f;
-//       }
-//       else if ( fm.sd_parent_folder == false  && generic_active_function == 0 )
-//         {
-//           display.setTextColor( COLOR_SYSTEXT,COLOR_BACKGROUND);
-//           generic_menu = fm.sd_skip_files + f;
-//         }
-
-       
-//       show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name);
-//     }
-
-//     if (generic_active_function == 1 && seq.edit_state)
-//       display.setTextColor(COLOR_SYSTEXT, RED);
-//     else
-//     if (generic_active_function == 1 )
-//       display.setTextColor( COLOR_BACKGROUND,COLOR_SYSTEXT);
-//     else
-//       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-//     setCursor_textGrid_small(35, 6);
-//     display.print(generic_temp_select_menu);
-//     display.print(" ");
-
-//     play_midi_file();
-
-
-//   }
-
-//   if (LCDML.FUNC_close()) // ****** STABLE END *********
-//   {
-//     encoderDir[ENC_R].reset();
-//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//     display.fillScreen(COLOR_BACKGROUND);
-//   }
-// }
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+    encoderDir[ENC_R].reset();
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
 
 FLASHMEM void UI_func_test_mute(uint8_t param)
 {
