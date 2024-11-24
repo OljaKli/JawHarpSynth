@@ -100,9 +100,6 @@ private:
 
   std::vector<TouchButton*> toolsPages[TOOLS_NUM];
   std::vector<TouchButton*> trackButtons;
-
-  uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
-  uint16_t GRID_Y[LiveSequencer::LIVESEQUENCER_NUM_LAYERS + 2];
  
   static constexpr uint8_t BAR_WIDTH = 104; // 2 * BUTTON_WIDTH + spacing
   static constexpr uint8_t BAR_HEIGHT = 3;

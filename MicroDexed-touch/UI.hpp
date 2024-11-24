@@ -674,6 +674,23 @@ FLASHMEM void unregisterScope(void) {
   };
 }
 
+FLASHMEM uint16_t getContentTypeColor(uint8_t contentType) {
+  switch(contentType) {
+  case 0:
+    return COLOR_DRUMS;
+  case 1:
+    return COLOR_INSTR;
+  case 2:
+    return COLOR_CHORDS;
+  case 3:
+    return COLOR_ARP;
+  case 4:
+    return COLOR_PITCHSMP;
+  default:
+    return COLOR_SYSTEXT; // fallback
+  }
+}
+
 uint8_t state_dir;
 FLASHMEM void set_state_dir()
 {
@@ -1625,16 +1642,7 @@ FLASHMEM const char* seq_find_shortname(uint8_t sstep)
 
 FLASHMEM void set_track_type_color(uint8_t track)
 {
-  if (seq.track_type[track] == 0) // Drums
-    display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 1) // Inst
-    display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 2) // Chord
-    display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 3) // Arp
-    display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 4) // Sliced Sample
-    display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+  display.setTextColor(getContentTypeColor(seq.track_type[track]), COLOR_BACKGROUND);
 }
 
 FLASHMEM void sub_song_print_tracktypes()
@@ -1678,16 +1686,7 @@ FLASHMEM void sub_song_print_tracktypes()
 
 FLASHMEM void set_track_type_color_inverted(uint8_t track)
 {
-  if (seq.track_type[track] == 0) // Drums
-    display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
-  else if (seq.track_type[track] == 1) // Inst
-    display.setTextColor(COLOR_BACKGROUND, COLOR_INSTR);
-  else if (seq.track_type[track] == 2) // Chord
-    display.setTextColor(COLOR_BACKGROUND, COLOR_CHORDS);
-  else if (seq.track_type[track] == 3) // Arp
-    display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
-  else if (seq.track_type[track] == 4) // Sliced
-    display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
+  display.setTextColor(COLOR_BACKGROUND, getContentTypeColor(seq.track_type[track]));
 }
 
 bool song_page_full_draw_pattern_complete = false;
@@ -7059,40 +7058,13 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
 
 void set_pattern_content_type_color_with_green_highlight(uint8_t pattern)
 {
-  if (pattern == seq.active_pattern)
-  {
-    if (seq.content_type[pattern] == 0) // Drumpattern
-      display.setTextColor(COLOR_DRUMS, DARKGREEN);
-    else if (seq.content_type[pattern] == 1) // Instrument Pattern
-      display.setTextColor(COLOR_INSTR, DARKGREEN);
-    else if (seq.content_type[pattern] == 2) //  chord  pattern
-      display.setTextColor(COLOR_CHORDS, DARKGREEN);
-    else if (seq.content_type[pattern] == 3) //   arp pattern
-      display.setTextColor(COLOR_ARP, DARKGREEN);
-  }
-  else
-  {
-    if (seq.content_type[pattern] == 0) // Drumpattern
-      display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
-    else if (seq.content_type[pattern] == 1) // Instrument Pattern
-      display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-    else if (seq.content_type[pattern] == 2) //  chord  pattern
-      display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
-    else if (seq.content_type[pattern] == 3) //   arp pattern
-      display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-  }
+  const bool isActivePattern = pattern == seq.active_pattern;
+  display.setTextColor(getContentTypeColor(seq.content_type[pattern]), isActivePattern ? DARKGREEN : COLOR_BACKGROUND);
 }
 
 void set_pattern_content_type_color_inverted(uint8_t pattern)
 {
-  if (seq.content_type[pattern] == 0) // Drumpattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
-  else if (seq.content_type[pattern] == 1) // Instrument Pattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_INSTR);
-  else if (seq.content_type[pattern] == 2) //  chord  pattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_CHORDS);
-  else if (seq.content_type[pattern] == 3) //  arp pattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
+  display.setTextColor(COLOR_BACKGROUND, getContentTypeColor(seq.content_type[pattern]));
 }
 
 FLASHMEM void print_performance_name(int x, int y)
