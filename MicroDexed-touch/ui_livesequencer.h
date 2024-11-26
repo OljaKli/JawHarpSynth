@@ -120,7 +120,7 @@ private:
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
-  void drawVirtualKeyboard();
+  void drawKeyboard(bool clear = false);
 };
 
 #endif //UI_LIVESEQUENCER_H

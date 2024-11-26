@@ -642,7 +642,7 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
       const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
       // only redraw if PADs / KEYs view needs redrawing
       if(ts.current_virtual_keyboard_display_mode != isDrumsActive) {
-        drawVirtualKeyboard();
+        drawKeyboard(true);
       }
     }
     if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
@@ -664,14 +664,11 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   }
 }
 
-void UI_LiveSequencer::drawVirtualKeyboard() {
+void UI_LiveSequencer::drawKeyboard(bool clearScreen) {
   const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
   ts.current_virtual_keyboard_display_mode = isDrumsActive ? 1 : 0;
   ts.virtual_keyboard_instrument = 0;
-
-  virtual_keyboard();
-  virtual_keyboard_print_current_instrument();
-  virtual_keyboard_print_buttons(false);
+  drawVirtualKeyboard(clearScreen);
 }
 
 FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
@@ -984,7 +981,7 @@ FLASHMEM void UI_LiveSequencer::refreshToolsElements(Tools tools) {
     break;
 
   case TOOLS_KEYBOARD:
-    drawVirtualKeyboard();
+    drawKeyboard();
     break;
 
   default:

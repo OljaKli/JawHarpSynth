@@ -32,6 +32,8 @@
 #define SCREENSAVER_BRIGHTNESS_STEP (255/SCREENSAVER_FADE_TIME)
 #define SCREENSAVER_MAX_COUNTHUE 359
 
+#include "touchbutton.h"
+
 void splash_draw_header();
 void splash_draw_D();
 void splash_draw_reverseD();
@@ -41,6 +43,7 @@ void draw_logo_instant(uint8_t yoffset);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 void virtual_keyboard_print_buttons(bool showInstrumentButtons = true);
+void printDrumPad(uint8_t padIndex, TouchButton::Color color);
 
 void UI_func_stereo_mono(uint8_t param);
 void UI_func_dexed_audio(uint8_t param);

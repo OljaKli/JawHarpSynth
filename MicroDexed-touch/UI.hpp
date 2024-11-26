@@ -227,7 +227,6 @@ extern void draw_back_touchbutton();
 extern void seq_pattern_editor_update_dynamic_elements();
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2> microsynth_mixer_reverb;
-extern void virtual_keyboard_print_current_instrument();
 extern uint8_t find_longest_chain();
 extern bool get_bank_name(uint8_t p, uint8_t b, char* bank_name);
 extern bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name);
@@ -238,7 +237,6 @@ extern void dac_unmute(void);
 extern ts_t ts;
 extern fm_t fm;
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern void virtual_keyboard();
 extern void get_sd_performance_name_json(uint8_t number);
 extern bool save_sd_performance_json(uint8_t p);
 extern dexed_live_mod_t dexed_live_mod;
@@ -254,7 +252,6 @@ void draw_euclidean_circle();
 extern JoystickController joysticks[];
 extern void microsynth_update_single_setting(uint8_t microsynth_selected_instance);
 extern void update_step_rec_buttons();
-extern void virtual_keyboard_print_current_instrument();
 extern void virtual_keyboard_print_velocity_bar();
 extern void update_latch_button();
 
@@ -9526,11 +9523,9 @@ FLASHMEM void seq_pattern_editor_update_dynamic_elements()
   }
   else if (seq.cycle_touch_element == 1)
   {
-    virtual_keyboard_print_buttons();
     draw_button_on_grid(45, 1, "BACK", "TO SEQ", 0);
-    virtual_keyboard();
+    drawVirtualKeyboard();
     update_step_rec_buttons();
-    virtual_keyboard_print_current_instrument();
     virtual_keyboard_print_velocity_bar();
   }
   display.setTextSize(2);
@@ -11330,9 +11325,7 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
     else
     {
       draw_button_on_grid(45, 1, "MORE", "PARAM.", 0);
-      virtual_keyboard();
-      virtual_keyboard_print_buttons();
-      virtual_keyboard_print_current_instrument();
+      drawVirtualKeyboard();
     }
     print_static_texts_microsynth();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
@@ -15591,9 +15584,8 @@ FLASHMEM void UI_func_braids(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
     seq.cycle_touch_element = 1;
-    virtual_keyboard();
-    virtual_keyboard_print_buttons();
-    virtual_keyboard_print_current_instrument();
+    drawVirtualKeyboard(true);
+
     print_braids_static_texts();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
 
@@ -15601,7 +15593,6 @@ FLASHMEM void UI_func_braids(uint8_t param)
     generic_full_draw_required = true;
     update_selective_values_braids();
     generic_full_draw_required = false;
-
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -19161,21 +19152,23 @@ FLASHMEM void print_perfmod_buttons()
   }
 }
 
-FLASHMEM void print_drumpads()
-{
-  static constexpr uint8_t offset = 18;
+FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
   static constexpr uint8_t LINECHARS = 7;
+  static constexpr uint8_t offset = 18;
+  std::string line1;
+  std::string line2;
+  const int16_t sampleIndex = padIndex + ts.virtual_keyboard_octave * 12 - offset;
+  if(sampleIndex >= 0 && sampleIndex < NUM_DRUMSET_CONFIG) {
+    line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
+    line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
+  }
+  TouchButton::drawButton(TouchButton::GRID_X(padIndex % 6), TouchButton::GRID_Y(4 + (padIndex / 6)), std::string(line1), std::string(line2), color);
+}
+
+FLASHMEM void print_drumpads() {
   if (seq.cycle_touch_element == 1 || ts.keyb_in_menu_activated) {
-    
     for (uint8_t x = 0; x < 12; x++) {
-      std::string line1;
-      std::string line2;
-      const int16_t sampleIndex = x + ts.virtual_keyboard_octave * 12 - offset;
-      if(sampleIndex >= 0 && sampleIndex < NUM_DRUMSET_CONFIG) {
-        line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
-        line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
-      }
-      TouchButton::drawButton(TouchButton::GRID_X(x % 6), TouchButton::GRID_Y(4 + (x / 6)), std::string(line1), std::string(line2), TouchButton::BUTTON_ACTIVE);
+      printDrumPad(x, TouchButton::BUTTON_ACTIVE);
     }
   }
 }

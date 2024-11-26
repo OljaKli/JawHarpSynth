@@ -19,7 +19,7 @@ FLASHMEM uint16_t TouchButton::GRID_X(uint8_t x) {
 }
 
 FLASHMEM uint16_t TouchButton::GRID_Y(uint8_t y) {
-  const uint16_t offset = y > 2 ? 10 : 0;
+  const uint16_t offset = y > 1 ? 10 : 0;
   return offset + y * (BUTTON_SIZE_Y + BUTTON_SPACING);
 }
 
@@ -47,7 +47,7 @@ FLASHMEM bool TouchButton::isPressed(uint16_t x, uint16_t y) {
 }
 
 FLASHMEM bool TouchButton::isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  return (ts.p.x >= x && ts.p.x < (x + w) && ts.p.y >= y && ts.p.y < (y + h));
+  return (numTouchPoints > 0) && (ts.p.x >= x && ts.p.x < (x + w) && ts.p.y >= y && ts.p.y < (y + h));
 }
 
 FLASHMEM bool TouchButton::isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
