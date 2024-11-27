@@ -1255,8 +1255,8 @@ FLASHMEM void setup()
     sample_envelope[instance_id]->releaseNoteOn(0);
     sample_envelope[instance_id + NUM_DRUMS]->releaseNoteOn(0);
 
-SMF.begin(&(SdFat &)SD);
-SMF.setMidiHandler(midiCallback);
+    SMF.begin(&(SdFat&)SD);
+    SMF.setMidiHandler(midiCallback);
 
   }
 
@@ -2075,7 +2075,7 @@ void print_gate_state(uint8_t g)
 
 bool display_buffer_envelopes[NUM_DRUMS];
 bool display_buffer_samples[NUM_DRUMS];
-bool smf_playing=false;
+bool smf_playing = false;
 
 void loop()
 {
@@ -2175,9 +2175,9 @@ void loop()
         {
 
           if (d < NUM_DRUMS / 2)
-            setCursor_textGrid_small(12 + d * 2, 19);
+            setCursor_textGrid_small(12 + d * 2, 11);
           else
-            setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
+            setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 12);
 
           if (Drum[d]->isPlaying())
           {
@@ -2221,15 +2221,29 @@ void loop()
         sub_step_recording(false, 0);
       }
     }
-else if(smf_playing)
-{
-   if (!SMF.isEOF())
-      {
-        if (SMF.getNextEvent()) {
-        }
+    else if (!SMF.isEOF())
+    {
+      if (SMF.getNextEvent()) {
       }
-}
-   
+    }
+    else if (smf_playing)
+    {
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+      {
+        if (generic_temp_select_menu == 1)
+          display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+        else
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        setCursor_textGrid_small(33, 6);
+        display.print("STOPPED");
+        print_smf_parameters();
+        helptext_r("START PLAYING");
+        seq.edit_state = false;
+      }
+      smf_playing = false;
+      SMF.close();
+    }
+
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
   {
     microsynth_control_rate = 0;

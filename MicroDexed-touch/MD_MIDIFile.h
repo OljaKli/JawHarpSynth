@@ -30,6 +30,17 @@ Topics
 
 Revision History
 ----------------
+Apr 2022 version 2.6.0
+- Changes file referencing from SdFat only to FAT16/FAT32/exFAT using SD_FAT_TYPE define.
+- Adjusted examples for SDFat library version 2 changes/deprecated methods.
+
+Mar 2022 version 2.5.3
+- Corrected errors from new DEBUG statements.
+
+Mar 2022 version 2.5.2
+- Added PlayIO example for custom I/O player.
+- Added additional explanation for callbacks for message handling.
+
 Nov 2020 version 2.5.1
 - Adjusted setFileFolder() due to changes methods in SdFat version 2+.
 
@@ -152,7 +163,7 @@ is rarely used and not supported by this library.
 Each track chunk defines a logical track and contains events to be
 processed at specific time intervals. Events can be one of three types:
 
-- __MIDI Events (status bytes 0x8n - 0xE0n)__
+- __MIDI Events (status bytes 0x8n - 0xEn)__
 
 These correspond to the standard Channel MIDI messages. In this case '_n_' is the MIDI channel
 (0 - 15). This status byte will be followed by 1 or 2 data bytes, as is usual for the
@@ -163,7 +174,8 @@ effect, and that this byte is actually the first data byte (the status carrying 
 previous MIDI event). This can only be the case if the immediately previous event was also a
 MIDI event, ie SysEx and Meta events interrupt (clear) running status.
 
-MIDI events may be processed by the calling program through a callback.
+MIDI events may be processed by the calling program through a callback with relevant data passed
+through a pointer to a midi_event data structure.
 
 - __SYSEX events (status bytes 0xF0 and 0xF7)__
 
@@ -171,7 +183,8 @@ There are a couple of ways in which system exclusive messages can be encoded - a
 message (using the 0xF0 status), or split into packets (using the 0xF7 status). The 0xF7
 status is also used for sending escape sequences.
 
-SYSEX events may be processed by the calling program through a callback.
+SYSEX events may be processed by the calling program through a callback with relevant data passed
+through a pointer to a sysex_event data structure.
 
 - __META events (status byte 0xFF)__
 
@@ -182,7 +195,8 @@ common such events being some of the most common.
 Relevant META events are processed by the library code, but this is only a subset of all
 the available events.
 
-META events may be processed by the calling program through a callback.
+META events may be processed by the calling program through a callback with relevant data passed
+through a pointer to a meta_event data structure.
 
 Note that the status bytes associated with System Common messages (0xF1 to 0xF6 inclusive)
 and System Real Time messages (0xF8 to 0xFE inclusive) are not valid within a MIDI file.
@@ -378,27 +392,27 @@ http://www.stephenhobley.com/blog/2011/03/14/the-last-darned-midi-interface-ill-
 
 // ------------- Configuration Section - START
 
-#ifndef DUMP_DATA
-/**
- \def DUMP_DATA
- Set to 1 to to dump the file data instead of processing callback.
-  Neither SHOW_UNUSED_META or DUMP_DATA should not be set to 1 when MIDI messages 
-  are being transmitted through the serial port as the Serial.print() functions 
-  are called to print information to the serial monitor.
- */
-#define DUMP_DATA 0
-#endif
+// #ifndef DUMP_DATA
+// /**
+//  \def DUMP_DATA
+//   Set to 1 to to dump the file data instead of processing callback.
+//   Neither SHOW_UNUSED_META nor DUMP_DATA should be set to 1 when MIDI messages 
+//   are being transmitted through the serial port as Serial.print() functions 
+//   are called to print information to the serial monitor.
+//  */
+// #define DUMP_DATA 0
+// #endif
 
-#ifndef SHOW_USED_META
-/**
- \def SHOW_UNUSED_META
- Set to 1 to display unused META messages. DUMP_DATA must also be enabled for this 
- to have an effect. Neither SHOW_USED_META or DUMP_DATA should not be set to 1 when 
- MIDI messages are being transmitted through the serial port as the Serial.print() 
- functions are called to print information to the serial monitor.
- */
-#define SHOW_UNUSED_META  0
-#endif
+// #ifndef SHOW_USED_META
+// /**
+//  \def SHOW_UNUSED_META
+//  Set to 1 to display unused META messages. DUMP_DATA must also be enabled for this 
+//  to have an effect. Neither SHOW_USED_META nor DUMP_DATA should be set to 1 when 
+//  MIDI messages are being transmitted through the serial port as Serial.print() 
+//  functions are called to print information to the serial monitor.
+//  */
+// #define SHOW_UNUSED_META  0
+// #endif
 
 #ifndef MIDI_MAX_TRACKS
 /**
@@ -437,11 +451,40 @@ http://www.stephenhobley.com/blog/2011/03/14/the-last-darned-midi-interface-ill-
 // #endif // DUMP_DATA
 
 /**
- * MIDI event definition structure
- *
- * Structure defining a MIDI event and its related data.
- * A pointer to this structure type is passed the the related callback function.
- */
+ MIDI event definition structure
+
+ Structure defining a MIDI event and its related data.
+ data[0] contains the midi channel message identifier. data[1] onwards
+ contains the relevant parameters for the message id, as described below.
+
+|data[0]             | data[1]            | data[2]
+|--------------------|--------------------|------------------
+|0x80 (Note off)     | note number (0-127)| note velocity
+|0x90 (Note on)      | note number (0-127)| note velocity^
+|0xA0 (Polyphonc key)| note number (0-127)| pressure
+|0xB0 (Ctl change)   | controller number^^| Controller value
+|0xC0 (Prog change)  | program number     | -
+|0xD0 (Chan Pressure)| pressure value     | -
+|0xE0 (Pitch Bend)   | MSB                | LSB
+
+^ Note on with velocity 0 is same as note off
+
+^^ Control Change with controller numbers 121 thu 127
+   (0x79 thru 0x7f) are reserved for Channel Mode messages as follows:
+
+|data[0]             | data[1]             | data[2]
+|--------------------|---------------------|------------------
+|0xB0 (Ctl change)   | 0x79 (Reset all)    | -
+|0xB0 (Ctl change)   | 0x7a (Local control)| 0 = off; 127 = on
+|0xB0 (Ctl change)   | 0x7b (All notes off)| -
+|0xB0 (Ctl change)   | 0x7c (Omni mode off)| -
+|0xB0 (Ctl change)   | 0x7d (Omni mode on) | -
+|0xB0 (Ctl change)   | 0x7e (Mono mode on) | 0 (all) or specific number
+|0xB0 (Ctl change)   | 0x7f (Poly mode on) | -
+ 
+ A pointer to this structure type is passed to the callback function registered
+ using setMidiHandler().
+*/
 typedef struct
 {
   uint8_t track;    ///< the track this was on
@@ -451,11 +494,12 @@ typedef struct
 } midi_event;
 
 /**
- * SYSEX event definition structure
- *
- * Structure defining a SYSEX event and its related data.
- * A pointer to this structure type is passed the the related callback function.
- */
+ SYSEX event definition structure
+
+ Structure defining a SYSEX event and its related data.
+ A pointer to this structure type is passed to the callback function registered
+ using setSysexHandler().
+*/
 typedef struct
 {
   uint8_t track;    ///< the track this was on
@@ -464,11 +508,12 @@ typedef struct
 } sysex_event;
 
 /**
- * META event definition structure
- *
- * Structure defining a META event and its related data.
- * A pointer to this structure type is passed the the related callback function.
- */
+ META event definition structure
+
+ Structure defining a META event and its related data.
+ A pointer to this structure type is passed to the callback function registered 
+ using setMetaHandler().
+*/
 typedef struct
 {
   uint8_t track;    ///< the track this was on
@@ -695,7 +740,7 @@ public:
    * 
    * The main purpose if to pass in a pointer to the SDFat object will be used for file 
    * operations on the SMF.  A copy of this pointer is retained by the library for the life 
-   * of the MD_MIDIFile object. THge SDFat object should be initialized before calling this 
+   * of the MD_MIDIFile object. The SDFs object should be initialized before calling this 
    * method.
    *
    * \param psd Pointer to the SDFat object.
@@ -855,8 +900,8 @@ public:
    *
    * This is a pointer to a user defined buffer passed to the load()
    * method when the file is opened. The scope and persistence of this
-   * buffer depends on what the user code does, so the poiter returned
-   * *may* be invalid if the pointer rebernces a buffer that has become 
+   * buffer depends on what the user code does, so the pointer returned
+   * *may* be invalid if the pointer references a buffer that has become 
    * out of scope.
    * 
    * \return character pointer to the name string

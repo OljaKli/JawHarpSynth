@@ -1363,6 +1363,21 @@ FLASHMEM void handle_touchscreen_custom_mappings()
   }
 }
 
+extern void play_sample(uint8_t note);
+FLASHMEM void handle_touchscreen_drums()
+{
+  if (numTouchPoints > 0)
+  {
+    if (check_button_on_grid(12, 25))
+    {
+      draw_button_on_grid(12, 25, "PLAY", "SAMPLE", 2);
+      play_sample(activeSample);
+      delay(100);
+         draw_button_on_grid(12, 25, "PLAY", "SAMPLE", 1);
+    }
+  }
+}
+
 FLASHMEM void handle_touchscreen_mute_matrix()
 {
   if (numTouchPoints > 0)

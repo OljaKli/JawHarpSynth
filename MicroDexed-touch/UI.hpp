@@ -614,31 +614,31 @@ LCDML_add(33, LCDML_0_8, 15, "Settings", UI_func_seq_settings);
 LCDML_add(34, LCDML_0, 9, "Mixer", UI_func_mixer);
 LCDML_add(35, LCDML_0, 11, "Sample Editor", UI_func_sample_editor);
 LCDML_add(36, LCDML_0, 12, "Audio/SMP Record", UI_func_recorder);
-LCDML_add(37, LCDML_0, 13, "Load/Save", NULL);
-LCDML_add(38, LCDML_0_13, 1, "Load Perf.", UI_func_load_performance);
-LCDML_add(39, LCDML_0_13, 2, "Save Perf.", UI_func_save_performance);
-LCDML_add(40, LCDML_0_13, 3, "Name Perf.", UI_func_set_performance_name);
-LCDML_add(41, LCDML_0_13, 4, "Name Multisample", UI_func_set_multisample_name);
-LCDML_add(42, LCDML_0_13, 5, "MIDI", NULL);
-LCDML_add(43, LCDML_0_13_5, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(44, LCDML_0_13_5, 2, "MIDI Snd Bank", UI_func_sysex_send_bank);
-LCDML_add(45, LCDML_0_13_5, 3, "MIDI Snd Voice", UI_func_sysex_send_voice);
-LCDML_add(46, LCDML_0, 14, "File Manager", UI_func_file_manager);
-LCDML_add(47, LCDML_0, 15, "System", NULL);
-LCDML_add(48, LCDML_0_15, 1, "Stereo/Mono", UI_func_stereo_mono);
-LCDML_add(49, LCDML_0_15, 2, "MIDI channels", UI_func_midi_channels);
-LCDML_add(50, LCDML_0_15, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
-LCDML_add(51, LCDML_0_15, 4, "MIDI Mapping", UI_func_custom_mappings);
-LCDML_add(52, LCDML_0_15, 5, "Favorites", UI_func_favorites);
-LCDML_add(53, LCDML_0_15, 6, "Startup Perform.", UI_func_startup_performance);
-LCDML_add(54, LCDML_0_15, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(55, LCDML_0_15, 8, "System Settings", UI_func_system_settings);
-LCDML_add(56, LCDML_0_15, 9, "Map Gamepad", UI_func_map_gamepad);
-LCDML_add(57, LCDML_0_15, 10, "TEST Touchscreen", UI_func_test_touchscreen);
-LCDML_add(58, LCDML_0_15, 11, "TEST Audio Mute", UI_func_test_mute);
-LCDML_add(59, LCDML_0_15, 12, "TEST PSRAM", UI_func_test_psram);
-LCDML_add(60, LCDML_0_15, 13, "FORMAT FLASH", UI_func_format_flash);
-LCDML_add(61, LCDML_0, 16, "MIDI FILE Player", UI_func_midiplayer);
+LCDML_add(37, LCDML_0, 13, "SMF/MIDI Player", UI_func_midiplayer);
+LCDML_add(38, LCDML_0, 14, "Load/Save", NULL);
+LCDML_add(39, LCDML_0_14, 1, "Load Perf.", UI_func_load_performance);
+LCDML_add(40, LCDML_0_14, 2, "Save Perf.", UI_func_save_performance);
+LCDML_add(41, LCDML_0_14, 3, "Name Perf.", UI_func_set_performance_name);
+LCDML_add(42, LCDML_0_14, 4, "Name Multisample", UI_func_set_multisample_name);
+LCDML_add(43, LCDML_0_14, 5, "MIDI", NULL);
+LCDML_add(44, LCDML_0_14_5, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
+LCDML_add(45, LCDML_0_14_5, 2, "MIDI Snd Bank", UI_func_sysex_send_bank);
+LCDML_add(46, LCDML_0_14_5, 3, "MIDI Snd Voice", UI_func_sysex_send_voice);
+LCDML_add(47, LCDML_0, 15, "File Manager", UI_func_file_manager);
+LCDML_add(48, LCDML_0, 16, "System", NULL);
+LCDML_add(49, LCDML_0_16, 1, "Stereo/Mono", UI_func_stereo_mono);
+LCDML_add(50, LCDML_0_16, 2, "MIDI channels", UI_func_midi_channels);
+LCDML_add(51, LCDML_0_16, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
+LCDML_add(52, LCDML_0_16, 4, "MIDI Mapping", UI_func_custom_mappings);
+LCDML_add(53, LCDML_0_16, 5, "Favorites", UI_func_favorites);
+LCDML_add(54, LCDML_0_16, 6, "Startup Perform.", UI_func_startup_performance);
+LCDML_add(55, LCDML_0_16, 7, "Startup Page", UI_func_startup_page);
+LCDML_add(56, LCDML_0_16, 8, "System Settings", UI_func_system_settings);
+LCDML_add(57, LCDML_0_16, 9, "Map Gamepad", UI_func_map_gamepad);
+LCDML_add(58, LCDML_0_16, 10, "TEST Touchscreen", UI_func_test_touchscreen);
+LCDML_add(59, LCDML_0_16, 11, "TEST Audio Mute", UI_func_test_mute);
+LCDML_add(60, LCDML_0_16, 12, "TEST PSRAM", UI_func_test_psram);
+LCDML_add(61, LCDML_0_16, 13, "FORMAT FLASH", UI_func_format_flash);
 LCDML_add(62, LCDML_0, 17, "Info", UI_func_information);
 LCDML_addAdvanced(63, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(64, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
@@ -6673,7 +6673,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-
+    registerTouchHandler(handle_touchscreen_drums);
     drumScreenActive = true;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
@@ -6682,15 +6682,15 @@ FLASHMEM void UI_func_drums(uint8_t param)
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
       if (d < NUM_DRUMS / 2)
-        setCursor_textGrid_small(12 + d * 2, 19);
+        setCursor_textGrid_small(12 + d * 2, 11);
       else
-        setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
+        setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 12);
       display.print("-");
     }
 
     ui.setCursor(1, 0);
     drawDrumsSampleWave();
-    //draw_button_on_grid(45, 25, "PLAY", "SAMPLE", 1);
+    draw_button_on_grid(12, 25, "PLAY", "SAMPLE", 1);
 
     // the drum sample slot selector.
     // changes activesample and redraws all other editors as they depend on.
@@ -6792,6 +6792,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
+     unregisterTouchHandler();
     drumScreenActive = false;
     ui.clear();
   }
@@ -9777,6 +9778,10 @@ FLASHMEM void pattern_editor_menu_0()
       }
     }
   }
+}
+
+FLASHMEM void play_sample(uint8_t note) {
+  handleNoteOn(drum_midi_channel, drum_config[note ].midinote, 90, 0);
 }
 
 FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note) {
@@ -21910,22 +21915,102 @@ FLASHMEM void load_sd_directory_files_only()
 
 #include "MD_MIDIFile.h"
 MD_MIDIFile SMF;
-uint8_t smf_line = 12;
+uint8_t smf_line = 14;
 extern bool smf_playing;
-bool smf_track_state[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
+bool smf_track_state[16] =   { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
+uint8_t smf_track_inst[16] = { 1,1,1,1,1,1,1,1,1,6,1,1,1,1,1,1 };
 
-FLASHMEM void midiCallback(midi_event* pev)
+// first note #35, B2, Acoustic BD
+uint8_t smf_gm_mapping[48] = {
+  MIDI_C5, //Acoustic Bass Drum 35
+  MIDI_C5, //Bass Drum 1 36
+  MIDI_CIS5, //Side Stick 37
+  MIDI_B6, //Acoustic Snare 38
+  MIDI_DIS5, //Hand Clap 39
+  MIDI_E5, //Electric Snare 40
+  MIDI_F3, //Low Floor Tom 41
+  MIDI_G6, //Closed HH 42
+  MIDI_A3, //High Floor Tom 43
+  MIDI_GIS3, //Pedal HH 44
+  MIDI_F3, //Low Tom 45
+  MIDI_A6, //Open HH 46
+  MIDI_A7, //Low-Mid Tom 47
+  MIDI_C7, //Hi-Mid Tom 48
+  MIDI_CIS4, //Crash 49
+  MIDI_A3, //High Tom 50
+  MIDI_AIS4, //Ride 51
+  MIDI_CIS4, //Chinese Cymb 52
+  MIDI_F4, //Ride Bell 53
+  MIDI_FIS6, //Tamb 54
+  MIDI_CIS4, //Splash Cymb 55
+  MIDI_GIS6, //Cowbell 56
+  MIDI_A4, //Crash 2 57
+  MIDI_C6, //Vibraslap 58
+  MIDI_AIS4, //Ride Cymb 59
+  MIDI_A5, //Hi Bongo 60
+  MIDI_GIS5, //Low Bongo 61
+  MIDI_A5, //Mute Hi Conga 62
+  MIDI_GIS5, //Open Hi Conga 63 
+  MIDI_A5, //Low Conga 64
+  MIDI_AIS6, //High Timbale 65
+  MIDI_AIS6, //Low Timbale 66
+  MIDI_AIS6, //High Agogo 67
+  MIDI_AIS6, //Low Agogo 68 
+  MIDI_D5, //Cabasa 69
+  MIDI_D5, //Maracas 70
+  MIDI_D5, //Short Whistle 71
+  MIDI_D5, //Long Whistle 72
+  MIDI_D5, //Short Guiro 73
+  MIDI_D5, //Long Guiro 74
+  MIDI_CIS7, //Claves 75
+  MIDI_AIS6, //Hi Wood Block 76
+  MIDI_AIS6, //Low Wood Block 77
+  MIDI_AIS5, //Mute Cuica 78
+  MIDI_AIS5, //Open Cuica 79
+  MIDI_C6, //Mute Triange 80
+  MIDI_CIS6, //Open Triangle 81
+  MIDI_D5, //Shaker 82
+
+ };
+
+
+ void midiCallback(midi_event* pev)
 // Called by the MIDIFile library when a file event needs to be processed
 // thru the midi communications interface.
 // This callback is set up in the setup() function.
 {
   char tmp[10];
+uint8_t inst_channel=0;
+uint8_t in_note=0;
 
-  //if ((pev->data[0] >= 0x80) && (pev->data[0] <= 0xe0) && smf_track_state[pev->channel] ==1 )
-  if ((pev->data[0] >= 0x80) && (pev->data[0] <= 0xa0) && smf_track_state[pev->channel] ==1 )
+  if ((pev->data[0] >= 0x80) && (pev->data[0] <= 0xa0) && smf_track_state[pev->channel] == 1)
   {
     //Serial.write(pev->data[0] | pev->channel);
     //Serial.write(&pev->data[1], pev->size-1);
+
+if (smf_track_inst[pev->channel]==1)
+inst_channel=configuration.dexed[0].midi_channel;
+else if (smf_track_inst[pev->channel]==2)
+inst_channel=configuration.dexed[1].midi_channel;
+
+else if (smf_track_inst[pev->channel]==3)
+inst_channel=microsynth[0].midi_channel;
+else if (smf_track_inst[pev->channel]==4)
+inst_channel=microsynth[1].midi_channel;
+
+else if (smf_track_inst[pev->channel]==5)
+inst_channel=configuration.epiano.midi_channel;
+else if (smf_track_inst[pev->channel]==6)
+inst_channel=drum_midi_channel;
+else if (smf_track_inst[pev->channel]==7)
+inst_channel=braids_osc.midi_channel;
+
+ if (smf_track_inst[pev->channel]==6) //basic GM drum mapping
+{ 
+in_note= smf_gm_mapping[ pev->data[1]-35] ;
+}
+else
+in_note=pev->data[1];
 
     snprintf_P(tmp, sizeof(tmp), PSTR("%-2s"), noteNames[pev->data[1] % 12]);
     if (pev->data[0] >= 0x90)
@@ -21933,30 +22018,30 @@ FLASHMEM void midiCallback(midi_event* pev)
       if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
       {
         display.setTextColor(GREEN, COLOR_BACKGROUND);
-display.setCursor(pev->channel * (CHAR_width_small * 3) +(CHAR_width_small * 1), smf_line * 9);
- display.print(tmp);
+        display.setCursor(pev->channel * (CHAR_width_small * 3) + (CHAR_width_small * 1), smf_line * 9);
+        display.print(tmp);
         smf_line++;
 
       }
-      handleNoteOn(configuration.dexed[0].midi_channel, pev->data[1], pev->data[2], 0);
+      handleNoteOn(inst_channel, in_note, pev->data[2], 0);
     }
     else if (pev->data[0] >= 0x80 && pev->data[0] < 0x90)
     {
       if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
       {
         display.setTextColor(GREY2, COLOR_BACKGROUND);
-display.setCursor(pev->channel * (CHAR_width_small * 3)+(CHAR_width_small * 1), smf_line * 9);
- display.print(tmp);
+        display.setCursor(pev->channel * (CHAR_width_small * 3) + (CHAR_width_small * 1), smf_line * 9);
+        display.print(tmp);
         smf_line++;
       }
-      handleNoteOff(configuration.dexed[0].midi_channel, pev->data[1], pev->data[2], 0);
+      handleNoteOff(inst_channel, in_note, pev->data[2], 0);
     }
 
-if (remote_active)
- display.flushSysEx();
-    
+    if (remote_active)
+      display.flushSysEx();
+
     if (smf_line > 23)
-      smf_line = 12;
+      smf_line = 14;
 
     //--------------------
        // usbMIDI.send(pev->data[0], pev->data[1],pev->data[2],pev->channel, 0);
@@ -21965,83 +22050,145 @@ if (remote_active)
 
 FLASHMEM void _print_smf_track_state()
 {
-   for (uint8_t f = 0; f < 16; f++)
+  for (uint8_t f = 0; f < 16; f++)
+  {
+    display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 11 * CHAR_height_small + 5);
+    if (generic_temp_select_menu == f + 2 && smf_track_state[f])
+    display.setTextColor(COLOR_BACKGROUND, MIDDLEGREEN);
+     else   if (generic_temp_select_menu == f + 2 && smf_track_state[f]==false)
+        display.setTextColor(COLOR_BACKGROUND, RED);
+    else 
     {
-      display.setCursor(f * (CHAR_width_small * 3)+(CHAR_width_small * 1) , 11 * CHAR_height_small + 5);
-
-if (generic_temp_select_menu==f+2)
-{
-    if (smf_track_state[f])
- display.setTextColor(COLOR_BACKGROUND, GREEN);
- else
- display.setTextColor(COLOR_BACKGROUND, RED);
-}
-else if (seq.edit_state == 0)
-{
       if (smf_track_state[f])
-        display.setTextColor(GREEN, COLOR_BACKGROUND);
-        else
-display.setTextColor(RED, COLOR_BACKGROUND);
-}
-     print_formatted_number(f + 1, 2);
+        display.setTextColor(MIDDLEGREEN, COLOR_BACKGROUND);
+      else
+        display.setTextColor(RED, COLOR_BACKGROUND);
     }
+    print_formatted_number(f + 1, 2);
+  }
 }
 
-FLASHMEM void midiSilence(void)
-// Turn everything off on every channel.
-// Some midi files are badly behaved and leave notes hanging, so between songs turn
-// off all the notes and sound
+FLASHMEM void _print_smf_track_instruments()
 {
-  midi_event ev;
+  for (uint8_t f = 0; f < 16; f++)
+  {
+    display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 12 * CHAR_height_small + 5);
 
-  // All sound off
-  // When All Sound Off is received all oscillators will turn off, and their volume
-  // envelopes are set to zero as soon as possible.
-  ev.size = 0;
-  ev.data[ev.size++] = 0xb0;
-  ev.data[ev.size++] = 120;
-  ev.data[ev.size++] = 0;
-
-  for (ev.channel = 0; ev.channel < 16; ev.channel++)
-    midiCallback(&ev);
+     if (generic_temp_select_menu == f + 2+16 &&  smf_track_inst[f]!=6)
+    {
+        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);  
+    }else   if ( smf_track_inst[f]!=6)
+     display.setTextColor( COLOR_SYSTEXT,COLOR_BACKGROUND);  
+     else
+      if (generic_temp_select_menu == f + 2+16 &&  smf_track_inst[f]==6 )
+    
+        display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS); 
+        else
+           display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND); 
+   
+    if (smf_track_inst[f]==1)
+    display.print("D1");
+    else if (smf_track_inst[f]==2)
+    display.print("D2");
+    else  if (smf_track_inst[f]==3)
+    display.print("M1");
+    else  if (smf_track_inst[f]==4)
+    display.print("M2");
+    else  if (smf_track_inst[f]==5)
+    display.print("EP");
+    else  if (smf_track_inst[f]==6)
+    display.print("DR");
+    else  if (smf_track_inst[f]==7)
+    display.print("BR");
+    else 
+    display.print("??");
+  
+  }
 }
 
+// FLASHMEM void midiSilence(void)
+// // Turn everything off on every channel.
+// // Some midi files are badly behaved and leave notes hanging, so between songs turn
+// // off all the notes and sound
+// {
+//   midi_event ev;
+
+//   // All sound off
+//   // When All Sound Off is received all oscillators will turn off, and their volume
+//   // envelopes are set to zero as soon as possible.
+//   ev.size = 0;
+//   ev.data[ev.size++] = 0xb0;
+//   ev.data[ev.size++] = 120;
+//   ev.data[ev.size++] = 0;
+
+//   for (ev.channel = 0; ev.channel < 16; ev.channel++)
+//     midiCallback(&ev);
+// }
 
 FLASHMEM void play_midi_file()
 {
+  int i;
   snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
   // SMF.load("/MIDI/HIDNSEEK.mid");
-  SMF.load(filename);
-}
-FLASHMEM void print_smf_parameters()
-{
-
-  if ( smf_playing==false)
-{
- display.setTextColor(GREY2, COLOR_BACKGROUND);
-        setCursor_textGrid_small(33, 3);
-display.print(F("-"));
-  setCursor_textGrid_small(49, 3);
-display.print(F("-"));
-  setCursor_textGrid_small(33, 4);
-display.print(F("-"));
-  setCursor_textGrid_small(49, 4);
-display.print(F("-/-"));
+  i = SMF.load(filename);
+ 
+    setCursor_textGrid_small(33, 7);
+   display.print(F("                   "));
+ setCursor_textGrid_small(33, 7);
+if (i==0){
+display.setTextColor(GREEN, COLOR_BACKGROUND);
+ display.print(F("OK "));
 }
 else
 {
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        setCursor_textGrid_small(33, 3);
-display.print(SMF.getFormat());
-  setCursor_textGrid_small(49, 3);
-display.print(SMF.getTrackCount());
-  setCursor_textGrid_small(33, 4);
-display.print(SMF.getTempo());
-  setCursor_textGrid_small(49, 4);
-display.print(SMF.getTimeSignature()>>8);
-display.print("/");
-display.print(SMF.getTimeSignature() & 0xf);
+display.setTextColor(RED, COLOR_BACKGROUND);
+if (i==1)
+ display.print(F("BLANK FILENAME"));
+ else if (i==2)
+ display.print(F("ERROR OPEN FILE"));
+ else if (i==3)
+ display.print(F("NOT A MIDI FILE"));
+ else if (i==4)
+ display.print(F("HEADER SIZE ERR."));
+ else if (i==5)
+ display.print(F("NOT TYPE 0 OR 1"));
+ else if (i==6)
+ display.print(F("FMT 0 BUT MORE TRKS"));
+ else if (i==7)
+ display.print(F("MORE TRKS REQUIRED"));
+ else 
+ display.print(i);
+
 }
+}
+FLASHMEM void print_smf_parameters()
+{
+  if (smf_playing == false)
+  {
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    setCursor_textGrid_small(33, 3);
+    display.print(F("-"));
+    setCursor_textGrid_small(49, 3);
+    display.print(F("-"));
+    setCursor_textGrid_small(33, 4);
+    display.print(F("-"));
+    setCursor_textGrid_small(49, 4);
+    display.print(F("-/-"));
+  }
+  else
+  {
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid_small(33, 3);
+    display.print(SMF.getFormat());
+    setCursor_textGrid_small(49, 3);
+    display.print(SMF.getTrackCount());
+    setCursor_textGrid_small(33, 4);
+    display.print(SMF.getTempo());
+    setCursor_textGrid_small(49, 4);
+    display.print(SMF.getTimeSignature() >> 8);
+    display.print("/");
+    display.print(SMF.getTimeSignature() & 0xf);
+  }
 }
 
 FLASHMEM void UI_func_midiplayer(uint8_t param)
@@ -22059,10 +22206,10 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     seq.edit_state = 0;
     generic_menu = 0;
 
-       if (smf_playing)
-    generic_temp_select_menu = 1;
+    if (smf_playing)
+      generic_temp_select_menu = 1;
     else
-    generic_temp_select_menu = 0;
+      generic_temp_select_menu = 0;
 
     fm.sd_mode = FM_BROWSE_FILES;
     fm.active_window = 0;
@@ -22086,25 +22233,25 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
     setCursor_textGrid_small(20, 3);
     display.print(F("MIDI FORMAT:"));
-      setCursor_textGrid_small(37, 3);
+    setCursor_textGrid_small(37, 3);
     display.print(F("NUM.TRACKS:"));
-      setCursor_textGrid_small(20, 4);
+    setCursor_textGrid_small(20, 4);
     display.print(F("SONG TEMPO:"));
-      setCursor_textGrid_small(37, 4);
+    setCursor_textGrid_small(37, 4);
     display.print(F("TIME SIG:"));
 
     setCursor_textGrid_small(20, 6);
     display.print(F("STATUS:"));
+    setCursor_textGrid_small(20, 7);
+    display.print(F("ERROR CODE:"));
 
- print_smf_parameters();
+    print_smf_parameters();
 
-    // display.setTextColor(GREEN, COLOR_BACKGROUND);
-    // show_smallfont_noGrid(CHAR_height_small * 8 + 5, CHAR_width_small * 35, 16, "DEXED1");
 
-    display.setTextColor(GREY1, COLOR_BACKGROUND);
+   // display.setTextColor(GREY1, COLOR_BACKGROUND);
 
-_print_smf_track_state();
-
+   //_print_smf_track_state();
+//_print_smf_track_instruments();
     load_sd_directory_files_only();
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -22115,7 +22262,7 @@ _print_smf_track_state();
 
       if (seq.edit_state == 0)
       {
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 17);
+        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 17+16);
       }
       else  if (seq.edit_state == 1)
       {
@@ -22137,33 +22284,42 @@ _print_smf_track_state();
     }
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) // handle button presses during menu
     {
-      if (generic_temp_select_menu >1)
- {
- smf_track_state[generic_temp_select_menu-2]=!smf_track_state[generic_temp_select_menu-2];
- }
- else
-      seq.edit_state = !seq.edit_state;
-
-      if (generic_temp_select_menu == 1 && seq.edit_state && smf_playing==false)
+      if (generic_temp_select_menu > 1 && generic_temp_select_menu< 18)
       {
+        smf_track_state[generic_temp_select_menu - 2] = !smf_track_state[generic_temp_select_menu - 2];
+      }
+      else  if (generic_temp_select_menu > 17 )
+      {
+        smf_track_inst[generic_temp_select_menu - 18]++;
+        if ( smf_track_inst[generic_temp_select_menu - 18]>7)
+         smf_track_inst[generic_temp_select_menu - 18]=1;
+      }
+
+else if (generic_temp_select_menu == 1  && smf_playing == false)
+      {
+         smf_playing = true;
+          helptext_r("STOP PLAYING");
         play_midi_file();
-        smf_playing = true;
-        seq.edit_state=false;
+        seq.edit_state = false;
         print_smf_parameters();
-           helptext_r("STOP PLAYING");
+       
       }
       else if (generic_temp_select_menu == 1 && smf_playing)
       {
-   //midiSilence();
+        //midiSilence();
         MicroDexed[0]->panic();
-      MicroDexed[1]->panic();
+        MicroDexed[1]->panic();
 
-         SMF.close();
+        SMF.close();
         smf_playing = false;
-        seq.edit_state=false;
+        seq.edit_state = false;
         print_smf_parameters();
-           helptext_r("START PLAYING");
+        helptext_r("START PLAYING");
       }
+      else
+        seq.edit_state = !seq.edit_state;
+
+      
     }
 
     for (uint8_t f = 0; f < 4; f++)
@@ -22180,11 +22336,11 @@ _print_smf_track_state();
         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
         generic_menu = fm.sd_skip_files + f;
       }
-       else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
-       {
-         display.setTextColor(COLOR_BACKGROUND, GREY1);
+      else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
+      {
+        display.setTextColor(COLOR_BACKGROUND, GREY1);
         generic_menu = fm.sd_skip_files + f;
-       }
+      }
       else
       {
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -22197,12 +22353,23 @@ _print_smf_track_state();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     snprintf_P(filename, sizeof(filename), PSTR("%s"), sdcard_infos.files[generic_menu].name);
     //snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
-    show_smallfont_noGrid(CHAR_height_small * 1+2 , CHAR_width_small * 33, 18, filename);
+    show_smallfont_noGrid(CHAR_height_small * 1 + 2, CHAR_width_small * 33, 18, filename);
 
- if ( generic_temp_select_menu == 0&&seq.edit_state==false)
-    helptext_r("SELECT MIDI FILE");
- if ( generic_temp_select_menu == 1&&seq.edit_state==false)
-  helptext_r("START/STOP PLAYING");
+    if (generic_temp_select_menu == 0 && seq.edit_state == false)
+      helptext_r("SELECT MIDI FILE");
+   else if (generic_temp_select_menu == 1  && smf_playing==false)
+      helptext_r("START PLAYING");
+    else  if (generic_temp_select_menu == 1  && smf_playing)
+      helptext_r("STOP PLAYING");
+
+ else if (generic_temp_select_menu > 1 && generic_temp_select_menu< 18)
+      {
+        helptext_r("MUTE/UNMUTE TRACK");
+      }
+      else  if (generic_temp_select_menu > 17 )
+      {
+     helptext_r("SELECT INSTR.");
+      }
 
     if (seq.edit_state && generic_temp_select_menu == 1)
       display.setTextColor(COLOR_SYSTEXT, RED);
@@ -22212,14 +22379,14 @@ _print_smf_track_state();
     else
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
-     setCursor_textGrid_small(33, 6);
-if (smf_playing)
- display.print("PLAYING");
- else
-    display.print("STOPPED");
+    setCursor_textGrid_small(33, 6);
+    if (smf_playing)
+      display.print("PLAYING");
+    else
+      display.print("STOPPED");
 
-
-_print_smf_track_state();
+    _print_smf_track_state();
+_print_smf_track_instruments();
 
     // display.print(generic_temp_select_menu);
     // display.print(" ");

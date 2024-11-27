@@ -56,18 +56,18 @@ uint32_t MD_MFTrack::getLength(void)
   return _length;
 }
 
-bool MD_MFTrack::getEndOfTrack(void)
+FLASHMEM bool MD_MFTrack::getEndOfTrack(void)
 // true if end of track has been reached
 {
   return _endOfTrack;
 }
 
-void MD_MFTrack::syncTime(void)
+FLASHMEM void MD_MFTrack::syncTime(void)
 {
   _elapsedTicks = 0;
 }
 
-void MD_MFTrack::restart(void)
+FLASHMEM void MD_MFTrack::restart(void)
 // Start playing the track from the beginning again
 {
   _currOffset = 0;
@@ -326,7 +326,7 @@ FLASHMEM void MD_MFTrack::parseEvent(MD_MIDIFile *mf)
           strcpy(mev.chars, "Err"); // error sf
 
         mev.size = strlen(mev.chars); // change META length
-        //DUMP(" ", mev.chars);
+       // DUMP(" ", mev.chars);
       }
       break;
 

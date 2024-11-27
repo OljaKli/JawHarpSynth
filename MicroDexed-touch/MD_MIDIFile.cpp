@@ -240,8 +240,7 @@ FLASHMEM void MD_MIDIFile::processEvents(uint16_t ticks)
   // process all events from each track first - TRACK PRIORITY
   for (uint8_t i = 0; i < _trackCount; i++)
   {
-    //if (_format != 0) DUMPX("", i);
-
+   // if (_format != 0) DUMPX("", i);
     // Limit n to be a sensible number of events in the loop counter
     // When there are no more events, just break out
     // Other than the first event, the others have an elapsed time of 0 (ie occur simultaneously)
@@ -267,12 +266,12 @@ FLASHMEM void MD_MIDIFile::processEvents(uint16_t ticks)
     {
       bool b;
 
-      if (_format != 0) DUMPX("", i);
+    //  if (_format != 0) DUMPX("", i);
 
       // Other than the first event, the other have an elapsed time of 0 (ie occur simultaneously)
       b = _track[i].getNextEvent(this, (n==0 ? ticks : 0));
-      if (b && (_format != 0))
-        DUMPS("\n-- TRK "); 
+      // if (b && (_format != 0))
+      //   DUMPS("\n-- TRK "); 
       doneEvents = (doneEvents || b);
     }
 
@@ -338,11 +337,14 @@ FLASHMEM int MD_MIDIFile::load(const char *fname)
     _fd.close();
     return(E_FORMAT0);
   }
+
   if (dat16 > MIDI_MAX_TRACKS)
   {
-    _fd.close();
-    return(E_TRACKS);
+    // _fd.close();
+    // return(E_TRACKS);
+      _trackCount = MIDI_MAX_TRACKS; //set to 16 if there are more that 16 tracks - most times these are empty anyway
   }
+  else
   _trackCount = dat16;
 
   // read ticks per quarter note
@@ -380,23 +382,23 @@ FLASHMEM int MD_MIDIFile::load(const char *fname)
   return(E_OK);
 }
 
-#if DUMP_DATA
-void MD_MIDIFile::dump(void)
-{
-  DUMP("\nFile Name:\t", getFilename());
-  DUMP("\nFile format:\t", getFormat());
-  DUMP("\nTracks:\t\t", getTrackCount());
-  DUMP("\nTime division:\t", getTicksPerQuarterNote());
-  DUMP("\nTempo:\t\t", getTempo());
-  DUMP("\nMicrosec/tick:\t", getTickTime());
-  DUMP("\nTime Signature:\t", getTimeSignature()>>8);
-  DUMP("/", getTimeSignature() & 0xf);
-  DUMPS("\n");
+// #if DUMP_DATA
+// void MD_MIDIFile::dump(void)
+// {
+//   DUMP("\nFile Name:\t", getFilename());
+//   DUMP("\nFile format:\t", getFormat());
+//   DUMP("\nTracks:\t\t", getTrackCount());
+//   DUMP("\nTime division:\t", getTicksPerQuarterNote());
+//   DUMP("\nTempo:\t\t", getTempo());
+//   DUMP("\nMicrosec/tick:\t", getTickTime());
+//   DUMP("\nTime Signature:\t", getTimeSignature()>>8);
+//   DUMP("/", getTimeSignature() & 0xf);
+//   DUMPS("\n");
  
-  for (uint8_t i=0; i<_trackCount; i++)
-  {
-    _track[i].dump();
-    DUMPS("\n");
-  }
-}
-#endif // DUMP_DATA
+//   for (uint8_t i=0; i<_trackCount; i++)
+//   {
+//     _track[i].dump();
+//     DUMPS("\n");
+//   }
+// }
+// #endif // DUMP_DATA
