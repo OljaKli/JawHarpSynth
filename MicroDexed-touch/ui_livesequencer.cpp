@@ -5,11 +5,13 @@
 #include "livesequencer.h"
 #include "touch.h"
 #include "ui_liveseq_pianoroll.h"
+#include "virtualkeyboard.h"
 
-extern LCDMenuLib2 LCDML;
-extern ILI9341_t3n display;
+
 extern void helptext_l(const char* str);
 extern sequencer_t seq;
+extern LCDMenuLib2 LCDML;
+extern ILI9341_t3n display;
 extern ts_t ts;
 
 bool openingScreen = false;

@@ -47,6 +47,8 @@
 
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
+#include "virtualkeyboard.h"
+
 extern LiveSequencer liveSeq;
 
 extern Realtime_Scope scope;
@@ -252,7 +254,6 @@ void draw_euclidean_circle();
 extern JoystickController joysticks[];
 extern void microsynth_update_single_setting(uint8_t microsynth_selected_instance);
 extern void update_step_rec_buttons();
-extern void virtual_keyboard_print_velocity_bar();
 extern void update_latch_button();
 
 #if NUM_DRUMS > 0
@@ -366,7 +367,6 @@ extern const float midi_ticks_factor[10];
 extern uint8_t midi_bpm;
 extern elapsedMillis save_sys;
 extern bool save_sys_flag;
-extern void virtual_keyboard_smart_preselect_mode();
 
 bool remote_console_keystate_select;
 bool remote_console_keystate_a;
@@ -1175,7 +1175,6 @@ FLASHMEM void show_uppercase_no_grid(uint8_t pos_y, uint8_t pos_x, uint8_t field
   display.setCursor(pos_x, pos_y);
   display.print(tmp);
 }
-
 FLASHMEM void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str)
 {
   char tmp[STRING_BUFFER_SIZE];
@@ -9470,18 +9469,7 @@ void set_sample_type_color_of(uint8_t samplekey)
     display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
 }
 
-FLASHMEM void virtual_keyboard_print_buttons(bool showInstrumentButtons)
-{
-  // oct +- buttons
-  TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(3), "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
 
-  if(showInstrumentButtons) {
-    // instrument buttons
-    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "INSTR.", "-", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(3), "INSTR.", "+", TouchButton::BUTTON_NORMAL);
-  }
-}
 
 FLASHMEM void seq_pattern_editor_update_dynamic_elements()
 {
@@ -9744,14 +9732,6 @@ FLASHMEM void pattern_editor_menu_0()
       }
     }
   }
-}
-
-FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note) {
-  handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
-}
-
-FLASHMEM void play_sample_off_virtual_drumpads(uint8_t note) {
-  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
 }
 
 FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
@@ -19152,26 +19132,7 @@ FLASHMEM void print_perfmod_buttons()
   }
 }
 
-FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
-  static constexpr uint8_t LINECHARS = 7;
-  static constexpr uint8_t offset = 18;
-  std::string line1;
-  std::string line2;
-  const int16_t sampleIndex = padIndex + ts.virtual_keyboard_octave * 12 - offset;
-  if(sampleIndex >= 0 && sampleIndex < NUM_DRUMSET_CONFIG) {
-    line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
-    line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
-  }
-  TouchButton::drawButton(TouchButton::GRID_X(padIndex % 6), TouchButton::GRID_Y(4 + (padIndex / 6)), std::string(line1), std::string(line2), color);
-}
 
-FLASHMEM void print_drumpads() {
-  if (seq.cycle_touch_element == 1 || ts.keyb_in_menu_activated) {
-    for (uint8_t x = 0; x < 12; x++) {
-      printDrumPad(x, TouchButton::BUTTON_ACTIVE);
-    }
-  }
-}
 
 FLASHMEM void print_voice_select_default_help()
 {

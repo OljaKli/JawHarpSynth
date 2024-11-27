@@ -42,8 +42,10 @@ void splash_screen2_anim(uint8_t sysinfo_sound_state);
 void draw_logo_instant(uint8_t yoffset);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
-void virtual_keyboard_print_buttons(bool showInstrumentButtons = true);
-void printDrumPad(uint8_t padIndex, TouchButton::Color color);
+
+void show_no_grid(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, long num);
+void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
+const char* find_long_drum_name_from_note(uint8_t note);
 
 void UI_func_stereo_mono(uint8_t param);
 void UI_func_dexed_audio(uint8_t param);

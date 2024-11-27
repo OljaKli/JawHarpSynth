@@ -101,9 +101,7 @@ void registerTouchHandler(TouchFn touchFn);
 void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
-void drawVirtualKeyboard(bool clearScreen = false);
-void handleVirtualKeyboardKeys();
-void processOctaveButtons();
+
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();
