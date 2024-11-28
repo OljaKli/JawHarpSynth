@@ -1022,6 +1022,11 @@ void updateEncoderR(void)
 FLASHMEM void setup()
 {
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+  pinMode(LED_MIDI_IN, OUTPUT);
+  pinMode(LED_MIDI_OUT, OUTPUT);
+#endif
+
 #ifdef DEBUG
   LOG.println(CrashReport);
   // setup_debug_message();
@@ -2077,8 +2082,50 @@ bool display_buffer_envelopes[NUM_DRUMS];
 bool display_buffer_samples[NUM_DRUMS];
 bool smf_playing = false;
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+uint8_t LED_MIDI_IN_counter = 0;
+uint8_t LED_MIDI_OUT_counter = 0;
+#endif
+
 void loop()
 {
+
+ #ifdef MIDI_ACTIVITY_LIGHTS
+  if (LED_MIDI_OUT_counter != 0)
+  {
+    if (LED_MIDI_OUT_counter == 1)
+    {
+      digitalWrite(LED_MIDI_OUT, HIGH);
+      LED_MIDI_OUT_counter++;
+    }
+    else
+    {
+      LED_MIDI_OUT_counter++;
+      if (LED_MIDI_OUT_counter > 200)
+      {
+        digitalWrite(LED_MIDI_OUT, LOW);
+        LED_MIDI_OUT_counter = 0;
+      }
+    }
+  }
+   if (LED_MIDI_IN_counter != 0)
+  {
+    if (LED_MIDI_IN_counter == 1)
+    {
+      digitalWrite(LED_MIDI_IN, HIGH);
+      LED_MIDI_IN_counter++;
+    }
+    else
+    {
+      LED_MIDI_IN_counter++;
+      if (LED_MIDI_IN_counter > 200)
+      {
+        digitalWrite(LED_MIDI_IN, LOW);
+        LED_MIDI_IN_counter = 0;
+      }
+    }
+  }
+#endif
 
   // Serial read (commands from web remote)
   incomingSerialByte = 0;
@@ -2892,6 +2939,8 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
+
+
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
@@ -2923,6 +2972,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #ifdef MIDI_DEVICE_USB_HOST
     if (device == 1)
       midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
+
 #endif
 
 #ifdef MIDI_DEVICE_DIN
@@ -2940,6 +2990,11 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
       //        LOG.print(inVelocity);
       //        LOG.println();
       //    #endif
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+      LED_MIDI_OUT_counter = 1;
+#endif
+
     }
 #endif
 
