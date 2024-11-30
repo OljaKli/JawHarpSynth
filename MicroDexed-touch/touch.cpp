@@ -890,7 +890,7 @@ FLASHMEM void handle_touchscreen_menu()
     if (ts.keyb_in_menu_activated)
     {
       display.console = true;
-      display.fillRect(0, VIRT_KEYB_YPOS - 38, DISPLAY_WIDTH, DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 38, COLOR_BACKGROUND);
+      display.fillRect(0, TouchButton::GRID_Y(3), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(3), COLOR_BACKGROUND);
       display.console = false;
       drawVirtualKeyboard();
       draw_button_on_grid(45, 11, "KEYB", "OFF", 0);
@@ -906,7 +906,7 @@ FLASHMEM void handle_touchscreen_menu()
     if (check_button_on_grid(45, 11))
     {
       display.console = true;
-      display.fillRect(0, VIRT_KEYB_YPOS - 38, DISPLAY_WIDTH, DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 38, COLOR_BACKGROUND);
+      display.fillRect(0, TouchButton::GRID_Y(3), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(3), COLOR_BACKGROUND);
       display.console = false;
       ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
       if (ts.keyb_in_menu_activated)

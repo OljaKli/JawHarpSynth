@@ -313,7 +313,7 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
 }
 
 FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
-  static constexpr uint8_t LINECHARS = 7;
+  static constexpr uint8_t LINECHARS = 6;
   static constexpr uint8_t offset = 18;
   std::string line1;
   std::string line2;
