@@ -2,7 +2,6 @@
 #include "touchbutton.h"
 #include "UI.h"
 #include "sequencer.h"
-//#include "midi_devices.hpp"
 
 #include "touch.h"
 #include "LCDMenuLib2.h"
@@ -38,12 +37,17 @@ extern void handleNoteOff_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte in
 void printDrumPad(uint8_t padIndex, TouchButton::Color color);
 void virtual_keyboard_print_current_instrument();
 void print_drumpads();
-void print_virtual_keyboard_octave();
+void touch_check_all_keyboard_buttons();
+void processOctaveButtons();
 
 FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 {
-  if (ts.virtual_keyboard_instrument == 0 && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer)) {
+  if ((ts.virtual_keyboard_instrument == 0) && (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))) {
     ts.virtual_keyboard_instrument = 1;
+  }
+  if (ts.virtual_keyboard_instrument == 0) {
+    // do not draw instrument buttons for live sequencer
+    drawFlags &= ~VK_DRAW_INSTRUMENT_BUTTONS;
   }
 
   if(ts.virtual_keyboard_instrument != 0) { // livesequencer assigns display mode itself
@@ -51,7 +55,10 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   }
   const bool modeChanged = ts.current_virtual_keyboard_display_mode != ts.previous_virtual_keyboard_display_mode;
   if(modeChanged) {
-    drawFlags |= VK_DRAW_KEYS;
+    // clear keys area
+    display.console = true;
+    display.fillRect(0, TouchButton::GRID_Y(4), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(4), COLOR_BACKGROUND);
+    drawFlags |= VK_DRAW_KEYS | VK_DRAW_OCTAVE;
   }
   ts.previous_virtual_keyboard_display_mode = ts.current_virtual_keyboard_display_mode;
 
@@ -61,10 +68,6 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
     TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
   }
 
-  if (ts.virtual_keyboard_instrument == 0) {
-    // do not draw instrument buttons for live sequencer
-    drawFlags &= ~VK_DRAW_INSTRUMENT_BUTTONS;
-  }
   if (drawFlags & VK_DRAW_INSTRUMENT_BUTTONS) {
     // draw instrument buttons
     TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "INSTR.", "-", TouchButton::BUTTON_NORMAL);
@@ -83,11 +86,8 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   }
     
   if (drawFlags & VK_DRAW_KEYS) {
-    // clear keys area
-    display.console = true;
-    display.fillRect(0, TouchButton::GRID_Y(4), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(4), COLOR_BACKGROUND);
-
-    if (ts.current_virtual_keyboard_display_mode == 0) { //piano keys
+    switch (ts.current_virtual_keyboard_display_mode) {
+    case 0: //piano keys
       // draw white keys
       for (uint8_t x = 0; x < 10; x++) {
         display.console = true;
@@ -103,44 +103,39 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
           display.console = false;
         }
       }
+      break;
 
-      print_virtual_keyboard_octave();
-    }
-    else if (ts.current_virtual_keyboard_display_mode == 1) {
+    case 1: // drum pads
       print_drumpads();
+      break;
     }
   }
 
   if (drawFlags & VK_DRAW_OCTAVE) {
-    display.setCursor(32 * CHAR_width_small, 17 * CHAR_height_small);
+    display.setCursor(32 * CHAR_width_small + 2, 17 * CHAR_height_small + 3);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print("OCT");
     display.setTextSize(2);
-    display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small);
+    display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small + 3);
     display.print(ts.virtual_keyboard_octave);
     display.setTextSize(1);
-  }
 
-  display.setTextSize(2);
+    if (ts.current_virtual_keyboard_display_mode == 0) { // draw octave labels for keys mode
+      static constexpr uint8_t indexes[2] = { 0, 7 };
+      for (int i = 0; i < 2; i++) {
+        if (ts.virtual_keyboard_state_white & (1 << indexes[i])) {
+          display.setTextColor(COLOR_SYSTEXT, RED);
+        }
+        else {
+          display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+        }
+        display.setCursor(1 + indexes[i] * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE) + KEY_LABEL_OFFSET, VIRT_KEYB_YPOS + 57.75);
+        display.print("C");
+        display.print(ts.virtual_keyboard_octave + i);
+      }
+    }
+  }
   display.console = false;
-}
-
-FLASHMEM void print_virtual_keyboard_octave()
-{
-  display.setTextSize(1);
-  // draw octave labels
-  uint8_t indexes[2] = { 0, 7 };
-  for (int i = 0; i < 2; i++) {
-    if (ts.virtual_keyboard_state_white & (1 << indexes[i])) {
-      display.setTextColor(COLOR_SYSTEXT, RED);
-    }
-    else {
-      display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-    }
-    display.setCursor(1 + indexes[i] * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE) + KEY_LABEL_OFFSET, VIRT_KEYB_YPOS + 57.75);
-    display.print("C");
-    display.print(ts.virtual_keyboard_octave + i);
-  }
 }
 
 FLASHMEM void virtual_keyboard_key_off_white(uint8_t x)
@@ -155,7 +150,6 @@ FLASHMEM void virtual_keyboard_key_off_white(uint8_t x)
       halftones = halftones + 1;
     }
   }
-  // handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note, 120);
   handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 0);
   display.console = true;
   display.fillRect(1 + x * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE), VIRT_KEYB_YPOS + 34, KEY_WIDTH_WHITE, KEY_HEIGHT_WHITE, COLOR_SYSTEXT); // white key
@@ -171,7 +165,6 @@ FLASHMEM void virtual_keyboard_key_off_black(uint8_t x)
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
 
-  //  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note, 120);
   handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x, 0);
   display.console = true;
   display.fillRect(x * KEY_OFFSET_BLACK, VIRT_KEYB_YPOS, KEY_WIDTH_BLACK, KEY_HEIGHT_BLACK, COLOR_BACKGROUND); // BLACK key
@@ -182,34 +175,30 @@ FLASHMEM void virtual_keyboard_key_off_black(uint8_t x)
   display.console = false;
 }
 
-
 FLASHMEM void touch_button_oct_up()
 {
-  ts.virtual_keyboard_octave++;
-
-  if (ts.virtual_keyboard_instrument == 6 && ts.virtual_keyboard_octave > 8) {
+  if (++ts.virtual_keyboard_octave > 8) {
     ts.virtual_keyboard_octave = 8;
   }
+  if (ts.current_virtual_keyboard_display_mode == 1) {
+    drawVirtualKeyboard(VK_DRAW_OCTAVE | VK_DRAW_KEYS);
+  }
   else {
-    if (ts.virtual_keyboard_octave > 8) {
-      ts.virtual_keyboard_octave = 8;
-    }
+    drawVirtualKeyboard(VK_DRAW_OCTAVE);
   }
-  if ((ts.virtual_keyboard_instrument == 6) || (ts.virtual_keyboard_instrument == 0 && ts.current_virtual_keyboard_display_mode == 1)) {
-    drawVirtualKeyboard();
-  }
-  print_virtual_keyboard_octave();
 }
 
 FLASHMEM void touch_button_oct_down()
 {
-  if (ts.virtual_keyboard_octave > 1) {
-    ts.virtual_keyboard_octave--;
+  if (--ts.virtual_keyboard_octave == 0) {
+    ts.virtual_keyboard_octave = 1;
   }
-  if (ts.virtual_keyboard_instrument == 6 || (ts.virtual_keyboard_instrument == 0 && ts.current_virtual_keyboard_display_mode == 1)) {
-    drawVirtualKeyboard();
+  if (ts.current_virtual_keyboard_display_mode == 1) {
+    drawVirtualKeyboard(VK_DRAW_OCTAVE | VK_DRAW_KEYS);
   }
-  print_virtual_keyboard_octave();
+  else {
+    drawVirtualKeyboard(VK_DRAW_OCTAVE);
+  }
 }
 
 FLASHMEM void touch_button_inst_up()
@@ -250,11 +239,13 @@ FLASHMEM void touch_check_all_keyboard_buttons()
 {
   processOctaveButtons();
 
-  if(TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(3))) {
-    touch_button_inst_down();
-  }
-  if(TouchButton::isPressed(TouchButton::GRID_X(4), TouchButton::GRID_Y(3))) {
-    touch_button_inst_up();
+  if (ts.virtual_keyboard_instrument != 0) { // disabled for livesequencer
+    if(TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(3))) {
+      touch_button_inst_down();
+    }
+    if(TouchButton::isPressed(TouchButton::GRID_X(4), TouchButton::GRID_Y(3))) {
+      touch_button_inst_up();
+    }
   }
 }
 
@@ -263,26 +254,24 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   display.setTextColor(GREY2, COLOR_BACKGROUND);
   display.setTextSize(2);
   display.setCursor(18 * CHAR_width_small, 16 * CHAR_height_small);
-  if (ts.virtual_keyboard_instrument < 8)
-  {
+  if (ts.virtual_keyboard_instrument < 8) {
     display.print(F("PLAYING"));
     display.console = 1;
-    display.fillRect(33 * CHAR_width_small, 16 * CHAR_height_small, 3 * CHAR_width_small, 8, COLOR_BACKGROUND);
+    display.fillRect(33 * CHAR_width_small, 16 * CHAR_height_small, 3 * CHAR_width_small, CHAR_height_small, COLOR_BACKGROUND);
     display.console = 0;
   }
-  else
-  {
+  else {
     display.setTextSize(1);
     display.print(F("PITCHED SAMPLE #"));
     display.print(ts.virtual_keyboard_instrument - 7);
     display.print(" ");
 
     display.console = 1;
-    display.fillRect(18 * CHAR_width_small, 17 * CHAR_height_small, 17 * CHAR_width_small, 8, COLOR_BACKGROUND);
+    display.fillRect(18 * CHAR_width_small, 17 * CHAR_height_small, 14 * CHAR_width_small, CHAR_height_small, COLOR_BACKGROUND);
     display.console = 0;
   }
   display.setTextSize(2);
-  display.setCursor(18 * CHAR_width_small, 18 * CHAR_height_small + 1);
+  display.setCursor(18 * CHAR_width_small, 18 * CHAR_height_small + 3);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
   switch (ts.virtual_keyboard_instrument) {
@@ -291,11 +280,11 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
     ts.virtual_keyboard_midi_channel = 20;  //fake channel for livesequence
     break;
   case 1:
-    display.print(F("DEXED1"));
+    display.print(F("DEXED1 "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[0].midi_channel;
     break;
   case 2:
-    display.print(F("DEXED2"));
+    display.print(F("DEXED2 "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[1].midi_channel;
     break;
   case 3:
@@ -319,18 +308,10 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
     ts.virtual_keyboard_midi_channel = braids_osc.midi_channel; 
     break;
   default: // >7
-    show_no_grid(18 * CHAR_height_small + 1, 18 * CHAR_width_small, 7, find_long_drum_name_from_note(ts.virtual_keyboard_instrument - 8 + 210));
+    show_no_grid(18 * CHAR_height_small + 3, 18 * CHAR_width_small, 7, get_drum_name_from_note(ts.virtual_keyboard_instrument - 8 + 210));
     ts.virtual_keyboard_midi_channel = drum_midi_channel;
     break;
   }
-}
-
-FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note) {
-  handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
-}
-
-FLASHMEM void play_sample_off_virtual_drumpads(uint8_t note) {
-  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
 }
 
 FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
@@ -347,16 +328,15 @@ FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
 }
 
 FLASHMEM void print_drumpads() {
-  if (seq.cycle_touch_element == 1 || ts.keyb_in_menu_activated) {
-    for (uint8_t x = 0; x < 12; x++) {
-      printDrumPad(x, TouchButton::BUTTON_ACTIVE);
-    }
+  for (uint8_t x = 0; x < 12; x++) {
+    printDrumPad(x, TouchButton::BUTTON_ACTIVE);
   }
 }
 
-
-FLASHMEM void handleVirtualKeyboardKeys()
+FLASHMEM void handleTouchVirtualKeyboard()
 {
+  touch_check_all_keyboard_buttons();
+
   bool isPressed = numTouchPoints > 0;
 
   if (ts.current_virtual_keyboard_display_mode == 0)
@@ -380,7 +360,6 @@ FLASHMEM void handleVirtualKeyboardKeys()
             halftones = halftones + 1;
           }
         }
-        // handleNoteOn_MIDI_DEVICE_DIN(configuration.dexed[selected_instance_id].midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 120);
         // pitched samples
         if (ts.virtual_keyboard_instrument > 7) {
           set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x + halftones - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
@@ -409,7 +388,7 @@ FLASHMEM void handleVirtualKeyboardKeys()
         virtual_keyboard_key_off_white(x);
       }
       if (isKeyPress || isKeyRelease) {
-        print_virtual_keyboard_octave();
+        drawVirtualKeyboard(VK_DRAW_OCTAVE);
       }
     }
     bool isWithinBlackY = ts.p.y > VIRT_KEYB_YPOS && ts.p.y < VIRT_KEYB_YPOS + 34;
@@ -457,21 +436,22 @@ FLASHMEM void handleVirtualKeyboardKeys()
   else if (ts.current_virtual_keyboard_display_mode == 1) {
     if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0) {
       for (uint8_t x = 0; x < 12; x++) {
-        bool isWithinPad = TouchButton::isInArea(TouchButton::GRID_X(x % 6), TouchButton::GRID_Y(4 + (x / 6)), TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y);
-        bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
-        bool isPadRelease = (ts.virtual_keyboard_state_white & (1 << x)) != 0 && !isWithinPad;
+        const bool isWithinPad = TouchButton::isInArea(TouchButton::GRID_X(x % 6), TouchButton::GRID_Y(4 + (x / 6)), TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y);
+        const bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
+        const bool isPadRelease = (ts.virtual_keyboard_state_white & (1 << x)) != 0 && !isWithinPad;
+        const uint8_t note = x + ts.virtual_keyboard_octave * 12 - 18;
 
         if (isPadPress) {
           DBG_LOG(printf("press\n"));
           printDrumPad(x, TouchButton::BUTTON_HIGHLIGHTED);
           ts.virtual_keyboard_state_white |= (1 << x);
-          play_sample_on_virtual_drumpads(x + ts.virtual_keyboard_octave * 12);
+          handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note].midinote, ts.virtual_keyboard_velocity);
         }
         if (isPadRelease) {
           DBG_LOG(printf("release\n"));
           printDrumPad(x, TouchButton::BUTTON_ACTIVE);
           ts.virtual_keyboard_state_white &= ~(1 << x);
-          play_sample_off_virtual_drumpads(x + ts.virtual_keyboard_octave * 12);
+          handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note].midinote, ts.virtual_keyboard_velocity);
         }
       }
     }
@@ -482,9 +462,6 @@ FLASHMEM void handleVirtualKeyboardKeys()
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.console = false;
 }
-
-extern void print_drumpads();
-extern uint8_t microsynth_selected_instance;
 
 FLASHMEM void virtual_keyboard_print_velocity_bar()
 {

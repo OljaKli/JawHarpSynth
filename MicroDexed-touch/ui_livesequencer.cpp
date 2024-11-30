@@ -683,8 +683,7 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
   }
 
   if(showingTools && (currentTools == TOOLS_KEYBOARD)) {
-    handleVirtualKeyboardKeys();
-    processOctaveButtons();
+    handleTouchVirtualKeyboard();
   }
 
   const bool runningChanged = (runningHere != data.isRunning);

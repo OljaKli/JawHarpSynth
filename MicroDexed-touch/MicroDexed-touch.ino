@@ -2923,12 +2923,6 @@ FLASHMEM void learn_cc(byte inChannel, byte inNumber)
   print_custom_mappings();
 }
 
-uint8_t midiNoteToSampleNote(uint8_t note) {
-  // TODO: eliminate magic numbers
-  const uint8_t offset = (note > 209) ? 210 : 18;
-  return note - offset;
-}
-
 void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device) {
   //drum played from input selects current drum note if drum screen open
   if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI) {

@@ -45,7 +45,8 @@ void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 
 void show_no_grid(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, long num);
 void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
-const char* find_long_drum_name_from_note(uint8_t note);
+uint8_t midiNoteToSampleNote(uint8_t note);
+const char* get_drum_name_from_note(uint8_t note);
 
 void UI_func_stereo_mono(uint8_t param);
 void UI_func_dexed_audio(uint8_t param);

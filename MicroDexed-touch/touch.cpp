@@ -40,7 +40,6 @@ extern void microsynth_refresh_lower_screen_dynamic_text();
 extern float get_sample_p_offset(uint8_t sample);
 extern void set_sample_pitch(uint8_t sample, float playbackspeed);
 extern void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
-extern const char* find_long_drum_name_from_note(uint8_t note);
 extern void print_perfmod_buttons();
 extern void print_perfmod_lables();
 extern void print_empty_spaces(uint8_t spaces);
@@ -423,8 +422,7 @@ FLASHMEM void handle_touchscreen_voice_select()
     }
   }
   if (seq.cycle_touch_element == 1) {
-    handleVirtualKeyboardKeys();
-    touch_check_all_keyboard_buttons();
+    handleTouchVirtualKeyboard();
   }
 }
 
@@ -595,8 +593,7 @@ FLASHMEM void handle_touchscreen_pattern_editor()
   }
 
   if (seq.cycle_touch_element == 1) {
-    handleVirtualKeyboardKeys();
-    touch_check_all_keyboard_buttons();
+    handleTouchVirtualKeyboard();
   }
 }
 
@@ -628,8 +625,7 @@ FLASHMEM void handle_touchscreen_microsynth()
     }
   }
   if (seq.cycle_touch_element == 1) {
-    handleVirtualKeyboardKeys();
-    touch_check_all_keyboard_buttons();
+    handleTouchVirtualKeyboard();
   }
 }
 
@@ -864,8 +860,7 @@ FLASHMEM void handle_touchscreen_braids()
     seq.cycle_touch_element = 1;
   }
   if (seq.cycle_touch_element == 1) {
-    handleVirtualKeyboardKeys();
-    touch_check_all_keyboard_buttons();
+    handleTouchVirtualKeyboard();
   }
 }
 
@@ -992,8 +987,7 @@ FLASHMEM void handle_touchscreen_menu()
     ts.touch_ui_drawn_in_menu = true;
   }
   if (ts.keyb_in_menu_activated) {
-    handleVirtualKeyboardKeys();
-    touch_check_all_keyboard_buttons();
+    handleTouchVirtualKeyboard();
   }
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);

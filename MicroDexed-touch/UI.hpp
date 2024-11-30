@@ -2182,88 +2182,51 @@ FLASHMEM void print_chain_steps_in_song_page()
   print_formatted_number(get_chain_length_from_current_track(seq.selected_track), 2);
 }
 
-FLASHMEM uint8_t seq_find_drum_data_from_note(uint8_t note)
-{
-  bool found = false;
-  uint8_t samplenumber;
-  for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-  {
-    if (note == drum_config[d].midinote)
-    {
-      samplenumber = d;
-      found = true;
-      break;
-    }
-  }
-  if (found == false)
-    samplenumber = 0;
-
-  return samplenumber;
+uint8_t midiNoteToSampleNote(uint8_t note) {
+  // TODO: eliminate magic numbers
+  const uint8_t offset = (note > 209) ? 210 : 18;
+  return note - offset;
 }
 
-FLASHMEM const char* seq_find_drum_name_from_note(uint8_t note)
+FLASHMEM const char* get_drum_name_from_note(uint8_t note)
 {
-  bool found = false;
-  const char* shortname;
-  for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-  {
-    if (note == drum_config[d].midinote)
-    {
-      shortname = basename(drum_config[d].name);
-      found = true;
-      break;
-    }
-  }
-  if (found == false)
-    shortname = " ";
-
-  return shortname;
-}
-
-FLASHMEM const char* find_long_drum_name_from_note(uint8_t note)
-{
-  bool found = false;
-  const char* name;
-  for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-  {
-    if (note == drum_config[d].midinote && note != 0)
-    {
-      name = basename(drum_config[d].name);
-      found = true;
-      break;
-    }
-  }
-  if (found == false)
+  const uint8_t sampleNote = midiNoteToSampleNote(note);
+  const char *name;
+  if (sampleNote < NUM_DRUMSET_CONFIG) {
+    name = basename(drum_config[sampleNote].name);
+  } else {
     name = " ";
+  }
+  return name;
+}
 
+FLASHMEM const char* get_drum_shortname_from_note(uint8_t note)
+{
+  const uint8_t sampleNote = midiNoteToSampleNote(note);
+  const char *name;
+  if (sampleNote < NUM_DRUMSET_CONFIG) {
+    name = drum_config[sampleNote].shortname;
+  } else {
+    name = "-";
+  }
   return name;
 }
 
 FLASHMEM const char* tracker_find_shortname_from_pattern_step(uint8_t track, uint8_t pattern, uint8_t sstep)
 {
   const char* shortname;
-  bool found = false;
+  const uint8_t note = seq.note_data[seq.current_pattern[track]][sstep];
   if (seq.content_type[seq.current_pattern[track]] == 0 && seq.vel[seq.current_pattern[track]][sstep] < 210) // is Drumtrack and not a pitched sample
   {
-    for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-    {
-      if (seq.note_data[seq.current_pattern[track]][sstep] == drum_config[d].midinote)
-      {
-        shortname = drum_config[d].shortname;
-        found = true;
-        break;
-      }
-    }
-    if (found == false)
-      shortname = "-";
+    shortname = get_drum_shortname_from_note(note);
   }
   else
   {
     if (seq.vel[seq.current_pattern[track]][sstep] > 209)
       shortname = "P"; // pitched sample
-    else if (seq.note_data[seq.current_pattern[track]][sstep] > 0 && seq.note_data[seq.current_pattern[track]][sstep] != 130)
-      shortname = noteNames[seq.note_data[seq.current_pattern[track]][sstep] % 12];
-    else if (seq.note_data[seq.current_pattern[track]][sstep] == 130)
+    else if (note > 0 && note != 130)
+      shortname = noteNames[note % 12];
+    else if (note == 130)
       shortname = "~"; // note is a tie/latch
     else
       shortname = "-";
@@ -2274,28 +2237,18 @@ FLASHMEM const char* tracker_find_shortname_from_pattern_step(uint8_t track, uin
 FLASHMEM const char* seq_find_shortname_in_track(uint8_t sstep, uint8_t track)
 {
   const char* shortname;
-  bool found = false;
+  const uint8_t note = seq.note_data[track][sstep];
   if (seq.content_type[track] == 0 && seq.vel[track][sstep] < 210) // is Drumtrack and not a pitched sample
   {
-    for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-    {
-      if (seq.note_data[track][sstep] == drum_config[d].midinote)
-      {
-        shortname = drum_config[d].shortname;
-        found = true;
-        break;
-      }
-    }
-    if (found == false)
-      shortname = "-";
+    shortname = get_drum_shortname_from_note(note);
   }
   else
   {
     if (seq.vel[track][sstep] > 209)
       shortname = "P"; // pitched sample
-    else if (seq.note_data[track][sstep] > 0 && seq.note_data[track][sstep] != 130)
-      shortname = noteNames[seq.note_data[track][sstep] % 12];
-    else if (seq.note_data[track][sstep] == 130)
+    else if (note > 0 && note != 130)
+      shortname = noteNames[note % 12];
+    else if (note == 130)
       shortname = "~"; // note is a tie/latch
     else
       shortname = "-";
@@ -2466,7 +2419,7 @@ FLASHMEM void print_track_steps_detailed_only_current_playing_note(int xpos, int
             show_smallfont_noGrid(y, CHAR_width_small * 17, 10, basename(drum_config[seq.vel[seq.active_pattern][i] - 210].name));
           }
           else // else it is a regular Drum Sample
-            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
+            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, get_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
         }
         else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
           (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99)) // it is a Slice
@@ -6144,7 +6097,7 @@ FLASHMEM void print_custom_mappings()
     else if (custom_midi_map[y].type == 1)
     {
 
-      show_no_grid(line * 12, 34 * CHAR_width_small, 14, find_long_drum_name_from_note(custom_midi_map[y].out));
+      show_no_grid(line * 12, 34 * CHAR_width_small, 14, get_drum_name_from_note(custom_midi_map[y].out));
     }
     else if (custom_midi_map[y].type == 2)
     {
@@ -8100,7 +8053,7 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
           }
         }
         else // else it is a regular Drum Sample
-          show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
+          show_smallfont_noGrid(y, CHAR_width_small * 17, 10, get_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
       }
       else if (seq.content_type[seq.active_pattern] > 0 && seq.content_type[seq.active_pattern] != 3) // Inst Track or Chord or Arp
       {
@@ -8580,7 +8533,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
             display.print(" ");
             display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
             if (seq.content_type[seq.active_pattern] == 0)
-              show(0, 6, 8, seq_find_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 1]));
+              show(0, 6, 8, get_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 1]));
             else
               seq_sub_velocity_editor_print_slicename_toprow();
             if (seq.active_function == 99)
@@ -9738,14 +9691,6 @@ FLASHMEM void play_sample(uint8_t note) {
   handleNoteOn(drum_midi_channel, drum_config[note ].midinote, 90, 0);
 }
 
-FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note) {
-  handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
-}
-
-FLASHMEM void play_sample_off_virtual_drumpads(uint8_t note) {
-  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
-}
-
 FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -10244,7 +10189,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] < 210) // normal sample
           {
             if (seq.content_type[seq.active_pattern] == 0)
-              show(0, 1, 9, seq_find_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
+              show(0, 1, 9, get_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
             else if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
               (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[1] != 99))
               seq_sub_pattern_editor_print_slicename_toprow();  //phtodo
@@ -10281,7 +10226,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F("REPLACE "));
               set_sample_type_color_of(seq.note_data[seq.active_pattern][seq.menu - 3]);
-              display.print(find_long_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
+              display.print(get_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F(" WITH "));
               set_sample_type_color();
