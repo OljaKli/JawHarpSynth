@@ -86,7 +86,7 @@ FLASHMEM void TouchButton::draw(const std::string label, const std::string sub, 
 }
 
 FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color) {
-  ColorCombo c = colorMap[color];
+  const ColorCombo c = colorMap[color];
 
   display.setTextSize(1);
   display.setTextColor(c.text, c.bg);
@@ -108,7 +108,6 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
   }
   display.console = true;
   display.print(sub.c_str());
-  display.setTextSize(1); // FIXME
 }
 
 FLASHMEM void TouchButton::processPressed() {

@@ -8,7 +8,7 @@ enum VirtualKeyboardFlags : uint8_t {
     VK_DRAW_OCTAVE_BUTTONS = 1 << 2,
     VK_DRAW_KEYS = 1 << 3,
     VK_DRAW_OCTAVE = 1 << 4,
-    VK_DRAW_INSTUMENT_NAME = 1 << 5,
+    VK_DRAW_INSTRUMENT_NAME = 1 << 5,
     VK_DRAW_ALL = 0xFF
 };
 
