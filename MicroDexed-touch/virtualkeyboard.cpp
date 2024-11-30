@@ -38,7 +38,6 @@ void printDrumPad(uint8_t padIndex, TouchButton::Color color);
 void virtual_keyboard_print_current_instrument();
 void print_drumpads();
 void touch_check_all_keyboard_buttons();
-void processOctaveButtons();
 
 FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 {
@@ -226,20 +225,18 @@ FLASHMEM void touch_button_inst_down()
   drawVirtualKeyboard(VK_DRAW_INSTUMENT_NAME);
 }
 
-FLASHMEM void processOctaveButtons() {
+FLASHMEM void touch_check_all_keyboard_buttons()
+{
+  // octave buttons
   if(TouchButton::isPressed(TouchButton::GRID_X(0), TouchButton::GRID_Y(3))) {
     touch_button_oct_down();
   }
   if(TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(3))) {
     touch_button_oct_up();
   }
-}
 
-FLASHMEM void touch_check_all_keyboard_buttons()
-{
-  processOctaveButtons();
-
-  if (ts.virtual_keyboard_instrument != 0) { // disabled for livesequencer
+  // instrument buttons (disabled for livesequencer)
+  if (ts.virtual_keyboard_instrument != 0) { 
     if(TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(3))) {
       touch_button_inst_down();
     }
