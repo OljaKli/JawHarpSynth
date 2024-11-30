@@ -14,6 +14,15 @@ static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { COLOR_SYSTEXT, COLOR_BACKGROUND } // COLOR_LABEL
 };
 
+FLASHMEM uint16_t TouchButton::GRID_X(uint8_t x) {
+  return x * (BUTTON_SIZE_X + BUTTON_SPACING);
+}
+
+FLASHMEM uint16_t TouchButton::GRID_Y(uint8_t y) {
+  const uint16_t offset = y > 1 ? 10 : 0;
+  return offset + y * (BUTTON_SIZE_Y + BUTTON_SPACING);
+}
+
 FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed) : x(x_coord), y(y_coord), 
   drawHandler{draw},
   clickedHandler{clicked},
@@ -38,7 +47,7 @@ FLASHMEM bool TouchButton::isPressed(uint16_t x, uint16_t y) {
 }
 
 FLASHMEM bool TouchButton::isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  return (ts.p.x >= x && ts.p.x < (x + w) && ts.p.y >= y && ts.p.y < (y + h));
+  return (numTouchPoints > 0) && (ts.p.x >= x && ts.p.x < (x + w) && ts.p.y >= y && ts.p.y < (y + h));
 }
 
 FLASHMEM bool TouchButton::isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
@@ -77,7 +86,7 @@ FLASHMEM void TouchButton::draw(const std::string label, const std::string sub, 
 }
 
 FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color) {
-  ColorCombo c = colorMap[color];
+  const ColorCombo c = colorMap[color];
 
   display.setTextSize(1);
   display.setTextColor(c.text, c.bg);
@@ -99,7 +108,6 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
   }
   display.console = true;
   display.print(sub.c_str());
-  display.setTextSize(1); // FIXME
 }
 
 FLASHMEM void TouchButton::processPressed() {

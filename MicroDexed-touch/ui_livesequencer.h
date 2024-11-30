@@ -100,9 +100,6 @@ private:
 
   std::vector<TouchButton*> toolsPages[TOOLS_NUM];
   std::vector<TouchButton*> trackButtons;
-
-  uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
-  uint16_t GRID_Y[LiveSequencer::LIVESEQUENCER_NUM_LAYERS + 2];
  
   static constexpr uint8_t BAR_WIDTH = 104; // 2 * BUTTON_WIDTH + spacing
   static constexpr uint8_t BAR_HEIGHT = 3;
@@ -123,7 +120,7 @@ private:
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
-  void drawVirtualKeyboard();
+  void drawKeyboard(uint8_t flags);
 };
 
 #endif //UI_LIVESEQUENCER_H

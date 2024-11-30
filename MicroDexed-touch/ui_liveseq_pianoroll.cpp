@@ -55,7 +55,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
   static constexpr uint16_t layerViewSizeX = ROLL_WIDTH / 2;
   static constexpr uint16_t layerViewY = CONTENT_HEIGHT + LINE_HEIGHT;
   for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
-    const uint16_t x = GRID_X[0] + (l % 2) * (layerViewSizeX);
+    const uint16_t x = TouchButton::GRID_X(0) + (l % 2) * (layerViewSizeX);
     const uint16_t y = layerViewY + (l / 2) * (HEADER_HEIGHT / 2);
     const bool isMuted = data.tracks[data.activeTrack].layerMutes & (1 << l);
     const bool hasNotes = data.trackSettings[data.activeTrack].layerCount > l;
@@ -102,9 +102,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   display.console = true;
   display.fillRect(x, y, w, h, MIDDLEGREEN);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.setCursor(GRID_X[1], layerViewY + 3);
+  display.setCursor(TouchButton::GRID_X(1), layerViewY + 3);
   display.printf("BAR %i-%i", view.startBar + 1, view.startBar + view.numBars);
-  display.setCursor(GRID_X[1], layerViewY + CHAR_height_small + 5);
+  display.setCursor(TouchButton::GRID_X(1), layerViewY + CHAR_height_small + 5);
   display.printf("OCT %i-%i", view.startOctave, view.startOctave + view.numOctaves - 1);
 }
 
@@ -585,22 +585,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   char s[10] = { "\0" };
 
   if (modeFlags == HEADER_DRAW_ALL) {
-    display.fillRect(GRID_X[3], CONTENT_HEIGHT + LINE_HEIGHT, DISPLAY_WIDTH - GRID_X[3], HEADER_HEIGHT, HEADER_BG_COLOR);
+    display.fillRect(TouchButton::GRID_X(3), CONTENT_HEIGHT + LINE_HEIGHT, DISPLAY_WIDTH - TouchButton::GRID_X(3), HEADER_HEIGHT, HEADER_BG_COLOR);
   }
 
   switch (mode) {
   case MODE_VIEW:
     if (modeFlags & (1 << VIEW_ZOOM_X)) {
-      drawHeaderSetting(GRID_X[3], "ZOOM X", "", (viewMode == VIEW_ZOOM_X), false);
+      drawHeaderSetting(TouchButton::GRID_X(3), "ZOOM X", "", (viewMode == VIEW_ZOOM_X), false);
     }
     if (modeFlags & (1 << VIEW_SCROLL_X)) {
-      drawHeaderSetting(GRID_X[4], "SCROLL X", "", (viewMode == VIEW_SCROLL_X), false);
+      drawHeaderSetting(TouchButton::GRID_X(4), "SCROLL X", "", (viewMode == VIEW_SCROLL_X), false);
     }
     if (modeFlags & (1 << VIEW_ZOOM_Y)) {
-      drawHeaderSetting(GRID_X[3], "", "ZOOM Y", false, (viewMode == VIEW_ZOOM_Y));
+      drawHeaderSetting(TouchButton::GRID_X(3), "", "ZOOM Y", false, (viewMode == VIEW_ZOOM_Y));
     }
     if (modeFlags & (1 << VIEW_SCROLL_Y)) {
-      drawHeaderSetting(GRID_X[4], "", "SCROLL Y", false, (viewMode == VIEW_SCROLL_Y));
+      drawHeaderSetting(TouchButton::GRID_X(4), "", "SCROLL Y", false, (viewMode == VIEW_SCROLL_Y));
     }
     break;
 
@@ -614,27 +614,27 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
 
       if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
         sprintf(s, "%03i", selectedNote + 1);
-        drawHeaderSetting(GRID_X[3], "SEL", s, false, (editMode == EDIT_SELECT_NOTE));
+        drawHeaderSetting(TouchButton::GRID_X(3), "SEL", s, false, (editMode == EDIT_SELECT_NOTE));
       }
       if (modeFlags & (1 << EDIT_LAYER)) {
         sprintf(s, "%i", p.noteOn.layer + 1);
-        drawHeaderSetting(GRID_X[3] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
+        drawHeaderSetting(TouchButton::GRID_X(3) + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
       }
       if (modeFlags & (1 << EDIT_NOTEON)) {
         sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
-        drawHeaderSetting(GRID_X[4], s, "", (editMode == EDIT_NOTEON), false);
+        drawHeaderSetting(TouchButton::GRID_X(4), s, "", (editMode == EDIT_NOTEON), false);
       }
       if (modeFlags & (1 << EDIT_NOTEOFF)) {
         sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
-        drawHeaderSetting(GRID_X[4], "", s, false, (editMode == EDIT_NOTEOFF));
+        drawHeaderSetting(TouchButton::GRID_X(4), "", s, false, (editMode == EDIT_NOTEOFF));
       }
       if (modeFlags & (1 << EDIT_VELOCITY)) {
         sprintf(s, "%03u", p.noteOn.note_in_velocity);
-        drawHeaderSetting(GRID_X[5], "VEL", s, false, (editMode == EDIT_VELOCITY));
+        drawHeaderSetting(TouchButton::GRID_X(5), "VEL", s, false, (editMode == EDIT_VELOCITY));
       }
       if (modeFlags & (1 << EDIT_NOTE)) {
         sprintf(s, "%s", noteString.c_str());
-        drawHeaderSetting(GRID_X[5] + 25, "NOTE", s, false, (editMode == EDIT_NOTE));
+        drawHeaderSetting(TouchButton::GRID_X(5) + 25, "NOTE", s, false, (editMode == EDIT_NOTE));
       }
     }
     break;
@@ -643,16 +643,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
     if (modeFlags & (1 << STEP_RECORD)) {
       const uint8_t pattern = (stepCursorPositionIndex / stepRecordSteps);
       sprintf(s, "P%i %02i/%02i", pattern, stepCursorPositionIndex % stepRecordSteps, stepRecordSteps);
-      drawHeaderSetting(GRID_X[3], "REC/ADV", s, false, (stepMode == STEP_RECORD));
+      drawHeaderSetting(TouchButton::GRID_X(3), "REC/ADV", s, false, (stepMode == STEP_RECORD));
     }
     if (modeFlags & (1 << STEP_SIZE)) {
       sprintf(s, "1/%02i", stepRecordSteps);
-      drawHeaderSetting(GRID_X[4], "STEPSIZE", s, false, (stepMode == STEP_SIZE));
+      drawHeaderSetting(TouchButton::GRID_X(4), "STEPSIZE", s, false, (stepMode == STEP_SIZE));
 
     }
     if (modeFlags & (1 << STEP_LAYER)) {
       sprintf(s, "%i", stepRecordLayer + 1);
-      drawHeaderSetting(GRID_X[5], "TO LAYER", s, false, (stepMode == STEP_LAYER));
+      drawHeaderSetting(TouchButton::GRID_X(5), "TO LAYER", s, false, (stepMode == STEP_LAYER));
     }
     break;
   }
@@ -946,14 +946,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
-  const uint8_t BUTTON_SPACING = 4;  // center in screen
   const uint16_t y = CONTENT_HEIGHT + HEADER_HEIGHT + LINE_HEIGHT;
 
-  for (uint8_t i = 0; i < LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN; i++) {
-    GRID_X[i] = i * (TouchButton::BUTTON_SIZE_X + BUTTON_SPACING);
-  }
-
-  buttonPlay = new TouchButton(GRID_X[0], y, 
+  buttonPlay = new TouchButton(TouchButton::GRID_X(0), y, 
   [ this ] (auto *b) { // drawHandler
     const TouchButton::Color playColor = data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
     b->draw((data.isRunning ? "STOP" : "START"), "", playColor);
@@ -973,7 +968,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonPlay);
 
-  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID_X[1], y, data.activeTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, data.activeTrack, 
+  buttons.push_back(new ValueButtonRange<uint8_t>(&currentValue, TouchButton::GRID_X(1), y, data.activeTrack, 0, LiveSequencer::LIVESEQUENCER_NUM_TRACKS - 1, 1, data.activeTrack, 
   [ this ] (auto *b, auto *v) { // drawHandler
     char temp_char[2];
     itoa(data.activeTrack + 1, temp_char, 10);
@@ -989,7 +984,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     liveSeq.setActiveTrack(data.activeTrack);
   }));
 
-  buttonInst = new TouchButton(GRID_X[2], y, 
+  buttonInst = new TouchButton(TouchButton::GRID_X(3), y, 
   [ this ] (auto *b) { // drawHandler
     const uint8_t device = data.trackSettings[data.activeTrack].device;
     const uint8_t instrument = data.trackSettings[data.activeTrack].instrument;
@@ -1007,7 +1002,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonInst);
 
-  buttonView = new TouchButton(GRID_X[3], y,
+  buttonView = new TouchButton(TouchButton::GRID_X(3), y,
   [ this ] (auto *b) { // drawHandler
     b->draw("VIEW", "MODE", (mode == MODE_VIEW) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
@@ -1016,7 +1011,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonView);
 
-  buttonEdit = new TouchButton(GRID_X[4], y,
+  buttonEdit = new TouchButton(TouchButton::GRID_X(4), y,
   [ this ] (auto *b) { // drawHandler
     TouchButton::Color color = (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
     if ((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
@@ -1034,7 +1029,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonEdit);
 
-  buttonStep = new TouchButton(GRID_X[5], y,
+  buttonStep = new TouchButton(TouchButton::GRID_X(5), y,
   [ this ] (auto *b) { // drawHandler
     TouchButton::Color color = (mode == MODE_STEP) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
     if (data.isRunning) {

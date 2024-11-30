@@ -47,6 +47,8 @@
 
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
+#include "virtualkeyboard.h"
+
 extern LiveSequencer liveSeq;
 
 extern Realtime_Scope scope;
@@ -227,7 +229,6 @@ extern void draw_back_touchbutton();
 extern void seq_pattern_editor_update_dynamic_elements();
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2> microsynth_mixer_reverb;
-extern void virtual_keyboard_print_current_instrument();
 extern uint8_t find_longest_chain();
 extern bool get_bank_name(uint8_t p, uint8_t b, char* bank_name);
 extern bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name);
@@ -238,7 +239,6 @@ extern void dac_unmute(void);
 extern ts_t ts;
 extern fm_t fm;
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern void virtual_keyboard();
 extern void get_sd_performance_name_json(uint8_t number);
 extern bool save_sd_performance_json(uint8_t p);
 extern dexed_live_mod_t dexed_live_mod;
@@ -254,8 +254,6 @@ void draw_euclidean_circle();
 extern JoystickController joysticks[];
 extern void microsynth_update_single_setting(uint8_t microsynth_selected_instance);
 extern void update_step_rec_buttons();
-extern void virtual_keyboard_print_current_instrument();
-extern void virtual_keyboard_print_velocity_bar();
 extern void update_latch_button();
 
 #if NUM_DRUMS > 0
@@ -369,7 +367,6 @@ extern const float midi_ticks_factor[10];
 extern uint8_t midi_bpm;
 extern elapsedMillis save_sys;
 extern bool save_sys_flag;
-extern void virtual_keyboard_smart_preselect_mode();
 
 bool remote_console_keystate_select;
 bool remote_console_keystate_a;
@@ -672,6 +669,23 @@ FLASHMEM void unregisterScope(void) {
   currentScopeSettings = {
     .enabled = false
   };
+}
+
+FLASHMEM uint16_t getContentTypeColor(uint8_t contentType) {
+  switch(contentType) {
+  case 0:
+    return COLOR_DRUMS;
+  case 1:
+    return COLOR_INSTR;
+  case 2:
+    return COLOR_CHORDS;
+  case 3:
+    return COLOR_ARP;
+  case 4:
+    return COLOR_PITCHSMP;
+  default:
+    return COLOR_SYSTEXT; // fallback
+  }
 }
 
 uint8_t state_dir;
@@ -1625,16 +1639,7 @@ FLASHMEM const char* seq_find_shortname(uint8_t sstep)
 
 FLASHMEM void set_track_type_color(uint8_t track)
 {
-  if (seq.track_type[track] == 0) // Drums
-    display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 1) // Inst
-    display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 2) // Chord
-    display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 3) // Arp
-    display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-  else if (seq.track_type[track] == 4) // Sliced Sample
-    display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+  display.setTextColor(getContentTypeColor(seq.track_type[track]), COLOR_BACKGROUND);
 }
 
 FLASHMEM void sub_song_print_tracktypes()
@@ -1678,16 +1683,7 @@ FLASHMEM void sub_song_print_tracktypes()
 
 FLASHMEM void set_track_type_color_inverted(uint8_t track)
 {
-  if (seq.track_type[track] == 0) // Drums
-    display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
-  else if (seq.track_type[track] == 1) // Inst
-    display.setTextColor(COLOR_BACKGROUND, COLOR_INSTR);
-  else if (seq.track_type[track] == 2) // Chord
-    display.setTextColor(COLOR_BACKGROUND, COLOR_CHORDS);
-  else if (seq.track_type[track] == 3) // Arp
-    display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
-  else if (seq.track_type[track] == 4) // Sliced
-    display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
+  display.setTextColor(COLOR_BACKGROUND, getContentTypeColor(seq.track_type[track]));
 }
 
 bool song_page_full_draw_pattern_complete = false;
@@ -2186,88 +2182,51 @@ FLASHMEM void print_chain_steps_in_song_page()
   print_formatted_number(get_chain_length_from_current_track(seq.selected_track), 2);
 }
 
-FLASHMEM uint8_t seq_find_drum_data_from_note(uint8_t note)
-{
-  bool found = false;
-  uint8_t samplenumber;
-  for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-  {
-    if (note == drum_config[d].midinote)
-    {
-      samplenumber = d;
-      found = true;
-      break;
-    }
-  }
-  if (found == false)
-    samplenumber = 0;
-
-  return samplenumber;
+uint8_t midiNoteToSampleNote(uint8_t note) {
+  // TODO: eliminate magic numbers
+  const uint8_t offset = (note > 209) ? 210 : 18;
+  return note - offset;
 }
 
-FLASHMEM const char* seq_find_drum_name_from_note(uint8_t note)
+FLASHMEM const char* get_drum_name_from_note(uint8_t note)
 {
-  bool found = false;
-  const char* shortname;
-  for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-  {
-    if (note == drum_config[d].midinote)
-    {
-      shortname = basename(drum_config[d].name);
-      found = true;
-      break;
-    }
-  }
-  if (found == false)
-    shortname = " ";
-
-  return shortname;
-}
-
-FLASHMEM const char* find_long_drum_name_from_note(uint8_t note)
-{
-  bool found = false;
-  const char* name;
-  for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-  {
-    if (note == drum_config[d].midinote && note != 0)
-    {
-      name = basename(drum_config[d].name);
-      found = true;
-      break;
-    }
-  }
-  if (found == false)
+  const uint8_t sampleNote = midiNoteToSampleNote(note);
+  const char *name;
+  if (sampleNote < NUM_DRUMSET_CONFIG) {
+    name = basename(drum_config[sampleNote].name);
+  } else {
     name = " ";
+  }
+  return name;
+}
 
+FLASHMEM const char* get_drum_shortname_from_note(uint8_t note)
+{
+  const uint8_t sampleNote = midiNoteToSampleNote(note);
+  const char *name;
+  if (sampleNote < NUM_DRUMSET_CONFIG) {
+    name = drum_config[sampleNote].shortname;
+  } else {
+    name = "-";
+  }
   return name;
 }
 
 FLASHMEM const char* tracker_find_shortname_from_pattern_step(uint8_t track, uint8_t pattern, uint8_t sstep)
 {
   const char* shortname;
-  bool found = false;
+  const uint8_t note = seq.note_data[seq.current_pattern[track]][sstep];
   if (seq.content_type[seq.current_pattern[track]] == 0 && seq.vel[seq.current_pattern[track]][sstep] < 210) // is Drumtrack and not a pitched sample
   {
-    for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-    {
-      if (seq.note_data[seq.current_pattern[track]][sstep] == drum_config[d].midinote)
-      {
-        shortname = drum_config[d].shortname;
-        found = true;
-        break;
-      }
-    }
-    if (found == false)
-      shortname = "-";
+    shortname = get_drum_shortname_from_note(note);
   }
   else
   {
     if (seq.vel[seq.current_pattern[track]][sstep] > 209)
       shortname = "P"; // pitched sample
-    else if (seq.note_data[seq.current_pattern[track]][sstep] > 0 && seq.note_data[seq.current_pattern[track]][sstep] != 130)
-      shortname = noteNames[seq.note_data[seq.current_pattern[track]][sstep] % 12];
-    else if (seq.note_data[seq.current_pattern[track]][sstep] == 130)
+    else if (note > 0 && note != 130)
+      shortname = noteNames[note % 12];
+    else if (note == 130)
       shortname = "~"; // note is a tie/latch
     else
       shortname = "-";
@@ -2278,28 +2237,18 @@ FLASHMEM const char* tracker_find_shortname_from_pattern_step(uint8_t track, uin
 FLASHMEM const char* seq_find_shortname_in_track(uint8_t sstep, uint8_t track)
 {
   const char* shortname;
-  bool found = false;
+  const uint8_t note = seq.note_data[track][sstep];
   if (seq.content_type[track] == 0 && seq.vel[track][sstep] < 210) // is Drumtrack and not a pitched sample
   {
-    for (uint8_t d = 0; d < NUM_DRUMSET_CONFIG - 1; d++)
-    {
-      if (seq.note_data[track][sstep] == drum_config[d].midinote)
-      {
-        shortname = drum_config[d].shortname;
-        found = true;
-        break;
-      }
-    }
-    if (found == false)
-      shortname = "-";
+    shortname = get_drum_shortname_from_note(note);
   }
   else
   {
     if (seq.vel[track][sstep] > 209)
       shortname = "P"; // pitched sample
-    else if (seq.note_data[track][sstep] > 0 && seq.note_data[track][sstep] != 130)
-      shortname = noteNames[seq.note_data[track][sstep] % 12];
-    else if (seq.note_data[track][sstep] == 130)
+    else if (note > 0 && note != 130)
+      shortname = noteNames[note % 12];
+    else if (note == 130)
       shortname = "~"; // note is a tie/latch
     else
       shortname = "-";
@@ -2470,7 +2419,7 @@ FLASHMEM void print_track_steps_detailed_only_current_playing_note(int xpos, int
             show_smallfont_noGrid(y, CHAR_width_small * 17, 10, basename(drum_config[seq.vel[seq.active_pattern][i] - 210].name));
           }
           else // else it is a regular Drum Sample
-            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
+            show_smallfont_noGrid(y, CHAR_width_small * 17, 10, get_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
         }
         else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
           (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99)) // it is a Slice
@@ -6148,7 +6097,7 @@ FLASHMEM void print_custom_mappings()
     else if (custom_midi_map[y].type == 1)
     {
 
-      show_no_grid(line * 12, 34 * CHAR_width_small, 14, find_long_drum_name_from_note(custom_midi_map[y].out));
+      show_no_grid(line * 12, 34 * CHAR_width_small, 14, get_drum_name_from_note(custom_midi_map[y].out));
     }
     else if (custom_midi_map[y].type == 2)
     {
@@ -7060,40 +7009,13 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
 
 void set_pattern_content_type_color_with_green_highlight(uint8_t pattern)
 {
-  if (pattern == seq.active_pattern)
-  {
-    if (seq.content_type[pattern] == 0) // Drumpattern
-      display.setTextColor(COLOR_DRUMS, DARKGREEN);
-    else if (seq.content_type[pattern] == 1) // Instrument Pattern
-      display.setTextColor(COLOR_INSTR, DARKGREEN);
-    else if (seq.content_type[pattern] == 2) //  chord  pattern
-      display.setTextColor(COLOR_CHORDS, DARKGREEN);
-    else if (seq.content_type[pattern] == 3) //   arp pattern
-      display.setTextColor(COLOR_ARP, DARKGREEN);
-  }
-  else
-  {
-    if (seq.content_type[pattern] == 0) // Drumpattern
-      display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
-    else if (seq.content_type[pattern] == 1) // Instrument Pattern
-      display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-    else if (seq.content_type[pattern] == 2) //  chord  pattern
-      display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
-    else if (seq.content_type[pattern] == 3) //   arp pattern
-      display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-  }
+  const bool isActivePattern = pattern == seq.active_pattern;
+  display.setTextColor(getContentTypeColor(seq.content_type[pattern]), isActivePattern ? DARKGREEN : COLOR_BACKGROUND);
 }
 
 void set_pattern_content_type_color_inverted(uint8_t pattern)
 {
-  if (seq.content_type[pattern] == 0) // Drumpattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
-  else if (seq.content_type[pattern] == 1) // Instrument Pattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_INSTR);
-  else if (seq.content_type[pattern] == 2) //  chord  pattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_CHORDS);
-  else if (seq.content_type[pattern] == 3) //  arp pattern
-    display.setTextColor(COLOR_BACKGROUND, COLOR_ARP);
+  display.setTextColor(COLOR_BACKGROUND, getContentTypeColor(seq.content_type[pattern]));
 }
 
 FLASHMEM void print_performance_name(int x, int y)
@@ -8131,7 +8053,7 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
           }
         }
         else // else it is a regular Drum Sample
-          show_smallfont_noGrid(y, CHAR_width_small * 17, 10, find_long_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
+          show_smallfont_noGrid(y, CHAR_width_small * 17, 10, get_drum_name_from_note(seq.note_data[seq.active_pattern][i]));
       }
       else if (seq.content_type[seq.active_pattern] > 0 && seq.content_type[seq.active_pattern] != 3) // Inst Track or Chord or Arp
       {
@@ -8611,7 +8533,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
             display.print(" ");
             display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
             if (seq.content_type[seq.active_pattern] == 0)
-              show(0, 6, 8, seq_find_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 1]));
+              show(0, 6, 8, get_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 1]));
             else
               seq_sub_velocity_editor_print_slicename_toprow();
             if (seq.active_function == 99)
@@ -9502,19 +9424,6 @@ void set_sample_type_color_of(uint8_t samplekey)
     display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
 }
 
-FLASHMEM void virtual_keyboard_print_buttons(bool showInstrumentButtons)
-{
-  // oct +- buttons
-  draw_button_on_grid(1, 16, "OCTAVE", "-", 0);
-  draw_button_on_grid(45, 16, "OCTAVE", "+", 0);
-
-  if (showInstrumentButtons) {
-    // instrument buttons
-    draw_button_on_grid(9, 16, "INSTR.", "-", 0);
-    draw_button_on_grid(37, 16, "INSTR.", "+", 0);
-  }
-}
-
 FLASHMEM void seq_pattern_editor_update_dynamic_elements()
 {
   if (seq.running == false)
@@ -9555,11 +9464,9 @@ FLASHMEM void seq_pattern_editor_update_dynamic_elements()
   }
   else if (seq.cycle_touch_element == 1)
   {
-    virtual_keyboard_print_buttons();
     draw_button_on_grid(45, 1, "BACK", "TO SEQ", 0);
-    virtual_keyboard();
+    drawVirtualKeyboard();
     update_step_rec_buttons();
-    virtual_keyboard_print_current_instrument();
     virtual_keyboard_print_velocity_bar();
   }
   display.setTextSize(2);
@@ -9782,14 +9689,6 @@ FLASHMEM void pattern_editor_menu_0()
 
 FLASHMEM void play_sample(uint8_t note) {
   handleNoteOn(drum_midi_channel, drum_config[note ].midinote, 90, 0);
-}
-
-FLASHMEM void play_sample_on_virtual_drumpads(uint8_t note) {
-  handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
-}
-
-FLASHMEM void play_sample_off_virtual_drumpads(uint8_t note) {
-  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note - 18].midinote, ts.virtual_keyboard_velocity);
 }
 
 FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
@@ -10290,7 +10189,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] < 210) // normal sample
           {
             if (seq.content_type[seq.active_pattern] == 0)
-              show(0, 1, 9, seq_find_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
+              show(0, 1, 9, get_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
             else if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) ||
               (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[1] != 99))
               seq_sub_pattern_editor_print_slicename_toprow();  //phtodo
@@ -10327,7 +10226,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F("REPLACE "));
               set_sample_type_color_of(seq.note_data[seq.active_pattern][seq.menu - 3]);
-              display.print(find_long_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
+              display.print(get_drum_name_from_note(seq.note_data[seq.active_pattern][seq.menu - 3]));
               display.setTextColor(GREEN, COLOR_BACKGROUND);
               display.print(F(" WITH "));
               set_sample_type_color();
@@ -11363,9 +11262,7 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
     else
     {
       draw_button_on_grid(45, 1, "MORE", "PARAM.", 0);
-      virtual_keyboard();
-      virtual_keyboard_print_buttons();
-      virtual_keyboard_print_current_instrument();
+      drawVirtualKeyboard();
     }
     print_static_texts_microsynth();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
@@ -15624,9 +15521,8 @@ FLASHMEM void UI_func_braids(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
     seq.cycle_touch_element = 1;
-    virtual_keyboard();
-    virtual_keyboard_print_buttons();
-    virtual_keyboard_print_current_instrument();
+    drawVirtualKeyboard();
+
     print_braids_static_texts();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
 
@@ -15634,7 +15530,6 @@ FLASHMEM void UI_func_braids(uint8_t param)
     generic_full_draw_required = true;
     update_selective_values_braids();
     generic_full_draw_required = false;
-
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -19194,31 +19089,6 @@ FLASHMEM void print_perfmod_buttons()
   }
 }
 
-FLASHMEM void print_drumpads()
-{
-  uint8_t offset = 18;
-  if (seq.cycle_touch_element == 1 || ts.keyb_in_menu_activated) {
-    char tmp[14];
-    char tmp2[14];
-    for (uint8_t x = 0; x < 6; x++)
-    {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%.6s"), drum_config[x + ts.virtual_keyboard_octave * 12 - offset].name);
-      snprintf_P(tmp2, sizeof(tmp2), PSTR("%.6s"), &drum_config[x + ts.virtual_keyboard_octave * 12 - offset].name[6]);
-      if (x + ts.virtual_keyboard_octave * 12 - offset < NUM_DRUMSET_CONFIG && x + ts.virtual_keyboard_octave * 12 - offset >= 0)
-        draw_button_on_grid(x * 9 + 1, 21, tmp, tmp2, 1);
-      else
-        draw_button_on_grid(x * 9 + 1, 21, "", "", 1);
-
-      snprintf_P(tmp, sizeof(tmp), PSTR("%.6s"), drum_config[x + 6 + ts.virtual_keyboard_octave * 12 - offset].name);
-      snprintf_P(tmp2, sizeof(tmp2), PSTR("%.6s"), &drum_config[x + 6 + ts.virtual_keyboard_octave * 12 - offset].name[6]);
-      if (x + 6 + ts.virtual_keyboard_octave * 12 - offset < NUM_DRUMSET_CONFIG && x + ts.virtual_keyboard_octave * 12 - offset >= -6)
-        draw_button_on_grid(x * 9 + 1, 26, tmp, tmp2, 1);
-      else
-        draw_button_on_grid(x * 9 + 1, 26, "", "", 1);
-    }
-  }
-}
-
 FLASHMEM void print_voice_select_default_help()
 {
   if (seq.cycle_touch_element != 1)
@@ -21881,7 +21751,9 @@ FLASHMEM void UI_func_format_flash(uint8_t param)
 
 FLASHMEM void load_sd_directory_files_only()
 {
+
   File sd_root = SD.open("/MIDI");
+
   fm.sd_sum_files = 0;
 
   while (true)
@@ -21973,6 +21845,11 @@ uint8_t smf_gm_mapping[48] = {
 
  };
 
+//   midireader reader;
+//   reader.open(filename);
+//   //   setCursor_textGrid_small(0, 0);
+//   //    display.print(filename);
+//   // display.print("   ");
 
  void midiCallback(midi_event* pev)
 // Called by the MIDIFile library when a file event needs to be processed
@@ -22247,6 +22124,12 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
     print_smf_parameters();
 
+//     // strcpy(fm.sd_prev_dir, "");
+//     //    strcpy(fm.sd_new_name, "/");
+//     if (generic_active_function == 0)
+//     {
+//       load_sd_directory_files_only();
+//     }
 
    // display.setTextColor(GREY1, COLOR_BACKGROUND);
 

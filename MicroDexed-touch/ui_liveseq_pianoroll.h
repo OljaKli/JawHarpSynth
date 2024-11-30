@@ -91,7 +91,6 @@ private:
     std::set<uint8_t> notes; // empty = all
   };
   std::vector<UpdateRange> drawRegionsX;
-  uint16_t GRID_X[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN];
 
   void initGUI(void);
   void drawPianoRoll(void);

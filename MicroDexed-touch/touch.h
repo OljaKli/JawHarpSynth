@@ -31,14 +31,14 @@ typedef struct dexed_live_mod_s
 
 typedef struct ts_s
 {
-  bool finished_calibration = false;
   uint8_t virtual_keyboard_octave = 3;
   uint8_t virtual_keyboard_instrument = 1; // 0=livesequencer 1=dexed0 2=dexed1 3=microsynth0 4=microsynth1 5=epiano 6=drums 7=braids, 8-...=pitched samples
+  uint8_t virtual_keyboard_prev_instrument = 0xFF;
   uint8_t virtual_keyboard_midi_channel = 1;
   uint8_t virtual_keyboard_velocity = 120;
   uint8_t msp_peak[NUM_MULTISAMPLES];
-  uint8_t current_virtual_keyboard_display_mode = 0;
-  uint8_t previous_virtual_keyboard_display_mode = 99;
+  uint8_t current_virtual_keyboard_display_mode = 0;   // 0=keys 1=pads 
+  uint8_t previous_virtual_keyboard_display_mode = 99; // 0=keys 1=pads 
 
   TS_Point p;
 
@@ -100,10 +100,7 @@ void registerTouchHandler(TouchFn touchFn);
 void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
-void virtual_keyboard();
-void handleVirtualKeyboardKeys();
-void touch_check_all_keyboard_buttons_livesequencer(); // TODO: remove me
-void virtual_keyboard_print_current_instrument();
+
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();

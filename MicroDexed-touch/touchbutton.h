@@ -44,6 +44,8 @@ public:
   static bool isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
   static ColorCombo getColors(Color color);
   static void clearButton(uint16_t x, uint16_t y, uint16_t color);
+  static uint16_t GRID_X(uint8_t x);
+  static uint16_t GRID_Y(uint8_t y);
 
 private:
   bool isSelected = false;
@@ -56,6 +58,8 @@ private:
   PressedState pressedState;
 
   static constexpr uint16_t LONGPRESS_TIME_MS = 600;
+  static constexpr uint8_t BUTTON_SPACING = 4;  // center in screen
+
 };
 
 #endif //TOUCHBUTTON_H
