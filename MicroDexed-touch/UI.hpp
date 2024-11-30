@@ -15564,7 +15564,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
     seq.cycle_touch_element = 1;
-    drawVirtualKeyboard(true);
+    drawVirtualKeyboard();
 
     print_braids_static_texts();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))

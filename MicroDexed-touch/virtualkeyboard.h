@@ -26,12 +26,24 @@
 #ifndef _VIRTUALKEYBOARD_H
 #define _VIRTUALKEYBOARD_H
 
+#include <stdint.h>
+
+enum VirtualKeyboardFlags : uint8_t {
+    VK_CLEARSCREEN = 1 << 0,
+    VK_DRAW_INSTRUMENT_BUTTONS = 1 << 1,
+    VK_DRAW_OCTAVE_BUTTONS = 1 << 2,
+    VK_DRAW_KEYS = 1 << 3,
+    VK_DRAW_OCTAVE = 1 << 4,
+    VK_DRAW_INSTUMENT_NAME = 1 << 5,
+    VK_DRAW_ALL = 0xFF
+};
+
 void virtual_keyboard_print_velocity_bar();
-void drawVirtualKeyboard(bool clearScreen = false);
+void drawVirtualKeyboard(uint8_t drawFlags = VK_DRAW_ALL);
 void handleVirtualKeyboardKeys();
 void processOctaveButtons();
 void touch_check_all_keyboard_buttons();
-void virtual_keyboard_print_buttons(bool showInstrumentButtons = true);
 void virtual_keyboard_smart_preselect_mode();
+
 
 #endif //_VIRTUALKEYBOARD_H

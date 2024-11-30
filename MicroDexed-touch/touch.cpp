@@ -336,7 +336,7 @@ FLASHMEM void handle_touchscreen_voice_select()
         border3_large_clear();
         seq.cycle_touch_element = 1;
         draw_button_on_grid(45, 1, "DEXED", "DETAIL", 0);
-        drawVirtualKeyboard(true);
+        drawVirtualKeyboard();
       }
     }
     if (check_button_on_grid(37, 1))
@@ -535,7 +535,7 @@ FLASHMEM void handle_touchscreen_pattern_editor()
         display.console = false;
         update_step_rec_buttons();
         virtual_keyboard_print_velocity_bar();
-        drawVirtualKeyboard(true);
+        drawVirtualKeyboard();
       }
     }
     else if (check_button_on_grid(45, 6) && seq.cycle_touch_element == 1)//rest button
@@ -623,7 +623,7 @@ FLASHMEM void handle_touchscreen_microsynth()
       {
         seq.cycle_touch_element = 1;
         draw_button_on_grid(45, 1, "MORE", "PARAM.", 0);
-        drawVirtualKeyboard(true);
+        drawVirtualKeyboard();
       }
     }
   }
@@ -901,7 +901,7 @@ FLASHMEM void handle_touchscreen_menu()
       ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
       if (ts.keyb_in_menu_activated)
       {
-        drawVirtualKeyboard(true);
+        drawVirtualKeyboard();
         draw_button_on_grid(45, 11, "KEYB", "OFF", 0);
       }
       else

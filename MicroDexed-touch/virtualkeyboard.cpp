@@ -40,7 +40,7 @@ void virtual_keyboard_print_current_instrument();
 void print_drumpads();
 void print_virtual_keyboard_octave();
 
-FLASHMEM void drawVirtualKeyboard(bool clearScreen)
+FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 {
   if (ts.virtual_keyboard_instrument == 0 && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer)) {
     ts.virtual_keyboard_instrument = 1;
@@ -50,19 +50,29 @@ FLASHMEM void drawVirtualKeyboard(bool clearScreen)
     ts.current_virtual_keyboard_display_mode = (ts.virtual_keyboard_instrument == 6) ? 1 : 0; // pad view for drums, key for other
   }
   const bool modeChanged = ts.current_virtual_keyboard_display_mode != ts.previous_virtual_keyboard_display_mode;
-  DBG_LOG(printf("mode changed: %i, cls: %i\n", modeChanged, clearScreen));
-  clearScreen |= modeChanged;
+  if(modeChanged) {
+    drawFlags |= VK_DRAW_KEYS;
+  }
   ts.previous_virtual_keyboard_display_mode = ts.current_virtual_keyboard_display_mode;
 
-  if (clearScreen) { // clear pads / keys area
-    display.console = true;
-    display.fillRect(0, TouchButton::GRID_Y(4), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(4), COLOR_BACKGROUND);
+  if (drawFlags & VK_DRAW_OCTAVE_BUTTONS) {
+    // draw oct +- buttons
+    TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(3), "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
   }
-  virtual_keyboard_print_buttons(ts.virtual_keyboard_instrument != 0);
 
-  if(ts.virtual_keyboard_prev_instrument != ts.virtual_keyboard_instrument) {
+  if (ts.virtual_keyboard_instrument == 0) {
+    // do not draw instrument buttons for live sequencer
+    drawFlags &= ~VK_DRAW_INSTRUMENT_BUTTONS;
+  }
+  if (drawFlags & VK_DRAW_INSTRUMENT_BUTTONS) {
+    // draw instrument buttons
+    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "INSTR.", "-", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(3), "INSTR.", "+", TouchButton::BUTTON_NORMAL);
+  }
+
+  if(drawFlags & VK_DRAW_INSTUMENT_NAME) {
     virtual_keyboard_print_current_instrument();
-    ts.virtual_keyboard_prev_instrument = ts.virtual_keyboard_instrument;
   }
 
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
@@ -71,68 +81,66 @@ FLASHMEM void drawVirtualKeyboard(bool clearScreen)
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1 && seq.step_recording) {
     virtual_keyboard_print_velocity_bar();
   }
+    
+  if (drawFlags & VK_DRAW_KEYS) {
+    // clear keys area
+    display.console = true;
+    display.fillRect(0, TouchButton::GRID_Y(4), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(4), COLOR_BACKGROUND);
 
-  if (ts.current_virtual_keyboard_display_mode == 0) //piano keys
-  {
-    // draw white keys
-    for (uint8_t x = 0; x < 10; x++)
-    {
-      display.console = true;
-      display.fillRect(1 + x * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE), VIRT_KEYB_YPOS, KEY_WIDTH_WHITE, KEY_HEIGHT_WHITE, COLOR_SYSTEXT); // WHITE key
-      display.console = false;
-    }
-
-    // draw black keys
-    for (uint8_t x = 0; x < 16; x++)
-    {
-      if (seq.piano[x] == 1)
-      {
+    if (ts.current_virtual_keyboard_display_mode == 0) { //piano keys
+      // draw white keys
+      for (uint8_t x = 0; x < 10; x++) {
         display.console = true;
-        display.fillRect(x * KEY_OFFSET_BLACK, VIRT_KEYB_YPOS, KEY_WIDTH_BLACK, KEY_HEIGHT_BLACK, COLOR_BACKGROUND); // BLACK key
+        display.fillRect(1 + x * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE), VIRT_KEYB_YPOS, KEY_WIDTH_WHITE, KEY_HEIGHT_WHITE, COLOR_SYSTEXT); // WHITE key
         display.console = false;
       }
+
+      // draw black keys
+      for (uint8_t x = 0; x < 16; x++) {
+        if (seq.piano[x] == 1) {
+          display.console = true;
+          display.fillRect(x * KEY_OFFSET_BLACK, VIRT_KEYB_YPOS, KEY_WIDTH_BLACK, KEY_HEIGHT_BLACK, COLOR_BACKGROUND); // BLACK key
+          display.console = false;
+        }
+      }
+
+      print_virtual_keyboard_octave();
+    }
+    else if (ts.current_virtual_keyboard_display_mode == 1) {
+      print_drumpads();
     }
   }
-  else if (ts.current_virtual_keyboard_display_mode == 1) {
-    print_drumpads();
+
+  if (drawFlags & VK_DRAW_OCTAVE) {
+    display.setCursor(32 * CHAR_width_small, 17 * CHAR_height_small);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.print("OCT");
+    display.setTextSize(2);
+    display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small);
+    display.print(ts.virtual_keyboard_octave);
+    display.setTextSize(1);
   }
-  print_virtual_keyboard_octave();
+
   display.setTextSize(2);
   display.console = false;
-}
-
-FLASHMEM void print_virt_keyboard_octave_icon()
-{
-  display.setCursor(32 * CHAR_width_small, 17 * CHAR_height_small);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print("OCT");
-  display.setTextSize(2);
-  display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small);
-  display.print(ts.virtual_keyboard_octave);
-  display.setTextSize(1);
 }
 
 FLASHMEM void print_virtual_keyboard_octave()
 {
   display.setTextSize(1);
-  if (ts.current_virtual_keyboard_display_mode == 0)
-  {
-    // draw octave labels
-    uint8_t indexes[2] = { 0, 7 };
-    for (int i = 0; i < 2; i++)
-    {
-      if (ts.virtual_keyboard_state_white & (1 << indexes[i])) {
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      }
-      else {
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      }
-      display.setCursor(1 + indexes[i] * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE) + KEY_LABEL_OFFSET, VIRT_KEYB_YPOS + 57.75);
-      display.print("C");
-      display.print(ts.virtual_keyboard_octave + i);
+  // draw octave labels
+  uint8_t indexes[2] = { 0, 7 };
+  for (int i = 0; i < 2; i++) {
+    if (ts.virtual_keyboard_state_white & (1 << indexes[i])) {
+      display.setTextColor(COLOR_SYSTEXT, RED);
     }
+    else {
+      display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+    }
+    display.setCursor(1 + indexes[i] * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE) + KEY_LABEL_OFFSET, VIRT_KEYB_YPOS + 57.75);
+    display.print("C");
+    display.print(ts.virtual_keyboard_octave + i);
   }
-  print_virt_keyboard_octave_icon();
 }
 
 FLASHMEM void virtual_keyboard_key_off_white(uint8_t x)
@@ -142,10 +150,10 @@ FLASHMEM void virtual_keyboard_key_off_white(uint8_t x)
   display.setTextSize(1);
 
   // draw white keys
-  for (uint8_t z = 0; z < x; z++)
-  {
-    if (seq.piano2[z] == 1)
+  for (uint8_t z = 0; z < x; z++) {
+    if (seq.piano2[z] == 1) {
       halftones = halftones + 1;
+    }
   }
   // handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note, 120);
   handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 0);
@@ -214,7 +222,7 @@ FLASHMEM void touch_button_inst_up()
     ts.virtual_keyboard_instrument = 12;
   }
 
-  drawVirtualKeyboard();
+  drawVirtualKeyboard(VK_DRAW_INSTRUMENT_BUTTONS | VK_DRAW_INSTUMENT_NAME);
 }
 FLASHMEM void touch_button_inst_down()
 {
@@ -226,7 +234,7 @@ FLASHMEM void touch_button_inst_down()
     ts.virtual_keyboard_octave = 6;
   }
 
-  drawVirtualKeyboard();
+  drawVirtualKeyboard(VK_DRAW_INSTRUMENT_BUTTONS | VK_DRAW_INSTUMENT_NAME);
 }
 
 FLASHMEM void processOctaveButtons() {
@@ -247,19 +255,6 @@ FLASHMEM void touch_check_all_keyboard_buttons()
   }
   if(TouchButton::isPressed(TouchButton::GRID_X(4), TouchButton::GRID_Y(3))) {
     touch_button_inst_up();
-  }
-}
-
-FLASHMEM void virtual_keyboard_print_buttons(bool showInstrumentButtons)
-{
-  // oct +- buttons
-  TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(3), "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
-
-  if(showInstrumentButtons) {
-    // instrument buttons
-    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "INSTR.", "-", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(3), "INSTR.", "+", TouchButton::BUTTON_NORMAL);
   }
 }
 
