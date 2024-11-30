@@ -98,7 +98,14 @@ using namespace TeensyTimerTool;
 
 #include "livesequencer.h"
 #include <vector>
+
 //#include "MidiReader.h"
+
+
+
+
+
+
 
 uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
@@ -1015,6 +1022,11 @@ void updateEncoderR(void)
 FLASHMEM void setup()
 {
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+  pinMode(LED_MIDI_IN, OUTPUT);
+  pinMode(LED_MIDI_OUT, OUTPUT);
+#endif
+
 #ifdef DEBUG
   LOG.println(CrashReport);
   // setup_debug_message();
@@ -1247,6 +1259,9 @@ FLASHMEM void setup()
 
     sample_envelope[instance_id]->releaseNoteOn(0);
     sample_envelope[instance_id + NUM_DRUMS]->releaseNoteOn(0);
+
+    SMF.begin(&(SdFat&)SD);
+    SMF.setMidiHandler(midiCallback);
 
   }
 
@@ -2065,9 +2080,52 @@ void print_gate_state(uint8_t g)
 
 bool display_buffer_envelopes[NUM_DRUMS];
 bool display_buffer_samples[NUM_DRUMS];
+bool smf_playing = false;
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+uint8_t LED_MIDI_IN_counter = 0;
+uint8_t LED_MIDI_OUT_counter = 0;
+#endif
 
 void loop()
 {
+
+ #ifdef MIDI_ACTIVITY_LIGHTS
+  if (LED_MIDI_OUT_counter != 0)
+  {
+    if (LED_MIDI_OUT_counter == 1)
+    {
+      digitalWrite(LED_MIDI_OUT, HIGH);
+      LED_MIDI_OUT_counter++;
+    }
+    else
+    {
+      LED_MIDI_OUT_counter++;
+      if (LED_MIDI_OUT_counter > 200)
+      {
+        digitalWrite(LED_MIDI_OUT, LOW);
+        LED_MIDI_OUT_counter = 0;
+      }
+    }
+  }
+   if (LED_MIDI_IN_counter != 0)
+  {
+    if (LED_MIDI_IN_counter == 1)
+    {
+      digitalWrite(LED_MIDI_IN, HIGH);
+      LED_MIDI_IN_counter++;
+    }
+    else
+    {
+      LED_MIDI_IN_counter++;
+      if (LED_MIDI_IN_counter > 200)
+      {
+        digitalWrite(LED_MIDI_IN, LOW);
+        LED_MIDI_IN_counter = 0;
+      }
+    }
+  }
+#endif
 
   // Serial read (commands from web remote)
   incomingSerialByte = 0;
@@ -2164,9 +2222,9 @@ void loop()
         {
 
           if (d < NUM_DRUMS / 2)
-            setCursor_textGrid_small(12 + d * 2, 19);
+            setCursor_textGrid_small(12 + d * 2, 11);
           else
-            setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
+            setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 12);
 
           if (Drum[d]->isPlaying())
           {
@@ -2209,6 +2267,28 @@ void loop()
       if (seq.running == false) {
         sub_step_recording(false, 0);
       }
+    }
+    else if (!SMF.isEOF())
+    {
+      if (SMF.getNextEvent()) {
+      }
+    }
+    else if (smf_playing)
+    {
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+      {
+        if (generic_temp_select_menu == 1)
+          display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+        else
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        setCursor_textGrid_small(33, 6);
+        display.print("STOPPED");
+        print_smf_parameters();
+        helptext_r("START PLAYING");
+        seq.edit_state = false;
+      }
+      smf_playing = false;
+      SMF.close();
     }
 
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
@@ -2859,6 +2939,8 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
+
+
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
@@ -2890,6 +2972,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #ifdef MIDI_DEVICE_USB_HOST
     if (device == 1)
       midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
+
 #endif
 
 #ifdef MIDI_DEVICE_DIN
@@ -2907,6 +2990,11 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
       //        LOG.print(inVelocity);
       //        LOG.println();
       //    #endif
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+      LED_MIDI_OUT_counter = 1;
+#endif
+
     }
 #endif
 

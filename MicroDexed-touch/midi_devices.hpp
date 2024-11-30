@@ -127,6 +127,10 @@ void MD_sendControlChange(uint8_t channel, uint8_t cc, uint8_t value);
 
 #include "livesequencer.h"
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+extern uint8_t LED_MIDI_IN_counter;
+#endif
+
 extern LiveSequencer liveSeq;
 extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
@@ -189,6 +193,10 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
   }
 #ifdef DEBUG
   LOG.printf_P(PSTR("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d"), text, midi_device, inChannel, inData1, inData2);
+#endif
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+  LED_MIDI_IN_counter = 1;
 #endif
 
   // MIDI THRU (only for non _internal MDT)
@@ -487,20 +495,20 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
   default:
     break;
   }
-// #ifdef DEBUG
-//   LOG.printf_P(PSTR("[%s] %s"), midi_device, text);
-// #endif
+  // #ifdef DEBUG
+  //   LOG.printf_P(PSTR("[%s] %s"), midi_device, text);
+  // #endif
 
-  // MIDI THRU
+    // MIDI THRU
   if (configuration.sys.soft_midi_thru == 1)
   {
 #ifdef MIDI_DEVICE_USB
     if (strcmp(MIDI_BY_USB, midi_device))
     {
       usbMIDI.sendRealTime(event);
-// #ifdef DEBUG
-//       LOG.print(F(" THRU->MIDI_USB"));
-// #endif
+      // #ifdef DEBUG
+      //       LOG.print(F(" THRU->MIDI_USB"));
+      // #endif
     }
 #endif
 
@@ -508,9 +516,9 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
     if (strcmp(MIDI_BY_DIN, midi_device))
     {
       midi_serial.sendRealTime(event);
-// #ifdef DEBUG
-//       LOG.print(F(" THRU->MIDI_DIN"));
-// #endif
+      // #ifdef DEBUG
+      //       LOG.print(F(" THRU->MIDI_DIN"));
+      // #endif
     }
 #endif
 
@@ -525,9 +533,9 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 #endif
   }
 
-// #ifdef DEBUG
-//   LOG.println();
-// #endif
+  // #ifdef DEBUG
+  //   LOG.println();
+  // #endif
 }
 
 ///* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)

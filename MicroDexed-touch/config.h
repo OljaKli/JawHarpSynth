@@ -75,6 +75,11 @@
 #define MIDI_DEVICE_USB 1
 #define MIDI_DEVICE_USB_HOST
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+#define LED_MIDI_IN 40
+#define LED_MIDI_OUT 36
+#endif
+
 //*************************************************************************************************
 //* USB HOST KEYPAD/KEYBOARD/GAMEPAD SUPPORT
 //*************************************************************************************************

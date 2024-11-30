@@ -783,16 +783,16 @@ void sequencer_part1(void)
           }
 
 
-           if (seq.track_type[d] == 4)
-      { // sliced drums 
+          if (seq.track_type[d] == 4)
+          { // sliced drums 
 #if NUM_DRUMS > 0
-        if (seq.note_data[seq.current_pattern[d]][seq.step] > 0)
-        {
-            if (check_probability(seq.current_pattern[d]))
-              handleNoteOn(slices_midi_channel, seq.note_data[seq.current_pattern[d]][seq.step], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
-        }
+            if (seq.note_data[seq.current_pattern[d]][seq.step] > 0)
+            {
+              if (check_probability(seq.current_pattern[d]))
+                handleNoteOn(slices_midi_channel, seq.note_data[seq.current_pattern[d]][seq.step], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+            }
 #endif
-      }
+          }
         }
         // after here not triggered by a key input -  arp only
       }
@@ -801,6 +801,20 @@ void sequencer_part1(void)
   }
 
   //handle pattern end moved to interrupt timer
+
+// #ifdef MIDI_ACTIVITY_LIGHTS //TEST
+//   if (seq.step % 2 == 0)
+//   {
+//     digitalWrite(LED_MIDI_IN, HIGH);
+//     digitalWrite(LED_MIDI_OUT, LOW);
+//   }
+//   else
+//   {
+//     digitalWrite(LED_MIDI_IN, LOW);
+//     digitalWrite(LED_MIDI_OUT, HIGH);
+//   }
+// #endif
+
 }
 
 void sequencer_part2(void)
@@ -843,9 +857,9 @@ void sequencer_part2(void)
           }
           seq.noteoffsent[d] = true;
         }
-        if (seq.track_type[d] == 2  ) // Chords
+        if (seq.track_type[d] == 2) // Chords
         { //&& seq.note_data[seq.current_pattern[d]][seq.step] != 130
-          if (seq.prev_vel[d] > 199 )
+          if (seq.prev_vel[d] > 199)
           {
             for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
             {
@@ -918,7 +932,7 @@ void sequencer(void)
   if (seq.running) {
     // if (seq.ticks < 4)
     //   seq_live_recording();
-    if(seq.ticks == 0 && seq.step == 0) {
+    if (seq.ticks == 0 && seq.step == 0) {
       liveSeq.handlePatternBegin();
     }
 
