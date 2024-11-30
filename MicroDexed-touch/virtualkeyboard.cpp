@@ -211,7 +211,7 @@ FLASHMEM void touch_button_inst_up()
     ts.virtual_keyboard_instrument = 12;
   }
 
-  drawVirtualKeyboard(VK_DRAW_INSTRUMENT_BUTTONS | VK_DRAW_INSTUMENT_NAME);
+  drawVirtualKeyboard(VK_DRAW_INSTUMENT_NAME);
 }
 FLASHMEM void touch_button_inst_down()
 {
@@ -223,7 +223,7 @@ FLASHMEM void touch_button_inst_down()
     ts.virtual_keyboard_octave = 6;
   }
 
-  drawVirtualKeyboard(VK_DRAW_INSTRUMENT_BUTTONS | VK_DRAW_INSTUMENT_NAME);
+  drawVirtualKeyboard(VK_DRAW_INSTUMENT_NAME);
 }
 
 FLASHMEM void processOctaveButtons() {
@@ -277,7 +277,7 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   switch (ts.virtual_keyboard_instrument) {
   case 0:
     display.print(F("LIVESEQ"));
-    ts.virtual_keyboard_midi_channel = 20;  //fake channel for livesequence
+    ts.virtual_keyboard_midi_channel = 20;  //fake channel for livesequencer
     break;
   case 1:
     display.print(F("DEXED1 "));
