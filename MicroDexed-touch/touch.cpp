@@ -175,12 +175,13 @@ FLASHMEM void draw_back_touchbutton()
     // back text can be drawn as a touch button
     if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
     {
-      draw_button_on_grid(2, 25, "GO", back_text, 1);
+      TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), "GO", back_text, TouchButton::BUTTON_NORMAL);
     }
     else
       if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
       {
-        draw_button_on_grid(2, 25, "", "", 98);//clear
+        TouchButton::clearButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), COLOR_BACKGROUND);
+
       }
   }
   if (legacy_touch_button_back_page())
@@ -195,7 +196,7 @@ FLASHMEM void draw_back_touchbutton()
   }
   else if (touch_button_back_page() && seq.cycle_touch_element != 1)
   {
-    draw_button_on_grid(2, 25, "GO", back_text, 1);
+    TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), "GO", back_text, TouchButton::BUTTON_NORMAL);
   }
 }
 
@@ -350,76 +351,76 @@ FLASHMEM void handle_touchscreen_voice_select()
           configuration.sys.favorites = 0;
         print_voice_select_fav_search_button();
       }
-    else {
-      if (seq.cycle_touch_element != 1)
-      {
-        if (check_button_on_grid(20, 23)) {
-          reset_live_modifiers();
-          print_perf_modifier_buttons();
-        }
-        else
-          if (selected_instance_id == 0)
-          {
-            if (check_button_on_grid(2, 23))
-            {
-              if (dexed_live_mod.active_button != 1)
-                dexed_live_mod.active_button = 1;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(11, 23))
-            {
-              if (dexed_live_mod.active_button != 2)
-                dexed_live_mod.active_button = 2;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(45, 23))
-              LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
-          }
-          else if (selected_instance_id == 1)
-          {
-            if (check_button_on_grid(2, 23))
-            {
-              if (dexed_live_mod.active_button != 3)
-                dexed_live_mod.active_button = 3;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(11, 23))
-            {
-              if (dexed_live_mod.active_button != 4)
-                dexed_live_mod.active_button = 4;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(45, 23))
-              LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
+      else {
+        if (seq.cycle_touch_element != 1)
+        {
+          if (check_button_on_grid(20, 23)) {
+            reset_live_modifiers();
+            print_perf_modifier_buttons();
           }
           else
-            dexed_live_mod.active_button = 0;
+            if (selected_instance_id == 0)
+            {
+              if (check_button_on_grid(2, 23))
+              {
+                if (dexed_live_mod.active_button != 1)
+                  dexed_live_mod.active_button = 1;
+                else
+                  dexed_live_mod.active_button = 0;
+                print_perf_modifier_buttons();
+              }
+              else if (check_button_on_grid(11, 23))
+              {
+                if (dexed_live_mod.active_button != 2)
+                  dexed_live_mod.active_button = 2;
+                else
+                  dexed_live_mod.active_button = 0;
+                print_perf_modifier_buttons();
+              }
+              else if (check_button_on_grid(45, 23))
+                LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
+            }
+            else if (selected_instance_id == 1)
+            {
+              if (check_button_on_grid(2, 23))
+              {
+                if (dexed_live_mod.active_button != 3)
+                  dexed_live_mod.active_button = 3;
+                else
+                  dexed_live_mod.active_button = 0;
+                print_perf_modifier_buttons();
+              }
+              else if (check_button_on_grid(11, 23))
+              {
+                if (dexed_live_mod.active_button != 4)
+                  dexed_live_mod.active_button = 4;
+                else
+                  dexed_live_mod.active_button = 0;
+                print_perf_modifier_buttons();
+              }
+              else if (check_button_on_grid(45, 23))
+                LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
+            }
+            else
+              dexed_live_mod.active_button = 0;
 
-        if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
-        {
-          helptext_r("< > CHANGE MODIFIER VALUE");
-          display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-          print_empty_spaces(38);
-          display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-          print_empty_spaces(9);
-          display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-          display.print(F(" PUSH TO RETURN"));
+          if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
+          {
+            helptext_r("< > CHANGE MODIFIER VALUE");
+            display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+            print_empty_spaces(38);
+            display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
+            print_empty_spaces(9);
+            display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+            display.print(F(" PUSH TO RETURN"));
+          }
+          else
+          {
+            print_voice_select_default_help();
+          }
+          print_voice_settings_in_dexed_voice_select(false, true);
         }
-        else
-        {
-          print_voice_select_default_help();
-        }
-        print_voice_settings_in_dexed_voice_select(false, true);
       }
-    }
   }
   if (seq.cycle_touch_element == 1) {
     handleTouchVirtualKeyboard();
@@ -769,15 +770,13 @@ FLASHMEM void handle_touchscreen_custom_mappings()
 extern void play_sample(uint8_t note);
 FLASHMEM void handle_touchscreen_drums()
 {
-  if (numTouchPoints > 0)
+  //  if (numTouchPoints > 0)
+  if (TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(5)))
   {
-    if (check_button_on_grid(12, 25))
-    {
-      draw_button_on_grid(12, 25, "PLAY", "SAMPLE", 2);
-      play_sample(activeSample);
-      delay(100);
-         draw_button_on_grid(12, 25, "PLAY", "SAMPLE", 1);
-    }
+    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(5), "PLAY", "SAMPLE", TouchButton::BUTTON_RED);
+    play_sample(activeSample);
+    delay(60);
+    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(5), "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
   }
 }
 
@@ -866,44 +865,46 @@ FLASHMEM void handle_touchscreen_braids()
 
 FLASHMEM void draw_menu_ui_icons()
 {
-  draw_button_on_grid(2, 18, "DEXED", "VOICE", 0);
-  draw_button_on_grid(13, 18, "SONG", "EDIT", 0);
-  draw_button_on_grid(24, 18, "PATT", "EDIT", 0);
+  TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(3), "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "SONG", "EDITOR", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(TouchButton::GRID_X(2), TouchButton::GRID_Y(3), "PATT", "EDITOR", TouchButton::BUTTON_NORMAL);
+
   if (seq.running)
-    draw_button_on_grid(45, 18, "SEQ.", "STOP", 2);
+    TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "STOP", TouchButton::BUTTON_RED);
   else
-    draw_button_on_grid(45, 18, "SEQ.", "START", 1);
-  draw_button_on_grid(13, 25, "LOAD", "PERF", 0);
-  draw_button_on_grid(24, 25, "SAVE", "PERF", 0);
-  if (multiband_active)
-    draw_button_on_grid(35, 25, "MULTI", "BAND", 2);
-  else
-    draw_button_on_grid(35, 25, "MULTI", "BAND", 0);
-  draw_button_on_grid(45, 25, "MAIN", "MIX", 0);
-  draw_button_on_grid(45, 11, "", "", 99); // print keyboard icon
-}
+    TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
+
+  TouchButton::drawButton(TouchButton::GRID_X(2), TouchButton::GRID_Y(5), "LOAD", "PERF", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(TouchButton::GRID_X(3), TouchButton::GRID_Y(5), "SAVE", "PERF", TouchButton::BUTTON_NORMAL);
+
+  TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(5), "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(5), "MAIN", "MIXER", TouchButton::BUTTON_NORMAL);
+
+  TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(2), "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);
+
+}/////xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 FLASHMEM void handle_touchscreen_menu()
 {
-  if (ts.touch_ui_drawn_in_menu == false)
+  if (LCDML.FUNC_getID() > _LCDML_DISP_cnt)
   {
-    if (ts.keyb_in_menu_activated)
+    if (ts.touch_ui_drawn_in_menu == false)
     {
-      display.console = true;
-      display.fillRect(0, TouchButton::GRID_Y(3), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(3), COLOR_BACKGROUND);
-      display.console = false;
-      drawVirtualKeyboard();
-      draw_button_on_grid(45, 11, "KEYB", "OFF", 0);
+      if (ts.keyb_in_menu_activated)
+      {
+        drawVirtualKeyboard();
+        TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(2), "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
+      }
+      else
+      {
+        draw_menu_ui_icons();
+      }
+      ts.touch_ui_drawn_in_menu = true;
     }
-    else
-    {
-      draw_menu_ui_icons();
-    }
-    ts.touch_ui_drawn_in_menu = true;
-  }
-  if (numTouchPoints > 0)
-  {
-    if (check_button_on_grid(45, 11))
+    //if (numTouchPoints > 0)
+    //{
+
+    if (TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(2)))
     {
       display.console = true;
       display.fillRect(0, TouchButton::GRID_Y(3), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(3), COLOR_BACKGROUND);
@@ -912,7 +913,7 @@ FLASHMEM void handle_touchscreen_menu()
       if (ts.keyb_in_menu_activated)
       {
         drawVirtualKeyboard();
-        draw_button_on_grid(45, 11, "KEYB", "OFF", 0);
+        TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(2), "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
       }
       else
       {
@@ -925,59 +926,58 @@ FLASHMEM void handle_touchscreen_menu()
     }
     if (ts.keyb_in_menu_activated == false)
     {
-      if (check_button_on_grid(2, 18))
+      if (TouchButton::isPressed(TouchButton::GRID_X(0), TouchButton::GRID_Y(3)))
       {
         LCDML.OTHER_jumpToFunc(UI_func_voice_select);
       }
-      else if (check_button_on_grid(13, 18))
+      else  if (TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(3)))
       {
         LCDML.OTHER_jumpToFunc(UI_func_song);
       }
-      else if (check_button_on_grid(24, 18))
+      else  if (TouchButton::isPressed(TouchButton::GRID_X(2), TouchButton::GRID_Y(3)))
       {
         LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
       }
-      else if (check_button_on_grid(45, 18))
+      else if (TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(3)))
       {
         if (seq.running)
         {
           handleStop();
-          draw_button_on_grid(45, 18, "SEQ.", "START", 1);
+          // TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
         }
         else
         {
           handleStart();
-          draw_button_on_grid(45, 18, "SEQ.", "STOP", 2);
+          // TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "STOP",  TouchButton::BUTTON_RED );
         }
       }
-      else if (check_button_on_grid(13, 25))
+      else if (TouchButton::isPressed(TouchButton::GRID_X(2), TouchButton::GRID_Y(5)))
       {
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         LCDML.OTHER_jumpToFunc(UI_func_load_performance);
       }
-      else if (check_button_on_grid(24, 25))
+      else if (TouchButton::isPressed(TouchButton::GRID_X(3), TouchButton::GRID_Y(5)))
       {
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         LCDML.OTHER_jumpToFunc(UI_func_save_performance);
       }
-      else if (check_button_on_grid(45, 25))
+      else if (TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(5)))
       {
         LCDML.OTHER_jumpToFunc(UI_func_mixer);
       }
-      else if (check_button_on_grid(35, 25))
+      else if (TouchButton::isPressed(TouchButton::GRID_X(4), TouchButton::GRID_Y(5)))
       {
         multiband_active = !multiband_active;
-        if (multiband_active)
-          draw_button_on_grid(35, 25, "MULTI", "BAND", 2);
-        else
-          draw_button_on_grid(35, 25, "MULTI", "BAND", 0);
+        TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(5), "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+
         mb_set_mutes();
         mb_set_master();
         mb_set_compressor();
       }
-      else if (check_button_on_grid(2, 25)) // back button
+      //else if (check_button_on_grid(2, 25)) // back button
+      else if (TouchButton::isPressed(TouchButton::GRID_X(0), TouchButton::GRID_Y(5)))// back button
       {
         // LCDML.FUNC_goBackToMenu(); 
         LCDML.BT_quit();
@@ -1254,7 +1254,8 @@ FLASHMEM void handle_page_with_touch_back_button()
 {
   if (numTouchPoints > 0)
   {
-    if (seq.cycle_touch_element != 1 && check_button_on_grid(2, 25)) // back button
+    // if (seq.cycle_touch_element != 1 && check_button_on_grid(2, 25)) // back button
+    if (seq.cycle_touch_element != 1 && TouchButton::isPressed(TouchButton::GRID_X(0), TouchButton::GRID_Y(5))) // back button
     {
       LCDML.BT_quit();
     }

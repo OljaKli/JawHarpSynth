@@ -2090,7 +2090,7 @@ uint8_t LED_MIDI_OUT_counter = 0;
 void loop()
 {
 
- #ifdef MIDI_ACTIVITY_LIGHTS
+#ifdef MIDI_ACTIVITY_LIGHTS
   if (LED_MIDI_OUT_counter != 0)
   {
     if (LED_MIDI_OUT_counter == 1)
@@ -2108,7 +2108,7 @@ void loop()
       }
     }
   }
-   if (LED_MIDI_IN_counter != 0)
+  if (LED_MIDI_IN_counter != 0)
   {
     if (LED_MIDI_IN_counter == 1)
     {
@@ -2155,6 +2155,7 @@ void loop()
     else if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) {
       // menu
       handle_touchscreen_menu();
+      // registerTouchHandler(handle_touchscreen_menu);
       scope.draw_scope(230, 18, 87, 64);
     }
 
@@ -4526,7 +4527,8 @@ void handleStart(void)
       print_arp_start_stop_button();
     }
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
-      draw_button_on_grid(45, 18, "SEQ.", "STOP", 2);
+      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "STOP", TouchButton::BUTTON_RED);
+
   }
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
@@ -4619,7 +4621,7 @@ void handleStop(void)
       print_arp_start_stop_button();
     }
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
-      draw_button_on_grid(45, 18, "SEQ.", "START", 1);
+      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
   }
 }
 

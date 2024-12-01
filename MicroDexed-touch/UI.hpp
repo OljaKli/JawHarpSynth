@@ -392,7 +392,6 @@ extern flash_t flash_infos;
    GLOBAL
 ************************************************************************/
 elapsedMillis back_from_volume;
-uint8_t instance_num[8][8];
 PROGMEM const char accepted_chars[] = " _ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyz";
 
 int temp_int;
@@ -525,7 +524,6 @@ void display_bar_int(const char* title, uint32_t value, float factor, int32_t mi
 void display_bar_float(const char* title, float value, float factor, int32_t min_value, int32_t max_value, uint8_t size_number, uint8_t size_fraction, bool zeros, bool sign, bool init);
 void display_meter_int(const char* title, uint32_t value, float factor, float offset, int32_t min_value, int32_t max_value, uint8_t size, bool zeros, bool sign, bool init);
 void display_meter_float(const char* title, float value, float factor, float offset, int32_t min_value, int32_t max_value, uint8_t size_number, uint8_t size_fraction, bool zeros, bool sign, bool init);
-void display_OP_active_instance_number(uint8_t instance_id, uint8_t op);
 void string_trim(char* s);
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
@@ -586,12 +584,12 @@ LCDML_add(8, LCDML_0_1, 8, "Save Voice", UI_func_save_voice);
 LCDML_add(9, LCDML_0, 2, "E-Piano", UI_func_epiano);
 LCDML_add(10, LCDML_0, 3, "MicroSynth", UI_func_microsynth);
 LCDML_add(11, LCDML_0, 4, "Braids", UI_func_braids);
-LCDML_add(12, LCDML_0, 5, "MultiSample", UI_func_MultiSamplePlay);
+LCDML_add(12, LCDML_0, 5, "MultiSamplePlayer", UI_func_MultiSamplePlay);
 LCDML_add(13, LCDML_0, 6, "Drums", UI_func_drums);
 LCDML_add(14, LCDML_0, 7, "Master Effects", NULL);
 LCDML_add(15, LCDML_0_7, 1, "Delay+Reverb", UI_func_master_effects);
-LCDML_add(16, LCDML_0_7, 2, "SideChain", UI_func_sidechain);
-LCDML_add(17, LCDML_0_7, 3, "Multiband", UI_func_multiband_dynamics);
+LCDML_add(16, LCDML_0_7, 2, "SideChain Comp.", UI_func_sidechain);
+LCDML_add(17, LCDML_0_7, 3, "Multiband Comp.", UI_func_multiband_dynamics);
 LCDML_add(18, LCDML_0, 8, "Sequencer", NULL);
 LCDML_add(19, LCDML_0_8, 1, "Song", UI_func_song);
 LCDML_add(20, LCDML_0_8, 2, "Pattern Editor", UI_func_seq_pattern_editor);
@@ -672,7 +670,7 @@ FLASHMEM void unregisterScope(void) {
 }
 
 FLASHMEM uint16_t getContentTypeColor(uint8_t contentType) {
-  switch(contentType) {
+  switch (contentType) {
   case 0:
     return COLOR_DRUMS;
   case 1:
@@ -1575,16 +1573,10 @@ FLASHMEM bool touch_button_back_page() //modern pages with touch back button
     return false;
 }
 
-FLASHMEM void border0() // main Border  default Colors = GREY2/4
-{
-  display.console = true;
-  display.drawRect(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, GREY4); // Main Border
-}
-
 FLASHMEM void border1_clear() // upper left
 {
   display.console = true;
-  display.fillRect(1, CHAR_height, CHAR_width * 19 - 1, CHAR_height * display_rows, COLOR_BACKGROUND);
+  display.fillRect(0, CHAR_height, CHAR_width * 19, CHAR_height * display_rows, COLOR_BACKGROUND);
 }
 
 FLASHMEM void border3_clear() // lower left
@@ -1602,7 +1594,7 @@ FLASHMEM void border3_large() // lower left+right as one window
 FLASHMEM void border3_large_clear() // lower left+right as one window
 {
   display.console = true;
-  display.fillRect(1, CHAR_height * 5, DISPLAY_WIDTH, DISPLAY_HEIGHT - CHAR_height * 5, COLOR_BACKGROUND);
+  display.fillRect(0, CHAR_height * 5, DISPLAY_WIDTH, DISPLAY_HEIGHT - CHAR_height * 5, COLOR_BACKGROUND);
 }
 
 FLASHMEM const char* seq_find_shortname(uint8_t sstep)
@@ -2191,10 +2183,11 @@ uint8_t midiNoteToSampleNote(uint8_t note) {
 FLASHMEM const char* get_drum_name_from_note(uint8_t note)
 {
   const uint8_t sampleNote = midiNoteToSampleNote(note);
-  const char *name;
+  const char* name;
   if (sampleNote < NUM_DRUMSET_CONFIG) {
     name = basename(drum_config[sampleNote].name);
-  } else {
+  }
+  else {
     name = " ";
   }
   return name;
@@ -2203,10 +2196,11 @@ FLASHMEM const char* get_drum_name_from_note(uint8_t note)
 FLASHMEM const char* get_drum_shortname_from_note(uint8_t note)
 {
   const uint8_t sampleNote = midiNoteToSampleNote(note);
-  const char *name;
+  const char* name;
   if (sampleNote < NUM_DRUMSET_CONFIG) {
     name = drum_config[sampleNote].shortname;
-  } else {
+  }
+  else {
     name = "-";
   }
   return name;
@@ -3529,8 +3523,6 @@ public:
   void clear()
   {
     display.fillScreen(COLOR_BACKGROUND);
-    border0();
-
 
     if (touch_button_back_page() || legacy_touch_button_back_page())
     {
@@ -4636,11 +4628,12 @@ FLASHMEM void lcdml_menu_display(void)
       if (LCDML.MENU_getLayer() == 0)
       {
         // this is displayed when no header is available
-       // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width + CHAR_width_small*4;
-        x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
+       // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
+        x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = 0;
         last_menu_depth = LCDML.MENU_getLayer();
         display.console = true;
-        display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()] + CHAR_width, 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
+        //display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()] + CHAR_width, 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
+        display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
         display.console = false;
         //if (ts.keyb_in_menu_activated == false)
         //{
@@ -4681,7 +4674,7 @@ FLASHMEM void lcdml_menu_display(void)
               display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
             else
               display.setTextColor(GREY2, COLOR_BACKGROUND);
-            show(n + 1, 1, display_cols - 3, content_text);
+            show(n + 1, 0, display_cols - 2, content_text);
           }
           else
           {
@@ -4701,7 +4694,7 @@ FLASHMEM void lcdml_menu_display(void)
       if (i < _LCDML_DISP_rows)
       {
         display.console = true;
-        display.fillRect(CHAR_width, CHAR_height * (i + 1) - 1, CHAR_width * (_LCDML_DISP_cols - 2), CHAR_height * (_LCDML_DISP_rows - i), COLOR_BACKGROUND);
+        display.fillRect(0, CHAR_height * (i + 1) - 1, CHAR_width * (_LCDML_DISP_cols - 1), CHAR_height * (_LCDML_DISP_rows - i), COLOR_BACKGROUND);
       }
     }
   }
@@ -5794,19 +5787,23 @@ FLASHMEM void UI_handle_OP(uint8_t param)
 {
   static uint8_t op_selected;
 
-  display_OP_active_instance_number(selected_instance_id, configuration.dexed[selected_instance_id].op_enabled);
-
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
+    display.setCursor(CHAR_width_small * 25, 6);
+    display.setTextSize(1);
+    display.print(F("DEXED"));
+    UI_update_instance_icons();
+    display.setTextSize(2);
     setCursor_textGrid(1, 1);
     display.print(F("OP Enable"));
-    setCursor_textGrid(1, 2);
-    for (uint8_t i = 2; i < 8; i++)
-      display.print(i);
-    UI_update_instance_icons();
-    setCursor_textGrid(op_selected, 1);
-    // fix_later   lcd.blink();
+    for (uint8_t i = 0; i < 6; i++)
+    {
+      display.setTextColor(GREY2);
+      setCursor_textGrid(i * 2 + 1, 3);
+      display.print(i + 1);
+    }
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -5816,7 +5813,6 @@ FLASHMEM void UI_handle_OP(uint8_t param)
       {
         selected_instance_id = !selected_instance_id;
         op_selected = 5;
-        display_OP_active_instance_number(selected_instance_id, configuration.dexed[selected_instance_id].op_enabled);
       }
       else
         op_selected = constrain(op_selected - 1, 0, 5);
@@ -5827,7 +5823,6 @@ FLASHMEM void UI_handle_OP(uint8_t param)
       {
         selected_instance_id = !selected_instance_id;
         op_selected = 0;
-        display_OP_active_instance_number(selected_instance_id, configuration.dexed[selected_instance_id].op_enabled);
       }
       else
         op_selected = constrain(op_selected + 1, 0, 5);
@@ -5838,10 +5833,24 @@ FLASHMEM void UI_handle_OP(uint8_t param)
         bitClear(configuration.dexed[selected_instance_id].op_enabled, op_selected);
       else
         bitSet(configuration.dexed[selected_instance_id].op_enabled, op_selected);
-
-      display_OP_active_instance_number(selected_instance_id, configuration.dexed[selected_instance_id].op_enabled);
     }
-    setCursor_textGrid(op_selected, 1);
+
+    for (uint8_t i = 0; i < 6; i++)
+    {
+      if (i == op_selected)
+        display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
+      else
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+      setCursor_textGrid(i * 2 + 1, 4);
+
+      if (bitRead(configuration.dexed[selected_instance_id].op_enabled, i))
+        display.print("1");
+      else
+        display.print("0");
+    }
+
+    UI_update_instance_icons();
     MicroDexed[selected_instance_id]->setOPAll(configuration.dexed[selected_instance_id].op_enabled);
     MicroDexed[selected_instance_id]->doRefreshVoice();
     send_sysex_param(configuration.dexed[selected_instance_id].midi_channel, 155, configuration.dexed[selected_instance_id].op_enabled, 0);
@@ -6512,7 +6521,7 @@ void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   DBG_LOG(printf("draw sample wave()\n"));
 
-  static constexpr uint16_t plotX = 122 - 8;
+  static constexpr uint16_t plotX = 122;
   static constexpr uint16_t plotY = 19 + 8;
   static constexpr uint16_t plotW = 200 - 2;
   static constexpr uint16_t plotH = 67;
@@ -6627,19 +6636,16 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
-    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
-      if (d < NUM_DRUMS / 2)
-        setCursor_textGrid_small(12 + d * 2, 11);
-      else
-        setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 12);
+      setCursor_textGrid_small(26 + d * 2, 22);
       display.print("-");
     }
 
-    ui.setCursor(1, 0);
+    ui.setCursor(0, 0);
     drawDrumsSampleWave();
-    draw_button_on_grid(12, 25, "PLAY", "SAMPLE", 1);
+    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(5), "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
 
     // the drum sample slot selector.
     // changes activesample and redraws all other editors as they depend on.
@@ -6652,12 +6658,12 @@ FLASHMEM void UI_func_drums(uint8_t param)
       },
       [](Editor* editor, bool refresh) { // TODO: still called twice on editor change
         // render the current selected drum sample slot number and name
-        char header[25] = { " " };
+        char header[27] = { " " };
         sprintf(header, "%02i: %s", activeSample, basename(drum_config[activeSample].name));
 
         display.setTextSize(2);
         setModeColor(editor->select_id);
-        show(editor->y, editor->x, 25, header);
+        show(editor->y, editor->x, 27, header);
 
         display.setTextSize(1);
         if (drum_config[activeSample].numChannels == 1) { // mono
@@ -6671,7 +6677,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         checkDrawFilterText(true); // force redraw filter text on active sample change
       });
 
-    ui.setCursor(2, 3);
+    ui.setCursor(0, 3);
 
     // the parameter editors depend on activesample. We define them by sample index 0,
     // but they will act on current slot activesample later.
@@ -6684,11 +6690,11 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor((const char*)F("PITCH"), 0, 200, &drum_config[0].pitch);
     addDrumParameterEditor((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
 
-    setCursor_textGrid_small(2, 11);
+    setCursor_textGrid_small(0, 11);
     display.setTextColor(RED);
     display.print("ENVELOPE");
 
-    ui.setCursor(2, 13);
+    ui.setCursor(0, 13);
 
     addDrumParameterEditor_int16_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
     addDrumParameterEditor_int16_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
@@ -6702,7 +6708,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.setCursor(26, 13);
     addDrumParameterEditor_int16_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
     addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
-    ui.setCursor(40, 14);
+    ui.setCursor(42, 14);
     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
 
     display.setTextColor(RED);
@@ -6741,7 +6747,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
-     unregisterTouchHandler();
+    unregisterTouchHandler();
     drumScreenActive = false;
     ui.clear();
   }
@@ -7618,7 +7624,6 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     generic_temp_select_menu = 0;
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
-    border0();
     helptext_l(back_text);
     helptext_r("SELECT SAMPLE");
     display.setTextSize(1);
@@ -9688,7 +9693,7 @@ FLASHMEM void pattern_editor_menu_0()
 }
 
 FLASHMEM void play_sample(uint8_t note) {
-  handleNoteOn(drum_midi_channel, drum_config[note ].midinote, 90, 0);
+  handleNoteOn(drum_midi_channel, drum_config[note].midinote, 90, 0);
 }
 
 FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
@@ -16319,7 +16324,6 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     display.setTextSize(1);
-    border0();
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     for (uint8_t oct = 0; oct < 8; oct++)
@@ -16727,7 +16731,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     display.setTextSize(1);
-    border0();
     display.setCursor(CHAR_width_small * 1, 1 * CHAR_height_small);
     display.print(F("SD CARD"));
     display.setTextColor(GREY1);
@@ -18793,7 +18796,6 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setCursor(2 * CHAR_width_small + 1, 6);
     display.print(F("POOL "));
-    setCursor_textGrid_small(2, 6);
     display.setCursor(CHAR_width_small * 25, 6);
     display.print(F("DEXED"));
     setCursor_textGrid_small(2, 6);
@@ -19324,7 +19326,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     registerScope(217, 40, 102, 48);
     dexed_onscreen_algo = 88; // dummy value to force draw on screen init
     display.fillScreen(COLOR_BACKGROUND);
-    border0();
     virtual_keyboard_smart_preselect_mode();
     ts.fav_buttton_state = 0; //clear touch button state when starting page
     seq.cycle_touch_element = 0;
@@ -21191,57 +21192,6 @@ FLASHMEM uint8_t bit_reverse8(uint8_t v)
   return (result);
 }
 
-FLASHMEM void display_OP_active_instance_number(uint8_t instance_id, uint8_t op)
-{
-  uint8_t i, n;
-
-  for (n = 2; n < 8; n++)
-  {
-    for (i = 0; i < 8; i++)
-    {
-      if (bitRead(op, n - 2))
-        instance_num[n][i] = special_chars[n][i];
-      else
-        instance_num[n][i] = ~special_chars[n][i];
-    }
-    // lcd.createChar(n, instance_num[n]);
-  }
-
-  for (i = 0; i < 8; i++)
-  {
-    if (instance_id == 0)
-    {
-      if (configuration.dexed[instance_id].polyphony == 0)
-        instance_num[0][i] = bit_reverse8(special_chars[0][i]);
-      else
-        instance_num[0][i] = special_chars[0][i];
-
-      if (configuration.dexed[!instance_id].polyphony == 0)
-      {
-        instance_num[1][i] = bit_reverse8(special_chars[1][i]);
-        instance_num[1][i] = ~instance_num[1][i];
-      }
-      else
-        instance_num[1][i] = ~special_chars[1][i];
-    }
-    else
-    {
-      if (configuration.dexed[!instance_id].polyphony == 0)
-      {
-        instance_num[0][i] = bit_reverse8(special_chars[0][i]);
-        instance_num[0][i] = ~instance_num[0][i];
-      }
-      else
-        instance_num[0][i] = ~special_chars[0][i];
-
-      if (configuration.dexed[instance_id].polyphony == 0)
-        instance_num[1][i] = bit_reverse8(special_chars[1][i]);
-      else
-        instance_num[1][i] = special_chars[1][i];
-    }
-  }
-}
-
 FLASHMEM void string_trim(char* s)
 {
   int i;
@@ -21789,7 +21739,7 @@ FLASHMEM void load_sd_directory_files_only()
 MD_MIDIFile SMF;
 uint8_t smf_line = 14;
 extern bool smf_playing;
-bool smf_track_state[16] =   { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
+bool smf_track_state[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
 uint8_t smf_track_inst[16] = { 1,1,1,1,1,1,1,1,1,6,1,1,1,1,1,1 };
 
 // first note #35, B2, Acoustic BD
@@ -21843,7 +21793,7 @@ uint8_t smf_gm_mapping[48] = {
   MIDI_CIS6, //Open Triangle 81
   MIDI_D5, //Shaker 82
 
- };
+};
 
 //   midireader reader;
 //   reader.open(filename);
@@ -21851,43 +21801,43 @@ uint8_t smf_gm_mapping[48] = {
 //   //    display.print(filename);
 //   // display.print("   ");
 
- void midiCallback(midi_event* pev)
+void midiCallback(midi_event* pev)
 // Called by the MIDIFile library when a file event needs to be processed
 // thru the midi communications interface.
 // This callback is set up in the setup() function.
 {
   char tmp[10];
-uint8_t inst_channel=0;
-uint8_t in_note=0;
+  uint8_t inst_channel = 0;
+  uint8_t in_note = 0;
 
   if ((pev->data[0] >= 0x80) && (pev->data[0] <= 0xa0) && smf_track_state[pev->channel] == 1)
   {
     //Serial.write(pev->data[0] | pev->channel);
     //Serial.write(&pev->data[1], pev->size-1);
 
-if (smf_track_inst[pev->channel]==1)
-inst_channel=configuration.dexed[0].midi_channel;
-else if (smf_track_inst[pev->channel]==2)
-inst_channel=configuration.dexed[1].midi_channel;
+    if (smf_track_inst[pev->channel] == 1)
+      inst_channel = configuration.dexed[0].midi_channel;
+    else if (smf_track_inst[pev->channel] == 2)
+      inst_channel = configuration.dexed[1].midi_channel;
 
-else if (smf_track_inst[pev->channel]==3)
-inst_channel=microsynth[0].midi_channel;
-else if (smf_track_inst[pev->channel]==4)
-inst_channel=microsynth[1].midi_channel;
+    else if (smf_track_inst[pev->channel] == 3)
+      inst_channel = microsynth[0].midi_channel;
+    else if (smf_track_inst[pev->channel] == 4)
+      inst_channel = microsynth[1].midi_channel;
 
-else if (smf_track_inst[pev->channel]==5)
-inst_channel=configuration.epiano.midi_channel;
-else if (smf_track_inst[pev->channel]==6)
-inst_channel=drum_midi_channel;
-else if (smf_track_inst[pev->channel]==7)
-inst_channel=braids_osc.midi_channel;
+    else if (smf_track_inst[pev->channel] == 5)
+      inst_channel = configuration.epiano.midi_channel;
+    else if (smf_track_inst[pev->channel] == 6)
+      inst_channel = drum_midi_channel;
+    else if (smf_track_inst[pev->channel] == 7)
+      inst_channel = braids_osc.midi_channel;
 
- if (smf_track_inst[pev->channel]==6) //basic GM drum mapping
-{ 
-in_note= smf_gm_mapping[ pev->data[1]-35] ;
-}
-else
-in_note=pev->data[1];
+    if (smf_track_inst[pev->channel] == 6) //basic GM drum mapping
+    {
+      in_note = smf_gm_mapping[pev->data[1] - 35];
+    }
+    else
+      in_note = pev->data[1];
 
     snprintf_P(tmp, sizeof(tmp), PSTR("%-2s"), noteNames[pev->data[1] % 12]);
     if (pev->data[0] >= 0x90)
@@ -21931,10 +21881,10 @@ FLASHMEM void _print_smf_track_state()
   {
     display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 11 * CHAR_height_small + 5);
     if (generic_temp_select_menu == f + 2 && smf_track_state[f])
-    display.setTextColor(COLOR_BACKGROUND, MIDDLEGREEN);
-     else   if (generic_temp_select_menu == f + 2 && smf_track_state[f]==false)
-        display.setTextColor(COLOR_BACKGROUND, RED);
-    else 
+      display.setTextColor(COLOR_BACKGROUND, MIDDLEGREEN);
+    else   if (generic_temp_select_menu == f + 2 && smf_track_state[f] == false)
+      display.setTextColor(COLOR_BACKGROUND, RED);
+    else
     {
       if (smf_track_state[f])
         display.setTextColor(MIDDLEGREEN, COLOR_BACKGROUND);
@@ -21951,35 +21901,36 @@ FLASHMEM void _print_smf_track_instruments()
   {
     display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 12 * CHAR_height_small + 5);
 
-     if (generic_temp_select_menu == f + 2+16 &&  smf_track_inst[f]!=6)
+    if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] != 6)
     {
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);  
-    }else   if ( smf_track_inst[f]!=6)
-     display.setTextColor( COLOR_SYSTEXT,COLOR_BACKGROUND);  
-     else
-      if (generic_temp_select_menu == f + 2+16 &&  smf_track_inst[f]==6 )
-    
-        display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS); 
-        else
-           display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND); 
-   
-    if (smf_track_inst[f]==1)
-    display.print("D1");
-    else if (smf_track_inst[f]==2)
-    display.print("D2");
-    else  if (smf_track_inst[f]==3)
-    display.print("M1");
-    else  if (smf_track_inst[f]==4)
-    display.print("M2");
-    else  if (smf_track_inst[f]==5)
-    display.print("EP");
-    else  if (smf_track_inst[f]==6)
-    display.print("DR");
-    else  if (smf_track_inst[f]==7)
-    display.print("BR");
-    else 
-    display.print("??");
-  
+      display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+    }
+    else   if (smf_track_inst[f] != 6)
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    else
+      if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] == 6)
+
+        display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
+      else
+        display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
+
+    if (smf_track_inst[f] == 1)
+      display.print("D1");
+    else if (smf_track_inst[f] == 2)
+      display.print("D2");
+    else  if (smf_track_inst[f] == 3)
+      display.print("M1");
+    else  if (smf_track_inst[f] == 4)
+      display.print("M2");
+    else  if (smf_track_inst[f] == 5)
+      display.print("EP");
+    else  if (smf_track_inst[f] == 6)
+      display.print("DR");
+    else  if (smf_track_inst[f] == 7)
+      display.print("BR");
+    else
+      display.print("??");
+
   }
 }
 
@@ -22008,35 +21959,35 @@ FLASHMEM void play_midi_file()
   snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
   // SMF.load("/MIDI/HIDNSEEK.mid");
   i = SMF.load(filename);
- 
-    setCursor_textGrid_small(33, 7);
-   display.print(F("                   "));
- setCursor_textGrid_small(33, 7);
-if (i==0){
-display.setTextColor(GREEN, COLOR_BACKGROUND);
- display.print(F("OK "));
-}
-else
-{
-display.setTextColor(RED, COLOR_BACKGROUND);
-if (i==1)
- display.print(F("BLANK FILENAME"));
- else if (i==2)
- display.print(F("ERROR OPEN FILE"));
- else if (i==3)
- display.print(F("NOT A MIDI FILE"));
- else if (i==4)
- display.print(F("HEADER SIZE ERR."));
- else if (i==5)
- display.print(F("NOT TYPE 0 OR 1"));
- else if (i==6)
- display.print(F("FMT 0 BUT MORE TRKS"));
- else if (i==7)
- display.print(F("MORE TRKS REQUIRED"));
- else 
- display.print(i);
 
-}
+  setCursor_textGrid_small(33, 7);
+  display.print(F("                   "));
+  setCursor_textGrid_small(33, 7);
+  if (i == 0) {
+    display.setTextColor(GREEN, COLOR_BACKGROUND);
+    display.print(F("OK "));
+  }
+  else
+  {
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    if (i == 1)
+      display.print(F("BLANK FILENAME"));
+    else if (i == 2)
+      display.print(F("ERROR OPEN FILE"));
+    else if (i == 3)
+      display.print(F("NOT A MIDI FILE"));
+    else if (i == 4)
+      display.print(F("HEADER SIZE ERR."));
+    else if (i == 5)
+      display.print(F("NOT TYPE 0 OR 1"));
+    else if (i == 6)
+      display.print(F("FMT 0 BUT MORE TRKS"));
+    else if (i == 7)
+      display.print(F("MORE TRKS REQUIRED"));
+    else
+      display.print(i);
+
+  }
 }
 FLASHMEM void print_smf_parameters()
 {
@@ -22124,17 +22075,17 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
     print_smf_parameters();
 
-//     // strcpy(fm.sd_prev_dir, "");
-//     //    strcpy(fm.sd_new_name, "/");
-//     if (generic_active_function == 0)
-//     {
-//       load_sd_directory_files_only();
-//     }
+    //     // strcpy(fm.sd_prev_dir, "");
+    //     //    strcpy(fm.sd_new_name, "/");
+    //     if (generic_active_function == 0)
+    //     {
+    //       load_sd_directory_files_only();
+    //     }
 
-   // display.setTextColor(GREY1, COLOR_BACKGROUND);
+       // display.setTextColor(GREY1, COLOR_BACKGROUND);
 
-   //_print_smf_track_state();
-//_print_smf_track_instruments();
+       //_print_smf_track_state();
+    //_print_smf_track_instruments();
     load_sd_directory_files_only();
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -22145,7 +22096,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
       if (seq.edit_state == 0)
       {
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 17+16);
+        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 17 + 16);
       }
       else  if (seq.edit_state == 1)
       {
@@ -22167,25 +22118,25 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     }
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) // handle button presses during menu
     {
-      if (generic_temp_select_menu > 1 && generic_temp_select_menu< 18)
+      if (generic_temp_select_menu > 1 && generic_temp_select_menu < 18)
       {
         smf_track_state[generic_temp_select_menu - 2] = !smf_track_state[generic_temp_select_menu - 2];
       }
-      else  if (generic_temp_select_menu > 17 )
+      else  if (generic_temp_select_menu > 17)
       {
         smf_track_inst[generic_temp_select_menu - 18]++;
-        if ( smf_track_inst[generic_temp_select_menu - 18]>7)
-         smf_track_inst[generic_temp_select_menu - 18]=1;
+        if (smf_track_inst[generic_temp_select_menu - 18] > 7)
+          smf_track_inst[generic_temp_select_menu - 18] = 1;
       }
 
-else if (generic_temp_select_menu == 1  && smf_playing == false)
+      else if (generic_temp_select_menu == 1 && smf_playing == false)
       {
-         smf_playing = true;
-          helptext_r("STOP PLAYING");
+        smf_playing = true;
+        helptext_r("STOP PLAYING");
         play_midi_file();
         seq.edit_state = false;
         print_smf_parameters();
-       
+
       }
       else if (generic_temp_select_menu == 1 && smf_playing)
       {
@@ -22202,7 +22153,7 @@ else if (generic_temp_select_menu == 1  && smf_playing == false)
       else
         seq.edit_state = !seq.edit_state;
 
-      
+
     }
 
     for (uint8_t f = 0; f < 4; f++)
@@ -22240,19 +22191,19 @@ else if (generic_temp_select_menu == 1  && smf_playing == false)
 
     if (generic_temp_select_menu == 0 && seq.edit_state == false)
       helptext_r("SELECT MIDI FILE");
-   else if (generic_temp_select_menu == 1  && smf_playing==false)
+    else if (generic_temp_select_menu == 1 && smf_playing == false)
       helptext_r("START PLAYING");
-    else  if (generic_temp_select_menu == 1  && smf_playing)
+    else  if (generic_temp_select_menu == 1 && smf_playing)
       helptext_r("STOP PLAYING");
 
- else if (generic_temp_select_menu > 1 && generic_temp_select_menu< 18)
-      {
-        helptext_r("MUTE/UNMUTE TRACK");
-      }
-      else  if (generic_temp_select_menu > 17 )
-      {
-     helptext_r("SELECT INSTR.");
-      }
+    else if (generic_temp_select_menu > 1 && generic_temp_select_menu < 18)
+    {
+      helptext_r("MUTE/UNMUTE TRACK");
+    }
+    else  if (generic_temp_select_menu > 17)
+    {
+      helptext_r("SELECT INSTR.");
+    }
 
     if (seq.edit_state && generic_temp_select_menu == 1)
       display.setTextColor(COLOR_SYSTEXT, RED);
@@ -22269,7 +22220,7 @@ else if (generic_temp_select_menu == 1  && smf_playing == false)
       display.print("STOPPED");
 
     _print_smf_track_state();
-_print_smf_track_instruments();
+    _print_smf_track_instruments();
 
     // display.print(generic_temp_select_menu);
     // display.print(" ");

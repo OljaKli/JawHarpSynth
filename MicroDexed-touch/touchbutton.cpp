@@ -2,12 +2,16 @@
 #include "touch.h"
 #include "ILI9341_t3n.h"
 
+#include "sequencer.h"
+
 extern ILI9341_t3n display;
 extern ts_t ts;
 extern int numTouchPoints;
+extern sequencer_t seq;
 
 static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
-  { GREY1, GREY3 },               // COLOR_NORMAL
+       // { GREY1, GREY3 },               // COLOR_NORMAL
+  { COLOR_SYSTEXT, GREY2 },               // COLOR_NORMAL
   { COLOR_SYSTEXT, DX_DARKCYAN }, // COLOR_ACTIVE
   { COLOR_SYSTEXT, RED },         // COLOR_RED
   { COLOR_SYSTEXT, MIDDLEGREEN }, // COLOR_HIGHLIGHTED
@@ -23,12 +27,12 @@ FLASHMEM uint16_t TouchButton::GRID_Y(uint8_t y) {
   return offset + y * (BUTTON_SIZE_Y + BUTTON_SPACING);
 }
 
-FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed) : x(x_coord), y(y_coord), 
-  drawHandler{draw},
-  clickedHandler{clicked},
-  longPressedHandler{longPressed},
-  pressedMs(0),
-  pressedState(NOT_PRESSED) {
+FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed) : x(x_coord), y(y_coord),
+drawHandler{ draw },
+clickedHandler{ clicked },
+longPressedHandler{ longPressed },
+pressedMs(0),
+pressedState(NOT_PRESSED) {
 }
 
 FLASHMEM void TouchButton::drawNow() {
@@ -52,14 +56,15 @@ FLASHMEM bool TouchButton::isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t
 
 FLASHMEM bool TouchButton::isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   bool result = false;
-  if(numTouchPoints > 0) {
-    if(isButtonTouched == false) {
-      if(isInArea(x, y, w, h)) {
+  if (numTouchPoints > 0) {
+    if (isButtonTouched == false) {
+      if (isInArea(x, y, w, h)) {
         result = true;
         isButtonTouched = true;
       }
     }
-  } else {
+  }
+  else {
     isButtonTouched = false;
   }
   return result;
@@ -86,28 +91,61 @@ FLASHMEM void TouchButton::draw(const std::string label, const std::string sub, 
 }
 
 FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color) {
-  const ColorCombo c = colorMap[color];
 
-  display.setTextSize(1);
-  display.setTextColor(c.text, c.bg);
+  if (color == 99) // special case, draw virtual keyboard button (icon)
+  {
+    display.console = true;
+    display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY2);
+    display.console = true;
+    display.fillRect(x, y + 17, BUTTON_SIZE_X, 35 - 16, COLOR_BACKGROUND);
+    uint8_t offset[6] = { 1, 2, 2, 4, 6,7 }; //+ is the offset to left
+    int offcount = 0;
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT, GREY2);
+    display.setCursor(x + 5, y + 5);
+    display.print(F("V.KEYB"));
 
-  display.console = true;
-  display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, c.bg);
-  
-  display.setCursor(x + 5, y + 5);
-  display.console = true;
-  display.print(label.c_str());
-
-  const bool bigSub = sub.size() <= 3;
-  display.setTextSize(bigSub ? 2 : 1);
-  if(bigSub) {
-    const uint16_t subLengthPixels = sub.size() * CHAR_width;
-    display.setCursor(x + (BUTTON_SIZE_X - subLengthPixels) / 2, y + 15);
-  } else {
-    display.setCursor(x + 5, y + 20);
+    for (uint8_t i = 0; i < 9; i++) //draw white keys
+    {
+      display.console = true;
+      display.fillRect(x + 6 * i, y + 17, 5, 18, COLOR_SYSTEXT); // pianoroll white key
+    }
+    for (uint8_t i = 0; i < 14; i++)
+    {
+      if (seq.piano[i] == 1)
+      {
+        display.fillRect(x + 4 * i - offset[offcount], y + 17, 4, 9, COLOR_BACKGROUND); // BLACK key
+        offcount++;
+      }
+    }
   }
-  display.console = true;
-  display.print(sub.c_str());
+
+  else
+  {
+    const ColorCombo c = colorMap[color];
+
+    display.setTextSize(1);
+    display.setTextColor(c.text, c.bg);
+
+    display.console = true;
+    display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, c.bg);
+
+    display.setCursor(x + 5, y + 5);
+    //display.console = true;  //should not be necessary for printing text
+    display.print(label.c_str());
+
+    const bool bigSub = sub.size() <= 3;
+    display.setTextSize(bigSub ? 2 : 1);
+    if (bigSub) {
+      const uint16_t subLengthPixels = sub.size() * CHAR_width;
+      display.setCursor(x + (BUTTON_SIZE_X - subLengthPixels) / 2, y + 15);
+    }
+    else {
+      display.setCursor(x + 5, y + 20);
+    }
+    //display.console = true; //should not be necessary for printing text
+    display.print(sub.c_str());
+  }
 }
 
 FLASHMEM void TouchButton::processPressed() {
@@ -115,29 +153,30 @@ FLASHMEM void TouchButton::processPressed() {
 
   switch (pressedState) {
   case NOT_PRESSED:
-    if(numTouchPoints && inArea) {
+    if (numTouchPoints && inArea) {
       pressedState = PRESSED;
       pressedMs = 0;
     }
     break;
 
   case PRESSED:
-    if(longPressedHandler && numTouchPoints) {
-      if(inArea) {
+    if (longPressedHandler && numTouchPoints) {
+      if (inArea) {
         pressedMs += TOUCH_MAX_REFRESH_RATE_MS;
-        if(pressedMs >= LONGPRESS_TIME_MS) {
+        if (pressedMs >= LONGPRESS_TIME_MS) {
           longPressedHandler(this);
           pressedState = WAIT_RELEASED;
         }
       }
-    } else {
+    }
+    else {
       clickedHandler(this);
       pressedState = WAIT_RELEASED;
     }
     break;
 
   case WAIT_RELEASED:
-    if(numTouchPoints == 0) {
+    if (numTouchPoints == 0) {
       pressedState = NOT_PRESSED;
     }
     break;

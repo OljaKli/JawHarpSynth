@@ -25,7 +25,8 @@ public:
     BUTTON_RED = 2,
     BUTTON_HIGHLIGHTED = 3,
     BUTTON_LABEL = 4,
-    BUTTONCOLOR_NUM = 5
+    BUTTONCOLOR_NUM = 5,
+    BUTTON_VIRTUAL_KEYBOARD = 99
   };
 
   static constexpr uint16_t BUTTON_SIZE_X = 50;
@@ -39,6 +40,7 @@ public:
   void clear(uint16_t color);
 
   static void drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color);
+  //static void drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, uint8_t color);  // touchButton Keyboard
   static bool isPressed(uint16_t x, uint16_t y);
   static bool isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
   static bool isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
