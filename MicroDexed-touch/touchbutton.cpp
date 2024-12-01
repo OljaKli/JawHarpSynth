@@ -10,8 +10,7 @@ extern int numTouchPoints;
 extern sequencer_t seq;
 
 static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
-       // { GREY1, GREY3 },               // COLOR_NORMAL
-  { COLOR_SYSTEXT, GREY2 },               // COLOR_NORMAL
+  { GREY1, GREY3 },               // COLOR_NORMAL
   { COLOR_SYSTEXT, DX_DARKCYAN }, // COLOR_ACTIVE
   { COLOR_SYSTEXT, RED },         // COLOR_RED
   { COLOR_SYSTEXT, MIDDLEGREEN }, // COLOR_HIGHLIGHTED
@@ -95,13 +94,13 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
     display.console = true;
-    display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY2);
+    display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
     display.console = true;
     display.fillRect(x, y + 17, BUTTON_SIZE_X, 35 - 16, COLOR_BACKGROUND);
     uint8_t offset[6] = { 1, 2, 2, 4, 6,7 }; //+ is the offset to left
     int offcount = 0;
     display.setTextSize(1);
-    display.setTextColor(COLOR_SYSTEXT, GREY2);
+    display.setTextColor(GREY1, GREY3);
     display.setCursor(x + 5, y + 5);
     display.print(F("V.KEYB"));
 

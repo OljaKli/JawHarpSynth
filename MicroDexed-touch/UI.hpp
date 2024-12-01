@@ -6636,7 +6636,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
-    display.setTextColor(GREY1, COLOR_BACKGROUND);
+     display.setTextColor(GREY2, COLOR_BACKGROUND);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
       setCursor_textGrid_small(26 + d * 2, 22);

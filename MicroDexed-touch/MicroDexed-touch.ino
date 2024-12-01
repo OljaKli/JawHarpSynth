@@ -2221,11 +2221,7 @@ void loop()
 
         if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
-
-          if (d < NUM_DRUMS / 2)
-            setCursor_textGrid_small(12 + d * 2, 11);
-          else
-            setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 12);
+           setCursor_textGrid_small(26 + d * 2, 22);
 
           if (Drum[d]->isPlaying())
           {
