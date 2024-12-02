@@ -655,7 +655,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 
 #define TOUCH_ROTATION_MIN 0
 #define TOUCH_ROTATION_MAX 3
-#define TOUCH_ROTATION_DEFAULT 1
+#define TOUCH_ROTATION_DEFAULT 2
 #define TOUCH_ROTATION_INVERTED 3
 
 #define SCREEN_SAVER_START_MIN 1

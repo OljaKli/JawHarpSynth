@@ -2463,13 +2463,13 @@ void loop()
       save_sys_flag = false;
       if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false)
       {
-        draw_button_on_grid(2, 25, "CONFIG", "SAVED", 1);
+        TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), "CONFIG", "SAVED", TouchButton::BUTTON_ACTIVE);
         ui_save_notification_icon = true;
       }
       else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) ||
         LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_test_touchscreen))
       {
-        draw_button_on_grid(2, 25, "CONFIG", "SAVED", 1);
+        TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), "CONFIG", "SAVED", TouchButton::BUTTON_ACTIVE);
         ui_save_notification_icon = true;
       }
 #ifdef DEBUG
@@ -2490,7 +2490,7 @@ void loop()
     if (LCDML.FUNC_getID() == 255)
     {
       display.console = true;
-      display.fillRect(2 * CHAR_width_small, 25 * CHAR_height_small, 42, 32, COLOR_BACKGROUND);
+     TouchButton::clearButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), COLOR_BACKGROUND);
       ui_save_notification_icon = false;
       display.console = false;
     }
@@ -2498,7 +2498,8 @@ void loop()
       LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_test_touchscreen))
     {
       display.console = true;
-      display.fillRect(2 * CHAR_width_small, 25 * CHAR_height_small, 42, 32, COLOR_BACKGROUND);
+      TouchButton::clearButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), COLOR_BACKGROUND);
+
       ui_save_notification_icon = false;
       display.console = false;
     }
