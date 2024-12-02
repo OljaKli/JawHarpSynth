@@ -167,6 +167,7 @@ FLASHMEM void helptext_l(const char* str)
 
   ts.old_helptext_length[0] = l;
 }
+extern void clear_bottom_half_screen_without_backbutton();
 
 FLASHMEM void draw_back_touchbutton()
 {
@@ -184,14 +185,10 @@ FLASHMEM void draw_back_touchbutton()
 
       }
   }
-  if (legacy_touch_button_back_page())
+  if (legacy_touch_button_back_page() && (LCDML.FUNC_getID() > _LCDML_DISP_cnt))
   {
     //remove unusable touch buttons from screen
-    display.console = true;
-    display.fillRect(270, 87, CHAR_width_small * button_size_x, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
-    display.fillRect(12, 144, 300, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
-    display.fillRect(78, 200, 234, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
-    display.console = false;
+  clear_bottom_half_screen_without_backbutton();
     //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
   }
   else if (touch_button_back_page() && seq.cycle_touch_element != 1)
@@ -882,7 +879,7 @@ FLASHMEM void draw_menu_ui_icons()
 
   TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(2), "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);
 
-}/////xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+}
 
 FLASHMEM void handle_touchscreen_menu()
 {

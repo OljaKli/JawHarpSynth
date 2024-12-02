@@ -686,6 +686,15 @@ FLASHMEM uint16_t getContentTypeColor(uint8_t contentType) {
   }
 }
 
+FLASHMEM void clear_bottom_half_screen_without_backbutton()
+{
+  display.console = true;
+  display.fillRect(270, 88, 50, 35, COLOR_BACKGROUND);
+  display.fillRect(0, 127, 320, 35, COLOR_BACKGROUND);
+  display.fillRect(50, 205, 320 - 50, 35, COLOR_BACKGROUND);
+  display.console = false;
+}
+
 uint8_t state_dir;
 FLASHMEM void set_state_dir()
 {
@@ -4632,15 +4641,8 @@ FLASHMEM void lcdml_menu_display(void)
         x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = 0;
         last_menu_depth = LCDML.MENU_getLayer();
         display.console = true;
-        //display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()] + CHAR_width, 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
         display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
         display.console = false;
-        //if (ts.keyb_in_menu_activated == false)
-        //{
-          //display.setCursor(0, DISPLAY_HEIGHT - CHAR_height_small);
-          //display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-          //display.print(back_clear);
-        //}
       }
       else if (LCDML.MENU_getLayer() > last_menu_depth)
       {
@@ -5343,6 +5345,7 @@ FLASHMEM void UI_func_favorites(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    clear_bottom_half_screen_without_backbutton();
     encoderDir[ENC_L].reset();
     old_favorites = configuration.sys.favorites;
     setCursor_textGrid(1, 1);
@@ -5407,6 +5410,7 @@ FLASHMEM void UI_func_stereo_mono(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    clear_bottom_half_screen_without_backbutton();
     encoderDir[ENC_R].reset();
     old_mono = configuration.sys.mono;
 
@@ -5789,7 +5793,7 @@ FLASHMEM void UI_handle_OP(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-    display.fillScreen(COLOR_BACKGROUND);
+    clear_bottom_half_screen_without_backbutton();
     encoderDir[ENC_R].reset();
     display.setCursor(CHAR_width_small * 25, 6);
     display.setTextSize(1);
@@ -6636,7 +6640,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
 
-     display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
       setCursor_textGrid_small(26 + d * 2, 22);
@@ -17200,6 +17204,7 @@ FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
   static uint8_t old_soft_midi_thru;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    clear_bottom_half_screen_without_backbutton();
     old_soft_midi_thru = configuration.sys.soft_midi_thru;
     encoderDir[ENC_R].reset();
     setCursor_textGrid(1, 1);
@@ -18995,7 +19000,6 @@ FLASHMEM void UI_func_velocity_level(uint8_t param)
 
 FLASHMEM void UI_update_instance_icons()
 {
-  // display.fillRect(14 * CHAR_width + 16, 5, 20, 9, COLOR_BACKGROUND); //should not be required, testing
   display.setTextSize(1);
   display.console = true;
   if (selected_instance_id == 0)
@@ -19935,6 +19939,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    clear_bottom_half_screen_without_backbutton();
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     yesno = false;
@@ -20503,6 +20508,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    clear_bottom_half_screen_without_backbutton();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     mode = 0;
@@ -20650,13 +20656,12 @@ FLASHMEM void UI_func_startup_performance(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    clear_bottom_half_screen_without_backbutton();
     helptext_r("< > SELECT PERFORMANCE");
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     old_load_at_startup_performance = configuration.sys.load_at_startup_performance;
-
     encoderDir[ENC_R].reset();
-    display.fillScreen(COLOR_BACKGROUND);
     show(1, 1, 16, "Load at startup");
     if (configuration.sys.load_at_startup_performance == 255)
       show(2, 1, 16, "Last Performance");
@@ -20743,7 +20748,7 @@ FLASHMEM void UI_func_startup_page(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     encoderDir[ENC_R].reset();
-    display.fillScreen(COLOR_BACKGROUND);
+    clear_bottom_half_screen_without_backbutton();
     helptext_r("< > SELECT PAGE");
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
