@@ -597,17 +597,16 @@ FLASHMEM void handle_touchscreen_pattern_editor()
 
 FLASHMEM void handle_touchscreen_microsynth()
 {
-  if (numTouchPoints > 0)
-  {
-    if (check_button_on_grid(45, 1))
+    if (TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(0)))
     {
       display.console = true;
-      display.fillRect(0, VIRT_KEYB_YPOS - 6 * CHAR_height_small, DISPLAY_WIDTH - 1, DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 6 * CHAR_height_small, COLOR_BACKGROUND);
+      display.fillRect(0, VIRT_KEYB_YPOS - 6 * CHAR_height_small, DISPLAY_WIDTH ,
+       DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 6 * CHAR_height_small, COLOR_BACKGROUND);
       display.console = false;
       if (seq.cycle_touch_element == 1)
       {
         seq.cycle_touch_element = 0;
-        draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
+         TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
         generic_full_draw_required = true;
         microsynth_refresh_lower_screen_static_text();
         microsynth_refresh_lower_screen_dynamic_text();
@@ -617,11 +616,10 @@ FLASHMEM void handle_touchscreen_microsynth()
       else
       {
         seq.cycle_touch_element = 1;
-        draw_button_on_grid(45, 1, "MORE", "PARAM.", 0);
+         TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
         drawVirtualKeyboard();
       }
     }
-  }
   if (seq.cycle_touch_element == 1) {
     handleTouchVirtualKeyboard();
   }

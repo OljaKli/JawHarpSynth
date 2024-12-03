@@ -2298,7 +2298,7 @@ void loop()
       if (microsynth[microsynth_selected_instance].pwm_last_displayed != microsynth[microsynth_selected_instance].pwm_current && seq.cycle_touch_element != 1)
       {
         display.setTextSize(1);
-        setCursor_textGrid_small(15, 18);
+        setCursor_textGrid_small(15, 17);
         display.setTextColor(GREY2, COLOR_BACKGROUND);
         print_formatted_number(microsynth[microsynth_selected_instance].pwm_current / 10, 3);
         microsynth[microsynth_selected_instance].pwm_last_displayed = microsynth[microsynth_selected_instance].pwm_current;
@@ -2307,7 +2307,7 @@ void loop()
       if (seq.cycle_touch_element != 1 && microsynth[microsynth_selected_instance].filter_osc_freq_last_displayed != microsynth[microsynth_selected_instance].filter_osc_freq_current)
       {
         display.setTextSize(1);
-        setCursor_textGrid_small(15, 16);
+        setCursor_textGrid_small(15, 15);
         display.setTextColor(GREY2, COLOR_BACKGROUND);
         print_formatted_number(microsynth[microsynth_selected_instance].filter_osc_freq_current / 100, 3);
         microsynth[microsynth_selected_instance].filter_osc_freq_last_displayed = microsynth[microsynth_selected_instance].filter_osc_freq_current;
@@ -2316,9 +2316,9 @@ void loop()
       // debug
       display.setTextSize(1);
       display.setTextColor(GREY2, COLOR_BACKGROUND);
-      setCursor_textGrid_small(42, 9);
+      setCursor_textGrid_small(42, 8);
       print_formatted_number(microsynth[0].lfo_delay, 4);
-      setCursor_textGrid_small(42, 10);
+      setCursor_textGrid_small(42, 9);
       print_formatted_number(microsynth[0].lfo_fade, 4);
     }
   }
@@ -2412,13 +2412,14 @@ void loop()
         if (midi_decay_timer_microsynth > MIDI_DECAY_TIMER && midi_decay_microsynth[instance_id] > 1)
         {
           midi_decay_microsynth[instance_id]--;
-          display.fillRect(13 * 6 + (instance_id * 12), 19, 5, 8 - midi_decay_microsynth[instance_id], COLOR_BACKGROUND);                                // region above bar
-          display.fillRect(13 * 6 + (instance_id * 12), 27 - midi_decay_microsynth[instance_id], 5, midi_decay_microsynth[instance_id], COLOR_PITCHSMP); // bar
+          display.fillRect(13 * 6 + (instance_id * 12), 10, 5, 8 - midi_decay_microsynth[instance_id], COLOR_BACKGROUND);                                // region above bar
+          display.fillRect(13 * 6 + (instance_id * 12), 18 - midi_decay_microsynth[instance_id], 5, midi_decay_microsynth[instance_id], COLOR_PITCHSMP); // bar
         }
         // if value is 0 then no drawing should happen - so stop at 1
         if (midi_decay_microsynth[instance_id] == 1)
         {
-          display.fillRect(13 * 6 + (instance_id * 12), 19 + 7, 5, 1, COLOR_BACKGROUND);
+           display.console = true;
+          display.fillRect(13 * 6 + (instance_id * 12), 17, 5, 1, COLOR_BACKGROUND);
           midi_decay_microsynth[instance_id] = 0;
         }
         if (midi_decay_timer_microsynth > MIDI_DECAY_LEVEL_TIME)

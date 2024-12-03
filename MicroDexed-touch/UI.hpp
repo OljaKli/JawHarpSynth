@@ -10464,21 +10464,21 @@ FLASHMEM void update_microsynth_instance_icons()
   display.setTextSize(1);
   if (microsynth_selected_instance == 0)
   {
-    setCursor_textGrid_small(13, 1);
+    setCursor_textGrid_small(13, 0);
     display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
     display.print(F("1"));
     display.setTextColor(GREY1, COLOR_BACKGROUND);
-    setCursor_textGrid_small(15, 1);
+    setCursor_textGrid_small(15, 0);
     display.print(F("2"));
   }
   else
   {
-    setCursor_textGrid_small(13, 1);
+    setCursor_textGrid_small(13, 0);
     display.setTextColor(GREY1, COLOR_BACKGROUND);
     display.print(F("1"));
 
     display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-    setCursor_textGrid_small(15, 1);
+    setCursor_textGrid_small(15, 0);
     display.print(F("2"));
   }
   display.setTextColor(GREY1);
@@ -10493,9 +10493,9 @@ FLASHMEM void update_pwm_text()
     else
       display.setTextColor(GREY2);
 
-    setCursor_textGrid_small(1, 17);
+    setCursor_textGrid_small(0, 16);
     display.print(F("PWM"));
-    setCursor_textGrid_small(1, 18);
+    setCursor_textGrid_small(0, 17);
     display.print(F("SPEED"));
     display.setTextColor(GREY1);
   }
@@ -10506,13 +10506,13 @@ FLASHMEM void microsynth_refresh_lower_screen_static_text()
   helptext_r("LONG PUSH:INST.SEL.  <>SEL.PARA.");
 
   display.setTextColor(GREY1, COLOR_BACKGROUND);
-  setCursor_textGrid_small(1, 13);
+  setCursor_textGrid_small(0, 12);
   display.print(F("FILTER"));
-  setCursor_textGrid_small(1, 14);
+  setCursor_textGrid_small(0, 13);
   display.print(F("FREQ"));
-  setCursor_textGrid_small(1, 15);
+  setCursor_textGrid_small(0, 14);
   display.print(F("RES"));
-  setCursor_textGrid_small(9, 15);
+  setCursor_textGrid_small(9, 14);
   display.print(F("SPEED"));
   setCursor_textGrid_small(22, 12);
   display.print(F("REV. SEND"));
@@ -10530,9 +10530,9 @@ FLASHMEM void microsynth_refresh_lower_screen_static_text()
   display.print(F("OSC"));
   setCursor_textGrid_small(22, 21);
   display.print(F("NOISE"));
-  setCursor_textGrid_small(13, 17);
+  setCursor_textGrid_small(13, 16);
   display.print(F(">"));
-  setCursor_textGrid_small(13, 14);
+  setCursor_textGrid_small(13, 13);
   display.print(F(">"));
 }
 
@@ -10541,7 +10541,7 @@ FLASHMEM void microsynth_refresh_lower_screen_dynamic_text()
   if (menu_item_check(8))
   {
     setModeColor(8);
-    setCursor_textGrid_small(9, 13);
+    setCursor_textGrid_small(9, 12);
     if (microsynth[microsynth_selected_instance].filter_osc_mode == 0)
       display.print(F("OFF   "));
     else if (microsynth[microsynth_selected_instance].filter_osc_mode == 1)
@@ -10552,21 +10552,21 @@ FLASHMEM void microsynth_refresh_lower_screen_dynamic_text()
       display.print(F("HI12dB"));
   }
   if (menu_item_check(9))
-    print_small_intbar(9, 14, microsynth[microsynth_selected_instance].filter_osc_freq_from / 100, 9, 0, 1);
+    print_small_intbar(9, 13, microsynth[microsynth_selected_instance].filter_osc_freq_from / 100, 9, 0, 1);
   if (menu_item_check(10))
-    print_small_intbar(15, 14, microsynth[microsynth_selected_instance].filter_osc_freq_to / 100, 10, 0, 1);
+    print_small_intbar(15, 13, microsynth[microsynth_selected_instance].filter_osc_freq_to / 100, 10, 0, 1);
   if (menu_item_check(11))
-    print_small_intbar(5, 15, microsynth[microsynth_selected_instance].filter_osc_resonance, 11, 0, 1);
+    print_small_intbar(5, 14, microsynth[microsynth_selected_instance].filter_osc_resonance, 11, 0, 1);
   if (menu_item_check(12))
-    print_small_intbar(15, 15, microsynth[microsynth_selected_instance].filter_osc_speed / 10, 12, 0, 1);
+    print_small_intbar(15, 14, microsynth[microsynth_selected_instance].filter_osc_speed / 10, 12, 0, 1);
   if (menu_item_check(13))
-    print_small_intbar(9, 17, microsynth[microsynth_selected_instance].pwm_from / 10, 13, 0, 1);
+    print_small_intbar(9, 16, microsynth[microsynth_selected_instance].pwm_from / 10, 13, 0, 1);
   if (menu_item_check(14))
-    print_small_intbar(15, 17, microsynth[microsynth_selected_instance].pwm_to / 10, 14, 0, 1);
+    print_small_intbar(15, 16, microsynth[microsynth_selected_instance].pwm_to / 10, 14, 0, 1);
 
   if (menu_item_check(15))
   {
-    setCursor_textGrid_small(10, 18);
+    setCursor_textGrid_small(10, 17);
     setModeColor(15);
     print_formatted_number(microsynth[microsynth_selected_instance].pwm_speed, 2);
   }
@@ -11036,72 +11036,72 @@ FLASHMEM void print_static_texts_microsynth()
 {
   display.setTextSize(1);
   generic_active_function = 0;
-  setCursor_textGrid_small(1, 1);
+  setCursor_textGrid_small(0, 0);
   display.setTextColor(RED);
   display.print(F("MICROSYNTH"));
   update_microsynth_instance_icons();
 
-  setCursor_textGrid_small(1, 3);
+  setCursor_textGrid_small(0, 2);
   display.print(F("VOLUME"));
-  setCursor_textGrid_small(1, 4);
+  setCursor_textGrid_small(0, 3);
   display.print(F("WAVE"));
-  setCursor_textGrid_small(1, 5);
+  setCursor_textGrid_small(0, 4);
   display.print(F("COARSE"));
-  setCursor_textGrid_small(1, 6);
+  setCursor_textGrid_small(0, 5);
   display.print(F("DETUNE"));
 
-  setCursor_textGrid_small(22, 1);
+  setCursor_textGrid_small(22, 0);
   display.print(F("NOISE VOL"));
-  setCursor_textGrid_small(22, 2);
+  setCursor_textGrid_small(22, 1);
   display.print(F("NOISE DCY"));
-  setCursor_textGrid_small(22, 3);
+  setCursor_textGrid_small(22, 2);
   display.print(F("TRIG.WITH"));
 
-  setCursor_textGrid_small(22, 4);
+  setCursor_textGrid_small(22, 3);
   display.print(F("FILTER"));
-  setCursor_textGrid_small(22, 5);
+  setCursor_textGrid_small(22, 4);
   display.print(F("FREQ"));
-  setCursor_textGrid_small(22, 6);
+  setCursor_textGrid_small(22, 5);
   display.print(F("RES"));
-  setCursor_textGrid_small(32, 6);
+  setCursor_textGrid_small(32, 5);
   display.print(F("SPEED"));
 
-  setCursor_textGrid_small(1, 8);
+  setCursor_textGrid_small(0, 7);
   display.print(F("ATTACK"));
-  setCursor_textGrid_small(1, 9);
+  setCursor_textGrid_small(0, 8);
   display.print(F("DECAY"));
-  setCursor_textGrid_small(1, 10);
+  setCursor_textGrid_small(0, 9);
   display.print(F("SUSTAIN"));
-  setCursor_textGrid_small(1, 11);
+  setCursor_textGrid_small(0, 10);
   display.print(F("RELEASE"));
 
-  setCursor_textGrid_small(22, 8);
+  setCursor_textGrid_small(22, 7);
   display.print(F("OSC LFO"));
-  setCursor_textGrid_small(22, 9);
+  setCursor_textGrid_small(22, 8);
   display.print(F("MODE"));
-  setCursor_textGrid_small(22, 10);
+  setCursor_textGrid_small(22, 9);
   display.print(F("DELAY"));
-  setCursor_textGrid_small(32, 10);
+  setCursor_textGrid_small(32, 9);
   display.print(F("SPEED"));
 
   update_pwm_text();
 
-  setCursor_textGrid_small(13, 5);
+  setCursor_textGrid_small(13, 4);
   display.print(F("STEPS"));
-  setCursor_textGrid_small(13, 6);
+  setCursor_textGrid_small(13, 5);
   display.print(F("CENTS"));
+  setCursor_textGrid_small(16, 7);
+  display.print(F("MS"));
   setCursor_textGrid_small(16, 8);
   display.print(F("MS"));
   setCursor_textGrid_small(16, 9);
-  display.print(F("MS"));
-  setCursor_textGrid_small(16, 10);
   display.print(F("LEVL"));
-  setCursor_textGrid_small(16, 11);
+  setCursor_textGrid_small(16, 10);
   display.print(F("MS"));
 
   // arrows
   display.setTextColor(GREY1, COLOR_BACKGROUND);
-  setCursor_textGrid_small(36, 5);
+  setCursor_textGrid_small(36, 4);
   display.print(F(">"));
 }
 
@@ -11116,11 +11116,11 @@ FLASHMEM void update_selective_values_microsynth()
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setTextSize(1);
   if (menu_item_check(0))
-    print_small_intbar(9, 3, microsynth[microsynth_selected_instance].sound_intensity, 0, 1, 0);
+    print_small_intbar(9, 2, microsynth[microsynth_selected_instance].sound_intensity, 0, 1, 0);
   if (menu_item_check(1))
   {
     setModeColor(1);
-    setCursor_textGrid_small(9, 4);
+    setCursor_textGrid_small(9, 3);
     if (microsynth[microsynth_selected_instance].wave == 0)
       display.print(F("SINE    "));
     else if (microsynth[microsynth_selected_instance].wave == 1)
@@ -11143,49 +11143,49 @@ FLASHMEM void update_selective_values_microsynth()
   if (menu_item_check(2))
   {
     setModeColor(2);
-    setCursor_textGrid_small(9, 5);
+    setCursor_textGrid_small(9, 4);
     print_formatted_number_signed(microsynth[microsynth_selected_instance].coarse, 2);
   }
   if (menu_item_check(3))
   {
     setModeColor(3);
-    setCursor_textGrid_small(9, 6);
+    setCursor_textGrid_small(9, 5);
     print_formatted_number_signed(microsynth[microsynth_selected_instance].detune, 2);
   }
   if (menu_item_check(4))
   {
     setModeColor(4);
-    setCursor_textGrid_small(10, 8);
+    setCursor_textGrid_small(10, 7);
     print_formatted_number(microsynth[microsynth_selected_instance].env_attack * 4, 4);
   }
   if (menu_item_check(5))
   {
     setModeColor(5);
-    setCursor_textGrid_small(10, 9);
+    setCursor_textGrid_small(10, 8);
     print_formatted_number(microsynth[microsynth_selected_instance].env_decay * 4, 4);
   }
   if (menu_item_check(6))
   {
     setModeColor(6);
-    setCursor_textGrid_small(11, 10);
+    setCursor_textGrid_small(11, 9);
     print_formatted_number(microsynth[microsynth_selected_instance].env_sustain * 2, 3);
   }
   if (menu_item_check(7))
   {
     setModeColor(7);
-    setCursor_textGrid_small(10, 11);
+    setCursor_textGrid_small(10, 10);
     print_formatted_number(microsynth[microsynth_selected_instance].env_release * microsynth[microsynth_selected_instance].env_release, 4);
   }
   if (seq.cycle_touch_element != 1)
     microsynth_refresh_lower_screen_dynamic_text();
   if (menu_item_check(16))
-    print_small_intbar(32, 1, microsynth[microsynth_selected_instance].noise_vol, 16, 1, 0);
+    print_small_intbar(32, 0, microsynth[microsynth_selected_instance].noise_vol, 16, 1, 0);
   if (menu_item_check(17))
-    print_small_intbar(32, 2, microsynth[microsynth_selected_instance].noise_decay, 17, 1, 1);
+    print_small_intbar(32, 1, microsynth[microsynth_selected_instance].noise_decay, 17, 1, 1);
   if (menu_item_check(18))
   {
     setModeColor(18);
-    setCursor_textGrid_small(32, 3);
+    setCursor_textGrid_small(32, 2);
     if (microsynth[microsynth_selected_instance].trigger_noise_with_osc)
       display.print(F("OSC."));
     else
@@ -11194,7 +11194,7 @@ FLASHMEM void update_selective_values_microsynth()
   if (menu_item_check(19))
   {
     setModeColor(19);
-    setCursor_textGrid_small(32, 4);
+    setCursor_textGrid_small(32, 3);
     if (microsynth[microsynth_selected_instance].filter_noise_mode == 0)
       display.print(F("OFF   "));
     else if (microsynth[microsynth_selected_instance].filter_noise_mode == 1)
@@ -11205,19 +11205,19 @@ FLASHMEM void update_selective_values_microsynth()
       display.print(F("HI12dB"));
   }
   if (menu_item_check(20))
-    print_small_intbar(32, 5, microsynth[microsynth_selected_instance].filter_noise_freq_from / 100, 20, 0, 1);
+    print_small_intbar(32, 4, microsynth[microsynth_selected_instance].filter_noise_freq_from / 100, 20, 0, 1);
   if (menu_item_check(21))
-    print_small_intbar(38, 5, microsynth[microsynth_selected_instance].filter_noise_freq_to / 100, 21, 0, 1);
+    print_small_intbar(38, 4, microsynth[microsynth_selected_instance].filter_noise_freq_to / 100, 21, 0, 1);
   if (menu_item_check(22))
-    print_small_intbar(27, 6, microsynth[microsynth_selected_instance].filter_noise_resonance, 22, 0, 1);
+    print_small_intbar(27, 5, microsynth[microsynth_selected_instance].filter_noise_resonance, 22, 0, 1);
   if (menu_item_check(23))
-    print_small_intbar(38, 6, microsynth[microsynth_selected_instance].filter_noise_speed / 10, 23, 0, 1);
+    print_small_intbar(38, 5, microsynth[microsynth_selected_instance].filter_noise_speed / 10, 23, 0, 1);
   if (menu_item_check(24))
-    print_small_intbar(32, 8, microsynth[microsynth_selected_instance].lfo_intensity, 24, 0, 1);
+    print_small_intbar(32, 7, microsynth[microsynth_selected_instance].lfo_intensity, 24, 0, 1);
   if (menu_item_check(25))
   {
     setModeColor(25);
-    setCursor_textGrid_small(29, 9);
+    setCursor_textGrid_small(29, 8);
     print_formatted_number(microsynth[microsynth_selected_instance].lfo_mode, 2);
 
     if (microsynth[microsynth_selected_instance].lfo_mode == 0)
@@ -11227,7 +11227,7 @@ FLASHMEM void update_selective_values_microsynth()
     else
       display.setTextColor(GREY1, GREY3);
 
-    setCursor_textGrid_small(32, 9);
+    setCursor_textGrid_small(32, 8);
     display.print(F("U&D"));
     if (microsynth[microsynth_selected_instance].lfo_mode == 1)
     {
@@ -11235,7 +11235,7 @@ FLASHMEM void update_selective_values_microsynth()
     }
     else
       display.setTextColor(GREY1, GREY3);
-    setCursor_textGrid_small(36, 9);
+    setCursor_textGrid_small(36, 8);
     display.print(F("1U"));
 
     if (microsynth[microsynth_selected_instance].lfo_mode == 2)
@@ -11244,13 +11244,13 @@ FLASHMEM void update_selective_values_microsynth()
     }
     else
       display.setTextColor(GREY1, GREY3);
-    setCursor_textGrid_small(39, 9);
+    setCursor_textGrid_small(39, 8);
     display.print(F("1D"));
   }
   if (menu_item_check(26))
-    print_small_intbar(28, 10, microsynth[microsynth_selected_instance].lfo_delay, 26, 0, 1);
+    print_small_intbar(28, 9, microsynth[microsynth_selected_instance].lfo_delay, 26, 0, 1);
   if (menu_item_check(27))
-    print_small_intbar(38, 10, microsynth[microsynth_selected_instance].lfo_speed, 27, 0, 1);
+    print_small_intbar(38, 9, microsynth[microsynth_selected_instance].lfo_speed, 27, 0, 1);
 }
 
 FLASHMEM void UI_func_microsynth(uint8_t param)
@@ -11259,18 +11259,18 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
   {
     // setup function
     registerTouchHandler(handle_touchscreen_microsynth);
-    registerScope(253, 40, 58, 50);
+    registerScope(269, 40, 50, 40);
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
     {
-      draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
+      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
       microsynth_refresh_lower_screen_static_text();
     }
     else
     {
-      draw_button_on_grid(45, 1, "MORE", "PARAM.", 0);
+      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
       drawVirtualKeyboard();
     }
     print_static_texts_microsynth();
