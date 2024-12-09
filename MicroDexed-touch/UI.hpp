@@ -6649,7 +6649,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     ui.setCursor(0, 0);
     drawDrumsSampleWave();
-    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(5), "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
 
     // the drum sample slot selector.
     // changes activesample and redraws all other editors as they depend on.
@@ -11265,12 +11265,12 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
     virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
     {
-      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
       microsynth_refresh_lower_screen_static_text();
     }
     else
     {
-      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
       drawVirtualKeyboard();
     }
     print_static_texts_microsynth();

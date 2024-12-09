@@ -31,6 +31,7 @@ public:
 
   static constexpr uint16_t BUTTON_SIZE_X = 50;
   static constexpr uint16_t BUTTON_SIZE_Y = 35;
+  static constexpr uint8_t BUTTON_SPACING = 4;  // center in screen
 
   TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton *b)> clicked = [](TouchButton *b){}, std::function<void(TouchButton *b)> longPressed = 0);
   void processPressed();
@@ -40,14 +41,11 @@ public:
   void clear(uint16_t color);
 
   static void drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color);
-  //static void drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, uint8_t color);  // touchButton Keyboard
   static bool isPressed(uint16_t x, uint16_t y);
   static bool isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
   static bool isInArea(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
   static ColorCombo getColors(Color color);
   static void clearButton(uint16_t x, uint16_t y, uint16_t color);
-  static uint16_t GRID_X(uint8_t x);
-  static uint16_t GRID_Y(uint8_t y);
 
 private:
   bool isSelected = false;
@@ -60,7 +58,6 @@ private:
   PressedState pressedState;
 
   static constexpr uint16_t LONGPRESS_TIME_MS = 600;
-  static constexpr uint8_t BUTTON_SPACING = 4;  // center in screen
 
 };
 
