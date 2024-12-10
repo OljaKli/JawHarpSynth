@@ -136,9 +136,18 @@ extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, by
 
 //void handle_pitchbend((byte inChannel, byte inData1, byte inData2, const char *midi_device, midi::MidiType event));
 
+#if defined APC
+extern void print_apc_sample_selection_pads();
+extern void apc_print_right_buttons();
+extern void apc_fader_control(uint8_t inData1, uint8_t inData2);
+extern void apc_print_sample_volume_pads();
+extern void apc_NoteOn(byte inChannel, byte inData1, byte inData2);
+#endif
+
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
+
 #ifdef DEBUG
   char text[10];
 #endif
@@ -149,13 +158,28 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
   case midi::NoteOn:
     seq.note_in = inData1;
     seq.note_in_velocity = inData2;
+
+#if defined APC
+    if (strcmp(MIDI_BY_USB, midi_device))
+      apc_NoteOn(inChannel, inData1, inData2);
+#endif
+
     handleNoteOnInput(inChannel, inData1, inData2, 0);
+#if defined APC
+    print_apc_sample_selection_pads();
+#endif
+
 #ifdef DEBUG
 #endif
     break;
   case midi::NoteOff:
     seq.note_in = inData1;
     seq.note_in_velocity = inData2;
+
+#if defined APC
+    apc_print_right_buttons();
+#endif
+
     handleNoteOff(inChannel, inData1, inData2, 0);
 #ifdef DEBUG
     strcpy(text, "NoteOff");
@@ -165,6 +189,12 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     // Internal CC ?
     if (inData1 >= 20 && inData1 <= 31)
       _internal = true;
+
+#if defined APC
+    if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56)
+      apc_fader_control(inData1, inData2);
+#endif
+
     handleControlChange(inChannel, inData1, inData2);
 #ifdef DEBUG
     strcpy(text, "CC");

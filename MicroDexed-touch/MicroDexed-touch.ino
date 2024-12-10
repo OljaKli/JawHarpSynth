@@ -54,6 +54,12 @@
 #include "TeensyVariablePlaybackFlash.h"
 #endif
 
+  #if defined APC
+bool APC_BUTTONS_RIGHT[8];
+uint8_t APC_SCROLL_OFFSET = 64;
+uint8_t APC_PREVIOUS_NOTE = 254;
+  #endif
+
 // #ifdef COMPILE_FOR_FLASH
 // SerialFlashChip         myfs;
 // #endif
@@ -100,11 +106,6 @@ using namespace TeensyTimerTool;
 #include <vector>
 
 //#include "MidiReader.h"
-
-
-
-
-
 
 
 uint8_t check_sd_cards(void);
@@ -1771,7 +1772,7 @@ FLASHMEM void sub_step_recording(bool touchinput, uint8_t touchparam)
             set_pattern_content_type_color(seq.active_pattern);
         }
         display.print(seq_find_shortname(cur_step)[0]);
-        seq_printVelGraphBar_single_step(cur_step, GREY1);
+        seq_printAllVelocitySteps_single_step(cur_step, GREY1);
         if (seq.cycle_touch_element != 1)
           print_track_steps_detailed_only_current_playing_note(0, CHAR_height * 4 + 3, cur_step);
 
@@ -2965,7 +2966,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #ifdef MIDI_DEVICE_USB_HOST
     if (device == 1)
       midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
-
 #endif
 
 #ifdef MIDI_DEVICE_DIN
@@ -4520,6 +4520,12 @@ void handleStart(void)
     usbMIDI.sendRealTime(midi::Start);
 #endif
 
+#if defined APC
+APC_BUTTONS_RIGHT[7]=true;
+apc_print_right_buttons();
+#endif
+
+
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_arpeggio))
     {
       print_arp_start_stop_button();
@@ -4562,6 +4568,12 @@ void handleStop(void)
 #if NUM_DEXED > 1
       MicroDexed[1]->panic();
 #endif
+
+#if defined APC
+APC_BUTTONS_RIGHT[7]=false;
+apc_print_right_buttons();
+#endif
+
 
       if (seq.clock == 0 || seq.clock == 2)
         sequencer_timer.stop();
