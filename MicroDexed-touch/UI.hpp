@@ -11265,7 +11265,7 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
     virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
     {
-      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
+      TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
       microsynth_refresh_lower_screen_static_text();
     }
     else

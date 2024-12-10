@@ -25,8 +25,7 @@ public:
     BUTTON_RED = 2,
     BUTTON_HIGHLIGHTED = 3,
     BUTTON_LABEL = 4,
-    BUTTONCOLOR_NUM = 5,
-    BUTTON_VIRTUAL_KEYBOARD = 99
+    BUTTONCOLOR_NUM = 5
   };
 
   template<int nx, int ny>
@@ -55,6 +54,7 @@ public:
   void setSelected(bool selected);
   void clear(uint16_t color);
 
+  static void drawVirtualKeyboardButton(uint16_t x, uint16_t y);
   static void drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color);
   static bool isPressed(uint16_t x, uint16_t y);
   static bool isAreaPressed(uint16_t x, uint16_t y, uint16_t w, uint16_t h);

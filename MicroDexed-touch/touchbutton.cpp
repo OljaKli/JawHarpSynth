@@ -17,12 +17,14 @@ static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { COLOR_SYSTEXT, COLOR_BACKGROUND } // COLOR_LABEL
 };
 
-FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed) : x(x_coord), y(y_coord),
-drawHandler{ draw },
-clickedHandler{ clicked },
-longPressedHandler{ longPressed },
-pressedMs(0),
-pressedState(NOT_PRESSED) {
+FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed)
+: x(x_coord),
+  y(y_coord),
+  drawHandler{ draw },
+  clickedHandler{ clicked },
+  longPressedHandler{ longPressed },
+  pressedMs(0),
+  pressedState(NOT_PRESSED) {
 }
 
 FLASHMEM void TouchButton::drawNow() {
@@ -80,59 +82,55 @@ FLASHMEM void TouchButton::draw(const std::string label, const std::string sub, 
   display.fillRect(x, (y + BUTTON_SIZE_Y - 2), BUTTON_SIZE_X, 2, barColor);
 }
 
+FLASHMEM void TouchButton::drawVirtualKeyboardButton(uint16_t x, uint16_t y) {
+  display.console = true;
+  display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
+  display.console = true;
+  display.fillRect(x, y + 17, BUTTON_SIZE_X, 35 - 16, COLOR_BACKGROUND);
+  uint8_t offset[6] = { 1, 2, 2, 4, 6,7 }; //+ is the offset to left
+  int offcount = 0;
+  display.setTextSize(1);
+  display.setTextColor(GREY1, GREY3);
+  display.setCursor(x + 5, y + 5);
+  display.print(F("V.KEYB"));
+
+  for (uint8_t i = 0; i < 9; i++) //draw white keys
+  {
+    display.console = true;
+    display.fillRect(x + 6 * i, y + 17, 5, 18, COLOR_SYSTEXT); // pianoroll white key
+  }
+  for (uint8_t i = 0; i < 14; i++)
+  {
+    if (seq.piano[i] == 1)
+    {
+      display.fillRect(x + 4 * i - offset[offcount], y + 17, 4, 9, COLOR_BACKGROUND); // BLACK key
+      offcount++;
+    }
+  }
+}
+
 FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color) {
+  const ColorCombo c = colorMap[color];
 
-  if (color == BUTTON_VIRTUAL_KEYBOARD) // special case, draw virtual keyboard button (icon)
-  {
-    display.console = true;
-    display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
-    display.console = true;
-    display.fillRect(x, y + 17, BUTTON_SIZE_X, 35 - 16, COLOR_BACKGROUND);
-    uint8_t offset[6] = { 1, 2, 2, 4, 6,7 }; //+ is the offset to left
-    int offcount = 0;
-    display.setTextSize(1);
-    display.setTextColor(GREY1, GREY3);
-    display.setCursor(x + 5, y + 5);
-    display.print(F("V.KEYB"));
+  display.setTextSize(1);
+  display.setTextColor(c.text, c.bg);
 
-    for (uint8_t i = 0; i < 9; i++) //draw white keys
-    {
-      display.console = true;
-      display.fillRect(x + 6 * i, y + 17, 5, 18, COLOR_SYSTEXT); // pianoroll white key
-    }
-    for (uint8_t i = 0; i < 14; i++)
-    {
-      if (seq.piano[i] == 1)
-      {
-        display.fillRect(x + 4 * i - offset[offcount], y + 17, 4, 9, COLOR_BACKGROUND); // BLACK key
-        offcount++;
-      }
-    }
+  display.console = true;
+  display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, c.bg);
+
+  display.setCursor(x + 5, y + 5);
+  display.print(label.c_str());
+
+  const bool bigSub = sub.size() <= 3;
+  display.setTextSize(bigSub ? 2 : 1);
+  if (bigSub) {
+    const uint16_t subLengthPixels = sub.size() * CHAR_width;
+    display.setCursor(x + (BUTTON_SIZE_X - subLengthPixels) / 2, y + 15);
   }
-  else
-  {
-    const ColorCombo c = colorMap[color];
-
-    display.setTextSize(1);
-    display.setTextColor(c.text, c.bg);
-
-    display.console = true;
-    display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, c.bg);
-
-    display.setCursor(x + 5, y + 5);
-    display.print(label.c_str());
-
-    const bool bigSub = sub.size() <= 3;
-    display.setTextSize(bigSub ? 2 : 1);
-    if (bigSub) {
-      const uint16_t subLengthPixels = sub.size() * CHAR_width;
-      display.setCursor(x + (BUTTON_SIZE_X - subLengthPixels) / 2, y + 15);
-    }
-    else {
-      display.setCursor(x + 5, y + 20);
-    }
-    display.print(sub.c_str());
+  else {
+    display.setCursor(x + 5, y + 20);
   }
+  display.print(sub.c_str());
 }
 
 FLASHMEM void TouchButton::processPressed() {

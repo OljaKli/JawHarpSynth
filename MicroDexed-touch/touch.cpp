@@ -606,7 +606,7 @@ FLASHMEM void handle_touchscreen_microsynth()
       if (seq.cycle_touch_element == 1)
       {
         seq.cycle_touch_element = 0;
-         TouchButton::drawButton(GRID.X[5], GRID.Y[0], "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
+        TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
         generic_full_draw_required = true;
         microsynth_refresh_lower_screen_static_text();
         microsynth_refresh_lower_screen_dynamic_text();
@@ -875,13 +875,12 @@ FLASHMEM void draw_menu_ui_icons()
   TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[5], GRID.Y[5], "MAIN", "MIXER", TouchButton::BUTTON_NORMAL);
 
-  TouchButton::drawButton(GRID.X[5], GRID.Y[2], "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);
-
+  TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
 }
 
 FLASHMEM void handle_touchscreen_menu()
 {
-  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5]))
+  if ((ts.keyb_in_menu_activated == false) && TouchButton::isPressed(GRID.X[4], GRID.Y[5]))
   {
     multiband_active = !multiband_active;
     TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
