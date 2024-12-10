@@ -50,7 +50,7 @@
 #include "virtualkeyboard.h"
 
 #if defined APC
- #include "apc.h"
+#include "apc.h"
 #endif
 
 extern LiveSequencer liveSeq;
@@ -7200,7 +7200,6 @@ void seq_printAllVelocitySteps()
       sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
     }
 #endif
-
   }
 }
 
@@ -7223,6 +7222,18 @@ void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
       drawBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[22], 8, 8, COLOR_PITCHSMP);
     }
   }
+
+#if defined APC
+  if (step < 8)
+  {
+    sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 + step, 45);
+  }
+  else
+  {
+    sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 - 8 - 8 + step, 45);
+  }
+#endif
+
 }
 
 bool wave_editor_skip_redraw_overview = false;
@@ -9767,10 +9778,10 @@ FLASHMEM void pattern_editor_menu_0()
 
 #if defined APC
 
- void apc(uint8_t a, uint8_t b,uint8_t c)
- {
- midi_usb.sendNoteOn(a,b,c);
- }
+void apc(uint8_t a, uint8_t b, uint8_t c)
+{
+  midi_usb.sendNoteOn(a, b, c);
+}
 
 #endif
 

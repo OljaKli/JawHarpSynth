@@ -17,6 +17,7 @@ extern uint8_t APC_SCROLL_OFFSET;
 extern uint8_t APC_PREVIOUS_NOTE;
 extern bool APC_BUTTONS_RIGHT[8];
 extern void seq_printAllVelocitySteps();
+extern void  seq_printAllVelocitySteps_single_step(uint8_t step, int color);
 extern void seq_printAllSeqSteps();
 extern void pattern_editor_play_current_step(uint8_t step);
 extern void insert_pattern_step(uint8_t step);
@@ -153,12 +154,16 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
       if (APC_BUTTONS_RIGHT[3])
       {
         seq.vel[seq.active_pattern][in1 - 48] = in2;
-        seq_printAllVelocitySteps();
+      //  seq_printAllVelocitySteps();
+         seq_printAllVelocitySteps_single_step(in1 - 48, GREY1);
+
       }
       if (APC_BUTTONS_RIGHT[4])
       {
         seq.vel[seq.active_pattern][in1 - 48 + 8] = in2;
-        seq_printAllVelocitySteps();
+      //  seq_printAllVelocitySteps();
+        seq_printAllVelocitySteps_single_step(in1 - 48+8, GREY1);
+
       }
     }
   }

@@ -192,7 +192,9 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 
 #if defined APC
     if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56)
+    {
       apc_fader_control(inData1, inData2);
+  }
 #endif
 
     handleControlChange(inChannel, inData1, inData2);
