@@ -7,7 +7,6 @@
 #include "LCDMenuLib2.h"
 #include "ILI9341_t3n.h"
 #include "drums.h"
-#include "livesequencer.h"
 
 static constexpr float KEY_WIDTH_WHITE = 30;
 static constexpr float KEY_HEIGHT_WHITE = 74;

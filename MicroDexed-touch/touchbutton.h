@@ -29,6 +29,21 @@ public:
     BUTTON_VIRTUAL_KEYBOARD = 99
   };
 
+  template<int nx, int ny>
+  struct Grid {
+    constexpr Grid() : X(), Y() {
+      for (auto i = 0; i < nx; ++i) {
+          X[i] = i * (TouchButton::BUTTON_SIZE_X + TouchButton::BUTTON_SPACING);
+      }
+      for (auto i = 0; i < ny; ++i) {
+          const uint16_t offset = i > 1 ? 10 : 0;
+          Y[i] = offset + i * (TouchButton::BUTTON_SIZE_Y + TouchButton::BUTTON_SPACING);
+      }
+    }
+    int X[nx];
+    int Y[ny];
+  };
+
   static constexpr uint16_t BUTTON_SIZE_X = 50;
   static constexpr uint16_t BUTTON_SIZE_Y = 35;
   static constexpr uint8_t BUTTON_SPACING = 4;  // center in screen
@@ -60,5 +75,7 @@ private:
   static constexpr uint16_t LONGPRESS_TIME_MS = 600;
 
 };
+
+constexpr TouchButton::Grid<6, 6> GRID;
 
 #endif //TOUCHBUTTON_H

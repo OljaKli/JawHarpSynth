@@ -11,9 +11,7 @@
 #include <set>
 #include "UI.h"
 
-
 typedef void (*SetupFn)(void*);
-
 class UI_LiveSequencer;
 
 class LiveSequencer {
@@ -172,21 +170,6 @@ public:
     uint8_t songMuteQuantizeDenom = 1;
   };
 
-  template<int nx, int ny>
-  struct Grid {
-    constexpr Grid() : X(), Y() {
-      for (auto i = 0; i < nx; ++i) {
-          X[i] = i * (TouchButton::BUTTON_SIZE_X + TouchButton::BUTTON_SPACING);
-      }
-      for (auto i = 0; i < ny; ++i) {
-          const uint16_t offset = i > 1 ? 10 : 0;
-          Y[i] = offset + i * (TouchButton::BUTTON_SIZE_Y + TouchButton::BUTTON_SPACING);
-      }
-    }
-    int X[nx];
-    int Y[ny];
-  };
-
   LiveSequencer();
   void initOnce(void);
   LiveSequencer::LiveSeqData* getData(void);
@@ -268,7 +251,5 @@ private:
 
 void UI_func_livesequencer(uint8_t param);
 void handle_touchscreen_live_sequencer(void);
-
-constexpr LiveSequencer::Grid<LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN, 6> GRID;
 
 #endif // LIVESEQUENCER_H

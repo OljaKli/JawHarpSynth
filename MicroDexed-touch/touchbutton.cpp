@@ -82,7 +82,7 @@ FLASHMEM void TouchButton::draw(const std::string label, const std::string sub, 
 
 FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string label, const std::string sub, Color color) {
 
-  if (color == 99) // special case, draw virtual keyboard button (icon)
+  if (color == BUTTON_VIRTUAL_KEYBOARD) // special case, draw virtual keyboard button (icon)
   {
     display.console = true;
     display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
@@ -109,7 +109,6 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
       }
     }
   }
-
   else
   {
     const ColorCombo c = colorMap[color];
@@ -121,7 +120,6 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
     display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, c.bg);
 
     display.setCursor(x + 5, y + 5);
-    //display.console = true;  //should not be necessary for printing text
     display.print(label.c_str());
 
     const bool bigSub = sub.size() <= 3;
@@ -133,7 +131,6 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
     else {
       display.setCursor(x + 5, y + 20);
     }
-    //display.console = true; //should not be necessary for printing text
     display.print(sub.c_str());
   }
 }

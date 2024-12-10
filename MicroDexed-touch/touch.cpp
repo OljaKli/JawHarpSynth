@@ -7,7 +7,7 @@
 #include <Audio.h>
 #include "template_mixer.hpp"
 #include "UI.h"
-#include "livesequencer.h"
+#include "touchbutton.h"
 #include "virtualkeyboard.h"
 
 extern ILI9341_t3n display;

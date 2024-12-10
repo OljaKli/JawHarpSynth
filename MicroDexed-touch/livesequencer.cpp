@@ -38,8 +38,6 @@ FLASHMEM LiveSequencer::LiveSequencer() {
   ui_liveSeq = new UI_LiveSequencer(*this, data);
   ui_pianoRoll = new UI_LiveSeq_PianoRoll(*this, data);
 
-
-
   updateTrackChannels(true);
   data.processMidiIn = false;
   playIterator = data.eventsList.end();
