@@ -2464,13 +2464,13 @@ void loop()
       save_sys_flag = false;
       if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false)
       {
-        TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), "CONFIG", "SAVED", TouchButton::BUTTON_ACTIVE);
+        TouchButton::drawButton(GRID.X[0], GRID.Y[5], "CONFIG", "SAVED", TouchButton::BUTTON_ACTIVE);
         ui_save_notification_icon = true;
       }
       else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) ||
         LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_test_touchscreen))
       {
-        TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), "CONFIG", "SAVED", TouchButton::BUTTON_ACTIVE);
+        TouchButton::drawButton(GRID.X[0], GRID.Y[5], "CONFIG", "SAVED", TouchButton::BUTTON_ACTIVE);
         ui_save_notification_icon = true;
       }
 #ifdef DEBUG
@@ -2491,7 +2491,7 @@ void loop()
     if (LCDML.FUNC_getID() == 255)
     {
       display.console = true;
-     TouchButton::clearButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), COLOR_BACKGROUND);
+     TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
       ui_save_notification_icon = false;
       display.console = false;
     }
@@ -2499,7 +2499,7 @@ void loop()
       LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_test_touchscreen))
     {
       display.console = true;
-      TouchButton::clearButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(5), COLOR_BACKGROUND);
+      TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
 
       ui_save_notification_icon = false;
       display.console = false;
@@ -4525,7 +4525,7 @@ void handleStart(void)
       print_arp_start_stop_button();
     }
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
-      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "STOP", TouchButton::BUTTON_RED);
+      TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
 
   }
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
@@ -4619,7 +4619,7 @@ void handleStop(void)
       print_arp_start_stop_button();
     }
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
-      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
+      TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
   }
 }
 

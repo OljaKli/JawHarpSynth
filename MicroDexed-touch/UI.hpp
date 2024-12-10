@@ -6649,7 +6649,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     ui.setCursor(0, 0);
     drawDrumsSampleWave();
-    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(5), "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
 
     // the drum sample slot selector.
     // changes activesample and redraws all other editors as they depend on.
@@ -11265,12 +11265,12 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
     virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
     {
-      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "", "", TouchButton::BUTTON_VIRTUAL_KEYBOARD);// print keyboard icon
+      TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
       microsynth_refresh_lower_screen_static_text();
     }
     else
     {
-      TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(0), "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
       drawVirtualKeyboard();
     }
     print_static_texts_microsynth();
@@ -19872,29 +19872,6 @@ FLASHMEM void UI_func_volume(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     encoderDir[ENC_L].reset();
     back_from_volume = 0;
-  }
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_L].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_L].Up()))
-    {
-      back_from_volume = 0;
-      if (LCDML.BT_checkDown())
-      {
-        if (ENCODER[ENC_L].speed() > 5)
-          configuration.sys.vol = constrain(configuration.sys.vol + ENCODER[ENC_L].speed() / 2, VOLUME_MIN, VOLUME_MAX);
-        else
-          configuration.sys.vol = constrain(configuration.sys.vol + 1, VOLUME_MIN, VOLUME_MAX);
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        if (ENCODER[ENC_L].speed() > 5)
-          configuration.sys.vol = constrain(configuration.sys.vol - ENCODER[ENC_L].speed() / 2, VOLUME_MIN, VOLUME_MAX);
-        else
-          configuration.sys.vol = constrain(configuration.sys.vol - 1, VOLUME_MIN, VOLUME_MAX);
-      }
-    }
-
-    // Master Volume
 
     if (multiband_active)
     {
@@ -19909,9 +19886,21 @@ FLASHMEM void UI_func_volume(uint8_t param)
       mb_set_master();
       mb_set_mutes();
       mb_set_compressor();
-      if (LCDML.FUNC_getID() > _LCDML_DISP_cnt || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_volume))
-        draw_button_on_grid(35, 25, "MULTI", "BAND", 0);
     }
+
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+  }
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    if ((LCDML.BT_checkDown() && encoderDir[ENC_L].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_L].Up()))
+    {
+      back_from_volume = 0;
+      const uint8_t volChange = (ENCODER[ENC_L].speed() > 5) ? ENCODER[ENC_L].speed() / 2 : 1;
+      const int8_t factorChange = LCDML.BT_checkDown() ? +1 : -1;
+      configuration.sys.vol = constrain(configuration.sys.vol + factorChange * volChange, VOLUME_MIN, VOLUME_MAX);
+    }
+
+    // Master Volume
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     setCursor_textGrid(1, 1);

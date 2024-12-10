@@ -12,7 +12,6 @@
 #include "UI.h"
 
 typedef void (*SetupFn)(void*);
-
 class UI_LiveSequencer;
 
 class LiveSequencer {

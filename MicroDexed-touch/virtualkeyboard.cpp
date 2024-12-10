@@ -56,7 +56,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   if(modeChanged) {
     // clear keys area
     display.console = true;
-    display.fillRect(0, TouchButton::GRID_Y(4), DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::GRID_Y(4), COLOR_BACKGROUND);
+    display.fillRect(0, GRID.Y[4], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[4], COLOR_BACKGROUND);
 
     drawFlags |= VK_DRAW_KEYS | VK_DRAW_OCTAVE;
   }
@@ -64,14 +64,14 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 
   if (drawFlags & VK_DRAW_OCTAVE_BUTTONS) {
     // draw oct +- buttons
-    TouchButton::drawButton(TouchButton::GRID_X(0), TouchButton::GRID_Y(3), "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(TouchButton::GRID_X(5), TouchButton::GRID_Y(3), "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[0], GRID.Y[3], "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[3], "OCTAVE", "+", TouchButton::BUTTON_NORMAL);
   }
 
   if (drawFlags & VK_DRAW_INSTRUMENT_BUTTONS) {
     // draw instrument buttons
-    TouchButton::drawButton(TouchButton::GRID_X(1), TouchButton::GRID_Y(3), "INSTR.", "-", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(TouchButton::GRID_X(4), TouchButton::GRID_Y(3), "INSTR.", "+", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[3], "INSTR.", "-", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[3], "INSTR.", "+", TouchButton::BUTTON_NORMAL);
   }
 
   if(drawFlags & VK_DRAW_INSTRUMENT_NAME) {
@@ -229,19 +229,19 @@ FLASHMEM void touch_button_inst_down()
 FLASHMEM void touch_check_all_keyboard_buttons()
 {
   // octave buttons
-  if(TouchButton::isPressed(TouchButton::GRID_X(0), TouchButton::GRID_Y(3))) {
+  if(TouchButton::isPressed(GRID.X[0], GRID.Y[3])) {
     touch_button_oct_down();
   }
-  if(TouchButton::isPressed(TouchButton::GRID_X(5), TouchButton::GRID_Y(3))) {
+  if(TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
     touch_button_oct_up();
   }
 
   // instrument buttons (disabled for livesequencer)
   if (ts.virtual_keyboard_instrument != 0) { 
-    if(TouchButton::isPressed(TouchButton::GRID_X(1), TouchButton::GRID_Y(3))) {
+    if(TouchButton::isPressed(GRID.X[1], GRID.Y[3])) {
       touch_button_inst_down();
     }
-    if(TouchButton::isPressed(TouchButton::GRID_X(4), TouchButton::GRID_Y(3))) {
+    if(TouchButton::isPressed(GRID.X[4], GRID.Y[3])) {
       touch_button_inst_up();
     }
   }
@@ -322,7 +322,7 @@ FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
     line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
     line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
   }
-  TouchButton::drawButton(TouchButton::GRID_X(padIndex % 6), TouchButton::GRID_Y(4 + (padIndex / 6)), std::string(line1), std::string(line2), color);
+  TouchButton::drawButton(GRID.X[padIndex % 6], GRID.Y[4 + (padIndex / 6)], std::string(line1), std::string(line2), color);
 }
 
 FLASHMEM void print_drumpads() {
@@ -431,7 +431,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
   else if (ts.current_virtual_keyboard_display_mode == 1) {
     if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0) {
       for (uint8_t x = 0; x < 12; x++) {
-        const bool isWithinPad = TouchButton::isInArea(TouchButton::GRID_X(x % 6), TouchButton::GRID_Y(4 + (x / 6)), TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y);
+        const bool isWithinPad = TouchButton::isInArea(GRID.X[x % 6], GRID.Y[4 + (x / 6)], TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y);
         const bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
         const bool isPadRelease = (ts.virtual_keyboard_state_white & (1 << x)) != 0 && !isWithinPad;
         const uint8_t note = x + ts.virtual_keyboard_octave * 12 - 18;
