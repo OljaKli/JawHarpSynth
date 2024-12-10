@@ -881,7 +881,17 @@ FLASHMEM void draw_menu_ui_icons()
 
 FLASHMEM void handle_touchscreen_menu()
 {
-  if (LCDML.FUNC_getID() > _LCDML_DISP_cnt)
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5]))
+  {
+    multiband_active = !multiband_active;
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+
+    mb_set_mutes();
+    mb_set_master();
+    mb_set_compressor();
+  }
+  
+  if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) // only when not in UI_func_volume
   {
     if (ts.touch_ui_drawn_in_menu == false)
     {
@@ -896,8 +906,6 @@ FLASHMEM void handle_touchscreen_menu()
       }
       ts.touch_ui_drawn_in_menu = true;
     }
-    //if (numTouchPoints > 0)
-    //{
 
     if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
     {
@@ -938,12 +946,10 @@ FLASHMEM void handle_touchscreen_menu()
         if (seq.running)
         {
           handleStop();
-          // TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
         }
         else
         {
           handleStart();
-          // TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP",  TouchButton::BUTTON_RED );
         }
       }
       else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5]))
@@ -962,19 +968,8 @@ FLASHMEM void handle_touchscreen_menu()
       {
         LCDML.OTHER_jumpToFunc(UI_func_mixer);
       }
-      else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5]))
-      {
-        multiband_active = !multiband_active;
-        TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
-
-        mb_set_mutes();
-        mb_set_master();
-        mb_set_compressor();
-      }
-      //else if (check_button_on_grid(2, 25)) // back button
       else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]))// back button
       {
-        // LCDML.FUNC_goBackToMenu(); 
         LCDML.BT_quit();
       }
     }
