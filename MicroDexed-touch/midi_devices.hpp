@@ -161,7 +161,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
-    if (strcmp(MIDI_BY_USB, midi_device))
+    if (strcmp(MIDI_BY_USB, midi_device) && inChannel==1)
     {
       apc_NoteOn(inChannel, inData1, inData2);
       if (inData1 > 7 && inData1 < 16) // drum pad select row
@@ -197,7 +197,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
       _internal = true;
 
 #if defined APC
-    if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56)
+    if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel==1)
     {
       apc_fader_control(inData1, inData2);
     }

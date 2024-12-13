@@ -80,11 +80,11 @@ extern void apc_drawChar(int x, unsigned char c);
 
 FLASHMEM void apc_print_sample_volume_pads()
 {
-   if (apc_scroll_message == false)
-   {
-  for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
-    sub_print_volume_pad(drum_config[APC_SCROLL_OFFSET + i - 10].vol_max * 100, i, 5);
-   }
+  if (apc_scroll_message == false)
+  {
+    for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
+      sub_print_volume_pad(drum_config[APC_SCROLL_OFFSET + i - 10].vol_max * 100, i, 5);
+  }
 }
 
 FLASHMEM void apc_clear_grid()
@@ -124,12 +124,12 @@ FLASHMEM void print_apc_sample_selection_pads()
   {
     for (uint8_t i = 0; i < 8; i++)
     {
-      if (i == activeSample - APC_SCROLL_OFFSET +10 && APC_BUTTONS_RIGHT[6])
+      if (i == activeSample - APC_SCROLL_OFFSET + 10 && APC_BUTTONS_RIGHT[6])
       {
-        apc(8 + i, 8 + i  + APC_SCROLL_OFFSET, 11);
+        apc(8 + i, 8 + i + APC_SCROLL_OFFSET, 11);
       }
       else
-        apc(8 + i, 8 + i  + APC_SCROLL_OFFSET, 6);
+        apc(8 + i, 8 + i + APC_SCROLL_OFFSET, 6);
     }
   }
 }
@@ -143,8 +143,8 @@ FLASHMEM void set_apc_sample_selection(uint8_t pad)
 
   for (uint8_t i = 0; i < 8; i++)
   {
-    if (pad - 8== i)
-        activeSample =  APC_SCROLL_OFFSET+i;
+    if (pad - 8 == i)
+      activeSample = APC_SCROLL_OFFSET + i;
   }
 
   if (pad == APC_PREVIOUS_NOTE && APC_BUTTONS_RIGHT[6])
@@ -365,9 +365,9 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   else if (APC_SCROLL_OFFSET >= NUM_DRUMSET_CONFIG + 1)
     APC_SCROLL_OFFSET = NUM_DRUMSET_CONFIG + 1;
 
-  
 
-   if (inData1 == 112 || inData1 == 113) //pattern change
+
+  if (inData1 == 112 || inData1 == 113) //pattern change
     apc_pattern_change(inData1);
 
   if (inData1 == 115 || inData1 == 116)
@@ -415,7 +415,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   }
 
   //else if (inData1 > 7 + APC_SCROLL_OFFSET && inData1 < 16 + APC_SCROLL_OFFSET) // drum pad select row
-  else if (inData1 > 7  && inData1 < 16 ) // drum pad select row
+  else if (inData1 > 7 && inData1 < 16) // drum pad select row
   {
     inChannel = drum_midi_channel;
     set_apc_sample_selection(inData1);
@@ -446,11 +446,11 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   {
     apc_print_sample_volume_pads();
   }
-   else
-   {
-     inChannel = 99;
-   }
-apc_out_channel=inChannel;
+  else
+  {
+    inChannel = 99;
+  }
+  apc_out_channel = inChannel;
 
 
 }

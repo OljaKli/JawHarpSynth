@@ -7083,17 +7083,17 @@ void seq_printAllSeqSteps()
     }
 
 #if defined APC
- if (apc_scroll_message == false)
- {
-    if (i < 8)
+    if (apc_scroll_message == false)
     {
-      midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+      if (i < 8)
+      {
+        midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+      }
+      else
+      {
+        midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+      }
     }
-    else
-    {
-      midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
-    }
- }
 #endif
   }
 }
@@ -7193,19 +7193,19 @@ void seq_printAllVelocitySteps()
     }
 
 #if defined APC
- if (apc_scroll_message == false)
- {
-    if (i < 8)
+    if (apc_scroll_message == false)
     {
-      //  midi_usb.sendNoteOn(64 -16-8- 8 + i, seq.vel[seq.active_pattern][i], 6);
-      sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 45);
+      if (i < 8)
+      {
+        //  midi_usb.sendNoteOn(64 -16-8- 8 + i, seq.vel[seq.active_pattern][i], 6);
+        sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 45);
+      }
+      else
+      {
+        //  midi_usb.sendNoteOn(64 -16-8 - 16 - 8 + i, seq.vel[seq.active_pattern][i], 6);
+        sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
+      }
     }
-    else
-    {
-      //  midi_usb.sendNoteOn(64 -16-8 - 16 - 8 + i, seq.vel[seq.active_pattern][i], 6);
-      sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
-    }
- }
 #endif
   }
 }
@@ -7214,18 +7214,23 @@ void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
 {
   if (remote_active)
     display.console = true;
-  display.fillRect(0 + step * CHAR_width + 1, CHAR_height * 2 + 1, 8, 14, COLOR_BACKGROUND);
-  if (seq.vel[seq.active_pattern][step] < 130)
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
-    display.drawLine(0 + step * CHAR_width + 3, CHAR_height * 3 - 3, 0 + step * CHAR_width + 3, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][step] / 10), color);
-    display.drawLine(0 + step * CHAR_width + 4, CHAR_height * 3 - 3, 0 + step * CHAR_width + 4, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][step] / 10), color);
-    display.drawLine(0 + step * CHAR_width + 5, CHAR_height * 3 - 3, 0 + step * CHAR_width + 5, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][step] / 10), color);
-  }
-  else
-  {
-    if (seq.vel[seq.active_pattern][step] > 209)
+
+    display.fillRect(0 + step * CHAR_width + 1, CHAR_height * 2 + 1, 8, 14, COLOR_BACKGROUND);
+    if (seq.vel[seq.active_pattern][step] < 130)
     {
-      drawBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[22], 8, 8, COLOR_PITCHSMP);
+      display.drawLine(0 + step * CHAR_width + 3, CHAR_height * 3 - 3, 0 + step * CHAR_width + 3, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][step] / 10), color);
+      display.drawLine(0 + step * CHAR_width + 4, CHAR_height * 3 - 3, 0 + step * CHAR_width + 4, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][step] / 10), color);
+      display.drawLine(0 + step * CHAR_width + 5, CHAR_height * 3 - 3, 0 + step * CHAR_width + 5, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][step] / 10), color);
+    }
+    else
+    {
+      if (seq.vel[seq.active_pattern][step] > 209)
+      {
+        drawBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[22], 8, 8, COLOR_PITCHSMP);
+      }
     }
   }
 
@@ -9965,8 +9970,8 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
   {
     // setup function
 #if defined APC
- if (apc_scroll_message == false)
-    apc_clear_grid();
+    if (apc_scroll_message == false)
+      apc_clear_grid();
     apc_print_right_buttons();
 #endif
     registerTouchHandler(handle_touchscreen_pattern_editor);
