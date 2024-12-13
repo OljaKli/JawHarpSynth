@@ -143,6 +143,7 @@ extern void apc_fader_control(uint8_t inData1, uint8_t inData2);
 extern void apc_print_sample_volume_pads();
 extern uint8_t apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern uint8_t apc_out_channel;
+bool apc_shift_key=false;
 #endif
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
@@ -163,6 +164,9 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #if defined APC
     if (strcmp(MIDI_BY_USB, midi_device) && inChannel==1)
     {
+      if (inData1==122) //shift key
+      apc_shift_key=true;
+
       apc_NoteOn(inChannel, inData1, inData2);
       if (inData1 > 7 && inData1 < 16) // drum pad select row
         inData1 = inData1 + APC_SCROLL_OFFSET;
@@ -183,6 +187,8 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
+ if (inData1==122) //shift key
+      apc_shift_key=false;
     apc_print_right_buttons();
 #endif
 

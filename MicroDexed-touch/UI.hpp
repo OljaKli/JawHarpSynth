@@ -9895,8 +9895,18 @@ FLASHMEM void _seq_pattern_change()
 
 }
 
+extern bool apc_shift_key;
+
 FLASHMEM void insert_pattern_step(uint8_t step)
 {
+#if defined APC
+    if (apc_shift_key)
+    {
+       seq.note_data[seq.active_pattern][step]=0;
+       seq.vel[seq.active_pattern][step]=0;
+    }
+    else
+#endif
   if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
   { // Drumtrack
 

@@ -32,13 +32,11 @@ extern void handleStop();
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
 extern sequencer_t seq;
-
 extern int apc_scroll_counter;
 extern char apc_scrolltext[16];
 extern bool apc_scroll_message;
-
+extern bool apc_shift_key;
 uint8_t apc_out_channel;
-
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -201,7 +199,7 @@ void  apc_insert_pattern_step(uint8_t inData1)
   else
     input_step = inData1 - 48 + 8;
 
-  if (APC_BUTTONS_RIGHT[6])  //insert mode
+  if (APC_BUTTONS_RIGHT[6] || apc_shift_key)  //insert mode or delete mode with shift key
   {
     insert_pattern_step(input_step);
     seq_printAllSeqSteps();
@@ -329,8 +327,6 @@ FLASHMEM void apc_pattern_change(uint8_t inData1)
 
 
 }
-
-
 
 void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 {
