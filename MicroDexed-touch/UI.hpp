@@ -51,6 +51,7 @@
 
 #if defined APC
 #include "apc.h"
+extern bool apc_scroll_message;
 #endif
 
 extern LiveSequencer liveSeq;
@@ -7082,6 +7083,8 @@ void seq_printAllSeqSteps()
     }
 
 #if defined APC
+ if (apc_scroll_message == false)
+ {
     if (i < 8)
     {
       midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
@@ -7090,6 +7093,7 @@ void seq_printAllSeqSteps()
     {
       midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
     }
+ }
 #endif
   }
 }
@@ -7189,6 +7193,8 @@ void seq_printAllVelocitySteps()
     }
 
 #if defined APC
+ if (apc_scroll_message == false)
+ {
     if (i < 8)
     {
       //  midi_usb.sendNoteOn(64 -16-8- 8 + i, seq.vel[seq.active_pattern][i], 6);
@@ -7199,10 +7205,10 @@ void seq_printAllVelocitySteps()
       //  midi_usb.sendNoteOn(64 -16-8 - 16 - 8 + i, seq.vel[seq.active_pattern][i], 6);
       sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
     }
+ }
 #endif
   }
 }
-
 
 void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
 {
@@ -9959,6 +9965,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
   {
     // setup function
 #if defined APC
+ if (apc_scroll_message == false)
     apc_clear_grid();
     apc_print_right_buttons();
 #endif

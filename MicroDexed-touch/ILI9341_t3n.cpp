@@ -155,6 +155,35 @@ PROGMEM const unsigned char font[] = {
     0x08, 0x1C, 0x2A, 0x08, 0x08, // <-
 };
 
+
+#if defined APC
+extern void apc(uint8_t a, uint8_t b, uint8_t c);
+// Draw a character on apc
+void apc_drawChar(int xoff, unsigned char c)
+{
+  uint8_t x, y;
+
+  for (y = 0; y < 8; y++)
+  {
+    for (x = 0; x < 6; x++)
+    {
+      if (x + xoff >= 0 && x + xoff < 8 && x < 5)
+      {
+        if (bitRead(font[c * 5 + x], y) == 1)
+
+          apc((64 - 8 - 8 * y + x + xoff), 5, 6);
+        else
+          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+      }
+      else
+        if (x + xoff >= 0 && x + xoff < 8 && x == 5)
+          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+    }
+  }
+}
+#endif
+
+
 // MIDI sysex render header for remote
 const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
 
@@ -577,20 +606,20 @@ static const uint8_t PROGMEM init_commands[] = { 4, 0xEF, 0x03, 0x80, 0x02,
                                                 2, ILI9341_PWCTR1, 0x23,       // Power control
                                                 2, ILI9341_PWCTR2, 0x10,       // Power control
                                                 3, ILI9341_VMCTR1, 0x3e, 0x28, // VCM control
-                                                //2, ILI9341_VMCTR2, 0x86,       // VCM control2 b7
-                                                2, ILI9341_VMCTR2, 0xb7,       // VCM control2 
-                                                2, ILI9341_MADCTL, 0x48,       // Memory Access Control
-                                                2, ILI9341_PIXFMT, 0x55,
-                                                3, ILI9341_FRMCTR1, 0x00, 0x18,
-                                                4, ILI9341_DFUNCTR, 0x08, 0x82, 0x27, // Display Function Control
-                                                2, 0xF2, 0x00,                        // Gamma Function Disable
-                                                2, ILI9341_GAMMASET, 0x01,            // Gamma curve selected
-                                                16, ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E,
-                                                0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00, // Set Gamma
-                                                16, ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31,
-                                                0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F, // Set Gamma
-                                                3, 0xb1, 0x00, 0x10,                            // FrameRate Control 119Hz
-                                                0 };
+  //2, ILI9341_VMCTR2, 0x86,       // VCM control2 b7
+  2, ILI9341_VMCTR2, 0xb7,       // VCM control2 
+  2, ILI9341_MADCTL, 0x48,       // Memory Access Control
+  2, ILI9341_PIXFMT, 0x55,
+  3, ILI9341_FRMCTR1, 0x00, 0x18,
+  4, ILI9341_DFUNCTR, 0x08, 0x82, 0x27, // Display Function Control
+  2, 0xF2, 0x00,                        // Gamma Function Disable
+  2, ILI9341_GAMMASET, 0x01,            // Gamma curve selected
+  16, ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E,
+  0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00, // Set Gamma
+  16, ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31,
+  0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F, // Set Gamma
+  3, 0xb1, 0x00, 0x10,                            // FrameRate Control 119Hz
+  0 };
 
 #if defined GENERIC_DISPLAY
 FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)

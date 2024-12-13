@@ -54,11 +54,11 @@
 #include "TeensyVariablePlaybackFlash.h"
 #endif
 
-  #if defined APC
+#if defined APC
 bool APC_BUTTONS_RIGHT[8];
 uint8_t APC_SCROLL_OFFSET = 64;
 uint8_t APC_PREVIOUS_NOTE = 254;
-  #endif
+#endif
 
 // #ifdef COMPILE_FOR_FLASH
 // SerialFlashChip         myfs;
@@ -2088,6 +2088,14 @@ uint8_t LED_MIDI_IN_counter = 0;
 uint8_t LED_MIDI_OUT_counter = 0;
 #endif
 
+#if defined APC
+extern void apc_drawString_Background();
+bool apc_scroll_message = true;
+bool apc_welcome_message = true;
+int apc_scroll_counter = 0;
+char apc_scrolltext[16];
+#endif
+
 void loop()
 {
 
@@ -2142,6 +2150,18 @@ void loop()
 
   // MIDI input handling
   check_midi_devices();
+
+#if defined APC
+  if (apc_scroll_message)
+  {
+    if (apc_welcome_message && apc_scroll_counter == 0)
+    {
+      snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("MDT"));
+      apc_welcome_message = false;
+    }
+    apc_drawString_Background();
+  }
+#endif
 
   LCDML.loop();
 
@@ -2222,7 +2242,7 @@ void loop()
 
         if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
-           setCursor_textGrid_small(26 + d * 2, 22);
+          setCursor_textGrid_small(26 + d * 2, 22);
 
           if (Drum[d]->isPlaying())
           {
@@ -2419,7 +2439,7 @@ void loop()
         // if value is 0 then no drawing should happen - so stop at 1
         if (midi_decay_microsynth[instance_id] == 1)
         {
-           display.console = true;
+          display.console = true;
           display.fillRect(13 * 6 + (instance_id * 12), 17, 5, 1, COLOR_BACKGROUND);
           midi_decay_microsynth[instance_id] = 0;
         }
@@ -2492,7 +2512,7 @@ void loop()
     if (LCDML.FUNC_getID() == 255)
     {
       display.console = true;
-     TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
+      TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
       ui_save_notification_icon = false;
       display.console = false;
     }
@@ -4521,8 +4541,8 @@ void handleStart(void)
 #endif
 
 #if defined APC
-APC_BUTTONS_RIGHT[7]=true;
-apc_print_right_buttons();
+    APC_BUTTONS_RIGHT[7] = true;
+    apc_print_right_buttons();
 #endif
 
 
@@ -4570,8 +4590,8 @@ void handleStop(void)
 #endif
 
 #if defined APC
-APC_BUTTONS_RIGHT[7]=false;
-apc_print_right_buttons();
+      APC_BUTTONS_RIGHT[7] = false;
+      apc_print_right_buttons();
 #endif
 
 
