@@ -237,7 +237,7 @@ extern uint8_t find_longest_chain();
 extern bool get_bank_name(uint8_t p, uint8_t b, char* bank_name);
 extern bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name);
 extern void stop_all_drum_slots();
-extern char noteNames[12][3];
+extern const char noteNames[12][3];
 extern void dac_mute(void);
 extern void dac_unmute(void);
 extern ts_t ts;
@@ -5278,7 +5278,7 @@ FLASHMEM void UI_func_filter_resonance(uint8_t param)
 
 FLASHMEM void getNoteName(char* noteName, uint8_t noteNumber)
 {
-  char notes[12][3] = { "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#" };
+  const char notes[12][3] = { "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#" };
   uint8_t oct_index = noteNumber - 12;
   if (noteNumber == 130) // it is a latched note
   {
