@@ -104,9 +104,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   display.fillRect(x, y, w, h, MIDDLEGREEN);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setCursor(GRID.X[1], layerViewY + 3);
-  display.printf("BAR %i-%i ", view.startBar + 1, view.startBar + view.numBars);
+  display.printf("BAR %i-%i", view.startBar + 1, view.startBar + view.numBars);
   display.setCursor(GRID.X[1], layerViewY + CHAR_height_small + 5);
-  display.printf("OCT %i-%i ", view.startOctave, view.startOctave + view.numOctaves - 1);
+  display.printf("OCT %i-%i", view.startOctave, view.startOctave + view.numOctaves - 1);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
