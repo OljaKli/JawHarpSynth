@@ -949,7 +949,7 @@ char receive_bank_filename[FILENAME_LEN];
 uint8_t selected_instance_id = 0;
 uint8_t microsynth_selected_instance = 0;
 bool ui_save_notification_icon;
-char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
 uint8_t remote_MIDI_CC = 0;
 uint8_t remote_MIDI_CC_value;

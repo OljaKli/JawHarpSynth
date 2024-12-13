@@ -52,6 +52,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleTouchScreen() {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
+  display.setTextSize(1);
   static constexpr uint16_t layerViewSizeX = ROLL_WIDTH / 2;
   static constexpr uint16_t layerViewY = CONTENT_HEIGHT + LINE_HEIGHT;
   for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
@@ -77,7 +78,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
       display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND); // no text
     }
     display.setCursor(x + 2, y + 2);
-    display.setTextSize(0);
     display.print(l + 1);
   }
 }
@@ -96,10 +96,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   
   // draw content
   const uint16_t x = ROLL_WIDTH + 1 + round(wTotal * view.startBar / float(data.numberOfBars));
-  const uint16_t h = round(hTotal * view.numOctaves / 8.0f); // we have 8 octaves here
-  const uint16_t y = layerViewY + 1 + hTotal - h - round(hTotal * view.startOctave / 8.0f); // we have 8 octaves here
+  const uint16_t h = round(hTotal * view.numOctaves / float(TOTAL_OCTAVES)); // we have 8 octaves here
+  const uint16_t y = layerViewY + 1 + hTotal - h - round(hTotal * view.startOctave / float(TOTAL_OCTAVES)); // we have 8 octaves here
   const uint16_t w = wTotal * (view.numBars) / float(data.numberOfBars);
   display.console = true;
+  display.setTextSize(1);
   display.fillRect(x, y, w, h, MIDDLEGREEN);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setCursor(GRID.X[1], layerViewY + 3);
@@ -123,7 +124,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     view.numBars = data.numberOfBars;
 
     view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
-    reloadNotes(view.startBar, view.numBars, true);
+    reloadNotes(true);
    
     // setup function
     display.console = true;
@@ -151,12 +152,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       handleEncoderRight(-1);
     }
     if (LCDML.BT_checkEnter()) {
-      if ((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
-        ui_pianoroll->deleteSelectedNote();
-      }
-      else {
-        toggleSettingActivated();
-      }
+      toggleSettingActivated();
     }
     const bool runningChanged = isRunningHere != data.isRunning;
     const bool justStopped = isRunningHere && !data.isRunning;
@@ -212,20 +208,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(uint8_t patternFrom, uint8_t numBars, bool autoAdaptView) {
+FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
+  const uint8_t patternFrom = view.startBar;
+  const uint8_t patternTo = view.startBar + view.numBars - 1;
   uint8_t lowestNote = view.lowestNote;
   uint8_t highestNote = view.highestNote;
   if (autoAdaptView) {
     lowestNote = 0x00;
     highestNote = 0xFF;
   }
-  notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack, lowestNote, highestNote, patternFrom, patternFrom + numBars - 1);
+  notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack, lowestNote, highestNote, patternFrom, patternTo);
   if (autoAdaptView && notePairs.size()) {
-    view.startOctave = (lowestNote - 24) / 12;
+    view.startOctave = std::min((lowestNote - 24) / 12, TOTAL_OCTAVES - view.numOctaves); // limit highest octave
     setNumOctaves(5); // full zoom out
     drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
   }
-  DBG_LOG(printf("%i/%i: got %i note pairs\n", patternFrom, patternFrom + numBars - 1, notePairs.size()));
+  DBG_LOG(printf("%i/%i: got %i note pairs\n", patternFrom, patternTo, notePairs.size()));
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
@@ -301,7 +299,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
           drawLayersIndicator();
         }
         liveSeq.addNotePair(on, off);
-        reloadNotes(view.startBar, view.numBars);
+        reloadNotes();
       }
       else if (keysPressed.empty()) {
         // advance on last key released
@@ -331,7 +329,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
   view.noteHeight = CONTENT_HEIGHT / float(view.numNotes);
   view.lowestNote = 24 + view.startOctave * 12;
   view.highestNote = (view.lowestNote + view.numNotes);
-  reloadNotes(view.startBar, view.numBars);
+  reloadNotes();
   drawAreaIndicator();
 }
 
@@ -339,7 +337,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setStartOctave(int8_t num) {
   view.startOctave = num;
   view.lowestNote = 24 + view.startOctave * 12;
   view.highestNote = (view.lowestNote + view.numNotes);
-  reloadNotes(view.startBar, view.numBars);
+  reloadNotes();
   drawAreaIndicator();
 }
 FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
@@ -348,19 +346,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
     setBarStart(data.numberOfBars - view.numBars);
   }
   view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
-  reloadNotes(view.startBar, view.numBars);
+  reloadNotes();
   drawAreaIndicator();
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
   view.startBar = num;
   DBG_LOG(printf("pattern from %i to %i\n", view.startBar, view.startBar + view.numBars - 1));
-  reloadNotes(view.startBar, view.numBars);
+  reloadNotes();
   drawAreaIndicator();
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
   isSettingActivated = !isSettingActivated;
+  if ((mode == MODE_EDIT) && (editMode == EDIT_SELECT_NOTE)) {
+    buttonEdit->drawNow();
+  }
   drawHeader(HEADER_DRAW_ALL);
 }
 
@@ -379,7 +380,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         break;
 
       case VIEW_SCROLL_Y:
-        if (hasConstrainedChanged(view.startOctave, -diff, 0, 8 - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
+        if (hasConstrainedChanged(view.startOctave, -diff, 0, TOTAL_OCTAVES - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
           setStartOctave(view.startOctave);
           drawFlags |= DRAW_CONTENT_FULL;
         }
@@ -494,10 +495,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           }
         }
         break;
-
-      case EDIT_DELETE:
-        // nothing to do on encoder turn
-        break;
       }
       break;
 
@@ -581,7 +578,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent &e, ui
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextSize(1);
-  
   char s[10] = { "\0" };
 
   if (modeFlags == HEADER_DRAW_ALL) {
@@ -824,7 +820,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     display.console = true;
     display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(0);
+    display.setTextSize(1);
     display.print(text.c_str());
   }
 }
@@ -927,21 +923,22 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
   // delete (invalidate) this note pair
   if (selectedNote > -1) {
+    queueDrawNote(notePairs.at(selectedNote));
     notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
     notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
-    ui_pianoroll->reloadNotes(view.startBar, view.numBars);
-    const uint16_t notesCount = notePairs.size();
+    ui_pianoroll->reloadNotes();
+    const int16_t notesCount = notePairs.size();
     if (notesCount == 0) {
       selectedNote = -1;
+      isSettingActivated = false;
+      buttonEdit->drawNow();
       ui_pianoroll->drawHeader(HEADER_DRAW_ALL);
     }
     else {
-      selectedNote = std::min(selectedNote - 1, notesCount - 1);
+      selectedNote = std::min(selectedNote, int16_t(notesCount - 1));
       ui_pianoroll->drawHeader(1 << EDIT_SELECT_NOTE);
+      queueDrawNote(notePairs.at(selectedNote));
     }
-    drawFlags |= DRAW_CONTENT_FULL;
-    editMode = EDIT_SELECT_NOTE; // after delete, switch back to select mode
-    buttonEdit->drawNow();
   }
 }
 
@@ -974,12 +971,13 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     itoa(data.activeTrack + 1, temp_char, 10);
     b->draw("TRACK", temp_char, TouchButton::BUTTON_ACTIVE);
   }, [ this ] (auto *b) { // clickedHandler
-    ui_pianoroll->reloadNotes(view.startBar, view.numBars, true);
+    ui_pianoroll->reloadNotes(true);
     if (mode == MODE_EDIT) {
       selectedNote = notePairs.size() ? 0 : -1;
     }
     buttonInst->drawNow();
     drawFlags |= DRAW_CONTENT_FULL;
+    ui_pianoroll->drawHeader(HEADER_DRAW_ALL);
     ui_pianoroll->drawLayersIndicator();
     liveSeq.setActiveTrack(data.activeTrack);
   }));
@@ -1013,16 +1011,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 
   buttonEdit = new TouchButton(GRID.X[4], y,
   [ this ] (auto *b) { // drawHandler
-    TouchButton::Color color = (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
-    if ((mode == MODE_EDIT) && (editMode == EDIT_DELETE)) {
-      color = TouchButton::BUTTON_RED;
-    }
-    const std::string txt = (editMode == EDIT_DELETE) ? "NOTE" : "EDIT";
-    const std::string sub = (editMode == EDIT_DELETE) ? "DELETE" : "MODE";
+    const bool deleteButton = (mode == MODE_EDIT) && (editMode == EDIT_SELECT_NOTE) && isSettingActivated;
+    TouchButton::Color color = (mode == MODE_EDIT) ? (deleteButton ? TouchButton::BUTTON_RED : TouchButton::BUTTON_HIGHLIGHTED) : TouchButton::BUTTON_ACTIVE;
+    const std::string txt = deleteButton ? "NOTE" : "EDIT";
+    const std::string sub = deleteButton ? "DELETE" : "MODE";
     b->draw(txt.c_str(), sub.c_str(), color);
   }, [ this ] (auto *b) { // clickedHandler
     ui_pianoroll->setMode(MODE_EDIT);
-    if (editMode == EDIT_DELETE) {
+    if ((editMode == EDIT_SELECT_NOTE) && isSettingActivated) {
       ui_pianoroll->deleteSelectedNote();
     }
     b->drawNow();

@@ -37,7 +37,6 @@ private:
     EDIT_NOTEOFF,
     EDIT_VELOCITY,
     EDIT_NOTE,
-    EDIT_DELETE,
     EDIT_NUM
   };
   uint8_t editMode = EDIT_SELECT_NOTE;
@@ -127,7 +126,7 @@ private:
 
   std::string getNoteString(uint8_t note);
 
-  void reloadNotes(uint8_t patternFrom, uint8_t patternTo, bool autoAdaptView = false);
+  void reloadNotes(bool autoAdaptView = false);
   int16_t selectedNote = -1; // index of notePairs or -1
 
   bool step(int8_t diff);
@@ -155,6 +154,7 @@ private:
   TouchButton *buttonEdit;
   TouchButton *buttonStep;
 
+  static constexpr uint8_t TOTAL_OCTAVES = 8;
   static constexpr uint16_t HEADER_DRAW_ALL = 0xFFFF;
   static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
   static constexpr uint16_t CURSOR_BG_COLOR = HEADER_BG_COLOR; // for now..

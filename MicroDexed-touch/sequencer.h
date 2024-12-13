@@ -40,7 +40,7 @@ extern Sd2Card card;
 
 void print_formatted_number(uint16_t number, uint8_t length);
 
-extern char noteNames[12][3];
+extern const char noteNames[12][3];
 
 static const float tune_frequencies2_PGM[128] = {
     8.1758, 8.6620, 9.1770, 9.7227, 10.3009, 10.9134, 11.5623, 12.2499,
