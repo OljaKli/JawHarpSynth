@@ -145,6 +145,7 @@ extern uint8_t apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
+
 //extern uint8_t activeSample;
 #endif
 
@@ -164,6 +165,8 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
+if (APC_MODE==APC_PATTERN_EDITOR)
+{
     if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
     {
       if (inData1 == 122) //shift key
@@ -176,10 +179,12 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 
       inChannel = apc_out_channel;
     }
+}
 #endif
 
     handleNoteOnInput(inChannel, inData1, inData2, 0);
 #if defined APC
+if (APC_MODE==APC_PATTERN_EDITOR)
     print_apc_source_selection_pads();
 #endif
 
@@ -191,6 +196,8 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
+if (APC_MODE==APC_PATTERN_EDITOR)
+{
     if (inData1 == 122) //shift key
       apc_shift_key = false;
 
@@ -198,6 +205,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
       inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
 
     apc_print_right_buttons();
+}
 #endif
 
     handleNoteOff(inChannel, inData1, inData2, 0);
@@ -211,10 +219,11 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
       _internal = true;
 
 #if defined APC
+if (APC_MODE==APC_PATTERN_EDITOR)
+{
     if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel == 1)
-    {
       apc_fader_control(inData1, inData2);
-    }
+}
 #endif
 
     handleControlChange(inChannel, inData1, inData2);

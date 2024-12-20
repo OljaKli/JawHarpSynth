@@ -1551,6 +1551,16 @@ FLASHMEM void fill_up_with_spaces_left_window_filemanager()
 // #endif
 // }
 
+#if defined APC
+extern void check_and_clear_row3();
+
+void apc(uint8_t a, uint8_t b, uint8_t c)
+{
+  midi_usb.sendNoteOn(a, b, c);
+}
+
+#endif
+
 FLASHMEM bool legacy_touch_button_back_page() //legacy, 2 line text pages with touch back button
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_handle_OP) ||
@@ -1915,20 +1925,26 @@ FLASHMEM void print_chain_matrix_in_song_page()
               {
                 print_formatted_number(seq.song[x][y + seq.scrollpos], 2);
 #if defined APC
-                if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
-                  handleNoteOn(11, 64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 1);
-                else
-                  handleNoteOn(6, 64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 1);
+                if (APC_MODE == APC_SONG)
+                {
+                  if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+                    handleNoteOn(11, 64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 1);
+                  else
+                    handleNoteOn(6, 64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 1);
+                }
 #endif
               }
               else
               {
                 display.print(F("--"));
 #if defined APC
-                if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
-                  handleNoteOn(11, 64 - 8 + x - (y * 8), 5, 1);
-                else
-                  handleNoteOn(6, 64 - 8 + x - (y * 8), 0, 1);
+                if (APC_MODE == APC_SONG)
+                {
+                  if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+                    handleNoteOn(11, 64 - 8 + x - (y * 8), 5, 1);
+                  else
+                    handleNoteOn(6, 64 - 8 + x - (y * 8), 0, 1);
+                }
 #endif
               }
             }
@@ -2697,7 +2713,60 @@ FLASHMEM void update_display_functions_while_seq_running()
   {
     print_live_probability_pattern_info();
   }
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_mute_matrix))
+
+#if defined APC
+  if (APC_MODE == APC_MUTE_MATRIX)
+  {
+    uint8_t track_count = 0;
+    for (uint8_t y = 0; y < 2; y++)
+    {
+      for (uint8_t x = 0; x < 4; x++)
+      {
+        if (seq.current_chain[track_count] != 99)
+        {
+
+          if (seq.content_type[seq.current_pattern[track_count]] > 0) // it is a Inst. pattern
+          {
+            if (seq.note_data[seq.current_pattern[track_count]][seq.step] > 12 && seq.note_data[seq.current_pattern[track_count]][seq.step] != 130 && seq.note_data[seq.current_pattern[track_count]][seq.step] != 99)
+            {
+              apc(64 - 8 + x * 2 - 8 * y * 4, 5, 6);
+            }
+            //  else if (seq.note_data[seq.current_pattern[track_count]][seq.step] == 130) // latch
+               // display.print(F("LAT"));
+            else
+            {
+              apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
+            }
+          }
+          else    // it is a drum pattern
+            if (seq.vel[seq.current_pattern[track_count]][seq.step] < 210) // is Drumtrack and not a pitched sample
+            {
+              bool found = false;
+              for (uint8_t n = 0; n < NUM_DRUMSET_CONFIG - 1; n++)
+              {
+                if (seq.note_data[seq.current_pattern[track_count]][seq.step] == drum_config[n].midinote)
+                {
+                  found = true;
+                  apc(64 - 8 + x * 2 - 8 * y * 4, 5, 6);
+                  break;
+                }
+              }
+              if (found == false)
+              {
+                display.print(F("- "));
+                apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
+              }
+            }
+          //  else if (seq.vel[seq.current_pattern[track_count]][seq.step] > 209) // pitched sample
+             // display.print(F("PS"));
+        }
+        track_count++;
+      }
+    }
+  }
+#endif
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_mute_matrix))
   {
     uint8_t track_count = 0;
     for (uint8_t y = 0; y < 2; y++)
@@ -2722,7 +2791,9 @@ FLASHMEM void update_display_functions_while_seq_running()
             else if (seq.note_data[seq.current_pattern[track_count]][seq.step] == 130) // latch
               display.print(F("LAT"));
             else
+            {
               display.print(F("   "));
+            }
           }
           else                                                             // it is a drum pattern
             if (seq.vel[seq.current_pattern[track_count]][seq.step] < 210) // is Drumtrack and not a pitched sample
@@ -2738,7 +2809,9 @@ FLASHMEM void update_display_functions_while_seq_running()
                 }
               }
               if (found == false)
+              {
                 display.print(F("- "));
+              }
             }
             else if (seq.vel[seq.current_pattern[track_count]][seq.step] > 209) // pitched sample
               display.print(F("PS"));
@@ -7083,40 +7156,39 @@ void seq_printAllSeqSteps()
     }
 
 #if defined APC
-    if (apc_scroll_message == false)
+    if (APC_MODE == APC_PATTERN_EDITOR)
     {
-      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
+      if (apc_scroll_message == false)
       {
-        if (i < 8)
+        if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
         {
-          if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+          if (i < 8)
+          {
+            if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+              midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+            else
+              midi_usb.sendNoteOn(64 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6);//pitched sample
+          }
+          else
+          {
+            if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+              midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+            else
+              midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6); //pitched sample
+          }
+        }
+        else  //instrument track
+        {
+          if (i < 8)
+          {
             midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+          }
           else
-            midi_usb.sendNoteOn(64 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6);//pitched sample
-        }
-        else
-        {
-          if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+          {
             midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
-          else
-            midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6); //pitched sample
+          }
         }
       }
-      else  //instrument track
-      {
-        if (i < 8)
-        {
-          midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
-        }
-        else
-        {
-          midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
-        }
-
-
-      }
-
-
     }
 #endif
   }
@@ -7217,21 +7289,24 @@ void seq_printAllVelocitySteps()
     }
 
 #if defined APC
-    if (apc_scroll_message == false)
+    if (APC_MODE == APC_PATTERN_EDITOR)
     {
-      if (i < 8)
+      if (apc_scroll_message == false)
       {
-        if (seq.vel[seq.active_pattern][i] < 210) //normal sample
-          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 45);
+        if (i < 8)
+        {
+          if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+            sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 45);
+          else
+            sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 3); //white, pitched sample
+        }
         else
-          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 3); //white, pitched sample
-      }
-      else
-      {
-        if (seq.vel[seq.active_pattern][i] < 210) //normal sample
-          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
-        else
-          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 3); //white, pitched sample
+        {
+          if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+            sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
+          else
+            sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 3); //white, pitched sample
+        }
       }
     }
 #endif
@@ -7263,13 +7338,16 @@ void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
   }
 
 #if defined APC
-  if (step < 8)
+  if (APC_MODE == APC_PATTERN_EDITOR)
   {
-    sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 + step, 45);
-  }
-  else
-  {
-    sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 - 8 - 8 + step, 45);
+    if (step < 8)
+    {
+      sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 + step, 45);
+    }
+    else
+    {
+      sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 - 8 - 8 + step, 45);
+    }
   }
 #endif
 
@@ -8413,7 +8491,8 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
     seq_printAllSeqSteps();
 
 #if defined APC
-    apc_fader_control(0, 0);
+    if (APC_MODE == APC_PATTERN_EDITOR)
+      apc_fader_control(0, 0);
 #endif
 
   }
@@ -9815,16 +9894,6 @@ FLASHMEM void pattern_editor_menu_0()
   }
 }
 
-#if defined APC
-extern void check_and_clear_row3();
-  
-void apc(uint8_t a, uint8_t b, uint8_t c)
-{
-  midi_usb.sendNoteOn(a, b, c);
-}
-
-#endif
-
 FLASHMEM void play_sample(uint8_t note) {
   handleNoteOn(drum_midi_channel, drum_config[note].midinote, 90, 0);
 }
@@ -9915,8 +9984,11 @@ FLASHMEM void _seq_pattern_change()
   seq_printAllSeqSteps();
   seq_printAllVelocitySteps();
 #if defined APC
-  apc_print_volume_pads();
- check_and_clear_row3();
+  if (APC_MODE == APC_PATTERN_EDITOR)
+  {
+    apc_print_volume_pads();
+    check_and_clear_row3();
+  }
 #endif
 
   if (seq.cycle_touch_element != 1)
@@ -10006,13 +10078,16 @@ FLASHMEM void insert_pattern_step(uint8_t step)
 
 FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 {
+
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     // setup function
 #if defined APC
+    APC_MODE = APC_PATTERN_EDITOR;
     if (apc_scroll_message == false)
       apc_clear_grid();
     apc_print_right_buttons();
+
 #endif
     registerTouchHandler(handle_touchscreen_pattern_editor);
     registerScope(216, 0, button_size_x * CHAR_width_small, 50, true); // only draw when seq running
@@ -10055,7 +10130,8 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
     display.setTextSize(2);
 
 #if defined APC
-    apc_fader_control(0, 0);
+    if (APC_MODE == APC_PATTERN_EDITOR)
+      apc_fader_control(0, 0);
 #endif
 
   }
@@ -10158,11 +10234,14 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         virtual_keyboard_smart_preselect_mode();
         update_latch_button();
 #if defined APC
-        APC_BUTTONS_RIGHT[5] = false;
-  APC_BUTTONS_RIGHT[6] = false;
-  APC_BUTTONS_RIGHT[7] = false;
-   apc_print_right_buttons();
-   #endif
+        if (APC_MODE == APC_PATTERN_EDITOR)
+        {
+          APC_BUTTONS_RIGHT[5] = false;
+          APC_BUTTONS_RIGHT[6] = false;
+          APC_BUTTONS_RIGHT[7] = false;
+          apc_print_right_buttons();
+        }
+#endif
       }
     }
     if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -10243,14 +10322,17 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         seq_printAllSeqSteps();
         seq_printAllVelocitySteps();
 #if defined APC
-        apc_print_volume_pads();
+        if (APC_MODE == APC_PATTERN_EDITOR)
+          apc_print_volume_pads();
+
 #endif
       }
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 #if defined APC
-    print_apc_source_selection_pads();
+    if (APC_MODE == APC_PATTERN_EDITOR)
+      print_apc_source_selection_pads();
 #endif
     print_shortcut_navigator();
     display.setTextSize(2);
@@ -11956,6 +12038,7 @@ FLASHMEM void UI_func_song(uint8_t param)
   {
     // setup function
 #if defined APC
+    APC_MODE = APC_SONG;
     apc_clear_right_buttons();
 #endif
 
@@ -12467,7 +12550,6 @@ FLASHMEM void UI_func_song(uint8_t param)
 #if defined APC
     apc_clear_grid();
 #endif
-
   }
 }
 
@@ -13100,6 +13182,12 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined APC
+    APC_MODE = APC_MUTE_MATRIX;
+    apc_clear_grid();
+
+#endif
+
     // setup function
     registerTouchHandler(handle_touchscreen_mute_matrix);
     display.fillScreen(COLOR_BACKGROUND);
@@ -13131,9 +13219,20 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
         if (y < 2)
         {
           if (!seq.track_mute[button_count])
+          {
             draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), 1);
+#if defined APC
+            apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
+#endif
+
+          }
           else
+          {
             draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), 0);
+#if defined APC
+            apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
+#endif
+          }
           button_count++;
         }
         else

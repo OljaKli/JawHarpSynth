@@ -324,6 +324,13 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define ENC_R_PIN_B 29
 #define BUT_R_PIN 25
 
+// musikandmore settings
+// #define ENC_L_PIN_A 31
+// #define ENC_L_PIN_B 32
+
+// #define ENC_R_PIN_A 29
+// #define ENC_R_PIN_B 28
+
 #define BUT_DEBOUNCE_MS 20
 #define LONG_BUTTON_PRESS 500
 
@@ -1102,6 +1109,15 @@ inline float mapfloat(float val, float in_min, float in_max, float out_min, floa
   return (val - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 #endif
+
+enum APC_MODE
+{
+  APC_OFF,
+  APC_PATTERN_EDITOR,
+  APC_SONG,
+  APC_MUTE_MATRIX,
+  APC_MIXER
+};
 
 // For developers only
 #if defined DEBUG && DEBUG == 2

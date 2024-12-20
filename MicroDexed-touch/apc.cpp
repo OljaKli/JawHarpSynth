@@ -18,6 +18,7 @@ extern uint8_t drum_midi_channel;
 extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
 extern uint8_t APC_PREVIOUS_NOTE;
+extern uint8_t APC_MODE;
 extern bool APC_BUTTONS_RIGHT[8];
 extern void seq_printAllVelocitySteps();
 extern void  seq_printAllVelocitySteps_single_step(uint8_t step, int color);
@@ -349,12 +350,15 @@ void apc_drawString_Background()
     apc_scroll_counter = 0;
 
     delay(50);
+    if (APC_MODE==APC_PATTERN_EDITOR)
+    {
     apc_clear_grid();
     apc_print_right_buttons();
     seq_printAllSeqSteps();
     seq_printAllVelocitySteps();
     apc_print_volume_pads();
     print_apc_source_selection_pads();
+    }
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
     {
