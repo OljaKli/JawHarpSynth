@@ -7085,14 +7085,38 @@ void seq_printAllSeqSteps()
 #if defined APC
     if (apc_scroll_message == false)
     {
-      if (i < 8)
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
       {
-        midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+        if (i < 8)
+        {
+          if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+            midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+          else
+            midi_usb.sendNoteOn(64 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6);//pitched sample
+        }
+        else
+        {
+          if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+            midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+          else
+            midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6); //pitched sample
+        }
       }
-      else
+      else  //instrument track
       {
-        midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+        if (i < 8)
+        {
+          midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+        }
+        else
+        {
+          midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+        }
+
+
       }
+
+
     }
 #endif
   }
@@ -7197,13 +7221,17 @@ void seq_printAllVelocitySteps()
     {
       if (i < 8)
       {
-        //  midi_usb.sendNoteOn(64 -16-8- 8 + i, seq.vel[seq.active_pattern][i], 6);
-        sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 45);
+        if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 45);
+        else
+          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 + i, 3); //white, pitched sample
       }
       else
       {
-        //  midi_usb.sendNoteOn(64 -16-8 - 16 - 8 + i, seq.vel[seq.active_pattern][i], 6);
-        sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
+        if (seq.vel[seq.active_pattern][i] < 210) //normal sample
+          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
+        else
+          sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 3); //white, pitched sample
       }
     }
 #endif
@@ -9788,7 +9816,8 @@ FLASHMEM void pattern_editor_menu_0()
 }
 
 #if defined APC
-
+extern void check_and_clear_row3();
+  
 void apc(uint8_t a, uint8_t b, uint8_t c)
 {
   midi_usb.sendNoteOn(a, b, c);
@@ -9886,7 +9915,8 @@ FLASHMEM void _seq_pattern_change()
   seq_printAllSeqSteps();
   seq_printAllVelocitySteps();
 #if defined APC
-  apc_print_sample_volume_pads();
+  apc_print_volume_pads();
+ check_and_clear_row3();
 #endif
 
   if (seq.cycle_touch_element != 1)
@@ -9900,77 +9930,77 @@ extern bool apc_shift_key;
 FLASHMEM void insert_pattern_step(uint8_t step)
 {
 #if defined APC
-    if (apc_shift_key)
-    {
-       seq.note_data[seq.active_pattern][step]=0;
-       seq.vel[seq.active_pattern][step]=0;
-    }
-    else
+  if (apc_shift_key)
+  {
+    seq.note_data[seq.active_pattern][step] = 0;
+    seq.vel[seq.active_pattern][step] = 0;
+  }
+  else
 #endif
-  if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
-  { // Drumtrack
+    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)
+    { // Drumtrack
 
-    if (drum_config[activeSample].midinote > 209) // it selected sample is a pitched sample
-    {
-      // Step is empty - put in selected pitched sample with selected note value
-      if (seq.note_data[seq.active_pattern][step] == 0)
+      if (drum_config[activeSample].midinote > 209) // it selected sample is a pitched sample
       {
-        seq.vel[seq.active_pattern][step] = drum_config[activeSample].midinote;
-        if (temp_int > 12)
-          seq.note_data[seq.active_pattern][step] = temp_int;
-        else
-          seq.note_data[seq.active_pattern][step] = 12; // else insert C2
-        pattern_editor_play_current_step(step);
-      }
-      else
-      { // step is an other sample, replace with selected pitched sample
-        seq.vel[seq.active_pattern][step] = drum_config[activeSample].midinote;
-      }
-    }
-    else
-
-      if (drum_config[activeSample].midinote < 210)
-      {
-        // normal sample: check if note is already there, if not -> insert it, else remove it from grid.
-        if (seq.note_data[seq.active_pattern][step] == drum_config[activeSample].midinote)
+        // Step is empty - put in selected pitched sample with selected note value
+        if (seq.note_data[seq.active_pattern][step] == 0)
         {
-          seq.note_data[seq.active_pattern][step] = 0;
-          seq.vel[seq.active_pattern][step] = 0;
+          seq.vel[seq.active_pattern][step] = drum_config[activeSample].midinote;
+          if (temp_int > 24)
+            seq.note_data[seq.active_pattern][step] = temp_int;
+          else
+            seq.note_data[seq.active_pattern][step] = 24; // else insert C2
+          pattern_editor_play_current_step(step);
         }
         else
+        { // step is an other sample, replace with selected pitched sample
+          seq.vel[seq.active_pattern][step] = drum_config[activeSample].midinote;
+        }
+      }
+      else
+
+        if (drum_config[activeSample].midinote < 210)
         {
-          seq.note_data[seq.active_pattern][step] = drum_config[activeSample].midinote;
-          seq.vel[seq.active_pattern][step] = 120;
+          // normal sample: check if note is already there, if not -> insert it, else remove it from grid.
+          if (seq.note_data[seq.active_pattern][step] == drum_config[activeSample].midinote)
+          {
+            seq.note_data[seq.active_pattern][step] = 0;
+            seq.vel[seq.active_pattern][step] = 0;
+          }
+          else
+          {
+            seq.note_data[seq.active_pattern][step] = drum_config[activeSample].midinote;
+            seq.vel[seq.active_pattern][step] = 120;
+            pattern_editor_play_current_step(step);
+          }
+        }
+    }
+    else
+    { // Inst. Track
+      if (temp_int == 109 || seq.note_data[seq.active_pattern][step] == temp_int)
+      { // clear note
+        seq.note_data[seq.active_pattern][step] = 0;
+        seq.vel[seq.active_pattern][step] = 0;
+      }
+      else if (temp_int == 110)
+      { // latch note
+        seq.note_data[seq.active_pattern][step] = 130;
+        // seq.vel[seq.active_pattern][step] = 0;
+      }
+      else
+      {
+        if (seq.note_data[seq.active_pattern][step] != temp_int)
+        {
+
+          seq.note_data[seq.active_pattern][step] = temp_int;
+          if (seq.content_type[seq.active_pattern] == 2) // Chords
+            seq.vel[seq.active_pattern][step] = 200;
+          else // normal note
+            seq.vel[seq.active_pattern][step] = 120;
           pattern_editor_play_current_step(step);
         }
       }
-  }
-  else
-  { // Inst. Track
-    if (temp_int == 109 || seq.note_data[seq.active_pattern][step] == temp_int)
-    { // clear note
-      seq.note_data[seq.active_pattern][step] = 0;
-      seq.vel[seq.active_pattern][step] = 0;
     }
-    else if (temp_int == 110)
-    { // latch note
-      seq.note_data[seq.active_pattern][step] = 130;
-      // seq.vel[seq.active_pattern][step] = 0;
-    }
-    else
-    {
-      if (seq.note_data[seq.active_pattern][step] != temp_int)
-      {
-
-        seq.note_data[seq.active_pattern][step] = temp_int;
-        if (seq.content_type[seq.active_pattern] == 2) // Chords
-          seq.vel[seq.active_pattern][step] = 200;
-        else // normal note
-          seq.vel[seq.active_pattern][step] = 120;
-        pattern_editor_play_current_step(step);
-      }
-    }
-  }
 }
 
 
@@ -10018,7 +10048,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       seq_printAllSeqSteps();
       seq_printAllVelocitySteps();
 #if defined APC
-      apc_print_sample_volume_pads();
+      apc_print_volume_pads();
 #endif
     }
 
@@ -10127,6 +10157,12 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         print_content_type();
         virtual_keyboard_smart_preselect_mode();
         update_latch_button();
+#if defined APC
+        APC_BUTTONS_RIGHT[5] = false;
+  APC_BUTTONS_RIGHT[6] = false;
+  APC_BUTTONS_RIGHT[7] = false;
+   apc_print_right_buttons();
+   #endif
       }
     }
     if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -10207,19 +10243,15 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         seq_printAllSeqSteps();
         seq_printAllVelocitySteps();
 #if defined APC
-        apc_print_sample_volume_pads();
+        apc_print_volume_pads();
 #endif
-
       }
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 #if defined APC
-
-    print_apc_sample_selection_pads();
-
+    print_apc_source_selection_pads();
 #endif
-
     print_shortcut_navigator();
     display.setTextSize(2);
     if (seq.menu == 0) // sound select menu

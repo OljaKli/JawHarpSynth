@@ -56,7 +56,8 @@
 
 #if defined APC
 bool APC_BUTTONS_RIGHT[8];
-uint8_t APC_SCROLL_OFFSET = 64;
+uint8_t APC_SAMPLE_SCROLL_OFFSET = 64;
+uint8_t APC_TONAL_SCROLL_OFFSET = 64;
 uint8_t APC_PREVIOUS_NOTE = 254;
 #endif
 
@@ -4541,7 +4542,7 @@ void handleStart(void)
 #endif
 
 #if defined APC
-    APC_BUTTONS_RIGHT[7] = true;
+    APC_BUTTONS_RIGHT[2] = true;
     apc_print_right_buttons();
 #endif
 
@@ -4590,7 +4591,7 @@ void handleStop(void)
 #endif
 
 #if defined APC
-      APC_BUTTONS_RIGHT[7] = false;
+      APC_BUTTONS_RIGHT[2] = false;
       apc_print_right_buttons();
 #endif
 

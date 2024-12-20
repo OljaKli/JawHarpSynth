@@ -137,13 +137,15 @@ extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, by
 //void handle_pitchbend((byte inChannel, byte inData1, byte inData2, const char *midi_device, midi::MidiType event));
 
 #if defined APC
-extern void print_apc_sample_selection_pads();
+extern void print_apc_source_selection_pads();
 extern void apc_print_right_buttons();
 extern void apc_fader_control(uint8_t inData1, uint8_t inData2);
-extern void apc_print_sample_volume_pads();
+extern void apc_print_volume_pads();
 extern uint8_t apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern uint8_t apc_out_channel;
-bool apc_shift_key=false;
+bool apc_shift_key = false;
+extern uint8_t APC_TONAL_SCROLL_OFFSET;
+//extern uint8_t activeSample;
 #endif
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
@@ -162,21 +164,23 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
-    if (strcmp(MIDI_BY_USB, midi_device) && inChannel==1)
+    if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
     {
-      if (inData1==122) //shift key
-      apc_shift_key=true;
-
+      if (inData1 == 122) //shift key
+        apc_shift_key = true;
       apc_NoteOn(inChannel, inData1, inData2);
-      if (inData1 > 7 && inData1 < 16) // drum pad select row
-        inData1 = inData1 + APC_SCROLL_OFFSET;
+      if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)) // drum sample
+        inData1 = inData1 + APC_SAMPLE_SCROLL_OFFSET;
+      else if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
+        inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
+
       inChannel = apc_out_channel;
     }
 #endif
 
     handleNoteOnInput(inChannel, inData1, inData2, 0);
 #if defined APC
-    print_apc_sample_selection_pads();
+    print_apc_source_selection_pads();
 #endif
 
 #ifdef DEBUG
@@ -187,8 +191,12 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
- if (inData1==122) //shift key
-      apc_shift_key=false;
+    if (inData1 == 122) //shift key
+      apc_shift_key = false;
+
+    if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
+      inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
+
     apc_print_right_buttons();
 #endif
 
@@ -203,7 +211,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
       _internal = true;
 
 #if defined APC
-    if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel==1)
+    if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel == 1)
     {
       apc_fader_control(inData1, inData2);
     }
