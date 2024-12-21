@@ -59,7 +59,7 @@ bool APC_BUTTONS_RIGHT[8];
 uint8_t APC_SAMPLE_SCROLL_OFFSET = 64;
 uint8_t APC_TONAL_SCROLL_OFFSET = 64;
 uint8_t APC_PREVIOUS_NOTE = 254;
-uint8_t APC_MODE=APC_OFF;
+uint8_t APC_MODE = APC_OFF;
 #endif
 
 // #ifdef COMPILE_FOR_FLASH
@@ -4543,11 +4543,11 @@ void handleStart(void)
 #endif
 
 #if defined APC
-if (APC_MODE==APC_PATTERN_EDITOR)
-{
-    APC_BUTTONS_RIGHT[2] = true;
-    apc_print_right_buttons();
-}
+    if (APC_MODE == APC_PATTERN_EDITOR)
+    {
+      APC_BUTTONS_RIGHT[2] = true;
+      apc_print_right_buttons();
+    }
 #endif
 
 
@@ -4595,13 +4595,12 @@ void handleStop(void)
 #endif
 
 #if defined APC
-if (APC_MODE==APC_PATTERN_EDITOR)
-{
-      APC_BUTTONS_RIGHT[2] = false;
-      apc_print_right_buttons();
-}
+      if (APC_MODE == APC_PATTERN_EDITOR)
+      {
+        APC_BUTTONS_RIGHT[2] = false;
+        apc_print_right_buttons();
+      }
 #endif
-
       if (seq.clock == 0 || seq.clock == 2)
         sequencer_timer.stop();
 

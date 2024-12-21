@@ -165,27 +165,40 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
-if (APC_MODE==APC_PATTERN_EDITOR)
-{
+
     if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
     {
       if (inData1 == 122) //shift key
         apc_shift_key = true;
-      apc_NoteOn(inChannel, inData1, inData2);
-      if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)) // drum sample
-        inData1 = inData1 + APC_SAMPLE_SCROLL_OFFSET;
-      else if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
-        inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
+      if (APC_MODE == APC_PATTERN_EDITOR)
+      {
+        apc_NoteOn(inChannel, inData1, inData2);
+        if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)) // drum sample
+          inData1 = inData1 + APC_SAMPLE_SCROLL_OFFSET;
+        else if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
+          inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
 
-      inChannel = apc_out_channel;
+        inChannel = apc_out_channel;
+      }
+      else
+        if (APC_MODE == APC_MUTE_MATRIX)
+        {
+          apc_NoteOn(inChannel, inData1, inData2);
+        }
+         else
+        if (APC_MODE == APC_SONG)
+        {
+          apc_NoteOn(inChannel, inData1, inData2);
+         
+        }
     }
-}
+
 #endif
 
     handleNoteOnInput(inChannel, inData1, inData2, 0);
 #if defined APC
-if (APC_MODE==APC_PATTERN_EDITOR)
-    print_apc_source_selection_pads();
+    if (APC_MODE == APC_PATTERN_EDITOR)
+      print_apc_source_selection_pads();
 #endif
 
 #ifdef DEBUG
@@ -196,16 +209,14 @@ if (APC_MODE==APC_PATTERN_EDITOR)
     seq.note_in_velocity = inData2;
 
 #if defined APC
-if (APC_MODE==APC_PATTERN_EDITOR)
-{
-    if (inData1 == 122) //shift key
-      apc_shift_key = false;
-
-    if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
-      inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
-
-    apc_print_right_buttons();
-}
+ if (inData1 == 122) //shift key
+        apc_shift_key = false;
+    if (APC_MODE == APC_PATTERN_EDITOR)
+    {
+      if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
+        inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
+      apc_print_right_buttons();
+    }
 #endif
 
     handleNoteOff(inChannel, inData1, inData2, 0);
@@ -219,11 +230,11 @@ if (APC_MODE==APC_PATTERN_EDITOR)
       _internal = true;
 
 #if defined APC
-if (APC_MODE==APC_PATTERN_EDITOR)
-{
-    if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel == 1)
-      apc_fader_control(inData1, inData2);
-}
+    if (APC_MODE == APC_PATTERN_EDITOR)
+    {
+      if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel == 1)
+        apc_fader_control(inData1, inData2);
+    }
 #endif
 
     handleControlChange(inChannel, inData1, inData2);

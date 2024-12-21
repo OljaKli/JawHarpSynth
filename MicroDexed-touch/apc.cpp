@@ -41,6 +41,7 @@ extern bool apc_scroll_message;
 extern bool apc_shift_key;
 extern int temp_int;
 uint8_t apc_out_channel;
+extern void  print_chain_matrix_in_song_page();
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -86,7 +87,6 @@ FLASHMEM void apc_print_volume_pads()
 {
   if (apc_scroll_message == false)
   {
-
     for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
         sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max * 100, i, 5);
@@ -120,7 +120,6 @@ FLASHMEM void print_apc_source_selection_pads()
 {
   if (apc_scroll_message == false)
   {
-
     if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
     {
       for (uint8_t i = 0; i < 8; i++)
@@ -206,7 +205,6 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
           seq.vel[seq.active_pattern][in1 - 48] = in2;
           seq_printAllVelocitySteps_single_step(in1 - 48, GREY1);
         }
-
       }
       if (APC_BUTTONS_RIGHT[4])
       {
@@ -259,7 +257,6 @@ void  apc_insert_pattern_step(uint8_t inData1)
             APC_TONAL_SCROLL_OFFSET = seq.note_data[seq.active_pattern][input_step] - input_step;
             // if (seq.note_data[seq.active_pattern][input_step]==130)
             // apc_latch=true;
-
           }
         }
       }
@@ -286,7 +283,6 @@ void  apc_insert_pattern_step(uint8_t inData1)
             APC_TONAL_SCROLL_OFFSET = seq.note_data[seq.active_pattern][input_step] - input_step - 8;
           // if (seq.note_data[seq.active_pattern][input_step] == 130)
           //   apc_latch = true;
-
         }
       }
       else  //pitched
@@ -308,20 +304,16 @@ void  apc_insert_pattern_step(uint8_t inData1)
 // void apc_drawString()
 // {
 //   uint8_t len = strlen(apc_scrolltext);
-
 //   apc_clear_grid();
 //   delay(50);
-
 //   for (apc_scroll_counter = 0; apc_scroll_counter < len * 6 + 8; apc_scroll_counter++)
 //   {
-
 //     for (uint8_t i = 0; i < len; i++)
 //     {
 //       apc_drawChar(8 + i * 6 - apc_scroll_counter, apc_scrolltext[i]);
 //     }
 //     delay(90);
 //   }
-
 //   apc_scroll_counter = 0;
 //   delay(50);
 //   apc_clear_grid();
@@ -350,14 +342,14 @@ void apc_drawString_Background()
     apc_scroll_counter = 0;
 
     delay(50);
-    if (APC_MODE==APC_PATTERN_EDITOR)
+    if (APC_MODE == APC_PATTERN_EDITOR)
     {
-    apc_clear_grid();
-    apc_print_right_buttons();
-    seq_printAllSeqSteps();
-    seq_printAllVelocitySteps();
-    apc_print_volume_pads();
-    print_apc_source_selection_pads();
+      apc_clear_grid();
+      apc_print_right_buttons();
+      seq_printAllSeqSteps();
+      seq_printAllVelocitySteps();
+      apc_print_volume_pads();
+      print_apc_source_selection_pads();
     }
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
@@ -413,89 +405,104 @@ FLASHMEM void apc_pattern_change(uint8_t inData1)
   APC_BUTTONS_RIGHT[5] = false;
   APC_BUTTONS_RIGHT[6] = false;
   APC_BUTTONS_RIGHT[7] = false;
-
   //apc_print_right_buttons();
   apc_print_pattern_number();
   check_and_clear_row3();
+}
+extern void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
+
+void apc_mute_matrix()
+{
+  if (APC_MODE == APC_MUTE_MATRIX)
+  {
+    uint8_t track_count = 0;
+    for (uint8_t y = 0; y < 2; y++)
+    {
+      for (uint8_t x = 0; x < 4; x++)
+      {
+        // if (seq.current_chain[track_count] != 99)
+        // {
+        if (seq.track_mute[track_count]) //muted
+          apc(64 - 16 + x * 2 - 8 * y * 3, 1, 6);
+        else
+          apc(64 - 16 + x * 2 - 8 * y * 3, 78, 6);
+
+        if (seq.content_type[seq.current_pattern[track_count]] > 0) // it is a Inst. pattern
+        {
+          if (seq.note_data[seq.current_pattern[track_count]][seq.step] > 12 && seq.note_data[seq.current_pattern[track_count]][seq.step] != 99)
+          {
+            if (seq.track_mute[track_count]) //muted
+              apc(64 - 8 + x * 2 - 8 * y * 3, 2, 6);
+            else
+              apc(64 - 8 + x * 2 - 8 * y * 3, 40, 6);
+          }
+          else
+          {
+            apc(64 - 8 + x * 2 - 8 * y * 3, 0, 6);
+          }
+        }
+        else    // it is a drum pattern
+          if (seq.vel[seq.current_pattern[track_count]][seq.step] < 210) // is Drumtrack and not a pitched sample
+          {
+            bool found = false;
+            for (uint8_t n = 0; n < NUM_DRUMSET_CONFIG - 1; n++)
+            {
+              if (seq.note_data[seq.current_pattern[track_count]][seq.step] == drum_config[n].midinote)
+              {
+                found = true;
+                if (seq.track_mute[track_count]) //muted
+                  apc(64 - 8 + x * 2 - 8 * y * 3, 2, 6);
+                else
+                  apc(64 - 8 + x * 2 - 8 * y * 3, 124, 6);
+                break;
+              }
+            }
+            if (found == false)
+            {
+              apc(64 - 8 + x * 2 - 8 * y * 3, 0, 6);
+            }
+          }
+          else if (seq.vel[seq.current_pattern[track_count]][seq.step] > 209) // pitched sample
+          {
+            if (seq.track_mute[track_count]) //muted
+              apc(64 - 8 + x * 2 - 8 * y * 3, 2, 6);
+            else
+              apc(64 - 8 + x * 2 - 8 * y * 3, 36, 6);
+          }
+        track_count++;
+      }
+    }
+  }
+}
+
+FLASHMEM void apc_song()
+{
+  for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
+  {
+    for (uint8_t y = 0; y < 16; y++) // visible song steps
+    {
+      if (seq.song[x][y + seq.scrollpos] < 99)
+      {
+        if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+          apc(64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 11);
+        else
+          apc(64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 6);
+      }
+      else
+      {
+        if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+          apc(64 - 8 + x - (y * 8), 5, 11);
+        else
+          apc(64 - 8 + x - (y * 8), 0, 6);
+      }
+    }
+  }
 }
 
 void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 {
 
-  if (inData1 == 107) //track8 pad++
-  {
-    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
-    {
-      APC_SAMPLE_SCROLL_OFFSET++;
-    }
-    else
-    {
-      APC_TONAL_SCROLL_OFFSET++;
-    }
-    inChannel = 99;
-  }
-  else if (inData1 == 106) //track7 pad--
-  {
-    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
-    {
-      if (APC_SAMPLE_SCROLL_OFFSET > 10)
-        APC_SAMPLE_SCROLL_OFFSET--;
-    }
-    else
-    {
-      if (APC_TONAL_SCROLL_OFFSET > 10)
-        APC_TONAL_SCROLL_OFFSET--;
-    }
-    inChannel = 99;
-  }
-  else if (inData1 == 105) //track8 pad -8
-  {
-    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
-    {
-      if (APC_SAMPLE_SCROLL_OFFSET - 8 > 9)
-        APC_SAMPLE_SCROLL_OFFSET = APC_SAMPLE_SCROLL_OFFSET - 8;
-      else
-        APC_SAMPLE_SCROLL_OFFSET = 10;
-    }
-    else
-    {
-      if (APC_TONAL_SCROLL_OFFSET - 8 > 9)
-        APC_TONAL_SCROLL_OFFSET = APC_TONAL_SCROLL_OFFSET - 8;
-      else
-        APC_TONAL_SCROLL_OFFSET = 10;
-    }
-    inChannel = 99;
-  }
-  else if (inData1 == 104) //track7 pad +8
-  {
-    if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
-    {
-      APC_SAMPLE_SCROLL_OFFSET = APC_SAMPLE_SCROLL_OFFSET + 8;
-    }
-    else
-    {
-      APC_TONAL_SCROLL_OFFSET = APC_TONAL_SCROLL_OFFSET + 8;
-    }
-    inChannel = 99;
-  }
-
-  if (APC_SAMPLE_SCROLL_OFFSET < 10)
-    APC_SAMPLE_SCROLL_OFFSET = 10;
-  else if (APC_SAMPLE_SCROLL_OFFSET >= NUM_DRUMSET_CONFIG + 1)
-    APC_SAMPLE_SCROLL_OFFSET = NUM_DRUMSET_CONFIG + 1;
-
-  if (APC_TONAL_SCROLL_OFFSET < 10)
-    APC_TONAL_SCROLL_OFFSET = 10;
-  // if (apc_latch == false)
-  // {
-   if (APC_TONAL_SCROLL_OFFSET >= 160)
-      APC_TONAL_SCROLL_OFFSET = 160;
-  // }
-
-  if (inData1 == 112 || inData1 == 113) //pattern change
-    apc_pattern_change(inData1);
-
-  else if (inData1 == 114) //start/stop
+  if (inData1 == 114 && !apc_shift_key) //start/stop
   {
     if (!seq.running)
       handleStart();
@@ -503,96 +510,212 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       handleStop();
   }
 
-  if (inData1 == 115 || inData1 == 116)
+  if (inData1 == 112 && apc_shift_key) //switch to pattern editor
   {
-    APC_BUTTONS_RIGHT[0] = false;
-    APC_BUTTONS_RIGHT[1] = false;
-    APC_BUTTONS_RIGHT[6] = false;
+    APC_MODE = APC_PATTERN_EDITOR;
+    apc_clear_grid();
+    apc_print_right_buttons();
+    seq_printAllSeqSteps();
+    seq_printAllVelocitySteps();
+    apc_print_volume_pads();
+    print_apc_source_selection_pads();
   }
 
-  if (inData1 == 115) //velocity upper row
+  else if (inData1 == 113 && apc_shift_key) //switch to song editor
   {
-    APC_BUTTONS_RIGHT[3] = true;
-    APC_BUTTONS_RIGHT[4] = false;
-  }
-  else if (inData1 == 116) //velocity lower row
-  {
-    APC_BUTTONS_RIGHT[3] = false;
-    APC_BUTTONS_RIGHT[4] = true;
-
+    APC_MODE = APC_SONG;
+    // LCDML.OTHER_jumpToFunc(UI_func_song);
+    //print_chain_matrix_in_song_page();
+    apc_song();
   }
 
-  else  if (inData1 == 118 || inData1 == 117 || inData1 == 119) //enable/disable pad select mode
+  else if (inData1 == 114 && apc_shift_key) //switch to mute matrix
   {
+    APC_MODE = APC_MUTE_MATRIX;
+    apc_clear_grid();
+    apc_mute_matrix();
+  }
 
-    if ((APC_BUTTONS_RIGHT[6] && inData1 == 118) || (APC_BUTTONS_RIGHT[6] && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)))
+  if (APC_MODE == APC_MUTE_MATRIX)
+  {
+    if (inData1 > 23 && inData1 < 64 - 8)
     {
-      APC_BUTTONS_RIGHT[5] = false;
+      uint8_t pad_count = 0;
+      char buf[4];
+      uint8_t spacerx = 90;
+      for (uint8_t y = 0; y < 2; y++)
+      {
+        for (uint8_t x = 0; x < 4; x++)
+        {
+          if (inData1 == 64 - 16 + x * 2 - 8 * y * 3)
+          {
+            seq.track_mute[pad_count] = !seq.track_mute[pad_count];
+            if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_mute_matrix))
+              TouchButton::drawButton(x * spacerx, 95 + y * 55, "TRACK:", itoa(pad_count + 1, buf, 10), seq.track_mute[pad_count] ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE);
+          }
+          pad_count++;
+        }
+      }
+    }
+    apc_mute_matrix();
+  }
+  else if (APC_MODE == APC_PATTERN_EDITOR)
+  {
+    if (inData1 == 107) //track8 pad++
+    {
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
+      {
+        APC_SAMPLE_SCROLL_OFFSET++;
+      }
+      else
+      {
+        APC_TONAL_SCROLL_OFFSET++;
+      }
+      inChannel = 99;
+    }
+    else if (inData1 == 106) //track7 pad--
+    {
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
+      {
+        if (APC_SAMPLE_SCROLL_OFFSET > 10)
+          APC_SAMPLE_SCROLL_OFFSET--;
+      }
+      else
+      {
+        if (APC_TONAL_SCROLL_OFFSET > 10)
+          APC_TONAL_SCROLL_OFFSET--;
+      }
+      inChannel = 99;
+    }
+    else if (inData1 == 105) //track8 pad -8
+    {
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
+      {
+        if (APC_SAMPLE_SCROLL_OFFSET - 8 > 9)
+          APC_SAMPLE_SCROLL_OFFSET = APC_SAMPLE_SCROLL_OFFSET - 8;
+        else
+          APC_SAMPLE_SCROLL_OFFSET = 10;
+      }
+      else
+      {
+        if (APC_TONAL_SCROLL_OFFSET - 8 > 9)
+          APC_TONAL_SCROLL_OFFSET = APC_TONAL_SCROLL_OFFSET - 8;
+        else
+          APC_TONAL_SCROLL_OFFSET = 10;
+      }
+      inChannel = 99;
+    }
+    else if (inData1 == 104) //track7 pad +8
+    {
+      if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
+      {
+        APC_SAMPLE_SCROLL_OFFSET = APC_SAMPLE_SCROLL_OFFSET + 8;
+      }
+      else
+      {
+        APC_TONAL_SCROLL_OFFSET = APC_TONAL_SCROLL_OFFSET + 8;
+      }
+      inChannel = 99;
+    }
+
+    if (APC_SAMPLE_SCROLL_OFFSET < 10)
+      APC_SAMPLE_SCROLL_OFFSET = 10;
+    else if (APC_SAMPLE_SCROLL_OFFSET >= NUM_DRUMSET_CONFIG + 1)
+      APC_SAMPLE_SCROLL_OFFSET = NUM_DRUMSET_CONFIG + 1;
+
+    if (APC_TONAL_SCROLL_OFFSET < 10)
+      APC_TONAL_SCROLL_OFFSET = 10;
+    // if (apc_latch == false)
+    // {
+    if (APC_TONAL_SCROLL_OFFSET >= 160)
+      APC_TONAL_SCROLL_OFFSET = 160;
+    // }
+
+    if (inData1 == 112 || inData1 == 113) //pattern change
+      if (!apc_shift_key)
+        apc_pattern_change(inData1);
+
+    if (inData1 == 115 || inData1 == 116)
+    {
+      APC_BUTTONS_RIGHT[0] = false;
+      APC_BUTTONS_RIGHT[1] = false;
       APC_BUTTONS_RIGHT[6] = false;
-      APC_BUTTONS_RIGHT[7] = false;
+    }
+    if (inData1 == 115) //velocity upper row
+    {
+      APC_BUTTONS_RIGHT[3] = true;
+      APC_BUTTONS_RIGHT[4] = false;
+    }
+    else if (inData1 == 116) //velocity lower row
+    {
+      APC_BUTTONS_RIGHT[3] = false;
+      APC_BUTTONS_RIGHT[4] = true;
+    }
+    else  if (inData1 == 118 || inData1 == 117 || inData1 == 119) //enable/disable pad select mode
+    {
+      if ((APC_BUTTONS_RIGHT[6] && inData1 == 118) || (APC_BUTTONS_RIGHT[6] && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)))
+      {
+        APC_BUTTONS_RIGHT[5] = false;
+        APC_BUTTONS_RIGHT[6] = false;
+        APC_BUTTONS_RIGHT[7] = false;
+      }
+      else
+        if (APC_PREVIOUS_NOTE != 254)
+        {
+          if (inData1 == 118)
+            APC_BUTTONS_RIGHT[6] = true;
+
+          if (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)
+          {
+            APC_BUTTONS_RIGHT[5] = true;
+            APC_BUTTONS_RIGHT[6] = true;
+            APC_BUTTONS_RIGHT[7] = true;
+          }
+          APC_BUTTONS_RIGHT[0] = false;
+          APC_BUTTONS_RIGHT[1] = false;
+          APC_BUTTONS_RIGHT[3] = false;
+          APC_BUTTONS_RIGHT[4] = false;
+        }
+    }
+    else if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3))
+    {
+      inChannel = drum_midi_channel;
+      set_apc_pad_selection(inData1);
+      APC_PREVIOUS_NOTE = inData1;
+      apc_print_volume_pads();
+    }
+    else if (inData1 < 24 && seq.content_type[seq.active_pattern] == 1) // tonal instrument type
+    {
+      set_apc_pad_selection(inData1);
+      APC_PREVIOUS_NOTE = inData1;
+      apc_print_volume_pads();
+
+    }
+    else if ((inData1 >= 64 - 16 && inData1 <= 64)) //step input to pattern
+    {
+      apc_insert_pattern_step(inData1);
+      if (APC_BUTTONS_RIGHT[0] || APC_BUTTONS_RIGHT[6] || APC_BUTTONS_RIGHT[3] || APC_BUTTONS_RIGHT[4])
+        inChannel = 99;
+    }
+    else if (inData1 > 23 && inData1 < 40) // velocity steps
+    {
+      inChannel = drum_midi_channel;
+      set_apc_velocity_pad(inData1);
+      if (APC_BUTTONS_RIGHT[3] || APC_BUTTONS_RIGHT[4])
+        inChannel = 99;
+
+      seq_printAllVelocitySteps();
+    }
+    else if ((inData1 > 103 && inData1 < 108)) //update scrolling pad view
+    {
+      apc_print_volume_pads();
     }
     else
-      if (APC_PREVIOUS_NOTE != 254)
-      {
-        if (inData1 == 118)
-          APC_BUTTONS_RIGHT[6] = true;
-
-        if (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)
-        {
-          APC_BUTTONS_RIGHT[5] = true;
-          APC_BUTTONS_RIGHT[6] = true;
-          APC_BUTTONS_RIGHT[7] = true;
-        }
-        APC_BUTTONS_RIGHT[0] = false;
-        APC_BUTTONS_RIGHT[1] = false;
-        APC_BUTTONS_RIGHT[3] = false;
-        APC_BUTTONS_RIGHT[4] = false;
-      }
-  }
-
-  else if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3))
-  {
-    inChannel = drum_midi_channel;
-    set_apc_pad_selection(inData1);
-    APC_PREVIOUS_NOTE = inData1;
-    apc_print_volume_pads();
-
-  }
-  else if (inData1 < 24 && seq.content_type[seq.active_pattern] == 1) // tonal instrument type
-  {
-    set_apc_pad_selection(inData1);
-    APC_PREVIOUS_NOTE = inData1;
-    apc_print_volume_pads();
-
-  }
-
-  else if ((inData1 >= 64 - 16 && inData1 <= 64)) //step input to pattern
-  {
-    apc_insert_pattern_step(inData1);
-    if (APC_BUTTONS_RIGHT[0] || APC_BUTTONS_RIGHT[6] || APC_BUTTONS_RIGHT[3] || APC_BUTTONS_RIGHT[4])
+    {
       inChannel = 99;
+    }
+    apc_out_channel = inChannel;
   }
-
-
-  else if (inData1 > 23 && inData1 < 40) // velocity steps
-  {
-    inChannel = drum_midi_channel;
-    set_apc_velocity_pad(inData1);
-    if (APC_BUTTONS_RIGHT[3] || APC_BUTTONS_RIGHT[4])
-      inChannel = 99;
-
-    seq_printAllVelocitySteps();
-  }
-
-  else if ((inData1 > 103 && inData1 < 108)) //update scrolling pad view
-  {
-    apc_print_volume_pads();
-  }
-  else
-  {
-    inChannel = 99;
-  }
-  apc_out_channel = inChannel;
 }
 
 #endif

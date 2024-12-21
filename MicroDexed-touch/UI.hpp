@@ -1552,6 +1552,7 @@ FLASHMEM void fill_up_with_spaces_left_window_filemanager()
 // }
 
 #if defined APC
+extern void apc_mute_matrix();
 extern void check_and_clear_row3();
 
 void apc(uint8_t a, uint8_t b, uint8_t c)
@@ -1817,7 +1818,6 @@ FLASHMEM void edit_song_loop()
 
 FLASHMEM void print_chain_matrix_in_song_page()
 {
-
 
   if (seq.tracktype_or_instrument_assign > 0 && seq.tracktype_or_instrument_assign < 3) // select track for instrument assignment
   {
@@ -2715,67 +2715,23 @@ FLASHMEM void update_display_functions_while_seq_running()
   }
 
 #if defined APC
-  if (APC_MODE == APC_MUTE_MATRIX)
-  {
-    uint8_t track_count = 0;
-    for (uint8_t y = 0; y < 2; y++)
-    {
-      for (uint8_t x = 0; x < 4; x++)
-      {
-        if (seq.current_chain[track_count] != 99)
-        {
-
-          if (seq.content_type[seq.current_pattern[track_count]] > 0) // it is a Inst. pattern
-          {
-            if (seq.note_data[seq.current_pattern[track_count]][seq.step] > 12 && seq.note_data[seq.current_pattern[track_count]][seq.step] != 130 && seq.note_data[seq.current_pattern[track_count]][seq.step] != 99)
-            {
-              apc(64 - 8 + x * 2 - 8 * y * 4, 5, 6);
-            }
-            //  else if (seq.note_data[seq.current_pattern[track_count]][seq.step] == 130) // latch
-               // display.print(F("LAT"));
-            else
-            {
-              apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
-            }
-          }
-          else    // it is a drum pattern
-            if (seq.vel[seq.current_pattern[track_count]][seq.step] < 210) // is Drumtrack and not a pitched sample
-            {
-              bool found = false;
-              for (uint8_t n = 0; n < NUM_DRUMSET_CONFIG - 1; n++)
-              {
-                if (seq.note_data[seq.current_pattern[track_count]][seq.step] == drum_config[n].midinote)
-                {
-                  found = true;
-                  apc(64 - 8 + x * 2 - 8 * y * 4, 5, 6);
-                  break;
-                }
-              }
-              if (found == false)
-              {
-                display.print(F("- "));
-                apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
-              }
-            }
-          //  else if (seq.vel[seq.current_pattern[track_count]][seq.step] > 209) // pitched sample
-             // display.print(F("PS"));
-        }
-        track_count++;
-      }
-    }
-  }
+ apc_mute_matrix();
 #endif
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_mute_matrix))
   {
     uint8_t track_count = 0;
+     display.setTextSize(1);
     for (uint8_t y = 0; y < 2; y++)
     {
       for (uint8_t x = 0; x < 4; x++)
       {
         if (seq.current_chain[track_count] != 99)
         {
-          display.setCursor((2 * CHAR_width_small) + x * (CHAR_width_small * 14), 4 + (10 * CHAR_height_small) + (y * (CHAR_height_small * 8)));
+          if (y==0)
+          display.setCursor( x * (CHAR_width_small * 15), 82 );
+else
+ display.setCursor( x * (CHAR_width_small * 15), 138 );
           set_pattern_content_type_color(seq.current_pattern[track_count]);
           if (seq.content_type[seq.current_pattern[track_count]] > 0) // it is a Inst. pattern
           {
@@ -2795,7 +2751,7 @@ FLASHMEM void update_display_functions_while_seq_running()
               display.print(F("   "));
             }
           }
-          else                                                             // it is a drum pattern
+          else   // it is a drum pattern
             if (seq.vel[seq.current_pattern[track_count]][seq.step] < 210) // is Drumtrack and not a pitched sample
             {
               bool found = false;
@@ -12547,9 +12503,9 @@ FLASHMEM void UI_func_song(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
 
-#if defined APC
-    apc_clear_grid();
-#endif
+// #if defined APC
+//     apc_clear_grid();
+// #endif
   }
 }
 
@@ -13185,7 +13141,7 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
 #if defined APC
     APC_MODE = APC_MUTE_MATRIX;
     apc_clear_grid();
-
+    apc_clear_right_buttons();
 #endif
 
     // setup function
@@ -13205,11 +13161,12 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
   {
     uint8_t button_count = 0;
     char buf[4];
+uint8_t spacerx=90;
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    setCursor_textGrid_small(2, 4);
+    setCursor_textGrid_small(0, 4);
     display.print(F("MUTE/UNMUTE"));
-    setCursor_textGrid_small(2, 5);
+    setCursor_textGrid_small(0, 5);
     display.print(F("AT/IN:"));
 
     for (uint8_t y = 0; y < 3; y++)
@@ -13220,17 +13177,16 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
         {
           if (!seq.track_mute[button_count])
           {
-            draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), 1);
+ TouchButton::drawButton( x * spacerx, 95+ y * 55, "TRACK:", itoa(button_count + 1, buf, 10), TouchButton::BUTTON_ACTIVE);
 #if defined APC
-            apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
+            apc(64 - 16 + x * 2 - 8 * y * 3, 78, 6);
 #endif
-
           }
           else
           {
-            draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), 0);
+ TouchButton::drawButton(x * spacerx, 95+ y * 55, "TRACK:", itoa(button_count + 1, buf, 10), TouchButton::BUTTON_NORMAL);
 #if defined APC
-            apc(64 - 8 + x * 2 - 8 * y * 4, 1, 6);
+            apc(64 - 16 + x * 2 - 8 * y * 3, 1, 6);
 #endif
           }
           button_count++;
@@ -13239,24 +13195,24 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
         {
           if (x == 1)
           {
-            if (seq.mute_mode == 0)
-              draw_button_on_grid(2 + x * 14, 4, "REAL", "TIME", 1);
-            else
-              draw_button_on_grid(2 + x * 14, 4, "REAL", "TIME", 0);
+             if (seq.mute_mode == 0)
+            TouchButton::drawButton(x * spacerx,  35,  "REAL", "TIME", TouchButton::BUTTON_ACTIVE);
+             else
+            TouchButton::drawButton(x * spacerx,  35,  "REAL", "TIME", TouchButton::BUTTON_NORMAL);
           }
           else if (x == 2)
           {
-            if (seq.mute_mode == 1)
-              draw_button_on_grid(2 + x * 14, 4, "NEXT", "PATTRN", 1);
-            else
-              draw_button_on_grid(2 + x * 14, 4, "NEXT", "PATTRN", 0);
-          }
+             if (seq.mute_mode == 1)
+             TouchButton::drawButton(x * spacerx,  35,  "NEXT", "PATTRN", TouchButton::BUTTON_ACTIVE);
+             else
+            TouchButton::drawButton(x * spacerx,  35,  "NEXT", "PATTRN", TouchButton::BUTTON_NORMAL);
+          } 
           else if (x == 3)
           {
-            if (seq.mute_mode == 2)
-              draw_button_on_grid(2 + x * 14, 4, "SONG", "STEP", 1);
-            else
-              draw_button_on_grid(2 + x * 14, 4, "SONG", "STEP", 0);
+             if (seq.mute_mode == 2)
+            TouchButton::drawButton(x * spacerx,  35,  "SONG", "STEP", TouchButton::BUTTON_ACTIVE);
+             else
+            TouchButton::drawButton(x * spacerx,  35,  "SONG", "STEP", TouchButton::BUTTON_NORMAL);
           }
         }
       }
