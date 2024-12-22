@@ -1056,6 +1056,7 @@ FLASHMEM void setup()
   pinMode(BUT_R_PIN, INPUT_PULLUP);
   pinMode(BUT_L_PIN, INPUT_PULLUP);
 
+//Encoder with Interrupts
   attachInterrupt(ENC_L_PIN_A, updateEncoderL, CHANGE);
   attachInterrupt(ENC_L_PIN_B, updateEncoderL, CHANGE);
   attachInterrupt(ENC_R_PIN_A, updateEncoderR, CHANGE);
@@ -2152,6 +2153,10 @@ void loop()
 
   // MIDI input handling
   check_midi_devices();
+
+  // check encoder (old, polling)
+  //ENCODER[ENC_L].update();
+  //ENCODER[ENC_R].update();
 
 #if defined APC
   if (apc_scroll_message)

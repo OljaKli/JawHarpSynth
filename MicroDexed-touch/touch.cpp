@@ -191,6 +191,12 @@ FLASHMEM void draw_back_touchbutton()
     //remove unusable touch buttons from screen
     clear_bottom_half_screen_without_backbutton();
     //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
+   
+  }
+  //else if (legacy_touch_button_back_page()&& ts.keyb_in_menu_activated  )
+  else if (legacy_touch_button_back_page() )
+  { // but when virtual keyboard was active when coming from main menu, it must be redrawn
+     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
   }
   else if (touch_button_back_page() && seq.cycle_touch_element != 1)
   {

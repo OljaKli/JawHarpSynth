@@ -106,7 +106,9 @@ void MD_REncoder::update(void)
   if (_state & 0x30) _count++;
   if (millis() - _timeLast >= _period)
   {
-    _spd = _count * (1000/_period);
+    _spd = _count * (1000/_period)/6;
+     if (_spd<1)
+     _spd=1;
     _timeLast = millis();
     _count = 0;
   }
