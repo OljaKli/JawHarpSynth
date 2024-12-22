@@ -247,7 +247,7 @@ public:
    * \return The speed in clicks per second.
    */
 
-   // some hack to make it work with gamepad and native buttons 
+   // some hack to make it work with gamepad and native buttons, hopefully no longer needed
 
   // inline uint16_t speed(void)
   // {

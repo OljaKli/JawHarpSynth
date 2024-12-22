@@ -146,7 +146,6 @@ int8_t MD_REncoder::read(void)
   return(0);
 }
 
-
 void MD_REncoder::write(int32_t v) 
 {
   value=v;
