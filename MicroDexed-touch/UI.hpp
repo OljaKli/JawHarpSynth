@@ -2912,7 +2912,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 #if defined APC
     if (screensaver_counthue % 8 == 0)
       apc(random(64), 0, 0);
-  else  if (screensaver_counthue % 9 == 0)
+    else  if (screensaver_counthue % 9 == 0)
       apc(random(64), 36, random(5) + 1);
     else if (screensaver_counthue % 183 == 0)
       apc(random(64), 5, 6);
@@ -3822,16 +3822,9 @@ FLASHMEM void lcdml_menu_control(void)
 
   // Volatile Variables
   long g_LCDML_CONTROL_Encoder_position[NUM_ENCODER] = { ENCODER[ENC_R].read(), ENCODER[ENC_L].read() };
-  if (configuration.sys.ui_reverse)
-  {
-    button[0] = digitalRead(BUT_L_PIN);
-    button[1] = digitalRead(BUT_R_PIN);
-  }
-  else
-  {
-    button[0] = digitalRead(BUT_R_PIN);
-    button[1] = digitalRead(BUT_L_PIN);
-  }
+
+  button[0] = digitalRead(BUT_R_PIN);
+  button[1] = digitalRead(BUT_L_PIN);
 
 #ifdef USB_KEYPAD // USB KEYPAD CONTROL TEST
   if (USB_KEY != 0)
@@ -17973,9 +17966,8 @@ FLASHMEM void _render_misc_settings()
   setCursor_textGrid_small(2, 10);
   display.print(F("TOUCH SCREEN ROTATION"));
   setCursor_textGrid_small(2, 11);
-  display.setTextColor(GREY2, COLOR_BACKGROUND);
-  display.print(F("REVERSE UI (ENCODERS ON TOP)"));
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.print(F("SWAP ENCODER DIRECTION (A/B PINS)"));
   setCursor_textGrid_small(42, 6);
   print_formatted_number(configuration.sys.gamepad_speed, 3);
   setCursor_textGrid_small(46, 6);
@@ -17997,7 +17989,7 @@ FLASHMEM void _render_misc_settings()
   setCursor_textGrid_small(42, 10);
   display.print(configuration.sys.touch_rotation);
   setCursor_textGrid_small(42, 11);
-  display.print(configuration.sys.ui_reverse ? F("ON ") : F("OFF"));
+  display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF"));
   setCursor_textGrid_small(42, 12);
   display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO "));
   setCursor_textGrid_small(42, 13);
@@ -18063,10 +18055,10 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           break;
 
         case 5:
-          // configuration.sys.ui_reverse = !configuration.sys.ui_reverse;
-          // configuration.sys.display_rotation = configuration.sys.ui_reverse ? DISPLAY_ROTATION_INVERTED : DISPLAY_ROTATION_DEFAULT;
-          // configuration.sys.touch_rotation = configuration.sys.ui_reverse ? TOUCH_ROTATION_INVERTED : TOUCH_ROTATION_DEFAULT;
-
+          configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins;
+          ENCODER[ENC_L].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
+          ENCODER[ENC_R].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
+         
           // // set hardware rotations for display/touch and pins for encoders
           // _setup_rotation_and_encoders(false);
 
@@ -18142,7 +18134,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
     // UI reverse
     setModeColor(5);
     setCursor_textGrid_small(42, 11);
-    display.print(configuration.sys.ui_reverse ? F("ON ") : F("OFF"));
+    display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF"));
 
     setModeColor(6);
     setCursor_textGrid_small(42, 12);
@@ -18187,21 +18179,9 @@ FLASHMEM void _setup_rotation_and_encoders(bool init)
 #if defined GENERIC_DISPLAY
   touch.setRotation(configuration.sys.touch_rotation);
 #endif
-  if (configuration.sys.ui_reverse == true)
-  {
-    MD_REncoder encoder_tmp = ENCODER[ENC_L];
-    ENCODER[ENC_L] = ENCODER[ENC_R];
-    ENCODER[ENC_R] = encoder_tmp;
-  }
-  else
-  {
-    if (!init)
-    {
-      MD_REncoder encoder_tmp = ENCODER[ENC_R];
-      ENCODER[ENC_R] = ENCODER[ENC_L];
-      ENCODER[ENC_L] = encoder_tmp;
-    }
-  }
+
+  ENCODER[ENC_L].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
+  ENCODER[ENC_R].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
 }
 
 FLASHMEM void print_mixer_text()

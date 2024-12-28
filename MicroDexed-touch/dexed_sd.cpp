@@ -2049,7 +2049,7 @@ FLASHMEM bool load_sd_sys_json(void)
         {
           configuration.sys.display_rotation = data_json["display_rotation"];
           configuration.sys.touch_rotation = data_json["touch_rotation"];
-          configuration.sys.ui_reverse = data_json["ui_reverse"];
+          configuration.sys.reverse_encoder_pins = data_json["encoder_reversed"];
           configuration.sys.boot_anim_skip = data_json["boot_anim_skip"];
           configuration.sys.invert_colors = data_json["invert_colors"];
         }
@@ -2123,7 +2123,7 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["load_at_startup_page"] = configuration.sys.load_at_startup_page;
       data_json["display_rotation"] = configuration.sys.display_rotation;
       data_json["touch_rotation"] = configuration.sys.touch_rotation;
-      data_json["ui_reverse"] = configuration.sys.ui_reverse;
+      data_json["encoder_reversed"] = configuration.sys.reverse_encoder_pins;
       data_json["boot_anim_skip"] = configuration.sys.boot_anim_skip;
       data_json["invert_colors"] = configuration.sys.invert_colors;
       data_json["screen_saver_start"] = configuration.sys.screen_saver_start;

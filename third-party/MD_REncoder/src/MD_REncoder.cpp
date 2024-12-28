@@ -29,23 +29,23 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include <MD_REncoder.h>
 
-/*
- * The below state table has, for each state (row), the new state
- * to set based on the next encoder output. From left to right in,
- * the table, the encoder outputs are 00, 01, 10, 11, and the value
- * in that position is the new state to set.
- */
+ /*
+  * The below state table has, for each state (row), the new state
+  * to set based on the next encoder output. From left to right in,
+  * the table, the encoder outputs are 00, 01, 10, 11, and the value
+  * in that position is the new state to set.
+  */
 #define R_START 0x0
 
 #if ENABLE_HALF_STEP
-// Use the half-step state table (emits a code at 00 and 11)
+  // Use the half-step state table (emits a code at 00 and 11)
 #define R_CCW_BEGIN   0x1
 #define R_CW_BEGIN    0x2
 #define R_START_M     0x3
 #define R_CW_BEGIN_M  0x4
 #define R_CCW_BEGIN_M 0x5
 
-const unsigned char ttable[][4] = 
+const unsigned char ttable[][4] =
 {
   // 00                  01              10            11
   {R_START_M,           R_CW_BEGIN,     R_CCW_BEGIN,  R_START},           // R_START (00)
@@ -56,7 +56,7 @@ const unsigned char ttable[][4] =
   {R_START_M,           R_CCW_BEGIN_M,  R_START_M,    R_START | DIR_CCW}  // R_CCW_BEGIN_M
 };
 #else
-// Use the full-step state table (emits a code at 00 only)
+  // Use the full-step state table (emits a code at 00 only)
 #define R_CW_FINAL   0x1
 #define R_CW_BEGIN   0x2
 #define R_CW_NEXT    0x3
@@ -64,7 +64,7 @@ const unsigned char ttable[][4] =
 #define R_CCW_FINAL  0x5
 #define R_CCW_NEXT   0x6
 
-const unsigned char ttable[][4] = 
+const unsigned char ttable[][4] =
 {
   // 00         01           10           11
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},           // R_START
@@ -77,10 +77,10 @@ const unsigned char ttable[][4] =
 };
 #endif
 
-MD_REncoder::MD_REncoder(uint8_t pinA, uint8_t pinB):
-_pinA (pinA), _pinB (pinB), _state(R_START)
+MD_REncoder::MD_REncoder(uint8_t pinA, uint8_t pinB) :
+  _pinA(pinA), _pinB(pinB), _state(R_START)
 #if ENABLE_SPEED
-, _period(DEFAULT_PERIOD), _count(0), _spd(0), _timeLast(0)
+  , _period(DEFAULT_PERIOD), _count(0), _spd(0), _timeLast(0)
 #endif
 {
 }
@@ -89,39 +89,49 @@ void MD_REncoder::begin(void)
 {
   pinMode(_pinA, (ENABLE_PULLUPS ? INPUT_PULLUP : INPUT));
   pinMode(_pinB, (ENABLE_PULLUPS ? INPUT_PULLUP : INPUT));
-  value=0;
-  last_dir=DIR_NONE;
+  value = 0;
+  last_dir = DIR_NONE;
 }
 
-void MD_REncoder::update(void) 
+void MD_REncoder::swap_encoder_input_pins(bool input)
+{
+  swap_input = input;
+}
+
+
+void MD_REncoder::update(void)
 // Grab state of input pins, determine new state from the pins 
 // and state table, and return the emit bits (ie the generated event).
 {
-  uint8_t pinstate = (digitalRead(_pinB) << 1) | digitalRead(_pinA);
-  
-  _state = ttable[_state & 0xf][pinstate]; 
-  
+  uint8_t pinstate;
+  if (!swap_input)
+    pinstate = (digitalRead(_pinB) << 1) | digitalRead(_pinA);
+  else
+    pinstate = (digitalRead(_pinA) << 1) | digitalRead(_pinB);
+
+  _state = ttable[_state & 0xf][pinstate];
+
 #if ENABLE_SPEED
   // handle the encoder velocity calc
   if (_state & 0x30) _count++;
   if (millis() - _timeLast >= _period)
   {
-    _spd = _count * (1000/_period)/6;
-     if (_spd<1)
-     _spd=1;
+    _spd = _count * (1000 / _period) / 6;
+    if (_spd < 1)
+      _spd = 1;
     _timeLast = millis();
     _count = 0;
   }
 #endif
 
-  switch(_state & 0x30)
+  switch (_state & 0x30)
   {
-   case DIR_CW:
+  case DIR_CW:
     value++;
-    last_dir=DIR_CW;
+    last_dir = DIR_CW;
     break;
-   case DIR_CCW:
-    last_dir=DIR_CCW;
+  case DIR_CCW:
+    last_dir = DIR_CCW;
     value--;
     break;
   }
@@ -134,19 +144,19 @@ int32_t MD_REncoder::read_value(void)
 
 int8_t MD_REncoder::read(void)
 {
-  switch(last_dir)
+  switch (last_dir)
   {
-   case DIR_CW:
-    last_dir=DIR_NONE;
+  case DIR_CW:
+    last_dir = DIR_NONE;
     return(4);
-   case DIR_CCW:
-    last_dir=DIR_NONE;
+  case DIR_CCW:
+    last_dir = DIR_NONE;
     return(-4);
   }
   return(0);
 }
 
-void MD_REncoder::write(int32_t v) 
+void MD_REncoder::write(int32_t v)
 {
-  value=v;
+  value = v;
 }

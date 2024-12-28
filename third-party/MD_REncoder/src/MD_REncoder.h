@@ -209,7 +209,7 @@ public:
    * new data for the class that cannot be done during the object creation.
    */
   void begin(void);
-
+  void swap_encoder_input_pins(bool input);
   /**
    * Read the direction of rotation.
    *
@@ -268,7 +268,8 @@ private:
   // Hardware data
   uint8_t _pinA;      // pin A number
   uint8_t _pinB;      // pin B number
-
+  bool swap_input;
+ 
   // Encoder value
   uint8_t _state;     // latest state for the encoder
   int32_t value;

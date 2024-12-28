@@ -66,12 +66,10 @@
 //*************************************************************************************************
 //* DEVICE SETTINGS
 //*************************************************************************************************
-// #define UI_REVERSE
 
 #if defined APC
 #define APC_NUM_PADS 64
 #endif
-
 
 //*************************************************************************************************
 //* MIDI HARDWARE SETTINGS
@@ -323,13 +321,6 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define ENC_R_PIN_A 28
 #define ENC_R_PIN_B 29
 #define BUT_R_PIN 25
-
-// musikandmore settings
-// #define ENC_L_PIN_A 31
-// #define ENC_L_PIN_B 32
-
-// #define ENC_R_PIN_A 29
-// #define ENC_R_PIN_B 28
 
 #define BUT_DEBOUNCE_MS 20
 #define LONG_BUTTON_PRESS 500
@@ -1010,7 +1001,7 @@ typedef struct sys_s
   uint8_t screen_saver_start; // minutes
   uint8_t screen_saver_mode; // 0 = random, modes 1...4 , 99 = off
   uint16_t gamepad_speed;     // milliseconds
-  bool ui_reverse;
+  bool reverse_encoder_pins;
   bool boot_anim_skip;
   bool invert_colors;
   uint8_t brightness;

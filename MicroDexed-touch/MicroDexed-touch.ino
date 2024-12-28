@@ -1056,7 +1056,7 @@ FLASHMEM void setup()
   pinMode(BUT_R_PIN, INPUT_PULLUP);
   pinMode(BUT_L_PIN, INPUT_PULLUP);
 
-//Encoder with Interrupts
+  //Encoder with Interrupts
   attachInterrupt(ENC_L_PIN_A, updateEncoderL, CHANGE);
   attachInterrupt(ENC_L_PIN_B, updateEncoderL, CHANGE);
   attachInterrupt(ENC_R_PIN_A, updateEncoderR, CHANGE);
@@ -4895,7 +4895,7 @@ FLASHMEM void check_configuration_sys(void)
   configuration.sys.load_at_startup_performance = constrain(configuration.sys.load_at_startup_performance, STARTUP_NUM_MIN, STARTUP_NUM_MAX);
   configuration.sys.display_rotation = constrain(configuration.sys.display_rotation, 0, 3);
   configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
-  configuration.sys.ui_reverse = constrain(configuration.sys.ui_reverse, false, true);
+  configuration.sys.reverse_encoder_pins = constrain(configuration.sys.reverse_encoder_pins, false, true);
   configuration.sys.boot_anim_skip = constrain(configuration.sys.boot_anim_skip, false, true);
   configuration.sys.brightness = constrain(configuration.sys.brightness, 100, 200);
   setup_screensaver();
@@ -5013,7 +5013,7 @@ FLASHMEM void init_configuration(void)
   configuration.sys.load_at_startup_performance = STARTUP_NUM_DEFAULT;
   configuration.sys.display_rotation = DISPLAY_ROTATION_DEFAULT;
   configuration.sys.touch_rotation = TOUCH_ROTATION_DEFAULT;
-  configuration.sys.ui_reverse = false;
+  configuration.sys.reverse_encoder_pins = false;
   configuration.sys.boot_anim_skip = false;
   configuration.sys.screen_saver_start = SCREEN_SAVER_START_DEFAULT;
   configuration.sys.screen_saver_mode = SCREEN_SAVER_MODE_DEFAULT;
@@ -5871,7 +5871,7 @@ FLASHMEM void show_configuration(void)
   LOG.print(F("  Touch rotation      "));
   LOG.println(configuration.sys.touch_rotation, DEC);
   LOG.print(F("  UI reverse          "));
-  LOG.println(configuration.sys.ui_reverse);
+  LOG.println(configuration.sys.reverse_encoder_pins);
   LOG.print(F("  Screen saver start  "));
   LOG.println(configuration.sys.screen_saver_start, DEC);
   LOG.println(F("FX"));
