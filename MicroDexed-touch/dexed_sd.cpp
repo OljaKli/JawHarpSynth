@@ -624,20 +624,39 @@ FLASHMEM bool load_sd_envelopes_json(uint8_t number)
         for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG - 1; i++)
         {
 
-          if (data_json["env_attack"][i] > 0 || data_json["env_hold"][i] > 0 || data_json["env_decay"][i] > 0 ||
-            data_json["env_sus"][i] > 0 || data_json["env_rel"][i] > 0)
+          set_sample_env_attack(i, data_json["env_attack"][i]);
+
+          if (data_json["env_hold"][i] == 0 && data_json["env_decay"][i] == 0)
           {
-            set_sample_env_attack(i, data_json["env_attack"][i]);
+            set_sample_env_hold(i, 50);
+            set_sample_env_decay(i, 60);
+          }
+          else
+          {
             set_sample_env_hold(i, data_json["env_hold"][i]);
             set_sample_env_decay(i, data_json["env_decay"][i]);
-            set_sample_env_sustain(i, data_json["env_sus"][i]);
-            set_sample_env_release(i, data_json["env_rel"][i]);
           }
+          set_sample_env_sustain(i, data_json["env_sus"][i]);
+          set_sample_env_release(i, data_json["env_rel"][i]);
         }
-
 
         return (true);
       }
+    }
+    else
+    {
+      AudioInterrupts();
+
+      for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG - 1; i++)
+      {
+        set_sample_env_attack(i, 0);
+        set_sample_env_hold(i, 50);
+        set_sample_env_decay(i, 60);
+        set_sample_env_sustain(i, 50);
+        set_sample_env_release(i, 10);
+      }
+
+      return (true);
     }
   }
   AudioInterrupts();
