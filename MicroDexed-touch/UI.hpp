@@ -2944,7 +2944,7 @@ FLASHMEM void setup_screensaver(void)
   {
     // Enable Screensaver (screensaver menu function, time to activate in ms)
     LCDML.SCREEN_enable(mFunc_screensaver, configuration.sys.screen_saver_start * 60000); // from parameter in minutes
-    //LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    //LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
   }
 }
 
@@ -4705,7 +4705,7 @@ FLASHMEM void lcdml_menu_display(void)
         show_uppercase_no_grid(7, display.getCursorX(), strlen(content_text), content_text);
         // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = display.getCursorX();
        // if (ts.keyb_in_menu_activated == false)
-        //  helptext_l(back_text);//xxxyyy
+        //  helptext_l(back_text);
       }
       draw_back_touchbutton();
       display.setTextSize(2);
@@ -13967,8 +13967,12 @@ FLASHMEM void update_selective_values_master_effects()
 {
   print_delay_sync_status(0);
   print_delay_sync_status(1);
+
   if (menu_item_check(1))
+  {
     print_delay_multiplier(0, 1);
+    print_small_intbar(43, 19, braids_osc.rev_send, 40, 0, 0);
+  }
 
   if (menu_item_check(2))
     print_delay_time(0, 2);
@@ -14063,7 +14067,10 @@ FLASHMEM void update_selective_values_master_effects()
   if (menu_item_check(39))
     print_small_intbar(43, 18, microsynth[1].rev_send, 39, 1, 0);
   if (menu_item_check(40))
+  {
     print_small_intbar(43, 19, braids_osc.rev_send, 40, 1, 0);
+    print_delay_multiplier(0, 1);
+  }
 
   display.setTextColor(COLOR_SYSTEXT, GREY3);
   setCursor_textGrid_small(1 + 5, 7);
@@ -14132,12 +14139,14 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())) {
       const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
       if (seq.edit_state == 0) {
-        if (LCDML.BT_checkDown() && generic_temp_select_menu < 40) {
+        if (LCDML.BT_checkDown() && generic_temp_select_menu < 40)
           generic_temp_select_menu++;
-        }
-        else if (LCDML.BT_checkUp() && generic_temp_select_menu > 1) {
+        else if (LCDML.BT_checkDown())
+          generic_temp_select_menu = 1;
+        else if (LCDML.BT_checkUp() && generic_temp_select_menu > 1)
           generic_temp_select_menu--;
-        }
+        else if (LCDML.BT_checkUp())
+          generic_temp_select_menu = 40;
         update_selective_values_master_effects();
       }
       else {
@@ -18058,7 +18067,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins;
           ENCODER[ENC_L].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
           ENCODER[ENC_R].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
-         
+
           // // set hardware rotations for display/touch and pins for encoders
           // _setup_rotation_and_encoders(false);
 
