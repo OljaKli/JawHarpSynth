@@ -1919,10 +1919,10 @@ void update_sidechain()
   // {
   // }
 
-  if (control_rate > CONTROL_RATE_MS && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sidechain))
-  {
-    print_sidechain_level_indicators();
-  }
+  // if (control_rate > CONTROL_RATE_MS && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sidechain))
+  // {
+  //   print_sidechain_level_indicators();
+  // }
 }
 
 FLASHMEM void preview_sample()
@@ -5620,57 +5620,6 @@ FLASHMEM void check_and_create_directories(void)
         }
       }
     }
-
-    // 2022/11/19 update SD: move banks into /DEXED
-    File sysex_dir;
-    for (i = 0; i < MAX_BANKS; i++)
-    {
-      snprintf_P(tmp, sizeof(tmp), PSTR("/%d"), i);
-      if (SD.exists(tmp))
-      {
-        sysex_dir = SD.open(tmp);
-
-        if (!sysex_dir)
-        {
-          break;
-        }
-
-        // move file into new /DEXED folder
-        File entry;
-        do
-        {
-          entry = sysex_dir.openNextFile();
-        } while (entry.isDirectory());
-
-        char sysexFilename[FILENAME_LEN];
-        char sysexPath[FILENAME_LEN];
-        strcpy(sysexFilename, entry.name());
-        snprintf_P(sysexPath, sizeof(sysexPath), PSTR("/%d/%s"), i, sysexFilename);
-#ifdef DEBUG
-        LOG.printf("move %s to /%s%s\n", sysexPath, DEXED_CONFIG_PATH, sysexPath);
-#endif
-        entry.close();
-        sysex_dir.close();
-
-        File myFileIn = SD.open(sysexPath, FILE_READ);
-        byte buffer[4104];
-        myFileIn.read(buffer, 4104);
-        myFileIn.close();
-        SD.remove(sysexPath);
-
-        snprintf_P(sysexPath, sizeof(sysexPath), PSTR("/%s/%d/%s"), DEXED_CONFIG_PATH, i, sysexFilename);
-        if (SD.exists(sysexPath))
-        {
-          SD.remove(sysexPath);
-        }
-        File myFileOut = SD.open(sysexPath, FILE_WRITE);
-        myFileOut.write(buffer, 4104);
-        myFileOut.close();
-
-        SD.rmdir(tmp);
-      }
-    }
-
     // Create directory for performances
     snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), PERFORMANCE_CONFIG_PATH);
     if (!SD.exists(tmp))
@@ -5681,101 +5630,6 @@ FLASHMEM void check_and_create_directories(void)
 #endif
       SD.mkdir(tmp);
     }
-
-    /*
-      // create directories for configuration files
-      snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), VOICE_CONFIG_PATH);
-      if (!SD.exists(tmp))
-      {
-      #ifdef DEBUG
-      LOG.print(F("Creating directory "));
-      LOG.println(tmp);
-      #endif
-      SD.mkdir(tmp);
-      }
-    snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), PERFORMANCE_CONFIG_PATH);
-    if (!SD.exists(tmp))
-    {
-#ifdef DEBUG
-    LOG.print(F("Creating directory "));
-    LOG.println(tmp);
-#endif
-    SD.mkdir(tmp);
-}
-  snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), FX_CONFIG_PATH);
-  if (!SD.exists(tmp))
-  {
-#ifdef DEBUG
-    LOG.print(F("Creating directory "));
-    LOG.println(tmp);
-#endif
-    SD.mkdir(tmp);
-  }
-  snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), DRUM_CONFIG_PATH);
-  if (!SD.exists(tmp))
-  {
-#ifdef DEBUG
-    LOG.print(F("Creating directory "));
-    LOG.println(tmp);
-#endif
-    SD.mkdir(tmp);
-  }
-  snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), FAV_CONFIG_PATH);
-  if (!SD.exists(tmp))
-  {
-#ifdef DEBUG
-    LOG.print(F("Creating directory "));
-    LOG.println(tmp);
-#endif
-    SD.mkdir(tmp);
-  }
-  */
-
-  // 2022/11/22 move existing favourites into /DEXED
-    // if (SD.exists("FAVCFG"))
-    // {
-
-    //   SD.mkdir(FAV_CONFIG_PATH);
-
-    //   for (i = 0; i < MAX_BANKS; i++)
-    //   {
-    //     snprintf_P(tmp, sizeof(tmp), PSTR("/FAVCFG/%d"), i);
-
-    //     if (SD.exists(tmp))
-    //     {
-    //       char favPath[FILENAME_LEN];
-    //       char favFilename[FILENAME_LEN];
-
-    //       strcpy(favPath, tmp);
-
-    //       snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d"), FAV_CONFIG_PATH, i);
-    //       SD.mkdir(tmp);
-
-    //       File fav_bank = SD.open(favPath);
-    //       while (true)
-    //       {
-    //         File fav = fav_bank.openNextFile();
-    //         if (!fav)
-    //           break;
-
-    //         strcpy(favFilename, fav.name());
-    //         snprintf_P(favPath, sizeof(favPath), PSTR("/%s/%d/%s"), "FAVCFG", i, favFilename);
-    //         fav.close();
-
-    //         SD.remove(favPath);
-
-    //         snprintf_P(favPath, sizeof(favPath), PSTR("/%s/%d/%s"), FAV_CONFIG_PATH, i, favFilename);
-    //         File myFileOut = SD.open(favPath, FILE_WRITE);
-    //         myFileOut.close();
-    //       }
-    //       fav_bank.close();
-    //       snprintf_P(tmp, sizeof(tmp), PSTR("FAVCFG/%d"), i);
-    //       SD.rmdir(tmp);
-    //     }
-    //   }
-
-    //   SD.rmdir("/FAVCFG");
-    // }
   }
 #ifdef DEBUG
   LOG.println(F("SD card check end"));
