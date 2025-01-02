@@ -3260,7 +3260,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
             if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
               if ((d >= 0 && d < NUM_DRUMSET_CONFIG - 1) || (d >= 210 && d < 216)) {
-  #endif
+#endif
                 Drum[slot]->enableInterpolation(true);
                 Drum[slot]->setPlaybackRate(drum_config[d].pitch);
                 Drum[slot]->setLoopType(loop_type::looptype_none);
@@ -3269,23 +3269,23 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 sample_envelope[slot]->noteOn();
                 sample_envelope[slot + NUM_DRUMS]->noteOn();
 
-  #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
                 Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-  #endif
+#endif
 
-  #if defined(COMPILE_FOR_FLASH)
+#if defined(COMPILE_FOR_FLASH)
                 snprintf_P(temp_name, sizeof(temp_name), PSTR("%s.wav"), drum_config[d].filename);
                 Drum[slot]->playWav(temp_name);
                 // Drum[slot]->playWav("DMpop.wav");  //Test
-  #endif
+#endif
 
-  #ifdef COMPILE_FOR_SDCARD
+#ifdef COMPILE_FOR_SDCARD
                 strcpy(temp_name, "/DRUMS/");
                 strcat(temp_name, drum_config[d].name);
                 strcat(temp_name, ".wav");
 
                 Drum[slot]->playWav(temp_name);
-  #endif
+#endif
 
                 // #ifdef DEBUG
                 //         char note_name[4];
@@ -3296,10 +3296,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 //         LOG.println(note_name);
                 // #endif
 
-  #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
               }
             }
-  #endif
+#endif
             // #ifdef DEBUG
             //                 LOG.print(F("Drum "));
             //                 LOG.print(drum_config[d].shortname);
