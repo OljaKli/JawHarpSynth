@@ -1916,7 +1916,6 @@ void update_sidechain()
   // if (seq.running && control_rate > CONTROL_RATE_MS)
   // {
   // }
-
   // if (control_rate > CONTROL_RATE_MS && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sidechain))
   // {
   //   print_sidechain_level_indicators();
@@ -1945,6 +1944,7 @@ FLASHMEM void preview_sample()
       playWAVFilePSRAM(fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files);
 #endif
     }
+    delay(100);
     draw_button_on_grid(46, 25, "PLAY", "SAMPLE", 1);
   }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor))
@@ -2002,7 +2002,9 @@ FLASHMEM void preview_sample()
         seq.edit_state = 0;
         print_updated_slices_text();
         playWAVFilePSRAM((generic_temp_select_menu - 6) / 2);
+            
       }
+      delay(100);
       if (num_slices[0] == 0)
         draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
       else
@@ -2557,13 +2559,7 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
       if (WAV_preview_PSRAM.isPlaying())
         WAV_preview_PSRAM.stop();
       WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-      while (WAV_preview_PSRAM.isPlaying())
-      {
-        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
-        delay(25);
-      }
       delay(15);
-      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
   }
   else
@@ -2576,10 +2572,6 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
           if (WAV_preview_PSRAM.isPlaying())
             WAV_preview_PSRAM.stop();
           WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-          while (WAV_preview_PSRAM.isPlaying())
-          {
-            delay(25);
-          }
           delay(15);
         }
       }
@@ -2592,10 +2584,6 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
             WAV_preview_PSRAM.stop();
           WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
             slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
-          while (WAV_preview_PSRAM.isPlaying())
-          {
-            delay(25);
-          }
           delay(15);
         }
       }
@@ -2612,13 +2600,7 @@ FLASHMEM void playWAVFile(const char* filename)
       if (WAV_preview_SD.isPlaying())
         WAV_preview_SD.stop();
       WAV_preview_SD.play(filename);
-      while (WAV_preview_SD.isPlaying())
-      {
-        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 7, RED);
-        delay(25);
-      }
       delay(15);
-      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
 #ifdef COMPILE_FOR_FLASH
     if (fm.active_window == 1)
@@ -2626,13 +2608,7 @@ FLASHMEM void playWAVFile(const char* filename)
       if (WAV_preview_FLASH.isPlaying())
         WAV_preview_FLASH.stop();
       WAV_preview_FLASH.play(filename);
-      while (WAV_preview_FLASH.isPlaying())
-      {
-        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_FLASH.lengthMillis()) * WAV_preview_FLASH.positionMillis() + 1, 7, RED);
-        delay(25);
-      }
       delay(15);
-      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
 #endif
   }
@@ -2645,13 +2621,7 @@ FLASHMEM void playWAVFile(const char* filename)
     if (WAV_preview_FLASH.isPlaying())
       WAV_preview_FLASH.stop();
     WAV_preview_FLASH.play(filename);
-    while (WAV_preview_FLASH.isPlaying())
-    {
-      display.fillRect(6, 222, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_FLASH.lengthMillis()) * WAV_preview_FLASH.positionMillis() + 1, 5, RED);
-      delay(25);
-    }
     delay(15);
-    display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
   }
 #endif
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor) && fm.sample_source == 0)
@@ -2662,13 +2632,6 @@ FLASHMEM void playWAVFile(const char* filename)
       WAV_preview_SD.stop();
     WAV_preview_SD.play(filename);
     delay(15);
-    while (WAV_preview_SD.isPlaying())
-    {
-      display.fillRect(6, 222, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 5, RED);
-      delay(25);
-    }
-    delay(15);
-    display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
   }
 }
 

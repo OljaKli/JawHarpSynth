@@ -6388,7 +6388,7 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      return round(*ptr * 100.f); 
+      return round(*ptr * 100.f);
     },
     [](Editor* editor, int16_t value)
     {
@@ -14549,7 +14549,7 @@ FLASHMEM void mb_set_master()
 
 FLASHMEM void mb_set_compressor()
 {
- 
+
   mb_compressor_l_0.limit(mb_threshold_low * -1, 0.03f, 0.2f);
   mb_compressor_r_0.limit(mb_threshold_low * -1, 0.03f, 0.2f);
 

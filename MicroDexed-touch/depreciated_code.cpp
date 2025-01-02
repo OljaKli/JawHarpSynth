@@ -671,5 +671,27 @@
   //    display.fillRect(CHAR_width + i * 8, 2 * CHAR_height + 4, 8, 8, COLOR_BACKGROUND);  //empty block
   // }
 
-  
+  //sample playing progress bar, only working in some cases
+
+   // while (WAV_preview_PSRAM.isPlaying())
+      // {
+      //   display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
+      //   delay(25);
+      // }
+     // display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
+
+ // while (WAV_preview_SD.isPlaying())
+      // {
+      //   display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 7, RED);
+      //   delay(25);
+      // }
+     // display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
+    // while (WAV_preview_SD.isPlaying())
+    // {
+    //   display.fillRect(6, 222, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 5, RED);
+    //   delay(25);
+    // }
+    // delay(15);
+    // display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
+    
 
