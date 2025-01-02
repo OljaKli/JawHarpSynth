@@ -19795,7 +19795,9 @@ FLASHMEM void UI_func_volume(uint8_t param)
       const int8_t factorChange = LCDML.BT_checkDown() ? +1 : -1;
       configuration.sys.vol = constrain(configuration.sys.vol + factorChange * volChange, VOLUME_MIN, VOLUME_MAX);
     }
-
+    else if (encoderDir[ENC_R].Down() || encoderDir[ENC_R].Up() ||  encoderDir[ENC_R].ButtonShort())
+      back_from_volume = BACK_FROM_VOLUME_MS;
+      
     // Master Volume
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
