@@ -15,9 +15,7 @@ extern config_t configuration;
 extern uint8_t selected_instance_id;
 extern void print_voice_settings_in_dexed_voice_select(bool text, bool values);
 extern void print_voice_settings_in_pattern_editor(int x, int y);
-extern void UI_update_instance_icons();
 extern void print_voice_select_fav_search_button();
-extern void print_perf_modifier_buttons();
 extern void reset_live_modifiers();
 extern LCDMenuLib2 LCDML;
 extern void pattern_editor_menu_0();
@@ -26,20 +24,10 @@ extern bool remote_touched;
 extern sequencer_t seq;
 extern void border3_large_clear();
 extern void border3_large();
-#ifdef COMPILE_FOR_FLASH
-extern void flash_loadDirectory();
-extern void flash_printDirectory();
-#endif
-extern void sd_printDirectory(bool forceReload);
-extern uint8_t find_longest_chain();
-extern void print_formatted_number(uint16_t v, uint8_t l);
 extern void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
 extern void seq_pattern_editor_update_dynamic_elements();
 extern void microsynth_refresh_lower_screen_static_text();
 extern void microsynth_refresh_lower_screen_dynamic_text();
-extern float get_sample_p_offset(uint8_t sample);
-extern void set_sample_pitch(uint8_t sample, float playbackspeed);
-extern void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 extern void print_perfmod_buttons();
 extern void print_perfmod_lables();
 extern void print_empty_spaces(uint8_t spaces);
@@ -52,7 +40,6 @@ extern void draw_volmeters_mixer();
 extern void draw_volmeters_multiband_compressor();
 extern bool legacy_touch_button_back_page();
 extern bool touch_button_back_page();
-extern void liveseq_listeditor_delete_element();
 
 extern uint8_t activeSample;
 extern microsynth_t microsynth[NUM_MICROSYNTH];
@@ -717,10 +704,6 @@ FLASHMEM void handle_touchscreen_file_manager()
       {
         fm.sd_mode = FM_COPY_TO_PSRAM;
         print_file_manager_buttons();
-        strcpy(fm.sd_new_name, "/CUSTOM/");
-        display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-        show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 20, "/CUSTOM/");
-        sd_printDirectory(false);
       }
       else if (check_button_on_grid(28 + 9, 25))
       {
@@ -863,6 +846,7 @@ FLASHMEM void draw_menu_ui_icons()
   TouchButton::drawButton(GRID.X[0], GRID.Y[3], "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SONG", "EDITOR", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[2], GRID.Y[3], "PATT", "EDITOR", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[3], "LIVE", "SEQ", TouchButton::BUTTON_NORMAL);
 
   if (seq.running)
     TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
@@ -932,13 +916,17 @@ FLASHMEM void handle_touchscreen_menu()
       {
         LCDML.OTHER_jumpToFunc(UI_func_voice_select);
       }
-      else  if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
+      else if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_song);
       }
-      else  if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
+      else if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
+      }
+      else if (TouchButton::isPressed(GRID.X[3], GRID.Y[3]))
+      {
+        LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
       }
       else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3]))
       {
