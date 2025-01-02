@@ -1649,12 +1649,10 @@ FLASHMEM void load_custom_samples_to_psram()
 {
   // load CUSTOM samples
   for (int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
-    char temp_name[36];
-    strcpy(temp_name, "/CUSTOM/");
-    strcat(temp_name, drum_config[i].filename);
-    sampleLoader.loadSampleToDrums(temp_name, drum_config[i]);
+    sampleLoader.loadSampleToDrums(drum_config[i].filename, drum_config[i]);
     if (drum_config[i].len == 0 || drum_config[i].len > 10000000)
     {
+      char temp_name[36];
       snprintf_P(temp_name, 12, PSTR("CUSTOM%02d"), i - NUM_STATIC_PITCHED_SAMPLES + 1);
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
@@ -3260,54 +3258,48 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-            if ((drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 0 && d < NUM_DRUMSET_CONFIG - 1) ||
-              (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000 && d >= 210 && d < 216))
-            {
-#endif
-
-
-
-              if (drum_config[d].pitch != 0.0)
-              {
+            if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
+              if ((d >= 0 && d < NUM_DRUMSET_CONFIG - 1) || (d >= 210 && d < 216)) {
+  #endif
                 Drum[slot]->enableInterpolation(true);
                 Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+                Drum[slot]->setLoopType(loop_type::looptype_none);
+
+                set_stereo_envelopes(slot, d);
+                sample_envelope[slot]->noteOn();
+                sample_envelope[slot + NUM_DRUMS]->noteOn();
+
+  #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+                Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+  #endif
+
+  #if defined(COMPILE_FOR_FLASH)
+                snprintf_P(temp_name, sizeof(temp_name), PSTR("%s.wav"), drum_config[d].filename);
+                Drum[slot]->playWav(temp_name);
+                // Drum[slot]->playWav("DMpop.wav");  //Test
+  #endif
+
+  #ifdef COMPILE_FOR_SDCARD
+                strcpy(temp_name, "/DRUMS/");
+                strcat(temp_name, drum_config[d].name);
+                strcat(temp_name, ".wav");
+
+                Drum[slot]->playWav(temp_name);
+  #endif
+
+                // #ifdef DEBUG
+                //         char note_name[4];
+                //         getNoteName(note_name, inNumber);
+                //         LOG.print(F("=> Drum["));
+                //         LOG.print(slot, DEC);
+                //         LOG.print(F("]: "));
+                //         LOG.println(note_name);
+                // #endif
+
+  #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
               }
-              Drum[slot]->setLoopType(loop_type::looptype_none);
-
-              set_stereo_envelopes(slot, d);
-              sample_envelope[slot]->noteOn();
-              sample_envelope[slot + NUM_DRUMS]->noteOn();
-
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-              Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-#endif
-
-#if defined(COMPILE_FOR_FLASH)
-              snprintf_P(temp_name, sizeof(temp_name), PSTR("%s.wav"), drum_config[d].filename);
-              Drum[slot]->playWav(temp_name);
-              // Drum[slot]->playWav("DMpop.wav");  //Test
-#endif
-
-#ifdef COMPILE_FOR_SDCARD
-              strcpy(temp_name, "/DRUMS/");
-              strcat(temp_name, drum_config[d].name);
-              strcat(temp_name, ".wav");
-
-              Drum[slot]->playWav(temp_name);
-#endif
-
-              // #ifdef DEBUG
-              //         char note_name[4];
-              //         getNoteName(note_name, inNumber);
-              //         LOG.print(F("=> Drum["));
-              //         LOG.print(slot, DEC);
-              //         LOG.print(F("]: "));
-              //         LOG.println(note_name);
-              // #endif
-
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
             }
-#endif
+  #endif
             // #ifdef DEBUG
             //                 LOG.print(F("Drum "));
             //                 LOG.print(drum_config[d].shortname);
@@ -5110,6 +5102,9 @@ FLASHMEM void init_configuration(void)
 
 FLASHMEM void set_sample_pitch(uint8_t sample, float playbackspeed)
 {
+  if (playbackspeed == 0.0) {
+    playbackspeed = 1.0;
+  }
   drum_config[sample].pitch = playbackspeed;
 }
 

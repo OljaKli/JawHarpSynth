@@ -6388,16 +6388,14 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      //return round(*ptr * 100.f); 
-      return round(*ptr * 99.f);
+      return round(*ptr * 100.f); 
     },
     [](Editor* editor, int16_t value)
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      // *ptr = value / 100.f;
-      *ptr = value / 99.f;
+      *ptr = round(value / 100.f);
     },
     NULL);
 }
@@ -6628,7 +6626,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
     addDrumParameterEditor((const char*)F("DELAY1"), 0, 100, &drum_config[0].delay1);
     addDrumParameterEditor((const char*)F("DELAY2"), 0, 100, &drum_config[0].delay2);
-    addDrumParameterEditor((const char*)F("PITCH"), 0, 200, &drum_config[0].pitch);
+    addDrumParameterEditor((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
     addDrumParameterEditor((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
 
     setCursor_textGrid_small(0, 11);
@@ -15922,7 +15920,7 @@ FLASHMEM void psram_printCustomSamplesList()
       else
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
-    show_smallfont_noGrid(i * 11, CHAR_width_small * 32, 12, drum_config[i + fm.flash_or_psram_skip_files].filename);
+    show_smallfont_noGrid(i * 11, CHAR_width_small * 32, 12, drum_config[i + fm.flash_or_psram_skip_files].name);
 
     display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
     display.setCursor(CHAR_width_small * 45, i * 11);
@@ -17058,7 +17056,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
               strcat(fm.sd_full_name, "/");
               strcat(fm.sd_full_name, fm.sd_temp_name);
               sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files]);
-              strcpy(drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].filename, fm.sd_temp_name);
+              strcpy(drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].filename, fm.sd_full_name);
               strip_extension(fm.sd_temp_name, drum_config[fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files].name, 14);
 
               print_psram_stats_filemanager();
@@ -22634,7 +22632,7 @@ FLASHMEM char* basename(const char* filename)
 FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8_t zone_number, const uint8_t psram_entry)
 {
   // fill the multisample zone information
-  strcpy(msz[preset_number][zone_number].filename, filename);
+  strcpy(msz[preset_number][zone_number].filename, basename(filename));
 
 #if defined COMPILE_FOR_PSRAM
   if (psram_entry >= 0)
@@ -22915,11 +22913,11 @@ FLASHMEM void splash_screen1()
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setTextSize(1);
   display.setCursor(0, 124);
-  display.print(F("(c) 2018-2021 H. WIRTZ"));
+  display.print(F("(c) 2018-2021 H.WIRTZ"));
   display.setCursor(0, 133);
-  display.print(F("(c) 2021-2023 H. WIRTZ, M. KOSLOWSKI, D. PERBAL"));
+  display.print(F("(c) 2021-2023 H.WIRTZ, M.KOSLOWSKI, D.PERBAL"));
   display.setCursor(0, 142);
-  display.print(F("(c) 2024 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
+  display.print(F("(c) 2024-2025 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
 }
 
 FLASHMEM void splash_screen2_anim(uint8_t sysinfo_sound_state)
@@ -23031,11 +23029,11 @@ FLASHMEM void splash_screen2()
   display.setTextColor(COLOR_SYSTEXT);
   display.setTextSize(1);
   display.setCursor(1, 90);
-  display.print(F("(c) 2018-2021 H. WIRTZ"));
+  display.print(F("(c) 2018-2021 H.WIRTZ"));
   display.setCursor(1, 100);
-  display.print(F("(c) 2021-2023 H. WIRTZ, M. KOSLOWSKI, D. PERBAL"));
+  display.print(F("(c) 2021-2023 H.WIRTZ, M.KOSLOWSKI, D.PERBAL"));
   display.setCursor(1, 110);
-  display.print(F("(c) 2024 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
+  display.print(F("(c) 2024-2025 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
   display.setCursor(1 + CHAR_width_small * 4, 128);
   display.setTextColor(GREY2);
   display.print(F("https://codeberg.org/positionhigh/"));

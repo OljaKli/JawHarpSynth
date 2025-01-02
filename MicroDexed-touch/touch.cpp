@@ -26,10 +26,6 @@ extern bool remote_touched;
 extern sequencer_t seq;
 extern void border3_large_clear();
 extern void border3_large();
-#ifdef COMPILE_FOR_FLASH
-extern void flash_loadDirectory();
-extern void flash_printDirectory();
-#endif
 extern void sd_printDirectory(bool forceReload);
 extern uint8_t find_longest_chain();
 extern void print_formatted_number(uint16_t v, uint8_t l);
@@ -38,7 +34,6 @@ extern void seq_pattern_editor_update_dynamic_elements();
 extern void microsynth_refresh_lower_screen_static_text();
 extern void microsynth_refresh_lower_screen_dynamic_text();
 extern float get_sample_p_offset(uint8_t sample);
-extern void set_sample_pitch(uint8_t sample, float playbackspeed);
 extern void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 extern void print_perfmod_buttons();
 extern void print_perfmod_lables();
@@ -717,10 +712,6 @@ FLASHMEM void handle_touchscreen_file_manager()
       {
         fm.sd_mode = FM_COPY_TO_PSRAM;
         print_file_manager_buttons();
-        strcpy(fm.sd_new_name, "/CUSTOM/");
-        display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-        show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 20, "/CUSTOM/");
-        sd_printDirectory(false);
       }
       else if (check_button_on_grid(28 + 9, 25))
       {
@@ -863,6 +854,7 @@ FLASHMEM void draw_menu_ui_icons()
   TouchButton::drawButton(GRID.X[0], GRID.Y[3], "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SONG", "EDITOR", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[2], GRID.Y[3], "PATT", "EDITOR", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[3], "LIVE", "SEQ", TouchButton::BUTTON_NORMAL);
 
   if (seq.running)
     TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
@@ -932,13 +924,17 @@ FLASHMEM void handle_touchscreen_menu()
       {
         LCDML.OTHER_jumpToFunc(UI_func_voice_select);
       }
-      else  if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
+      else if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_song);
       }
-      else  if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
+      else if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
+      }
+      else if (TouchButton::isPressed(GRID.X[3], GRID.Y[3]))
+      {
+        LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
       }
       else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3]))
       {

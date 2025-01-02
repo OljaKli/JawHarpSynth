@@ -340,6 +340,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
 #define DRUM_NAME_LEN 21
+#define DRUM_FULLPATH_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"
 #define SEQUENCER_CONFIG_NAME "sequencer"
