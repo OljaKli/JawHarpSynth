@@ -1362,12 +1362,12 @@ FLASHMEM void setup()
   // Setup SD WAV play
 
   create_audio_wav_preview_chain();
-  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.4);
-  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.4);
+  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.5);
+  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.5);
 
 #if defined(COMPILE_FOR_FLASH) || defined(COMPILE_FOR_PSRAM)
-  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM, 0.4);
-  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM, 0.4);
+  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM, 0.5);
+  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM, 0.5);
 #endif
 
   //  Serial Flash Init
@@ -2002,7 +2002,7 @@ FLASHMEM void preview_sample()
         seq.edit_state = 0;
         print_updated_slices_text();
         playWAVFilePSRAM((generic_temp_select_menu - 6) / 2);
-            
+
       }
       delay(100);
       if (num_slices[0] == 0)
@@ -2012,6 +2012,27 @@ FLASHMEM void preview_sample()
     }
 #endif
   }
+}
+
+FLASHMEM void stop_preview_sample()
+{
+
+#ifdef COMPILE_FOR_SDCARD
+  ;
+#endif
+
+  if (WAV_preview_SD.isPlaying())
+    WAV_preview_SD.stop();
+
+#if defined(COMPILE_FOR_FLASH)
+  if (WAV_preview_FLASH.isPlaying())
+    WAV_preview_FLASH.stop();
+#endif
+
+#if defined(COMPILE_FOR_PSRAM)
+  if (WAV_preview_PSRAM.isPlaying())
+    WAV_preview_PSRAM.stop();
+#endif
 }
 
 // Gaussian Wave Breathing

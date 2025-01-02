@@ -117,6 +117,7 @@ int gamepad_1_neutral;
 
 bool remote_touched;
 extern void draw_menu_ui_icons();
+extern void stop_preview_sample();
 
 extern int (*calc_val[2])(int, int, int, int);
 extern int menuhelper_previous_val;
@@ -4538,6 +4539,7 @@ FLASHMEM void lcdml_menu_control(void)
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
     { // when in filemanager, long push ENC-L goes up one directory
+      stop_preview_sample();
       sd_go_parent_folder();
       sd_update_display();
     }
@@ -16775,6 +16777,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     if (LCDML.BT_checkEnter())
     {
+      stop_preview_sample();
 #ifdef COMPILE_FOR_FLASH
       if (fm.sd_mode == FM_COPY_PRESETS) // copy presets dir from SD to flash
       {
@@ -17105,6 +17108,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+    stop_preview_sample();
     unregisterTouchHandler();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
