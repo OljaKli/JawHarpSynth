@@ -4773,13 +4773,13 @@ FLASHMEM void set_volume(uint8_t v, uint8_t m)
       dexed_mono2stereo[instance_id]->panorama(mapfloat(PANORAMA_DEFAULT, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
     break;
   case 2: // mono right
-    volume_l.gain(0.0);
+    volume_l.gain(0.0001); //zero probably turns the object off - then no audio at all
     stereo2mono.stereo(false);
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
       dexed_mono2stereo[instance_id]->panorama(mapfloat(PANORAMA_MAX, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
     break;
   case 3: // mono left
-    volume_r.gain(0.0);
+    volume_r.gain(0.0001); //zero probably turns the object off - then no audio at all
     stereo2mono.stereo(false);
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
       dexed_mono2stereo[instance_id]->panorama(mapfloat(PANORAMA_MIN, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
