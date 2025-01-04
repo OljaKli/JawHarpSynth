@@ -3724,6 +3724,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           load_sd_voiceconfig_json(number, instance_id);
           load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
           MicroDexed[instance_id]->setGain(midi_volume_transform(map(configuration.dexed[instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
+          
           MicroDexed[instance_id]->panic();
         }
 

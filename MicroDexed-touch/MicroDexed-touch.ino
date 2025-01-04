@@ -235,7 +235,6 @@ AudioEffectDelay* delay_fx[NUM_DEXED];
 
 AudioMixer<2>* delay_mixer[NUM_DEXED];
 AudioEffectMonoStereo* dexed_mono2stereo[NUM_DEXED];
-AudioEffectMonoStereo* dexed_dry_mono2stereo[NUM_DEXED];
 AudioEffectMonoStereo* delay_mono2stereo[NUM_DEXED];
 
 AudioMixer<2> dexed_chorus_mixer_r[NUM_DEXED];
@@ -641,7 +640,6 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   MicroDexed[instance_id] = new AudioSynthDexed(MAX_NOTES / NUM_DEXED, SAMPLE_RATE);
   dexed_mono2stereo[instance_id] = new AudioEffectMonoStereo();
   delay_mono2stereo[instance_id] = new AudioEffectMonoStereo();
-  dexed_dry_mono2stereo[instance_id] = new AudioEffectMonoStereo();
 
   chorus_modulator[instance_id] = new AudioSynthWaveform();
 
@@ -733,12 +731,12 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dynamicConnections[nDynamic++] = new AudioConnection(microsynth_mixer_filter_osc[1], 0, *global_delay_in_mixer[instance_id], 3);
 
   // dexed delay output
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, *dexed_dry_mono2stereo[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 1, *dexed_dry_mono2stereo[instance_id], 1);
+  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, *dexed_mono2stereo[instance_id], 0);
+  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 1, *dexed_mono2stereo[instance_id], 1);
 
   // dexed dry output
-  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_dry_mono2stereo[instance_id], 0, dexed_chorus_mixer_r[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_dry_mono2stereo[instance_id], 1, dexed_chorus_mixer_l[instance_id], 0);
+  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_mono2stereo[instance_id], 0, dexed_chorus_mixer_r[instance_id], 0);
+  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_mono2stereo[instance_id], 1, dexed_chorus_mixer_l[instance_id], 0);
 
 
   // delay outs as sends to reverb
@@ -2014,27 +2012,6 @@ FLASHMEM void preview_sample()
   }
 }
 
-FLASHMEM void stop_preview_sample()
-{
-
-#ifdef COMPILE_FOR_SDCARD
-  ;
-#endif
-
-  if (WAV_preview_SD.isPlaying())
-    WAV_preview_SD.stop();
-
-#if defined(COMPILE_FOR_FLASH)
-  if (WAV_preview_FLASH.isPlaying())
-    WAV_preview_FLASH.stop();
-#endif
-
-#if defined(COMPILE_FOR_PSRAM)
-  if (WAV_preview_PSRAM.isPlaying())
-    WAV_preview_PSRAM.stop();
-#endif
-}
-
 // Gaussian Wave Breathing
 
 // float glow_smoothness_pts = 20;//larger=slower change in brightness
@@ -2580,7 +2557,13 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
       if (WAV_preview_PSRAM.isPlaying())
         WAV_preview_PSRAM.stop();
       WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+      while (WAV_preview_PSRAM.isPlaying())
+      {
+        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
+        delay(25);
+      }
       delay(15);
+      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
   }
   else
@@ -2593,6 +2576,10 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
           if (WAV_preview_PSRAM.isPlaying())
             WAV_preview_PSRAM.stop();
           WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+          while (WAV_preview_PSRAM.isPlaying())
+          {
+            delay(25);
+          }
           delay(15);
         }
       }
@@ -2605,6 +2592,10 @@ FLASHMEM void playWAVFilePSRAM(uint8_t d)
             WAV_preview_PSRAM.stop();
           WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
             slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
+          while (WAV_preview_PSRAM.isPlaying())
+          {
+            delay(25);
+          }
           delay(15);
         }
       }
@@ -2621,7 +2612,13 @@ FLASHMEM void playWAVFile(const char* filename)
       if (WAV_preview_SD.isPlaying())
         WAV_preview_SD.stop();
       WAV_preview_SD.play(filename);
+      while (WAV_preview_SD.isPlaying())
+      {
+        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 7, RED);
+        delay(25);
+      }
       delay(15);
+      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
 #ifdef COMPILE_FOR_FLASH
     if (fm.active_window == 1)
@@ -2629,7 +2626,13 @@ FLASHMEM void playWAVFile(const char* filename)
       if (WAV_preview_FLASH.isPlaying())
         WAV_preview_FLASH.stop();
       WAV_preview_FLASH.play(filename);
+      while (WAV_preview_FLASH.isPlaying())
+      {
+        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_FLASH.lengthMillis()) * WAV_preview_FLASH.positionMillis() + 1, 7, RED);
+        delay(25);
+      }
       delay(15);
+      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
     }
 #endif
   }
@@ -2642,7 +2645,13 @@ FLASHMEM void playWAVFile(const char* filename)
     if (WAV_preview_FLASH.isPlaying())
       WAV_preview_FLASH.stop();
     WAV_preview_FLASH.play(filename);
+    while (WAV_preview_FLASH.isPlaying())
+    {
+      display.fillRect(6, 222, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_FLASH.lengthMillis()) * WAV_preview_FLASH.positionMillis() + 1, 5, RED);
+      delay(25);
+    }
     delay(15);
+    display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
   }
 #endif
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor) && fm.sample_source == 0)
@@ -2653,6 +2662,13 @@ FLASHMEM void playWAVFile(const char* filename)
       WAV_preview_SD.stop();
     WAV_preview_SD.play(filename);
     delay(15);
+    while (WAV_preview_SD.isPlaying())
+    {
+      display.fillRect(6, 222, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 5, RED);
+      delay(25);
+    }
+    delay(15);
+    display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
   }
 }
 

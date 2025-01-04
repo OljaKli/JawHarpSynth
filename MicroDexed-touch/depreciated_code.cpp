@@ -694,4 +694,23 @@
     // delay(15);
     // display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
     
+// FLASHMEM void stop_preview_sample()
+// {
 
+// #ifdef COMPILE_FOR_SDCARD
+//   ;
+// #endif
+
+//   if (WAV_preview_SD.isPlaying())
+//     WAV_preview_SD.stop();
+
+// #if defined(COMPILE_FOR_FLASH)
+//   if (WAV_preview_FLASH.isPlaying())
+//     WAV_preview_FLASH.stop();
+// #endif
+
+// #if defined(COMPILE_FOR_PSRAM)
+//   if (WAV_preview_PSRAM.isPlaying())
+//     WAV_preview_PSRAM.stop();
+// #endif
+// }

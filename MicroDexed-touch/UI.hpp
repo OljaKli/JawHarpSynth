@@ -117,7 +117,6 @@ int gamepad_1_neutral;
 
 bool remote_touched;
 extern void draw_menu_ui_icons();
-extern void stop_preview_sample();
 
 extern int (*calc_val[2])(int, int, int, int);
 extern int menuhelper_previous_val;
@@ -295,8 +294,7 @@ extern AudioMixer<2>* delay_mixer[NUM_DEXED];
 extern AudioMixer<2> dexed_chorus_mixer_r[NUM_DEXED];
 extern AudioMixer<2> dexed_chorus_mixer_l[NUM_DEXED];
 
-//extern AudioEffectMonoStereo* dexed_mono2stereo[NUM_DEXED];
-extern AudioEffectMonoStereo* dexed_dry_mono2stereo[NUM_DEXED];
+extern AudioEffectMonoStereo* dexed_mono2stereo[NUM_DEXED];
 extern AudioEffectMonoStereo* delay_mono2stereo[NUM_DEXED];
 
 extern AudioAnalyzePeak microdexed_peak_0;
@@ -4539,7 +4537,6 @@ FLASHMEM void lcdml_menu_control(void)
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
     { // when in filemanager, long push ENC-L goes up one directory
-      stop_preview_sample();
       sd_go_parent_folder();
       sd_update_display();
     }
@@ -5548,7 +5545,7 @@ FLASHMEM void UI_func_dexed_audio(uint8_t param)
         MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 10, map(value + pan_center, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
         if (configuration.sys.mono == 0)
         {
-          dexed_dry_mono2stereo[selected_instance_id]->panorama(mapfloat(value + pan_center, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
+          dexed_mono2stereo[selected_instance_id]->panorama(mapfloat(value + pan_center, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
         }
       });
 
@@ -6391,15 +6388,15 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
       // return round(*ptr * 100.f); //breaks editing values
-      return round(*ptr * 99.f);
+      return round(*ptr * 100.0f);
     },
     [](Editor* editor, int16_t value)
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-     // *ptr = round(value / 100.f); //breaks editing values
-     *ptr = value / 99.f;
+      //*ptr = round(value / 100.0f); //breaks editing values
+      *ptr = value / 100.0f;
     },
     NULL);
 }
@@ -16780,7 +16777,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     if (LCDML.BT_checkEnter())
     {
-      stop_preview_sample();
 #ifdef COMPILE_FOR_FLASH
       if (fm.sd_mode == FM_COPY_PRESETS) // copy presets dir from SD to flash
       {
@@ -17111,7 +17107,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-    stop_preview_sample();
     unregisterTouchHandler();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
@@ -19324,8 +19319,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
         if (generic_temp_select_menu == 6)
         {
           configuration.dexed[selected_instance_id].pan = calc_val[state_dir](configuration.dexed[selected_instance_id].pan, ENCODER[ENC_R].speed(), PANORAMA_MIN, PANORAMA_MAX);
-          // MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 10, map(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
-          dexed_dry_mono2stereo[selected_instance_id]->panorama(mapfloat(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
+         MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 10, map(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
+          dexed_mono2stereo[selected_instance_id]->panorama(mapfloat(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
         }
         if (generic_temp_select_menu == 7) // lowest note
         {
