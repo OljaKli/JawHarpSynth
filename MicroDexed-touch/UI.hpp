@@ -16627,10 +16627,11 @@ FLASHMEM void print_psram_stats_filemanager()
 }
 #endif
 
+static drum_config_t previewSlot;
+extern AudioPlayArrayResmp WAV_preview_PSRAM;
+
 FLASHMEM void UI_func_file_manager(uint8_t param)
 {
-  uint32_t volumesize;
-
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_file_manager);
@@ -16668,7 +16669,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.setTextColor(COLOR_PITCHSMP);
     display.print(sdcard_infos.type);
     display.setCursor(CHAR_width_small * 12, 2 * CHAR_height_small);
-    volumesize = volume.blocksPerCluster(); // clusters are collections of blocks
+    uint32_t volumesize = volume.blocksPerCluster(); // clusters are collections of blocks
     volumesize *= volume.clusterCount();    // we'll have a lot of clusters
     display.setTextColor(GREY1);
     display.print("TOTAL: ");
@@ -17077,7 +17078,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     // show files
     if (fm.active_window == 0)
     {
-
       if (fm.sd_new_name[0] != 0x2f)
         fm.sd_new_name[0] = 0x2f;
 
@@ -17107,6 +17107,9 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+    if (previewSlot.drum_data != nullptr) {
+      sampleLoader.unloadSample(previewSlot.drum_data, previewSlot.len * 2); // 16bit value
+    }
     unregisterTouchHandler();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);

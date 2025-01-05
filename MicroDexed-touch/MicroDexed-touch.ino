@@ -1920,6 +1920,8 @@ void update_sidechain()
   // }
 }
 
+extern drum_config_t previewSlot;
+
 FLASHMEM void preview_sample()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
@@ -1930,7 +1932,10 @@ FLASHMEM void preview_sample()
       strcpy(fm.sd_full_name, fm.sd_new_name);
       strcat(fm.sd_full_name, "/");
       strcat(fm.sd_full_name, fm.sd_temp_name);
-      playWAVFile(fm.sd_full_name);
+      sampleLoader.loadSampleToDrums(fm.sd_full_name, previewSlot);
+      if (previewSlot.drum_data != nullptr) {
+        WAV_preview_PSRAM.playRaw((int16_t*)previewSlot.drum_data, previewSlot.len, previewSlot.numChannels);
+      }
     }
     else if (fm.active_window == 1)
     { // preview flash file
@@ -1984,7 +1989,6 @@ FLASHMEM void preview_sample()
         strcpy(temp_name, "/DRUMS/");
         strcat(temp_name, f.name());
         playWAVFile(temp_name);
-
       }
     }
 

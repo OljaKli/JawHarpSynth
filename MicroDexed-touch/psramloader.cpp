@@ -7,7 +7,7 @@ FLASHMEM PsramLoader::PsramLoader(uint32_t &freeBytes) :
 
 FLASHMEM void PsramLoader::loadSampleToDrums(const char* path, drum_config_t &slot) {
   if((slot.drum_data != nullptr) && (slot.len > 0)) {
-    unloadSample(slot.drum_data, slot.len);
+    unloadSample(slot.drum_data, slot.len * 2); // len is 16bit
   }
   uint32_t bytesRead = 0;
   slot.drum_data = loadSample(path, bytesRead, slot.numChannels);
@@ -39,6 +39,7 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const char *filename, uint32_t &bytesR
       }
       AudioInterrupts();
       freeBytesPSRAM -= total_read;
+      DBG_LOG(printf("loaded %i bytes. remaining %i\n", total_read, freeBytesPSRAM));
       bytesRead = total_read;
       channels = numCh;
     }
@@ -50,5 +51,6 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const char *filename, uint32_t &bytesR
 FLASHMEM void PsramLoader::unloadSample(const uint8_t *data, uint32_t length) {
   extmem_free((uint8_t*)data);
   freeBytesPSRAM += length;
+  DBG_LOG(printf("freeing %i bytes...\n", length));
 }
 
