@@ -204,7 +204,7 @@
 
 // DELAYTIME
 #ifdef PSRAM
-#define DELAY_MAX_TIME 10000 // 10s
+#define DELAY_MAX_TIME 2000 // 10s  //2s -- longer delay times seem to brake MIDI IN from Teensy Micro-USB Input
 #else
 #define DELAY_MAX_TIME 500  // 0.5s
 #endif
