@@ -870,8 +870,8 @@ FLASHMEM void create_audio_wav_preview_chain()
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_SD, 1, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_SD);
 
 #ifdef COMPILE_FOR_PSRAM
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 1, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM);
+  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 1, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_PSRAM);
+  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_PSRAM);
 #endif
 
 }
@@ -1043,7 +1043,7 @@ FLASHMEM void setup()
   pinMode(BI_BUTTON_B, INPUT_PULLUP);
 #endif
 
-  // Init display / SPI Flash
+  // Init display
   SPI.begin();
   display.begin();
 
@@ -1336,8 +1336,8 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.5);
 
 #if defined(COMPILE_FOR_PSRAM)
-  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM, 0.5);
-  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM, 0.5);
+  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
+  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
   AudioNoInterrupts();
@@ -1899,10 +1899,10 @@ FLASHMEM void preview_sample()
       }
     }
     else if (fm.active_window == 1)
-    { // preview flash file
+    { // preview file
 
 #if defined(COMPILE_FOR_PSRAM)
-      playWAVFilePSRAM(fm.flash_or_psram_selected_file + 6 + fm.flash_or_psram_skip_files);
+      playWAVFilePSRAM(fm.psram_selected_file + 6 + fm.psram_skip_files);
 #endif
     }
     delay(100);
@@ -1914,22 +1914,6 @@ FLASHMEM void preview_sample()
     if (fm.sample_source > 1 && fm.sample_source < 4) // MSP
     {
       playWAVFile(msz[fm.sample_source - 2][temp_int].filename);
-    }
-    else if (fm.sample_source == 1) // FLASH
-    {
-      uint32_t filesize;
-      SerialFlash.opendir();
-      if (temp_int + 1 > 0)
-      {
-        for (int f = 0; f < temp_int + 1; f++)
-        {
-          if (SerialFlash.readdir(filename, sizeof(filename), filesize))
-            ;
-          else
-            break;
-        }
-      }
-      playWAVFile(filename);
     }
     else if (fm.sample_source == 0) // SD
     {

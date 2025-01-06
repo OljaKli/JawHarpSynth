@@ -614,9 +614,9 @@
 //   }
 // }
 
-//   if (drum_config[i + fm.flash_or_psram_skip_files].len / 1024 / 1024 > 0)
+//   if (drum_config[i + fm.psram_skip_files].len / 1024 / 1024 > 0)
     // {
-    //   snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.flash_or_psram_skip_files].len / 1024 / 1024));
+    //   snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.psram_skip_files].len / 1024 / 1024));
     //   display.print(tmp);
     //   display.print(" MB");
     // }

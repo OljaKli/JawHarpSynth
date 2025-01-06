@@ -643,7 +643,7 @@ FLASHMEM void print_file_manager_buttons()
 
 FLASHMEM void print_file_manager_active_border()
 {
-  // active_window   0 = left window (SDCARD) , 1 = FLASH OR PSRAM
+  // active_window   0 = left window (SDCARD) , 1 = PSRAM
   if (fm.active_window == 0)
   {
     display.console = true;
@@ -701,7 +701,7 @@ FLASHMEM void handle_touchscreen_file_manager()
         print_file_manager_buttons();
       }
       }
-    // active_window   0 = left window (SDCARD) , 1 = FLASH OR PSRAM
+    // active_window   0 = left window (SDCARD) , 1 = PSRAM
     else if (ts.p.x > 1 && ts.p.x < CHAR_width_small * 29)
     {
       fm.active_window = 0;

@@ -124,10 +124,10 @@
 #define SHOW_CPU_LOAD_MSEC 5000
 
 //*************************************************************************************************
-//* PROGMEM AND FLASH COMPILE MODES
+//* PROGMEM AND SDCARD COMPILE MODES
 //*************************************************************************************************
 
-// #define COMPILE_FOR_PROGMEM  // enable this if you do not have a SPI FLASH chip
+// #define COMPILE_FOR_PROGMEM  // enable this if you do not have a PSRAM chip
 // #define COMPILE_FOR_SDCARD  // experimental, for testing purposes only
 
 #if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
@@ -308,10 +308,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 //* HARDWARE SETTINGS
 //*************************************************************************************************
 
-const int FlashChipSelect = 6; // digital pin for flash chip CS pin
-
 // Encoders with push button
-
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A 32
 #define ENC_L_PIN_B 31
@@ -339,7 +336,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
 #define DRUM_NAME_LEN 21
-#define DRUM_FULLPATH_LEN 64
+#define MAX_FULLPATH_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"
 #define SEQUENCER_CONFIG_NAME "sequencer"
@@ -365,11 +362,8 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define ENVELOPES_CONFIG_NAME "envelope"
 #define MAX_PERF_MOD 30
 
-// SerialFlash & SD CARD
+// SD CARD
 #define MAX_FILES 150
-
-// SerialFlash
-#define MAX_FLASH_FILENAME_LEN 64
 
 //*************************************************************************************************
 //* DO NO CHANGE ANYTHING BEYOND IF YOU DON'T KNOW WHAT YOU ARE DOING !!!
@@ -969,7 +963,7 @@ typedef struct multisample_s
 
 typedef struct multisample_zone_s
 {
-  char filename[MAX_FLASH_FILENAME_LEN];
+  char filename[MAX_FULLPATH_LEN];
   uint8_t entry_number;
   uint8_t rootnote; // sample root note
   uint8_t low;      // lowest note in range
@@ -1049,7 +1043,7 @@ enum master_mixer_ports
   MASTER_MIX_CH_MICROSYNTH,
   MASTER_MIX_CH_BRAIDS,
   MASTER_MIX_CH_WAV_PREVIEW_SD,
-  MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM,
+  MASTER_MIX_CH_WAV_PREVIEW_PSRAM,
   MASTER_MIX_CH_DELAY1,
   MASTER_MIX_CH_DELAY2,
   MASTER_MIX_CH_SIDECHAIN,
@@ -1072,7 +1066,6 @@ enum fm_modes
   FM_BROWSE_FILES,
   FM_DELETE_FILE,
   FM_COPY_PRESETS,
-  FM_COPY_TO_FLASH,
   FM_PLAY_SAMPLE,
   FM_COPY_TO_PSRAM,
   FM_DELETE_FROM_PSRAM

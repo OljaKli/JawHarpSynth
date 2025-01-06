@@ -58,16 +58,9 @@ typedef struct fm_s
 {
   uint8_t wav_recorder_mode = 0;
 
-#ifdef COMPILE_FOR_SDCARD
-  uint8_t sample_source = 0; // 0 = SD, 1 = FLASH
-#endif
-
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-  uint8_t sample_source = 0; // 0 = SD, 1 = FLASH
-#endif
-
+  uint8_t sample_source = 0; // 0 = SD, 1 = UNUSED, 2 = MSP1, 3 = MSP2, 4 = PSRAM
   int sample_screen_position_x = 0;
-  uint8_t active_window = 0; // 0 = left window (SDCARD) , 1 = FLASH or PSRAM
+  uint8_t active_window = 0; // 0 = left window (SDCARD) , 1 = PSRAM
   uint16_t sd_sum_files = 0;
   uint8_t sd_cap_rows;
   uint8_t sd_folder_depth = 0;
@@ -81,12 +74,11 @@ typedef struct fm_s
   char sd_prev_dir[52];
   char sd_temp_name[52];
 
-  uint16_t flash_or_psram_sum_files = 0;
-  uint16_t flash_or_psram_cap_rows;
-  uint16_t flash_or_psram_selected_file = 0;
-  uint16_t flash_or_psram_skip_files = 0;
-  char flash_or_psram_temp_name[52];
-
+  uint16_t psram_sum_files = 0;
+  uint16_t psram_cap_rows;
+  uint16_t psram_selected_file = 0;
+  uint16_t psram_skip_files = 0;
+  char psram_temp_name[52];
 } fm_t;
 
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
