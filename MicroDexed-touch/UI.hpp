@@ -169,8 +169,12 @@ extern AudioMixer<4> mb_mixer_l;
 extern AudioMixer<4> mb_mixer_r;
 extern AudioMixer<2> finalized_mixer_r;
 extern AudioMixer<2> finalized_mixer_l;
+
+#ifdef AUDIO_DEVICE_USB
 extern AudioConnection patchCordUsbL;
 extern AudioConnection patchCordUsbR;
+#endif
+
 extern AudioAnalyzePeak mb_before_l;
 extern AudioAnalyzePeak mb_before_r;
 extern AudioAnalyzePeak mb_after_l;
@@ -3812,6 +3816,7 @@ FLASHMEM void lcdml_menu_control(void)
       }
 
       // if remote active, dynamic patching for usb audio
+      #ifdef AUDIO_DEVICE_USB
       if (remote_active)
       {
         patchCordUsbL.connect();
@@ -3822,7 +3827,7 @@ FLASHMEM void lcdml_menu_control(void)
         patchCordUsbL.disconnect();
         patchCordUsbR.disconnect();
       }
-
+#endif
       // LCDML.FUNC_goBackToMenu();
       LCDML.MENU_goRoot();
       break;

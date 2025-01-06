@@ -619,8 +619,10 @@ AudioConnection patchCord[] = {
                 {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
 };
 
+#ifdef AUDIO_DEVICE_USB
 AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
 AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
+#endif
 
 AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
 AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
