@@ -69,16 +69,15 @@ typedef struct fm_s
   uint8_t sd_mode = 0;
   bool sd_is_folder;
   bool sd_parent_folder = false;
-  char sd_new_name[52];
-  char sd_full_name[52];
-  char sd_prev_dir[52];
-  char sd_temp_name[52];
+  String sd_new_name;
+  String sd_full_name;
+  String sd_prev_dir;
+  String sd_temp_name;
 
   uint16_t psram_sum_files = 0;
   uint16_t psram_cap_rows;
   uint16_t psram_selected_file = 0;
   uint16_t psram_skip_files = 0;
-  char psram_temp_name[52];
 } fm_t;
 
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz

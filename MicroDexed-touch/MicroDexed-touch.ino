@@ -1888,11 +1888,11 @@ FLASHMEM void preview_sample()
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
   {
     draw_button_on_grid(46, 25, "PLEASE", "WAIT", 2);
-    if (fm.active_window == 0 && !fm.sd_is_folder && strstr(fm.sd_temp_name, ".wav") != NULL)
+    if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav"))
     { // preview sd file
-      strcpy(fm.sd_full_name, fm.sd_new_name);
-      strcat(fm.sd_full_name, "/");
-      strcat(fm.sd_full_name, fm.sd_temp_name);
+      fm.sd_full_name = fm.sd_new_name;
+      fm.sd_full_name.append("/");
+      fm.sd_full_name.append(fm.sd_temp_name);
       sampleLoader.loadSampleToDrums(fm.sd_full_name, previewSlot);
       if (previewSlot.drum_data != nullptr) {
         WAV_preview_PSRAM.playRaw((int16_t*)previewSlot.drum_data, previewSlot.len, previewSlot.numChannels);

@@ -4287,13 +4287,10 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   return (false);
 }
 
-int compare_files_by_name(const void* a, const void* b)
+int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
 {
-  storage_file_t* fileA = (storage_file_t*)a;
-  storage_file_t* fileB = (storage_file_t*)b;
-
-  String strA = ((String)fileA->name).toLowerCase();
-  String strB = ((String)fileB->name).toLowerCase();
+  String strA = ((String)fileA.name).toLowerCase();
+  String strB = ((String)fileB.name).toLowerCase();
 
   if (strA.length() == 1)
   {
@@ -4304,20 +4301,21 @@ int compare_files_by_name(const void* a, const void* b)
     strB = "0" + strB;
   }
 
-  if (fileA->isDirectory == fileB->isDirectory) {
-    return strA < strB ? -1 : strA > strB ? 1 : 0;
+  if (fileA.isDirectory == fileB.isDirectory) {
+    return strA < strB;
   }
   else { // sort folders before files
-    return fileB->isDirectory ? 1 : -1;
+    return fileA.isDirectory;
   }
 }
 
 FLASHMEM void load_sd_directory()
 {
-  strcpy(fm.sd_prev_dir, fm.sd_new_name);
-  File sd_root = SD.open(fm.sd_new_name);
+  fm.sd_prev_dir = fm.sd_new_name;
+  File sd_root = SD.open(fm.sd_new_name.c_str());
 
   fm.sd_sum_files = 0;
+  sdcard_infos.files.clear();
 
   while (true)
   {
@@ -4328,32 +4326,26 @@ FLASHMEM void load_sd_directory()
     // skip special files
     if (strcmp(sd_entry.name(), "System Volume Information") && strstr(sd_entry.name(), "._") == NULL)
     {
-      strcpy(sdcard_infos.files[fm.sd_sum_files].name, sd_entry.name());
-      sdcard_infos.files[fm.sd_sum_files].size = sd_entry.size();
-      sdcard_infos.files[fm.sd_sum_files].isDirectory = sd_entry.isDirectory();
+      storage_file_s entry;
+      entry.name = sd_entry.name();
+      entry.size = sd_entry.size();
+      entry.isDirectory = sd_entry.isDirectory();
 #ifdef DEBUG
       LOG.print(fm.sd_sum_files);
       LOG.print(F("  "));
-      LOG.print(sdcard_infos.files[fm.sd_sum_files].name);
+      LOG.print(entry.name);
       LOG.print(F("  "));
-      LOG.print(sdcard_infos.files[fm.sd_sum_files].size);
+      LOG.print(entry.size);
       LOG.print(F(" bytes"));
       LOG.println();
 #endif
+      sdcard_infos.files.emplace_back(entry);
       fm.sd_sum_files++;
     }
     sd_entry.close();
   }
   sd_root.close();
 
-  // clear all the unused files in array
-  for (uint8_t i = fm.sd_sum_files; i < MAX_FILES; i++)
-  {
-    strcpy(sdcard_infos.files[i].name, "");
-    sdcard_infos.files[i].size = 0;
-    sdcard_infos.files[i].isDirectory = false;
-  }
-
-  qsort(sdcard_infos.files, fm.sd_sum_files, sizeof(storage_file_t), compare_files_by_name);
+  std::sort(sdcard_infos.files.begin(), sdcard_infos.files.end(), compare_files_by_name);
 }
 

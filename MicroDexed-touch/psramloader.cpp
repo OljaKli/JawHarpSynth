@@ -5,7 +5,7 @@ FLASHMEM PsramLoader::PsramLoader(uint32_t &freeBytes) :
   freeBytesPSRAM(freeBytes) {
 }
 
-FLASHMEM void PsramLoader::loadSampleToDrums(const char* path, drum_config_t &slot) {
+FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &slot) {
   if((slot.drum_data != nullptr) && (slot.len > 0)) {
     unloadSample(slot.drum_data, slot.len * 2); // len is 16bit
   }
@@ -14,10 +14,10 @@ FLASHMEM void PsramLoader::loadSampleToDrums(const char* path, drum_config_t &sl
   slot.len = bytesRead / 2;
 }
 
-FLASHMEM uint8_t* PsramLoader::loadSample(const char *filename, uint32_t &bytesRead, uint8_t &channels) {
+FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytesRead, uint8_t &channels) {
   uint8_t *data = nullptr;
   Serial.printf("Reading %s\n", filename);
-  File f = SD.open(filename, O_READ);
+  File f = SD.open(filename.c_str(), O_READ);
   if (f) {
     if (f.size() < freeBytesPSRAM) {
       AudioNoInterrupts();

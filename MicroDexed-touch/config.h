@@ -29,6 +29,7 @@
 #include <Arduino.h>
 #include "midinotes.h"
 #include "teensy_board_detection.h"
+#include <vector>
 
 #ifdef DEBUG
 #define DBG_LOG(s) LOG.s
@@ -1003,7 +1004,7 @@ typedef struct sys_s
 
 typedef struct storage_file_s
 {
-  char name[FILENAME_MAX_LEN];
+  String name;
   uint32_t size;
   bool isDirectory;
 } storage_file_t;
@@ -1011,7 +1012,7 @@ typedef struct storage_file_s
 typedef struct sdcard_s
 {
   char type[5];
-  storage_file_t files[MAX_FILES];
+  std::vector<storage_file_t> files;
   uint32_t used;
   uint32_t capacity;
 } sdcard_t;

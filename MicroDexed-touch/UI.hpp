@@ -15579,13 +15579,13 @@ FLASHMEM void UI_func_braids(uint8_t param)
 
 FLASHMEM void sd_printDirectory(bool forceReload)
 {
-  if (forceReload || strcmp(fm.sd_new_name, fm.sd_prev_dir))
+  if (forceReload || fm.sd_new_name != fm.sd_prev_dir)
   {
 #ifdef COMPILE_FOR_PSRAM
     if (fm.sd_mode == FM_COPY_TO_PSRAM)
     {
-      strcpy(fm.sd_prev_dir, "/CUSTOM/");
-      strcpy(fm.sd_new_name, "/CUSTOM/");
+      fm.sd_prev_dir = "/CUSTOM/";
+      fm.sd_new_name = "/CUSTOM/";
     }
 #endif
 
@@ -15598,7 +15598,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
   if (fm.sd_parent_folder && fm.sd_folder_depth > 0)
   {
     fm.sd_is_folder = true;
-    strcpy(fm.sd_temp_name, "..");
+    fm.sd_temp_name = "..";
     display.setTextColor(COLOR_SYSTEXT, COLOR_PITCHSMP);
   }
   else
@@ -15634,7 +15634,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
         display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
       else
         display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-      show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name);
+      show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name.c_str());
       display.setCursor(CHAR_width_small * 21, f * 11 + 6 * 11);
       display.setTextColor(DX_DARKCYAN, COLOR_BACKGROUND);
       display.print("DIR   ");
@@ -15646,7 +15646,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
       else
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name);
+      show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name.c_str());
       display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
       display.setCursor(CHAR_width_small * 20, f * 11 + 6 * 11);
       // if (sd_entry.size / 1024 / 1024 > 0)
@@ -15669,7 +15669,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
       }
     }
     if (f == fm.sd_selected_file && fm.sd_parent_folder == false)
-      strcpy(fm.sd_temp_name, sd_entry.name);
+      fm.sd_temp_name = sd_entry.name;
     if (f == fm.sd_selected_file && sd_entry.isDirectory)
       fm.sd_is_folder = true;
   }
@@ -16330,12 +16330,12 @@ FLASHMEM void sd_go_parent_folder()
   {
     fm.sd_folder_depth = 0;
     fm.sd_skip_files = 0;
-    strcpy(fm.sd_new_name, "/");
+    fm.sd_new_name = "/";
   }
   else
   {
     // path has at least one parent folder
-    for (uint8_t count = strlen(fm.sd_new_name); count > 0; count--)
+    for (uint8_t count = fm.sd_new_name.length(); count > 0; count--)
     {
       if (fm.sd_new_name[count] == 0x2f)
       {
@@ -16355,8 +16355,8 @@ FLASHMEM void sd_update_display()
   display.setCursor(CHAR_width_small * 24, 1 * CHAR_height_small);
   display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
   print_formatted_number(fm.sd_sum_files, 3);
-  show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 20, fm.sd_new_name);
-  show_smallfont_noGrid(5 * CHAR_height_small, CHAR_width_small * 1, 20, fm.sd_temp_name);
+  show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 20, fm.sd_new_name.c_str());
+  show_smallfont_noGrid(5 * CHAR_height_small, CHAR_width_small * 1, 20, fm.sd_temp_name.c_str());
 
 }
 
@@ -16391,7 +16391,7 @@ FLASHMEM void print_psram_stats_filemanager()
   sprintf(text1, "%05d KB  FREE", (int)(psram_size / 1024 - total_data_size / 1024));
   display.print(text1);
   fm.psram_sum_files = NUM_CUSTOM_SAMPLES;
-  strcpy(fm.sd_new_name, "/");
+  fm.sd_new_name = "/";
 }
 #endif
 
@@ -16422,8 +16422,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     fm.active_window = 0;
     // fm.sd_skip_files = 0;
     // fm.sd_selected_file = 0;
-    strcpy(fm.sd_prev_dir, "");
-    // strcpy(fm.sd_new_name, "/");
+    fm.sd_prev_dir = "";
+    // fm.sd_new_name = "/";
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     display.setTextSize(1);
@@ -16523,12 +16523,12 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             {
               fm.sd_folder_depth = 0;
               fm.sd_skip_files = 0;
-              strcpy(fm.sd_new_name, "/");
+              fm.sd_new_name = "/";
             }
             else
             {
               // path has at least one parent folder
-              for (uint8_t count = strlen(fm.sd_new_name); count > 0; count--)
+              for (uint8_t count = fm.sd_new_name.length(); count > 0; count--)
               {
                 if (fm.sd_new_name[count] == 0x2f)
                 {
@@ -16542,9 +16542,10 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
           else if (fm.sd_mode != FM_COPY_TO_PSRAM)
           {
             fm.sd_skip_files = 0;
-            if (fm.sd_folder_depth > 0)
-              strcat(fm.sd_new_name, "/");
-            strcat(fm.sd_new_name, fm.sd_temp_name);
+            if (fm.sd_folder_depth > 0) {
+              fm.sd_new_name.append("/");
+            }
+            fm.sd_new_name.append(fm.sd_temp_name);
             fm.sd_folder_depth++;
           }
           fm.sd_selected_file = 0;
@@ -16554,24 +16555,24 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         {
           if (fm.sd_mode == FM_DELETE_FILE && fm.sd_mode != FM_COPY_TO_PSRAM)
           {
-            strcpy(fm.sd_full_name, fm.sd_new_name);
-            strcat(fm.sd_full_name, "/");
-            strcat(fm.sd_full_name, fm.sd_temp_name);
-            SD.remove(fm.sd_full_name);
+            fm.sd_full_name = fm.sd_new_name;
+            fm.sd_full_name.append("/");
+            fm.sd_full_name.append(fm.sd_temp_name);
+            SD.remove(fm.sd_full_name.c_str());
             load_sd_directory();
           }
 
 #ifdef COMPILE_FOR_PSRAM
           else if (fm.sd_mode == FM_COPY_TO_PSRAM) //copy from SD CUSTOM folder to PSRAM
           {
-            if (!fm.sd_is_folder && strstr(fm.sd_temp_name, ".wav") != NULL)
+            if (!fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav"))
             {
-              strcpy(fm.sd_full_name, fm.sd_new_name);
-              strcat(fm.sd_full_name, "/");
-              strcat(fm.sd_full_name, fm.sd_temp_name);
+              fm.sd_full_name = fm.sd_new_name;
+              fm.sd_full_name.append("/");
+              fm.sd_full_name.append(fm.sd_temp_name);
               sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files]);
-              strcpy(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files].filename, fm.sd_full_name);
-              strip_extension(fm.sd_temp_name, drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files].name, 14);
+              strcpy(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files].filename, fm.sd_full_name.c_str());
+              strip_extension(fm.sd_temp_name.c_str(), drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files].name, 14);
 
               print_psram_stats_filemanager();
               psram_printCustomSamplesList();
@@ -16597,8 +16598,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       display.setCursor(CHAR_width_small * 24, 1 * CHAR_height_small);
       display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
       print_formatted_number(fm.sd_sum_files, 3);
-      show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 20, fm.sd_new_name);
-      // show_smallfont_noGrid(5 * CHAR_height_small, CHAR_width_small * 1, 20, fm.sd_temp_name);
+      show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 20, fm.sd_new_name.c_str());
     }
 
 #ifdef COMPILE_FOR_PSRAM
@@ -20858,6 +20858,7 @@ FLASHMEM void load_sd_directory_files_only()
   File sd_root = SD.open("/MIDI");
 
   fm.sd_sum_files = 0;
+  sdcard_infos.files.clear();
 
   while (true)
   {
@@ -20867,25 +20868,19 @@ FLASHMEM void load_sd_directory_files_only()
 
     if (sd_entry.isDirectory() == false && strstr(sd_entry.name(), "._") == NULL)
     {
-      strcpy(sdcard_infos.files[fm.sd_sum_files].name, sd_entry.name());
-      sdcard_infos.files[fm.sd_sum_files].size = sd_entry.size();
-      sdcard_infos.files[fm.sd_sum_files].isDirectory = sd_entry.isDirectory();
-
+      storage_file_s entry;
+      entry.name = sd_entry.name();
+      entry.size = sd_entry.size();
+      entry.isDirectory = sd_entry.isDirectory();
+      
+      sdcard_infos.files.emplace_back(entry);
       fm.sd_sum_files++;
     }
     sd_entry.close();
   }
   sd_root.close();
 
-  // clear all the unused files in array
-  for (uint8_t i = fm.sd_sum_files; i < MAX_FILES; i++)
-  {
-    strcpy(sdcard_infos.files[i].name, "");
-    sdcard_infos.files[i].size = 0;
-    sdcard_infos.files[i].isDirectory = false;
-  }
-
-  qsort(sdcard_infos.files, fm.sd_sum_files, sizeof(storage_file_t), compare_files_by_name);
+  std::sort(sdcard_infos.files.begin(), sdcard_infos.files.end(), compare_files_by_name);
 }
 
 #include "MD_MIDIFile.h"
@@ -21229,7 +21224,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     print_smf_parameters();
 
     //     // strcpy(fm.sd_prev_dir, "");
-    //     //    strcpy(fm.sd_new_name, "/");
+    //     //    fm.sd_new_name = "/";
     //     if (generic_active_function == 0)
     //     {
     //       load_sd_directory_files_only();
@@ -21334,7 +21329,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         // generic_menu = fm.sd_skip_files + f;
       }
 
-      show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name);
+      show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name.c_str());
     }
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
