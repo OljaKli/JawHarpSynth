@@ -66,10 +66,6 @@ typedef struct fm_s
   uint8_t sample_source = 0; // 0 = SD, 1 = FLASH
 #endif
 
-#ifdef COMPILE_FOR_FLASH
-  uint8_t sample_source = 1; // 0 = SD, 1 = FLASH
-#endif
-
   int sample_screen_position_x = 0;
   uint8_t active_window = 0; // 0 = left window (SDCARD) , 1 = FLASH or PSRAM
   uint16_t sd_sum_files = 0;

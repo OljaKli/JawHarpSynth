@@ -128,10 +128,9 @@
 //*************************************************************************************************
 
 // #define COMPILE_FOR_PROGMEM  // enable this if you do not have a SPI FLASH chip
-// #define COMPILE_FOR_FLASH  // this is the intended configuration, with SPI FLASH chip
 // #define COMPILE_FOR_SDCARD  // experimental, for testing purposes only
 
-#if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_FLASH) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
+#if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
 #define COMPILE_FOR_PROGMEM // default
 #endif
 
@@ -1023,15 +1022,6 @@ typedef struct sdcard_s
   uint32_t used;
   uint32_t capacity;
 } sdcard_t;
-
-#ifdef COMPILE_FOR_FLASH
-typedef struct flash_s
-{
-  storage_file_t files[MAX_FILES];
-  uint32_t used;
-  uint32_t capacity;
-} flash_t;
-#endif
 
 typedef struct configuration_s
 {

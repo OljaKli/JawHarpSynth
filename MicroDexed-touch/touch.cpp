@@ -623,10 +623,6 @@ FLASHMEM void print_file_manager_buttons()
 {
   draw_button_on_grid(1, 25, "BROWSE", "FILES", fm.sd_mode == FM_BROWSE_FILES ? 1 : 0);
   draw_button_on_grid(10, 25, "DELETE", "FILE", fm.sd_mode == FM_DELETE_FILE ? 1 : 0);
-#ifdef COMPILE_FOR_FLASH
-  draw_button_on_grid(19, 25, "COPY", "PRESET", fm.sd_mode == FM_COPY_PRESETS ? 1 : 0);
-  draw_button_on_grid(28, 25, "COPY >", "FLASH", fm.sd_mode == FM_COPY_TO_FLASH ? 1 : 0);
-#endif
 
 #ifdef COMPILE_FOR_PSRAM
   draw_button_on_grid(19 + 9, 25, "COPY >", "PSRAM", fm.sd_mode == FM_COPY_TO_PSRAM ? 1 : 0);
@@ -686,19 +682,6 @@ FLASHMEM void handle_touchscreen_file_manager()
         print_file_manager_buttons();
       }
 
-#if defined COMPILE_FOR_FLASH
-      else if (check_button_on_grid(19, 25))
-      {
-        fm.sd_mode = FM_COPY_PRESETS;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(28, 25))
-      {
-        fm.sd_mode = FM_COPY_TO_FLASH;
-        print_file_manager_buttons();
-      }
-#endif
-
 #if defined COMPILE_FOR_PSRAM
       else if (check_button_on_grid(19 + 9, 25))
       {
@@ -726,7 +709,7 @@ FLASHMEM void handle_touchscreen_file_manager()
     }
     else if (ts.p.x > CHAR_width_small * 29)
     {
-#if defined COMPILE_FOR_FLASH || defined COMPILE_FOR_PSRAM
+#if defined COMPILE_FOR_PSRAM
       fm.active_window = 1;
 #endif
 
