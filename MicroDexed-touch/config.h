@@ -335,8 +335,8 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define VOICE_NAME_LEN 12 // 11 (plus '\0')
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
-#define DRUM_NAME_LEN 21
-#define MAX_FULLPATH_LEN 64
+#define FILENAME_MAX_LEN 16
+#define FULLPATH_MAX_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"
 #define SEQUENCER_CONFIG_NAME "sequencer"
@@ -956,14 +956,14 @@ typedef struct braids_s
 
 typedef struct multisample_s
 {
-  char name[18];
+  char name[FILENAME_MAX_LEN];
   uint8_t sound_intensity;
   uint8_t midi_channel;
 } multisample_t;
 
 typedef struct multisample_zone_s
 {
-  char filename[MAX_FULLPATH_LEN];
+  char filename[FULLPATH_MAX_LEN];
   uint8_t entry_number;
   uint8_t rootnote; // sample root note
   uint8_t low;      // lowest note in range
@@ -1003,9 +1003,8 @@ typedef struct sys_s
 
 typedef struct storage_file_s
 {
-  char name[26];
-  //uint16_t size;
-  unsigned long size;
+  char name[FILENAME_MAX_LEN];
+  uint32_t size;
   bool isDirectory;
 } storage_file_t;
 

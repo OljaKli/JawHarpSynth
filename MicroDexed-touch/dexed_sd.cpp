@@ -4304,8 +4304,12 @@ int compare_files_by_name(const void* a, const void* b)
     strB = "0" + strB;
   }
 
-  return strA < strB ? -1 : strA > strB ? 1
-    : 0;
+  if (fileA->isDirectory == fileB->isDirectory) {
+    return strA < strB ? -1 : strA > strB ? 1 : 0;
+  }
+  else { // sort folders before files
+    return fileB->isDirectory ? 1 : -1;
+  }
 }
 
 FLASHMEM void load_sd_directory()

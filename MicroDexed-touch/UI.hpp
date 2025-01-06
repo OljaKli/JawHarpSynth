@@ -7196,7 +7196,6 @@ void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
     }
   }
 #endif
-
 }
 
 bool wave_editor_skip_redraw_overview = false;
@@ -7340,7 +7339,6 @@ FLASHMEM void print_updated_slices_text()
     display.fillRect(155, 30, 156, 38, COLOR_BACKGROUND);
     display.console = false;
   }
-
 }
 
 FLASHMEM void draw_header_sample_editor()
@@ -7604,7 +7602,6 @@ FLASHMEM void draw_loop_buttons()
     draw_button_on_grid(1, 23, "LOOP", "START", 0);
     draw_button_on_grid(9, 23, "LOOP", "END", 0);
   }
-
 }
 
 FLASHMEM void UI_func_sample_editor(uint8_t param)
