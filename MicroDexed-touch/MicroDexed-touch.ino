@@ -1887,7 +1887,6 @@ FLASHMEM void preview_sample()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
   {
-    draw_button_on_grid(46, 25, "PLEASE", "WAIT", 2);
     if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav"))
     { // preview sd file
       fm.sd_full_name = fm.sd_new_name;
@@ -1898,15 +1897,11 @@ FLASHMEM void preview_sample()
         WAV_preview_PSRAM.playRaw((int16_t*)previewSlot.drum_data, previewSlot.len, previewSlot.numChannels);
       }
     }
-    else if (fm.active_window == 1)
-    { // preview file
-
+    else if (fm.active_window == 1) { // preview file
 #if defined(COMPILE_FOR_PSRAM)
       playWAVFilePSRAM(fm.psram_selected_file + 6 + fm.psram_skip_files);
 #endif
     }
-    delay(100);
-    draw_button_on_grid(46, 25, "PLAY", "SAMPLE", 1);
   }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor))
   {
