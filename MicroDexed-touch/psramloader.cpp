@@ -26,14 +26,15 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
       f.read(header, WAV_HEADER_SIZE);
       uint16_t numCh = (header[23] << 8) | header[22];
       //uint32_t size = (header[43] << 24) | header[42] << 16 | header[41] << 8 | header[40];
-
+      //f.seek(0);
       uint32_t total_read = 0;
-      data = (uint8_t*)extmem_malloc(f.size() - WAV_HEADER_SIZE);
+      data = (uint8_t*)extmem_malloc(f.size());// - WAV_HEADER_SIZE); // removes click at end somehow..
       uint8_t *index = data;
       while (f.available()) {
         size_t bytesRead = f.read(index, DEFAULT_SD_BUFSIZE);
-        if (bytesRead == 0)
+        if (bytesRead == 0) {
           break;
+        }
         total_read += bytesRead;
         index += bytesRead;
       }

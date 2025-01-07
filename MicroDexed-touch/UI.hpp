@@ -16391,7 +16391,6 @@ FLASHMEM void print_psram_stats_filemanager()
   sprintf(text1, "%05d KB  FREE", (int)(psram_size / 1024 - total_data_size / 1024));
   display.print(text1);
   fm.psram_sum_files = NUM_CUSTOM_SAMPLES;
-  fm.sd_new_name = "/";
 }
 #endif
 
@@ -16419,6 +16418,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
     }
     fm.sd_mode = FM_BROWSE_FILES;
+    fm.sd_new_name = "/";
     fm.active_window = 0;
     // fm.sd_skip_files = 0;
     // fm.sd_selected_file = 0;
@@ -16463,55 +16463,67 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     print_file_manager_buttons();
     print_file_manager_active_border();
+
+    LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
   }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      if (LCDML.BT_checkDown() && fm.active_window == 0) // left window, SDCARD
-      {
-        if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 8 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
-          fm.sd_skip_files++;
-        if (fm.sd_selected_file == 0 && fm.sd_parent_folder == true)
-        {
-          fm.sd_is_folder = true;
-          fm.sd_selected_file = 0;
-          fm.sd_parent_folder = false;
+    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())) {
+      if (fm.active_window == 0) { // left window, SDCARD
+        if (LCDML.BT_checkDown()) {
+          if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 8 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
+            fm.sd_skip_files++;
+          if (fm.sd_selected_file == 0 && fm.sd_parent_folder == true)
+          {
+            fm.sd_is_folder = true;
+            fm.sd_selected_file = 0;
+            fm.sd_parent_folder = false;
+          }
+          else
+            fm.sd_selected_file = constrain(fm.sd_selected_file + 1, 0, fm.sd_cap_rows);
         }
-        else
-          fm.sd_selected_file = constrain(fm.sd_selected_file + 1, 0, fm.sd_cap_rows);
-      }
-      else if (LCDML.BT_checkUp() && fm.active_window == 0) // left window, SDCARD 
-      {
-        if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
-          fm.sd_skip_files--;
-        else if (fm.sd_selected_file == 0 && fm.sd_skip_files == 0)
+        else if (LCDML.BT_checkUp())
         {
-          if (fm.sd_folder_depth > 0)
-            fm.sd_parent_folder = true;
+          if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
+            fm.sd_skip_files--;
+          else if (fm.sd_selected_file == 0 && fm.sd_skip_files == 0)
+          {
+            if (fm.sd_folder_depth > 0)
+              fm.sd_parent_folder = true;
+          }
+          fm.sd_selected_file = constrain(fm.sd_selected_file - 1, 0, fm.sd_cap_rows);
         }
-        fm.sd_selected_file = constrain(fm.sd_selected_file - 1, 0, fm.sd_cap_rows);
       }
-
 #ifdef COMPILE_FOR_PSRAM
-      if (LCDML.BT_checkDown() && fm.active_window == 1) // right window, PSRAM
-      {
-        if (fm.psram_selected_file == fm.psram_cap_rows && fm.psram_cap_rows > 8 && fm.psram_skip_files < fm.psram_sum_files - fm.psram_cap_rows - 1)
-          fm.psram_skip_files++;
+      if (fm.active_window == 1) { // right window, PSRAM
+        if (LCDML.BT_checkDown())
+        {
+          if (fm.psram_selected_file == fm.psram_cap_rows && fm.psram_cap_rows > 8 && fm.psram_skip_files < fm.psram_sum_files - fm.psram_cap_rows - 1)
+            fm.psram_skip_files++;
 
-        fm.psram_selected_file = constrain(fm.psram_selected_file + 1, 0, fm.psram_cap_rows);
-      }
-      else if (LCDML.BT_checkUp() && fm.active_window == 1) // // right window, PSRAM
-      {
-        if (fm.psram_selected_file == 0 && fm.psram_skip_files > 0)
-          fm.psram_skip_files--;
+          fm.psram_selected_file = constrain(fm.psram_selected_file + 1, 0, fm.psram_cap_rows);
+        }
+        else if (LCDML.BT_checkUp())
+        {
+          if (fm.psram_selected_file == 0 && fm.psram_skip_files > 0)
+            fm.psram_skip_files--;
 
-        fm.psram_selected_file = constrain(fm.psram_selected_file - 1, 0, fm.psram_cap_rows);
+          fm.psram_selected_file = constrain(fm.psram_selected_file - 1, 0, fm.psram_cap_rows);
+        }
       }
 #endif
-
     }
+    DBG_LOG(printf("looop...\n"));
+    bool isPlayingPrev = false;
+    bool isPlayingNow = WAV_preview_PSRAM.isPlaying();
+    if (isPlayingNow) {
+      DBG_LOG(printf("playing %i - %i\n", WAV_preview_PSRAM.positionMillis(), WAV_preview_PSRAM.lengthMillis()));
+      display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
+    } else if (isPlayingPrev) {
+      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
+    }
+    isPlayingPrev = isPlayingNow;
 
     if (LCDML.BT_checkEnter()) {
       if (fm.sd_is_folder) {
@@ -16556,6 +16568,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
           } 
           break;
 #endif
+        default:
         case FM_PLAY_SAMPLE:
           preview_sample();
           break;
