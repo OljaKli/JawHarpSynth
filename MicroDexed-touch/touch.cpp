@@ -178,12 +178,12 @@ FLASHMEM void draw_back_touchbutton()
     //remove unusable touch buttons from screen
     clear_bottom_half_screen_without_backbutton();
     //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
-   
+
   }
   //else if (legacy_touch_button_back_page()&& ts.keyb_in_menu_activated  )
-  else if (legacy_touch_button_back_page() )
+  else if (legacy_touch_button_back_page())
   { // but when virtual keyboard was active when coming from main menu, it must be redrawn
-     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
   }
   else if (touch_button_back_page() && seq.cycle_touch_element != 1)
   {
@@ -304,6 +304,11 @@ FLASHMEM void print_perf_modifier_buttons() {
   print_perfmod_lables();
 }
 
+extern void draw_algo();
+extern uint8_t get_algo();
+extern uint8_t set_algo(uint8_t value);
+extern void panic_dexed_current_instance();
+
 FLASHMEM void handle_touchscreen_voice_select()
 {
   if (numTouchPoints > 0)
@@ -334,84 +339,96 @@ FLASHMEM void handle_touchscreen_voice_select()
     {
       save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     }
-    else
-      if (check_button_on_grid(45, 11)) //toggle fav. preset search modes
+    else if (check_button_on_grid(45, 11)) //toggle fav. preset search modes
+    {
+      configuration.sys.favorites++;
+      if (configuration.sys.favorites > 3)
+        configuration.sys.favorites = 0;
+      print_voice_select_fav_search_button();
+    }
+    else {
+      if (seq.cycle_touch_element != 1)
       {
-        configuration.sys.favorites++;
-        if (configuration.sys.favorites > 3)
-          configuration.sys.favorites = 0;
-        print_voice_select_fav_search_button();
-      }
-      else {
-        if (seq.cycle_touch_element != 1)
+        if (check_button_on_grid(37, 23)) //algo
         {
-          if (check_button_on_grid(20, 23)) {
-            reset_live_modifiers();
-            print_perf_modifier_buttons();
-          }
-          else
-            if (selected_instance_id == 0)
-            {
-              if (check_button_on_grid(2, 23))
-              {
-                if (dexed_live_mod.active_button != 1)
-                  dexed_live_mod.active_button = 1;
-                else
-                  dexed_live_mod.active_button = 0;
-                print_perf_modifier_buttons();
-              }
-              else if (check_button_on_grid(11, 23))
-              {
-                if (dexed_live_mod.active_button != 2)
-                  dexed_live_mod.active_button = 2;
-                else
-                  dexed_live_mod.active_button = 0;
-                print_perf_modifier_buttons();
-              }
-              else if (check_button_on_grid(45, 23))
-                LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
-            }
-            else if (selected_instance_id == 1)
-            {
-              if (check_button_on_grid(2, 23))
-              {
-                if (dexed_live_mod.active_button != 3)
-                  dexed_live_mod.active_button = 3;
-                else
-                  dexed_live_mod.active_button = 0;
-                print_perf_modifier_buttons();
-              }
-              else if (check_button_on_grid(11, 23))
-              {
-                if (dexed_live_mod.active_button != 4)
-                  dexed_live_mod.active_button = 4;
-                else
-                  dexed_live_mod.active_button = 0;
-                print_perf_modifier_buttons();
-              }
-              else if (check_button_on_grid(45, 23))
-                LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
-            }
-            else
-              dexed_live_mod.active_button = 0;
+          uint8_t value = get_algo();
 
-          if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
+          value++;
+          if (value > 31)
+            value = 0;
+          panic_dexed_current_instance();
+          set_algo(value);
+          draw_algo();
+        }
+
+        else  if (check_button_on_grid(20, 23)) {
+          reset_live_modifiers();
+          print_perf_modifier_buttons();
+        }
+        else
+          if (selected_instance_id == 0)
           {
-            helptext_r("< > CHANGE MODIFIER VALUE");
-            display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-            print_empty_spaces(38);
-            display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-            print_empty_spaces(9);
-            display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-            display.print(F(" PUSH TO RETURN"));
+            if (check_button_on_grid(2, 23))
+            {
+              if (dexed_live_mod.active_button != 1)
+                dexed_live_mod.active_button = 1;
+              else
+                dexed_live_mod.active_button = 0;
+              print_perf_modifier_buttons();
+            }
+            else if (check_button_on_grid(11, 23))
+            {
+              if (dexed_live_mod.active_button != 2)
+                dexed_live_mod.active_button = 2;
+              else
+                dexed_live_mod.active_button = 0;
+              print_perf_modifier_buttons();
+            }
+            else if (check_button_on_grid(45, 23))
+              LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
+          }
+          else if (selected_instance_id == 1)
+          {
+            if (check_button_on_grid(2, 23))
+            {
+              if (dexed_live_mod.active_button != 3)
+                dexed_live_mod.active_button = 3;
+              else
+                dexed_live_mod.active_button = 0;
+              print_perf_modifier_buttons();
+            }
+            else if (check_button_on_grid(11, 23))
+            {
+              if (dexed_live_mod.active_button != 4)
+                dexed_live_mod.active_button = 4;
+              else
+                dexed_live_mod.active_button = 0;
+              print_perf_modifier_buttons();
+            }
+
+            else if (check_button_on_grid(45, 23))
+              LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
           }
           else
-          {
-            print_voice_select_default_help();
-          }
-          print_voice_settings_in_dexed_voice_select(false, true);
+            dexed_live_mod.active_button = 0;
+
+        if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
+        {
+          helptext_r("< > CHANGE MODIFIER VALUE");
+          display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+          print_empty_spaces(38);
+          display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
+          print_empty_spaces(9);
+          display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+          display.print(F(" PUSH TO RETURN"));
         }
+        else
+        {
+          print_voice_select_default_help();
+        }
+        print_voice_settings_in_dexed_voice_select(false, true);
       }
+    }
   }
   if (seq.cycle_touch_element == 1) {
     handleTouchVirtualKeyboard();
@@ -631,6 +648,7 @@ FLASHMEM void print_file_manager_buttons()
 
   if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE) {
     display.setTextSize(1);
+
     display.setCursor(CHAR_width_small, (CHAR_height_small * 23) + 5);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(F("SELECT, THEN CONFIRM OPERATION > PUSH ENCODER[R]"));

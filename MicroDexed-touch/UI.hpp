@@ -167,8 +167,8 @@ extern AudioEffectDynamics mb_compressor_r_2;
 extern AudioEffectDynamics mb_compressor_r_3;
 extern AudioMixer<4> mb_mixer_l;
 extern AudioMixer<4> mb_mixer_r;
-extern AudioMixer<2> finalized_mixer_r;
-extern AudioMixer<2> finalized_mixer_l;
+extern AudioMixer<3> finalized_mixer_r;
+extern AudioMixer<3> finalized_mixer_l;
 
 #ifdef AUDIO_DEVICE_USB
 extern AudioConnection patchCordUsbL;
@@ -18170,6 +18170,29 @@ FLASHMEM void  print_voice_select_fav_search_button()
 
 }
 
+FLASHMEM void draw_algo()
+{
+   if ((dexed_onscreen_algo != MicroDexed[selected_instance_id]->getAlgorithm()))
+      {
+        UI_draw_FM_algorithm(MicroDexed[selected_instance_id]->getAlgorithm(), 147, 86);
+        dexed_onscreen_algo = MicroDexed[selected_instance_id]->getAlgorithm();
+      }
+}
+
+FLASHMEM void set_algo(uint8_t value)
+{
+    MicroDexed[selected_instance_id]->setAlgorithm(value);
+}
+FLASHMEM uint8_t get_algo()
+{
+   return MicroDexed[selected_instance_id]->getAlgorithm();
+}
+
+FLASHMEM void panic_dexed_current_instance()
+{
+ MicroDexed[selected_instance_id]->panic();
+}
+
 FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, bool fullrefresh_values)
 {
   char note_name[4];
@@ -18236,14 +18259,11 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
       display.print(F("ALGORITHM"));
       print_voice_select_fav_search_button();
       draw_button_on_grid(20, 23, "CLEAR", "MODS", 0);
-      draw_button_on_grid(37, 23, "EDIT", "ALGO", 0);
+      draw_button_on_grid(37, 23, "CHANGE", "ALGO", 0);
       draw_button_on_grid(45, 23, "EDIT", "VOICE", 0);
 
-      if ((dexed_onscreen_algo != MicroDexed[selected_instance_id]->getAlgorithm()))
-      {
-        UI_draw_FM_algorithm(MicroDexed[selected_instance_id]->getAlgorithm(), 147, 86);
-        dexed_onscreen_algo = MicroDexed[selected_instance_id]->getAlgorithm();
-      }
+draw_algo();
+
     }
   }
 
