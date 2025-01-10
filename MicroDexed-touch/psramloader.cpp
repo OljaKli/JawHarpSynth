@@ -17,11 +17,10 @@ FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &s
 
 FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytesRead, uint8_t &channels) {
   uint8_t *data = nullptr;
-  Serial.printf("Reading %s\n", filename);
+  //Serial.printf("Reading %s\n", filename);
   File f = SD.open(filename.c_str(), O_READ);
   
   if (f) {
-    
     if (f.size() < freeBytesPSRAM) {
       AudioNoInterrupts();
       
@@ -29,6 +28,7 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
       WavHeaderParser wavHeaderParser;
       bool success = wavHeaderParser.readWaveHeader(header, f);
       if(success) {
+        f.seek(header.dataOffset); // skip header
         uint32_t total_read = 0;
         data = (uint8_t*)extmem_malloc(header.data_bytes);
         uint8_t *index = data;
@@ -52,7 +52,7 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
       }
     }
   }
-
+  f.close();
   return data;
 }
 

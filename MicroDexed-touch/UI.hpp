@@ -16419,11 +16419,13 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     }
     fm.sd_mode = FM_BROWSE_FILES;
     fm.sd_new_name = "/";
-    fm.active_window = 0;
-    // fm.sd_skip_files = 0;
-    // fm.sd_selected_file = 0;
+    fm.sd_full_name = "/";
     fm.sd_prev_dir = "";
-    // fm.sd_new_name = "/";
+    fm.sd_temp_name = "/";
+    fm.active_window = 0;
+    fm.sd_skip_files = 0;
+    fm.sd_selected_file = 0;
+
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     display.setTextSize(1);
@@ -16514,11 +16516,11 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
 #endif
     }
-    DBG_LOG(printf("looop...\n"));
+    //DBG_LOG(printf("looop...\n"));
     bool isPlayingPrev = false;
     bool isPlayingNow = WAV_preview_PSRAM.isPlaying();
     if (isPlayingNow) {
-      DBG_LOG(printf("playing %i - %i\n", WAV_preview_PSRAM.positionMillis(), WAV_preview_PSRAM.lengthMillis()));
+      //DBG_LOG(printf("playing %i - %i\n", WAV_preview_PSRAM.positionMillis(), WAV_preview_PSRAM.lengthMillis()));
       display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
     } else if (isPlayingPrev) {
       display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
@@ -16577,8 +16579,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     }
 
     // show files
-    if (fm.active_window == 0)
-    {
+    if (fm.active_window == 0) {
       if (fm.sd_new_name[0] != 0x2f)
         fm.sd_new_name[0] = 0x2f;
 

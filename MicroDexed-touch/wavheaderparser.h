@@ -8,29 +8,32 @@
 #include <string>
 #include <cstdint>
 #include <SD.h>
+#include "config.h"
+
+static constexpr uint32_t FOURCCRIFF = 0x52494646;	// RIFF
+static constexpr uint32_t FOURCCWAVE = 0x57415645;	// WAVE
+static constexpr uint32_t FOURCCFMT  = 0x666D7420;	// fmt 
+static constexpr uint32_t FOURCCDATA = 0x64617461;	// data
+static constexpr uint32_t FOURCCLIST = 0x4C495354;	// LIST
 
 using namespace std;
 
-// from https://gist.github.com/Jon-Schneider/8b7c53d27a7a13346a643dac9c19d34f
 struct WavHeader {
     // RIFF Header
-    char riff_header[4];    // 00 - 03 - Contains "RIFF"
-    int header_chunk_size;  // 04 - 07 - Size of the wav portion of the file, which follows the first 8 bytes. File size - 8
-    char wave_header[4];    // 08 - 11 - Contains "WAVE"
+    uint32_t header_chunk_size;// 04 - 07 - Size of the wav portion of the file, which follows the first 8 bytes. File size - 8
 
     // Format Header
-    char fmt_header[4];     // 12 - 15 - Contains "fmt " (includes trailing space)
-    int fmt_chunk_size;     // 16 - 19 - Should be 16 for PCM
-    short audio_format;     // 20 - 21 - Should be 1 for PCM. 3 for IEEE Float
-    short num_channels;     // 22 - 23
-    int sample_rate;        // 24 - 27
-    int byte_rate;          // 28 - 31
-    short sample_alignment; // 32 - 33
-    short bit_depth;        // 34 - 35
+    uint32_t fmt_chunk_size;   // 16 - 19 - Should be 16 for PCM
+    uint16_t audio_format;     // 20 - 21 - Should be 1 for PCM. 3 for IEEE Float
+    uint16_t num_channels;     // 22 - 23
+    uint32_t sample_rate;      // 24 - 27
+    uint32_t byte_rate;        // 28 - 31
+    uint16_t sample_alignment; // 32 - 33
+    uint16_t bit_depth;        // 34 - 35
 
     // Data
-    char data_header[4];    // "data"
-    unsigned int data_bytes;// 
+    uint32_t data_bytes; // number of audio bytes following
+    uint16_t dataOffset; // byte offset where audio data starts
 };
 
 class WavHeaderParser {
@@ -40,7 +43,7 @@ public:
         File wavFile = SD.open(filename);
         __enable_irq();
         if (!wavFile) {
-            // Serial.printf("Not able to open wave file... %s\n", filename);
+            DBG_LOG(printf("Not able to open wave file... %s\n", filename));
             return false;
         }
         bool result = readWaveHeader(header, wavFile);
@@ -49,93 +52,91 @@ public:
     }
 
     bool readWaveHeader(WavHeader &header, File wavFile) {
-        char buffer[100];
+        static constexpr uint16_t MAX_HEADER_SIZE = 512;
+        uint8_t buffer[MAX_HEADER_SIZE];
         __disable_irq();
-        int bytesRead = wavFile.read(buffer, 100);
+        int bytesRead = wavFile.read(buffer, MAX_HEADER_SIZE);
         __enable_irq();
-        if (bytesRead != 100) {
-            // Serial.printf("expected 44 bytes (was %d)\n", bytesRead);
+        if (bytesRead != MAX_HEADER_SIZE) {
             return false;
         }
         return readWaveHeaderFromBuffer(buffer, header);
     }
 
-    bool readWaveHeaderFromBuffer(const char *buffer, WavHeader &header) {
-        if (buffer[0] != 'R' || buffer[1] != 'I' || buffer[2] != 'F' || buffer[3] != 'F') {
-            // Serial.printf("expected RIFF (was %s)\n", buffer);
-            return false;
-        }
-        for (int i=0; i < 4; i++)
-            header.riff_header[i] = buffer[i];
-
-        unsigned char *b = (unsigned char*)buffer;
-
-        auto header_chunk_size = static_cast<unsigned long>(b[7] << 24 | b[6] << 16 | b[5] << 8 | b[4]);
-        header.header_chunk_size = header_chunk_size;
-
-        for (int i=0; i < 4; i++)
-            header.wave_header[i] = buffer[i+8];
-        if (buffer[8] != 'W' || buffer[9] != 'A' || buffer[10] != 'V' || buffer[11] != 'E') {
-            // Serial.printf("expected WAVE (was %s)\n", buffer[8]);
+    bool readWaveHeaderFromBuffer(uint8_t *buffer, WavHeader &header) {
+        const uint32_t riff = parse_uint32_BE(&buffer[0]);
+        if(riff != FOURCCRIFF) {
+            DBG_LOG(printf("expected RIFF (was %s)\n", buffer));
             return false;
         }
 
-        for (int i=0; i < 4; i++)
-            header.fmt_header[i] = buffer[i+12];
-        if (buffer[12] != 'f' || buffer[13] != 'm' || buffer[14] != 't' || buffer[15] != ' ') {
-            // Serial.printf("expected 'fmt ' (was %s)\n",  buffer[12]);
+        header.header_chunk_size = parse_uint32_LE(&buffer[4]);
+        
+        const uint32_t wave = parse_uint32_BE(&buffer[8]);
+        if(wave != FOURCCWAVE) {
+            DBG_LOG(printf("expected WAVE (was %s)\n", buffer[8]));
             return false;
         }
 
-        auto fmt_chunk_size = static_cast<unsigned long>(b[19] << 24 | b[18] << 16 | b[17] << 8 | b[16]);
-        header.fmt_chunk_size = fmt_chunk_size;
-        if (fmt_chunk_size != 16) {
-            // Serial.printf("chunk size should be 16 for PCM wave data... (was %d)\n", fmt_chunk_size);
+        const uint32_t fmt = parse_uint32_BE(&buffer[12]);
+        if(fmt != FOURCCFMT) {
+            DBG_LOG(printf("expected 'fmt ' (was %s)\n",  buffer[12]));
             return false;
         }
 
-        auto audio_format = static_cast<unsigned long>((b[21] << 8) | b[20]);
-        header.audio_format = audio_format;
+        const uint32_t fmtSize = parse_uint32_LE(&buffer[16]);
+        if(fmtSize != 16) {
+            DBG_LOG(printf("chunk size should be 16 for PCM wave data... (was %d)\n", fmtSize));
+            return false;
+        }
+        header.fmt_chunk_size = fmtSize;
+        header.audio_format = parse_uint16_LE(&buffer[20]);
+        header.num_channels = parse_uint16_LE(&buffer[22]);
+        header.sample_rate = parse_uint32_LE(&buffer[24]);
+        header.byte_rate = parse_uint32_LE(&buffer[28]);
+        header.sample_alignment = parse_uint16_LE(&buffer[32]);
+        header.bit_depth = parse_uint16_LE(&buffer[34]);
 
-        auto num_channels = static_cast<unsigned long>((b[23] << 8) | b[22]);
-        header.num_channels = num_channels;
+        uint8_t *d = &buffer[36];
+        uint32_t nextChunk = parse_uint32_BE(d);
+        uint16_t listSize = 0;
 
-        uint32_t sample_rate = static_cast<uint32_t>(b[27] << 24 | b[26] << 16 | b[25] << 8 | b[24]);
-        header.sample_rate = sample_rate;
-
-        uint32_t byte_rate = static_cast<uint32_t>(b[31] << 24 | b[30] << 16 | b[29] << 8 | b[28]);
-        header.byte_rate = byte_rate;
-
-        auto sample_alignment = static_cast<unsigned long>((b[33] << 8) | b[32]);
-        header.sample_alignment = sample_alignment;
-
-        auto bit_depth = static_cast<unsigned long>(b[35] << 8 | b[34]);
-        header.bit_depth = bit_depth;
-
-        unsigned char *d = (unsigned char*)&buffer[36];
-
-        if (d[0] == 'L' || d[1] == 'I' || d[2] == 'S' || d[3] == 'T') {
-            uint32_t listSize = static_cast<uint32_t>(d[7] << 24 | d[6] << 16 | d[5] << 8 | d[4]);
-            Serial.printf("skipping list size %i\n", listSize);
-            d += listSize + 8;
+        if(nextChunk == FOURCCLIST) {
+            listSize = parse_uint32_LE(&d[4]);
+            DBG_LOG(printf("skipping list size %i\n", listSize));
+            listSize += 8; // skip "LIST" and listSize
+            d += listSize;
+            nextChunk = parse_uint32_BE(d); // load next chunk id
         }
 
-        for (int i=0; i < 4; i++) {
-            header.data_header[i] = d[i];
-        }
-        if (d[0] != 'd' || d[1] != 'a' || d[2] != 't' || d[3] != 'a') {
-            Serial.printf("expected 'd'... (was %d)\n", d[0]);
+        if(nextChunk != FOURCCDATA) {
+            DBG_LOG(printf("expected 'd'... (was %d)\n", d[0]));
             return false;
         }
 
-        uint32_t data_bytes = static_cast<uint32_t>(d[7] << 24 | d[6] << 16 | d[5] << 8 | d[4]);
+        uint32_t data_bytes = parse_uint32_LE(&d[4]);
         header.data_bytes = data_bytes;
-        Serial.printf("size %d bytes\n", data_bytes);
+        header.dataOffset = 44 + listSize;
+        DBG_LOG(printf("size %d bytes\n", data_bytes));
         return true;
     }
 
 private:
-};
+    uint16_t parse_uint16_LE(const uint8_t *pos) {
+        return pos[0] | pos[1] << 8;
+    }
 
+    uint16_t parse_uint16_BE(const uint8_t *pos) {
+        return pos[1] | pos[0] << 8;
+    }
+
+    uint32_t parse_uint32_LE(const uint8_t *pos) {
+        return pos[0] | pos[1] << 8 | pos[2] << 16 | pos[3] << 24;
+    }
+
+    uint32_t parse_uint32_BE(const uint8_t *pos) {
+        return pos[3] | pos[2] << 8 | pos[1] << 16 | pos[0] << 24;
+    }
+};
 
 #endif //WAVHEADERPARSER_H
