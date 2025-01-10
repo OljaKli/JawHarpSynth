@@ -52,7 +52,7 @@ public:
     }
 
     bool readWaveHeader(WavHeader &header, File wavFile) {
-        static constexpr uint16_t MAX_HEADER_SIZE = 512;
+        static constexpr uint16_t MAX_HEADER_SIZE = 512; // this should be enough for most LIST chunks...
         uint8_t buffer[MAX_HEADER_SIZE];
         __disable_irq();
         int bytesRead = wavFile.read(buffer, MAX_HEADER_SIZE);

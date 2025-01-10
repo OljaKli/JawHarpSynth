@@ -8,6 +8,7 @@ FLASHMEM PsramLoader::PsramLoader(uint32_t &freeBytes) :
 
 FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &slot) {
   if((slot.drum_data != nullptr) && (slot.len > 0)) {
+    DBG_LOG(printf("unload...\n"));
     unloadSample(slot.drum_data, slot.len * 2); // len is 16bit
   }
   uint32_t bytesRead = 0;
@@ -17,7 +18,8 @@ FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &s
 
 FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytesRead, uint8_t &channels) {
   uint8_t *data = nullptr;
-  //Serial.printf("Reading %s\n", filename);
+  DBG_LOG(printf("Reading %s\n", filename.c_str()));
+  
   File f = SD.open(filename.c_str(), O_READ);
   
   if (f) {
@@ -58,6 +60,7 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
 
 FLASHMEM void PsramLoader::unloadSample(const uint8_t *data, uint32_t length) {
   extmem_free((uint8_t*)data);
+  data = nullptr;
   freeBytesPSRAM += length;
   DBG_LOG(printf("freeing %i bytes...\n", length));
 }

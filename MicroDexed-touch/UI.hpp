@@ -16425,6 +16425,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     fm.active_window = 0;
     fm.sd_skip_files = 0;
     fm.sd_selected_file = 0;
+    fm.sd_is_folder = false;
 
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
@@ -16433,7 +16434,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.print(F("SD CARD"));
     display.setTextColor(GREY1);
     display.setCursor(CHAR_width_small * 17, 1 * CHAR_height_small);
-    display.print("FILES:");
+    display.print(F("FILES:"));
     display.setCursor(CHAR_width_small * 1, 2 * CHAR_height_small);
     display.print(F("TYPE: "));
     display.setTextColor(COLOR_PITCHSMP);
@@ -16442,12 +16443,12 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     uint32_t volumesize = volume.blocksPerCluster(); // clusters are collections of blocks
     volumesize *= volume.clusterCount();    // we'll have a lot of clusters
     display.setTextColor(GREY1);
-    display.print("TOTAL: ");
+    display.print(F("TOTAL: "));
     display.setTextColor(COLOR_PITCHSMP);
     volumesize /= 1024;
     display.print(volumesize);
     display.setTextColor(COLOR_CHORDS);
-    display.print(" MB");
+    display.print(F(" MB"));
     display.setTextSize(1);
     display.setCursor(CHAR_width_small * 1, 3 * CHAR_height_small);
     display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
@@ -16603,6 +16604,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   {
     if (previewSlot.drum_data != nullptr) {
       sampleLoader.unloadSample(previewSlot.drum_data, previewSlot.len * 2); // 16bit value
+      previewSlot.len = 0;
     }
     unregisterTouchHandler();
     encoderDir[ENC_R].reset();
