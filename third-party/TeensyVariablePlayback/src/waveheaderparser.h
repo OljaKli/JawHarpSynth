@@ -7,7 +7,6 @@
 #include <string>
 #include <cstdint>
 #include <SD.h>
-#include "spi_interrupt.h"
 
 using namespace std;
 
@@ -29,8 +28,8 @@ struct wav_header {
     short bit_depth;        // 34 - 35
 
     // Data
-    char data_header[4];    // 36 - 39
-    unsigned int data_bytes;// 40 - 43
+    char data_header[4];    // "data"
+    unsigned int data_bytes;// 
 };
 
 class WaveHeaderParser {
@@ -49,11 +48,11 @@ public:
     }
 
     bool readWaveHeader(wav_header &header, File wavFile) {
-        char buffer[44];
+        char buffer[80];
         __disable_irq();
-        int bytesRead = wavFile.read(buffer, 44);
+        int bytesRead = wavFile.read(buffer, 80);
         __enable_irq();
-        if (bytesRead != 44) {
+        if (bytesRead != 80) {
             // Serial.printf("expected 44 bytes (was %d)\n", bytesRead);
             return false;
         }
@@ -112,15 +111,25 @@ public:
         auto bit_depth = static_cast<unsigned long>(b[35] << 8 | b[34]);
         header.bit_depth = bit_depth;
 
-        for (int i=0; i < 4; i++)
-            header.data_header[i] = buffer[i+36];
-        if (buffer[36] != 'd' || buffer[37] != 'a' || buffer[38] != 't' || buffer[39] != 'a') {
-            // Serial.printf("expected data... (was %d)\n", buffer);
+        unsigned char *d = (unsigned char*)&buffer[36];
+
+        if (d[0] == 'L' || d[1] == 'I' || d[2] == 'S' || d[3] == 'T') {
+            uint32_t listSize = static_cast<uint32_t>(d[7] << 24 | d[6] << 16 | d[5] << 8 | d[4]);
+            Serial.printf("skipping list size %i\n", listSize);
+            d += listSize + 8;
+        }
+
+        for (int i=0; i < 4; i++) {
+            header.data_header[i] = d[i];
+        }
+        if (d[0] != 'd' || d[1] != 'a' || d[2] != 't' || d[3] != 'a') {
+            Serial.printf("expected 'd'... (was %d)\n", d[0]);
             return false;
         }
 
-        auto data_bytes = static_cast<unsigned long>(b[43] << 24 | b[42] << 16 | b[41] << 8 | b[40]);
+        uint32_t data_bytes = static_cast<uint32_t>(d[7] << 24 | d[6] << 16 | d[5] << 8 | d[4]);
         header.data_bytes = data_bytes;
+        Serial.printf("size %d bytes\n", data_bytes);
         return true;
     }
 

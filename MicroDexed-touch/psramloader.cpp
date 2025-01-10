@@ -1,5 +1,6 @@
 #include "psramloader.h"
 #include <Audio.h>
+#include "waveheaderparser.h"
 
 FLASHMEM PsramLoader::PsramLoader(uint32_t &freeBytes) : 
   freeBytesPSRAM(freeBytes) {
@@ -18,31 +19,37 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
   uint8_t *data = nullptr;
   Serial.printf("Reading %s\n", filename);
   File f = SD.open(filename.c_str(), O_READ);
+  
   if (f) {
+    
     if (f.size() < freeBytesPSRAM) {
       AudioNoInterrupts();
       
-      uint8_t header[WAV_HEADER_SIZE];
-      f.read(header, WAV_HEADER_SIZE);
-      uint16_t numCh = (header[23] << 8) | header[22];
-      //uint32_t size = (header[43] << 24) | header[42] << 16 | header[41] << 8 | header[40];
-      //f.seek(0);
-      uint32_t total_read = 0;
-      data = (uint8_t*)extmem_malloc(f.size());// - WAV_HEADER_SIZE); // removes click at end somehow..
-      uint8_t *index = data;
-      while (f.available()) {
-        size_t bytesRead = f.read(index, DEFAULT_SD_BUFSIZE);
-        if (bytesRead == 0) {
-          break;
+      wav_header header = { 0 };
+      WaveHeaderParser wavHeaderParser;
+      bool success = wavHeaderParser.readWaveHeader(header, f);
+      if(success) {
+        uint32_t total_read = 0;
+        data = (uint8_t*)extmem_malloc(header.data_bytes);
+        uint8_t *index = data;
+        while (f.available()) {
+          size_t bytesRead = f.read(index, DEFAULT_SD_BUFSIZE);
+          if (bytesRead == 0) {
+            break;
+          }
+          total_read += bytesRead;
+          index += bytesRead;
         }
-        total_read += bytesRead;
-        index += bytesRead;
+
+        AudioInterrupts();
+
+        DBG_LOG(printf("read %i of %i bytes.\n", total_read, header.data_bytes));
+
+        freeBytesPSRAM -= total_read;
+        DBG_LOG(printf("loaded %i bytes. remaining %i\n", total_read, freeBytesPSRAM));
+        bytesRead = total_read;
+        channels = header.num_channels;
       }
-      AudioInterrupts();
-      freeBytesPSRAM -= total_read;
-      DBG_LOG(printf("loaded %i bytes. remaining %i\n", total_read, freeBytesPSRAM));
-      bytesRead = total_read;
-      channels = numCh;
     }
   }
 
