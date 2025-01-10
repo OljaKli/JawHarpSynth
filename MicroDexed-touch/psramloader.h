@@ -15,7 +15,6 @@ public:
 private:
   uint32_t &freeBytesPSRAM;
   static constexpr uint32_t DEFAULT_SD_BUFSIZE = 4 * 1024;
-  static constexpr uint8_t WAV_HEADER_SIZE = 44;
 };
 
 #endif //PSRAMLOADER_H

@@ -16,6 +16,8 @@ static constexpr uint32_t FOURCCFMT  = 0x666D7420;	// fmt
 static constexpr uint32_t FOURCCDATA = 0x64617461;	// data
 static constexpr uint32_t FOURCCLIST = 0x4C495354;	// LIST
 
+static constexpr uint8_t WAV_HEADER_SIZE = 44; // without LIST chunk
+
 using namespace std;
 
 struct WavHeader {
@@ -116,7 +118,7 @@ public:
 
         uint32_t data_bytes = parse_uint32_LE(&d[4]);
         header.data_bytes = data_bytes;
-        header.dataOffset = 44 + listSize;
+        header.dataOffset = WAV_HEADER_SIZE + listSize;
         DBG_LOG(printf("size %d bytes\n", data_bytes));
         return true;
     }
