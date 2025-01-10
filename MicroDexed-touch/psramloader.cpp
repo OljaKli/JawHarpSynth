@@ -1,6 +1,6 @@
 #include "psramloader.h"
 #include <Audio.h>
-#include "waveheaderparser.h"
+#include "wavheaderparser.h"
 
 FLASHMEM PsramLoader::PsramLoader(uint32_t &freeBytes) : 
   freeBytesPSRAM(freeBytes) {
@@ -25,8 +25,8 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
     if (f.size() < freeBytesPSRAM) {
       AudioNoInterrupts();
       
-      wav_header header = { 0 };
-      WaveHeaderParser wavHeaderParser;
+      WavHeader header = { 0 };
+      WavHeaderParser wavHeaderParser;
       bool success = wavHeaderParser.readWaveHeader(header, f);
       if(success) {
         uint32_t total_read = 0;
