@@ -53,8 +53,9 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
         channels = header.num_channels;
       }
     }
+    f.close();
   }
-  f.close();
+  
   return data;
 }
 
