@@ -22,8 +22,6 @@ MicroDexed started as a Teensy based, 6-operator-FM-synthesizer. The first gener
 
 Compared to the first generation, MicroDexed-touch offers a lot of new features/improvements:
 
-* The Flash Chip is presoldered on a small PCB attachment for <2$.
-
 * "Large" Graphical Interface, view and edit multiple Parameters in one Screen
 
 * Use external MIDI gear over USB or Mini TRS Jacks (DIN MIDI with adaptor) from 2 x 16 MIDI Channels in the Sequencer
@@ -42,11 +40,17 @@ Compared to the first generation, MicroDexed-touch offers a lot of new features/
 
 * The sequencer can also play chords of various types, stacked up to 7 notes, using only a single sequencer track
 
+* In addition to the chain based Sequencer there is second sequencing tool: LIVE SEQUENCER
+
+* LIVE SEQUENCER offers 12 tracks for recording up to 4 patterns each, including a Song mode with pattern muting
+
+* Both sequencers do work together and are fully synced
+
 * Global Mixer View with all Channels
 
 * Multiband Master Compressor with 4 bands
 
-* Sample Management from SD-CARD and SPI FLASH/PSRAM, samples can be loaded from SD-CARD to PSRAM during runtime.
+* Sample Management from SD-CARD and PSRAM, samples can be loaded from SD-CARD to PSRAM during runtime.
 
 * Touch Mute Matrix for live / realtime performance
 
