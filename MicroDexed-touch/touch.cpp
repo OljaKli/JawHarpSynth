@@ -678,6 +678,8 @@ FLASHMEM void print_file_manager_active_border()
 extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 #endif
 
+extern FLASHMEM void previewSampleFilemanager();
+
 FLASHMEM void handle_touchscreen_file_manager()
 {
   if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
@@ -710,7 +712,7 @@ FLASHMEM void handle_touchscreen_file_manager()
 #endif
   else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
     fm.sd_mode = FM_PLAY_SAMPLE;
-    preview_sample();
+    previewSampleFilemanager();
     print_file_manager_buttons();
   }
 }

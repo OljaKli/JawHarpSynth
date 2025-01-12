@@ -202,7 +202,6 @@ extern Adafruit_FT6206 touch;
 #endif
 
 extern void sequencer(void);
-extern void preview_sample(void);
 extern bool check_sd_performance_exists(uint8_t number);
 extern SdVolume volume;
 extern elapsedMillis record_timer;
@@ -7722,8 +7721,9 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         fm.sample_source = calc_val[state_dir](fm.sample_source, 1, 2, 4);
         if (fm.sample_source == 2 || fm.sample_source == 3)
         {
-          if (temp_int > 7)
+          if (temp_int > 7) {
             temp_int = 7;
+          }
           display.console = true;
           display.fillRect(155, 30, 156, 38, COLOR_BACKGROUND);
           display.console = false;
@@ -16394,8 +16394,84 @@ FLASHMEM void print_psram_stats_filemanager()
 }
 #endif
 
+
 static drum_config_t previewSlot;
 extern AudioPlayArrayResmp WAV_preview_PSRAM;
+
+FLASHMEM void previewWavSlot(drum_config_t &slot) {
+  if (slot.drum_data != NULL && slot.len > 0) {
+    WAV_preview_PSRAM.playRaw((int16_t*)slot.drum_data, slot.len, slot.numChannels);
+  }
+}
+
+FLASHMEM void previewWavFile(String filename) {
+  WAV_preview_PSRAM.stop();
+  sampleLoader.loadSampleToDrums(filename, previewSlot);
+  if (previewSlot.drum_data != nullptr) {
+    previewWavSlot(previewSlot);
+  }
+}
+
+FLASHMEM void previewSampleFilemanager() {
+  // preview sd file
+  if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav")) {
+    fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
+    previewWavFile(fm.sd_full_name);
+  }
+  // preview psram slot file
+  else if (fm.active_window == 1) { 
+    previewWavSlot(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files]);
+  }
+}
+
+FLASHMEM void preview_sample() {
+#if defined(COMPILE_FOR_PSRAM)
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor)) {
+    draw_button_on_grid(45, 23, "PLEASE", "WAIT", 2);
+    if (fm.sample_source > 1 && fm.sample_source < 4) {// MSP
+      previewWavFile(msz[fm.sample_source - 2][temp_int].filename);
+    }
+    else if (fm.sample_source == 4) {// PSRAM
+      if (num_slices[0] == 0) {
+        draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+        previewWavSlot(drum_config[temp_int]);
+      }
+      else {
+        draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+        if (generic_temp_select_menu < 6) {
+          generic_temp_select_menu = 6;
+        }
+        seq.edit_state = 0;
+        print_updated_slices_text();
+        previewWavSlot(drum_config[(generic_temp_select_menu - 6) / 2]);
+      }
+    }
+  }
+#endif
+}
+
+/*
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor))
+    {
+      if (num_slices[0] == 0)
+      {
+        if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000)
+        {
+          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+        }
+      }
+      else //sliced
+      {
+        if ((drum_config[selected_slice_sample[0]].drum_data != NULL && drum_config[selected_slice_sample[0]].len > 0 &&
+          drum_config[selected_slice_sample[0]].len < 10000000 && d >= 0 && d <= num_slices[0]))
+        {
+          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
+          slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
+        }
+      }
+    }
+*/
+
 
 FLASHMEM void UI_func_file_manager(uint8_t param)
 {
@@ -16573,7 +16649,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 #endif
         default:
         case FM_PLAY_SAMPLE:
-          preview_sample();
+          previewSampleFilemanager();
           break;
         }
       }
@@ -16603,6 +16679,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (previewSlot.drum_data != nullptr) {
+      WAV_preview_PSRAM.stop();
       sampleLoader.unloadSample(previewSlot.drum_data, previewSlot.len * 2); // 16bit value
       previewSlot.len = 0;
     }

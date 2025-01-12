@@ -265,7 +265,6 @@ AudioMixer<3> finalized_mixer_l;
 
 AudioSynthWaveformDc     dc1;
 
-AudioPlaySdWav WAV_preview_SD;
 
 #ifdef COMPILE_FOR_PSRAM
 AudioPlayArrayResmp WAV_preview_PSRAM;
@@ -870,9 +869,6 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
 
 FLASHMEM void create_audio_wav_preview_chain()
 {
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_SD, 0, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_SD);
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_SD, 1, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_SD);
-
 #ifdef COMPILE_FOR_PSRAM
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 1, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_PSRAM);
   dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_PSRAM);
@@ -1892,76 +1888,6 @@ void update_sidechain()
   // }
 }
 
-extern drum_config_t previewSlot;
-
-FLASHMEM void preview_sample()
-{
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
-  {
-    if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav"))
-    { // preview sd file
-      fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
-      sampleLoader.loadSampleToDrums(fm.sd_full_name, previewSlot);
-      if (previewSlot.drum_data != nullptr) {
-        WAV_preview_PSRAM.playRaw((int16_t*)previewSlot.drum_data, previewSlot.len, previewSlot.numChannels);
-      }
-    }
-    else if (fm.active_window == 1) { // preview file
-#if defined(COMPILE_FOR_PSRAM)
-      playWAVFilePSRAM(fm.psram_selected_file + 6 + fm.psram_skip_files);
-#endif
-    }
-  }
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor))
-  {
-    draw_button_on_grid(45, 23, "PLEASE", "WAIT", 2);
-    if (fm.sample_source > 1 && fm.sample_source < 4) // MSP
-    {
-      playWAVFile(msz[fm.sample_source - 2][temp_int].filename);
-    }
-    else if (fm.sample_source == 0) // SD
-    {
-      if (!WAV_preview_SD.isPlaying())
-      {
-        draw_button_on_grid(45, 23, "PLEASE", "WAIT", 2);
-        char temp_name[26];
-        File f;
-        File myDir = SD.open("/DRUMS");
-        for (uint16_t i = 0; i < temp_int + 1; i++)
-        {
-          f.close();
-          f = myDir.openNextFile();
-        }
-        strcpy(temp_name, "/DRUMS/");
-        strcat(temp_name, f.name());
-        playWAVFile(temp_name);
-      }
-    }
-
-#if defined(COMPILE_FOR_PSRAM)
-    else if (fm.sample_source == 4) // PSRAM
-    {
-      if (num_slices[0] == 0)
-        playWAVFilePSRAM(temp_int);
-      else
-      {
-        if (generic_temp_select_menu < 6)
-          generic_temp_select_menu = 6;
-        seq.edit_state = 0;
-        print_updated_slices_text();
-        playWAVFilePSRAM((generic_temp_select_menu - 6) / 2);
-
-      }
-      delay(100);
-      if (num_slices[0] == 0)
-        draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
-      else
-        draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
-    }
-#endif
-  }
-}
-
 // Gaussian Wave Breathing
 
 // float glow_smoothness_pts = 20;//larger=slower change in brightness
@@ -2490,98 +2416,7 @@ void loop()
   MIDI MESSAGE HANDLER
 ******************************************************************************/
 
-#if  defined(COMPILE_FOR_PSRAM)
-FLASHMEM void playWAVFilePSRAM(uint8_t d)
-{
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager) && fm.active_window == 1)
-  {
-    if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
-      if (WAV_preview_PSRAM.isPlaying())
-        WAV_preview_PSRAM.stop();
-      WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-      while (WAV_preview_PSRAM.isPlaying())
-      {
-        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
-        delay(25);
-      }
-      delay(15);
-      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
-    }
-  }
-  else
-    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor))
-    {
-      if (num_slices[0] == 0)
-      {
-        if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000)
-        {
-          if (WAV_preview_PSRAM.isPlaying())
-            WAV_preview_PSRAM.stop();
-          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
-          while (WAV_preview_PSRAM.isPlaying())
-          {
-            delay(25);
-          }
-          delay(15);
-        }
-      }
-      else //sliced
-      {
-        if ((drum_config[selected_slice_sample[0]].drum_data != NULL && drum_config[selected_slice_sample[0]].len > 0 &&
-          drum_config[selected_slice_sample[0]].len < 10000000 && d >= 0 && d <= num_slices[0]))
-        {
-          if (WAV_preview_PSRAM.isPlaying())
-            WAV_preview_PSRAM.stop();
-          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
-            slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
-          while (WAV_preview_PSRAM.isPlaying())
-          {
-            delay(25);
-          }
-          delay(15);
-        }
-      }
-    }
-}
-#endif
 
-FLASHMEM void playWAVFile(const char* filename)
-{
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_file_manager))
-  {
-    if (fm.active_window == 0)
-    { // preview from sd card
-      if (WAV_preview_SD.isPlaying())
-        WAV_preview_SD.stop();
-      WAV_preview_SD.play(filename);
-      while (WAV_preview_SD.isPlaying())
-      {
-        display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 7, RED);
-        delay(25);
-      }
-      delay(15);
-      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
-    }
-  }
-
-
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor) && fm.sample_source == 0)
-  {
-
-    // preview from sd card
-    if (WAV_preview_SD.isPlaying())
-      WAV_preview_SD.stop();
-    WAV_preview_SD.play(filename);
-    delay(15);
-    while (WAV_preview_SD.isPlaying())
-    {
-      display.fillRect(6, 222, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_SD.lengthMillis()) * WAV_preview_SD.positionMillis() + 1, 5, RED);
-      delay(25);
-    }
-    delay(15);
-    display.fillRect(6, 222, DISPLAY_WIDTH - 7, 5, COLOR_BACKGROUND);
-  }
-}
 
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
