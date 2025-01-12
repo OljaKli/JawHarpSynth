@@ -1004,6 +1004,7 @@ typedef struct sys_s
   bool boot_anim_skip;
   bool invert_colors;
   uint8_t brightness;
+  bool skip_midi_channel_warning;
 } sys_t;
 
 typedef struct storage_file_s

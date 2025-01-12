@@ -2058,6 +2058,10 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.load_at_startup_page = data_json["load_at_startup_page"];
         configuration.sys.screen_saver_start = data_json["screen_saver_start"];
         configuration.sys.screen_saver_mode = data_json["screen_saver_mode"];
+        configuration.sys.boot_anim_skip = data_json["boot_anim_skip"];
+        configuration.sys.reverse_encoder_pins = data_json["encoder_reversed"];
+        configuration.sys.invert_colors = data_json["invert_colors"];
+        configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
 
         if (data_json["brightness"] == 0)
           configuration.sys.brightness = 183;
@@ -2068,9 +2072,6 @@ FLASHMEM bool load_sd_sys_json(void)
         {
           configuration.sys.display_rotation = data_json["display_rotation"];
           configuration.sys.touch_rotation = data_json["touch_rotation"];
-          configuration.sys.reverse_encoder_pins = data_json["encoder_reversed"];
-          configuration.sys.boot_anim_skip = data_json["boot_anim_skip"];
-          configuration.sys.invert_colors = data_json["invert_colors"];
         }
         if (data_json.containsKey("gp_speed"))
           configuration.sys.gamepad_speed = data_json["gp_speed"];
@@ -2148,6 +2149,7 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["screen_saver_start"] = configuration.sys.screen_saver_start;
       data_json["screen_saver_mode"] = configuration.sys.screen_saver_mode;
       data_json["brightness"] = configuration.sys.brightness;
+      data_json["skip_midi_channel_warning"] = configuration.sys.skip_midi_channel_warning;
       data_json["gp_speed"] = configuration.sys.gamepad_speed;
       if (GAMEPAD_BUTTON_A != GAMEPAD_BUTTON_B)
       {
