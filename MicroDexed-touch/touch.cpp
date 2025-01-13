@@ -35,7 +35,6 @@ extern void print_voice_select_default_help();
 extern void handleStop(void);
 extern void handleStart(void);
 extern void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
-extern void preview_sample(void);
 extern void draw_volmeters_mixer();
 extern void draw_volmeters_multiband_compressor();
 extern bool legacy_touch_button_back_page();
@@ -638,22 +637,15 @@ FLASHMEM void handle_touchscreen_microsynth()
 
 FLASHMEM void print_file_manager_buttons()
 {
-  draw_button_on_grid(1, 25, "BROWSE", "FILES", fm.sd_mode == FM_BROWSE_FILES ? 1 : 0);
-  draw_button_on_grid(10, 25, "DELETE", "FILE", fm.sd_mode == FM_DELETE_FILE ? 1 : 0);
-#ifdef COMPILE_FOR_FLASH
-  draw_button_on_grid(19, 25, "COPY", "PRESET", fm.sd_mode == FM_COPY_PRESETS ? 1 : 0);
-  draw_button_on_grid(28, 25, "COPY >", "FLASH", fm.sd_mode == FM_COPY_TO_FLASH ? 1 : 0);
-#endif
-
+  TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BROWSE", "FILES", (fm.sd_mode == FM_BROWSE_FILES) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[5], "DELETE", "FILE", (fm.sd_mode == FM_DELETE_FILE) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
 #ifdef COMPILE_FOR_PSRAM
-  draw_button_on_grid(19 + 9, 25, "COPY >", "PSRAM", fm.sd_mode == FM_COPY_TO_PSRAM ? 1 : 0);
-  draw_button_on_grid(28 + 9, 25, "DELETE", "PSRAM", fm.sd_mode == FM_DELETE_FROM_PSRAM ? 1 : 0);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "PSRAM", (fm.sd_mode == FM_COPY_TO_PSRAM) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[4], GRID.Y[5], "DELETE", "PSRAM", (fm.sd_mode == FM_DELETE_FROM_PSRAM) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
 #endif
+  TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", (fm.sd_mode == FM_PLAY_SAMPLE) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
 
-  draw_button_on_grid(46, 25, "PLAY", "SAMPLE", fm.sd_mode == FM_PLAY_SAMPLE ? 1 : 0);
-
-  if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE)
-  {
+  if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE) {
     display.setTextSize(1);
 
     display.setCursor(CHAR_width_small, (CHAR_height_small * 23) + 5);
@@ -664,7 +656,7 @@ FLASHMEM void print_file_manager_buttons()
 
 FLASHMEM void print_file_manager_active_border()
 {
-  // active_window   0 = left window (SDCARD) , 1 = FLASH OR PSRAM
+  // active_window   0 = left window (SDCARD) , 1 = PSRAM
   if (fm.active_window == 0)
   {
     display.console = true;
@@ -687,68 +679,38 @@ extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, con
 
 FLASHMEM void handle_touchscreen_file_manager()
 {
-  if (numTouchPoints > 0)
-  {
-    // check touch buttons
-    if (ts.p.y > CHAR_height_small * 20)
-    {
-      if (check_button_on_grid(1, 25))
-      {
-        fm.sd_mode = FM_BROWSE_FILES;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(10, 25))
-      {
-        fm.sd_mode = FM_DELETE_FILE;
-        print_file_manager_buttons();
-      }
-
-#if defined COMPILE_FOR_FLASH
-      else if (check_button_on_grid(19, 25))
-      {
-        fm.sd_mode = FM_COPY_PRESETS;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(28, 25))
-      {
-        fm.sd_mode = FM_COPY_TO_FLASH;
-        print_file_manager_buttons();
-      }
-#endif
-
+  if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
+    fm.active_window = 0;
+    print_file_manager_active_border();
+  } 
 #if defined COMPILE_FOR_PSRAM
-      else if (check_button_on_grid(19 + 9, 25))
-      {
-        fm.sd_mode = FM_COPY_TO_PSRAM;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(28 + 9, 25))
-      {
-        fm.sd_mode = FM_DELETE_FROM_PSRAM;
-        print_file_manager_buttons();
-      }
+  else if (TouchButton::isInArea(DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
+    fm.active_window = 1;
+    print_file_manager_active_border();
+  }
 #endif
-      else if (check_button_on_grid(46, 25))
-      {
-        fm.sd_mode = FM_PLAY_SAMPLE;
-        preview_sample();
-        print_file_manager_buttons();
-      }
-    }
-    // active_window   0 = left window (SDCARD) , 1 = FLASH OR PSRAM
-    else if (ts.p.x > 1 && ts.p.x < CHAR_width_small * 29)
-    {
-      fm.active_window = 0;
-      print_file_manager_active_border();
-    }
-    else if (ts.p.x > CHAR_width_small * 29)
-    {
-#if defined COMPILE_FOR_FLASH || defined COMPILE_FOR_PSRAM
-      fm.active_window = 1;
+  else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+    fm.sd_mode = FM_BROWSE_FILES;
+    print_file_manager_buttons();
+  }
+  else if (TouchButton::isPressed(GRID.X[1], GRID.Y[5])) {
+    fm.sd_mode = FM_DELETE_FILE;
+    print_file_manager_buttons();
+  }
+#if defined COMPILE_FOR_PSRAM
+  else if (TouchButton::isPressed(GRID.X[3], GRID.Y[5])) {
+    fm.sd_mode = FM_COPY_TO_PSRAM;
+    print_file_manager_buttons();
+  }
+  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
+    fm.sd_mode = FM_DELETE_FROM_PSRAM;
+    print_file_manager_buttons();
+  }
 #endif
-
-      print_file_manager_active_border();
-    }
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
+    fm.sd_mode = FM_PLAY_SAMPLE;
+    previewWavFilemanager();
+    print_file_manager_buttons();
   }
 }
 
@@ -1095,7 +1057,7 @@ extern uint8_t selected_slice_sample[2];
 extern void print_sliced_status();
 extern void check_and_print_sliced_message();
 
-FLASHMEM void  assign_free_slices_or_increment()
+FLASHMEM void assign_free_slices_or_increment()
 {
   if (num_slices[0] == 0 && selected_slice_sample[0] == 99)
   {
@@ -1150,24 +1112,20 @@ FLASHMEM void handle_touchscreen_sample_editor()
 {
   if (numTouchPoints > 0)
   {
-    char buf[4];
-    if (check_button_on_grid(45, 23))
-    {
-      preview_sample();
+    if (check_button_on_grid(45, 23)) {
+      previewWavSampleEditor();
     }
 
     if (check_button_on_grid(1, 23) && fm.sample_source > 1 && fm.sample_source < 4) //loop start
     {
       // draw_button_on_grid(1, 23, "LOOP", "START", 0);
-      if (loop_start_button == false)
-      {
+      if (loop_start_button == false) {
         loop_start_button = true;
         loop_end_button = false;
         seq.edit_state = 1;
         generic_temp_select_menu = 3;
       }
-      else
-      {
+      else {
         loop_start_button = false;
         seq.edit_state = 0;
       }
@@ -1178,24 +1136,19 @@ FLASHMEM void handle_touchscreen_sample_editor()
     else  if (check_button_on_grid(9, 23) && fm.sample_source > 1 && fm.sample_source < 4)  //loop end
     {
       draw_button_on_grid(9, 23, "LOOP", "END", 0);
-      if (loop_end_button == false)
-      {
+      if (loop_end_button == false) {
         loop_end_button = true;
         loop_start_button = false;
         seq.edit_state = 1;
         generic_temp_select_menu = 4;
-
       }
-      else
-      {
+      else {
         loop_end_button = false;
         seq.edit_state = 0;
       }
       draw_loop_buttons();
       print_loop_data();
-
     }
-
 
     if (check_button_on_grid(33, 23) && fm.sample_source == 4) // num slices
     {
@@ -1213,6 +1166,8 @@ FLASHMEM void handle_touchscreen_sample_editor()
       slices_scrollspeed = slices_scrollspeed * 2;
       if (slices_scrollspeed > 512)
         slices_scrollspeed = 1;
+
+      char buf[4] = { 0 };
       draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 1);
     }
   }

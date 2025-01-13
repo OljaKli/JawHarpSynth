@@ -29,6 +29,7 @@
 #include <Arduino.h>
 #include "midinotes.h"
 #include "teensy_board_detection.h"
+#include <vector>
 
 #ifdef DEBUG
 #define DBG_LOG(s) LOG.s
@@ -124,14 +125,13 @@
 #define SHOW_CPU_LOAD_MSEC 5000
 
 //*************************************************************************************************
-//* PROGMEM AND FLASH COMPILE MODES
+//* PROGMEM AND SDCARD COMPILE MODES
 //*************************************************************************************************
 
-// #define COMPILE_FOR_PROGMEM  // enable this if you do not have a SPI FLASH chip
-// #define COMPILE_FOR_FLASH  // this is the intended configuration, with SPI FLASH chip
+// #define COMPILE_FOR_PROGMEM  // enable this if you do not have a PSRAM chip
 // #define COMPILE_FOR_SDCARD  // experimental, for testing purposes only
 
-#if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_FLASH) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
+#if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
 #define COMPILE_FOR_PROGMEM // default
 #endif
 
@@ -307,10 +307,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 //* HARDWARE SETTINGS
 //*************************************************************************************************
 
-const int FlashChipSelect = 6; // digital pin for flash chip CS pin
-
 // Encoders with push button
-
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A 32
 #define ENC_L_PIN_B 31
@@ -337,8 +334,8 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define VOICE_NAME_LEN 12 // 11 (plus '\0')
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
-#define DRUM_NAME_LEN 21
-#define DRUM_FULLPATH_LEN 64
+#define FILENAME_MAX_LEN 16
+#define FULLPATH_MAX_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"
 #define SEQUENCER_CONFIG_NAME "sequencer"
@@ -364,11 +361,8 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin
 #define ENVELOPES_CONFIG_NAME "envelope"
 #define MAX_PERF_MOD 30
 
-// SerialFlash & SD CARD
+// SD CARD
 #define MAX_FILES 150
-
-// SerialFlash
-#define MAX_FLASH_FILENAME_LEN 64
 
 //*************************************************************************************************
 //* DO NO CHANGE ANYTHING BEYOND IF YOU DON'T KNOW WHAT YOU ARE DOING !!!
@@ -961,14 +955,14 @@ typedef struct braids_s
 
 typedef struct multisample_s
 {
-  char name[18];
+  char name[FILENAME_MAX_LEN];
   uint8_t sound_intensity;
   uint8_t midi_channel;
 } multisample_t;
 
 typedef struct multisample_zone_s
 {
-  char filename[MAX_FLASH_FILENAME_LEN];
+  char filename[FULLPATH_MAX_LEN];
   uint8_t entry_number;
   uint8_t rootnote; // sample root note
   uint8_t low;      // lowest note in range
@@ -1009,28 +1003,18 @@ typedef struct sys_s
 
 typedef struct storage_file_s
 {
-  char name[26];
-  //uint16_t size;
-  unsigned long size;
+  String name;
+  uint32_t size;
   bool isDirectory;
 } storage_file_t;
 
 typedef struct sdcard_s
 {
   char type[5];
-  storage_file_t files[MAX_FILES];
+  std::vector<storage_file_t> files;
   uint32_t used;
   uint32_t capacity;
 } sdcard_t;
-
-#ifdef COMPILE_FOR_FLASH
-typedef struct flash_s
-{
-  storage_file_t files[MAX_FILES];
-  uint32_t used;
-  uint32_t capacity;
-} flash_t;
-#endif
 
 typedef struct configuration_s
 {
@@ -1058,7 +1042,7 @@ enum master_mixer_ports
   MASTER_MIX_CH_MICROSYNTH,
   MASTER_MIX_CH_BRAIDS,
   MASTER_MIX_CH_WAV_PREVIEW_SD,
-  MASTER_MIX_CH_WAV_PREVIEW_FLASH_OR_PSRAM,
+  MASTER_MIX_CH_WAV_PREVIEW_PSRAM,
   MASTER_MIX_CH_DELAY1,
   MASTER_MIX_CH_DELAY2,
   MASTER_MIX_CH_SIDECHAIN,
@@ -1081,7 +1065,6 @@ enum fm_modes
   FM_BROWSE_FILES,
   FM_DELETE_FILE,
   FM_COPY_PRESETS,
-  FM_COPY_TO_FLASH,
   FM_PLAY_SAMPLE,
   FM_COPY_TO_PSRAM,
   FM_DELETE_FROM_PSRAM
