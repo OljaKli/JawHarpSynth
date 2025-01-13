@@ -17137,9 +17137,9 @@ FLASHMEM void _system_settings_long_help_texts()
   else if (generic_temp_select_menu == 10) {
 
       setCursor_textGrid_small(2, 18);
-      display.print(F("ENABLE TO SKIP THE WARNING PAGE WHEN MULTIPLE  "));
+      display.print(F("ENABLE TO SKIP WARNINGS ABOUT DUPLICATE MIDI-  "));
       setCursor_textGrid_small(2, 19);
-      display.print(F("INSTRUMENTS ARE MAPPED TO THE SAME MIDI CHANNEL"));
+      display.print(F("CHANNELS OR MIDI SYNC IS SET TO EXTERNAL SOURCE"));
   }
   else
   {
@@ -17188,7 +17188,7 @@ FLASHMEM void _render_misc_settings()
   setCursor_textGrid_small(2, 15);
   display.print(F("DEXED ENGINE"));
   setCursor_textGrid_small(2, 16);
-  display.print(F("SKIP MIDI CHANNEL WARNINGS"));
+  display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS"));
   setCursor_textGrid_small(42, 7);
   display.print(configuration.sys.screen_saver_start);
   setCursor_textGrid_small(42, 8);

@@ -1558,7 +1558,7 @@ FLASHMEM void setup()
     if ( (count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning==false) // startup with midi channel setup page
       LCDML.OTHER_jumpToFunc(UI_func_midi_channels);
     else
-      if (seq.clock == 1) //MIDI Slave
+      if (seq.clock == 1 && configuration.sys.skip_midi_channel_warning==false) //MIDI Slave
         LCDML.OTHER_jumpToFunc(UI_func_seq_settings);
       else
       {
