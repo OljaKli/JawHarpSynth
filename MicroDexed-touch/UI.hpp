@@ -16443,7 +16443,15 @@ FLASHMEM void preview_sample() {
         }
         seq.edit_state = 0;
         print_updated_slices_text();
-        previewWavSlot(drum_config[(generic_temp_select_menu - 6) / 2]);
+
+        if(num_slices[0] == 0) {
+          previewWavSlot(drum_config[(generic_temp_select_menu - 6) / 2]);
+        }
+        else {
+          uint8_t d = generic_temp_select_menu;
+          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
+          slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
+        }
       }
     }
   }
