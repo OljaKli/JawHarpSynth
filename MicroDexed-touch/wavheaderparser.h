@@ -86,18 +86,33 @@ public:
             return false;
         }
 
-        const uint32_t fmtSize = parse_uint32_LE(&buffer[16]);
-        if(fmtSize != 16) {
-            DBG_LOG(printf("chunk size should be 16 for PCM wave data... (was %d)\n", fmtSize));
+        header.fmt_chunk_size = parse_uint32_LE(&buffer[16]);
+        if(header.fmt_chunk_size != 16) {
+            DBG_LOG(printf("chunk size should be 16 for PCM wave data... (was %d)\n", header.fmt_chunk_size));
             return false;
         }
-        header.fmt_chunk_size = fmtSize;
+
         header.audio_format = parse_uint16_LE(&buffer[20]);
+        if(header.audio_format != 1) {
+            DBG_LOG(printf("unsupported format %i\n", header.audio_format));
+            return false;
+        }
+
         header.num_channels = parse_uint16_LE(&buffer[22]);
         header.sample_rate = parse_uint32_LE(&buffer[24]);
+        if(header.sample_rate != 44100) {
+            DBG_LOG(printf("unsupported samplerate: %i\n", header.sample_rate));
+            return false;
+        }
+
         header.byte_rate = parse_uint32_LE(&buffer[28]);
         header.sample_alignment = parse_uint16_LE(&buffer[32]);
+        
         header.bit_depth = parse_uint16_LE(&buffer[34]);
+        if(header.bit_depth != 16) {
+            DBG_LOG(printf("unsupported bit depth: %i\n", header.bit_depth));
+            return false;
+        }
 
         uint8_t *d = &buffer[36];
         uint32_t nextChunk = parse_uint32_BE(d);
