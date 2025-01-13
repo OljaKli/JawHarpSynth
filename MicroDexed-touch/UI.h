@@ -43,6 +43,9 @@ void draw_logo_instant(uint8_t yoffset);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 
+void previewWavSampleEditor();
+void previewWavFilemanager();
+
 void show_no_grid(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, long num);
 void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 uint8_t midiNoteToSampleNote(uint8_t note);

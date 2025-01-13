@@ -35,7 +35,6 @@ extern void print_voice_select_default_help();
 extern void handleStop(void);
 extern void handleStart(void);
 extern void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
-extern void preview_sample(void);
 extern void draw_volmeters_mixer();
 extern void draw_volmeters_multiband_compressor();
 extern bool legacy_touch_button_back_page();
@@ -678,8 +677,6 @@ FLASHMEM void print_file_manager_active_border()
 extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 #endif
 
-extern FLASHMEM void previewSampleFilemanager();
-
 FLASHMEM void handle_touchscreen_file_manager()
 {
   if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
@@ -712,7 +709,7 @@ FLASHMEM void handle_touchscreen_file_manager()
 #endif
   else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
     fm.sd_mode = FM_PLAY_SAMPLE;
-    previewSampleFilemanager();
+    previewWavFilemanager();
     print_file_manager_buttons();
   }
 }
@@ -1116,7 +1113,7 @@ FLASHMEM void handle_touchscreen_sample_editor()
   if (numTouchPoints > 0)
   {
     if (check_button_on_grid(45, 23)) {
-      preview_sample();
+      previewWavSampleEditor();
     }
 
     if (check_button_on_grid(1, 23) && fm.sample_source > 1 && fm.sample_source < 4) //loop start
