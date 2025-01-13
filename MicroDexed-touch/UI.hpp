@@ -16392,8 +16392,6 @@ FLASHMEM void print_psram_stats_filemanager()
   display.print(text1);
   fm.psram_sum_files = NUM_CUSTOM_SAMPLES;
 }
-#endif
-
 
 static drum_config_t previewSlot;
 extern AudioPlayArrayResmp WAV_preview_PSRAM;
@@ -16411,21 +16409,10 @@ FLASHMEM void previewWavFile(String filename) {
     previewWavSlot(previewSlot);
   }
 }
-
-FLASHMEM void previewWavFilemanager() {
-  // preview sd file
-  if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav")) {
-    fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
-    previewWavFile(fm.sd_full_name);
-  }
-  // preview psram slot file
-  else if (fm.active_window == 1) { 
-    previewWavSlot(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files]);
-  }
-}
+#endif
 
 FLASHMEM void previewWavSampleEditor() {
-#if defined(COMPILE_FOR_PSRAM)
+#ifdef COMPILE_FOR_PSRAM
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor)) {
     if (fm.sample_source > 1 && fm.sample_source < 4) {// MSP
       previewWavFile(msz[fm.sample_source - 2][temp_int].filename);
@@ -16449,6 +16436,20 @@ FLASHMEM void previewWavSampleEditor() {
         WAV_preview_PSRAM.playRaw((int16_t*)sample.drum_data + slice_start[0][sliceNumber], slice_end[0][sliceNumber] - slice_start[0][sliceNumber], sample.numChannels);
       }
     }
+  }
+#endif
+}
+
+FLASHMEM void previewWavFilemanager() {
+#ifdef COMPILE_FOR_PSRAM
+  // preview sd file
+  if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav")) {
+    fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
+    previewWavFile(fm.sd_full_name);
+  }
+  // preview psram slot file
+  else if (fm.active_window == 1) { 
+    previewWavSlot(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files]);
   }
 #endif
 }
@@ -16650,11 +16651,13 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+#ifdef COMPILE_FOR_PSRAM
     if (previewSlot.drum_data != nullptr) {
       WAV_preview_PSRAM.stop();
       sampleLoader.unloadSample(previewSlot.drum_data, previewSlot.len * 2); // 16bit value
       previewSlot.len = 0;
     }
+#endif
     unregisterTouchHandler();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
