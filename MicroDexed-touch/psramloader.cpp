@@ -35,7 +35,8 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
         data = (uint8_t*)extmem_malloc(header.data_bytes);
         uint8_t *index = data;
         while (f.available()) {
-          size_t bytesRead = f.read(index, DEFAULT_SD_BUFSIZE);
+          uint32_t readNumBytes = std::min(header.data_bytes - total_read, DEFAULT_SD_BUFSIZE);
+          size_t bytesRead = f.read(index, readNumBytes);
           if (bytesRead == 0) {
             break;
           }
