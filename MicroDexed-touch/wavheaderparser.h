@@ -102,7 +102,7 @@ public:
         header.sample_rate = parse_uint32_LE(&buffer[24]);
         if(header.sample_rate != 44100) {
             DBG_LOG(printf("unsupported samplerate: %i\n", header.sample_rate));
-            return false;
+            //return false; // we currently have some DRUMS samples with other sample rates (30kHz and 48kHz)
         }
 
         header.byte_rate = parse_uint32_LE(&buffer[28]);
