@@ -16526,8 +16526,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     print_file_manager_buttons();
     print_file_manager_active_border();
-
-    LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
   }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -16577,16 +16575,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
 #endif
     }
-    //DBG_LOG(printf("looop...\n"));
-    bool isPlayingPrev = false;
-    bool isPlayingNow = WAV_preview_PSRAM.isPlaying();
-    if (isPlayingNow) {
-      //DBG_LOG(printf("playing %i - %i\n", WAV_preview_PSRAM.positionMillis(), WAV_preview_PSRAM.lengthMillis()));
-      display.fillRect(6, 189, (float)(DISPLAY_WIDTH - 8) / (WAV_preview_PSRAM.lengthMillis()) * WAV_preview_PSRAM.positionMillis() + 1, 7, RED);
-    } else if (isPlayingPrev) {
-      display.fillRect(6, 189, DISPLAY_WIDTH - 7, 7, COLOR_BACKGROUND);
-    }
-    isPlayingPrev = isPlayingNow;
 
     if (LCDML.BT_checkEnter()) {
       if (fm.sd_is_folder) {
