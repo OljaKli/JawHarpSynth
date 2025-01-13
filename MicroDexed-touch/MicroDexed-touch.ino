@@ -1555,7 +1555,7 @@ FLASHMEM void setup()
     LCDML.OTHER_jumpToFunc(UI_func_sd_content_not_found);
   }
   else {
-    if (count_omni() != 0 || count_midi_channel_duplicates(false) != 0) // startup with midi channel setup page
+    if ( (count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning==false) // startup with midi channel setup page
       LCDML.OTHER_jumpToFunc(UI_func_midi_channels);
     else
       if (seq.clock == 1) //MIDI Slave
@@ -4619,7 +4619,6 @@ FLASHMEM void check_configuration_sys(void)
   configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
   configuration.sys.reverse_encoder_pins = constrain(configuration.sys.reverse_encoder_pins, false, true);
   configuration.sys.boot_anim_skip = constrain(configuration.sys.boot_anim_skip, false, true);
-  configuration.sys.brightness = constrain(configuration.sys.brightness, 100, 200);
   setup_screensaver();
 
   configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed, 60, 500);

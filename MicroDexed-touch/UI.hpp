@@ -13033,7 +13033,7 @@ FLASHMEM bool load_performance_and_check_midi(uint8_t perf)
   bool ret = load_sd_performance_json(perf);
 
   // check MIDI channels
-  if (count_omni() != 0 || count_midi_channel_duplicates(false) != 0) // startup with midi channel setup page
+  if ((count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning==false) // startup with midi channel setup page
     LCDML.OTHER_jumpToFunc(UI_func_midi_channels);
 
   return ret;
@@ -17137,9 +17137,9 @@ FLASHMEM void _system_settings_long_help_texts()
   display.setTextColor(GREY1, COLOR_BACKGROUND);
 
   if (generic_temp_select_menu == 8) {
-    setCursor_textGrid_small(2, 17);
-    display.print(F("DEFAULT VALUE IS 183. DO NOT TOUCH UNLESS YOUR "));
     setCursor_textGrid_small(2, 18);
+    display.print(F("DEFAULT VALUE IS 183. DO NOT TOUCH UNLESS YOUR "));
+    setCursor_textGrid_small(2, 19);
     display.print(F("DISPLAY IS UNCOMMON. RESULTS VARY WITH RUNTIME!"));
   }
 
@@ -17147,25 +17147,39 @@ FLASHMEM void _system_settings_long_help_texts()
 
     if (MicroDexed[0]->getEngineType() == 0)
     {
-      setCursor_textGrid_small(2, 17);
-      display.print(F("MODERN: THIS IS THE ORIGINAL 24-BIT MUSIC-     "));
       setCursor_textGrid_small(2, 18);
+      display.print(F("MODERN: THIS IS THE ORIGINAL 24-BIT MUSIC-     "));
+      setCursor_textGrid_small(2, 19);
       display.print(F("SYNTHESIZER-FOR-ANDROID IMPLEMENTATION         "));
     }
     else if (MicroDexed[0]->getEngineType() == 1)
     {
-      setCursor_textGrid_small(2, 17);
-      display.print(F("MARK I: BASED ON THE OPL SERIES BUT AT A HIGHER"));
       setCursor_textGrid_small(2, 18);
+      display.print(F("MARK I: BASED ON THE OPL SERIES BUT AT A HIGHER"));
+      setCursor_textGrid_small(2, 19);
       display.print(F("RESOLUTION. TARGET IS TO BE CLOSEST TO REAL DX7"));
     }
     else if (MicroDexed[0]->getEngineType() == 2)
     {
-      setCursor_textGrid_small(2, 17);
-      display.print(F("OPL: THIS IS AN EXPERIMENTAL IMPLEMENTATION OF "));
       setCursor_textGrid_small(2, 18);
+      display.print(F("OPL: THIS IS AN EXPERIMENTAL IMPLEMENTATION OF "));
+      setCursor_textGrid_small(2, 19);
       display.print(F("THE REVERSED ENGINEERED OPL FAMILY CHIPS, 8-BIT"));
     }
+  }
+  else if (generic_temp_select_menu == 10) {
+
+      setCursor_textGrid_small(2, 18);
+      display.print(F("ENABLE TO SKIP THE WARNING PAGE WHEN MULTIPLE  "));
+      setCursor_textGrid_small(2, 19);
+      display.print(F("INSTRUMENTS ARE MAPPED TO THE SAME MIDI CHANNEL"));
+  }
+  else
+  {
+     setCursor_textGrid_small(2, 18);
+     print_empty_spaces(47);
+      setCursor_textGrid_small(2, 19);
+     print_empty_spaces(47);
   }
 }
 
@@ -17206,6 +17220,8 @@ FLASHMEM void _render_misc_settings()
   display.print(F("DISPLAY BRIGHTNESS"));
   setCursor_textGrid_small(2, 15);
   display.print(F("DEXED ENGINE"));
+  setCursor_textGrid_small(2, 16);
+  display.print(F("SKIP MIDI CHANNEL WARNINGS"));
   setCursor_textGrid_small(42, 7);
   display.print(configuration.sys.screen_saver_start);
   setCursor_textGrid_small(42, 8);
@@ -17222,6 +17238,8 @@ FLASHMEM void _render_misc_settings()
   display.print(configuration.sys.invert_colors ? F("YES") : F("NO "));
   setCursor_textGrid_small(42, 14);
   print_formatted_number(configuration.sys.brightness, 3);
+  setCursor_textGrid_small(42, 15);
+  display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO "));
 
   _system_settings_long_help_texts();
 }
@@ -17245,7 +17263,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
       if (generic_active_function == 0) {
         // navigate through menu
-        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 9);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 10);
       }
       else {
         // handle setting change and load save timer
@@ -17311,6 +17329,10 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (factorChange * 1), 0, 2);
           for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
             MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
+          break;
+
+           case 10:
+          configuration.sys.skip_midi_channel_warning = !configuration.sys.skip_midi_channel_warning;
           break;
         }
       }
@@ -17388,6 +17410,11 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
     {
       display.print(F("OPL "));
     }
+
+    setModeColor(10);
+    setCursor_textGrid_small(42, 16);
+    display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO "));
+
   }
   // ****** STABLE END *********
   if (LCDML.FUNC_close())
