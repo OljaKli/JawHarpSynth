@@ -3402,7 +3402,7 @@ private:
     int16_t(* const _getter)(Editor* param),
     void (* const _setter)(Editor* param, int16_t value),
     void (* const _renderer)(Editor* param, bool refresh))
-    : fast(limit_max - limit_min > 32), getter(_getter), setter(_setter), renderer(_renderer),
+    : fast(_limit_max - _limit_min > 32), getter(_getter), setter(_setter), renderer(_renderer),
     name(_name), x(_x), y(_y), select_id(_select_id), limit_min(_limit_min), limit_max(_limit_max),
     value(_valuePtr) {}
 
