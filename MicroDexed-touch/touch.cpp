@@ -1060,7 +1060,7 @@ extern uint8_t selected_slice_sample[2];
 extern void print_sliced_status();
 extern void check_and_print_sliced_message();
 
-FLASHMEM void  assign_free_slices_or_increment()
+FLASHMEM void assign_free_slices_or_increment()
 {
   if (num_slices[0] == 0 && selected_slice_sample[0] == 99)
   {

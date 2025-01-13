@@ -16427,7 +16427,6 @@ FLASHMEM void previewSampleFilemanager() {
 FLASHMEM void preview_sample() {
 #if defined(COMPILE_FOR_PSRAM)
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sample_editor)) {
-    draw_button_on_grid(45, 23, "PLEASE", "WAIT", 2);
     if (fm.sample_source > 1 && fm.sample_source < 4) {// MSP
       previewWavFile(msz[fm.sample_source - 2][temp_int].filename);
     }
@@ -16444,14 +16443,12 @@ FLASHMEM void preview_sample() {
         seq.edit_state = 0;
         print_updated_slices_text();
 
-        if(num_slices[0] == 0) {
-          previewWavSlot(drum_config[(generic_temp_select_menu - 6) / 2]);
-        }
-        else {
-          uint8_t d = generic_temp_select_menu;
-          WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
-          slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
-        }
+
+        uint8_t d = get_current_sliced_sample_in_ui();
+        DBG_LOG(printf("%i slices: preview slice %i of sample %s\n", num_slices[0], d, drum_config[selected_slice_sample[0]].name));
+
+        WAV_preview_PSRAM.playRaw((int16_t*)drum_config[selected_slice_sample[0]].drum_data + slice_start[0][d],
+        slice_end[0][d] - slice_start[0][d], drum_config[selected_slice_sample[0]].numChannels);
       }
     }
   }
@@ -16483,6 +16480,10 @@ FLASHMEM void preview_sample() {
 
 FLASHMEM void UI_func_file_manager(uint8_t param)
 {
+  static constexpr char CUSTOM_DIR[] = "CUSTOM";
+  static constexpr char RECORDINGS_DIR[] = "RECORDINGS";
+  static constexpr char MIDI_DIR[] = "MIDI";
+  
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_file_manager);
@@ -16491,14 +16492,14 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     if (sd_card > 0)
     {
       // Auto create missing folders if needed
-      if (!SD.exists("CUSTOM")) {
-        SD.mkdir("CUSTOM");
+      if (!SD.exists(CUSTOM_DIR)) {
+        SD.mkdir(CUSTOM_DIR);
       }
-      if (!SD.exists("RECORDINGS")) {
-        SD.mkdir("RECORDINGS");
+      if (!SD.exists(RECORDINGS_DIR)) {
+        SD.mkdir(RECORDINGS_DIR);
       }
-      if (!SD.exists("MIDI")) {
-        SD.mkdir("MIDI");
+      if (!SD.exists(MIDI_DIR)) {
+        SD.mkdir(MIDI_DIR);
       }
     }
     fm.sd_mode = FM_BROWSE_FILES;
