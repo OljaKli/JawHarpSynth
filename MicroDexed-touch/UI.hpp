@@ -16442,15 +16442,22 @@ FLASHMEM void previewWavSampleEditor() {
 
 FLASHMEM void previewWavFilemanager() {
 #ifdef COMPILE_FOR_PSRAM
+
   // preview sd file
   if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav")) {
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
     fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
     previewWavFile(fm.sd_full_name);
   }
   // preview psram slot file
   else if (fm.active_window == 1) { 
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
     previewWavSlot(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files]);
   }
+
+  delay(100);
+  TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+ 
 #endif
 }
 
@@ -16464,7 +16471,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   {
     registerTouchHandler(handle_touchscreen_file_manager);
     // handleStop(); //test 20/03/2023 for remote console crash when opening file manager while sequencer is playing
-
+    menuhelper_previous_val=199;  //fake value to draw all touch buttons at start
     if (sd_card > 0)
     {
       // Auto create missing folders if needed
@@ -16579,6 +16586,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     if (LCDML.BT_checkEnter()) {
       if (fm.sd_is_folder) {
+        TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
         if (fm.sd_temp_name == "..") {
           if (fm.sd_folder_depth < 2) {
             fm.sd_folder_depth = 0;
@@ -16619,6 +16627,10 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             psram_printCustomSamplesList();
           } 
           break;
+           case FM_DELETE_FROM_PSRAM:
+          ;
+          break;
+
 #endif
         default:
         case FM_PLAY_SAMPLE:
