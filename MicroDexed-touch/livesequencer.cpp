@@ -1303,7 +1303,7 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
               NotePair p = {
                 .noteOn = *itOn,
                 .noteOff = *itOff,
-                .isMuted = data.tracks[track].layerMutes & (1 << itOn->layer)
+                .isMuted = (data.tracks[track].layerMutes & (1 << itOn->layer)) > 0
               };
               highestFound = std::max(highestFound, itOn->note_in);
               lowestFound = std::min(lowestFound, itOn->note_in);

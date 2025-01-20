@@ -77,7 +77,7 @@ USBHub hub1(usb_host);
 USBHIDParser hid1(usb_host);
 
 #define COUNT_JOYSTICKS 1
-JoystickController joysticks[COUNT_JOYSTICKS](usb_host);
+JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
 uint32_t gamepad_buttons_prev = 0;
 
 USBDriver* drivers[] = { &hub1, &joysticks[0], &joysticks[1], &joysticks[2], &joysticks[3], &hid1 };
@@ -433,27 +433,27 @@ void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device
 
 void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::MidiType event)
 {
-  char text[10];
+  //char text[10];
 
   switch (event)
   {
   case midi::TimeCodeQuarterFrame:
     handleTimeCodeQuarterFrame(inData1);
-    strcpy(text, "TimeCodeQuarterFrame");
+    //strcpy(text, "TimeCodeQuarterFrame");
     break;
   case midi::SongSelect:
     handleSongSelect(inData1);
-    strcpy(text, "SongSelect");
+    //strcpy(text, "SongSelect");
     break;
   case midi::TuneRequest:
     handleTuneRequest();
-    strcpy(text, "TuneRequest");
+    //strcpy(text, "TuneRequest");
     break;
   default:
     break;
   }
 #ifdef DEBUG
-  LOG.printf_P(PSTR("[%s] %s"), midi_device, text);
+  //LOG.printf_P(PSTR("[%s] %s"), midi_device, text);
 #endif
 
   // MIDI THRU
@@ -536,33 +536,33 @@ void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::Mid
 
 void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 {
-  char text[10];
+  //char text[16];
 
   switch (event)
   {
   case midi::Clock:
     handleClock();
-    strcpy(text, "Clock");
+    //strcpy(text, "Clock");
     break;
   case midi::Start:
     handleStart();
-    strcpy(text, "Start");
+    //strcpy(text, "Start");
     break;
   case midi::Continue:
     handleContinue();
-    strcpy(text, "Continue");
+    //strcpy(text, "Continue");
     break;
   case midi::Stop:
     handleStop();
-    strcpy(text, "Stop");
+    //strcpy(text, "Stop");
     break;
   case midi::ActiveSensing:
     handleActiveSensing();
-    strcpy(text, "ActiveSensing");
+    //strcpy(text, "ActiveSensing");
     break;
   case midi::SystemReset:
     handleSystemReset();
-    strcpy(text, "SystemReset");
+    //strcpy(text, "SystemReset");
     break;
   default:
     break;

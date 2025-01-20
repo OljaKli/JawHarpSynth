@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <vector>
 #include <functional>
+#include <cstdint>
 
 class EditableValueBase {
 public:
