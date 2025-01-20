@@ -202,9 +202,11 @@
 #define SGTL5000_HEADPHONE_VOLUME 0.8
 #endif
 
+#define byte __uint8_t // workarounds "error: reference to 'byte' is ambiguous"
+
 // DELAYTIME
 #ifdef PSRAM
-#define DELAY_MAX_TIME 1500 // 10s //1.5 sec
+#define DELAY_MAX_TIME 10000 // 10s
 #else
 #define DELAY_MAX_TIME 500  // 0.5s
 #endif
@@ -1041,7 +1043,6 @@ enum master_mixer_ports
   MASTER_MIX_CH_EPIANO,
   MASTER_MIX_CH_MICROSYNTH,
   MASTER_MIX_CH_BRAIDS,
-  MASTER_MIX_CH_WAV_PREVIEW_SD,
   MASTER_MIX_CH_WAV_PREVIEW_PSRAM,
   MASTER_MIX_CH_DELAY1,
   MASTER_MIX_CH_DELAY2,

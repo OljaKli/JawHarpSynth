@@ -2021,13 +2021,11 @@ FLASHMEM void empty_chain_warning_text_in_song_page()
   {
     if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][0] == 99)
     {
-      char tmptxt[5];
       display.setCursor(13 * CHAR_width_small, 29 * CHAR_height_small);
       display.setTextSize(1);
       display.setTextColor(RED, COLOR_BACKGROUND);
       display.print(F("CHAIN "));
-      snprintf_P(tmptxt, sizeof(tmptxt), PSTR("[%02d]"), seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]);
-      display.print(tmptxt);
+      display.printf("[%02d]", seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]);
       display.print(F(" IS EMPTY"));
     }
     else
@@ -5228,9 +5226,9 @@ FLASHMEM void getNoteName(char* noteName, uint8_t noteNumber)
   {
     noteNumber -= 21;
     if (notes[noteNumber % 12][1] == '\0')
-      snprintf_P(noteName, sizeof(noteName), PSTR("%1s-%1d"), notes[noteNumber % 12], oct_index / 12);
+      sprintf(noteName, "%1s-%1d", notes[noteNumber % 12], oct_index / 12);
     else
-      snprintf_P(noteName, sizeof(noteName), PSTR("%2s%1d"), notes[noteNumber % 12], oct_index / 12);
+      sprintf(noteName, "%2s%1d", notes[noteNumber % 12], oct_index / 12);
   }
 }
 
@@ -6862,19 +6860,16 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
 
     setModeColor(0);
     setCursor_textGrid_small(23, 6);
-    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), seq.oct_shift);
-    display.print(displayname);
+    display.printf("%02d", seq.oct_shift);
     setModeColor(1);
     setCursor_textGrid_small(23, 7);
     display.print(seq.element_shift);
     setModeColor(2);
     setCursor_textGrid_small(23, 8);
-    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), seq.chord_key_ammount);
-    display.print(displayname);
+    display.printf("%02d", seq.chord_key_ammount);
     setModeColor(3);
     setCursor_textGrid_small(23, 9);
-    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), seq.arp_num_notes_max);
-    display.print(displayname);
+    display.printf("%02d", seq.arp_num_notes_max);
     setModeColor(4);
     setCursor_textGrid_small(23, 10);
     print_formatted_number(seq.chord_vel, 3);
@@ -6896,12 +6891,10 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     }
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     setCursor_textGrid_small(13, 15);
-    snprintf_P(displayname, sizeof(displayname), PSTR("%03d"), seq.tempo_ms / 1000);
-    display.print(displayname);
+    display.printf("%03d", seq.tempo_ms / 1000);
     setModeColor(6);
     setCursor_textGrid_small(23, 15);
-    snprintf_P(displayname, sizeof(displayname), PSTR("%03d"), seq.bpm);
-    display.print(displayname);
+    display.printf("%03d", seq.bpm);
 
     setModeColor(7);
     setCursor_textGrid_small(23, 16);
@@ -7342,7 +7335,6 @@ FLASHMEM void print_updated_slices_text()
 
 FLASHMEM void draw_header_sample_editor()
 {
-  char tmp[7];
   if (fm.sample_source == 2 || fm.sample_source == 3) //MSP
   {
     setCursor_textGrid_small(14, 2);
@@ -7355,17 +7347,16 @@ FLASHMEM void draw_header_sample_editor()
       display.print(F("                                "));
 
     if (strlen(msz[fm.sample_source - 2][temp_int].filename) < 2)
-      snprintf_P(tmp, sizeof(tmp), PSTR("%04d"), 0);
+      display.printf("%04d", 0);
     else
-      snprintf_P(tmp, sizeof(tmp), PSTR("%04d"), drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len / 1024);
+      display.printf("%04d", drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len / 1024);
   }
   else //slice/normal sample
   {
-    snprintf_P(tmp, sizeof(tmp), PSTR("%04d"), drum_config[temp_int].len / 1024);
+    display.printf("%04d", drum_config[temp_int].len / 1024);
   }
   setCursor_textGrid_small(32, 1);
   display.setTextColor(GREY1, COLOR_BACKGROUND);
-  display.print(tmp);
   display.print(" KB  ");
 }
 
@@ -9227,7 +9218,6 @@ FLASHMEM void seq_sub_pattern_transpose()
 
   if (seq.menu == 34 && seq.active_function == 94)
   { // transpose
-    char displayname[4] = { 0, 0, 0, 0 };
     setCursor_textGrid(12, 0);
     display.setTextSize(2);
     display.print("[");
@@ -9243,8 +9233,8 @@ FLASHMEM void seq_sub_pattern_transpose()
     {
       display.print(" ");
     }
-    snprintf_P(displayname, sizeof(displayname), PSTR("%02d"), abs(temp_int));
-    display.print(displayname);
+
+    display.printf("%02d", abs(temp_int));
     display.print("]");
     for (uint8_t i = 0; i < 16; i++)
     {
@@ -13809,11 +13799,9 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     display.setTextSize(1);
 
 #ifdef PSRAM
-    char text1[30];
     uint8_t size = external_psram_size;
     if (size != 0) {
-      sprintf(text1, "%d MB PSRAM CHIP FOUND, MAX DELAY: 2x %d MS", size, DELAY_MAX_TIME);
-      display.print(text1);
+      display.printf("%2d MB PSRAM CHIP FOUND, MAX DELAY: 2x %d MS", size, DELAY_MAX_TIME);
     }
     else {
       display.print(F("NO VALID PSRAM CHIP FOUND"));
@@ -15592,7 +15580,6 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     load_sd_directory();
   }
 
-  char tmp[6];
   fm.sd_is_folder = false;
   fm.sd_cap_rows = 9;
   if (fm.sd_parent_folder && fm.sd_folder_depth > 0)
@@ -15657,14 +15644,12 @@ FLASHMEM void sd_printDirectory(bool forceReload)
       // }
       if (int(sd_entry.size / 1024) > 0)
       {
-        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), sd_entry.size / 1024);
-        display.print(tmp);
+        display.printf("%4d", sd_entry.size / 1024);
         display.print(" KB");
       }
       else
       {
-        snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), sd_entry.size);
-        display.print(tmp);
+        display.printf("%4d", sd_entry.size);
         display.print(" B ");
       }
     }
@@ -15680,7 +15665,6 @@ FLASHMEM void psram_printCustomSamplesList()
 {
   // if (seq.running == false)
   // {
-  char tmp[6];
   fm.psram_cap_rows = 9;
 
   for (uint8_t i = 6; i < 16; i++)
@@ -15691,8 +15675,7 @@ FLASHMEM void psram_printCustomSamplesList()
       display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
 
     display.setCursor(CHAR_width_small * 29, i * 11);
-    snprintf_P(tmp, sizeof(tmp), PSTR("%02d"), i - 5 + fm.psram_skip_files);
-    display.print(tmp);
+    display.printf("%02d", i - 5 + fm.psram_skip_files);
 
     if (i == fm.psram_selected_file + 6 && fm.active_window == 1)
       display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
@@ -15709,14 +15692,12 @@ FLASHMEM void psram_printCustomSamplesList()
 
     if (int(drum_config[i + fm.psram_skip_files].len / 1024) > 0)
     {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), ((drum_config[i + fm.psram_skip_files].len) / 1024) * 2);
-      display.print(tmp);
+      display.printf("%4d", ((drum_config[i + fm.psram_skip_files].len) / 1024) * 2);
       display.print(" KB");
     }
     else
     {
-      snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), (drum_config[i + fm.psram_skip_files].len) * 2);
-      display.print(tmp);
+      display.printf("%4d", (drum_config[i + fm.psram_skip_files].len) * 2);
       display.print(" B ");
     }
   }
@@ -16363,7 +16344,6 @@ FLASHMEM void sd_update_display()
 #ifdef COMPILE_FOR_PSRAM
 FLASHMEM void print_psram_stats_filemanager()
 {
-  char text1[24];
   uint32_t total_data_size = 0;
   uint32_t psram_size = external_psram_size * 1048576;
   display.setTextSize(1);
@@ -16373,8 +16353,7 @@ FLASHMEM void print_psram_stats_filemanager()
   display.setCursor(CHAR_width_small * 44, 1 * CHAR_height_small);
   if (psram_size != 0)
   {
-    sprintf(text1, "%05d KB", (int)psram_size / 1024);
-    display.print(text1);
+    display.printf("%05d KB", (int)psram_size / 1024);
   }
   for (int i = 0; i < NUM_DRUMSET_CONFIG; i++) {
     total_data_size = total_data_size + drum_config[i].len;
@@ -16385,11 +16364,9 @@ FLASHMEM void print_psram_stats_filemanager()
   display.print(F("MEMORY USED/FREE:"));
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setCursor(CHAR_width_small * 29, 5 * CHAR_height_small);
-  sprintf(text1, "%05d KB/%05d KB  USED", (int)total_data_size / 1024, (int)(psram_size / 1024));
-  display.print(text1);
+  display.printf("%05d KB/%05d KB  USED", (int)total_data_size / 1024, (int)(psram_size / 1024));
   display.setCursor(CHAR_width_small * 38, 6 * CHAR_height_small);
-  sprintf(text1, "%05d KB  FREE", (int)(psram_size / 1024 - total_data_size / 1024));
-  display.print(text1);
+  display.printf("%05d KB  FREE", (int)(psram_size / 1024 - total_data_size / 1024));
   fm.psram_sum_files = NUM_CUSTOM_SAMPLES;
 }
 
@@ -19711,7 +19688,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
 #endif
             char tmp[FILENAME_LEN];
             strcpy(tmp, receive_bank_filename);
-            snprintf_P(receive_bank_filename, sizeof(receive_bank_filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, pool_number, bank_number, tmp);
+            snprintf(receive_bank_filename, sizeof(receive_bank_filename), "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, pool_number, bank_number, tmp);
 #ifdef DEBUG
             LOG.print(F("Receiving into bank "));
             LOG.print(bank_number);
@@ -19941,7 +19918,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
     {
       if (strcmp("*ERROR*", tmp_bank_name) != 0)
       {
-        char filename[FILENAME_LEN + 4];
+        char filename[FILENAME_LEN + 10];
         snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, pool_number, bank_number, tmp_bank_name);
 #ifdef DEBUG
         LOG.print(F("Send bank "));
@@ -20080,8 +20057,8 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
       case 2:
         if (strcmp("*ERROR*", tmp_bank_name) != 0)
         {
-          char filename[FILENAME_LEN + 4];
-          snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, pool_number, bank_number, tmp_bank_name);
+          char filename[FILENAME_LEN + 10];
+          snprintf(filename, sizeof(filename), "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, pool_number, bank_number, tmp_bank_name);
 #ifdef DEBUG
           LOG.print(F("Send voice "));
           LOG.print(voice_number);
@@ -20572,7 +20549,7 @@ FLASHMEM void display_float(float var, uint8_t size_number, uint8_t size_fractio
     char tmp[display_cols + 1];
 
     strcpy(tmp, s);
-    snprintf_P(s, sizeof(s), PSTR("[%s]"), tmp);
+    snprintf(s, sizeof(s), "[%s]", tmp);
   }
 
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);

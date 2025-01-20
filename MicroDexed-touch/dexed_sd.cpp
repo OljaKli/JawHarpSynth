@@ -365,7 +365,6 @@ FLASHMEM bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 
 FLASHMEM bool get_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
 {
-  uint16_t n;
   int32_t bulk_checksum_calc = 0;
   int8_t bulk_checksum;
 
@@ -413,7 +412,7 @@ FLASHMEM bool get_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
   bulk_checksum = sysex.read();
 
   sysex.seek(6); // start of bulk data
-  for (n = 0; n < 4096; n++)
+  for (int n = 0; n < 4096; n++)
   {
     uint8_t d = sysex.read();
     if (n >= voice_number * 128 && n < (voice_number + 1) * 128)
@@ -450,7 +449,6 @@ FLASHMEM bool get_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
 
 FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
 {
-  uint16_t n;
   int32_t bulk_checksum_calc = 0;
 
   AudioNoInterrupts();
@@ -499,7 +497,7 @@ FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
 
   // checksum calculation
   sysex.seek(6); // start of bulk data
-  for (n = 0; n < 4096; n++)
+  for (int n = 0; n < 4096; n++)
   {
     uint8_t d = sysex.read();
     bulk_checksum_calc -= d;

@@ -578,7 +578,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent &e, ui
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextSize(1);
-  char s[10] = { "\0" };
+  char s[16] = { "\0" };
 
   if (modeFlags == HEADER_DRAW_ALL) {
     display.fillRect(GRID.X[3], CONTENT_HEIGHT + LINE_HEIGHT, DISPLAY_WIDTH - GRID.X[3], HEADER_HEIGHT, HEADER_BG_COLOR);

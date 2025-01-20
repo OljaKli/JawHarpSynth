@@ -1003,46 +1003,38 @@ int get_pattern_content_type_color(uint8_t pattern)
 
 FLASHMEM void print_formatted_number(uint16_t number, uint8_t length)
 {
-  char nb[5];
-  if (length == 4)
-  {
-    sprintf(nb, "%04d", number);
+  switch (length) {
+  case 4:
+    display.printf("%04d", number);
+    break;
+
+  case 3:
+    display.printf("%03d", number);
+    break;
+  
+  default:
+    display.printf("%02d", number);
+    break;
   }
-  else if (length == 3)
-  {
-    sprintf(nb, "%03d", number);
-  }
-  else
-    // if not 3 then length defaults to 2
-  {
-    sprintf(nb, "%02d", number);
-  }
-  display.print(nb);
 }
 
 FLASHMEM void print_formatted_number_trailing_space(uint16_t number, uint8_t length) {
-  char nb[5];
-  if (length == 4)
-  {
-    sprintf(nb, "%-4d", number);
+  if (length == 4) {
+    display.printf("%-4d", number);
   }
-  else
-    // if not 4 then length defaults to 3
-  {
-    sprintf(nb, "%-3d", number);
+  else {// if not 4 then length defaults to 3    
+    display.printf("%-3d", number);
   }
-  display.print(nb);
 }
 
 FLASHMEM void print_formatted_number_signed(int number, uint8_t length)
 {
-  char nb[5];
-
-  if (number > -1)
-    sprintf(nb, "+%02d", number);
-  else
-    sprintf(nb, "%03d", number); // minus sign comes automatically
-  display.print(nb);
+  if (number > -1) {
+    display.printf("+%02d", number);
+  }
+  else {
+    display.printf("%03d", number); // minus sign comes automatically
+  }
 }
 
 FLASHMEM void print_chord_name(uint8_t currentstep)

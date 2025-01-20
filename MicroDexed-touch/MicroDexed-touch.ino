@@ -31,6 +31,9 @@
 #include <SD.h>
 #include <SPI.h>
 #include "psramloader.h"
+#include "filemanager.h"
+
+#include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
 
 #include "ILI9341_t3n.h"
 
@@ -388,7 +391,7 @@ File frec;
 //
 // Static patching of audio objects
 //
-AudioConnection patchCord[] = {
+const AudioConnection patchCord[] = {
   // Audio chain tail
   {reverb_mixer_r, 0, reverb, 0},
   {reverb_mixer_l, 0, reverb, 1},
@@ -616,12 +619,7 @@ AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 //
 // Dynamic patching of MicroDexed objects
 //
-
-uint8_t nDynamic = 0;
-
-//AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16];
-AudioConnection* dynamicConnections[NUM_DEXED * 16 + NUM_DRUMS * 4 + NUM_BRAIDS * 11 + 14 + 20 + 8 + 16 + 8 + 4];
-
+std::vector<AudioConnection*> dynamicConnections;
 
 FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 {
@@ -648,103 +646,103 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 
   if (instance_id == 0)
   {
-    dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_0, 0);
+    dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_0, 0));
 
-    dynamicConnections[nDynamic++] = new AudioConnection(sidechain_mixer_r, 0, fade_sidechain_r, 0);
-    dynamicConnections[nDynamic++] = new AudioConnection(sidechain_mixer_l, 0, fade_sidechain_l, 0);
+    dynamicConnections.emplace_back(new AudioConnection(sidechain_mixer_r, 0, fade_sidechain_r, 0));
+    dynamicConnections.emplace_back(new AudioConnection(sidechain_mixer_l, 0, fade_sidechain_l, 0));
 
-    dynamicConnections[nDynamic++] = new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN);
-    dynamicConnections[nDynamic++] = new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN);
+    dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN));
+    dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN));
 
   }
   else
-    dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_1, 0);
+    dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_1, 0));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[instance_id], 0);
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[instance_id], 0));
 
   //chorus
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, *dexed_chorus[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*chorus_modulator[instance_id], 0, *dexed_chorus[instance_id], 1);
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *dexed_chorus[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*chorus_modulator[instance_id], 0, *dexed_chorus[instance_id], 1));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_chorus[instance_id], 0, dexed_chorus_mixer_r[instance_id], 1);
-  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_chorus[instance_id], 0, dexed_chorus_mixer_l[instance_id], 1);
+  dynamicConnections.emplace_back(new AudioConnection(*dexed_chorus[instance_id], 0, dexed_chorus_mixer_r[instance_id], 1));
+  dynamicConnections.emplace_back(new AudioConnection(*dexed_chorus[instance_id], 0, dexed_chorus_mixer_l[instance_id], 1));
 
   //normal
-  dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_r[instance_id], 0, master_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_l[instance_id], 0, master_mixer_l, instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(dexed_chorus_mixer_r[instance_id], 0, master_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(dexed_chorus_mixer_l[instance_id], 0, master_mixer_l, instance_id));
 
   //test fades with sidechain mixer
 
-  dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_r[instance_id], 0, sidechain_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(dexed_chorus_mixer_l[instance_id], 0, sidechain_mixer_l, instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(dexed_chorus_mixer_r[instance_id], 0, sidechain_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(dexed_chorus_mixer_l[instance_id], 0, sidechain_mixer_l, instance_id));
 
   //test fades sidechain mixer
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*global_delay_in_mixer[instance_id], 0, global_delay_filter[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*global_delay_in_mixer[instance_id], 0, global_delay_filter_mixer[instance_id], 0); // bypass
+  dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[instance_id], 0, global_delay_filter[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[instance_id], 0, global_delay_filter_mixer[instance_id], 0)); // bypass
 
-  dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter[instance_id], 0, global_delay_filter_mixer[instance_id], 1);    // low
-  dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter[instance_id], 1, global_delay_filter_mixer[instance_id], 2);    // band
-  dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter[instance_id], 2, global_delay_filter_mixer[instance_id], 3);    // hi
+  dynamicConnections.emplace_back(new AudioConnection(global_delay_filter[instance_id], 0, global_delay_filter_mixer[instance_id], 1));    // low
+  dynamicConnections.emplace_back(new AudioConnection(global_delay_filter[instance_id], 1, global_delay_filter_mixer[instance_id], 2));    // band
+  dynamicConnections.emplace_back(new AudioConnection(global_delay_filter[instance_id], 2, global_delay_filter_mixer[instance_id], 3));    // hi
 
-  dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_fb_mixer[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_mixer[instance_id], 0);
+  dynamicConnections.emplace_back(new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_fb_mixer[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_mixer[instance_id], 0));
 
-  //dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *delay_fx[instance_id], 0);
+  //dynamicConnections.emplace_back(new AudioConnection(*delay_fb_mixer[instance_id], 0, *delay_fx[instance_id], 0));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 1);
-
-
-  dynamicConnections[nDynamic++] = new AudioConnection(*Gate[instance_id], 0, *delay_fx[instance_id], 0);
+  dynamicConnections.emplace_back(new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 1));
 
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fx[instance_id], 0, *delay_fb_mixer[instance_id], 1);
+  dynamicConnections.emplace_back(new AudioConnection(*Gate[instance_id], 0, *delay_fx[instance_id], 0));
 
-  //dynamicConnections[nDynamic++] = new AudioConnection(DC_OffsetWaveForm, 0, *delay_fb_mixer[instance_id], 2);
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_fx[instance_id], 0, *delay_mixer[instance_id], 1);
+  dynamicConnections.emplace_back(new AudioConnection(*delay_fx[instance_id], 0, *delay_fb_mixer[instance_id], 1));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mixer[instance_id], 0, *delay_mono2stereo[instance_id], 0);
+  //dynamicConnections.emplace_back(new AudioConnection(DC_OffsetWaveForm, 0, *delay_fb_mixer[instance_id], 2));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_l, instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*delay_fx[instance_id], 0, *delay_mixer[instance_id], 1));
+
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mixer[instance_id], 0, *delay_mono2stereo[instance_id], 0));
+
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_l, instance_id));
 
   // epiano delay
-  dynamicConnections[nDynamic++] = new AudioConnection(ep, 0, *global_delay_in_mixer[instance_id], 5);
-  dynamicConnections[nDynamic++] = new AudioConnection(ep, 1, *global_delay_in_mixer[instance_id], 6);
+  dynamicConnections.emplace_back(new AudioConnection(ep, 0, *global_delay_in_mixer[instance_id], 5));
+  dynamicConnections.emplace_back(new AudioConnection(ep, 1, *global_delay_in_mixer[instance_id], 6));
 
   // microsynth delays
-  dynamicConnections[nDynamic++] = new AudioConnection(microsynth_mixer_filter_osc[0], 0, *global_delay_in_mixer[instance_id], 2);
-  dynamicConnections[nDynamic++] = new AudioConnection(microsynth_mixer_filter_osc[1], 0, *global_delay_in_mixer[instance_id], 3);
+  dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[0], 0, *global_delay_in_mixer[instance_id], 2));
+  dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[1], 0, *global_delay_in_mixer[instance_id], 3));
 
   // dexed delay output
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 0, *dexed_mono2stereo[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*MicroDexed[instance_id], 1, *dexed_mono2stereo[instance_id], 1);
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *dexed_mono2stereo[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 1, *dexed_mono2stereo[instance_id], 1));
 
   // dexed dry output
-  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_mono2stereo[instance_id], 0, dexed_chorus_mixer_r[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*dexed_mono2stereo[instance_id], 1, dexed_chorus_mixer_l[instance_id], 0);
+  dynamicConnections.emplace_back(new AudioConnection(*dexed_mono2stereo[instance_id], 0, dexed_chorus_mixer_r[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*dexed_mono2stereo[instance_id], 1, dexed_chorus_mixer_l[instance_id], 0));
 
 
   // delay outs as sends to reverb
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mixer[instance_id], 0, reverb_mixer_r, REVERB_MIX_CH_AUX_DELAY1 + instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mixer[instance_id], 0, reverb_mixer_l, REVERB_MIX_CH_AUX_DELAY1 + instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mixer[instance_id], 0, reverb_mixer_r, REVERB_MIX_CH_AUX_DELAY1 + instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mixer[instance_id], 0, reverb_mixer_l, REVERB_MIX_CH_AUX_DELAY1 + instance_id));
 
   // master out
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 0, master_mixer_r, MASTER_MIX_CH_DELAY1 + instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 1, master_mixer_l, MASTER_MIX_CH_DELAY1 + instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mono2stereo[instance_id], 0, master_mixer_r, MASTER_MIX_CH_DELAY1 + instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mono2stereo[instance_id], 1, master_mixer_l, MASTER_MIX_CH_DELAY1 + instance_id));
 
   // sidechain
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 0, sidechain_mixer_r, MASTER_MIX_CH_DELAY1 + instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*delay_mono2stereo[instance_id], 1, sidechain_mixer_l, MASTER_MIX_CH_DELAY1 + instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mono2stereo[instance_id], 0, sidechain_mixer_r, MASTER_MIX_CH_DELAY1 + instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*delay_mono2stereo[instance_id], 1, sidechain_mixer_l, MASTER_MIX_CH_DELAY1 + instance_id));
 
   if (instance_id == 1)
   {
     // delay1 to delay2
-    dynamicConnections[nDynamic++] = new AudioConnection(*global_delay_in_mixer[0], 0, *global_delay_in_mixer[1], 7);
+    dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[0], 0, *global_delay_in_mixer[1], 7));
     // delay2 to delay1
-    dynamicConnections[nDynamic++] = new AudioConnection(*global_delay_in_mixer[1], 0, *global_delay_in_mixer[0], 7);
+    dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[1], 0, *global_delay_in_mixer[0], 7));
 
   }
 
@@ -760,41 +758,41 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
   braids_envelope[instance_id] = new AudioEffectEnvelope();
   braids_filter[instance_id] = new AudioFilterBiquad();
   braids_mixer_filter[instance_id] = new AudioMixer<4>;
-  dynamicConnections[nDynamic++] = new AudioConnection(*synthBraids[instance_id], 0, *braids_envelope[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*braids_envelope[instance_id], 0, *braids_filter[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*braids_filter[instance_id], 0, *braids_mixer_filter[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*braids_envelope[instance_id], 0, *braids_mixer_filter[instance_id], 3); // filter is off
-  dynamicConnections[nDynamic++] = new AudioConnection(*braids_mixer_filter[instance_id], 0, braids_mixer, instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*synthBraids[instance_id], 0, *braids_envelope[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*braids_envelope[instance_id], 0, *braids_filter[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*braids_filter[instance_id], 0, *braids_mixer_filter[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*braids_envelope[instance_id], 0, *braids_mixer_filter[instance_id], 3)); // filter is off
+  dynamicConnections.emplace_back(new AudioConnection(*braids_mixer_filter[instance_id], 0, braids_mixer, instance_id));
 
   if (instance_id == 0)
   {
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 0);
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 1);
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 0));
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 1));
 
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_stereo_panorama, 0, braids_flanger_r, 0);
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_stereo_panorama, 1, braids_flanger_l, 0);
+    dynamicConnections.emplace_back(new AudioConnection(braids_stereo_panorama, 0, braids_flanger_r, 0));
+    dynamicConnections.emplace_back(new AudioConnection(braids_stereo_panorama, 1, braids_flanger_l, 0));
 
     //normal
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_r, 0, master_mixer_r, MASTER_MIX_CH_BRAIDS);
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_l, 0, master_mixer_l, MASTER_MIX_CH_BRAIDS);
+    dynamicConnections.emplace_back(new AudioConnection(braids_flanger_r, 0, master_mixer_r, MASTER_MIX_CH_BRAIDS));
+    dynamicConnections.emplace_back(new AudioConnection(braids_flanger_l, 0, master_mixer_l, MASTER_MIX_CH_BRAIDS));
 
     // sidechain mixer
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_r, 0, sidechain_mixer_r, MASTER_MIX_CH_BRAIDS);
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_flanger_l, 0, sidechain_mixer_l, MASTER_MIX_CH_BRAIDS);
+    dynamicConnections.emplace_back(new AudioConnection(braids_flanger_r, 0, sidechain_mixer_r, MASTER_MIX_CH_BRAIDS));
+    dynamicConnections.emplace_back(new AudioConnection(braids_flanger_l, 0, sidechain_mixer_l, MASTER_MIX_CH_BRAIDS));
 
     // sidechain mixer end
 
-    dynamicConnections[nDynamic++] = new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 0 };
-    dynamicConnections[nDynamic++] = new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 1 };
-    dynamicConnections[nDynamic++] = new AudioConnection{ braids_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_BRAIDS };
-    dynamicConnections[nDynamic++] = new AudioConnection{ braids_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_BRAIDS };
+    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 0 });
+    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 1 });
+    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_BRAIDS });
+    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_BRAIDS });
 
-    dynamicConnections[nDynamic++] = new AudioConnection{ braids_stereo_panorama, 0, braids_peak_r, 0 };
-    dynamicConnections[nDynamic++] = new AudioConnection{ braids_stereo_panorama, 1, braids_peak_l, 0 };
+    dynamicConnections.emplace_back(new AudioConnection{ braids_stereo_panorama, 0, braids_peak_r, 0 });
+    dynamicConnections.emplace_back(new AudioConnection{ braids_stereo_panorama, 1, braids_peak_l, 0 });
 
     // braids delays
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_mixer, 0, *global_delay_in_mixer[0], 4);
-    dynamicConnections[nDynamic++] = new AudioConnection(braids_mixer, 0, *global_delay_in_mixer[1], 4);
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, *global_delay_in_mixer[0], 4));
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, *global_delay_in_mixer[1], 4));
   }
 }
 
@@ -831,30 +829,30 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   Drum[instance_id]->setPlaybackRate(1.0);
 
   //no filter code
-    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
-    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id);
-    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id);
-    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-    // dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 8 + instance_id);
+    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
+    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id);
+    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
+    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id);
+    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
+    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 8 + instance_id);
 
-  //dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
-  //dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *Drum_filter[NUM_DRUMS + instance_id], 0);
+  //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
+  //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *Drum_filter[NUM_DRUMS + instance_id], 0);
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 0, *sample_envelope[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum[instance_id], 1, *sample_envelope[NUM_DRUMS + instance_id], 0);
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *sample_envelope[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *sample_envelope[NUM_DRUMS + instance_id], 0));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*sample_envelope[instance_id], 0, *Drum_filter[instance_id], 0);
-  dynamicConnections[nDynamic++] = new AudioConnection(*sample_envelope[NUM_DRUMS + instance_id], 0, *Drum_filter[NUM_DRUMS + instance_id], 0);
+  dynamicConnections.emplace_back(new AudioConnection(*sample_envelope[instance_id], 0, *Drum_filter[instance_id], 0));
+  dynamicConnections.emplace_back(new AudioConnection(*sample_envelope[NUM_DRUMS + instance_id], 0, *Drum_filter[NUM_DRUMS + instance_id], 0));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_mixer_l, instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[instance_id], 0, drum_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_mixer_l, instance_id));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_reverb_send_mixer_l, instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[instance_id], 0, drum_reverb_send_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, drum_reverb_send_mixer_l, instance_id));
 
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-  dynamicConnections[nDynamic++] = new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id);
+  dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, *global_delay_in_mixer[1], 8 + instance_id));
 
   Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
   Drum_filter[NUM_DRUMS + instance_id]->setLowpass(0, 20000, 0.2); //phtodo
@@ -863,15 +861,15 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   LOG.print(F("Drum-Instance: "));
   LOG.println(instance_id);
   LOG.print(F("Dynamic-Connection-Counter="));
-  LOG.println(nDynamic);
+  LOG.println(dynamicConnections.size());
 #endif
 }
 
 FLASHMEM void create_audio_wav_preview_chain()
 {
 #ifdef COMPILE_FOR_PSRAM
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 1, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_PSRAM);
-  dynamicConnections[nDynamic++] = new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_PSRAM);
+  dynamicConnections.emplace_back(new AudioConnection(WAV_preview_PSRAM, 1, master_mixer_r, MASTER_MIX_CH_WAV_PREVIEW_PSRAM));
+  dynamicConnections.emplace_back(new AudioConnection(WAV_preview_PSRAM, 0, master_mixer_l, MASTER_MIX_CH_WAV_PREVIEW_PSRAM));
 #endif
 
 }
@@ -926,7 +924,6 @@ const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#",
 uint8_t remote_MIDI_CC = 0;
 uint8_t remote_MIDI_CC_value;
 
-#include "filemanager.h"
 uint8_t incomingSerialByte;
 
 int8_t midi_decay_dexed[NUM_DEXED] = { -1, -1 };
@@ -995,7 +992,6 @@ void updateEncoderR(void)
 FLASHMEM void setup()
 {
 
-
 #ifdef MIDI_ACTIVITY_LIGHTS
   pinMode(LED_MIDI_IN, OUTPUT);
   pinMode(LED_MIDI_OUT, OUTPUT);
@@ -1019,6 +1015,7 @@ FLASHMEM void setup()
   LOG.println(F("<setup start>"));
   LOG.flush();
 #endif
+
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   pinMode(TFT_TOUCH_IRQ, INPUT);
@@ -1333,11 +1330,8 @@ FLASHMEM void setup()
   LOG.println(F(" samples"));
 #endif
 
-  // Setup SD WAV play
-
+  // Setup WAV preview play
   create_audio_wav_preview_chain();
-  master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.5);
-  master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_SD, 0.5);
 
 #if defined(COMPILE_FOR_PSRAM)
   master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
@@ -5214,11 +5208,11 @@ FLASHMEM void generate_version_string(char* buffer, uint8_t len)
 #if defined(TEENSY4_0)
   strncat(buffer, " - 4.0", 6);
 #elif defined(TEENSY4_1)
-  strncat(buffer, " - 4.1", 6);
+  strcat(buffer, " - 4.1");
 #endif
-  strncat(buffer, " - FX", 5);
+  strcat(buffer, " - FX");
 #if defined(MAX_NOTES)
-  strncat(buffer, " - MAX ", 7);
+  strcat(buffer, " - MAX ");
   itoa(MAX_NOTES, tmp, 10);
   strncat(buffer, tmp, 2);
 #endif

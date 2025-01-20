@@ -176,7 +176,7 @@ public:
 
     float desiredseparation = 14;
     float neighbordist = 30;
-    float mass;
+    //float mass;
 
     Boid() {}
 
