@@ -1,30 +1,32 @@
 #pragma once
+#include "Arduino.h"
 #include "ErrorHandling/error_codes.h"
 #include "config.h"
 
-#if not defined(PLAIN_VANILLA_CALLBACKS)
 
-    #include <functional>
-    inline void std::__throw_bad_function_call()
-    {
-        while (1) {} // do whatever you want to do instead of an exception
-    }
-    namespace TeensyTimerTool
-    {
-        using callback_t = std::function<void(void)>;
-        using errorFunc_t = std::function<void(errorCode)>;
+#if not defined(PLAIN_VANILLA_CALLBACKS)
+        #define USE_MODERN_CALLBACKS
+        #include "inplace_function.h"
+#endif
+namespace TeensyTimerTool
+{
+    #if defined(USE_MODERN_CALLBACKS)
+        using callback_t  = stdext::inplace_function<void(void)>;
+        using errorFunc_t = stdext::inplace_function<void(errorCode)>;
 
         extern void attachErrFunc(errorFunc_t);
         extern errorCode postError(errorCode);
-    }
-#else
-    namespace TeensyTimerTool
-    {
-        using callback_t = void (*)();
+    #else
+        using callback_t  = void (*)();
         using errorFunc_t = void (*)(errorCode);
 
         extern void attachErrFunc(errorFunc_t);
         extern errorCode postError(errorCode);
-    }
-#endif
+    #endif
 
+    #if defined(TTT_TEENSY4X)
+    #define TTT_F_CPU F_CPU_ACTUAL
+    #else
+    #define TTT_F_CPU F_CPU
+    #endif
+} // namespace TeensyTimerTool

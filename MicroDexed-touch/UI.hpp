@@ -19688,7 +19688,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
 #endif
             char tmp[FILENAME_LEN];
             strcpy(tmp, receive_bank_filename);
-            snprintf(receive_bank_filename, sizeof(receive_bank_filename), "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, pool_number, bank_number, tmp);
+            sprintf(receive_bank_filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, pool_number, bank_number, tmp);
 #ifdef DEBUG
             LOG.print(F("Receiving into bank "));
             LOG.print(bank_number);
@@ -20519,7 +20519,7 @@ FLASHMEM void display_int(int16_t var, uint8_t size, bool zeros, bool brackets, 
 
 FLASHMEM void display_float(float var, uint8_t size_number, uint8_t size_fraction, bool zeros, bool brackets, bool sign)
 {
-  char s[display_cols + 1];
+  char s[display_cols + 3];
 
   if (size_fraction > 0)
   {
@@ -20549,7 +20549,7 @@ FLASHMEM void display_float(float var, uint8_t size_number, uint8_t size_fractio
     char tmp[display_cols + 1];
 
     strcpy(tmp, s);
-    snprintf(s, sizeof(s), "[%s]", tmp);
+    sprintf(s, "[%s]", tmp);
   }
 
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
