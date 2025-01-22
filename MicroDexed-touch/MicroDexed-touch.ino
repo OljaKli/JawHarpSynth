@@ -1549,10 +1549,10 @@ FLASHMEM void setup()
     LCDML.OTHER_jumpToFunc(UI_func_sd_content_not_found);
   }
   else {
-    if ( (count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning==false) // startup with midi channel setup page
+    if ((count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning == false) // startup with midi channel setup page
       LCDML.OTHER_jumpToFunc(UI_func_midi_channels);
     else
-      if (seq.clock == 1 && configuration.sys.skip_midi_channel_warning==false) //MIDI Slave
+      if (seq.clock == 1 && configuration.sys.skip_midi_channel_warning == false) //MIDI Slave
         LCDML.OTHER_jumpToFunc(UI_func_seq_settings);
       else
       {
@@ -2410,25 +2410,23 @@ void loop()
   MIDI MESSAGE HANDLER
 ******************************************************************************/
 
-
-
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
   AudioNoInterrupts();
-  sample_envelope[instance_id]->attack(drum_config[sample].env_attack * 20);
-  sample_envelope[instance_id + NUM_DRUMS]->attack(drum_config[sample].env_attack * 20);
+  sample_envelope[instance_id]->attack(pow(drum_config[sample].env_attack, 1.2f));
+  sample_envelope[instance_id + NUM_DRUMS]->attack(pow(drum_config[sample].env_attack, 1.2f));
 
-  sample_envelope[instance_id]->hold(drum_config[sample].env_hold * 8);
-  sample_envelope[instance_id + NUM_DRUMS]->hold(drum_config[sample].env_hold * 8);
+  sample_envelope[instance_id]->hold(pow(drum_config[sample].env_hold, 1.5f));
+  sample_envelope[instance_id + NUM_DRUMS]->hold(pow(drum_config[sample].env_hold, 1.5f));
 
-  sample_envelope[instance_id]->decay(drum_config[sample].env_decay * 8);
-  sample_envelope[instance_id + NUM_DRUMS]->decay(drum_config[sample].env_decay * 8);
+  sample_envelope[instance_id]->decay(pow(drum_config[sample].env_decay, 1.5f));
+  sample_envelope[instance_id + NUM_DRUMS]->decay(pow(drum_config[sample].env_decay, 1.5f));
 
   sample_envelope[instance_id]->sustain((float)drum_config[sample].env_sustain / 100);
   sample_envelope[instance_id + NUM_DRUMS]->sustain((float)drum_config[sample].env_sustain / 100);
 
-  sample_envelope[instance_id]->release(drum_config[sample].env_release * 28);
-  sample_envelope[instance_id + NUM_DRUMS]->release(drum_config[sample].env_release * 28);
+  sample_envelope[instance_id]->release(pow(drum_config[sample].env_release, 2.5f));
+  sample_envelope[instance_id + NUM_DRUMS]->release(pow(drum_config[sample].env_release, 2.5f));
   AudioInterrupts();
 }
 
