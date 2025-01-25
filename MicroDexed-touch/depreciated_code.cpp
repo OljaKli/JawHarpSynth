@@ -120,6 +120,31 @@
 // ; ;     ${env.lib_deps}
 // ; custom_firmware_name = FLASH_PSRAM
 
+// [env:psram_capacitive_boot_delay]
+// ; PSRAM_CAPACITIVE
+// build_flags = 
+//     ${common.build_flags}
+//     -D COMPILE_FOR_PSRAM
+//     -D PSRAM
+//     -D CAPACITIVE_TOUCH_DISPLAY
+//     -D BOOT_DELAY
+//     ;-D MIDI_ACTIVITY_LIGHTS
+//     ;-D DEBUG=1
+// ; lib_deps =
+// ;     ${env.lib_deps}
+// custom_firmware_name = PSRAM-CAPACITIVE_TOUCH-BOOT_DELAY
+
+// [env:progmem_capacitive_boot_delay]
+// build_flags = 
+//     ${common.build_flags}
+//     -D COMPILE_FOR_PROGMEM
+//     -D CAPACITIVE_TOUCH_DISPLAY
+//     -D BOOT_DELAY
+//     ;-D MIDI_ACTIVITY_LIGHTS
+//     ;-D DEBUG=1
+// ; lib_deps =
+// ;     ${env.lib_deps}
+// custom_firmware_name = PROGMEM-CAPACITIVE_TOUCH-BOOT_DELAY
 
 // microdexed-touch.ino
 

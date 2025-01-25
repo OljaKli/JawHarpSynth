@@ -146,7 +146,7 @@
 //* DEXED SEQUENCER, EPIANO AND EFFECTS SETTINGS
 //*************************************************************************************************
 // Number of Dexed instances
-#define NUM_DEXED 2 // 1 or 2 - nothing else!
+#define NUM_DEXED 4 // 1 or 2 - nothing else!
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST0 1
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST1 2
 
@@ -389,7 +389,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define BI_BUTTON_B 17
 #endif
 
-#define MAX_DEXED 2 // No! - even don't think about increasing this number! IT _WILL_ PRODUCE MASSIVE PROBLEMS!
+#define MAX_DEXED 4 // No! - even don't think about increasing this number! IT _WILL_ PRODUCE MASSIVE PROBLEMS!
 #define CONTROL_RATE_MS 50
 #define MICROSYNTH_CONTROL_RATE_MS 30
 #define BRAIDS_CONTROL_RATE_MS 30
@@ -1038,6 +1038,8 @@ enum master_mixer_ports
 {
   MASTER_MIX_CH_DEXED1,
   MASTER_MIX_CH_DEXED2,
+  MASTER_MIX_CH_DEXED3,
+  MASTER_MIX_CH_DEXED4,
   MASTER_MIX_CH_REVERB,
   MASTER_MIX_CH_DRUMS,
   MASTER_MIX_CH_EPIANO,
@@ -1053,6 +1055,8 @@ enum reverb_mixer_ports
 {
   REVERB_MIX_CH_DEXED1,
   REVERB_MIX_CH_DEXED2,
+  REVERB_MIX_CH_DEXED3,
+  REVERB_MIX_CH_DEXED4,
   REVERB_MIX_CH_DRUMS,
   REVERB_MIX_CH_EPIANO,
   REVERB_MIX_CH_MICROSYNTH,

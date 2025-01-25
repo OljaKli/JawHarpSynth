@@ -167,8 +167,8 @@ AudioAnalyzePeak ep_peak_l;
 // Sidechain
 AudioEffectFade fade_sidechain_r;
 AudioEffectFade fade_sidechain_l;
-AudioMixer<12> sidechain_mixer_r;
-AudioMixer<12> sidechain_mixer_l;
+AudioMixer<14> sidechain_mixer_r;
+AudioMixer<14> sidechain_mixer_l;
 
 AudioSynthBraids* synthBraids[NUM_BRAIDS];
 AudioMixer<NUM_BRAIDS> braids_mixer;
@@ -223,9 +223,9 @@ AudioFilterStateVariable global_delay_filter[NUM_DEXED];
 AudioMixer<4> global_delay_filter_mixer[NUM_DEXED];
 
 #ifdef PSRAM
-AudioEffectDelayExternal8* delay_fx[NUM_DEXED];
+AudioEffectDelayExternal8* delay_fx[2];
 #else
-AudioEffectDelay* delay_fx[NUM_DEXED];
+AudioEffectDelay* delay_fx[2];
 #endif
 
 AudioMixer<2>* delay_mixer[NUM_DEXED];
@@ -245,13 +245,17 @@ AudioMixer<2> ep_chorus_mixer_l;
 AudioAnalyzePeak microdexed_peak_0;
 AudioAnalyzePeak microdexed_peak_1;
 
-AudioMixer<8> reverb_mixer_r;
-AudioMixer<8> reverb_mixer_l;
+AudioAnalyzePeak microdexed_peak_2;
+AudioAnalyzePeak microdexed_peak_3;
+
+
+AudioMixer<10> reverb_mixer_r;
+AudioMixer<10> reverb_mixer_l;
 
 AudioEffectPlateReverb reverb;
 
-AudioMixer<12> master_mixer_r;
-AudioMixer<12> master_mixer_l;
+AudioMixer<14> master_mixer_r;
+AudioMixer<14> master_mixer_l;
 
 AudioAmplifier volume_r;
 AudioAmplifier volume_l;
@@ -632,8 +636,11 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
   global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS * 2>();
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
-  Gate[instance_id] = new AudioEffectGate();
+ 
 
+if (instance_id == 0 || instance_id == 1) 
+{
+   Gate[instance_id] = new AudioEffectGate();
 #ifdef PSRAM
   delay_fx[instance_id] = new AudioEffectDelayExternal8(AUDIO_MEMORY8_EXTMEM, DELAY_MAX_TIME);
   const uint32_t delay_memory_size = (sizeof(((audio_block_t*)0)->data[0])) * (DELAY_MAX_TIME * (AUDIO_SAMPLE_RATE_EXACT / 1000.0f)) + 0.5f;
@@ -641,6 +648,8 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 #else
   delay_fx[instance_id] = new AudioEffectDelay();
 #endif
+  dynamicConnections.emplace_back(new AudioConnection(*Gate[instance_id], 0, *delay_fx[instance_id], 0));
+}
 
   delay_mixer[instance_id] = new AudioMixer<2>();
 
@@ -656,7 +665,15 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 
   }
   else
+    if (instance_id == 1)
     dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_1, 0));
+    else
+    if (instance_id == 2)
+    dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_2, 0));
+    else
+    if (instance_id == 3)
+    dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_3, 0));
+
 
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[instance_id], 0));
 
@@ -688,18 +705,10 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dynamicConnections.emplace_back(new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_fb_mixer[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(global_delay_filter_mixer[instance_id], 0, *delay_mixer[instance_id], 0));
 
-  //dynamicConnections.emplace_back(new AudioConnection(*delay_fb_mixer[instance_id], 0, *delay_fx[instance_id], 0));
-
   dynamicConnections.emplace_back(new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(*delay_fb_mixer[instance_id], 0, *Gate[instance_id], 1));
 
-
-  dynamicConnections.emplace_back(new AudioConnection(*Gate[instance_id], 0, *delay_fx[instance_id], 0));
-
-
   dynamicConnections.emplace_back(new AudioConnection(*delay_fx[instance_id], 0, *delay_fb_mixer[instance_id], 1));
-
-  //dynamicConnections.emplace_back(new AudioConnection(DC_OffsetWaveForm, 0, *delay_fb_mixer[instance_id], 2));
 
   dynamicConnections.emplace_back(new AudioConnection(*delay_fx[instance_id], 0, *delay_mixer[instance_id], 1));
 
@@ -708,13 +717,19 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_r, instance_id));
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, reverb_mixer_l, instance_id));
 
-  // epiano delay
+  
+if (instance_id == 0 || instance_id == 1) //connections to delay 1 and delay 2
+{
+
+// epiano delay
   dynamicConnections.emplace_back(new AudioConnection(ep, 0, *global_delay_in_mixer[instance_id], 5));
   dynamicConnections.emplace_back(new AudioConnection(ep, 1, *global_delay_in_mixer[instance_id], 6));
 
   // microsynth delays
   dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[0], 0, *global_delay_in_mixer[instance_id], 2));
   dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[1], 0, *global_delay_in_mixer[instance_id], 3));
+  
+}
 
   // dexed delay output
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *dexed_mono2stereo[instance_id], 0));
@@ -2277,13 +2292,13 @@ void loop()
         if (midi_decay_timer_dexed > MIDI_DECAY_TIMER && midi_decay_dexed[instance_id] > 0)
         {
           midi_decay_dexed[instance_id]--;
-          display.fillRect(187 + (instance_id * 12), 19, 5, 8 - midi_decay_dexed[instance_id], COLOR_BACKGROUND);                           // region above bar
-          display.fillRect(187 + (instance_id * 12), 27 - midi_decay_dexed[instance_id], 5, midi_decay_dexed[instance_id], COLOR_PITCHSMP); // bar
+          display.fillRect(167 + (instance_id * 12), 19, 5, 8 - midi_decay_dexed[instance_id], COLOR_BACKGROUND);                           // region above bar
+          display.fillRect(167 + (instance_id * 12), 27 - midi_decay_dexed[instance_id], 5, midi_decay_dexed[instance_id], COLOR_PITCHSMP); // bar
         }
         else if (midi_voices[instance_id] == 0 && midi_decay_dexed[instance_id] == 0 && !MicroDexed[instance_id]->getSustain())
         {
           midi_decay_dexed[instance_id]--;
-          display.fillRect(187 + (instance_id * 12), 19 + 7, 5, 1, COLOR_BACKGROUND);
+          display.fillRect(167 + (instance_id * 12), 19 + 7, 5, 1, COLOR_BACKGROUND);
         }
       }
       if (midi_decay_timer_dexed > MIDI_DECAY_LEVEL_TIME)
@@ -3659,8 +3674,8 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           seq.note_in = 0;
           break;
         case 203: // CC 203: dexed panic
-          MicroDexed[0]->panic();
-          MicroDexed[1]->panic();
+         for (uint8_t i = 0; i < NUM_DEXED; i++)
+          MicroDexed[i]->panic();
           break;
         }
       }
@@ -4308,11 +4323,9 @@ void handleStop(void)
         display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
       }
 
-      MicroDexed[0]->panic();
-#if NUM_DEXED > 1
-      MicroDexed[1]->panic();
-#endif
-
+ for (uint8_t i = 0; i < NUM_DEXED; i++)
+          MicroDexed[i]->panic();
+         
 #if defined APC
       if (APC_MODE == APC_PATTERN_EDITOR)
       {
@@ -4571,6 +4584,10 @@ FLASHMEM void initial_values(bool init)
   { // boot without performance - set some defaults
     configuration.dexed[0].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST0;
     configuration.dexed[1].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST1;
+
+     configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
+    configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
+
     // configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel + 1, 0, 16);
     microsynth[0].midi_channel = DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST0;
     microsynth[1].midi_channel = DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST1;
@@ -4659,7 +4676,7 @@ FLASHMEM void check_configuration_dexed(uint8_t instance_id)
 {
   configuration.dexed[instance_id].bank = constrain(configuration.dexed[instance_id].bank, 0, MAX_BANKS - 1);
   configuration.dexed[instance_id].voice = constrain(configuration.dexed[instance_id].voice, 0, MAX_VOICES - 1);
-  configuration.dexed[instance_id].midi_channel = constrain(configuration.dexed[instance_id].midi_channel, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
+  configuration.dexed[instance_id].midi_channel = constrain(configuration.dexed[instance_id].midi_channel, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);  //+1 = OFF
   configuration.dexed[instance_id].lowest_note = constrain(configuration.dexed[instance_id].lowest_note, INSTANCE_LOWEST_NOTE_MIN, INSTANCE_LOWEST_NOTE_MAX);
   configuration.dexed[instance_id].highest_note = constrain(configuration.dexed[instance_id].highest_note, INSTANCE_HIGHEST_NOTE_MIN, INSTANCE_HIGHEST_NOTE_MAX);
   configuration.dexed[instance_id].sound_intensity = constrain(configuration.dexed[instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
