@@ -53,8 +53,8 @@ public:
     INSTR_MSP2 = 8,
     INSTR_SLC = 9,
     // The gap here is because in the other sequencer, all instruments are managed as the same thing, even the external 16+16+16=48 MIDI Channels (+ a safety gap)
-    INSTR_DX3 = 70,  //Not sure if this can be working with the real instrument number 70/71. Hacked it at the playing stage later
-    INSTR_DX4 = 71,  //since i could not get it working here
+    INSTR_DX3 = 70,  
+    INSTR_DX4 = 71, 
     INSTR_MAX = 12
   };
 
