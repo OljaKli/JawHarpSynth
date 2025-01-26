@@ -1431,7 +1431,7 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         serializeJsonPretty(data_json, Serial);
         LOG.println();
 #endif
-        for (uint8_t i = 0; i < MAX_DEXED; i++)
+        for (uint8_t i = 0; i < 2; i++) 
         {
           configuration.fx.filter_cutoff[i] = data_json["filter_cutoff"][i];
           configuration.fx.filter_resonance[i] = data_json["filter_resonance"][i];
@@ -1524,7 +1524,7 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
     if (json)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-      for (uint8_t i = 0; i < MAX_DEXED; i++)
+      for (uint8_t i = 0; i < 2; i++)
       {
         data_json["filter_cutoff"][i] = configuration.fx.filter_cutoff[i];
         data_json["filter_resonance"][i] = configuration.fx.filter_resonance[i];
@@ -3276,14 +3276,16 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_slices_json(number);
 #endif
 
-  for (uint8_t i = 0; i < MAX_DEXED; i++)
+  for (uint8_t i = 0; i < MAX_DEXED; i++)  //phtodo
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, number, VOICE_CONFIG_NAME, i);
 #ifdef DEBUG
     LOG.print(F("Write Voice-Config for sequencer"));
     LOG.println(filename);
 #endif
+if (i<2)
     save_sd_microsynth_json(number, i);
+
     save_sd_voiceconfig_json(number, i);
   }
   if (sd_card > 0)
@@ -3720,7 +3722,10 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           LOG.print(instance_id + 1);
           LOG.print(F(" for sequencer"));
 #endif
+
+if (instance_id<2)
           load_sd_microsynth_json(number, instance_id);
+
           load_sd_voiceconfig_json(number, instance_id);
           load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
           MicroDexed[instance_id]->setGain(midi_volume_transform(map(configuration.dexed[instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));

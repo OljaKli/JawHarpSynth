@@ -1099,7 +1099,7 @@ FLASHMEM void setup()
 #ifdef BOOT_DELAY
   delay(10);
 #endif
-
+delay(10);
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))

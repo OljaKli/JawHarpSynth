@@ -979,12 +979,10 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
         display.print(F("DX1"));
       else if (seq.instrument[x] == 1)
         display.print(F("DX2"));
-
- else if (seq.instrument[x] == 70)
+      else if (seq.instrument[x] == 70)
         display.print(F("DX3"));
       else if (seq.instrument[x] == 71)
         display.print(F("DX4"));
-
       else if (seq.instrument[x] == 2)
         display.print(F("EP "));
       else if (seq.instrument[x] == 3)
@@ -11989,14 +11987,14 @@ FLASHMEM void UI_func_song(uint8_t param)
           }
           else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
           {  // 26/01/2026 new dexed instance will start at 70
-            if (seq.instrument[seq.selected_track] < 63 && seq.instrument[seq.selected_track]!=1)
+            if (seq.instrument[seq.selected_track] < 63 && seq.instrument[seq.selected_track] != 1)
               seq.instrument[seq.selected_track]++;
-else  if (seq.instrument[seq.selected_track] ==1) //second dexed instance
-   seq.instrument[seq.selected_track]=70;
-else  if (seq.instrument[seq.selected_track] ==70) //third dexed instance
-   seq.instrument[seq.selected_track]=71;
-else  if (seq.instrument[seq.selected_track] ==71) 
-   seq.instrument[seq.selected_track]=2;
+            else  if (seq.instrument[seq.selected_track] == 1) //second dexed instance
+              seq.instrument[seq.selected_track] = 70;
+            else  if (seq.instrument[seq.selected_track] == 70) //third dexed instance
+              seq.instrument[seq.selected_track] = 71;
+            else  if (seq.instrument[seq.selected_track] == 71)
+              seq.instrument[seq.selected_track] = 2;
 
             if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
             {
@@ -12090,19 +12088,19 @@ else  if (seq.instrument[seq.selected_track] ==71)
           }
           else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
           {//26/01/2026 new dexed instance will start at 70
-            if (seq.instrument[seq.selected_track] > 0 &&seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track]!=2)
+            if (seq.instrument[seq.selected_track] > 0 && seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track] != 2)
             {
               seq.instrument[seq.selected_track]--;
               if (seq.instrument[seq.selected_track] == 5)
                 sub_song_print_tracktypes();
-                
+
             }
-            else if (seq.instrument[seq.selected_track] ==2) 
-            seq.instrument[seq.selected_track] =71;
-            else if (seq.instrument[seq.selected_track] ==70) // third dexed instance
-            seq.instrument[seq.selected_track] =1;
-             else if (seq.instrument[seq.selected_track] ==71) // fourth dexed instance
-            seq.instrument[seq.selected_track] =70;
+            else if (seq.instrument[seq.selected_track] == 2)
+              seq.instrument[seq.selected_track] = 71;
+            else if (seq.instrument[seq.selected_track] == 70) // third dexed instance
+              seq.instrument[seq.selected_track] = 1;
+            else if (seq.instrument[seq.selected_track] == 71) // fourth dexed instance
+              seq.instrument[seq.selected_track] = 70;
 
             if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
             {
@@ -13009,6 +13007,10 @@ FLASHMEM uint8_t count_omni()
     count++;
   if (configuration.dexed[1].midi_channel == MIDI_CHANNEL_OMNI)
     count++;
+  if (configuration.dexed[2].midi_channel == MIDI_CHANNEL_OMNI)
+    count++;
+  if (configuration.dexed[3].midi_channel == MIDI_CHANNEL_OMNI)
+    count++;
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI)
     count++;
   if (microsynth[0].midi_channel == MIDI_CHANNEL_OMNI)
@@ -13033,7 +13035,7 @@ FLASHMEM uint8_t count_midi_channel_duplicates(bool find_first)
 {
   uint8_t count = 0;
   uint8_t midi_ch[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-  uint8_t ins[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,0 };
+  uint8_t ins[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0 };
 
   ins[0] = configuration.dexed[0].midi_channel;
   ins[1] = configuration.dexed[1].midi_channel;
@@ -13045,11 +13047,12 @@ FLASHMEM uint8_t count_midi_channel_duplicates(bool find_first)
   ins[7] = msp[1].midi_channel;
   ins[8] = drum_midi_channel;
   ins[9] = slices_midi_channel;
+  ins[10] = configuration.dexed[2].midi_channel;
+  ins[11] = configuration.dexed[3].midi_channel;
 
   for (uint8_t i = 1; i < 17; i++)
   {
-
-    for (uint8_t j = 0; j < 10; j++)
+    for (uint8_t j = 0; j < 12; j++)
     {
       if (ins[j] == i)
         midi_ch[i]++;
@@ -16979,7 +16982,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       setCursor_textGrid_small(40, 6);
       _print_midi_channel(configuration.dexed[1].midi_channel);
     }
-if (menu_item_check(2))
+    if (menu_item_check(2))
     {
       setModeColor(2);
       setCursor_textGrid_small(40, 7);
