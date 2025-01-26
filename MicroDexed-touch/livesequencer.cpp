@@ -938,6 +938,15 @@ FLASHMEM void selectDexed1() {
   selected_instance_id = 1;
 }
 
+FLASHMEM void selectDexed2() {
+  selected_instance_id = 2;
+}
+
+FLASHMEM void selectDexed3() {
+  selected_instance_id = 3;
+}
+
+
 FLASHMEM void selectMs0() {
   microsynth_selected_instance = 0;
 }
@@ -1109,6 +1118,18 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].screenSetupFn = (instrument == INSTR_DX1) ? (SetupFn)selectDexed0 : (SetupFn)selectDexed1;
         break;
 
+      case INSTR_DX3:
+        data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[2].midi_channel);
+         data.tracks[i].screen = UI_func_voice_select;
+          data.tracks[i].screenSetupFn = (SetupFn)selectDexed2;
+        break;
+
+      case INSTR_DX4:
+        data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[3].midi_channel);
+         data.tracks[i].screen = UI_func_voice_select;
+         data.tracks[i].screenSetupFn =  (SetupFn)selectDexed3;
+        break;
+
       case INSTR_EP:
         data.tracks[i].channel = static_cast<midi::Channel>(configuration.epiano.midi_channel);
         data.tracks[i].screen = UI_func_epiano;
@@ -1137,6 +1158,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].screen = UI_func_MultiSamplePlay;
         data.tracks[i].screenSetupFn = (instrument == INSTR_MSP1) ? (SetupFn)selectMsp0 : (SetupFn)selectMsp1;
         break;
+
 
       default:
         data.tracks[i].channel = 99; // probably unused
@@ -1195,6 +1217,11 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
     case INSTR_DX1:
     case INSTR_DX2:
       sprintf(sub, "DX%i", instrument);
+      break;
+
+    case INSTR_DX3:
+    case INSTR_DX4:  
+      sprintf(sub, "DX%i", instrument - INSTR_DX3 + 3);
       break;
 
     case INSTR_EP:

@@ -69,6 +69,24 @@ private:
     uint8_t velocity;
   } selectedTrackSetup;
 
+ // instrument order in GUI in track instrument config, free to change
+  static constexpr uint8_t instrumentToInstrumentID[] = {
+    LiveSequencer::INSTR_DRUM,
+    LiveSequencer::INSTR_DX1,
+    LiveSequencer::INSTR_DX2,
+    LiveSequencer::INSTR_DX3,
+    LiveSequencer::INSTR_DX4,
+    LiveSequencer::INSTR_EP,
+    LiveSequencer::INSTR_MS1,
+    LiveSequencer::INSTR_MS2,
+    LiveSequencer::INSTR_BRD,
+    LiveSequencer::INSTR_MSP1,
+    LiveSequencer::INSTR_MSP2,
+    LiveSequencer::INSTR_SLC
+  };
+
+  uint8_t selectedInstrument = LiveSequencer::INSTR_DRUM;
+
   UI_LiveSequencer* instance;
   LiveSequencer& liveSeq;
   LiveSequencer::LiveSeqData &data;

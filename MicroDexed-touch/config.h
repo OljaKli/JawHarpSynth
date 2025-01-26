@@ -389,7 +389,6 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define BI_BUTTON_B 17
 #endif
 
-#define MAX_DEXED 4 // No! - even don't think about increasing this number! IT _WILL_ PRODUCE MASSIVE PROBLEMS!
 #define CONTROL_RATE_MS 50
 #define MICROSYNTH_CONTROL_RATE_MS 30
 #define BRAIDS_CONTROL_RATE_MS 30
@@ -808,23 +807,23 @@ typedef struct dexed_s
 
 typedef struct fx_s
 {
-  uint8_t filter_cutoff[MAX_DEXED];
-  uint8_t filter_resonance[MAX_DEXED];
-  uint8_t chorus_frequency[MAX_DEXED];
-  uint8_t chorus_waveform[MAX_DEXED];
-  uint8_t chorus_depth[MAX_DEXED];
-  uint8_t chorus_level[MAX_DEXED];
-  uint8_t delay_multiplier[MAX_DEXED];
-  uint16_t delay_time[MAX_DEXED];
-  uint8_t delay_feedback[MAX_DEXED];
-  uint8_t delay_level[MAX_DEXED];
-  uint8_t delay_level_global[MAX_DEXED];
-  uint8_t delay_sync[MAX_DEXED];
-  uint8_t delay_pan[MAX_DEXED];
-  uint8_t reverb_send[MAX_DEXED];
-  uint8_t delay_to_reverb[MAX_DEXED];
-  uint8_t delay_filter_mode[MAX_DEXED];
-  uint16_t delay_filter_freq[MAX_DEXED];
+  uint8_t filter_cutoff[NUM_DEXED];
+  uint8_t filter_resonance[NUM_DEXED];
+  uint8_t chorus_frequency[NUM_DEXED];
+  uint8_t chorus_waveform[NUM_DEXED];
+  uint8_t chorus_depth[NUM_DEXED];
+  uint8_t chorus_level[NUM_DEXED];
+  uint8_t delay_multiplier[NUM_DEXED];
+  uint16_t delay_time[NUM_DEXED];
+  uint8_t delay_feedback[NUM_DEXED];
+  uint8_t delay_level[NUM_DEXED];
+  uint8_t delay_level_global[NUM_DEXED];
+  uint8_t delay_sync[NUM_DEXED];
+  uint8_t delay_pan[NUM_DEXED];
+  uint8_t reverb_send[NUM_DEXED];
+  uint8_t delay_to_reverb[NUM_DEXED];
+  uint8_t delay_filter_mode[NUM_DEXED];
+  uint16_t delay_filter_freq[NUM_DEXED];
   uint8_t delay1_to_delay2;
   uint8_t delay2_to_delay1;
   uint8_t reverb_roomsize;
@@ -1021,7 +1020,7 @@ typedef struct sdcard_s
 typedef struct configuration_s
 {
   sys_t sys;
-  dexed_t dexed[MAX_DEXED];
+  dexed_t dexed[NUM_DEXED];
   epiano_t epiano;
   fx_t fx;
 } config_t;

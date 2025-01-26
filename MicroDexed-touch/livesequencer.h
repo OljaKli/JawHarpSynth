@@ -40,6 +40,7 @@ public:
     DEVICE_MIDI_INT = 3
   };
 
+   // !!! never change existing numbers, used as IDs in saved performances !!!
   enum InternalInstrument {
     INSTR_DRUM = 0,
     INSTR_DX1 = 1,
@@ -50,7 +51,11 @@ public:
     INSTR_BRD = 6,
     INSTR_MSP1 = 7,
     INSTR_MSP2 = 8,
-    INSTR_SLC = 9
+    INSTR_SLC = 9,
+    // The gap here is because in the other sequencer, all instruments are managed as the same thing, even the external 16+16+16=48 MIDI Channels (+ a safety gap)
+    INSTR_DX3 = 70,  //Not sure if this can be working with the real instrument number 70/71. Hacked it at the playing stage later
+    INSTR_DX4 = 71,  //since i could not get it working here
+    INSTR_MAX = 12
   };
 
   struct MidiEvent {

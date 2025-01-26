@@ -728,7 +728,7 @@ void update_seq_speed() {
       sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
   }
 
-  for (uint8_t i = 0; i < MAX_DEXED; i++)
+  for (uint8_t i = 0; i < NUM_DEXED; i++)
   {
     if (configuration.fx.delay_sync[i] > 0)
     {

@@ -1431,7 +1431,7 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         serializeJsonPretty(data_json, Serial);
         LOG.println();
 #endif
-        for (uint8_t i = 0; i < 2; i++) 
+        for (uint8_t i = 0; i < 2; i++)
         {
           configuration.fx.filter_cutoff[i] = data_json["filter_cutoff"][i];
           configuration.fx.filter_resonance[i] = data_json["filter_resonance"][i];
@@ -3276,15 +3276,15 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_slices_json(number);
 #endif
 
-  for (uint8_t i = 0; i < MAX_DEXED; i++)  //phtodo
+  for (uint8_t i = 0; i < NUM_DEXED; i++)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, number, VOICE_CONFIG_NAME, i);
 #ifdef DEBUG
     LOG.print(F("Write Voice-Config for sequencer"));
     LOG.println(filename);
 #endif
-if (i<2)
-    save_sd_microsynth_json(number, i);
+    if (i < 2)  //only 2 instances of microsynth
+      save_sd_microsynth_json(number, i);
 
     save_sd_voiceconfig_json(number, i);
   }
@@ -3723,20 +3723,20 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           LOG.print(F(" for sequencer"));
 #endif
 
-if (instance_id<2)
-          load_sd_microsynth_json(number, instance_id);
+          if (instance_id < 2)
+            load_sd_microsynth_json(number, instance_id);
 
           load_sd_voiceconfig_json(number, instance_id);
           load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
           MicroDexed[instance_id]->setGain(midi_volume_transform(map(configuration.dexed[instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
-          
+
           MicroDexed[instance_id]->panic();
         }
 
-        if (configuration.dexed[2].midi_channel==0)
-         configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
-        if (configuration.dexed[3].midi_channel==0)
-         configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
+        if (configuration.dexed[2].midi_channel == 0)
+          configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
+        if (configuration.dexed[3].midi_channel == 0)
+          configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
 
         load_sd_fx_json(configuration.sys.performance_number); //loaded here since bpm must be loaded first
         AudioInterrupts();
@@ -4297,7 +4297,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   return (false);
 }
 
-int compare_files_by_name(storage_file_s &fileA, storage_file_s &fileB)
+int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
 {
   String strA = fileA.name.toLowerCase();
   String strB = fileB.name.toLowerCase();
