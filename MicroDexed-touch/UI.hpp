@@ -283,7 +283,7 @@ bool generic_full_draw_required = false;
 
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
-extern AudioMixer<2 * NUM_DRUMS>* global_delay_in_mixer[NUM_DEXED];
+extern AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
 extern AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 #ifdef PSRAM
@@ -979,6 +979,12 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
         display.print(F("DX1"));
       else if (seq.instrument[x] == 1)
         display.print(F("DX2"));
+
+ else if (seq.instrument[x] == 70)
+        display.print(F("DX3"));
+      else if (seq.instrument[x] == 71)
+        display.print(F("DX4"));
+
       else if (seq.instrument[x] == 2)
         display.print(F("EP "));
       else if (seq.instrument[x] == 3)
@@ -3197,21 +3203,21 @@ FLASHMEM void gamepad_learn_func(uint32_t buttons)
 
 FLASHMEM void increment_dexed_instance()
 {
-   if (selected_instance_id < NUM_DEXED)
- selected_instance_id++;       
+  if (selected_instance_id < NUM_DEXED)
+    selected_instance_id++;
 }
 
 FLASHMEM void increment_dexed_instance_round_robin()
 {
- selected_instance_id++;
-        if (selected_instance_id == NUM_DEXED)
-          selected_instance_id = 0;
+  selected_instance_id++;
+  if (selected_instance_id == NUM_DEXED)
+    selected_instance_id = 0;
 }
 
 FLASHMEM void decrement_dexed_instance()
 {
-  if (selected_instance_id>0)
- selected_instance_id--;
+  if (selected_instance_id > 0)
+    selected_instance_id--;
 }
 
 FLASHMEM void setModeColor(uint8_t selected_option)
@@ -3713,7 +3719,7 @@ public:
     if (buttonLongHandler && encoderDir[ENC_R].ButtonLong())
     {
       if (instance_select_flag)
-     increment_dexed_instance_round_robin();
+        increment_dexed_instance_round_robin();
       else
         buttonLongHandler->set(1 - buttonLongHandler->get()); // toggle value between 0 and 1
 
@@ -4576,7 +4582,7 @@ FLASHMEM void lcdml_menu_control(void)
     encoderDir[ENC_L].reset();
     encoderDir[ENC_R].reset();
   }
-  }
+}
 
 /***********************************************************************
    MENU DISPLAY
@@ -5617,7 +5623,13 @@ FLASHMEM void UI_func_dexed_audio(uint8_t param)
       {
         fx_current_instance_setter(editor, value);
         MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 107, value);
-        global_delay_in_mixer[selected_instance_id]->gain(0, midi_volume_transform(map(value, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 127))); });
+        if (selected_instance_id == 0 || selected_instance_id == 1)
+          global_delay_in_mixer[selected_instance_id]->gain(0, midi_volume_transform(map(value, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 127)));
+        else if (selected_instance_id == 2)
+          global_delay_in_mixer[0]->gain(1, midi_volume_transform(map(value, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 127)));
+        else if (selected_instance_id == 3)
+          global_delay_in_mixer[1]->gain(1, midi_volume_transform(map(value, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 127)));
+      });
     ui.addEditor("REVERB SEND", REVERB_SEND_MIN, REVERB_SEND_MAX, &configuration.fx.reverb_send[0],
       &fx_current_instance_getter, [](Editor* editor, int16_t value)
       {
@@ -8754,7 +8766,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
       seq.menu_status = 0;
     }
   }
-  }
+}
 
 FLASHMEM void seq_clear_active_pattern()
 {
@@ -9832,7 +9844,7 @@ FLASHMEM void _seq_pattern_change()
     print_current_sample_and_pitch_buffer();
   // seq_sub_print_track_assignments(CHAR_width * 12, CHAR_height * 2, false);
 
-  }
+}
 
 extern bool apc_shift_key;
 
@@ -9883,7 +9895,7 @@ FLASHMEM void insert_pattern_step(uint8_t step)
             pattern_editor_play_current_step(step);
           }
         }
-  }
+    }
     else
     { // Inst. Track
       if (temp_int == 109 || seq.note_data[seq.active_pattern][step] == temp_int)
@@ -10164,7 +10176,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 
 #endif
       }
-      }
+    }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 #if defined APC
@@ -10529,7 +10541,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         }
     }
     virtual_keyboard_smart_preselect_mode();
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     unregisterTouchHandler();
@@ -10544,7 +10556,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       seq.menu_status = 0;
     }
   }
-        }
+}
 
 void UI_toplineInfoText(uint8_t s)
 {
@@ -10948,8 +10960,8 @@ FLASHMEM void update_selective_values_epiano()
   }
   if (generic_temp_select_menu == 19 && seq.edit_state)
   {
-    global_delay_in_mixer[0]->gain(5, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
-    global_delay_in_mixer[0]->gain(6, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+    global_delay_in_mixer[0]->gain(7, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//prev 5
+    global_delay_in_mixer[0]->gain(8, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//prev 6 
   }
   if (menu_item_check(20))
   {
@@ -10959,8 +10971,8 @@ FLASHMEM void update_selective_values_epiano()
   }
   if (generic_temp_select_menu == 20 && seq.edit_state)
   {
-    global_delay_in_mixer[1]->gain(5, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
-    global_delay_in_mixer[1]->gain(6, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+    global_delay_in_mixer[1]->gain(7, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//prev 5
+    global_delay_in_mixer[1]->gain(8, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//prev 6
   }
   if (menu_item_check(21))
     print_small_intbar(34, 17, configuration.fx.ep_reverb_send, 21, 1, 0);
@@ -11976,9 +11988,15 @@ FLASHMEM void UI_func_song(uint8_t param)
             seq.help_text_needs_refresh = true;
           }
           else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
-          {
-            if (seq.instrument[seq.selected_track] < 63)
+          {  // 26/01/2026 new dexed instance will start at 70
+            if (seq.instrument[seq.selected_track] < 63 && seq.instrument[seq.selected_track]!=1)
               seq.instrument[seq.selected_track]++;
+else  if (seq.instrument[seq.selected_track] ==1) //second dexed instance
+   seq.instrument[seq.selected_track]=70;
+else  if (seq.instrument[seq.selected_track] ==70) //third dexed instance
+   seq.instrument[seq.selected_track]=71;
+else  if (seq.instrument[seq.selected_track] ==71) 
+   seq.instrument[seq.selected_track]=2;
 
             if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
             {
@@ -12071,13 +12089,21 @@ FLASHMEM void UI_func_song(uint8_t param)
             }
           }
           else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
-          {
-            if (seq.instrument[seq.selected_track] > 0)
+          {//26/01/2026 new dexed instance will start at 70
+            if (seq.instrument[seq.selected_track] > 0 &&seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track]!=2)
             {
               seq.instrument[seq.selected_track]--;
               if (seq.instrument[seq.selected_track] == 5)
                 sub_song_print_tracktypes();
+                
             }
+            else if (seq.instrument[seq.selected_track] ==2) 
+            seq.instrument[seq.selected_track] =71;
+            else if (seq.instrument[seq.selected_track] ==70) // third dexed instance
+            seq.instrument[seq.selected_track] =1;
+             else if (seq.instrument[seq.selected_track] ==71) // fourth dexed instance
+            seq.instrument[seq.selected_track] =70;
+
             if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
             {
               if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
@@ -13359,7 +13385,7 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
     delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
   }
-    }
+}
 
 FLASHMEM void print_sync_timing(uint8_t sync)
 {
@@ -13934,36 +13960,36 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
         case 9:
           // epiano delay level
           configuration.fx.ep_delay_send_1 = constrain(configuration.fx.ep_delay_send_1 + (factorChange * ENCODER[ENC_R].speed()), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[0]->gain(5, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
-          global_delay_in_mixer[0]->gain(6, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[0]->gain(7, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 5
+          global_delay_in_mixer[0]->gain(8, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 6
           print_small_intbar(6, 15, configuration.fx.ep_delay_send_1, 9, 1, 0);
           break;
 
         case 10:
           // microsynth 1 delay1 level
           microsynth[0].delay_send[0] = constrain(microsynth[0].delay_send[0] + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[0]->gain(2, mapfloat(microsynth[0].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[0]->gain(4, mapfloat(microsynth[0].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 2
           print_small_intbar(6, 16, microsynth[0].delay_send[0], 10, 1, 0);
           break;
 
         case 11:
           // microsynth 2 delay1 level
           microsynth[1].delay_send[0] = constrain(microsynth[1].delay_send[0] + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[0]->gain(3, mapfloat(microsynth[1].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[0]->gain(5, mapfloat(microsynth[1].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 3
           print_small_intbar(6, 17, microsynth[1].delay_send[0], 11, 1, 0);
           break;
 
         case 12:
           // braids delay level
           braids_osc.delay_send_1 = constrain(braids_osc.delay_send_1 + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[0]->gain(4, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[0]->gain(6, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 4
           print_small_intbar(6, 18, braids_osc.delay_send_1, 12, 1, 0);
           break;
 
         case 13:
           // delay1 to delay2
           configuration.fx.delay1_to_delay2 = constrain(configuration.fx.delay1_to_delay2 + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[1]->gain(7, mapfloat(configuration.fx.delay1_to_delay2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
+          global_delay_in_mixer[1]->gain(9, mapfloat(configuration.fx.delay1_to_delay2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));//previously 7
           print_small_intbar(6, 19, configuration.fx.delay1_to_delay2, 13, 1, 0);
           break;
 
@@ -14028,35 +14054,35 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
         case 23:
           // ep send
           configuration.fx.ep_delay_send_2 = constrain(configuration.fx.ep_delay_send_2 + (factorChange * ENCODER[ENC_R].speed()), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[1]->gain(5, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
-          global_delay_in_mixer[1]->gain(6, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[1]->gain(7, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 5
+          global_delay_in_mixer[1]->gain(8, mapfloat(configuration.fx.ep_delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 6
           print_small_intbar(22, 15, configuration.fx.ep_delay_send_2, 23, 1, 0);
           break;
 
         case 24:
           // microsynth 1 delay2 level
           microsynth[0].delay_send[1] = constrain(microsynth[0].delay_send[1] + (factorChange * ENCODER[ENC_R].speed()), DELAY_TIME_MIN, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[1]->gain(2, mapfloat(microsynth[0].delay_send[1], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[1]->gain(4, mapfloat(microsynth[0].delay_send[1], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 2
           print_small_intbar(22, 16, microsynth[0].delay_send[1], 24, 1, 0);
           break;
 
         case 25:
           // microsynth 2 delay2 level
           microsynth[1].delay_send[1] = constrain(microsynth[1].delay_send[1] + (factorChange * ENCODER[ENC_R].speed()), DELAY_TIME_MIN, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[1]->gain(3, mapfloat(microsynth[1].delay_send[1], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[1]->gain(5, mapfloat(microsynth[1].delay_send[1], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 3
           print_small_intbar(22, 17, microsynth[1].delay_send[1], 25, 1, 0);
           break;
 
         case 26:
           // braids delay2 level
           braids_osc.delay_send_2 = constrain(braids_osc.delay_send_2 + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[1]->gain(4, mapfloat(braids_osc.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          global_delay_in_mixer[1]->gain(6, mapfloat(braids_osc.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 4
           print_small_intbar(22, 18, braids_osc.delay_send_2, 26, 1, 0);
           break;
 
         case 27:
           configuration.fx.delay2_to_delay1 = constrain(configuration.fx.delay2_to_delay1 + (factorChange * ENCODER[ENC_R].speed()), 0, DELAY_LEVEL_MAX);
-          global_delay_in_mixer[0]->gain(7, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
+          global_delay_in_mixer[0]->gain(9, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));//previously 7
           print_small_intbar(22, 19, configuration.fx.delay2_to_delay1, 27, 1, 0);
           break;
 
@@ -16863,10 +16889,10 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     helptext_r("EDIT");
     display.setTextSize(1);
     char buf[21];
-    for (uint8_t i = 0; i < 2; i++)
+    for (uint8_t i = 0; i < NUM_DEXED; i++)
     {
       snprintf_P(buf, sizeof(buf), PSTR("%s%d"), F("DEXED INSTANCE #"), i + 1);
-      _show_midi_channel(buf, 6 + i, configuration.dexed[i].midi_channel);
+      _show_midi_channel(buf, 5 + i, configuration.dexed[i].midi_channel);
     }
 
     snprintf_P(buf, sizeof(buf), PSTR("%s"), F("MDA ePIANO"));
@@ -16900,26 +16926,31 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     {
       set_state_dir();
       if (seq.edit_state == 0)
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 9);
+        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 11);
       else if (generic_temp_select_menu == 0)
         configuration.dexed[0].midi_channel = calc_val[state_dir](configuration.dexed[0].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 1)
         configuration.dexed[1].midi_channel = calc_val[state_dir](configuration.dexed[1].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 2)
-        configuration.epiano.midi_channel = calc_val[state_dir](configuration.epiano.midi_channel, 1, 0, 17);
+        configuration.dexed[2].midi_channel = calc_val[state_dir](configuration.dexed[2].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 3)
-        microsynth[0].midi_channel = calc_val[state_dir](microsynth[0].midi_channel, 1, 0, 17);
+        configuration.dexed[3].midi_channel = calc_val[state_dir](configuration.dexed[3].midi_channel, 1, 0, 17);
+
       else if (generic_temp_select_menu == 4)
-        microsynth[1].midi_channel = calc_val[state_dir](microsynth[1].midi_channel, 1, 0, 17);
+        configuration.epiano.midi_channel = calc_val[state_dir](configuration.epiano.midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 5)
-        braids_osc.midi_channel = calc_val[state_dir](braids_osc.midi_channel, 1, 0, 17);
+        microsynth[0].midi_channel = calc_val[state_dir](microsynth[0].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 6)
-        msp[0].midi_channel = calc_val[state_dir](msp[0].midi_channel, 1, 0, 17);
+        microsynth[1].midi_channel = calc_val[state_dir](microsynth[1].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 7)
-        msp[1].midi_channel = calc_val[state_dir](msp[1].midi_channel, 1, 0, 17);
+        braids_osc.midi_channel = calc_val[state_dir](braids_osc.midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 8)
-        drum_midi_channel = calc_val[state_dir](drum_midi_channel, 1, 0, 17);
+        msp[0].midi_channel = calc_val[state_dir](msp[0].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 9)
+        msp[1].midi_channel = calc_val[state_dir](msp[1].midi_channel, 1, 0, 17);
+      else if (generic_temp_select_menu == 10)
+        drum_midi_channel = calc_val[state_dir](drum_midi_channel, 1, 0, 17);
+      else if (generic_temp_select_menu == 11)
         slices_midi_channel = calc_val[state_dir](slices_midi_channel, 1, 0, 17);
     }
     // handle button presses during menu
@@ -16939,60 +16970,73 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     if (menu_item_check(0))
     {
       setModeColor(0);
-      setCursor_textGrid_small(40, 6);
+      setCursor_textGrid_small(40, 5);
       _print_midi_channel(configuration.dexed[0].midi_channel);
     }
     if (menu_item_check(1))
     {
       setModeColor(1);
-      setCursor_textGrid_small(40, 7);
+      setCursor_textGrid_small(40, 6);
       _print_midi_channel(configuration.dexed[1].midi_channel);
     }
-    if (menu_item_check(2))
+if (menu_item_check(2))
     {
       setModeColor(2);
-      setCursor_textGrid_small(40, 9);
-      _print_midi_channel(configuration.epiano.midi_channel);
+      setCursor_textGrid_small(40, 7);
+      _print_midi_channel(configuration.dexed[2].midi_channel);
     }
     if (menu_item_check(3))
     {
       setModeColor(3);
-      setCursor_textGrid_small(40, 11);
-      _print_midi_channel(microsynth[0].midi_channel);
+      setCursor_textGrid_small(40, 8);
+      _print_midi_channel(configuration.dexed[3].midi_channel);
     }
+
     if (menu_item_check(4))
     {
       setModeColor(4);
-      setCursor_textGrid_small(40, 12);
-      _print_midi_channel(microsynth[1].midi_channel);
+      setCursor_textGrid_small(40, 9);
+      _print_midi_channel(configuration.epiano.midi_channel);
     }
     if (menu_item_check(5))
     {
       setModeColor(5);
-      setCursor_textGrid_small(40, 14);
-      _print_midi_channel(braids_osc.midi_channel);
+      setCursor_textGrid_small(40, 11);
+      _print_midi_channel(microsynth[0].midi_channel);
     }
     if (menu_item_check(6))
     {
       setModeColor(6);
-      setCursor_textGrid_small(40, 16);
-      _print_midi_channel(msp[0].midi_channel);
+      setCursor_textGrid_small(40, 12);
+      _print_midi_channel(microsynth[1].midi_channel);
     }
     if (menu_item_check(7))
     {
       setModeColor(7);
-      setCursor_textGrid_small(40, 17);
-      _print_midi_channel(msp[1].midi_channel);
+      setCursor_textGrid_small(40, 14);
+      _print_midi_channel(braids_osc.midi_channel);
     }
     if (menu_item_check(8))
     {
       setModeColor(8);
-      setCursor_textGrid_small(40, 18);
-      _print_midi_channel(drum_midi_channel);
+      setCursor_textGrid_small(40, 16);
+      _print_midi_channel(msp[0].midi_channel);
     }
     if (menu_item_check(9))
     {
       setModeColor(9);
+      setCursor_textGrid_small(40, 17);
+      _print_midi_channel(msp[1].midi_channel);
+    }
+    if (menu_item_check(10))
+    {
+      setModeColor(10);
+      setCursor_textGrid_small(40, 18);
+      _print_midi_channel(drum_midi_channel);
+    }
+    if (menu_item_check(11))
+    {
+      setModeColor(11);
       setCursor_textGrid_small(40, 19);
       _print_midi_channel(slices_midi_channel);
     }
@@ -18467,21 +18511,21 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
 
 FLASHMEM void increment_dexed_instance_in_voice_select_round_robin()
 {
- increment_dexed_instance_round_robin();
+  increment_dexed_instance_round_robin();
   print_voice_settings_in_dexed_voice_select(false, true);
   UI_update_instance_icons();
 };
 
 FLASHMEM void increment_dexed_instance_in_voice_select()
 {
- increment_dexed_instance();
+  increment_dexed_instance();
   print_voice_settings_in_dexed_voice_select(false, true);
   UI_update_instance_icons();
 };
 
 FLASHMEM void decrement_dexed_instance_in_voice_select()
 {
- decrement_dexed_instance();
+  decrement_dexed_instance();
   print_voice_settings_in_dexed_voice_select(false, true);
   UI_update_instance_icons();
 };
@@ -18910,11 +18954,11 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
           if (LCDML.BT_checkDown() || LCDML.BT_checkUp())
           {
 
- if (LCDML.BT_checkDown() )
-  increment_dexed_instance_in_voice_select();
- else  if ( LCDML.BT_checkUp())
- decrement_dexed_instance_in_voice_select();
-           
+            if (LCDML.BT_checkDown())
+              increment_dexed_instance_in_voice_select();
+            else  if (LCDML.BT_checkUp())
+              decrement_dexed_instance_in_voice_select();
+
             draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
             load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
           }
@@ -18963,7 +19007,10 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
         {
           configuration.fx.delay_level[selected_instance_id] = calc_val[state_dir](configuration.fx.delay_level[selected_instance_id], ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
           MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 107, configuration.fx.delay_level[selected_instance_id]);
-          global_delay_in_mixer[selected_instance_id]->gain(0, mapfloat(configuration.fx.delay_level[selected_instance_id], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          if (selected_instance_id == 0 || selected_instance_id == 1)
+            global_delay_in_mixer[selected_instance_id]->gain(0, mapfloat(configuration.fx.delay_level[selected_instance_id], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+          else  if (selected_instance_id == 2 || selected_instance_id == 3)
+            global_delay_in_mixer[selected_instance_id - 2]->gain(1, mapfloat(configuration.fx.delay_level[selected_instance_id], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
         }
         if (generic_temp_select_menu == 14) // REVERB SEND
         {
@@ -19479,7 +19526,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
       {
       case 0: // Instance selection
         if (LCDML.BT_checkDown() || LCDML.BT_checkUp())
-        increment_dexed_instance();
+          increment_dexed_instance();
         _print_instances_in_save_voice();
         break;
       case 1: // Bank selection
@@ -20938,10 +20985,10 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-    }
+  }
   else
     return false;
-  }
+}
 
 FLASHMEM float eraseBytesPerSecond(const unsigned char* id)
 {
@@ -21583,14 +21630,14 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
 #endif
     }
     // setCursor_textGrid(1, 2);
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 void sub_touchscreen_test_page_init()
 {
@@ -21921,7 +21968,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
   }
   else
     return false;
-  }
+}
 
 FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id)
 {
@@ -21960,7 +22007,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Added to Favorites..."));
 #endif
-  }
+    }
     else
     { // delete the file, is no longer a favorite
       SD.remove(tmp);
@@ -21973,7 +22020,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d/%d.fav"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, i);
         if (SD.exists(tmp))
           countfavs++;
-    }
+      }
       if (countfavs == 0)
       {
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b);
@@ -21991,7 +22038,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Removed from Favorites..."));
 #endif
-      }
+    }
   }
 }
 

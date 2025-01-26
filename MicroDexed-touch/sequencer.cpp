@@ -266,6 +266,14 @@ void handle_pattern_end_in_song_mode()
   }
 }
 
+uint8_t map_to_dexed_instance(uint8_t input)
+{
+  if (input < 2)
+    return input;
+  else
+    return input - 68;
+}
+
 void arp_track(uint8_t d)
 {
   if ((seq.track_type[d] == 3 && seq.arp_num_notes_count < seq.arp_num_notes_max && seq.euclidean_active == false) ||
@@ -301,10 +309,10 @@ void arp_track(uint8_t d)
               seq.arp_step = 0;
           }
         }
-        else if (seq.instrument[d] < 2) // track is assigned to dexed
+        else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
         {
           if (check_probability(seq.current_pattern[d]))
-            handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step + seq.element_shift], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+            handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step + seq.element_shift], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
         }
         else if (seq.instrument[d] == 2) // track is assigned for epiano
         {
@@ -351,10 +359,10 @@ void arp_track(uint8_t d)
               seq.arp_step = 0;
           }
         }
-        else if (seq.instrument[d] < 2) // track is assigned to dexed
+        else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
         {
           if (check_probability(seq.current_pattern[d]))
-            handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length - seq.arp_step + seq.element_shift], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+            handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length - seq.arp_step + seq.element_shift], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
         }
         else if (seq.instrument[d] == 2) // track is assigned for epiano
         {
@@ -404,10 +412,10 @@ void arp_track(uint8_t d)
                 seq.arp_step = 0;
             }
           }
-          else if (seq.instrument[d] < 2) // track is assigned to dexed
+          else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
           {
             if (check_probability(seq.current_pattern[d]))
-              handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+              handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
           }
           else if (seq.instrument[d] == 2) // track is assigned to epiano
           {
@@ -454,11 +462,11 @@ void arp_track(uint8_t d)
                 seq.arp_step = 0;
             }
           }
-          else if (seq.instrument[d] < 2) // track is assigned to dexed
+          else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
           {
             if (check_probability(seq.current_pattern[d]))
 
-              handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length * 2 - seq.arp_step], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+              handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length * 2 - seq.arp_step], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
           }
           else if (seq.instrument[d] == 2) // track is assigned to epiano
           {
@@ -508,11 +516,11 @@ void arp_track(uint8_t d)
           if (check_probability(seq.current_pattern[d]))
             handleNoteOn(braids_osc.midi_channel, seq.arp_note + seq.arps[seq.arp_chord][rnd1 + seq.element_shift] + (seq.oct_shift * 12), check_vel_variation(seq.current_pattern[d], seq.chord_vel), 4);
         }
-        else if (seq.instrument[d] < 2) // track is assigned to dexed
+        else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
         {
           if (check_probability(seq.current_pattern[d]))
 
-            handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][rnd1 + seq.element_shift] + (seq.oct_shift * 12), check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+            handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.arp_note + seq.arps[seq.arp_chord][rnd1 + seq.element_shift] + (seq.oct_shift * 12), check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
         }
         else if (seq.instrument[d] == 2) // track is assigned to epiano
         {
@@ -686,10 +694,10 @@ void sequencer_part1(void)
                   handleNoteOn(seq.instrument[d] - 47, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 3);
               }
 
-              else if (seq.instrument[d] < 2) // track is assigned to dexed
+              else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
               {
                 if (check_probability(seq.current_pattern[d]))
-                  handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+                  handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
               }
               else if (seq.instrument[d] == 2) // track is assigned to epiano
               {
@@ -725,10 +733,10 @@ void sequencer_part1(void)
             {
               for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
               {
-                if (seq.instrument[d] < 2) // track is assigned to dexed
+                if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
                 {
                   if (check_probability(seq.current_pattern[d]))
-                    handleNoteOn(configuration.dexed[seq.instrument[d]].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+                    handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
                 }
                 else if (seq.instrument[d] == 2) // track is assigned to epiano
                 {
@@ -829,8 +837,8 @@ void sequencer_part2(void)
       {
         if (seq.note_data[seq.current_pattern[d]][seq.step] != 130)
         {
-          if (seq.instrument[d] < 2 && seq.ticks == seq.ticks_max) // dexed
-            handleNoteOff(configuration.dexed[seq.instrument[d]].midi_channel, seq.prev_note[d], 0, 0);
+          if ((seq.instrument[d] < 2 && seq.ticks == seq.ticks_max) || (seq.instrument[d] == 70 && seq.ticks == seq.ticks_max) || (seq.instrument[d] == 71 && seq.ticks == seq.ticks_max)) // dexed
+            handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d], 0, 0);
           else if (seq.instrument[d] == 2 && seq.ticks == seq.ticks_max) // epiano
             handleNoteOff(configuration.epiano.midi_channel, seq.prev_note[d], 0, 0);
           else if (seq.instrument[d] > 2 && seq.instrument[d] < 5)
@@ -863,8 +871,8 @@ void sequencer_part2(void)
           {
             for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
             {
-              if (seq.instrument[d] < 2) // dexed
-                handleNoteOff(configuration.dexed[seq.instrument[d]].midi_channel, seq.prev_note[d] + seq.arps[seq.prev_vel[d] - 200][x], 0, 0);
+              if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // dexed
+                handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d] + seq.arps[seq.prev_vel[d] - 200][x], 0, 0);
               else if (seq.instrument[d] == 2)
                 handleNoteOff(configuration.epiano.midi_channel, seq.prev_note[d] + seq.arps[seq.prev_vel[d] - 200][x], 0, 0);
 #ifdef MIDI_DEVICE_USB_HOST
@@ -893,8 +901,8 @@ void sequencer_part2(void)
         }
         if (seq.track_type[d] == 3)
         {                                              // Arp
-          if (seq.instrument[d] < 2) // dexed
-            handleNoteOff(configuration.dexed[seq.instrument[d]].midi_channel, seq.arp_note_prev, 0, 0);
+          if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // dexed
+            handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.arp_note_prev, 0, 0);
           else if (seq.instrument[d] == 2) // epiano
             handleNoteOff(configuration.epiano.midi_channel, seq.arp_note_prev, 0, 0);
 #ifdef MIDI_DEVICE_USB_HOST
@@ -1011,7 +1019,7 @@ FLASHMEM void print_formatted_number(uint16_t number, uint8_t length)
   case 3:
     display.printf("%03d", number);
     break;
-  
+
   default:
     display.printf("%02d", number);
     break;
