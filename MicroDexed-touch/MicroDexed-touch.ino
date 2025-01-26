@@ -2719,7 +2719,6 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
 }
 
 
-
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
