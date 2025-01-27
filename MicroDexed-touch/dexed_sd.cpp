@@ -1442,7 +1442,8 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
           configuration.fx.delay_multiplier[i] = data_json["delay_multiplier"][i];
           configuration.fx.delay_time[i] = data_json["delay_time"][i];
           configuration.fx.delay_feedback[i] = data_json["delay_feedback"][i];
-          configuration.fx.delay_level[i] = data_json["delay_level"][i];
+          configuration.fx.delay_level1[i] = data_json["delay_level"][i];
+          configuration.fx.delay_level2[i] = data_json["delay_level2"][i];
           configuration.fx.delay_sync[i] = data_json["delay_sync"][i];
           configuration.fx.delay_pan[i] = data_json["delay_pan"][i];
           configuration.fx.reverb_send[i] = data_json["reverb_send"][i];
@@ -1535,7 +1536,8 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
         data_json["delay_multiplier"][i] = configuration.fx.delay_multiplier[i];
         data_json["delay_time"][i] = configuration.fx.delay_time[i];
         data_json["delay_feedback"][i] = configuration.fx.delay_feedback[i];
-        data_json["delay_level"][i] = configuration.fx.delay_level[i];
+        data_json["delay_level"][i] = configuration.fx.delay_level1[i];
+        data_json["delay_level2"][i] = configuration.fx.delay_level2[i];
         data_json["delay_level_global"][i] = configuration.fx.delay_level_global[i];
         data_json["delay_sync"][i] = configuration.fx.delay_sync[i];
         data_json["delay_pan"][i] = configuration.fx.delay_pan[i];

@@ -816,7 +816,8 @@ typedef struct fx_s
   uint8_t delay_multiplier[NUM_DEXED];
   uint16_t delay_time[NUM_DEXED];
   uint8_t delay_feedback[NUM_DEXED];
-  uint8_t delay_level[NUM_DEXED];
+  uint8_t delay_level1[NUM_DEXED];
+  uint8_t delay_level2[NUM_DEXED];
   uint8_t delay_level_global[NUM_DEXED];
   uint8_t delay_sync[NUM_DEXED];
   uint8_t delay_pan[NUM_DEXED];
@@ -833,13 +834,6 @@ typedef struct fx_s
   uint8_t reverb_hidamp;
   uint8_t reverb_diffusion;
   uint8_t reverb_level;
-  uint8_t eq_1;
-  int8_t eq_2;
-  int8_t eq_3;
-  int8_t eq_4;
-  int8_t eq_5;
-  int8_t eq_6;
-  uint8_t eq_7;
   uint8_t ep_chorus_frequency;
   uint8_t ep_chorus_waveform;
   uint8_t ep_chorus_depth;

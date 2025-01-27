@@ -719,7 +719,7 @@ FLASHMEM void handle_touchscreen_file_manager()
   }
 #endif
   else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
-    if ( (!fm.sd_is_folder && fm.active_window == 0 ) || (fm.active_window == 1) ) 
+    if ((!fm.sd_is_folder && fm.active_window == 0) || (fm.active_window == 1))
     {
       fm.sd_mode = FM_PLAY_SAMPLE;
       previewWavFilemanager();
