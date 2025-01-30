@@ -1431,7 +1431,7 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         serializeJsonPretty(data_json, Serial);
         LOG.println();
 #endif
-        for (uint8_t i = 0; i < 2; i++)
+        for (uint8_t i = 0; i < NUM_DEXED; i++)
         {
           configuration.fx.filter_cutoff[i] = data_json["filter_cutoff"][i];
           configuration.fx.filter_resonance[i] = data_json["filter_resonance"][i];
@@ -1525,7 +1525,7 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
     if (json)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-      for (uint8_t i = 0; i < 2; i++)
+      for (uint8_t i = 0; i < NUM_DEXED; i++)
       {
         data_json["filter_cutoff"][i] = configuration.fx.filter_cutoff[i];
         data_json["filter_resonance"][i] = configuration.fx.filter_resonance[i];

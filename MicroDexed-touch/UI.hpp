@@ -3718,7 +3718,10 @@ public:
     if (buttonLongHandler && encoderDir[ENC_R].ButtonLong())
     {
       if (instance_select_flag)
+      {
         increment_dexed_instance_round_robin();
+        buttonLongHandler->set(selected_instance_id);
+      }
       else
         buttonLongHandler->set(1 - buttonLongHandler->get()); // toggle value between 0 and 1
 
@@ -4222,9 +4225,11 @@ FLASHMEM void lcdml_menu_control(void)
   {
 #ifdef DEBUG
     LOG.println(F("ENC-R long recognized"));
-#endif
+#endif 
     encoderDir[ENC_R].ButtonLong(true);
-    if (ui.handlesButtonLong() || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_select) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings) && generic_temp_select_menu == 1))
+    if (ui.handlesButtonLong() || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_select)
+      || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_handle_OP) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth) ||
+      (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings) && generic_temp_select_menu == 1))
     { // handle long press ENC_R
       LCDML.BT_enter();
       LCDML.OTHER_updateFunc();
@@ -5774,7 +5779,8 @@ FLASHMEM void UI_handle_OP(uint8_t param)
   {
     clear_bottom_half_screen_without_backbutton();
     encoderDir[ENC_R].reset();
-    display.setCursor(CHAR_width_small * 25, 6);
+    helptext_r("LONG PUSH - CHANGE INSTANCE");
+    display.setCursor(CHAR_width_small * 22, 6);
     display.setTextSize(1);
     display.print(F("DEXED"));
     UI_update_instance_icons();
@@ -5792,33 +5798,27 @@ FLASHMEM void UI_handle_OP(uint8_t param)
   {
     display.setTextSize(2);
     if (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())
-    {
-      if (op_selected == 0)
-      {
-        selected_instance_id = !selected_instance_id;
-        op_selected = 5;
-      }
-      else
-        op_selected = constrain(op_selected - 1, 0, 5);
-    }
+      op_selected = constrain(op_selected - 1, 0, 5);
+    
     else if (LCDML.BT_checkDown() && encoderDir[ENC_R].Down())
+      op_selected = constrain(op_selected + 1, 0, 5);
+
+    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonPressed())
     {
-      if (op_selected == 5)
-      {
-        selected_instance_id = !selected_instance_id;
-        op_selected = 0;
-      }
+      if (selected_instance_id < NUM_DEXED - 1)
+        selected_instance_id++;
       else
-        op_selected = constrain(op_selected + 1, 0, 5);
+        selected_instance_id = 0;
+      UI_update_instance_icons();
     }
-    else if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
+
+    else if (LCDML.BT_checkEnter())
     {
       if (bitRead(configuration.dexed[selected_instance_id].op_enabled, op_selected))
         bitClear(configuration.dexed[selected_instance_id].op_enabled, op_selected);
       else
         bitSet(configuration.dexed[selected_instance_id].op_enabled, op_selected);
     }
-
     for (uint8_t i = 0; i < 6; i++)
     {
       if (i == op_selected)
@@ -5839,7 +5839,6 @@ FLASHMEM void UI_handle_OP(uint8_t param)
     MicroDexed[selected_instance_id]->doRefreshVoice();
     send_sysex_param(configuration.dexed[selected_instance_id].midi_channel, 155, configuration.dexed[selected_instance_id].op_enabled, 0);
   }
-
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();

@@ -341,12 +341,14 @@ float SmoothNoise2(float x, float y)
   center = Noise2(x, y) / 4;
   return (corners + sides + center);
 }
+
 float CosineInterpolate(float a, float b, float x)
 {
   float ft = x * 3.1415927;
   float f = (1 - cos(ft)) * .5;
   return(a * (1 - f) + b * f);
 }
+
 float Interpolate(float a, float b, float x)
 {
   return(CosineInterpolate(a, b, x));
@@ -384,6 +386,7 @@ float PerlinNoise2(float x, float y, float persistance, int octaves)
   }
   return(total);
 }
+
 FLASHMEM void terrain_project(float ax, float ay, float az, float* bx, float* by)
 {
   // three point perspective
