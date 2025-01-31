@@ -729,7 +729,7 @@ void update_seq_speed() {
       sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
   }
 
-  for (uint8_t i = 0; i < NUM_DEXED; i++)
+  for (uint8_t i = 0; i < 2; i++)
   {
     if (configuration.fx.delay_sync[i] > 0)
     {
@@ -5068,6 +5068,7 @@ FLASHMEM void UI_func_chorus_level(uint8_t param)
 
 FLASHMEM void master_effects_set_delay_time(uint8_t instance)
 {
+ if (instance == 0 || instance == 1){
 
   if (configuration.fx.delay_sync[instance] > 0)
   {
@@ -5117,6 +5118,7 @@ FLASHMEM void master_effects_set_delay_time(uint8_t instance)
     else
       delay_fx[instance]->delay(0, constrain(configuration.fx.delay_time[instance], DELAY_TIME_MIN, DELAY_TIME_MAX) * 10);
   }
+}
 }
 
 FLASHMEM void master_effects_set_delay_feedback(uint8_t instance)
@@ -13359,7 +13361,8 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
 
 FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
 {
-
+ if (instance == 0 || instance == 1)
+{
   if (seq.running == false)
   {
     // uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / midi_bpm + 0.5);
@@ -13382,6 +13385,7 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
     uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
     delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
   }
+}
 }
 
 FLASHMEM void print_sync_timing(uint8_t sync)

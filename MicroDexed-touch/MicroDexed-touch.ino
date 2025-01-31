@@ -1044,6 +1044,23 @@ FLASHMEM void setup()
   LOG.flush();
 #endif
 
+// zero all malloccable RAM so crashes are deterministic
+std::vector<uint8_t*> blocks;
+int size = 10000;
+bool done = false;
+while(done == false){
+  uint8_t *b = (uint8_t*)malloc(size);
+  done = b == nullptr;
+  if(done == false){
+    memset(b, 0x00, size);
+    blocks.emplace_back(b);
+  }
+}
+for(uint8_t* b : blocks) {
+  free(b);
+}
+blocks.clear();
+// ***********
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   pinMode(TFT_TOUCH_IRQ, INPUT);
@@ -1083,26 +1100,6 @@ FLASHMEM void setup()
   touch.begin();
   touch_ic_found = true;
 #endif
-
-  // #if defined GENERIC_DISPLAY
-  //   delay(10);  // have seen some boot issues with old display without this delay 2024/06/19 
-  // #endif
-  // #if defined(PSRAM)
-  //   delay(10); // FIXME: this somehow workarounds capacitive build with PSRAM not booting reliably
-  //   // 2024/4/14
-  //   // However it is reported that it is not necessary with 16MB psram and even making boot problems
-  //   // after testing with my only mdt with 8MB psram and capacitive touch, the delay makes boot problems after COLD BOOT
-  //   // will disable delay, until any non-working combination is reported
-  //   // 2024/8/16 after being stuck in bootloops for hours, i put back in the delay and it just booted up with psram
-  // #endif
-
-  //delay(10); //2024/10/14  had another bootloop issue with 2.8" cap. screen, inserting delay fixed it. Now put it in for every config.
-
-//2024/10/22 Added configurations in platformio.ini to create version with and without the boot-delay until this is figured out
-#ifdef BOOT_DELAY
-  delay(10);
-#endif
-  delay(10);
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))
@@ -3629,6 +3626,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           break;
         case 105: // CC 105: delay time
           configuration.fx.delay_time[instance_id] = map(inValue, 0, 0x7f, DELAY_TIME_MIN, DELAY_TIME_MAX);
+           if (instance_id == 0 || instance_id == 1)
           delay_fx[instance_id]->delay(0, constrain(configuration.fx.delay_time[instance_id] * 10, DELAY_TIME_MIN * 10, DELAY_TIME_MAX * 10));
           // if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_delay_time)) {
           //   LCDML.OTHER_updateFunc();
@@ -5019,7 +5017,6 @@ FLASHMEM void set_fx_params(void)
     chorus_modulator[instance_id]->offset(0.0);
 
     // DELAY
-
     set_dexed_delay_level(0, instance_id, configuration.fx.delay_level1[instance_id]);
     set_dexed_delay_level(1, instance_id, configuration.fx.delay_level2[instance_id]);
 
@@ -5032,15 +5029,19 @@ FLASHMEM void set_fx_params(void)
     //   if (configuration.fx.delay_level2[instance_id] <= DELAY_LEVEL_MIN)
     //   delay_fx[instance_id]->disable(0);
     //else
-    if (configuration.fx.delay_sync[instance_id] == 0)
+    if (configuration.fx.delay_sync[instance_id] == 0) {
+        if (instance_id == 0 || instance_id == 1)
       delay_fx[instance_id]->delay(0, constrain(configuration.fx.delay_time[instance_id], DELAY_TIME_MIN, DELAY_TIME_MAX) * 10);
+    }
 
-    if (configuration.fx.delay_multiplier[instance_id] == 0)
+    if (configuration.fx.delay_multiplier[instance_id] == 0) {
       configuration.fx.delay_multiplier[instance_id] = 1;
-    if (configuration.fx.delay_sync[instance_id] > 0)
-    {
+    }
+
+    if (configuration.fx.delay_sync[instance_id] > 0) {
       uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[configuration.fx.delay_sync[instance_id]] / seq.bpm);
       // set_delay_sync(configuration.fx.delay_sync[instance_id], instance_id);
+        if (instance_id == 0 || instance_id == 1)
       delay_fx[instance_id]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance_id], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
     }
 
@@ -5526,7 +5527,7 @@ FLASHMEM void show_configuration(void)
     LOG.print(F("  Delay Feedback       "));
     LOG.println(configuration.fx.delay_feedback[instance_id], DEC);
     LOG.print(F("  Delay Level          "));
-    LOG.println(configuration.fx.delay_level[instance_id], DEC);
+    LOG.println(configuration.fx.delay_level1[instance_id], DEC);
     LOG.print(F("  Delay Sync           "));
     LOG.println(configuration.fx.delay_sync[instance_id], DEC);
     LOG.print(F("  Reverb Send          "));

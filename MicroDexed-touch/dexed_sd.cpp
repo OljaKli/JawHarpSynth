@@ -201,7 +201,8 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     char voice_name[VOICE_NAME_LEN];
     uint8_t data[128];
 
-    snprintf_P(bankdir, sizeof(bankdir), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, p, b);
+    //snprintf_P(bankdir, sizeof(bankdir), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, p, b);
+    sprintf(bankdir, "/%s/%d/%d", DEXED_CONFIG_PATH, p, b);
 
     AudioNoInterrupts();
     sysex_dir = SD.open(bankdir);
@@ -241,7 +242,8 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     strcpy(g_bank_name[instance_id], bank_name);
 #ifdef DEBUG
     char filename[FILENAME_LEN];
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.syx"), DEXED_CONFIG_PATH, b, bank_name);
+    //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.syx"), DEXED_CONFIG_PATH, b, bank_name);
+    sprintf(filename, "/%s/%d/%s.syx", DEXED_CONFIG_PATH, b, bank_name);
     LOG.print(F("Loading voice from "));
     LOG.print(filename);
     LOG.print(F(" bank:["));
@@ -547,7 +549,8 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
           LOG.print(F("/"));
           LOG.println(entry.name());
 #endif
-          snprintf_P(tmp2, sizeof(tmp2), PSTR("/%s/%s/%s"), DEXED_CONFIG_PATH, tmp, entry.name());
+          //snprintf_P(tmp2, sizeof(tmp2), PSTR("/%s/%s/%s"), DEXED_CONFIG_PATH, tmp, entry.name());
+          sprintf(tmp2, "/%s/%s/%s", DEXED_CONFIG_PATH, tmp, entry.name());          
           entry.close();
 #ifdef DEBUG
           LOG.printf("Remove file %s\n", tmp2);
@@ -1401,12 +1404,12 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
 {
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
 
-  load_sd_drumsettings_json(number);
+  //load_sd_drumsettings_json(number); check if necessary phtodo
 
   if (sd_card > 0)
   {
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, FX_CONFIG_NAME);
-
+    //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, FX_CONFIG_NAME);
+    sprintf(filename, "/%s/%d/%s.json", PERFORMANCE_CONFIG_PATH, number, FX_CONFIG_NAME);
     // first check if file exists...
     AudioNoInterrupts();
     if (SD.exists(filename))
@@ -3635,6 +3638,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
   if (sd_card > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
+    sprintf(filename, "/%s/%d/%s.json", PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
     // first check if file exists...
     if (SD.exists(filename))
     {
@@ -3739,6 +3743,8 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
         if (configuration.dexed[3].midi_channel == 0)
           configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
+
+	//load_sd_drumsettings_json(number); check if necessary phtodo
 
         load_sd_fx_json(configuration.sys.performance_number); //loaded here since bpm must be loaded first
         AudioInterrupts();
