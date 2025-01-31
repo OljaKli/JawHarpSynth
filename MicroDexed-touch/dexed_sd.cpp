@@ -1404,7 +1404,7 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
 {
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
 
-  //load_sd_drumsettings_json(number); check if necessary phtodo
+  load_sd_drumsettings_json(number);
 
   if (sd_card > 0)
   {
@@ -3637,7 +3637,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
 
   if (sd_card > 0)
   {
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
+    //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
     sprintf(filename, "/%s/%d/%s.json", PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
     // first check if file exists...
     if (SD.exists(filename))
