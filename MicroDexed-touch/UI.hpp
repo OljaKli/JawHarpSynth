@@ -5068,57 +5068,57 @@ FLASHMEM void UI_func_chorus_level(uint8_t param)
 
 FLASHMEM void master_effects_set_delay_time(uint8_t instance)
 {
- if (instance == 0 || instance == 1){
+  if (instance == 0 || instance == 1) {
 
-  if (configuration.fx.delay_sync[instance] > 0)
-  {
-    set_delay_sync(configuration.fx.delay_sync[instance], instance);
-  }
+    if (configuration.fx.delay_sync[instance] > 0)
+    {
+      set_delay_sync(configuration.fx.delay_sync[instance], instance);
+    }
 
-  if (LCDML.BT_checkDown())
-  {
-    if (configuration.fx.delay_time[instance] == DELAY_TIME_MIN && configuration.fx.delay_sync[instance] > DELAY_SYNC_MIN)
+    if (LCDML.BT_checkDown())
     {
-      // MIDI-sync delay
-      configuration.fx.delay_sync[instance] = constrain(configuration.fx.delay_sync[instance] - 1, DELAY_SYNC_MIN, DELAY_SYNC_MAX);
-    }
-    else
-    {
-      configuration.fx.delay_time[instance] = constrain(configuration.fx.delay_time[instance] + ENCODER[ENC_R].speed(), DELAY_TIME_MIN, DELAY_TIME_MAX);
-      MD_sendControlChange(configuration.dexed[instance].midi_channel, 105, configuration.fx.delay_time[instance]);
-    }
-  }
-  else if (LCDML.BT_checkUp())
-  {
-    if (configuration.fx.delay_time[instance] == DELAY_TIME_MIN && configuration.fx.delay_sync[instance] > DELAY_SYNC_MIN)
-    {
-      // MIDI-sync delay
-      configuration.fx.delay_sync[instance] = constrain(configuration.fx.delay_sync[instance] + 1, DELAY_SYNC_MIN, DELAY_SYNC_MAX);
-    }
-    else
-    {
-      if (configuration.fx.delay_time[instance] == DELAY_TIME_MIN)
-        configuration.fx.delay_sync[instance] = DELAY_SYNC_MIN + 1;
+      if (configuration.fx.delay_time[instance] == DELAY_TIME_MIN && configuration.fx.delay_sync[instance] > DELAY_SYNC_MIN)
+      {
+        // MIDI-sync delay
+        configuration.fx.delay_sync[instance] = constrain(configuration.fx.delay_sync[instance] - 1, DELAY_SYNC_MIN, DELAY_SYNC_MAX);
+      }
       else
       {
-        configuration.fx.delay_time[instance] = constrain(configuration.fx.delay_time[instance] - ENCODER[ENC_R].speed(), DELAY_TIME_MIN, DELAY_TIME_MAX);
+        configuration.fx.delay_time[instance] = constrain(configuration.fx.delay_time[instance] + ENCODER[ENC_R].speed(), DELAY_TIME_MIN, DELAY_TIME_MAX);
         MD_sendControlChange(configuration.dexed[instance].midi_channel, 105, configuration.fx.delay_time[instance]);
       }
     }
-  }
-  if (configuration.fx.delay_sync[instance] > 0)
-  {
-    set_delay_sync(configuration.fx.delay_sync[instance], instance); // MIDI Sync Delay
-  }
-  else
-  {
-
-    if (configuration.fx.delay_time[instance] <= DELAY_TIME_MIN)
-      delay_fx[instance]->disable(0);
+    else if (LCDML.BT_checkUp())
+    {
+      if (configuration.fx.delay_time[instance] == DELAY_TIME_MIN && configuration.fx.delay_sync[instance] > DELAY_SYNC_MIN)
+      {
+        // MIDI-sync delay
+        configuration.fx.delay_sync[instance] = constrain(configuration.fx.delay_sync[instance] + 1, DELAY_SYNC_MIN, DELAY_SYNC_MAX);
+      }
+      else
+      {
+        if (configuration.fx.delay_time[instance] == DELAY_TIME_MIN)
+          configuration.fx.delay_sync[instance] = DELAY_SYNC_MIN + 1;
+        else
+        {
+          configuration.fx.delay_time[instance] = constrain(configuration.fx.delay_time[instance] - ENCODER[ENC_R].speed(), DELAY_TIME_MIN, DELAY_TIME_MAX);
+          MD_sendControlChange(configuration.dexed[instance].midi_channel, 105, configuration.fx.delay_time[instance]);
+        }
+      }
+    }
+    if (configuration.fx.delay_sync[instance] > 0)
+    {
+      set_delay_sync(configuration.fx.delay_sync[instance], instance); // MIDI Sync Delay
+    }
     else
-      delay_fx[instance]->delay(0, constrain(configuration.fx.delay_time[instance], DELAY_TIME_MIN, DELAY_TIME_MAX) * 10);
+    {
+
+      if (configuration.fx.delay_time[instance] <= DELAY_TIME_MIN)
+        delay_fx[instance]->disable(0);
+      else
+        delay_fx[instance]->delay(0, constrain(configuration.fx.delay_time[instance], DELAY_TIME_MIN, DELAY_TIME_MAX) * 10);
+    }
   }
-}
 }
 
 FLASHMEM void master_effects_set_delay_feedback(uint8_t instance)
@@ -5801,7 +5801,7 @@ FLASHMEM void UI_handle_OP(uint8_t param)
     display.setTextSize(2);
     if (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())
       op_selected = constrain(op_selected - 1, 0, 5);
-    
+
     else if (LCDML.BT_checkDown() && encoderDir[ENC_R].Down())
       op_selected = constrain(op_selected + 1, 0, 5);
 
@@ -13361,31 +13361,31 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
 
 FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
 {
- if (instance == 0 || instance == 1)
-{
-  if (seq.running == false)
+  if (instance == 0 || instance == 1)
   {
-    // uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / midi_bpm + 0.5);
-    uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
-    delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
-    if (midi_sync_delay_time > DELAY_MAX_TIME)
+    if (seq.running == false)
     {
+      // uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / midi_bpm + 0.5);
+      uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
+      delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
+      if (midi_sync_delay_time > DELAY_MAX_TIME)
+      {
 #ifdef DEBUG
-      LOG.println(F("Calculated MIDI-Sync delay: "));
-      LOG.print(round(60000.0 * midi_ticks_factor[sync] / midi_bpm), DEC);
-      LOG.println(F("ms"));
-      LOG.println(F("MIDI-Sync delay: midi_sync_delay_time"));
-      LOG.print(midi_sync_delay_time, DEC);
-      LOG.println(F("ms"));
+        LOG.println(F("Calculated MIDI-Sync delay: "));
+        LOG.print(round(60000.0 * midi_ticks_factor[sync] / midi_bpm), DEC);
+        LOG.println(F("ms"));
+        LOG.println(F("MIDI-Sync delay: midi_sync_delay_time"));
+        LOG.print(midi_sync_delay_time, DEC);
+        LOG.println(F("ms"));
 #endif
+      }
+    }
+    else
+    {
+      uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
+      delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
     }
   }
-  else
-  {
-    uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
-    delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
-  }
-}
 }
 
 FLASHMEM void print_sync_timing(uint8_t sync)
@@ -21135,19 +21135,41 @@ FLASHMEM void load_sd_directory_files_only()
 
     if (sd_entry.isDirectory() == false && strstr(sd_entry.name(), "._") == NULL)
     {
+
+      //new code
       storage_file_s entry;
       entry.name = sd_entry.name();
       entry.size = sd_entry.size();
       entry.isDirectory = sd_entry.isDirectory();
-
       sdcard_infos.files.emplace_back(entry);
+
+      //old code
+        // strcpy(sdcard_infos.files[fm.sd_sum_files].name, sd_entry.name());
+        //     sdcard_infos.files[fm.sd_sum_files].size = sd_entry.size();
+        //     sdcard_infos.files[fm.sd_sum_files].isDirectory = sd_entry.isDirectory();
+
       fm.sd_sum_files++;
     }
+
     sd_entry.close();
   }
   sd_root.close();
 
+  // clear all the unused files in array
+
+    // for (uint8_t i = fm.sd_sum_files; i < MAX_FILES; i++)
+    // {
+    //   strcpy(sdcard_infos.files[i].name, "");
+    //   sdcard_infos.files[i].size = 0;
+    //   sdcard_infos.files[i].isDirectory = false;
+    // }
+
+   //old
+   // qsort(sdcard_infos.files, fm.sd_sum_files, sizeof(storage_file_t), compare_files_by_name);
+   
+  //new
   std::sort(sdcard_infos.files.begin(), sdcard_infos.files.end(), compare_files_by_name);
+
 }
 
 #include "MD_MIDIFile.h"
@@ -21434,6 +21456,8 @@ FLASHMEM void print_smf_parameters()
   }
 }
 
+
+
 FLASHMEM void UI_func_midiplayer(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -21446,6 +21470,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         SD.mkdir("MIDI");
       }
     }
+    fm.sd_sum_files = 0;
     seq.edit_state = 0;
     generic_menu = 0;
 
@@ -21531,7 +21556,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         }
       }
     }
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) // handle button presses during menu
+    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort() && fm.sd_sum_files != 0) // handle button presses during menu
     {
       if (generic_temp_select_menu > 1 && generic_temp_select_menu < 18)
       {
@@ -21567,80 +21592,95 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
       }
       else
         seq.edit_state = !seq.edit_state;
-
-
     }
 
-    for (uint8_t f = 0; f < 4; f++)
+    if (fm.sd_sum_files == 0)
     {
-      storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
-
-      if (f == fm.sd_selected_file && fm.sd_parent_folder == false && seq.edit_state && generic_temp_select_menu == 0)
-      {
-        display.setTextColor(COLOR_SYSTEXT, RED);
-        generic_menu = fm.sd_skip_files + f;
-      }
-      else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu == 0)
-      {
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-        generic_menu = fm.sd_skip_files + f;
-      }
-      else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
-      {
-        display.setTextColor(COLOR_BACKGROUND, GREY1);
-        generic_menu = fm.sd_skip_files + f;
-      }
-      else
-      {
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        // generic_menu = fm.sd_skip_files + f;
-      }
-
-      show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name.c_str());
+      helptext_r("NO FILES IN MIDI FOLDER");
+      display.setTextColor(RED, COLOR_BACKGROUND);
     }
-
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    snprintf_P(filename, sizeof(filename), PSTR("%s"), sdcard_infos.files[generic_menu].name);
-    //snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
-    show_smallfont_noGrid(CHAR_height_small * 1 + 2, CHAR_width_small * 33, 18, filename);
-
-    if (generic_temp_select_menu == 0 && seq.edit_state == false)
-      helptext_r("SELECT MIDI FILE");
-    else if (generic_temp_select_menu == 1 && smf_playing == false)
-      helptext_r("START PLAYING");
-    else  if (generic_temp_select_menu == 1 && smf_playing)
-      helptext_r("STOP PLAYING");
-
-    else if (generic_temp_select_menu > 1 && generic_temp_select_menu < 18)
-    {
-      helptext_r("MUTE/UNMUTE TRACK");
-    }
-    else  if (generic_temp_select_menu > 17)
-    {
-      helptext_r("SELECT INSTR.");
-    }
-
-    if (seq.edit_state && generic_temp_select_menu == 1)
-      display.setTextColor(COLOR_SYSTEXT, RED);
-    else   if (seq.edit_state == false && generic_temp_select_menu == 1)
-      display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-
     else
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid_small(37, 0);
+    display.print("FILES: ");
+    display.print(fm.sd_sum_files);
 
-    setCursor_textGrid_small(33, 6);
-    if (smf_playing)
-      display.print("PLAYING");
-    else
-      display.print("STOPPED");
+    if (fm.sd_sum_files != 0)
+    {
+      for (uint8_t f = 0; f < 4; f++)
+      {
+        storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
 
-    _print_smf_track_state();
-    _print_smf_track_instruments();
+        if (f == fm.sd_selected_file && fm.sd_parent_folder == false && seq.edit_state && generic_temp_select_menu == 0)
+        {
+          display.setTextColor(COLOR_SYSTEXT, RED);
+          generic_menu = fm.sd_skip_files + f;
+        }
+        else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu == 0)
+        {
+          display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+          generic_menu = fm.sd_skip_files + f;
+        }
+        else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
+        {
+          display.setTextColor(COLOR_BACKGROUND, GREY1);
+          generic_menu = fm.sd_skip_files + f;
+        }
+        else
+        {
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          // generic_menu = fm.sd_skip_files + f;
+        }
 
-    // display.print(generic_temp_select_menu);
-    // display.print(" ");
-    // display.print(seq.edit_state);
-    // display.print(" ");
+        //show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name);
+        show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name.c_str());
+      }
+
+
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      snprintf_P(filename, sizeof(filename), PSTR("%s"), sdcard_infos.files[generic_menu].name);
+      //snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+      show_smallfont_noGrid(CHAR_height_small * 1 + 2, CHAR_width_small * 33, 18, filename);
+
+      if (generic_temp_select_menu == 0 && seq.edit_state == false)
+        helptext_r("SELECT MIDI FILE");
+      else if (generic_temp_select_menu == 1 && smf_playing == false)
+        helptext_r("START PLAYING");
+      else  if (generic_temp_select_menu == 1 && smf_playing)
+        helptext_r("STOP PLAYING");
+
+      else if (generic_temp_select_menu > 1 && generic_temp_select_menu < 18)
+      {
+        helptext_r("MUTE/UNMUTE TRACK");
+      }
+      else  if (generic_temp_select_menu > 17)
+      {
+        helptext_r("SELECT INSTR.");
+      }
+
+      if (seq.edit_state && generic_temp_select_menu == 1)
+        display.setTextColor(COLOR_SYSTEXT, RED);
+      else   if (seq.edit_state == false && generic_temp_select_menu == 1)
+        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+
+      else
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+      setCursor_textGrid_small(33, 6);
+      if (smf_playing)
+        display.print("PLAYING");
+      else
+        display.print("STOPPED");
+
+      _print_smf_track_state();
+      _print_smf_track_instruments();
+
+      // display.print(generic_temp_select_menu);
+      // display.print(" ");
+      // display.print(seq.edit_state);
+      // display.print(" ");
+
+    }
 
   }
 
