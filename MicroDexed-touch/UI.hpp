@@ -3202,7 +3202,7 @@ FLASHMEM void gamepad_learn_func(uint32_t buttons)
 
 FLASHMEM void increment_dexed_instance()
 {
-  if (selected_instance_id < NUM_DEXED)
+  if (selected_instance_id < NUM_DEXED-1)
     selected_instance_id++;
 }
 
