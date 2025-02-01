@@ -2,7 +2,7 @@
 #include "ILI9341_t3n.h"
 extern ILI9341_t3n display;
 
-FLASHMEM void Realtime_Scope::update(void)
+void Realtime_Scope::update(void)
 {
   audio_block_t* block = receiveReadOnly(0);
   if (block) {
@@ -19,10 +19,12 @@ FLASHMEM void Realtime_Scope::update(void)
   }
 }
 
-FLASHMEM void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
+void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
 {
   scope_is_drawing = true;
   display.console = false;
+
+  w = std::min(uint8_t(AUDIO_BLOCK_SAMPLES), w); // limit width to 64 (scope buffer size)
 
   //display.drawRect(x, y, w, h, DX_DARKCYAN); // comment in to fit scope into screen
   //display.drawLine(x,y+h/2,x+w,y+h/2,GREEN); //zero line
@@ -40,8 +42,8 @@ FLASHMEM void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h
     if (scopebuffer_old[i] != scopebuffer[i]) {
       display.drawPixel(x + i, scopebuffer_old[i] + y, COLOR_BACKGROUND);
       display.drawPixel(x + i, scopebuffer[i] + y, COLOR_SYSTEXT);
+      scopebuffer_old[i] = scopebuffer[i];
     }
-    scopebuffer_old[i] = scopebuffer[i];
   }
   updateBuffer = true;
   scope_is_drawing = false;
