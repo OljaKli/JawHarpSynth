@@ -122,18 +122,17 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   toolsPages[TOOLS_SEQ].push_back(selectedTrackSetup.label);
 
   // track instrument
-  //ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedTrackSetup.instrument, 0, 15, 1, data.trackSettings[data.activeTrack].instrument,
-  ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedInstrument, 0, 15, 1, data.trackSettings[data.activeTrack].instrument,
+  ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedInstrument, 0, 15, 1, instrumentToInstrumentID[data.trackSettings[data.activeTrack].instrument],
     [this](auto* b, auto* v) { // drawHandler
       char name[10];
       char sub[10];
       
-  // MDT has instruments 0-12 / MIDI has instuments 0-15
+      // MDT has instruments 0-12 / MIDI has instuments 0-15
       selectedTrackSetup.instrument = instrumentToInstrumentID[selectedInstrument];
       const uint8_t maxInstrument = (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) ? LiveSequencer::INSTR_MAX - 1 : 15;
       static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, maxInstrument);
 
-        liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
+      liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
       b->draw(name, sub, TouchButton::BUTTON_ACTIVE);
       instance->checkApplyTrackInstrument();
     });
@@ -642,7 +641,6 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
     trackButtons[SCREEN_TRACK_INDEX(activeOld)]->drawNow();
     trackButtons[SCREEN_TRACK_INDEX(track)]->drawNow();
 
-    updateTrackChannelSetupButtons(track);
     if (showingTools && (currentTools == TOOLS_KEYBOARD)) {
       const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
       // only redraw if PADs / KEYs view needs redrawing
@@ -663,6 +661,13 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   selectedTrackSetup.instrument = data.trackSettings[track].instrument;
   selectedTrackSetup.quantizeDenom = data.trackSettings[track].quantizeDenom;
   selectedTrackSetup.velocity = data.trackSettings[track].velocityLevel;
+
+  // reverse lookup selected instrument index
+  for(size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
+    if(instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
+      selectedInstrument = i;
+    }
+  }
   // update currently selected track
   if ((isLayerViewActive == false) && (currentTools == TOOLS_SEQ)) {
     drawUpdates(drawTools);
