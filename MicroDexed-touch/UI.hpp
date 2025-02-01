@@ -11365,7 +11365,7 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
   {
     // setup function
     registerTouchHandler(handle_touchscreen_microsynth);
-    registerScope(269, 40, 50, 40);
+    registerScope(269, 40, 51, 40);
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
@@ -12686,7 +12686,7 @@ FLASHMEM void UI_func_arpeggio(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_arpeggio);
-    registerScope(180, 0, 128, 50);
+    registerScope(250, 0, 64, 50);
     encoderDir[ENC_R].reset();
     generic_temp_select_menu = 0;
     seq.temp_active_menu = 0;
@@ -13893,7 +13893,6 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-    // registerScope(258, 4, 55, 42);
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
 
@@ -14267,7 +14266,6 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-    unregisterScope();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
@@ -14302,7 +14300,7 @@ FLASHMEM void UI_func_information(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
 
-    registerScope(180, 150, 128, 50);
+    registerScope(250, 150, 64, 50);
     sysinfo_chord_state = 0;
     char version_string[display_cols + 10 + 1];
     encoderDir[ENC_R].reset();
@@ -14888,7 +14886,7 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_multiband);
-    registerScope(188, 0, 128, 64);
+    registerScope(250, 0, 64, 50);
     generic_active_function = 0;
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextColor(COLOR_SYSTEXT);
@@ -16977,7 +16975,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
   if (LCDML.FUNC_setup())
   {
     registerTouchHandler(handle_touchscreen_midi_channel_page);
-    registerScope(180, 0, 128, 50);
+    registerScope(180, 0, 64, 50);
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     generic_temp_select_menu = 0;
@@ -17750,7 +17748,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_mixer);
-    registerScope(180, 0, 128, 50);
+    registerScope(180, 0, 64, 50);
     encoderDir[ENC_R].reset();
     seq.temp_active_menu = 0;
     display.fillScreen(COLOR_BACKGROUND);
@@ -18986,7 +18984,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_voice_select);
-    registerScope(217, 40, 102, 48);
+    registerScope(250, 40, 64, 48);
     dexed_onscreen_algo = 88; // dummy value to force draw on screen init
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
@@ -19541,7 +19539,7 @@ FLASHMEM void UI_func_volume(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_menu);
-    registerScope(230, 18, 87, 64);
+    registerScope(250, 18, 64, 50);
     old_volume = configuration.sys.vol;
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
