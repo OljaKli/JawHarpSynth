@@ -21391,7 +21391,7 @@ FLASHMEM void _print_smf_track_instruments()
 FLASHMEM void play_midi_file()
 {
   int i;
-  snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+  sprintf(filename, "/MIDI/%s", sdcard_infos.files[generic_menu].name.c_str());
   // SMF.load("/MIDI/HIDNSEEK.mid");
   i = SMF.load(filename);
 
@@ -21636,8 +21636,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
 
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      snprintf_P(filename, sizeof(filename), PSTR("%s"), sdcard_infos.files[generic_menu].name);
-      //snprintf_P(filename, sizeof(filename), PSTR("/MIDI/%s"), sdcard_infos.files[generic_menu].name);
+      sprintf(filename, "%s", sdcard_infos.files[generic_menu].name.c_str());
       show_smallfont_noGrid(CHAR_height_small * 1 + 2, CHAR_width_small * 33, 18, filename);
 
       if (generic_temp_select_menu == 0 && seq.edit_state == false)
