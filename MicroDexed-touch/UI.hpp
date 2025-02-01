@@ -21255,19 +21255,25 @@ void midiCallback(midi_event* pev)
     else if (smf_track_inst[pev->channel] == 2)
       inst_channel = configuration.dexed[1].midi_channel;
 
-    else if (smf_track_inst[pev->channel] == 3)
-      inst_channel = microsynth[0].midi_channel;
-    else if (smf_track_inst[pev->channel] == 4)
-      inst_channel = microsynth[1].midi_channel;
+      else if (smf_track_inst[pev->channel] == 3)
+      inst_channel = configuration.dexed[2].midi_channel;
+
+      else if (smf_track_inst[pev->channel] == 4)
+      inst_channel = configuration.dexed[3].midi_channel;
 
     else if (smf_track_inst[pev->channel] == 5)
-      inst_channel = configuration.epiano.midi_channel;
+      inst_channel = microsynth[0].midi_channel;
     else if (smf_track_inst[pev->channel] == 6)
-      inst_channel = drum_midi_channel;
+      inst_channel = microsynth[1].midi_channel;
+
     else if (smf_track_inst[pev->channel] == 7)
+      inst_channel = configuration.epiano.midi_channel;
+    else if (smf_track_inst[pev->channel] == 8)
+      inst_channel = drum_midi_channel;
+    else if (smf_track_inst[pev->channel] == 9)
       inst_channel = braids_osc.midi_channel;
 
-    if (smf_track_inst[pev->channel] == 6) //basic GM drum mapping
+    if (smf_track_inst[pev->channel] == 8) //basic GM drum mapping
     {
       in_note = smf_gm_mapping[pev->data[1] - 35];
     }
@@ -21336,15 +21342,14 @@ FLASHMEM void _print_smf_track_instruments()
   {
     display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 12 * CHAR_height_small + 5);
 
-    if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] != 6)
+    if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] != 8)
     {
       display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
     }
-    else   if (smf_track_inst[f] != 6)
+    else if (smf_track_inst[f] != 8)
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     else
-      if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] == 6)
-
+      if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] == 8)
         display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
       else
         display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
@@ -21353,19 +21358,22 @@ FLASHMEM void _print_smf_track_instruments()
       display.print("D1");
     else if (smf_track_inst[f] == 2)
       display.print("D2");
-    else  if (smf_track_inst[f] == 3)
-      display.print("M1");
-    else  if (smf_track_inst[f] == 4)
-      display.print("M2");
+       else if (smf_track_inst[f] == 3)
+      display.print("D3");
+       else if (smf_track_inst[f] == 4)
+      display.print("D4");
     else  if (smf_track_inst[f] == 5)
-      display.print("EP");
+      display.print("M1");
     else  if (smf_track_inst[f] == 6)
-      display.print("DR");
+      display.print("M2");
     else  if (smf_track_inst[f] == 7)
+      display.print("EP");
+    else  if (smf_track_inst[f] == 8)
+      display.print("DR");
+    else  if (smf_track_inst[f] == 9)
       display.print("BR");
     else
       display.print("??");
-
   }
 }
 
@@ -21454,8 +21462,6 @@ FLASHMEM void print_smf_parameters()
   }
 }
 
-
-
 FLASHMEM void UI_func_midiplayer(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -21519,10 +21525,8 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     //     {
     //       load_sd_directory_files_only();
     //     }
-
-       // display.setTextColor(GREY1, COLOR_BACKGROUND);
-
-       //_print_smf_track_state();
+    // display.setTextColor(GREY1, COLOR_BACKGROUND);
+    //_print_smf_track_state();
     //_print_smf_track_instruments();
     load_sd_directory_files_only();
   }
@@ -21563,7 +21567,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
       else  if (generic_temp_select_menu > 17)
       {
         smf_track_inst[generic_temp_select_menu - 18]++;
-        if (smf_track_inst[generic_temp_select_menu - 18] > 7)
+        if (smf_track_inst[generic_temp_select_menu - 18] > 9)
           smf_track_inst[generic_temp_select_menu - 18] = 1;
       }
 
@@ -21581,6 +21585,8 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         //midiSilence();
         MicroDexed[0]->panic();
         MicroDexed[1]->panic();
+        MicroDexed[2]->panic();
+        MicroDexed[3]->panic();
 
         SMF.close();
         smf_playing = false;
@@ -21671,11 +21677,6 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
       _print_smf_track_state();
       _print_smf_track_instruments();
-
-      // display.print(generic_temp_select_menu);
-      // display.print(" ");
-      // display.print(seq.edit_state);
-      // display.print(" ");
 
     }
 
