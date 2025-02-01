@@ -2166,7 +2166,7 @@ void loop()
       if (Gate[0]->get_state() != gate_state_old[0])
       {
         display.setTextSize(1);
-        setCursor_textGrid_small(1 + 5, 6);
+        setCursor_textGrid_small(1 + 5, 5);
         display.setTextColor(GREEN, GREY4);
         print_gate_state(0);
         gate_state_old[0] = Gate[0]->get_state();
@@ -2175,7 +2175,7 @@ void loop()
       if (Gate[1]->get_state() != gate_state_old[1])
       {
         display.setTextSize(1);
-        setCursor_textGrid_small(17 + 5, 6);
+        setCursor_textGrid_small(17 + 5, 5);
         display.setTextColor(GREEN, GREY3);
         print_gate_state(1);
         gate_state_old[1] = Gate[1]->get_state();

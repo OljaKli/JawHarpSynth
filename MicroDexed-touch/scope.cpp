@@ -24,7 +24,7 @@ void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
   scope_is_drawing = true;
   display.console = false;
 
-  w = std::min(uint8_t(AUDIO_BLOCK_SAMPLES), w); // limit width to 64 (scope buffer size)
+  w = std::min(uint8_t(AUDIO_BLOCK_SAMPLES), w); // limit width AUDIO_BLOCK size (128)
 
   //display.drawRect(x, y, w, h, DX_DARKCYAN); // comment in to fit scope into screen
   //display.drawLine(x,y+h/2,x+w,y+h/2,GREEN); //zero line
