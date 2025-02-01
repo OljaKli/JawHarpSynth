@@ -15247,36 +15247,53 @@ short writeWavStereoBlock() {
 // write all 512 bytes to the SD card
 void continueWavRecording()
 {
+  static constexpr int PLOT_HALFHEIGHT = 40;
+  static constexpr int PLOT_Y_CENTER = 185;
+
+  static int16_t sampleValueMin = INT16_MAX;
+  static int16_t sampleValueMax = INT16_MIN;
+
+  static uint32_t lastPlotted = 0;
+
   if (record_queue_l.available() >= 2 && record_queue_r.available() >= 2)
   {
-    short samplevalue = writeWavStereoBlock();
+    const int16_t sampleValue = writeWavStereoBlock();
+    sampleValueMin = std::min(sampleValueMin, sampleValue);
+    sampleValueMax = std::max(sampleValueMax, sampleValue);
 
-    if (record_timer % 6 == 0)
+    if (record_timer - lastPlotted > 20)
     {
+      lastPlotted = record_timer;
+      const int16_t yFrom = constrain(sampleValueMin / 500, -PLOT_HALFHEIGHT, +PLOT_HALFHEIGHT);
+      const int16_t yTo = constrain(sampleValueMax / 500, -PLOT_HALFHEIGHT, +PLOT_HALFHEIGHT);
+
+      sampleValueMin = INT16_MAX;
+      sampleValueMax = INT16_MIN;
+
       record_x_pos++;
       if (record_x_pos > DISPLAY_WIDTH - 1)
       {
         record_x_pos = 0;
       }
 
-      display.drawLine(record_x_pos, 185 - 40, record_x_pos, 185 + 40, GREY4);
-      display.drawLine(record_x_pos, 185, record_x_pos, samplevalue / 100 + 185, GREEN);
+      display.drawLine(record_x_pos, PLOT_Y_CENTER - PLOT_HALFHEIGHT, record_x_pos, PLOT_Y_CENTER + PLOT_HALFHEIGHT, GREY4);
+      display.drawLine(record_x_pos, PLOT_Y_CENTER + yFrom, record_x_pos, PLOT_Y_CENTER + yTo, GREEN);
+
+      uint32_t seconds = record_timer / 1000, minutes, hours;
+      minutes = seconds / 60;
+      seconds %= 60;
+      hours = minutes / 60;
+      minutes %= 60;
+
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      setCursor_textGrid(9, 7);
+      print_formatted_number(hours, 2);
+      setCursor_textGrid(12, 7);
+      print_formatted_number(minutes, 2);
+      setCursor_textGrid(15, 7);
+      print_formatted_number(seconds, 2);
     }
   }
-
-  uint32_t seconds = record_timer / 1000, minutes, hours;
-  minutes = seconds / 60;
-  seconds %= 60;
-  hours = minutes / 60;
-  minutes %= 60;
-
-  display.setTextColor(GREY2, COLOR_BACKGROUND);
-  setCursor_textGrid(9, 7);
-  print_formatted_number(hours, 2);
-  setCursor_textGrid(12, 7);
-  print_formatted_number(minutes, 2);
-  setCursor_textGrid(15, 7);
-  print_formatted_number(seconds, 2);
 }
 
 FLASHMEM void stopWavRecording()
