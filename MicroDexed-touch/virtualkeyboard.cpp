@@ -41,16 +41,16 @@ void touch_check_all_keyboard_buttons();
 
 FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 {
-  if ((ts.virtual_keyboard_instrument == 0) && (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))) {
-    ts.virtual_keyboard_instrument = 1;
+  if ((ts.virtual_keyboard_instrument == VK_LIVESEQUENCER) && (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))) {
+    ts.virtual_keyboard_instrument = VK_DEXED0;
   }
-  if (ts.virtual_keyboard_instrument == 0) {
+  if (ts.virtual_keyboard_instrument == VK_LIVESEQUENCER) {
     // do not draw instrument buttons for live sequencer
     drawFlags &= ~VK_DRAW_INSTRUMENT_BUTTONS;
   }
 
   if (ts.virtual_keyboard_instrument != 0) { // livesequencer assigns display mode itself
-    ts.current_virtual_keyboard_display_mode = (ts.virtual_keyboard_instrument == 6) ? 1 : 0; // pad view for drums, key for other
+    ts.current_virtual_keyboard_display_mode = (ts.virtual_keyboard_instrument == VK_DRUMS) ? 1 : 0; // pad view for drums, key for other
   }
   const bool modeChanged = ts.current_virtual_keyboard_display_mode != ts.previous_virtual_keyboard_display_mode;
   if (modeChanged) {
@@ -204,7 +204,7 @@ FLASHMEM void touch_button_oct_down()
 FLASHMEM void touch_button_inst_up()
 {
   ts.virtual_keyboard_instrument++;
-  if (ts.virtual_keyboard_instrument == 6 && ts.virtual_keyboard_octave > 6) {
+  if (ts.virtual_keyboard_instrument == VK_DRUMS && ts.virtual_keyboard_octave > 6) {
     ts.virtual_keyboard_octave = 6;
   }
   if (ts.virtual_keyboard_instrument > 12) {
@@ -219,7 +219,7 @@ FLASHMEM void touch_button_inst_down()
     ts.virtual_keyboard_instrument--;
   }
 
-  if (ts.virtual_keyboard_instrument == 6 && ts.virtual_keyboard_octave > 6) {
+  if (ts.virtual_keyboard_instrument == VK_DRUMS && ts.virtual_keyboard_octave > 6) {
     ts.virtual_keyboard_octave = 6;
   }
 
@@ -261,7 +261,7 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   else {
     display.setTextSize(1);
     display.print(F("PITCHED SAMPLE #"));
-    display.print(ts.virtual_keyboard_instrument - 7);
+    display.print(ts.virtual_keyboard_instrument - 9);
     display.print(" ");
 
     display.console = 1;
@@ -367,7 +367,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
           }
         }
         // pitched samples
-        if (ts.virtual_keyboard_instrument > 7) {
+        if (ts.virtual_keyboard_instrument > VK_BRAIDS) {
           set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x + halftones - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
             handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
@@ -407,7 +407,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
           ts.virtual_keyboard_state_black |= (1 << x);
 
           // pitched samples
-          if (ts.virtual_keyboard_instrument > 7) {
+          if (ts.virtual_keyboard_instrument > VK_BRAIDS) {
             set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
             if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
               handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
@@ -437,7 +437,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
   }
 
   else if (ts.current_virtual_keyboard_display_mode == 1) {
-    if (ts.virtual_keyboard_instrument == 6 || ts.virtual_keyboard_instrument == 0) {
+    if (ts.virtual_keyboard_instrument == VK_DRUMS || ts.virtual_keyboard_instrument == 0) {
       for (uint8_t x = 0; x < 12; x++) {
         const bool isWithinPad = TouchButton::isInArea(GRID.X[x % 6], GRID.Y[4 + (x / 6)], TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y);
         const bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
@@ -509,7 +509,7 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
     if (seq.content_type[seq.active_pattern] == 0)
     {
       ts.current_virtual_keyboard_display_mode = 1;
-      ts.virtual_keyboard_instrument = 6;
+      ts.virtual_keyboard_instrument = VK_DRUMS;
     }
     else
     {
@@ -529,11 +529,11 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_braids))
   {
     ts.current_virtual_keyboard_display_mode = 0;
-    ts.virtual_keyboard_instrument = 7;
+    ts.virtual_keyboard_instrument = VK_BRAIDS;
   }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth))
   {
     ts.current_virtual_keyboard_display_mode = 0;
-    ts.virtual_keyboard_instrument = microsynth_selected_instance + 3;
+    ts.virtual_keyboard_instrument = microsynth_selected_instance + 5;
   }
 }

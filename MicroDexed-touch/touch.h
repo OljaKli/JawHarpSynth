@@ -32,7 +32,7 @@ typedef struct dexed_live_mod_s
 typedef struct ts_s
 {
   uint8_t virtual_keyboard_octave = 3;
-  uint8_t virtual_keyboard_instrument = 1; // 0=livesequencer 1=dexed0 2=dexed1 3=microsynth0 4=microsynth1 5=epiano 6=drums 7=braids, 8-...=pitched samples
+  uint8_t virtual_keyboard_instrument = VK_DEXED0;
   uint8_t virtual_keyboard_prev_instrument = 0xFF;
   uint8_t virtual_keyboard_midi_channel = 1;
   uint8_t virtual_keyboard_velocity = 120;

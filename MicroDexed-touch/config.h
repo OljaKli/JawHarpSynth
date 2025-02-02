@@ -1031,6 +1031,23 @@ typedef struct custom_midi_map_s
   uint8_t out;     // Destination Key / Value
 } custom_midi_map_t;
 
+enum virtual_keyboard_instruments
+{
+ VK_LIVESEQUENCER,
+ VK_DEXED0,
+ VK_DEXED1,
+ VK_DEXED2,
+ VK_DEXED3,
+ VK_MICROSYNTH0,
+ VK_MICROSYNTH1,
+ VK_EPIANO,
+ VK_DRUMS,
+ VK_BRAIDS,
+ VK_PS_1,
+ VK_PS_2,
+ VK_PS_3
+};
+
 enum master_mixer_ports
 {
   MASTER_MIX_CH_DEXED1,

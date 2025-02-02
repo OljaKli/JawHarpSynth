@@ -677,7 +677,7 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
 void UI_LiveSequencer::drawKeyboard(uint8_t flags) {
   const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
   ts.current_virtual_keyboard_display_mode = isDrumsActive ? 1 : 0;
-  ts.virtual_keyboard_instrument = 0;
+  ts.virtual_keyboard_instrument = VK_LIVESEQUENCER;
   drawVirtualKeyboard(flags);
 }
 

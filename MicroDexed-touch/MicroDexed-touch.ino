@@ -1730,7 +1730,7 @@ FLASHMEM void sub_step_recording(bool touchinput, uint8_t touchparam)
 
         if (touchparam == 0)
         {
-          if (seq.content_type[seq.active_pattern] == 0 && get_sample_note(activeSample) > 209 && ts.virtual_keyboard_instrument != 6) // pitched sample
+          if (seq.content_type[seq.active_pattern] == 0 && get_sample_note(activeSample) > 209 && ts.virtual_keyboard_instrument != VK_DRUMS) // pitched sample
           {
             seq.vel[seq.active_pattern][cur_step] = get_sample_note(activeSample);
           }
