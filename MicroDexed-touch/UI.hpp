@@ -17586,7 +17586,7 @@ FLASHMEM void _setup_rotation_and_encoders(bool init)
 FLASHMEM void print_mixer_text()
 {
   // Dexed
-  if (seq.temp_active_menu >= 0 && seq.temp_active_menu <= 4)
+  if (seq.temp_active_menu >= 0 && seq.temp_active_menu <4)
     display.setTextColor(RED, COLOR_BACKGROUND);
   else
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -17623,10 +17623,6 @@ FLASHMEM void print_mixer_text()
     display.setTextColor(RED, COLOR_BACKGROUND);
   else
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  // setCursor_textGrid_small(8, 20);
-  // display.print(F("L"));
-  // setCursor_textGrid_small(12, 20);
-  // display.print(F("R"));
   setCursor_textGrid_small(17, 12);
   display.print(F("EP"));
 
@@ -17793,7 +17789,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       ts.displayed_peak[j] = 0;
     }
 
-    setCursor_textGrid_small(1, 1);
+    setCursor_textGrid_small(0,0);
     display.setTextSize(1);
     display.setTextColor(RED);
     display.print(F("MIXER"));
@@ -17906,9 +17902,10 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       border1_clear();
       if (!seq.edit_state)
       {
-        display.setTextSize(2);
-        setCursor_textGrid(1, 1);
-        display.print(F("MIXER"));
+         display.setTextSize(1);
+          setCursor_textGrid_small(0,0);
+    display.setTextColor(RED);
+    display.print(F("MIXER"));
       }
     }
     if (seq.edit_state)
@@ -17916,6 +17913,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
     else
       helptext_r("< > SELECT CHANNEL");
     display.setTextSize(2);
+
     if (seq.temp_active_menu < 4 && seq.edit_state) // dexed 0-3 instance selected
     {
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
