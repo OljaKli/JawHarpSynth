@@ -17784,7 +17784,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_mixer);
-    registerScope(180, 0, 128, 50);
+    registerScope(210, 0, 98, 50);
     encoderDir[ENC_R].reset();
     seq.temp_active_menu = 0;
     display.fillScreen(COLOR_BACKGROUND);
@@ -17810,9 +17810,9 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       if (!seq.edit_state) // select channel
       {
         if (LCDML.BT_checkDown())
-          seq.temp_active_menu = constrain(seq.temp_active_menu + 1, 0, 10);
+          seq.temp_active_menu = constrain(seq.temp_active_menu + 1, 0, 12);
         else if (LCDML.BT_checkUp())
-          seq.temp_active_menu = constrain(seq.temp_active_menu - 1, 0, 10);
+          seq.temp_active_menu = constrain(seq.temp_active_menu - 1, 0, 12);
       }
       else
       {
@@ -17839,9 +17839,9 @@ FLASHMEM void UI_func_mixer(uint8_t param)
         else if (seq.temp_active_menu > 4 && seq.temp_active_menu < 7) // microsynth
         {
           if (LCDML.BT_checkDown())
-            microsynth[seq.temp_active_menu - 3].sound_intensity = constrain(microsynth[seq.temp_active_menu - 3].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+            microsynth[seq.temp_active_menu - 5].sound_intensity = constrain(microsynth[seq.temp_active_menu - 5].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           else if (LCDML.BT_checkUp())
-            microsynth[seq.temp_active_menu - 3].sound_intensity = constrain(microsynth[seq.temp_active_menu - 3].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+            microsynth[seq.temp_active_menu - 5].sound_intensity = constrain(microsynth[seq.temp_active_menu - 5].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
         }
         else if (seq.temp_active_menu == 7) // braids
         {
@@ -17877,6 +17877,8 @@ FLASHMEM void UI_func_mixer(uint8_t param)
           else if (LCDML.BT_checkUp())
             temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           seq.drums_volume = mapfloat(temp_int, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0, VOL_MAX_FLOAT);
+        master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+        master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
         }
         else if (seq.temp_active_menu == 11) // reverb level
         {
@@ -17914,7 +17916,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
     else
       helptext_r("< > SELECT CHANNEL");
     display.setTextSize(2);
-    if (seq.temp_active_menu < 5 && seq.edit_state) // dexed 0-3 instance selected
+    if (seq.temp_active_menu < 4 && seq.edit_state) // dexed 0-3 instance selected
     {
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       display_bar_int("", configuration.dexed[seq.temp_active_menu].sound_intensity, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
@@ -17934,10 +17936,10 @@ FLASHMEM void UI_func_mixer(uint8_t param)
     else if (seq.temp_active_menu > 4 && seq.temp_active_menu < 7 && seq.edit_state) // microsynth
     {
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      display_bar_int("", microsynth[seq.temp_active_menu - 3].sound_intensity, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
+      display_bar_int("", microsynth[seq.temp_active_menu - 5].sound_intensity, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
       setCursor_textGrid(1, 1);
       display.print("MICROSYNTH #");
-      display.print(seq.temp_active_menu - 2);
+      display.print(seq.temp_active_menu - 4);
     }
     else if (seq.temp_active_menu == 7 && seq.edit_state) // braids
     {
@@ -17967,8 +17969,8 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       temp_int = mapfloat(seq.drums_volume, 0.0, VOL_MAX_FLOAT, 0, 100);
       display_bar_int("DRUMS VOLUME", temp_int, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, true);
-      master_mixer_r.gain(3, volume_transform(mapfloat(temp_int, 0, 100, 0.0, VOL_MAX_FLOAT)));
-      master_mixer_l.gain(3, volume_transform(mapfloat(temp_int, 0, 100, 0.0, VOL_MAX_FLOAT)));
+      master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(mapfloat(temp_int, 0, 100, 0.0, VOL_MAX_FLOAT)));
+      master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(mapfloat(temp_int, 0, 100, 0.0, VOL_MAX_FLOAT)));
     }
     else if (seq.temp_active_menu == 11 && seq.edit_state) // reverb level
     {
