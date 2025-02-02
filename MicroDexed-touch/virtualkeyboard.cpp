@@ -49,11 +49,11 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
     drawFlags &= ~VK_DRAW_INSTRUMENT_BUTTONS;
   }
 
-  if(ts.virtual_keyboard_instrument != 0) { // livesequencer assigns display mode itself
+  if (ts.virtual_keyboard_instrument != 0) { // livesequencer assigns display mode itself
     ts.current_virtual_keyboard_display_mode = (ts.virtual_keyboard_instrument == 6) ? 1 : 0; // pad view for drums, key for other
   }
   const bool modeChanged = ts.current_virtual_keyboard_display_mode != ts.previous_virtual_keyboard_display_mode;
-  if(modeChanged) {
+  if (modeChanged) {
     // clear keys area
     display.console = true;
     display.fillRect(0, GRID.Y[4], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[4], COLOR_BACKGROUND);
@@ -74,7 +74,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
     TouchButton::drawButton(GRID.X[4], GRID.Y[3], "INSTR.", "+", TouchButton::BUTTON_NORMAL);
   }
 
-  if(drawFlags & VK_DRAW_INSTRUMENT_NAME) {
+  if (drawFlags & VK_DRAW_INSTRUMENT_NAME) {
     virtual_keyboard_print_current_instrument();
   }
 
@@ -84,7 +84,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1 && seq.step_recording) {
     virtual_keyboard_print_velocity_bar();
   }
-    
+
   if (drawFlags & VK_DRAW_KEYS) {
     switch (ts.current_virtual_keyboard_display_mode) {
     case 0: //piano keys
@@ -229,19 +229,19 @@ FLASHMEM void touch_button_inst_down()
 FLASHMEM void touch_check_all_keyboard_buttons()
 {
   // octave buttons
-  if(TouchButton::isPressed(GRID.X[0], GRID.Y[3])) {
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[3])) {
     touch_button_oct_down();
   }
-  if(TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
     touch_button_oct_up();
   }
 
   // instrument buttons (disabled for livesequencer)
-  if (ts.virtual_keyboard_instrument != 0) { 
-    if(TouchButton::isPressed(GRID.X[1], GRID.Y[3])) {
+  if (ts.virtual_keyboard_instrument != 0) {
+    if (TouchButton::isPressed(GRID.X[1], GRID.Y[3])) {
       touch_button_inst_down();
     }
-    if(TouchButton::isPressed(GRID.X[4], GRID.Y[3])) {
+    if (TouchButton::isPressed(GRID.X[4], GRID.Y[3])) {
       touch_button_inst_up();
     }
   }
@@ -252,7 +252,7 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   display.setTextColor(GREY2, COLOR_BACKGROUND);
   display.setTextSize(2);
   display.setCursor(18 * CHAR_width_small, 16 * CHAR_height_small);
-  if (ts.virtual_keyboard_instrument < 8) {
+  if (ts.virtual_keyboard_instrument < 10) {
     display.print(F("PLAYING"));
     display.console = 1;
     display.fillRect(33 * CHAR_width_small, 16 * CHAR_height_small, 3 * CHAR_width_small, CHAR_height_small, COLOR_BACKGROUND);
@@ -286,26 +286,34 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
     ts.virtual_keyboard_midi_channel = configuration.dexed[1].midi_channel;
     break;
   case 3:
+    display.print(F("DEXED3 "));
+    ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
+    break;
+  case 4:
+    display.print(F("DEXED4 "));
+    ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
+    break;
+  case 5:
     display.print(F("MSYNTH1"));
     ts.virtual_keyboard_midi_channel = microsynth[0].midi_channel;
     break;
-  case 4:
+  case 6:
     display.print(F("MSYNTH2"));
     ts.virtual_keyboard_midi_channel = microsynth[1].midi_channel;
     break;
-  case 5:
+  case 7:
     display.print(F("EPIANO "));
     ts.virtual_keyboard_midi_channel = configuration.epiano.midi_channel;
     break;
-  case 6:
+  case 8:
     display.print(F("DRUMS  "));
     ts.virtual_keyboard_midi_channel = drum_midi_channel;
     break;
-  case 7:
+  case 9:
     display.print(F("BRAIDS "));
-    ts.virtual_keyboard_midi_channel = braids_osc.midi_channel; 
+    ts.virtual_keyboard_midi_channel = braids_osc.midi_channel;
     break;
-  default: // >7
+  default: // >9
     show_no_grid(18 * CHAR_height_small + 3, 18 * CHAR_width_small, 7, get_drum_name_from_note(ts.virtual_keyboard_instrument - 8 + 210));
     ts.virtual_keyboard_midi_channel = drum_midi_channel;
     break;
@@ -318,7 +326,7 @@ FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
   std::string line1;
   std::string line2;
   const int16_t sampleIndex = padIndex + ts.virtual_keyboard_octave * 12 - offset;
-  if(sampleIndex >= 0 && sampleIndex < NUM_DRUMSET_CONFIG) {
+  if (sampleIndex >= 0 && sampleIndex < NUM_DRUMSET_CONFIG) {
     line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
     line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
   }
