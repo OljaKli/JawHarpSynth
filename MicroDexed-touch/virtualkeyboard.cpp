@@ -513,7 +513,7 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
     }
     else
     {
-      if (seq.content_type[seq.active_pattern] != 0)
+        if (seq.content_type[seq.active_pattern] != 0)
       {
         ts.current_virtual_keyboard_display_mode = 0;
         ts.virtual_keyboard_instrument = 1;
@@ -523,8 +523,8 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_select))
   {
     ts.current_virtual_keyboard_display_mode = 0;
-
-    ts.virtual_keyboard_instrument = selected_instance_id + 1;
+    if (seq.cycle_touch_element == 0)
+      ts.virtual_keyboard_instrument = selected_instance_id + 1;
   }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_braids))
   {

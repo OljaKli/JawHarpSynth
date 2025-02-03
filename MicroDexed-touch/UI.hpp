@@ -8305,6 +8305,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
     // setup function
     registerTouchHandler(handle_touchscreen_pattern_editor);
     registerScope(216, 0, button_size_x * CHAR_width_small, 50, true); // only draw when seq running
+    virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
       draw_button_on_grid(45, 16, "", "", 0); // clear button
     if (seq.menu_status != 1)
@@ -9939,7 +9940,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
     registerTouchHandler(handle_touchscreen_pattern_editor);
     registerScope(216, 0, button_size_x * CHAR_width_small, 50, true); // only draw when seq running
     seq.menu = 3;
-
+    virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
       draw_button_on_grid(45, 16, "JUMP", "TOOLS", 0);
 
@@ -17586,7 +17587,7 @@ FLASHMEM void _setup_rotation_and_encoders(bool init)
 FLASHMEM void print_mixer_text()
 {
   // Dexed
-  if (seq.temp_active_menu >= 0 && seq.temp_active_menu <4)
+  if (seq.temp_active_menu >= 0 && seq.temp_active_menu < 4)
     display.setTextColor(RED, COLOR_BACKGROUND);
   else
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -17789,7 +17790,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       ts.displayed_peak[j] = 0;
     }
 
-    setCursor_textGrid_small(0,0);
+    setCursor_textGrid_small(0, 0);
     display.setTextSize(1);
     display.setTextColor(RED);
     display.print(F("MIXER"));
@@ -17873,8 +17874,8 @@ FLASHMEM void UI_func_mixer(uint8_t param)
           else if (LCDML.BT_checkUp())
             temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           seq.drums_volume = mapfloat(temp_int, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0, VOL_MAX_FLOAT);
-        master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
-        master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+          master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+          master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
         }
         else if (seq.temp_active_menu == 11) // reverb level
         {
@@ -17902,10 +17903,10 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       border1_clear();
       if (!seq.edit_state)
       {
-         display.setTextSize(1);
-          setCursor_textGrid_small(0,0);
-    display.setTextColor(RED);
-    display.print(F("MIXER"));
+        display.setTextSize(1);
+        setCursor_textGrid_small(0, 0);
+        display.setTextColor(RED);
+        display.print(F("MIXER"));
       }
     }
     if (seq.edit_state)
@@ -19029,7 +19030,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     registerScope(217, 40, 102, 48);
     dexed_onscreen_algo = 88; // dummy value to force draw on screen init
     display.fillScreen(COLOR_BACKGROUND);
-    virtual_keyboard_smart_preselect_mode();
     ts.fav_buttton_state = 0; //clear touch button state when starting page
     seq.cycle_touch_element = 0;
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
@@ -19054,7 +19054,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
     show_smallfont_noGrid(9 * CHAR_height_small - 2, CHAR_width_small * 25, 10, seq.name);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
+    //if (seq.cycle_touch_element == 0)
+    virtual_keyboard_smart_preselect_mode();
     encoderDir[ENC_R].reset();
   }
 
@@ -19178,7 +19179,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonPressed() && dexed_live_mod.active_button != 99)
     {
       increment_dexed_instance_in_voice_select_round_robin();
-      virtual_keyboard_smart_preselect_mode();
+      if (seq.cycle_touch_element == 0)
+        virtual_keyboard_smart_preselect_mode();
       draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     }
     else if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -21183,11 +21185,6 @@ FLASHMEM void load_sd_directory_files_only()
       entry.isDirectory = sd_entry.isDirectory();
       sdcard_infos.files.emplace_back(entry);
 
-      //old code
-        // strcpy(sdcard_infos.files[fm.sd_sum_files].name, sd_entry.name());
-        //     sdcard_infos.files[fm.sd_sum_files].size = sd_entry.size();
-        //     sdcard_infos.files[fm.sd_sum_files].isDirectory = sd_entry.isDirectory();
-
       fm.sd_sum_files++;
     }
 
@@ -21297,10 +21294,10 @@ void midiCallback(midi_event* pev)
     else if (smf_track_inst[pev->channel] == 2)
       inst_channel = configuration.dexed[1].midi_channel;
 
-      else if (smf_track_inst[pev->channel] == 3)
+    else if (smf_track_inst[pev->channel] == 3)
       inst_channel = configuration.dexed[2].midi_channel;
 
-      else if (smf_track_inst[pev->channel] == 4)
+    else if (smf_track_inst[pev->channel] == 4)
       inst_channel = configuration.dexed[3].midi_channel;
 
     else if (smf_track_inst[pev->channel] == 5)
@@ -21400,9 +21397,9 @@ FLASHMEM void _print_smf_track_instruments()
       display.print("D1");
     else if (smf_track_inst[f] == 2)
       display.print("D2");
-       else if (smf_track_inst[f] == 3)
+    else if (smf_track_inst[f] == 3)
       display.print("D3");
-       else if (smf_track_inst[f] == 4)
+    else if (smf_track_inst[f] == 4)
       display.print("D4");
     else  if (smf_track_inst[f] == 5)
       display.print("M1");
@@ -21561,15 +21558,6 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
     print_smf_parameters();
 
-    //     // strcpy(fm.sd_prev_dir, "");
-    //     //    fm.sd_new_name = "/";
-    //     if (generic_active_function == 0)
-    //     {
-    //       load_sd_directory_files_only();
-    //     }
-    // display.setTextColor(GREY1, COLOR_BACKGROUND);
-    //_print_smf_track_state();
-    //_print_smf_track_instruments();
     load_sd_directory_files_only();
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -21588,7 +21576,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         {
           if (LCDML.BT_checkDown())
           {
-            if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
+            if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1 )
               fm.sd_skip_files++;
           }
           else if (LCDML.BT_checkUp())
@@ -21596,6 +21584,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
             if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
               fm.sd_skip_files--;
           }
+          if ( calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows) < fm.sd_sum_files)
           fm.sd_selected_file = calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows);
         }
       }
@@ -21655,6 +21644,8 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     {
       for (uint8_t f = 0; f < 4; f++)
       {
+        if (f <fm.sd_sum_files)
+        {
         storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
 
         if (f == fm.sd_selected_file && fm.sd_parent_folder == false && seq.edit_state && generic_temp_select_menu == 0)
@@ -21675,13 +21666,15 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         else
         {
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-          // generic_menu = fm.sd_skip_files + f;
         }
-
-        //show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name);
         show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name.c_str());
+        }
+        else
+        {
+           display.setTextColor(GREY3, COLOR_BACKGROUND);
+          show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, "---EMPTY---"); 
+        }
       }
-
 
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       sprintf(filename, "%s", sdcard_infos.files[generic_menu].name.c_str());
@@ -21826,14 +21819,14 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
 #endif
     }
     // setCursor_textGrid(1, 2);
-  }
+    }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 void sub_touchscreen_test_page_init()
 {
@@ -22161,10 +22154,10 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-  }
+    }
   else
     return false;
-}
+  }
 
 FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id)
 {
@@ -22235,8 +22228,8 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       LOG.println(F("Removed from Favorites..."));
 #endif
     }
-  }
-}
+      }
+    }
 
 FLASHMEM char* basename(const char* filename)
 {

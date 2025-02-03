@@ -487,10 +487,6 @@ void ILI9341_t3n::brightness(uint8_t value)
   endSPITransaction();
 }
 
-
-
-
-
 ///============================================================================
 // writeRect1BPP - 	write 1 bit per pixel paletted bitmap
 //					bitmap data in array at pixels, 4 bits per
