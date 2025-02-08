@@ -1049,7 +1049,7 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
     display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, GREY2);
-    display.fillRect(x * CHAR_width_small, y * CHAR_height_small + CHAR_height_small * button_size_y / 2, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, COLOR_BACKGROUND);
+    display.fillRect(x * CHAR_width_small, y * CHAR_height_small + CHAR_height_small * button_size_y / 2 - 2, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 + 2, COLOR_BACKGROUND);
     uint8_t offset[5] = { 1, 2, 2, 4, 6 }; //+ is the offset to left
     int offcount = 0;
     display.setTextSize(1);
@@ -1060,7 +1060,7 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
     for (uint8_t i = 0; i < 7; i++)
     {
       display.console = true;
-      display.fillRect(x * CHAR_width_small + 6 * i, y * CHAR_height_small + 16, 5, 15, COLOR_SYSTEXT); // pianoroll white key
+      display.fillRect(x * CHAR_width_small + 6 * i, y * CHAR_height_small + 16, 5, 16, COLOR_SYSTEXT); // pianoroll white key
     }
     for (uint8_t i = 0; i < 11; i++)
     {
@@ -10563,9 +10563,9 @@ void UI_toplineInfoText(uint8_t s)
   if (remote_active)
     display.console = true;
   if (s == 2)
-    display.fillRect(0, 0, DISPLAY_WIDTH - 1, CHAR_height_small * 2 + 3, DX_DARKCYAN);
+    display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 2 + 3, DX_DARKCYAN);
   else if (s == 1)
-    display.fillRect(0, 0, DISPLAY_WIDTH - 1, CHAR_height_small * 1 + 3, DX_DARKCYAN);
+    display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 1 + 3, DX_DARKCYAN);
   if (remote_active)
     display.console = false;
 }

@@ -18,7 +18,7 @@ static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
 };
 
 FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed)
-: x(x_coord),
+  : x(x_coord),
   y(y_coord),
   drawHandler{ draw },
   clickedHandler{ clicked },
@@ -86,7 +86,7 @@ FLASHMEM void TouchButton::drawVirtualKeyboardButton(uint16_t x, uint16_t y) {
   display.console = true;
   display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
   display.console = true;
-  display.fillRect(x, y + 17, BUTTON_SIZE_X, 35 - 16, COLOR_BACKGROUND);
+  display.fillRect(x, y + 16, BUTTON_SIZE_X, 36 - 16, COLOR_BACKGROUND);
   uint8_t offset[6] = { 1, 2, 2, 4, 6,7 }; //+ is the offset to left
   int offcount = 0;
   display.setTextSize(1);
