@@ -1049,7 +1049,7 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
     display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, GREY2);
-    display.fillRect(x * CHAR_width_small, y * CHAR_height_small + CHAR_height_small * button_size_y / 2, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, COLOR_BACKGROUND);
+    display.fillRect(x * CHAR_width_small, y * CHAR_height_small + CHAR_height_small * button_size_y / 2 - 2, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 + 2, COLOR_BACKGROUND);
     uint8_t offset[5] = { 1, 2, 2, 4, 6 }; //+ is the offset to left
     int offcount = 0;
     display.setTextSize(1);
@@ -1060,7 +1060,7 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
     for (uint8_t i = 0; i < 7; i++)
     {
       display.console = true;
-      display.fillRect(x * CHAR_width_small + 6 * i, y * CHAR_height_small + 16, 5, 15, COLOR_SYSTEXT); // pianoroll white key
+      display.fillRect(x * CHAR_width_small + 6 * i, y * CHAR_height_small + 16, 5, 16, COLOR_SYSTEXT); // pianoroll white key
     }
     for (uint8_t i = 0; i < 11; i++)
     {
@@ -10562,9 +10562,9 @@ void UI_toplineInfoText(uint8_t s)
   if (remote_active)
     display.console = true;
   if (s == 2)
-    display.fillRect(0, 0, DISPLAY_WIDTH - 1, CHAR_height_small * 2 + 3, DX_DARKCYAN);
+    display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 2 + 3, DX_DARKCYAN);
   else if (s == 1)
-    display.fillRect(0, 0, DISPLAY_WIDTH - 1, CHAR_height_small * 1 + 3, DX_DARKCYAN);
+    display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 1 + 3, DX_DARKCYAN);
   if (remote_active)
     display.console = false;
 }
@@ -17877,8 +17877,8 @@ FLASHMEM void UI_func_mixer(uint8_t param)
           else if (LCDML.BT_checkUp())
             temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           seq.drums_volume = mapfloat(temp_int, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0, VOL_MAX_FLOAT);
-        master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
-        master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+          master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+          master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
         }
         else if (seq.temp_active_menu == 11) // reverb level
         {
@@ -21299,10 +21299,10 @@ void midiCallback(midi_event* pev)
     else if (smf_track_inst[pev->channel] == 2)
       inst_channel = configuration.dexed[1].midi_channel;
 
-      else if (smf_track_inst[pev->channel] == 3)
+    else if (smf_track_inst[pev->channel] == 3)
       inst_channel = configuration.dexed[2].midi_channel;
 
-      else if (smf_track_inst[pev->channel] == 4)
+    else if (smf_track_inst[pev->channel] == 4)
       inst_channel = configuration.dexed[3].midi_channel;
 
     else if (smf_track_inst[pev->channel] == 5)
@@ -21402,9 +21402,9 @@ FLASHMEM void _print_smf_track_instruments()
       display.print("D1");
     else if (smf_track_inst[f] == 2)
       display.print("D2");
-       else if (smf_track_inst[f] == 3)
+    else if (smf_track_inst[f] == 3)
       display.print("D3");
-       else if (smf_track_inst[f] == 4)
+    else if (smf_track_inst[f] == 4)
       display.print("D4");
     else  if (smf_track_inst[f] == 5)
       display.print("M1");
