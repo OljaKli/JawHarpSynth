@@ -301,6 +301,7 @@ extern uint8_t dexed_onscreen_algo;
 FLASHMEM void print_perf_modifier_buttons() {
   print_perfmod_buttons();
   print_perfmod_lables();
+  delay(100);
 }
 
 extern void draw_algo();
@@ -364,52 +365,30 @@ FLASHMEM void handle_touchscreen_voice_select()
           reset_live_modifiers();
           print_perf_modifier_buttons();
         }
-        else
-          if (selected_instance_id == 0)
-          {
-            if (check_button_on_grid(2, 23))
-            {
-              if (dexed_live_mod.active_button != 1)
-                dexed_live_mod.active_button = 1;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(11, 23))
-            {
-              if (dexed_live_mod.active_button != 2)
-                dexed_live_mod.active_button = 2;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(45, 23))
-              LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
-          }
-          else if (selected_instance_id == 1)
-          {
-            if (check_button_on_grid(2, 23))
-            {
-              if (dexed_live_mod.active_button != 3)
-                dexed_live_mod.active_button = 3;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
-            else if (check_button_on_grid(11, 23))
-            {
-              if (dexed_live_mod.active_button != 4)
-                dexed_live_mod.active_button = 4;
-              else
-                dexed_live_mod.active_button = 0;
-              print_perf_modifier_buttons();
-            }
+        else if (check_button_on_grid(45, 23))
+          LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
 
-            else if (check_button_on_grid(45, 23))
-              LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
-          }
+        else if (check_button_on_grid(2, 23))
+        {
+          if (dexed_live_mod.active_button != 1)
+            dexed_live_mod.active_button = 1;
           else
             dexed_live_mod.active_button = 0;
+          print_perf_modifier_buttons();
+        }
+        else if (check_button_on_grid(11, 23))
+        {
+          if (dexed_live_mod.active_button != 2)
+            dexed_live_mod.active_button = 2;
+          else
+            dexed_live_mod.active_button = 0;
+          print_perf_modifier_buttons();
+        }
+        else //if touched somewhere else reset modifier edit mode
+        {
+          dexed_live_mod.active_button = 0;
+          print_perf_modifier_buttons();
+        }
 
         if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
         {

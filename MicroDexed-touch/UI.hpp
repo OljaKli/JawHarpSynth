@@ -18748,14 +18748,14 @@ FLASHMEM void print_perfmod_lables()
   if (seq.cycle_touch_element != 1) {
     char tmp[5];
     display.setTextSize(1);
-    if (dexed_live_mod.active_button == 1 || dexed_live_mod.active_button == 3)
+    if (dexed_live_mod.active_button == 1)
       display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
     else
       display.setTextColor(GREY1, GREY2);
     display.setCursor(5 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
     snprintf_P(tmp, sizeof(tmp), PSTR("%03d"), dexed_live_mod.attack_mod[selected_instance_id]);
     display.print(tmp);
-    if (dexed_live_mod.active_button == 2 || dexed_live_mod.active_button == 4)
+    if (dexed_live_mod.active_button == 2)
       display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
     else
       display.setTextColor(GREY1, GREY2);
@@ -18770,28 +18770,15 @@ FLASHMEM void print_perfmod_buttons()
 {
   // Performance Modifier Buttons
   if (seq.cycle_touch_element != 1) {
-    if (selected_instance_id == 0)
-    {
-      if (dexed_live_mod.active_button == 1)
-        draw_button_on_grid(2, 23, "ATTACK", "MD", 1);
-      else
-        draw_button_on_grid(2, 23, "ATTACK", "MD", 0);
-      if (dexed_live_mod.active_button == 2)
-        draw_button_on_grid(11, 23, "REL.", "MD", 1);
-      else
-        draw_button_on_grid(11, 23, "REL.", "MD", 0);
-    }
-    else if (selected_instance_id == 1)
-    {
-      if (dexed_live_mod.active_button == 3)
-        draw_button_on_grid(2, 23, "ATTACK", "MD", 1);
-      else
-        draw_button_on_grid(2, 23, "ATTACK", "MD", 0);
-      if (dexed_live_mod.active_button == 4)
-        draw_button_on_grid(11, 23, "REL.", "MD", 1);
-      else
-        draw_button_on_grid(11, 23, "REL.", "MD", 0);
-    }
+
+    if (dexed_live_mod.active_button == 1)
+      draw_button_on_grid(2, 23, "ATTACK", "MD", 1);
+    else
+      draw_button_on_grid(2, 23, "ATTACK", "MD", 0);
+    if (dexed_live_mod.active_button == 2)
+      draw_button_on_grid(11, 23, "REL.", "MD", 1);
+    else
+      draw_button_on_grid(11, 23, "REL.", "MD", 0);
   }
 }
 
@@ -19082,7 +19069,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     {
       set_state_dir();
 
-      if (seq.edit_state == 0)
+      if (seq.edit_state == 0 && dexed_live_mod.active_button == 0)
       {
         generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 18);
         if (generic_temp_select_menu != menuhelper_previous_val)
@@ -19108,6 +19095,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
             else  if (LCDML.BT_checkUp())
               decrement_dexed_instance_in_voice_select();
 
+            print_perfmod_buttons();
+            print_perfmod_lables();
             draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
             load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
           }
@@ -19182,6 +19171,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       if (seq.cycle_touch_element == 0)
         virtual_keyboard_smart_preselect_mode();
       draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+      print_perfmod_buttons();
+      print_perfmod_lables();
     }
     else if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
@@ -19209,12 +19200,15 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       }
       else
       {
-        if (seq.edit_state == 0)
-          seq.edit_state = 1;
-        else
-          seq.edit_state = 0;
-        menuhelper_redraw = true;
-        print_voice_select_default_help();
+        if (dexed_live_mod.active_button == 0)
+        {
+          if (seq.edit_state == 0)
+            seq.edit_state = 1;
+          else
+            seq.edit_state = 0;
+          menuhelper_redraw = true;
+          print_voice_select_default_help();
+        }
       }
     }
 
@@ -21576,7 +21570,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
         {
           if (LCDML.BT_checkDown())
           {
-            if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1 )
+            if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
               fm.sd_skip_files++;
           }
           else if (LCDML.BT_checkUp())
@@ -21584,8 +21578,8 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
             if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
               fm.sd_skip_files--;
           }
-          if ( calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows) < fm.sd_sum_files)
-          fm.sd_selected_file = calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows);
+          if (calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows) < fm.sd_sum_files)
+            fm.sd_selected_file = calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows);
         }
       }
     }
@@ -21644,35 +21638,35 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     {
       for (uint8_t f = 0; f < 4; f++)
       {
-        if (f <fm.sd_sum_files)
+        if (f < fm.sd_sum_files)
         {
-        storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
+          storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
 
-        if (f == fm.sd_selected_file && fm.sd_parent_folder == false && seq.edit_state && generic_temp_select_menu == 0)
-        {
-          display.setTextColor(COLOR_SYSTEXT, RED);
-          generic_menu = fm.sd_skip_files + f;
-        }
-        else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu == 0)
-        {
-          display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-          generic_menu = fm.sd_skip_files + f;
-        }
-        else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
-        {
-          display.setTextColor(COLOR_BACKGROUND, GREY1);
-          generic_menu = fm.sd_skip_files + f;
+          if (f == fm.sd_selected_file && fm.sd_parent_folder == false && seq.edit_state && generic_temp_select_menu == 0)
+          {
+            display.setTextColor(COLOR_SYSTEXT, RED);
+            generic_menu = fm.sd_skip_files + f;
+          }
+          else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu == 0)
+          {
+            display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+            generic_menu = fm.sd_skip_files + f;
+          }
+          else if (f == fm.sd_selected_file && fm.sd_parent_folder == false && generic_temp_select_menu != 0)
+          {
+            display.setTextColor(COLOR_BACKGROUND, GREY1);
+            generic_menu = fm.sd_skip_files + f;
+          }
+          else
+          {
+            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          }
+          show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name.c_str());
         }
         else
         {
-          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        }
-        show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, sd_entry.name.c_str());
-        }
-        else
-        {
-           display.setTextColor(GREY3, COLOR_BACKGROUND);
-          show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, "---EMPTY---"); 
+          display.setTextColor(GREY3, COLOR_BACKGROUND);
+          show_smallfont_noGrid(f * 11 + 4 * 11, CHAR_width_small * 1, 17, "---EMPTY---");
         }
       }
 
@@ -21819,14 +21813,14 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
 #endif
     }
     // setCursor_textGrid(1, 2);
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 void sub_touchscreen_test_page_init()
 {
@@ -22154,10 +22148,10 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-    }
+  }
   else
     return false;
-  }
+}
 
 FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id)
 {
@@ -22228,8 +22222,8 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       LOG.println(F("Removed from Favorites..."));
 #endif
     }
-      }
-    }
+  }
+}
 
 FLASHMEM char* basename(const char* filename)
 {
