@@ -269,7 +269,6 @@ FLASHMEM uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val)
     break;
   }
   return RGB24toRGB565(r, g, b);
-  //  }
 }
 
 FLASHMEM bool check_button_on_grid(uint8_t x, uint8_t y)

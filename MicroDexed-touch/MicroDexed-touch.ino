@@ -5239,7 +5239,7 @@ FLASHMEM void generate_version_string(char* buffer, uint8_t len)
   char tmp[3];
 
   memset(buffer, 0, len);
-  strncat(buffer, VERSION, len);
+  strcat(buffer, VERSION);
 #if defined(TEENSY4_0)
   strncat(buffer, " - 4.0", 6);
 #elif defined(TEENSY4_1)

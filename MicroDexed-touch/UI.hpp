@@ -229,7 +229,7 @@ extern void print_chord_name(uint8_t currentstep);
 extern void print_file_manager_buttons(void);
 extern void print_file_manager_active_border(void);
 extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
-extern uint32_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 extern uint8_t get_chain_length_from_current_track(uint8_t tr);
 extern uint8_t get_song_length(void);
 extern void helptext_l(const char* str);
