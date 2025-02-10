@@ -6422,7 +6422,6 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      // return round(*ptr * 100.f); //breaks editing values
       return round(*ptr * 100.0f);
     },
     [](Editor* editor, int16_t value)
@@ -6430,7 +6429,6 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      //*ptr = round(value / 100.0f); //breaks editing values
       *ptr = value / 100.0f;
     },
     NULL);
