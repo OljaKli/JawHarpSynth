@@ -156,12 +156,11 @@ extern uint8_t get_sample_env_hold(uint8_t sample);
 extern uint8_t get_sample_env_decay(uint8_t sample);
 extern uint8_t get_sample_env_sustain(uint8_t sample);
 extern uint8_t get_sample_env_release(uint8_t sample);
-
-extern uint8_t set_sample_env_attack(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_hold(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_decay(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_sustain(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_release(uint8_t sample, uint8_t value);
+extern void set_sample_env_attack(uint8_t sample, uint8_t value);
+extern void set_sample_env_hold(uint8_t sample, uint8_t value);
+extern void set_sample_env_decay(uint8_t sample, uint8_t value);
+extern void set_sample_env_sustain(uint8_t sample, uint8_t value);
+extern void set_sample_env_release(uint8_t sample, uint8_t value);
 
 
 extern multisample_t msp[NUM_MULTISAMPLES];
@@ -280,7 +279,7 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       configuration.dexed[instance_id].bank = b;
       configuration.dexed[instance_id].voice = v;
 
-      uint8_t data_copy[155];
+      uint8_t data_copy[156];
       MicroDexed[instance_id]->getVoiceData(data_copy);
       send_sysex_voice(configuration.dexed[instance_id].midi_channel, data_copy);
       init_MIDI_send_CC();

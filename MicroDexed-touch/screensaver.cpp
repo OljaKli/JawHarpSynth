@@ -4,7 +4,7 @@
 #include "ILI9341_t3n.h"
 
 extern ILI9341_t3n display;
-extern uint32_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 
 uint8_t screensaver_brightness = 255;
 uint16_t screensaver_counthue = 0;

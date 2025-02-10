@@ -4972,23 +4972,23 @@ FLASHMEM float get_sample_delay2(uint8_t sample)
   return (drum_config[sample].delay2);
 }
 
-FLASHMEM int16_t get_sample_env_attack(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_attack(uint8_t sample)
 {
   return (drum_config[sample].env_attack);
 }
-FLASHMEM int16_t get_sample_env_hold(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_hold(uint8_t sample)
 {
   return (drum_config[sample].env_hold);
 }
-FLASHMEM int16_t get_sample_env_decay(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_decay(uint8_t sample)
 {
   return (drum_config[sample].env_decay);
 }
-FLASHMEM int16_t get_sample_env_sustain(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_sustain(uint8_t sample)
 {
   return (drum_config[sample].env_sustain);
 }
-FLASHMEM int16_t get_sample_env_release(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_release(uint8_t sample)
 {
   return (drum_config[sample].env_release);
 }
@@ -5239,7 +5239,7 @@ FLASHMEM void generate_version_string(char* buffer, uint8_t len)
   char tmp[3];
 
   memset(buffer, 0, len);
-  strncat(buffer, VERSION, len);
+  strcat(buffer, VERSION);
 #if defined(TEENSY4_0)
   strncat(buffer, " - 4.0", 6);
 #elif defined(TEENSY4_1)

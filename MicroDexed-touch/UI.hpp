@@ -229,7 +229,7 @@ extern void print_chord_name(uint8_t currentstep);
 extern void print_file_manager_buttons(void);
 extern void print_file_manager_active_border(void);
 extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
-extern uint32_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 extern uint8_t get_chain_length_from_current_track(uint8_t tr);
 extern uint8_t get_song_length(void);
 extern void helptext_l(const char* str);
@@ -6422,7 +6422,6 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      // return round(*ptr * 100.f); //breaks editing values
       return round(*ptr * 100.0f);
     },
     [](Editor* editor, int16_t value)
@@ -6430,25 +6429,24 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      //*ptr = round(value / 100.0f); //breaks editing values
       *ptr = value / 100.0f;
     },
     NULL);
 }
 
-void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t limit_max, int16_t* valuePtr)
+void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr)
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
     [](Editor* editor) -> int16_t
     {
-      int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
+      uint8_t* ptr = (uint8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
       return *ptr;
     },
     [](Editor* editor, int16_t value)
     {
-      int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      *ptr = value;
+      uint8_t* ptr = (uint8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
+      *ptr = static_cast<uint8_t>(value);
     },
     NULL);
 }
@@ -6469,10 +6467,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   if (w > 0 && data != nullptr) {
     const uint32_t binSize = ceil(length / float(w * numChannels));
     const uint8_t spacing = 4; // stereo looks better with spacing for loud waves
-    const float scaleY = (h - spacing) / float(65536 * numChannels);
+    const float scaleY = (h - spacing) / float(UINT16_MAX * numChannels);
 
-    int16_t binMin[numChannels] = { +32767 };
-    int16_t binMax[numChannels] = { -32768 };
+    int16_t binMin[numChannels] = { INT16_MAX };
+    int16_t binMax[numChannels] = { INT16_MIN };
     uint32_t numBinSamples = 0;
 
     const uint16_t maxDitherIgnore = 1 / scaleY;
@@ -6496,8 +6494,8 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           display.console = true;
           display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
 
-          binMin[ch] = +32767;
-          binMax[ch] = -32767;
+          binMin[ch] = INT16_MAX;
+          binMax[ch] = INT16_MIN;
         }
         x++;
         numBinSamples = 0;
@@ -6671,17 +6669,17 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     ui.setCursor(0, 13);
 
-    addDrumParameterEditor_int16_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
-    addDrumParameterEditor_int16_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
-    addDrumParameterEditor_int16_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
-    addDrumParameterEditor_int16_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
-    addDrumParameterEditor_int16_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
+    addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
+    addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
+    addDrumParameterEditor_uint8_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
+    addDrumParameterEditor_uint8_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
+    addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
 
     setCursor_textGrid_small(26, 11);
     display.setTextColor(RED);
     display.print("FILTER");
     ui.setCursor(26, 13);
-    addDrumParameterEditor_int16_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
+    addDrumParameterEditor_uint8_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
     addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
     ui.setCursor(42, 14);
     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);

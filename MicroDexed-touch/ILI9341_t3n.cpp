@@ -21,7 +21,7 @@
 #include <SPI.h>
 
 extern bool remote_active;
-extern uint32_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 
 // 5x7 font
 PROGMEM const unsigned char font[] = {
