@@ -144,23 +144,23 @@ extern float get_sample_p_offset(uint8_t sample);
 extern float get_sample_pan(uint8_t sample);
 extern float get_sample_vol_max(uint8_t sample);
 extern float get_sample_reverb_send(uint8_t sample);
-extern int16_t get_sample_filter_mode(uint8_t sample);
+extern uint8_t get_sample_filter_mode(uint8_t sample);
 extern float get_sample_filter_freq(uint8_t sample);
 extern float get_sample_filter_q(uint8_t sample);
 
 extern float get_sample_delay1(uint8_t sample);
 extern float get_sample_delay2(uint8_t sample);
 
-extern int16_t get_sample_env_attack(uint8_t sample);
-extern int16_t get_sample_env_hold(uint8_t sample);
-extern int16_t get_sample_env_decay(uint8_t sample);
-extern int16_t get_sample_env_sustain(uint8_t sample);
-extern int16_t get_sample_env_release(uint8_t sample);
-extern uint8_t set_sample_env_attack(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_hold(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_decay(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_sustain(uint8_t sample, uint8_t value);
-extern uint8_t set_sample_env_release(uint8_t sample, uint8_t value);
+extern uint8_t get_sample_env_attack(uint8_t sample);
+extern uint8_t get_sample_env_hold(uint8_t sample);
+extern uint8_t get_sample_env_decay(uint8_t sample);
+extern uint8_t get_sample_env_sustain(uint8_t sample);
+extern uint8_t get_sample_env_release(uint8_t sample);
+extern void set_sample_env_attack(uint8_t sample, uint8_t value);
+extern void set_sample_env_hold(uint8_t sample, uint8_t value);
+extern void set_sample_env_decay(uint8_t sample, uint8_t value);
+extern void set_sample_env_sustain(uint8_t sample, uint8_t value);
+extern void set_sample_env_release(uint8_t sample, uint8_t value);
 
 
 extern multisample_t msp[NUM_MULTISAMPLES];

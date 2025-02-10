@@ -6436,19 +6436,19 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
     NULL);
 }
 
-void addDrumParameterEditor_int16_t(const char* name, int16_t limit_min, int16_t limit_max, int16_t* valuePtr)
+void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr)
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
     [](Editor* editor) -> int16_t
     {
-      int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
+      uint8_t* ptr = (uint8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
       return *ptr;
     },
     [](Editor* editor, int16_t value)
     {
-      int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      *ptr = value;
+      uint8_t* ptr = (uint8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
+      *ptr = static_cast<uint8_t>(value);
     },
     NULL);
 }
@@ -6671,17 +6671,17 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     ui.setCursor(0, 13);
 
-    addDrumParameterEditor_int16_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
-    addDrumParameterEditor_int16_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
-    addDrumParameterEditor_int16_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
-    addDrumParameterEditor_int16_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
-    addDrumParameterEditor_int16_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
+    addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
+    addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
+    addDrumParameterEditor_uint8_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
+    addDrumParameterEditor_uint8_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
+    addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
 
     setCursor_textGrid_small(26, 11);
     display.setTextColor(RED);
     display.print("FILTER");
     ui.setCursor(26, 13);
-    addDrumParameterEditor_int16_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
+    addDrumParameterEditor_uint8_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
     addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
     ui.setCursor(42, 14);
     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);

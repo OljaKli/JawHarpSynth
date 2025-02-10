@@ -4972,23 +4972,23 @@ FLASHMEM float get_sample_delay2(uint8_t sample)
   return (drum_config[sample].delay2);
 }
 
-FLASHMEM int16_t get_sample_env_attack(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_attack(uint8_t sample)
 {
   return (drum_config[sample].env_attack);
 }
-FLASHMEM int16_t get_sample_env_hold(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_hold(uint8_t sample)
 {
   return (drum_config[sample].env_hold);
 }
-FLASHMEM int16_t get_sample_env_decay(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_decay(uint8_t sample)
 {
   return (drum_config[sample].env_decay);
 }
-FLASHMEM int16_t get_sample_env_sustain(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_sustain(uint8_t sample)
 {
   return (drum_config[sample].env_sustain);
 }
-FLASHMEM int16_t get_sample_env_release(uint8_t sample)
+FLASHMEM uint8_t get_sample_env_release(uint8_t sample)
 {
   return (drum_config[sample].env_release);
 }
