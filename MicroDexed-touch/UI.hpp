@@ -6469,10 +6469,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   if (w > 0 && data != nullptr) {
     const uint32_t binSize = ceil(length / float(w * numChannels));
     const uint8_t spacing = 4; // stereo looks better with spacing for loud waves
-    const float scaleY = (h - spacing) / float(65536 * numChannels);
+    const float scaleY = (h - spacing) / float(UINT16_MAX * numChannels);
 
-    int16_t binMin[numChannels] = { +32767 };
-    int16_t binMax[numChannels] = { -32768 };
+    int16_t binMin[numChannels] = { INT16_MAX };
+    int16_t binMax[numChannels] = { INT16_MIN };
     uint32_t numBinSamples = 0;
 
     const uint16_t maxDitherIgnore = 1 / scaleY;
@@ -6496,8 +6496,8 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           display.console = true;
           display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
 
-          binMin[ch] = +32767;
-          binMax[ch] = -32767;
+          binMin[ch] = INT16_MAX;
+          binMax[ch] = INT16_MIN;
         }
         x++;
         numBinSamples = 0;
