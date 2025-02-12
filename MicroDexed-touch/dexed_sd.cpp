@@ -2064,7 +2064,7 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.reverse_encoder_pins = data_json["encoder_reversed"];
         configuration.sys.invert_colors = data_json["invert_colors"];
         configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
-
+       
         if (data_json["brightness"] == 0)
           configuration.sys.brightness = 183;
         else
@@ -3324,6 +3324,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["seq_element_shift"] = seq.element_shift;
       data_json["euclidean_active"] = seq.euclidean_active;
       data_json["euclidean_offset"] = seq.euclidean_offset;
+      data_json["hihat_randomizer"] = seq.hihat_randomizer;
 
       for (uint8_t i = 0; i < sizeof(seq.track_type); i++)
       {
@@ -3713,6 +3714,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         seq.chord_key_ammount = data_json["chord_key_ammount"];
         seq.oct_shift = data_json["seq_oct_shift"];
         seq.element_shift = data_json["seq_element_shift"];
+        seq.hihat_randomizer = data_json["hihat_randomizer"];
         seq.euclidean_active = data_json["euclidean_active"];
         seq.euclidean_offset = data_json["euclidean_offset"];
         if (data_json["drum_midi_channel"] > 0) //do not set to onmi when it was never saved before. Better to use the default channel in this case.

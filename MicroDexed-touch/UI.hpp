@@ -747,9 +747,11 @@ FLASHMEM bool menu_item_check(uint8_t in)
   return redrawRequired;
 }
 
-FLASHMEM void print_empty_spaces(uint8_t spaces)
+FLASHMEM void print_empty_spaces(uint8_t spaces, bool clear_background)
 {
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  if (clear_background)
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
   for (uint8_t x = 0; x < spaces; x++)
   {
     display.print(" ");
@@ -915,7 +917,7 @@ FLASHMEM void print_song_mode_help()
     else if (seq.edit_state && seq.cycle_touch_element == 5)
     {
       display.setCursor(7 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-      print_empty_spaces(31);
+      print_empty_spaces(31, 1);
       helptext_l("> CHAIN");
       helptext_r("< > SELECT CHAIN");
     }
@@ -923,7 +925,7 @@ FLASHMEM void print_song_mode_help()
     {
       helptext_l("SONG < > TRANSPOSE");
       display.setCursor(CHAR_width_small * 18, DISPLAY_HEIGHT - CHAR_height_small);
-      print_empty_spaces(10);
+      print_empty_spaces(10, 1);
       helptext_r("< > SEL. CH. STEP");
     }
     else if (seq.edit_state && seq.cycle_touch_element == 7)
@@ -6508,10 +6510,10 @@ void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   DBG_LOG(printf("draw sample wave()\n"));
 
-  static constexpr uint16_t plotX = 122;
+  static constexpr uint16_t plotX = 120;
   static constexpr uint16_t plotY = 19 + 8;
-  static constexpr uint16_t plotW = 200 - 2;
-  static constexpr uint16_t plotH = 67;
+  static constexpr uint16_t plotW = 200;
+  static constexpr uint16_t plotH = 63 + 8;
   printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels);
 #endif
 }
@@ -6597,6 +6599,7 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
   }
 }
 
+extern void print_sample_type(bool dir);
 
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
@@ -6640,13 +6643,17 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
         display.setTextSize(1);
         if (drum_config[activeSample].numChannels == 1) { // mono
-          setCursor_textGrid_small(22, 11);
+          //  setCursor_textGrid_small(22, 11);
           show(0, 23, 6, "  MONO");
         }
         else { //stereo
           setCursor_textGrid_small(20, 11);
           show(0, 23, 6, "STEREO");
         }
+        setCursor_textGrid_small(39, 9);
+        display.setTextColor(COLOR_BACKGROUND, GREY3);
+        print_sample_type(1);
+
         checkDrawFilterText(true); // force redraw filter text on active sample change
       });
 
@@ -6772,40 +6779,47 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     display.setTextSize(1);
     display.setTextColor(RED);
 
-    setCursor_textGrid_small(1, 1);
-    display.print("SEQUENCER SETTINGS");
-
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(1, 4);
-    display.setTextColor(GREY2);
+    setCursor_textGrid_small(1, 0);
+    display.setTextColor(RED);
     display.print("ARP/CHORD TRANSPOSE");
 
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(1, 6);
+    setCursor_textGrid_small(1, 2);
     display.print("OCTAVE SHIFT -/+");
-    setCursor_textGrid_small(1, 7);
+    setCursor_textGrid_small(1, 3);
     display.print("NOTE (INTERVAL) SHIFT");
-    setCursor_textGrid_small(1, 8);
+    setCursor_textGrid_small(1, 4);
     display.print("MAX. CHORD NOTES");
-    setCursor_textGrid_small(26, 8);
+    setCursor_textGrid_small(26, 4);
     display.setTextColor(GREY2);
     display.print(F("KEYS"));
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(1, 9);
+    setCursor_textGrid_small(1, 5);
     display.print("MAX. ARP NOTES/STEP");
-    setCursor_textGrid_small(26, 9);
+    setCursor_textGrid_small(26, 5);
     display.setTextColor(GREY2);
     display.print(F("STEPS"));
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(1, 10);
+    setCursor_textGrid_small(1, 6);
     display.print(F("CHRD/ARP VELOCITY"));
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(1, 11);
+    setCursor_textGrid_small(1, 7);
     display.print(F("OCT. FOR LIVE TRANSP."));
-    setCursor_textGrid_small(27, 11);
+    setCursor_textGrid_small(27, 7);
     display.print("-");
 
+    display.setTextColor(RED);
+    setCursor_textGrid_small(1, 9);
+    display.print(F("SAMPLES"));
+    display.setTextColor(COLOR_SYSTEXT);
+    setCursor_textGrid_small(1, 11);
+    display.print(F("HIHAT RANDOMIZER"));
     display.setTextColor(GREY2);
+    setCursor_textGrid_small(28, 11);
+    display.print(F("SAMPLES"));
+
+    display.setTextColor(RED);
     setCursor_textGrid_small(1, 13);
     display.print(F("SONG"));
 
@@ -6825,9 +6839,8 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     display.print(F("STEP RECORDING:"));
     setCursor_textGrid_small(1, 18);
     display.print(F("TIMING CLOCK:"));
-
-
   }
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())) {
@@ -6835,7 +6848,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
 
       if (generic_active_function == 0) {
         // navigate through menu
-        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 9);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 10);
       }
       else {
         // handle setting change
@@ -6861,23 +6874,27 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
           break;
 
         case 5:
-          seq.transpose = constrain(seq.transpose + (factorChange * 1), 0, 60);
+          seq.transpose = constrain(seq.transpose + (factorChange * 1), 12, 60);
           break;
 
         case 6:
+          seq.hihat_randomizer = constrain(seq.hihat_randomizer + (factorChange * 1), 0, 100);
+          break;
+
+        case 7:
           seq.bpm = constrain(seq.bpm + (factorChange * 1), 60, 180);
           update_seq_speed();
           break;
 
-        case 7:
+        case 8:
           seq.pattern_len_dec = constrain(seq.pattern_len_dec - (factorChange * 1), 0, 8);  // dir reversed as this is decreased from 16
           break;
 
-        case 8:
+        case 9:
           seq.auto_advance_step = constrain(seq.auto_advance_step + (factorChange * 1), 0, 2);
           break;
 
-        case 9:
+        case 10:
           seq.clock = constrain(seq.clock + (factorChange * 1), 0, 2);
 
           if (seq.clock == 1 && seq.running == true) {// stop when switching to MIDI Slave
@@ -6896,48 +6913,52 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     }
 
     setModeColor(0);
-    setCursor_textGrid_small(23, 6);
+    setCursor_textGrid_small(23, 2);
     display.printf("%02d", seq.oct_shift);
     setModeColor(1);
-    setCursor_textGrid_small(23, 7);
+    setCursor_textGrid_small(23, 3);
     display.print(seq.element_shift);
     setModeColor(2);
-    setCursor_textGrid_small(23, 8);
+    setCursor_textGrid_small(23, 4);
     display.printf("%02d", seq.chord_key_ammount);
     setModeColor(3);
-    setCursor_textGrid_small(23, 9);
+    setCursor_textGrid_small(23, 5);
     display.printf("%02d", seq.arp_num_notes_max);
     setModeColor(4);
-    setCursor_textGrid_small(23, 10);
+    setCursor_textGrid_small(23, 6);
     print_formatted_number(seq.chord_vel, 3);
     setModeColor(5);
-    setCursor_textGrid_small(23, 11);
+    setCursor_textGrid_small(23, 7);
     if (seq.transpose != 0)
     {
       getNoteName(displayname, seq.transpose);
       display.print(displayname);
-      setCursor_textGrid_small(29, 11);
+      setCursor_textGrid_small(29, 7);
       getNoteName(displayname, seq.transpose + 12);
       display.print(displayname);
     }
     else
     {
       display.print(F("OFF"));
-      setCursor_textGrid_small(29, 11);
+      setCursor_textGrid_small(29, 7);
       display.print(F("OFF"));
     }
+    setModeColor(6);
+    setCursor_textGrid_small(23, 11);
+    display.printf("%04d", seq.hihat_randomizer * 50);
+
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     setCursor_textGrid_small(13, 15);
     display.printf("%03d", seq.tempo_ms / 1000);
-    setModeColor(6);
+    setModeColor(7);
     setCursor_textGrid_small(23, 15);
     display.printf("%03d", seq.bpm);
 
-    setModeColor(7);
+    setModeColor(8);
     setCursor_textGrid_small(23, 16);
     print_formatted_number(16 - seq.pattern_len_dec, 2);
 
-    setModeColor(8);
+    setModeColor(9);
     setCursor_textGrid_small(23, 17);
     if (seq.auto_advance_step == 1)
       display.print(F("AUTO ADVANCE STEP"));
@@ -6946,7 +6967,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     else
       display.print(F("KEEP CURRENT STEP"));
 
-    setModeColor(9);
+    setModeColor(10);
     setCursor_textGrid_small(23, 18);
     if (seq.clock == 0)
       display.print(F("INTERNAL (NO MIDI SYNC)   "));
@@ -6961,13 +6982,21 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
       seq.ticks_max = 5; //(0-5 = 6)
 
     //warning message
-    if (seq.clock == 1) {
+    if (seq.clock == 0) {
       display.setTextSize(1);
-      display.setTextColor(RED);
+      display.setTextColor(DARKGREEN, COLOR_BACKGROUND);
+      setCursor_textGrid_small(1, 20);
+      display.print(F("TIMING IS SET TO INTERNAL FOR BEST PERFORMANCE"));
+      setCursor_textGrid_small(1, 21);
+      display.print(F("YOU CAN USE EXTERNAL MIDI GEAR BUT NO MIDI CLOCK"));
+    }
+    else    if (seq.clock == 1) {
+      display.setTextSize(1);
+      display.setTextColor(RED, COLOR_BACKGROUND);
       setCursor_textGrid_small(1, 20);
       display.print(F("WARNING: CLOCK IS SET TO EXTERNAL (MIDI CLOCK)"));
       setCursor_textGrid_small(1, 21);
-      display.print(F("SEQ. WILL DEPEND ON EXTERNAL DEVICE TO WORK"));
+      display.print(F("SEQ. WILL DEPEND ON THE EXTERNAL DEVICE TO WORK "));
     }
     else {
       display.console = true;
@@ -8482,11 +8511,11 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
       display.setCursor(0, 3 * CHAR_height + 17);
       display.setTextColor(GREEN, COLOR_BACKGROUND);
       display.print(F("SELECT PATTERN TO EDIT"));
-      print_empty_spaces(8);
+      print_empty_spaces(8, 1);
       display.setTextSize(2);
       display.setCursor(0, 0);
       display.setTextColor(GREY1, COLOR_BACKGROUND);
-      print_empty_spaces(14);
+      print_empty_spaces(14, 1);
     }
     if (seq.menu == 0)
     {
@@ -8645,7 +8674,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
               setCursor_textGrid(4, 0);
               display.print(tmp);
               setCursor_textGrid(7, 0);
-              print_empty_spaces(3);
+              print_empty_spaces(3, 1);
             }
             set_pattern_content_type_color(seq.active_pattern);
 
@@ -8701,7 +8730,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
         display.setCursor(0, 0);
         display.setTextSize(2);
         display.setTextColor(GREY1, COLOR_BACKGROUND);
-        print_empty_spaces(15);
+        print_empty_spaces(15, 1);
         display.setTextSize(1);
         display.setCursor(0, 3 * CHAR_height + 17);
         display.setTextColor(GREEN, COLOR_BACKGROUND);
@@ -8829,42 +8858,57 @@ void check_variable_samples_basespeed()
   }
 }
 
-void print_sample_type()
+void print_sample_type(bool dir)
 {
+  char text[13];
+  uint8_t len = 0;
+
   if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.content_type[seq.active_pattern] != 3)
   {
     if (drum_config[activeSample].drum_class == 0)
-      display.print(F("none      "));
+      strcpy(text, "NONE");
     else if (drum_config[activeSample].drum_class == 1)
-      display.print(F("BASSDRUM  "));
+      strcpy(text, "BASSDRUM");
     else if (drum_config[activeSample].drum_class == 2)
-      display.print(F("SNARE     "));
+      strcpy(text, "SNARE DRUM");
     else if (drum_config[activeSample].drum_class == 3)
-      display.print(F("HIHAT     "));
+      strcpy(text, "HIGH HAT");
     else if (drum_config[activeSample].drum_class == 4)
-      display.print(F("HANDCLAP  "));
+      strcpy(text, "HANDCLAP");
     else if (drum_config[activeSample].drum_class == 5)
-      display.print(F("RIDE      "));
+      strcpy(text, "RIDE CYMBAL");
     else if (drum_config[activeSample].drum_class == 6)
-      display.print(F("CRASH     "));
+      strcpy(text, "CRASH CYMBAL");
     else if (drum_config[activeSample].drum_class == 7)
-      display.print(F("LOW TOM   "));
+      strcpy(text, "LOW TOM");
     else if (drum_config[activeSample].drum_class == 8)
-      display.print(F("MID TOM   "));
+      strcpy(text, "MID TOM");
     else if (drum_config[activeSample].drum_class == 9)
-      display.print(F("HIGH TOM  "));
+      strcpy(text, "HIGH TOM");
     else if (drum_config[activeSample].drum_class == 10)
-      display.print(F("PERCUSSION"));
+      strcpy(text, "PERCUSSION");
     else if (drum_config[activeSample].drum_class == 11)
-      display.print(F("POLY/SYNTH"));
+      strcpy(text, "POLY/SYNTH");
     else
-      display.print(F("other     "));
-    print_empty_spaces(6);
+      strcpy(text, "other");
   }
   else if (seq.content_type[seq.active_pattern] == 3) // sliced
   {
-    display.print(F("SLICES     "));
-    print_empty_spaces(6);
+    strcpy(text, "SLICES");
+  }
+  else
+    strcpy(text, "NONE");
+
+  len = strlen(text);
+  if (dir == 0) //left adjusted
+  {
+    display.print(text);
+    print_empty_spaces(13 - len, 0);
+  }
+  else if (dir == 1) //right adjusted
+  {
+    print_empty_spaces(13 - len, 0);
+    display.print(text);
   }
 }
 
@@ -9446,7 +9490,7 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
     display.print(F("SAMPLE TYPE: "));
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setCursor(36 * CHAR_width_small, 7 * (CHAR_height_small + 2) + 10);
-    print_sample_type();
+    print_sample_type(0);
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.setCursor(36 * CHAR_width_small, 8 * (CHAR_height_small + 2) + 10);
     display.print(F("NOTE BUFFER: "));
@@ -13176,7 +13220,7 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
           display.print(F(" -- DATA --"));
       }
       else
-        print_empty_spaces(11);
+        print_empty_spaces(11, 1);
 
       //      for (uint8_t nextslot = 1; nextslot < 5; nextslot++)
       //      {
@@ -13339,7 +13383,7 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
             display.print(F("-- DATA --"));
         }
         else
-          print_empty_spaces(10);
+          print_empty_spaces(10, 1);
       }
       else if (mode == 1)
       {
@@ -13459,7 +13503,7 @@ FLASHMEM void print_delay_sync_status(uint8_t instance)
     }
     display.setTextColor(GREY2, GREY3);
     display.print(F("OFF"));
-    print_empty_spaces(6);
+    print_empty_spaces(6, 1);
   }
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
@@ -17322,9 +17366,9 @@ FLASHMEM void _system_settings_long_help_texts()
   else
   {
     setCursor_textGrid_small(2, 18);
-    print_empty_spaces(47);
+    print_empty_spaces(47, 1);
     setCursor_textGrid_small(2, 19);
-    print_empty_spaces(47);
+    print_empty_spaces(47, 1);
   }
 }
 
@@ -21900,9 +21944,9 @@ FLASHMEM void UI_func_clear_song(uint8_t param)
       seq_clear_song_data();
       setCursor_textGrid(1, 1);
       display.print(F("Done."));
-      print_empty_spaces(10);
+      print_empty_spaces(10, 1);
       setCursor_textGrid(1, 2);
-      print_empty_spaces(23);
+      print_empty_spaces(23, 1);
       helptext_l("");
       border3_large_clear();
       delay(MESSAGE_WAIT_TIME);
@@ -21955,9 +21999,9 @@ FLASHMEM void UI_func_clear_song_chains(uint8_t param)
       seq_clear_chain_data();
       setCursor_textGrid(1, 1);
       display.print(F("Done."));
-      print_empty_spaces(10);
+      print_empty_spaces(10, 1);
       setCursor_textGrid(1, 2);
-      print_empty_spaces(23);
+      print_empty_spaces(23, 1);
       helptext_l("");
       border3_large_clear();
       delay(MESSAGE_WAIT_TIME);
@@ -22008,9 +22052,9 @@ FLASHMEM void UI_func_clear_patterns(uint8_t param)
       seq_clear_all_patterns();
       setCursor_textGrid(1, 1);
       display.print(F("Done."));
-      print_empty_spaces(10);
+      print_empty_spaces(10, 1);
       setCursor_textGrid(1, 2);
-      print_empty_spaces(23);
+      print_empty_spaces(23, 1);
       helptext_l("");
       border3_large_clear();
       delay(MESSAGE_WAIT_TIME);
@@ -22061,9 +22105,9 @@ FLASHMEM void UI_func_clear_all(uint8_t param)
       seq_clear_all_patterns();
       setCursor_textGrid(1, 1);
       display.print(F("Done.  "));
-      print_empty_spaces(10);
+      print_empty_spaces(10, 1);
       setCursor_textGrid(1, 2);
-      print_empty_spaces(23);
+      print_empty_spaces(23, 1);
       helptext_l("");
       border3_large_clear();
       delay(MESSAGE_WAIT_TIME);

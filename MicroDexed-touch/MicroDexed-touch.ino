@@ -1044,23 +1044,23 @@ FLASHMEM void setup()
   LOG.flush();
 #endif
 
-// zero all malloccable RAM so crashes are deterministic
-std::vector<uint8_t*> blocks;
-int size = 10000;
-bool done = false;
-while(done == false){
-  uint8_t *b = (uint8_t*)malloc(size);
-  done = b == nullptr;
-  if(done == false){
-    memset(b, 0x00, size);
-    blocks.emplace_back(b);
+  // zero all malloccable RAM so crashes are deterministic
+  std::vector<uint8_t*> blocks;
+  int size = 10000;
+  bool done = false;
+  while (done == false) {
+    uint8_t* b = (uint8_t*)malloc(size);
+    done = b == nullptr;
+    if (done == false) {
+      memset(b, 0x00, size);
+      blocks.emplace_back(b);
+    }
   }
-}
-for(uint8_t* b : blocks) {
-  free(b);
-}
-blocks.clear();
-// ***********
+  for (uint8_t* b : blocks) {
+    free(b);
+  }
+  blocks.clear();
+  // ***********
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   pinMode(TFT_TOUCH_IRQ, INPUT);
@@ -3006,7 +3006,14 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 sample_envelope[slot + NUM_DRUMS]->noteOn();
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+                if (seq.hihat_randomizer != 0 && drum_config[d].drum_class == DRUM_HIHAT)
+                {
+                  int randomizer = random(seq.hihat_randomizer * 50);
+                  if (drum_config[d].len - randomizer > 1000)
+                    Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data + randomizer, drum_config[d].len - randomizer, drum_config[d].numChannels);
+                }
+                else
+                  Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
 #endif
 
 #ifdef COMPILE_FOR_SDCARD
@@ -3626,8 +3633,8 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           break;
         case 105: // CC 105: delay time
           configuration.fx.delay_time[instance_id] = map(inValue, 0, 0x7f, DELAY_TIME_MIN, DELAY_TIME_MAX);
-           if (instance_id == 0 || instance_id == 1)
-          delay_fx[instance_id]->delay(0, constrain(configuration.fx.delay_time[instance_id] * 10, DELAY_TIME_MIN * 10, DELAY_TIME_MAX * 10));
+          if (instance_id == 0 || instance_id == 1)
+            delay_fx[instance_id]->delay(0, constrain(configuration.fx.delay_time[instance_id] * 10, DELAY_TIME_MIN * 10, DELAY_TIME_MAX * 10));
           // if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_delay_time)) {
           //   LCDML.OTHER_updateFunc();
           //   LCDML.loop_menu();
@@ -5030,8 +5037,8 @@ FLASHMEM void set_fx_params(void)
     //   delay_fx[instance_id]->disable(0);
     //else
     if (configuration.fx.delay_sync[instance_id] == 0) {
-        if (instance_id == 0 || instance_id == 1)
-      delay_fx[instance_id]->delay(0, constrain(configuration.fx.delay_time[instance_id], DELAY_TIME_MIN, DELAY_TIME_MAX) * 10);
+      if (instance_id == 0 || instance_id == 1)
+        delay_fx[instance_id]->delay(0, constrain(configuration.fx.delay_time[instance_id], DELAY_TIME_MIN, DELAY_TIME_MAX) * 10);
     }
 
     if (configuration.fx.delay_multiplier[instance_id] == 0) {
@@ -5041,8 +5048,8 @@ FLASHMEM void set_fx_params(void)
     if (configuration.fx.delay_sync[instance_id] > 0) {
       uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[configuration.fx.delay_sync[instance_id]] / seq.bpm);
       // set_delay_sync(configuration.fx.delay_sync[instance_id], instance_id);
-        if (instance_id == 0 || instance_id == 1)
-      delay_fx[instance_id]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance_id], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
+      if (instance_id == 0 || instance_id == 1)
+        delay_fx[instance_id]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance_id], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
     }
 
     global_delay_in_mixer[0]->gain(4, mapfloat(microsynth[0].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));//previously 2

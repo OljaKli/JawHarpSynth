@@ -30,7 +30,7 @@ extern void microsynth_refresh_lower_screen_static_text();
 extern void microsynth_refresh_lower_screen_dynamic_text();
 extern void print_perfmod_buttons();
 extern void print_perfmod_lables();
-extern void print_empty_spaces(uint8_t spaces);
+extern void print_empty_spaces(uint8_t spaces, bool clear_background);
 extern void print_voice_select_default_help();
 extern void handleStop(void);
 extern void handleStart(void);
@@ -393,9 +393,9 @@ FLASHMEM void handle_touchscreen_voice_select()
         {
           helptext_r("< > CHANGE MODIFIER VALUE");
           display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-          print_empty_spaces(38);
+          print_empty_spaces(38,1);
           display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-          print_empty_spaces(9);
+          print_empty_spaces(9,1);
           display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
           display.print(F(" PUSH TO RETURN"));
         }
@@ -637,7 +637,7 @@ FLASHMEM void print_file_manager_buttons()
     }
     else
     {
-      print_empty_spaces(48);
+      print_empty_spaces(48,1);
     }
   }
   menuhelper_previous_val = fm.sd_mode;

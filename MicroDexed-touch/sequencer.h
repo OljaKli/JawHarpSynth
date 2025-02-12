@@ -128,6 +128,7 @@ typedef struct sequencer_s
     uint8_t element_shift = 0;
     int oct_shift = 0;
     uint8_t arp_style = 0; // up, down, up&down, random
+    uint8_t hihat_randomizer;
 
     const uint8_t arps[6][23] = {
         {0, 4, 7, 12, 16, 19, 24, 28, 31, 36, 40, 43, 48, 52, 55, 60, 64, 67, 72, 76, 79, 84, 0}, // major
