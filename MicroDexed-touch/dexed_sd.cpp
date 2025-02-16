@@ -274,7 +274,7 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       entry.close();
       sysex_dir.close();
       AudioInterrupts();
-      configuration.dexed[instance_id].transpose = MicroDexed[instance_id]->getTranspose();
+      MicroDexed[instance_id]->setTranspose(configuration.dexed[instance_id].transpose);
       configuration.dexed[instance_id].pool = p;
       configuration.dexed[instance_id].bank = b;
       configuration.dexed[instance_id].voice = v;

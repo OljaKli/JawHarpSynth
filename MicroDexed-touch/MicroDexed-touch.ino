@@ -412,8 +412,8 @@ const AudioConnection patchCord[] = {
 
        {master_mixer_l, volume_l},
        {master_mixer_r, volume_r},
-       {volume_l, 0, stereo2mono, 1},
-       {volume_r, 0, stereo2mono, 0},
+       {volume_l, 0, stereo2mono, 0},
+       {volume_r, 0, stereo2mono, 1},
 
        {master_mixer_l, 0, master_peak_l, 0},
        {master_mixer_r, 0, master_peak_r, 0},
@@ -428,188 +428,157 @@ const AudioConnection patchCord[] = {
        {master_mixer_l, 0, scope, 0},
 
        // Outputs
-       #if defined(TEENSY_AUDIO_BOARD)
-       #ifndef SGTL5000_AUDIO_THRU
 
-           {stereo2mono, 0, finalized_mixer_l, 0},
-           {stereo2mono, 1, finalized_mixer_r, 0},
-
-           {master_mixer_l, 0, mb_filter_l_0, 0},
-           {master_mixer_r, 0, mb_filter_r_0, 0},
-
-           {master_mixer_l, 0, mb_filter_l_1, 0},
-           {master_mixer_r, 0, mb_filter_r_1, 0},
-
-           {master_mixer_l, 0, mb_filter_l_2, 0},
-           {master_mixer_r, 0, mb_filter_r_2, 0},
-
-           {master_mixer_l, 0, mb_filter_l_3, 0},
-           {master_mixer_r, 0, mb_filter_r_3, 0},
-
-           {mb_mixer_l, 0, finalized_mixer_l, 1},
-           {mb_mixer_r, 0, finalized_mixer_r, 1},
-
-           {finalized_mixer_l, 0, i2s1, 0},
-           {finalized_mixer_r, 0, i2s1, 1},
-
-       #endif
-       #elif defined(I2S_AUDIO_ONLY)
-
-           {stereo2mono, 0, finalized_mixer_l, 0},
-           {stereo2mono, 1, finalized_mixer_r, 0},
-
-           {master_mixer_l, 0, mb_filter_l_0, 0},
-           {master_mixer_r, 0, mb_filter_r_0, 0},
-
-           {master_mixer_l, 0, mb_filter_l_1, 0},
-           {master_mixer_r, 0, mb_filter_r_1, 0},
-
-           {master_mixer_l, 0, mb_filter_l_2, 0},
-           {master_mixer_r, 0, mb_filter_r_2, 0},
-
-           {master_mixer_l, 0, mb_filter_l_3, 0},
-           {master_mixer_r, 0, mb_filter_r_3, 0},
-
-           {mb_mixer_l, 0, finalized_mixer_l, 1},
-           {mb_mixer_r, 0, finalized_mixer_r, 1},
-
+       #if defined(I2S_AUDIO_ONLY)
            {dc1, 0, finalized_mixer_l, 2},
            {dc1, 0, finalized_mixer_r, 2},
-
-            {finalized_mixer_l, 0, i2s1, 0},
-            {finalized_mixer_r, 0, i2s1, 1},
-
-            //  {finalized_mixer_l, 0, bitcrusher_l, 0},
-            //  {finalized_mixer_r, 0, bitcrusher_r, 0},
-
-              // WAV RECORDER
-              {finalized_mixer_l, 0, record_queue_l, 0},
-              {finalized_mixer_r, 0, record_queue_r, 0},
-
-
           #endif
 
+           {stereo2mono, 0, finalized_mixer_l, 0},
+           {stereo2mono, 1, finalized_mixer_r, 0},
 
-          #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
-              {stereo2mono, 0, audio_thru_mixer_r, 0},
-              {stereo2mono, 1, audio_thru_mixer_l, 0},
-              {audio_thru_mixer_r, 0, i2s1, 0},
-              {audio_thru_mixer_l, 0, i2s1, 1},
-          #endif
+           {master_mixer_l, 0, mb_filter_l_0, 0},
+           {master_mixer_r, 0, mb_filter_r_0, 0},
 
-              {drum_reverb_send_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_DRUMS},
-              {drum_reverb_send_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_DRUMS},
-              {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
-              {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
-              {drum_mixer_r, 0, drum_mixer_peak_r, 0},
-              {drum_mixer_l, 0, drum_mixer_peak_l, 0},
+           {master_mixer_l, 0, mb_filter_l_1, 0},
+           {master_mixer_r, 0, mb_filter_r_1, 0},
 
-              {reverb, 0, reverb_return_peak_r, 0},
-              {reverb, 1, reverb_return_peak_l, 0},
+           {master_mixer_l, 0, mb_filter_l_2, 0},
+           {master_mixer_r, 0, mb_filter_r_2, 0},
 
-              {ep, 0, ep_stereo_panorama, 0},
-              {ep, 1, ep_stereo_panorama, 1},
-              {ep_stereo_panorama, 0, ep_peak_r, 0},
-              {ep_stereo_panorama, 1, ep_peak_l, 0},
-              {ep_stereo_panorama, 0, ep_chorus_mixer_r, 0},
-              {ep_stereo_panorama, 1, ep_chorus_mixer_l, 0},
-              {ep_stereo_panorama, 0, ep_modchorus, 0},
-              {ep_stereo_panorama, 1, ep_modchorus, 1},
-              {ep_chorus_modulator, 0, ep_modchorus_filter, 0},
-              {ep_modchorus_filter, 0, ep_modchorus, 2},
-              {ep_modchorus, 0, ep_chorus_mixer_r, 1},
-              {ep_modchorus, 1, ep_chorus_mixer_l, 1},
-              {ep_chorus_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_EPIANO},
-              {ep_chorus_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_EPIANO},
-              {ep_chorus_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_EPIANO},
-              {ep_chorus_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_EPIANO},
+           {master_mixer_l, 0, mb_filter_l_3, 0},
+           {master_mixer_r, 0, mb_filter_r_3, 0},
 
-              {ep_chorus_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_EPIANO},
-              {ep_chorus_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_EPIANO},
+           {mb_mixer_l, 0, finalized_mixer_l, 1},
+           {mb_mixer_r, 0, finalized_mixer_r, 1},
 
-              {microsynth_noise[0], 0, microsynth_envelope_noise[0], 0}, // noise generator to envelope
-              {microsynth_noise[1], 0, microsynth_envelope_noise[1], 0},
+            {finalized_mixer_l, 0, i2s1, 1},
+            {finalized_mixer_r, 0, i2s1, 0},
 
-              {microsynth_envelope_noise[0], 0, microsynth_filter_noise[0], 0}, // noise envelope to filter
-              {microsynth_envelope_noise[1], 0, microsynth_filter_noise[1], 0},
+            // WAV RECORDER
+            {finalized_mixer_l, 0, record_queue_l, 0},
+            {finalized_mixer_r, 0, record_queue_r, 0},
 
-              {microsynth_filter_noise[0], 0, microsynth_mixer_filter_noise[0], 0}, // noise filter to mixer
-              {microsynth_filter_noise[0], 1, microsynth_mixer_filter_noise[0], 1},
-              {microsynth_filter_noise[0], 2, microsynth_mixer_filter_noise[0], 2},
+        #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
+            {stereo2mono, 0, audio_thru_mixer_r, 0},
+            {stereo2mono, 1, audio_thru_mixer_l, 0},
+            {audio_thru_mixer_r, 0, i2s1, 0},
+            {audio_thru_mixer_l, 0, i2s1, 1},
+        #endif
 
-              {microsynth_filter_noise[1], 0, microsynth_mixer_filter_noise[1], 0},
-              {microsynth_filter_noise[1], 1, microsynth_mixer_filter_noise[1], 1},
-              {microsynth_filter_noise[1], 2, microsynth_mixer_filter_noise[1], 2},
+            {drum_reverb_send_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_DRUMS},
+            {drum_reverb_send_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_DRUMS},
+            {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
+            {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
+            {drum_mixer_r, 0, drum_mixer_peak_r, 0},
+            {drum_mixer_l, 0, drum_mixer_peak_l, 0},
 
-              {microsynth_envelope_noise[0], 0, microsynth_mixer_filter_noise[0], 3}, // unfiltered noise to mixer
-              {microsynth_envelope_noise[1], 0, microsynth_mixer_filter_noise[1], 3},
+            {reverb, 0, reverb_return_peak_r, 0},
+            {reverb, 1, reverb_return_peak_l, 0},
 
-              {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 0}, // noise to panorama 0
-              {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 1},
+            {ep, 0, ep_stereo_panorama, 0},
+            {ep, 1, ep_stereo_panorama, 1},
+            {ep_stereo_panorama, 0, ep_peak_r, 0},
+            {ep_stereo_panorama, 1, ep_peak_l, 0},
+            {ep_stereo_panorama, 0, ep_chorus_mixer_r, 0},
+            {ep_stereo_panorama, 1, ep_chorus_mixer_l, 0},
+            {ep_stereo_panorama, 0, ep_modchorus, 0},
+            {ep_stereo_panorama, 1, ep_modchorus, 1},
+            {ep_chorus_modulator, 0, ep_modchorus_filter, 0},
+            {ep_modchorus_filter, 0, ep_modchorus, 2},
+            {ep_modchorus, 0, ep_chorus_mixer_r, 1},
+            {ep_modchorus, 1, ep_chorus_mixer_l, 1},
+            {ep_chorus_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_EPIANO},
+            {ep_chorus_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_EPIANO},
+            {ep_chorus_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_EPIANO},
+            {ep_chorus_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_EPIANO},
 
-              {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 0}, // noise to panorama 1
-              {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 1},
+            {ep_chorus_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_EPIANO},
+            {ep_chorus_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_EPIANO},
 
-              {microsynth_waveform[0], 0, microsynth_envelope_osc[0], 0}, // osc waveform to envelope
-              {microsynth_waveform[1], 0, microsynth_envelope_osc[1], 0},
+            {microsynth_noise[0], 0, microsynth_envelope_noise[0], 0}, // noise generator to envelope
+            {microsynth_noise[1], 0, microsynth_envelope_noise[1], 0},
 
-              {microsynth_envelope_osc[0], 0, microsynth_filter_osc[0], 0}, // osc envelope to filter
-              {microsynth_envelope_osc[1], 0, microsynth_filter_osc[1], 0},
+            {microsynth_envelope_noise[0], 0, microsynth_filter_noise[0], 0}, // noise envelope to filter
+            {microsynth_envelope_noise[1], 0, microsynth_filter_noise[1], 0},
 
-              {microsynth_envelope_osc[0], 0, microsynth_mixer_filter_osc[0], 3}, // osc env to mixer for bypass
-              {microsynth_envelope_osc[1], 0, microsynth_mixer_filter_osc[1], 3},
+            {microsynth_filter_noise[0], 0, microsynth_mixer_filter_noise[0], 0}, // noise filter to mixer
+            {microsynth_filter_noise[0], 1, microsynth_mixer_filter_noise[0], 1},
+            {microsynth_filter_noise[0], 2, microsynth_mixer_filter_noise[0], 2},
 
-              {microsynth_filter_osc[0], 0, microsynth_mixer_filter_osc[0], 0}, // osc filter 0 to mixer 0
-              {microsynth_filter_osc[0], 1, microsynth_mixer_filter_osc[0], 1},
-              {microsynth_filter_osc[0], 2, microsynth_mixer_filter_osc[0], 2},
+            {microsynth_filter_noise[1], 0, microsynth_mixer_filter_noise[1], 0},
+            {microsynth_filter_noise[1], 1, microsynth_mixer_filter_noise[1], 1},
+            {microsynth_filter_noise[1], 2, microsynth_mixer_filter_noise[1], 2},
 
-              {microsynth_filter_osc[1], 0, microsynth_mixer_filter_osc[1], 0}, // osc filter 1 to mixer 1
-              {microsynth_filter_osc[1], 1, microsynth_mixer_filter_osc[1], 1},
-              {microsynth_filter_osc[1], 2, microsynth_mixer_filter_osc[1], 2},
+            {microsynth_envelope_noise[0], 0, microsynth_mixer_filter_noise[0], 3}, // unfiltered noise to mixer
+            {microsynth_envelope_noise[1], 0, microsynth_mixer_filter_noise[1], 3},
 
-              {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 0}, // mixer 0 to panorama 0
-              {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 1},
+            {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 0}, // noise to panorama 0
+            {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 1},
 
-              {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 0}, // mixer 1 to panorama 1
-              {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 1},
+            {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 0}, // noise to panorama 1
+            {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 1},
 
-              {microsynth_stereo_panorama_osc[0], 0, microsynth_mixer_r[0], 0}, // osc 0 pan to internal mixer
-              {microsynth_stereo_panorama_osc[0], 1, microsynth_mixer_l[0], 0},
+            {microsynth_waveform[0], 0, microsynth_envelope_osc[0], 0}, // osc waveform to envelope
+            {microsynth_waveform[1], 0, microsynth_envelope_osc[1], 0},
 
-              {microsynth_stereo_panorama_osc[1], 0, microsynth_mixer_r[1], 0}, // osc 1 pan to internal mixer
-              {microsynth_stereo_panorama_osc[1], 1, microsynth_mixer_l[1], 0},
+            {microsynth_envelope_osc[0], 0, microsynth_filter_osc[0], 0}, // osc envelope to filter
+            {microsynth_envelope_osc[1], 0, microsynth_filter_osc[1], 0},
 
-              {microsynth_stereo_panorama_noise[0], 0, microsynth_mixer_r[0], 1}, // noise 0 to mixer
-              {microsynth_stereo_panorama_noise[0], 1, microsynth_mixer_l[0], 1},
+            {microsynth_envelope_osc[0], 0, microsynth_mixer_filter_osc[0], 3}, // osc env to mixer for bypass
+            {microsynth_envelope_osc[1], 0, microsynth_mixer_filter_osc[1], 3},
 
-              {microsynth_stereo_panorama_noise[1], 0, microsynth_mixer_r[1], 1}, // noise 1 to mixer
-              {microsynth_stereo_panorama_noise[1], 1, microsynth_mixer_l[1], 1},
+            {microsynth_filter_osc[0], 0, microsynth_mixer_filter_osc[0], 0}, // osc filter 0 to mixer 0
+            {microsynth_filter_osc[0], 1, microsynth_mixer_filter_osc[0], 1},
+            {microsynth_filter_osc[0], 2, microsynth_mixer_filter_osc[0], 2},
 
-              {microsynth_mixer_r[0], 0, microsynth_main_mixer_r, 0},
-              {microsynth_mixer_l[0], 0, microsynth_main_mixer_l, 0},
+            {microsynth_filter_osc[1], 0, microsynth_mixer_filter_osc[1], 0}, // osc filter 1 to mixer 1
+            {microsynth_filter_osc[1], 1, microsynth_mixer_filter_osc[1], 1},
+            {microsynth_filter_osc[1], 2, microsynth_mixer_filter_osc[1], 2},
 
-              {microsynth_mixer_r[1], 0, microsynth_main_mixer_r, 1},
-              {microsynth_mixer_l[1], 0, microsynth_main_mixer_l, 1},
+            {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 0}, // mixer 0 to panorama 0
+            {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 1},
 
-              {microsynth_main_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_MICROSYNTH},
-              {microsynth_main_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+            {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 0}, // mixer 1 to panorama 1
+            {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 1},
 
-              //sidechain
+            {microsynth_stereo_panorama_osc[0], 0, microsynth_mixer_r[0], 0}, // osc 0 pan to internal mixer
+            {microsynth_stereo_panorama_osc[0], 1, microsynth_mixer_l[0], 0},
 
-              {microsynth_main_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_MICROSYNTH},
-              {microsynth_main_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_MICROSYNTH},
-              //sidechain end
+            {microsynth_stereo_panorama_osc[1], 0, microsynth_mixer_r[1], 0}, // osc 1 pan to internal mixer
+            {microsynth_stereo_panorama_osc[1], 1, microsynth_mixer_l[1], 0},
 
-                 {microsynth_mixer_r[0], 0, microsynth_mixer_reverb, 0},
-                 {microsynth_mixer_r[1], 0, microsynth_mixer_reverb, 1},
+            {microsynth_stereo_panorama_noise[0], 0, microsynth_mixer_r[0], 1}, // noise 0 to mixer
+            {microsynth_stereo_panorama_noise[0], 1, microsynth_mixer_l[0], 1},
 
-                 {microsynth_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_MICROSYNTH},
-                 {microsynth_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_MICROSYNTH},
+            {microsynth_stereo_panorama_noise[1], 0, microsynth_mixer_r[1], 1}, // noise 1 to mixer
+            {microsynth_stereo_panorama_noise[1], 1, microsynth_mixer_l[1], 1},
 
-                 {microsynth_mixer_filter_osc[0], 0, microsynth_peak_osc_0, 0},     // osc 1 (inst1) to peak analyzer
-                 {microsynth_mixer_filter_osc[1], 0, microsynth_peak_osc_1, 0},     // osc 2 (inst2) to peak analyzer
-                 {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
-                 {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
+            {microsynth_mixer_r[0], 0, microsynth_main_mixer_r, 0},
+            {microsynth_mixer_l[0], 0, microsynth_main_mixer_l, 0},
+
+            {microsynth_mixer_r[1], 0, microsynth_main_mixer_r, 1},
+            {microsynth_mixer_l[1], 0, microsynth_main_mixer_l, 1},
+
+            {microsynth_main_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_MICROSYNTH},
+            {microsynth_main_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+
+            //sidechain
+
+            {microsynth_main_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_MICROSYNTH},
+            {microsynth_main_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+            //sidechain end
+
+               {microsynth_mixer_r[0], 0, microsynth_mixer_reverb, 0},
+               {microsynth_mixer_r[1], 0, microsynth_mixer_reverb, 1},
+
+               {microsynth_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_MICROSYNTH},
+               {microsynth_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_MICROSYNTH},
+
+               {microsynth_mixer_filter_osc[0], 0, microsynth_peak_osc_0, 0},     // osc 1 (inst1) to peak analyzer
+               {microsynth_mixer_filter_osc[1], 0, microsynth_peak_osc_1, 0},     // osc 2 (inst2) to peak analyzer
+               {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
+               {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
 };
 
 #ifdef AUDIO_DEVICE_USB
