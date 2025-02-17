@@ -16812,11 +16812,14 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         case FM_COPY_TO_PSRAM:
           if (fm.sd_temp_name.endsWith(".wav")) {
             fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
-            sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files]);
-            strcpy(drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files].filename, fm.sd_full_name.c_str());
-            strip_extension(fm.sd_temp_name.c_str(), drum_config[fm.psram_selected_file + 6 + fm.psram_skip_files].name, 14);
-            print_psram_stats_filemanager();
-            psram_printCustomSamplesList();
+            const uint8_t sampleIndex = fm.psram_selected_file + 6 + fm.psram_skip_files;
+            sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
+            if(drum_config[sampleIndex].drum_data != nullptr) {
+              strcpy(drum_config[sampleIndex].filename, fm.sd_full_name.c_str());
+              strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);
+              print_psram_stats_filemanager();
+              psram_printCustomSamplesList();
+            }
           }
           break;
         case FM_DELETE_FROM_PSRAM:

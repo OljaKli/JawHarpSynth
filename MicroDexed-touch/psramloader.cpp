@@ -33,15 +33,17 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
         f.seek(header.dataOffset); // skip header
         uint32_t total_read = 0;
         data = (uint8_t*)extmem_malloc(header.data_bytes);
-        uint8_t *index = data;
-        while (f.available()) {
-          uint32_t readNumBytes = std::min(header.data_bytes - total_read, DEFAULT_SD_BUFSIZE);
-          size_t bytesRead = f.read(index, readNumBytes);
-          if (bytesRead == 0) {
-            break;
+        if(data != nullptr) {
+          uint8_t *index = data;
+          while (f.available()) {
+            uint32_t readNumBytes = std::min(header.data_bytes - total_read, DEFAULT_SD_BUFSIZE);
+            size_t bytesRead = f.read(index, readNumBytes);
+            if (bytesRead == 0) {
+              break;
+            }
+            total_read += bytesRead;
+            index += bytesRead;
           }
-          total_read += bytesRead;
-          index += bytesRead;
         }
 
         AudioInterrupts();
