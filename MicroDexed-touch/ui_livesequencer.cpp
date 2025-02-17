@@ -753,9 +753,8 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
   const bool modePressed = TouchButton::isPressed(GRID.X[5], GRID.Y[0]);
   if (modePressed) {
     const bool newIsSongMode = !data.isSongMode;
-    if (showingTools == false) {
-      currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
-    }
+    currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
+    
     if (isModeToolActive()) { // switch pattern / song tools if selected
       currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
     }
