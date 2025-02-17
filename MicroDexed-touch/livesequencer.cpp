@@ -99,6 +99,7 @@ FLASHMEM void LiveSequencer::onStopped(void) {
     onSongStopped();
   }
 
+  addPendingNotes();
   playIterator = data.eventsList.end();
   allNotesOff();
   ui_liveSeq->onStopped();
@@ -385,18 +386,22 @@ FLASHMEM void LiveSequencer::changeNumberOfBars(uint8_t num) {
 
 FLASHMEM void LiveSequencer::deleteLiveSequencerData(void) {
   allNotesOff();
+  stop(); // stop so we can delete invalidated events
   data.pendingEvents.clear();
   for (auto& e : data.eventsList) {
     if (e.source == EVENT_PATTERN) {
       e.event = midi::InvalidType; // mark as invalid
     }
   }
+
   deleteAllSongEvents();
   for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
     data.trackSettings[track].layerCount = 0;
     data.tracks[track].layerMutes = 0;
   }
   ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons);
+
+  data.eventsList.clear();
   init();
 }
 
@@ -945,7 +950,6 @@ FLASHMEM void selectDexed2() {
 FLASHMEM void selectDexed3() {
   selected_instance_id = 3;
 }
-
 
 FLASHMEM void selectMs0() {
   microsynth_selected_instance = 0;
