@@ -109,8 +109,6 @@ uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
 void show_cpu_and_mem_usage(void);
 void initial_values(bool init);
-extern bool load_sd_performance_minimum_boot_json(uint8_t number);
-extern bool load_sd_sys_boot_minimum_json(void);
 
 void printLoadedSample(const uint8_t i, const char* name);
 
@@ -598,14 +596,12 @@ std::vector<AudioConnection*> dynamicConnections;
 
 FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 {
-  // MicroDexed[instance_id] = new AudioSynthDexed(MAX_NOTES / NUM_DEXED, SAMPLE_RATE);
-  MicroDexed[instance_id] = new AudioSynthDexed(configuration.dexed[instance_id].polyphony, SAMPLE_RATE);
+  MicroDexed[instance_id] = new AudioSynthDexed(MAX_NOTES / NUM_DEXED, SAMPLE_RATE);
 
   dexed_mono2stereo[instance_id] = new AudioEffectMonoStereo();
   delay_mono2stereo[instance_id] = new AudioEffectMonoStereo();
 
   chorus_modulator[instance_id] = new AudioSynthWaveform();
-
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
 
   if (instance_id == 0 || instance_id == 1)
@@ -1160,44 +1156,6 @@ FLASHMEM void setup()
 
 #endif
 
-  AudioNoInterrupts();
-  // Start SD card
-  sd_card = check_sd_cards();
-  AudioInterrupts();
-  if (sd_card < 1)
-  {
-#ifdef DEBUG
-    LOG.println(F("SD card not accessible."));
-#endif
-    strcpy(receive_bank_filename, "*ERROR*");
-    for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
-    {
-      strcpy(g_voice_name[instance_id], "*ERROR*");
-      strcpy(g_bank_name[instance_id], "*ERROR*");
-    }
-  }
-  else
-  {
-#ifdef DEBUG
-    LOG.println(F("SD card found."));
-#endif
-    AudioNoInterrupts();
-    check_and_create_directories();
-    AudioInterrupts();
-    memset(receive_bank_filename, 0, FILENAME_LEN);
-    for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
-    {
-      // load default SYSEX data
-      // load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
-
-      memset(g_voice_name[instance_id], 0, VOICE_NAME_LEN);
-      memset(g_bank_name[instance_id], 0, BANK_NAME_LEN);
-    }
-  }
-
-  load_sd_sys_boot_minimum_json();
-  load_sd_performance_minimum_boot_json(configuration.sys.load_at_startup_performance);
-
   // create dynamic Dexed instances
   for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
   {
@@ -1373,7 +1331,40 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
+  AudioNoInterrupts();
+  // Start SD card
+  sd_card = check_sd_cards();
+  AudioInterrupts();
+  if (sd_card < 1)
+  {
+#ifdef DEBUG
+    LOG.println(F("SD card not accessible."));
+#endif
+    strcpy(receive_bank_filename, "*ERROR*");
+    for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
+    {
+      strcpy(g_voice_name[instance_id], "*ERROR*");
+      strcpy(g_bank_name[instance_id], "*ERROR*");
+    }
+  }
+  else
+  {
+#ifdef DEBUG
+    LOG.println(F("SD card found."));
+#endif
+    AudioNoInterrupts();
+    check_and_create_directories();
+    AudioInterrupts();
+    memset(receive_bank_filename, 0, FILENAME_LEN);
+    for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
+    {
+      // load default SYSEX data
+       load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
 
+      memset(g_voice_name[instance_id], 0, VOICE_NAME_LEN);
+      memset(g_bank_name[instance_id], 0, BANK_NAME_LEN);
+    }
+  }
 
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
@@ -5136,7 +5127,7 @@ FLASHMEM void set_voiceconfig_params(uint8_t instance_id)
   MicroDexed[instance_id]->setATController(configuration.dexed[instance_id].at_range, configuration.dexed[instance_id].at_assign, configuration.dexed[instance_id].at_mode);
   MicroDexed[instance_id]->ControllersRefresh();
   MicroDexed[instance_id]->setOPAll(configuration.dexed[instance_id].op_enabled);
- // MicroDexed[instance_id]->setMonoMode(configuration.dexed[instance_id].monopoly);  //phtodo not sure why this is working opposite of what it should do
+  MicroDexed[instance_id]->setMonoMode(configuration.dexed[instance_id].monopoly);
   MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
   MicroDexed[instance_id]->doRefreshVoice();
   // Dexed output level

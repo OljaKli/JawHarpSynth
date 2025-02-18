@@ -5696,19 +5696,21 @@ FLASHMEM void UI_func_dexed_setup(uint8_t param)
     ui.printLn("POLYPHONY");
     ui.printLn("");
     ui.addEditor(
-      "MONO/POLY", MONOPOLY_MIN, MONOPOLY_MAX, &configuration.dexed[0].monopoly,
+      "POLY/MONO", MONOPOLY_MIN, MONOPOLY_MAX, &configuration.dexed[0].monopoly,
       &dexed_current_instance_getter, [](Editor* editor, int16_t value)
       {
         dexed_current_instance_setter(editor, value);
-        MicroDexed[selected_instance_id]->setMonoMode(!value);
+
+        MicroDexed[selected_instance_id]->setMonoMode(value);
          },
       [](struct Editor* editor, bool refresh)
       {
         prepare_multi_options(editor, refresh);
-        if (!editor->get())
+        if (editor->get())
           display.print(F("[MONO]"));
         else
           display.print(F("[POLY]"));
+          
       });
     ui.addEditor("POLYPHONY", POLYPHONY_MIN, POLYPHONY_MAX, &configuration.dexed[0].polyphony,
       &dexed_current_instance_getter, [](Editor* editor, int16_t value)

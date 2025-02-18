@@ -406,7 +406,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 // MAX_NOTES SETTINGS
 // Teensy-4.x settings
 #ifdef TEENSY4
-#define MAX_NOTES 32   
+#define MAX_NOTES 64
 #define MIDI_DECAY_LEVEL_TIME 500
 #endif
 
@@ -542,7 +542,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SOUND_INTENSITY_DEFAULT 100
 
 #define POLYPHONY_MIN 0
-#define POLYPHONY_MAX MAX_NOTES
+#define POLYPHONY_MAX MAX_NOTES / NUM_DEXED
 #define POLYPHONY_DEFAULT MAX_NOTES / NUM_DEXED
 
 #define MONOPOLY_MIN 0

@@ -2165,57 +2165,6 @@ FLASHMEM bool load_sd_sys_json(void)
   return (false);
 }
 
-FLASHMEM bool load_sd_sys_boot_minimum_json(void)
-{
-  if (sd_card > 0)
-  {
-    snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), SYS_CONFIG_NAME);
-
-    // first check if file exists...
-    AudioNoInterrupts();
-    if (SD.exists(filename))
-    {
-      // ... and if: load
-#ifdef DEBUG
-      LOG.println(F("Found sys configuration"));
-#endif
-      json = SD.open(filename);
-      if (json)
-      {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-        deserializeJson(data_json, json);
-
-        json.close();
-        AudioInterrupts();
-
-         configuration.sys.performance_number = data_json["performance_number"];
-         configuration.sys.load_at_startup_performance = data_json["load_at_startup_performance"];
-         configuration.sys.load_at_startup_page = data_json["load_at_startup_page"];
-        configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
-      
-        return (true);
-      }
-#ifdef DEBUG
-      else
-      {
-        LOG.print(F("E : Cannot open "));
-        LOG.print(filename);
-        LOG.println(F(" on SD."));
-      }
-    }
-    else
-    {
-      LOG.print(F("No "));
-      LOG.print(filename);
-      LOG.println(F(" available."));
-#endif
-    }
-  }
-
-  AudioInterrupts();
-  return (false);
-}
-
 FLASHMEM bool save_sd_sys_json(void)
 {
   if (sd_card > 0)
@@ -3880,42 +3829,6 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
       LOG.print(filename);
       LOG.println(F(" available."));
 #endif
-    }
-  }
-  return (false);
-}
-
-FLASHMEM bool load_sd_performance_minimum_boot_json(uint8_t number)
-{
-  dac_mute();
-  number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
-  AudioNoInterrupts();
-
-  configuration.sys.performance_number = number;
-
-  if (sd_card > 0)
-  {
-    sprintf(filename, "/%s/%d/%s.json", PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
-    // first check if file exists...
-    if (SD.exists(filename))
-    {
-      // ... and if: load
-
-      json = SD.open(filename);
-      if (json)
-      {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-        deserializeJson(data_json, json);
-        json.close();
-
-        for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
-        {
-        load_sd_voiceconfig_minimal_boot_json(number, instance_id);
-        }
-        AudioInterrupts();
-        dac_unmute();
-        return (true);
-      }
     }
   }
   return (false);
