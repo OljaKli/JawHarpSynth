@@ -387,6 +387,8 @@ float PerlinNoise2(float x, float y, float persistance, int octaves)
   return(total);
 }
 
+extern void check_midi_devices();
+
 FLASHMEM void terrain_project(float ax, float ay, float az, float* bx, float* by)
 {
   // three point perspective
@@ -466,6 +468,7 @@ public:
           display.drawLine(d_x1, d_y1, d_x2, d_y2, col);
         }
       }
+      check_midi_devices();
     }
     fly = fly + 1;
   }
