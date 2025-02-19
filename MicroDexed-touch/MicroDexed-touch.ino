@@ -753,7 +753,7 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
   synthBraids[instance_id] = new AudioSynthBraids();
   braids_envelope[instance_id] = new AudioEffectEnvelope();
   braids_filter[instance_id] = new AudioFilterBiquad();
-  braids_mixer_filter[instance_id] = new AudioMixer<4>;
+  braids_mixer_filter[instance_id] = new AudioMixer<4>();
   dynamicConnections.emplace_back(new AudioConnection(*synthBraids[instance_id], 0, *braids_envelope[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(*braids_envelope[instance_id], 0, *braids_filter[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(*braids_filter[instance_id], 0, *braids_mixer_filter[instance_id], 0));
