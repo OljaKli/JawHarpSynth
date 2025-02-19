@@ -754,6 +754,7 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
   braids_envelope[instance_id] = new AudioEffectEnvelope();
   braids_filter[instance_id] = new AudioFilterBiquad();
   braids_mixer_filter[instance_id] = new AudioMixer<4>();
+
   dynamicConnections.emplace_back(new AudioConnection(*synthBraids[instance_id], 0, *braids_envelope[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(*braids_envelope[instance_id], 0, *braids_filter[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(*braids_filter[instance_id], 0, *braids_mixer_filter[instance_id], 0));
@@ -762,6 +763,7 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
 
   if (instance_id == 0)
   {
+    
     dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 0));
     dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 1));
 
@@ -777,28 +779,17 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(braids_flanger_l, 0, sidechain_mixer_l, MASTER_MIX_CH_BRAIDS));
 
     // sidechain mixer end
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_mixer_reverb, 0));
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_mixer_reverb, 1));
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_BRAIDS));
+    dynamicConnections.emplace_back(new AudioConnection(braids_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_BRAIDS));
 
-    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 0 });
-    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer, 0, braids_mixer_reverb, 1 });
-    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_BRAIDS });
-    dynamicConnections.emplace_back(new AudioConnection{ braids_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_BRAIDS });
-
-    dynamicConnections.emplace_back(new AudioConnection{ braids_stereo_panorama, 0, braids_peak_r, 0 });
-    dynamicConnections.emplace_back(new AudioConnection{ braids_stereo_panorama, 1, braids_peak_l, 0 });
+    dynamicConnections.emplace_back(new AudioConnection(braids_stereo_panorama, 0, braids_peak_r, 0));
+    dynamicConnections.emplace_back(new AudioConnection(braids_stereo_panorama, 1, braids_peak_l, 0));
 
     // braids delays
     dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, *global_delay_in_mixer[0], 6));//previously 4
     dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, *global_delay_in_mixer[1], 6));//previously 4
-  }
-}
-
-
-FLASHMEM void create_filters()
-{
-  for (uint8_t x = 0; x < NUM_DRUMS * 2; x++)
-  {
-    //  Drum[x] = new AudioPlayArrayResmp();
-    Drum_filter[x] = new AudioFilterBiquad();
   }
 }
 
@@ -812,6 +803,8 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
 
   sample_envelope[instance_id] = new AudioEffectEnvelope();
   sample_envelope[instance_id + NUM_DRUMS] = new AudioEffectEnvelope();
+  sample_envelope[instance_id]->releaseNoteOn(0);
+  sample_envelope[instance_id + NUM_DRUMS]->releaseNoteOn(0);
 
 #ifdef COMPILE_FOR_SDCARD
   Drum[instance_id] = new AudioPlaySdResmp();
@@ -823,6 +816,12 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
 
   Drum[instance_id]->enableInterpolation(false);
   Drum[instance_id]->setPlaybackRate(1.0);
+
+  Drum_filter[instance_id] = new AudioFilterBiquad();
+  Drum_filter[instance_id + NUM_DRUMS] = new AudioFilterBiquad();
+
+  Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
+  Drum_filter[instance_id + NUM_DRUMS]->setLowpass(0, 20000, 0.2); //phtodo
 
   //no filter code
     // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
@@ -849,9 +848,6 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
 
   dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 10 + instance_id)); //previously 8
   dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, *global_delay_in_mixer[1], 10 + instance_id)); //previously 8
-
-  Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
-  Drum_filter[NUM_DRUMS + instance_id]->setLowpass(0, 20000, 0.2); //phtodo
 
 #ifdef DEBUG
   LOG.print(F("Drum-Instance: "));
@@ -1203,10 +1199,6 @@ FLASHMEM void setup()
   braids_flanger_r.voices(FLANGE_DELAY_PASSTHRU, 0, 0);
   braids_flanger_l.voices(FLANGE_DELAY_PASSTHRU, 0, 0);
 
-
-  // DRUM Filters
-  create_filters();
-
   // Setup (PROGMEM) sample drums
   // create dynamic Drum instances
   for (uint8_t instance_id = 0; instance_id < NUM_DRUMS; instance_id++)
@@ -1225,8 +1217,7 @@ FLASHMEM void setup()
     //global_delay_in_mixer[0]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5);  //phtodo
     //global_delay_in_mixer[1]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5); 
 
-    sample_envelope[instance_id]->releaseNoteOn(0);
-    sample_envelope[instance_id + NUM_DRUMS]->releaseNoteOn(0);
+    
 
     SMF.begin(&(SdFat&)SD);
     SMF.setMidiHandler(midiCallback);
