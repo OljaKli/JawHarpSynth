@@ -18,7 +18,8 @@ public:
     drawTime = (1 << 5),
     drawSongLayers = (1 << 6),
     drawLastPlayedNote = (1 << 7),
-    drawActiveTrackSubLabel = (1 << 8)
+    drawActiveTrackSubLabel = (1 << 8),
+    drawCpuLoad = (1 << 9)
   };
 
   UI_LiveSequencer(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
@@ -34,6 +35,7 @@ public:
   void updateTrackChannelSetupButtons(uint8_t track);
 
 private:
+  uint16_t msCount = 0;
   bool isVisible = false;
   uint16_t guiUpdateFlags = 0;
   uint8_t layerUpdates[LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN] = { 0 };

@@ -515,7 +515,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     liveSeq.onGuiInit();
 
     display.setTextSize(1);
-    display.setCursor(GRID.X[2], 3);
+    display.setCursor(GRID.X[2], 4);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(data.performanceName.c_str());
 
@@ -523,9 +523,15 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     redrawScreen();
     // setup function
     LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
+    msCount = 1000;
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
+    msCount += 25;
+    if(msCount >= 200 ) {
+      drawUpdates(drawCpuLoad);
+      msCount = 0;
+    }
     if (LCDML.BT_checkDown()) {
       if (currentValue.valueBase != nullptr) {
         currentValue.valueBase->next();
@@ -842,6 +848,21 @@ FLASHMEM void UI_LiveSequencer::processBar(const float progress, const uint16_t 
 
 FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
   display.console = true;
+
+  if (guiFlags & drawCpuLoad) {
+    static constexpr float size = 2 * TouchButton::BUTTON_SIZE_X + TouchButton::BUTTON_SPACING;
+    uint16_t color = GREEN;
+    const uint8_t cpuLoad = AudioProcessorUsage();
+    const uint16_t barWidth = cpuLoad * size / float(100);
+    if(cpuLoad > 90) {
+      color = RED;
+    } else if(cpuLoad > 75) {
+      color = COLOR_ARP;
+    }
+
+    display.drawLine(GRID.X[2], 0, GRID.X[2] + barWidth, 0, color);
+    display.drawLine(GRID.X[2] + barWidth, 0, GRID.X[4] - TouchButton::BUTTON_SPACING, 0, GREY2);
+  }
 
   if (guiFlags & drawTopButtons) {
     TouchButton::Color playColor = runningHere ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
