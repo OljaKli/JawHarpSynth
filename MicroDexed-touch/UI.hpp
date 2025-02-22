@@ -22574,7 +22574,7 @@ FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
   }
   const uint8_t incrementY = 11 - progress;
 
-  unsigned char splash[23360]; // 73×320
+  unsigned char splash[23360]; // 73 x 320
   RLE_Uncompress(splash_image, splash, sizeof(splash_image));
   uint16_t c;
   uint16_t color;
