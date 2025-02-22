@@ -515,7 +515,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     liveSeq.onGuiInit();
 
     display.setTextSize(1);
-    display.setCursor(GRID.X[2], 4);
+    display.setCursor(GRID.X[2], 6);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(data.performanceName.c_str());
 
@@ -890,8 +890,8 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     const float progressPattern = timeMs / float(data.patternLengthMs);
     const float progressTotal = (progressPattern + data.currentPattern) / float(data.numberOfBars);
 
-    processBar(progressPattern, 15, barPattern, GREEN);
-    processBar(progressTotal, 20, barTotal, RED);
+    processBar(progressPattern, 17, barPattern, GREEN);
+    processBar(progressTotal, 22, barTotal, RED);
 
     uint16_t patCount = data.isRunning ? data.currentPattern : 0;
     display.setCursor(GRID.X[2], 28);
