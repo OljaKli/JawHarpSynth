@@ -1124,14 +1124,14 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
 
       case INSTR_DX3:
         data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[2].midi_channel);
-         data.tracks[i].screen = UI_func_voice_select;
-          data.tracks[i].screenSetupFn = (SetupFn)selectDexed2;
+        data.tracks[i].screen = UI_func_voice_select;
+        data.tracks[i].screenSetupFn = (SetupFn)selectDexed2;
         break;
 
       case INSTR_DX4:
         data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[3].midi_channel);
-         data.tracks[i].screen = UI_func_voice_select;
-         data.tracks[i].screenSetupFn =  (SetupFn)selectDexed3;
+        data.tracks[i].screen = UI_func_voice_select;
+        data.tracks[i].screenSetupFn =  (SetupFn)selectDexed3;
         break;
 
       case INSTR_EP:
