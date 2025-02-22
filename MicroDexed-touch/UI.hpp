@@ -13935,9 +13935,6 @@ FLASHMEM void update_selective_values_master_effects()
   display.setTextColor(COLOR_SYSTEXT, GREY2);
   display.print(Gate[1]->get_threshold());
 }
-// #ifdef PSRAM
-extern "C" uint8_t external_psram_size;
-// #endif
 
 FLASHMEM void UI_func_master_effects(uint8_t param)
 {
@@ -14524,7 +14521,7 @@ FLASHMEM void UI_func_information(uint8_t param)
       }
     }
     if (sysinfo_logo_version == 2) {
-      splash_screen2_anim(loopMs / 50);
+      draw_logo2(0, loopMs / 50);
     }
 
     if (seq.running == false) {
@@ -22570,108 +22567,60 @@ FLASHMEM void splash_screen1()
   display.print(F("(c) 2024-2025 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
 }
 
-FLASHMEM void splash_screen2_anim(uint8_t sysinfo_sound_state)
+FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
 {
-  if (sysinfo_sound_state - 10 < 8)
-  {
-    unsigned char splash[23360];
-    RLE_Uncompress(splash_image, splash, 3033);
-    uint16_t c;
-    uint16_t color;
-
-    if (remote_active)
-      display.console = true;
-
-    for (uint8_t y = sysinfo_sound_state - 10; y < 73; y = y + 8)
-    {
-      for (uint16_t x = 0; x < DISPLAY_WIDTH; x++)
-      {
-        if (splash[x + y * DISPLAY_WIDTH] != 0)
-        {
-          if (splash[x + y * DISPLAY_WIDTH] > 130 || y < 26 || (x < 163 && y < 46) || x > 241 || x < 80 || (x > 189 && y > 64))
-          {
-            color = RGB24toRGB565(splash[x + y * DISPLAY_WIDTH], splash[x + y * DISPLAY_WIDTH], splash[x + y * DISPLAY_WIDTH]);
-          }
-          else
-            color = RGB24toRGB565(0, splash[x + y * DISPLAY_WIDTH] * 1.5, splash[x + y * DISPLAY_WIDTH]);
-
-          for (uint16_t s = 3; s < 200; s++)
-          {
-            if (splash[x + y * DISPLAY_WIDTH] == splash[(x + s) + y * DISPLAY_WIDTH] && x + s < DISPLAY_WIDTH)
-              c++;
-            else
-              break;
-          }
-          if (c > 0 && color > 0)
-          {
-            display.fillRect(x, y, c + 1, 1, color);
-            x = x + c;
-          }
-          else if (color > 0)
-          {
-            display.drawPixel(x, y, color);
-          }
-        }
-
-        c = 0;
-        if (y < 26 && x > 132)
-          break;
-      }
-    }
+  if(progress > 10) { // progress 0-10
+    return;
   }
+  const uint8_t incrementY = 11 - progress;
 
-  if (remote_active)
-    display.console = false;
-}
-
-FLASHMEM void draw_logo_instant(uint8_t yoffset)
-{
-  unsigned char splash[23360];
-  RLE_Uncompress(splash_image, splash, 3033);
+  unsigned char splash[23360]; // 73 x 320
+  RLE_Uncompress(splash_image, splash, sizeof(splash_image));
   uint16_t c;
   uint16_t color;
 
-  if (remote_active)
+  if (remote_active) {
     display.console = true;
+  }
 
-  for (uint8_t y = 0; y < 73; y++)
-  {
-    for (uint16_t x = 0; x < DISPLAY_WIDTH; x++)
-    {
-      if (splash[x + y * DISPLAY_WIDTH] != 0)
-      {
-        if (splash[x + y * DISPLAY_WIDTH] > 130 || y < 26 || (x < 163 && y < 46) || x > 241 || x < 80 || (x > 189 && y > 64))
-        {
-
-          color = RGB24toRGB565(splash[x + y * DISPLAY_WIDTH], splash[x + y * DISPLAY_WIDTH], splash[x + y * DISPLAY_WIDTH]);
+  for (uint8_t y = incrementY; y < 73; y += incrementY) {
+    for (uint16_t x = 0; x < DISPLAY_WIDTH; x++) {
+      const uint8_t data = splash[x + y * DISPLAY_WIDTH];
+      if (data != 0) {
+        if (data > 130 || y < 26 || (x < 163 && y < 46) || x > 241 || x < 80 || (x > 189 && y > 64)) {
+          color = RGB24toRGB565(data, data, data);
         }
-        else
-          color = RGB24toRGB565(0, splash[x + y * DISPLAY_WIDTH] * 1.5, splash[x + y * DISPLAY_WIDTH]);
-        for (uint16_t s = 3; s < 200; s++)
-        {
-          if (splash[x + y * DISPLAY_WIDTH] == splash[(x + s) + y * DISPLAY_WIDTH] && x + s < DISPLAY_WIDTH)
+        else {
+          color = RGB24toRGB565(0, data * 1.4, data * 1.8); // cyan
+        }
+        for (uint16_t s = 3; s < 200; s++) {
+          if (data == splash[(x + s) + y * DISPLAY_WIDTH] && x + s < DISPLAY_WIDTH) {
             c++;
-          else
+          }
+          else {
             break;
+          }
         }
-        if (c > 0 && color > 0)
-        {
-          display.fillRect(x, y + yoffset, c + 1, 1, color);
-          x = x + c;
-        }
-        else if (color > 0)
-        {
-          display.drawPixel(x, y + yoffset, color);
+        if (color > 0) {
+          if (c > 0) {
+            display.fillRect(x, y + yoffset, c + 1, 1, color);
+            x = x + c;
+          }
+          else {
+            display.drawPixel(x, y + yoffset, color);
+          }
         }
       }
       c = 0;
-      if (y < 26 && x > 132)
+      if (y < 26 && x > 132) {
         break;
+      }
     }
   }
 
-  if (remote_active)
+  if (remote_active) {
     display.console = false;
+  }
 }
 
 FLASHMEM void splash_screen2()

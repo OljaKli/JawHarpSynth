@@ -1,4 +1,7 @@
-PROGMEM static const uint8_t splash_image[3033] = {
+#ifndef SPLASH_IMAGE_H
+#define SPLASH_IMAGE_H
+
+PROGMEM static constexpr uint8_t splash_image[] = {
     20,
     20,
     38,
@@ -3033,3 +3036,4 @@ PROGMEM static const uint8_t splash_image[3033] = {
     4,
     0,
 };
+#endif // SPLASH_IMAGE_H

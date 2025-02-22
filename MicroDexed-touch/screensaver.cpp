@@ -488,7 +488,7 @@ FLASHMEM void terrain_init()
   }
   else {
     yTerrainOffset = 0;
-    draw_logo_instant(20);
+    draw_logo2(20);
   }
 }
 FLASHMEM void terrain_frame()
