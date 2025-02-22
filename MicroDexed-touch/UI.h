@@ -38,8 +38,7 @@ void splash_draw_header();
 void splash_draw_D();
 void splash_draw_reverseD();
 void splash_draw_X(uint8_t c);
-void splash_screen2_anim(uint8_t sysinfo_sound_state);
-void draw_logo_instant(uint8_t yoffset);
+void draw_logo2(uint8_t yoffset, uint8_t progress = 10);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 
