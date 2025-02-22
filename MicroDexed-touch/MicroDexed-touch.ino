@@ -61,7 +61,7 @@ uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
 
-extern "C" uint8_t external_psram_size;
+extern uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
 PsramLoader sampleLoader(psram_free_bytes);
 

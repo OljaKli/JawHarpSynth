@@ -13935,9 +13935,6 @@ FLASHMEM void update_selective_values_master_effects()
   display.setTextColor(COLOR_SYSTEXT, GREY2);
   display.print(Gate[1]->get_threshold());
 }
-// #ifdef PSRAM
-extern "C" uint8_t external_psram_size;
-// #endif
 
 FLASHMEM void UI_func_master_effects(uint8_t param)
 {
