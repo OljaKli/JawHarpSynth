@@ -30,12 +30,15 @@
 #include <MIDI.h>
 #include <SD.h>
 #include <SPI.h>
-#include "psramloader.h"
 #include "filemanager.h"
 
 #include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
 
 #include "ILI9341_t3n.h"
+#include <LCDMenuLib2.h>
+#include "screensaver.h"
+#include "touch.h"
+#include "USBHost_t36.h"
 
 #if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
@@ -61,9 +64,7 @@ uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
 
-extern uint8_t external_psram_size;
-uint32_t psram_free_bytes = 0;
-PsramLoader sampleLoader(psram_free_bytes);
+
 
 #ifdef PSRAM
 #include "effect_delay_ext8.h"
@@ -85,7 +86,7 @@ using namespace TeensyTimerTool;
 
 #include "effect_dynamics.h"
 
-#include "midi_devices.hpp"
+#include "midi_devices.h"
 #include "synth_dexed.h"
 #include "dexed_sd.h"
 #include "effect_modulated_delay.h"
@@ -94,7 +95,7 @@ using namespace TeensyTimerTool;
 #include "effect_platervbstereo.h"
 #include "effect_gate.h"
 #include "template_mixer.hpp"
-#include "UI.hpp"
+#include "UI.h"
 #include "drums.h"
 #include "synth_mda_epiano.h"
 #include "effect_stereo_panorama.h"
@@ -127,7 +128,7 @@ bool back_button_touch_page_check_and_init_done = false;
 bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
-ILI9341_t3n display = ILI9341_t3n(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
+
 
 #if defined GENERIC_DISPLAY 
 XPT2046_Touchscreen touch(TFT_TOUCH_CS);
@@ -248,7 +249,6 @@ AudioAnalyzePeak microdexed_peak_1;
 AudioAnalyzePeak microdexed_peak_2;
 AudioAnalyzePeak microdexed_peak_3;
 
-
 AudioMixer<10> reverb_mixer_r;
 AudioMixer<10> reverb_mixer_l;
 
@@ -271,11 +271,9 @@ AudioMixer<3> finalized_mixer_r;
 AudioMixer<3> finalized_mixer_l;
 
 AudioSynthWaveformDc     dc1;
+microsynth_t microsynth[2];
 
 
-#ifdef COMPILE_FOR_PSRAM
-AudioPlayArrayResmp WAV_preview_PSRAM;
-#endif
 
 // Drumset
 #if NUM_DRUMS > 0
@@ -306,6 +304,7 @@ AudioMixer<NUM_DRUMS> drum_reverb_send_mixer_l;
 AudioAnalyzePeak reverb_return_peak_r;
 AudioAnalyzePeak reverb_return_peak_l;
 
+LiveSequencer liveSeq;
 
 //SPDIF
 //AsyncAudioInputSPDIF3 spdif_in;
@@ -1009,7 +1008,7 @@ FLASHMEM void setup()
 #endif
 
   // zero all malloccable RAM so crashes are deterministic
-  std::vector<uint8_t*> blocks;
+  /*std::vector<uint8_t*> blocks;
   int size = 10000;
   bool done = false;
   while (done == false) {
@@ -1023,7 +1022,7 @@ FLASHMEM void setup()
   for (uint8_t* b : blocks) {
     free(b);
   }
-  blocks.clear();
+  blocks.clear();*/
   // ***********
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
@@ -1217,11 +1216,8 @@ FLASHMEM void setup()
     //global_delay_in_mixer[0]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5);  //phtodo
     //global_delay_in_mixer[1]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5); 
 
-    
-
     SMF.begin(&(SdFat&)SD);
     SMF.setMidiHandler(midiCallback);
-
   }
 
   // Setup EPiano
@@ -4206,8 +4202,6 @@ FLASHMEM void dac_unmute(void)
 #endif
   seq.DAC_mute_state = false;
 }
-
-LiveSequencer liveSeq;
 
 void handleStart(void)
 {

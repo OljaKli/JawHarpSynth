@@ -39,6 +39,7 @@
 extern Sd2Card card;
 
 void print_formatted_number(uint16_t number, uint8_t length);
+void set_pattern_content_type_color(uint8_t pattern);
 
 extern const char noteNames[12][3];
 

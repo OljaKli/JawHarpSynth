@@ -60,8 +60,8 @@ extern uint8_t find_first_song_step_with_pattern(uint8_t pattern);
 extern uint8_t find_first_chain_step_with_pattern(uint8_t pattern);
 sequencer_t seq;
 
-microsynth_t microsynth[2];
 
+extern microsynth_t microsynth[2];
 extern braids_t braids_osc;
 extern uint16_t braids_filter_state[NUM_BRAIDS];
 extern boolean braids_lfo_direction[NUM_BRAIDS];

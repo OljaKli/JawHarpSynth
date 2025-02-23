@@ -80,6 +80,9 @@ typedef struct fm_s
   uint16_t psram_skip_files = 0;
 } fm_t;
 
+ts_t ts;                         // touch screen
+fm_t fm;                         // file manager
+
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
 typedef void (*TouchFn)();
 
@@ -87,7 +90,8 @@ void registerTouchHandler(TouchFn touchFn);
 void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
-
+uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+void helptext_r(const char* str);
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();

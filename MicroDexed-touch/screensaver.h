@@ -411,5 +411,7 @@ public:
 
 };
 
+void boot_animation();
+
 
 

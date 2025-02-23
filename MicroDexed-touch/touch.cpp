@@ -68,8 +68,8 @@ extern void mb_set_compressor();
 extern uint8_t last_menu_depth;
 extern uint8_t drum_midi_channel;
 
-ts_t ts;                         // touch screen
-fm_t fm;                         // file manager
+
+
 dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release
 extern int temp_int;
 
