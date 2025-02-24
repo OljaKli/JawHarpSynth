@@ -688,7 +688,6 @@ void UI_LiveSequencer::drawKeyboard(uint8_t flags) {
 }
 
 FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
-  DBG_LOG(printf("touch\n"));
   if (showingHowTo) {
     if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
       openScreen(UI_func_midi_channels);

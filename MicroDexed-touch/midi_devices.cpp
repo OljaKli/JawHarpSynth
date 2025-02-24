@@ -24,7 +24,7 @@
 #include "midi_devices.h"
 
 #ifdef MIDI_DEVICE_USB_HOST
-  #include <USBHost_t36.h>
+#include <USBHost_t36.h>
 #endif
 #include "sequencer.h"
 

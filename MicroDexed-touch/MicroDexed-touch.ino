@@ -2055,7 +2055,6 @@ void loop()
     updateTouchScreen();
     const TouchFn touchHandler = getCurrentTouchHandler();
     if (touchHandler) {
-      
       touchHandler();
     }
     else if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) {
