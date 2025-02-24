@@ -73,6 +73,10 @@ extern uint8_t drum_midi_channel;
 dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release
 extern int temp_int;
 
+ts_t ts;                         // touch screen
+fm_t fm;                         // file manager
+bool loop_start_button = false;
+bool loop_end_button = false;
 bool isButtonTouched = false;
 int numTouchPoints = 0;
 
@@ -1095,9 +1099,20 @@ FLASHMEM void assign_free_slices_or_increment()
   check_and_print_sliced_message();
 }
 
-extern bool loop_start_button;
-extern bool loop_end_button;
-extern void draw_loop_buttons();
+FLASHMEM void draw_loop_buttons()
+{
+  if (fm.sample_source == 2 || fm.sample_source == 3)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 1 + loop_start_button);
+    draw_button_on_grid(9, 23, "LOOP", "END", 1 + loop_end_button);
+  }
+  else  if (fm.sample_source == 4)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 0);
+    draw_button_on_grid(9, 23, "LOOP", "END", 0);
+  }
+}
+
 extern void print_loop_data();
 
 FLASHMEM void handle_touchscreen_sample_editor()

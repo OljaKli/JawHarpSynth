@@ -314,6 +314,45 @@ LiveSequencer liveSeq;
 
 AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
 
+extern uint32_t gamepad_buttons_neutral;
+extern uint8_t gamepad_0_neutral;
+extern uint8_t gamepad_1_neutral;
+
+#ifdef COMPILE_FOR_PSRAM
+AudioPlayArrayResmp WAV_preview_PSRAM;
+#endif
+
+
+
+extern ILI9341_t3n display;
+extern MD_REncoder ENCODER[];
+extern MD_MIDIFile SMF;
+extern uint8_t activeSample;
+extern uint8_t generic_temp_select_menu;
+extern uint8_t generic_active_function;
+extern uint8_t generic_menu;
+extern bool generic_full_draw_required;
+extern uint8_t num_slices[2];
+extern uint8_t selected_slice_sample[2];
+extern uint32_t slice_start[2][16];
+extern uint32_t slice_end[2][16];
+extern uint16_t slices_scrollspeed;
+extern bool slices_autoalign;
+extern uint8_t external_psram_size;
+extern uint32_t psram_free_bytes;
+extern ts_t ts;
+extern fm_t fm;
+extern JoystickController joysticks[];
+extern bool remote_console_keystate_select;
+extern bool remote_console_keystate_a;
+extern bool remote_console_keystate_b;
+
+#ifdef COMPILE_FOR_PSRAM
+#include "psramloader.h"
+extern PsramLoader sampleLoader;
+#endif
+
+
 #if defined(TEENSY_AUDIO_BOARD)
 AudioOutputI2S i2s1;
 AudioControlSGTL5000 sgtl5000;
@@ -868,7 +907,6 @@ FLASHMEM void create_audio_wav_preview_chain()
 uint8_t sd_card = 0;
 Sd2Card card;
 SdVolume volume;
-const float midi_ticks_factor[10] = { 0.0, 0.25, 0.375, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0 };
 uint8_t midi_bpm_counter = 0;
 uint8_t midi_bpm = 0;
 int16_t _midi_bpm = -1;
@@ -2673,6 +2711,8 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
+extern MIDIDeviceBase midi_serial;
+extern MIDIDeviceBase midi_usb;
 
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {

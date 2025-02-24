@@ -48,6 +48,21 @@ extern uint32_t GAMEPAD_START;
 extern uint32_t GAMEPAD_BUTTON_A;
 extern uint32_t GAMEPAD_BUTTON_B;
 
+#include "MIDI.h"
+
+/* #if defined(MIDI_DEVICE_USB)
+  #include <midi_UsbTransport.h>
+  #endif */
+#ifdef MIDI_DEVICE_USB_HOST
+  #include <USBHost_t36.h>
+#endif
+  
+
+  
+  const float midi_ticks_factor[10] = { 0.0, 0.25, 0.375, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0 };
+
+
+void send_sysex_bank(uint8_t midi_channel, uint8_t* bank_data);
 void send_sysex_param(uint8_t midi_channel, uint8_t var, uint8_t val, uint8_t param_group);
 extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);

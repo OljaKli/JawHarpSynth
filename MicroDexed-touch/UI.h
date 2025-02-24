@@ -47,8 +47,7 @@
 
 #include "playarrayresmp.h"
 #include "USBHost_t36.h"
-
-extern JoystickController joysticks[];
+#include "touch.h"
 
 struct ScopeSettings {
   bool enabled;
@@ -57,7 +56,7 @@ struct ScopeSettings {
   uint16_t w;
   uint16_t h;
   bool onlyDrawWhenRunning;
-} currentScopeSettings;
+};
 
 
 void splash_draw_header();
@@ -161,43 +160,12 @@ void sub_song_print_tracknumbers();
 bool load_performance_and_check_midi(uint8_t perf);
 void setup_screensaver(void);
 
-extern uint8_t external_psram_size;
-uint32_t psram_free_bytes = 0;
-PsramLoader sampleLoader(psram_free_bytes);
-#ifdef COMPILE_FOR_PSRAM
-AudioPlayArrayResmp WAV_preview_PSRAM;
-#endif
-
-
-ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
-MD_REncoder ENCODER[NUM_ENCODER]{ MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };
-MD_MIDIFile SMF;
-uint8_t activeSample;
-uint8_t generic_temp_select_menu;
-uint8_t generic_active_function = 99;
-uint8_t generic_menu;
-bool generic_full_draw_required = false;
-uint8_t num_slices[2] = { 0,0 };
-uint8_t selected_slice_sample[2] = { 99,99 };
-uint32_t slice_start[2][16];
-uint32_t slice_end[2][16];
-uint16_t slices_scrollspeed = 1;
-bool slices_autoalign = true;
-
-bool loop_start_button = false;
-bool loop_end_button = false;
-bool remote_console_keystate_select;
-bool remote_console_keystate_a;
-bool remote_console_keystate_b;
-
 #define MAX_CC_DEST 15
 PROGMEM const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
   // 25,
   26, 27, 32, 91, 200, 201, 202, 203 };
 
-uint32_t gamepad_buttons_neutral;
-uint8_t gamepad_0_neutral;
-uint8_t gamepad_1_neutral;
+
 
 enum
 {
@@ -206,6 +174,5 @@ enum
 };
 
 PROGMEM const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
-
 
 #endif //_UI_H_

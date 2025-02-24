@@ -66,14 +66,9 @@ extern Realtime_Scope scope;
 extern qix_s qix;
 extern bool touch_ic_found;
 
-#ifdef COMPILE_FOR_PSRAM
-#include "psramloader.h"
-extern PsramLoader sampleLoader;
-#endif
-
 #include "synth_mda_epiano.h"
 extern AudioSynthEPiano ep;
-
+extern JoystickController joysticks[];
 
 #include <synth_braids.h>
 #include "braids.h"
@@ -118,7 +113,29 @@ uint32_t GAMEPAD_START = 512;
 uint32_t GAMEPAD_BUTTON_A = 2;
 uint32_t GAMEPAD_BUTTON_B = 1;
 
+uint32_t gamepad_buttons_neutral;
+uint8_t gamepad_0_neutral;
+uint8_t gamepad_1_neutral;
 
+extern uint8_t external_psram_size;
+uint32_t psram_free_bytes = 0;
+PsramLoader sampleLoader(psram_free_bytes);
+
+
+ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
+MD_REncoder ENCODER[NUM_ENCODER]{ MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };
+MD_MIDIFile SMF;
+uint8_t activeSample;
+uint8_t generic_temp_select_menu;
+uint8_t generic_active_function = 99;
+uint8_t generic_menu;
+bool generic_full_draw_required = false;
+uint8_t num_slices[2] = { 0,0 };
+uint8_t selected_slice_sample[2] = { 99,99 };
+uint32_t slice_start[2][16];
+uint32_t slice_end[2][16];
+uint16_t slices_scrollspeed = 1;
+bool slices_autoalign = true;
 
 bool remote_touched;
 extern void draw_menu_ui_icons();
@@ -249,7 +266,6 @@ extern void stop_all_drum_slots();
 extern const char noteNames[12][3];
 extern void dac_mute(void);
 extern void dac_unmute(void);
-extern ts_t ts;
 extern fm_t fm;
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
 extern void get_sd_performance_name_json(uint8_t number);
@@ -374,8 +390,8 @@ extern const float midi_ticks_factor[10];
 extern uint8_t midi_bpm;
 extern elapsedMillis save_sys;
 extern bool save_sys_flag;
-extern uint8_t external_psram_size;
 extern sdcard_t sdcard_infos;
+extern ts_t ts;
 
 /***********************************************************************
    GLOBAL
@@ -545,6 +561,12 @@ void draw_volmeters_multiband_compressor();
 uint8_t x_pos_menu_header_layer[8];
 uint8_t last_menu_depth = 99;
 uint8_t prev_menu_item = 0;    // avoid screen flicker at start / end of menu items
+
+ScopeSettings currentScopeSettings;
+
+bool remote_console_keystate_select;
+bool remote_console_keystate_a;
+bool remote_console_keystate_b;
 
 // normal menu
 LCDMenuLib2_menu LCDML_0(255, 0, 0, NULL, NULL); // normal root menu element (do not change)
@@ -7620,19 +7642,7 @@ FLASHMEM void print_loop_data()
   }
 }
 
-FLASHMEM void draw_loop_buttons()
-{
-  if (fm.sample_source == 2 || fm.sample_source == 3)
-  {
-    draw_button_on_grid(1, 23, "LOOP", "START", 1 + loop_start_button);
-    draw_button_on_grid(9, 23, "LOOP", "END", 1 + loop_end_button);
-  }
-  else  if (fm.sample_source == 4)
-  {
-    draw_button_on_grid(1, 23, "LOOP", "START", 0);
-    draw_button_on_grid(9, 23, "LOOP", "END", 0);
-  }
-}
+
 
 FLASHMEM void UI_func_sample_editor(uint8_t param)
 {

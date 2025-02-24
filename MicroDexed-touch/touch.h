@@ -80,9 +80,6 @@ typedef struct fm_s
   uint16_t psram_skip_files = 0;
 } fm_t;
 
-ts_t ts;                         // touch screen
-fm_t fm;                         // file manager
-
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
 typedef void (*TouchFn)();
 
@@ -92,6 +89,8 @@ TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
 uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 void helptext_r(const char* str);
+
+void draw_loop_buttons();
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();
@@ -105,12 +104,9 @@ void handle_touchscreen_menu();
 void handle_touchscreen_test_touchscreen();
 void handle_touchscreen_sample_editor();
 void handle_touchscreen_settings_button_test();
-void handle_touchscreen_liveseq_pianoroll();
-void handle_touchscreen_liveseq_listeditor();
 void handle_touchscreen_file_manager();
 void handle_touchscreen_mute_matrix();
 void handle_touchscreen_custom_mappings();
 void handle_touchscreen_drums();
-//void handle_touchscreen_drums();
 
 #endif

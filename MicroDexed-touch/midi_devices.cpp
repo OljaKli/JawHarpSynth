@@ -23,7 +23,19 @@
 
 #include "midi_devices.h"
 
-
+    // override default sysex size settings
+    struct MicroDexedSettings : public midi::DefaultSettings
+    {
+      static const unsigned SysExMaxSize = 4104; // Accept SysEx messages up to 1024 bytes long.
+    };
+    
+    #ifdef MIDI_DEVICE_DIN
+    MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroDexedSettings);
+    #endif
+    #ifdef MIDI_DEVICE_USB_HOST
+    USBHost usb_host;
+    MIDIDevice midi_usb(usb_host);
+    #endif
 
 #define MIDI_BY_DIN "MIDI_DIN"
 #define MIDI_BY_USB_HOST "MIDI_USB_HOST"
