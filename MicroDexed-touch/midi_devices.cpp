@@ -61,9 +61,10 @@ extern uint8_t apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
-
-//extern uint8_t activeSample;
 #endif
+
+#define COUNT_JOYSTICKS 1
+JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
