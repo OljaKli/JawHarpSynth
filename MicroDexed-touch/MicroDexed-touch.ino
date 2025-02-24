@@ -2066,6 +2066,7 @@ void loop()
     updateTouchScreen();
     const TouchFn touchHandler = getCurrentTouchHandler();
     if (touchHandler) {
+      
       touchHandler();
     }
     else if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) {
@@ -2711,8 +2712,8 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
-extern MIDIDeviceBase midi_serial;
-extern MIDIDeviceBase midi_usb;
+extern MIDIDevice midi_serial;
+extern MIDIDevice midi_usb;
 
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
@@ -4279,7 +4280,7 @@ void handleStart(void)
 #endif
 
 #ifdef MIDI_DEVICE_DIN
-    midi_serial.sendRealTime(midi::Start);
+    //midi_serial.sendRealTime(midi::Start);
 #endif
 
 #ifdef MIDI_DEVICE_USB
@@ -4387,7 +4388,7 @@ void handleStop(void)
 #endif
 
 #ifdef MIDI_DEVICE_DIN
-    midi_serial.sendRealTime(midi::Stop);
+    //midi_serial.sendRealTime(midi::Stop);
 #endif
 
 #ifdef MIDI_DEVICE_USB

@@ -35,16 +35,8 @@
 #include "touchbutton.h"
 #include "ILI9341_t3n.h"
 #include "MD_REncoder.h"
-
 #include "MD_MIDIFile.h"
-#include "effect_stereo_panorama.h"
-#include "effect_delay_ext8.h"
-#include "effect_midside.h"
-#include "effect_stereo_mono.h"
-#include "effect_mono_stereo.h"
-#include "effect_gate.h"
 #include "psramloader.h"
-
 #include "playarrayresmp.h"
 #include "USBHost_t36.h"
 #include "touch.h"

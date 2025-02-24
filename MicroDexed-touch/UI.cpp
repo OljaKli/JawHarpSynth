@@ -36,6 +36,11 @@
 #include "effect_modulated_delay.h"
 #include "effect_stereo_mono.h"
 #include "effect_platervbstereo.h"
+#include "effect_stereo_panorama.h"
+#include "effect_delay_ext8.h"
+#include "effect_midside.h"
+#include "effect_mono_stereo.h"
+#include "effect_gate.h"
 #include "template_mixer.hpp"
 #include "drumset.h"
 #include "sequencer.h"
@@ -141,7 +146,6 @@ uint16_t slices_scrollspeed = 1;
 bool slices_autoalign = true;
 
 bool remote_touched;
-extern void draw_menu_ui_icons();
 
 extern int (*calc_val[2])(int, int, int, int);
 extern int menuhelper_previous_val;
