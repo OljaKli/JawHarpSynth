@@ -36,10 +36,6 @@
 #include "ILI9341_t3n.h"
 #include "MD_REncoder.h"
 #include "MD_MIDIFile.h"
-#include "psramloader.h"
-#include "playarrayresmp.h"
-#include "USBHost_t36.h"
-#include "touch.h"
 
 struct ScopeSettings {
   bool enabled;

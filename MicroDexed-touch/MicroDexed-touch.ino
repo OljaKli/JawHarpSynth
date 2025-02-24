@@ -37,8 +37,33 @@
 #include "ILI9341_t3n.h"
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
+#include "UI.h"
 #include "touch.h"
 #include "USBHost_t36.h"
+#include "MD_REncoder.h"
+#include <TeensyTimerTool.h>
+using namespace TeensyTimerTool;
+
+#include "microsynth.h"
+#include "braids.h"
+
+#include "effect_dynamics.h"
+#include "midi_devices.h"
+#include "synth_dexed.h"
+#include "dexed_sd.h"
+#include "effect_modulated_delay.h"
+#include "effect_stereo_mono.h"
+#include "effect_mono_stereo.h"
+#include "effect_platervbstereo.h"
+#include "effect_gate.h"
+#include "template_mixer.hpp"
+#include "drums.h"
+#include "synth_mda_epiano.h"
+#include "effect_stereo_panorama.h"
+#include <synth_braids.h>
+
+#include "livesequencer.h"
+#include <vector>
 
 #if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
@@ -56,6 +81,10 @@
 #include <TeensyVariablePlayback.h>
 #endif
 
+#ifdef PSRAM
+#include "effect_delay_ext8.h"
+#endif
+
 #if defined APC
 bool APC_BUTTONS_RIGHT[8];
 uint8_t APC_SAMPLE_SCROLL_OFFSET = 64;
@@ -65,46 +94,12 @@ uint8_t APC_MODE = APC_OFF;
 #endif
 
 
-
-#ifdef PSRAM
-#include "effect_delay_ext8.h"
-#endif
-
-#include <synth_braids.h>
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 short braids_r_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 int braids_flanger_idx = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 int braids_flanger_depth = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 double braids_flanger_freq = .5;
-
-#include <TeensyTimerTool.h>
-using namespace TeensyTimerTool;
-
-#include "microsynth.h"
-#include "braids.h"
-
-#include "effect_dynamics.h"
-
-#include "midi_devices.h"
-#include "synth_dexed.h"
-#include "dexed_sd.h"
-#include "effect_modulated_delay.h"
-#include "effect_stereo_mono.h"
-#include "effect_mono_stereo.h"
-#include "effect_platervbstereo.h"
-#include "effect_gate.h"
-#include "template_mixer.hpp"
-#include "UI.h"
-#include "drums.h"
-#include "synth_mda_epiano.h"
-#include "effect_stereo_panorama.h"
-
-#include "livesequencer.h"
-#include <vector>
-
-//#include "MidiReader.h"
-
 
 uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
@@ -128,14 +123,12 @@ bool back_button_touch_page_check_and_init_done = false;
 bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
-
-
 #if defined GENERIC_DISPLAY 
-XPT2046_Touchscreen touch(TFT_TOUCH_CS);
+extern XPT2046_Touchscreen touch;
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
-Adafruit_FT6206 touch = Adafruit_FT6206();
+extern Adafruit_FT6206 touch;
 #endif
 
 // Editor operations
@@ -270,10 +263,8 @@ AudioMixer<2> audio_thru_mixer_l;
 AudioMixer<3> finalized_mixer_r;
 AudioMixer<3> finalized_mixer_l;
 
-AudioSynthWaveformDc     dc1;
+AudioSynthWaveformDc dc1;
 microsynth_t microsynth[2];
-
-
 
 // Drumset
 #if NUM_DRUMS > 0
@@ -321,8 +312,6 @@ extern uint8_t gamepad_1_neutral;
 #ifdef COMPILE_FOR_PSRAM
 AudioPlayArrayResmp WAV_preview_PSRAM;
 #endif
-
-
 
 extern ILI9341_t3n display;
 extern MD_REncoder ENCODER[];
@@ -914,7 +903,6 @@ elapsedMillis midi_bpm_timer;
 elapsedMillis long_button_pressed;
 elapsedMillis control_rate;
 elapsedMillis save_sys;
-elapsedMillis record_timer;
 elapsedMillis touchReadTimer = 0;
 
 static constexpr int SCREENSAVER_RESET_RATE_MS = 500;

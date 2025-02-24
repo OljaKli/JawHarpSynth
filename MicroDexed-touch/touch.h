@@ -11,8 +11,6 @@ extern XPT2046_Touchscreen touch;
 extern Adafruit_FT6206 touch;
 #endif
 
-#include <SD.h>
-
 typedef struct dexed_live_mod_s
 {
   uint8_t active_button = 0;

@@ -28,11 +28,8 @@
 
 #include "UI.h"
 #include <LCDMenuLib2.h>
-#include <MD_REncoder.h>
 #include <Regexp.h>
-#include "config.h"
 #include "disp_plus.h"
-#include "synth_dexed.h"
 #include "effect_modulated_delay.h"
 #include "effect_stereo_mono.h"
 #include "effect_platervbstereo.h"
@@ -49,6 +46,9 @@
 #include "dexed_sd.h"
 #include "screensaver.h"
 #include "scope.h"
+#include "psramloader.h"
+#include "playarrayresmp.h"
+
 
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
@@ -220,20 +220,19 @@ extern void qix_screensaver();
 #define _LCDML_DISP_cfg_scrollbar 1 // enable a scrollbar
 
 extern PeriodicTimer sequencer_timer;
-extern ILI9341_t3n display;
 
 #if defined GENERIC_DISPLAY 
-extern XPT2046_Touchscreen touch;
+XPT2046_Touchscreen touch(TFT_TOUCH_CS);
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
-extern Adafruit_FT6206 touch;
+Adafruit_FT6206 touch = Adafruit_FT6206();
 #endif
 
 extern void sequencer(void);
 extern bool check_sd_performance_exists(uint8_t number);
 extern SdVolume volume;
-extern elapsedMillis record_timer;
+elapsedMillis record_timer;
 uint16_t record_x_pos;
 
 extern config_t configuration;
