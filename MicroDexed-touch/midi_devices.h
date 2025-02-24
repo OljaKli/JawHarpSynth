@@ -42,4 +42,8 @@ void MD_sendControlChange(uint8_t channel, uint8_t cc, uint8_t value);
 void setup_midi_devices(void);
 void check_midi_devices(void);
 
+void midiSendRealtime(midi::MidiType event);
+void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device);
+void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device);
+
 #endif // MIDI_DEVICES_H

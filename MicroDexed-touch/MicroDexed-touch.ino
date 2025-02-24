@@ -2712,9 +2712,6 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
-extern MIDIDevice midi_serial;
-extern MIDIDevice midi_usb;
-
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
@@ -2743,40 +2740,13 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
       braids_osc.note_buffer[braids_slot] = inNumber;
     }
 
-#ifdef MIDI_DEVICE_USB_HOST
-    if (device == 1)
-      midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-    if (device == 2)
-    {
-      midi_serial.sendNoteOn(inNumber, inVelocity, inChannel);
-      //    #ifdef DEBUG
-      //        LOG.print(F(" DIN OUT Channel:"));
-      //        LOG.print(inChannel);
-      //        LOG.println(F);
-      //        LOG.print(F(" DIN inNumber:"));
-      //        LOG.print(inNumber);
-      //        LOG.println();
-      //        LOG.print(F(" DIN inVelocity:"));
-      //        LOG.print(inVelocity);
-      //        LOG.println();
-      //    #endif
+    midiNoteOn(inNumber, inVelocity, inChannel, device);
 
 #ifdef MIDI_ACTIVITY_LIGHTS
       LED_MIDI_OUT_counter = 1;
 #endif
 
-    }
-#endif
-
-    if (device == 3) //internal Micro USB
-      usbMIDI.sendNoteOn(inNumber, inVelocity, inChannel);
-
-    if (device == 0)
-    {
-
+    if (device == 0) {
       // check custom midi UI KEY mapping
       if (seq.midi_learn_active == false)
       {
@@ -3258,7 +3228,6 @@ uint8_t drum_get_slot(uint8_t dt)
 
 void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
-
   // check custom midi UI KEY mapping
   if (seq.midi_learn_active == false)
   {
@@ -3324,17 +3293,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     }
   }
 
-#ifdef MIDI_DEVICE_USB_HOST
-  if (device == 1)
-    midi_usb.sendNoteOff(inNumber, inVelocity, inChannel);
-#endif
-#ifdef MIDI_DEVICE_DIN
-  if (device == 2)
-    midi_serial.sendNoteOff(inNumber, inVelocity, inChannel);
-#endif
-
-  if (device == 3) //internal Micro USB
-    usbMIDI.sendNoteOff(inNumber, inVelocity, inChannel);
+  midiNoteOff(inNumber, inVelocity, inChannel, device);
 
   if (device == 0)
   {
@@ -4164,19 +4123,7 @@ void handleTuneRequest(void)
 
 void send_midi_clock()
 {
-#ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendRealTime(midi::Clock);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-  midi_serial.sendRealTime(midi::Clock);
-#endif
-
-#ifdef MIDI_DEVICE_USB
-  usbMIDI.sendRealTime(midi::Clock);
-#endif
-
-
+  midiSendRealtime(midi::Clock);
 }
 
 void handleClock(void)
@@ -4275,17 +4222,7 @@ void handleStart(void)
       sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), true); // first callback immediately
     }
 
-#ifdef MIDI_DEVICE_USB_HOST
-    midi_usb.sendRealTime(midi::Start);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-    //midi_serial.sendRealTime(midi::Start);
-#endif
-
-#ifdef MIDI_DEVICE_USB
-    usbMIDI.sendRealTime(midi::Start);
-#endif
+    midiSendRealtime(midi::Start);
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
@@ -4383,17 +4320,7 @@ void handleStop(void)
         braids_envelope[i]->noteOff();
     }
 
-#ifdef MIDI_DEVICE_USB_HOST
-    midi_usb.sendRealTime(midi::Stop);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-    //midi_serial.sendRealTime(midi::Stop);
-#endif
-
-#ifdef MIDI_DEVICE_USB
-    usbMIDI.sendRealTime(midi::Stop);
-#endif
+    midiSendRealtime(midi::Stop);
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_arpeggio))
     {

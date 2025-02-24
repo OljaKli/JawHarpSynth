@@ -71,6 +71,60 @@ extern void handleStop(void);
 extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
+void midiSendRealtime(midi::MidiType event) {
+#ifdef MIDI_DEVICE_USB_HOST
+  midi_usb.sendRealTime(event);
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  midi_serial.sendRealTime(event);
+#endif
+
+#ifdef MIDI_DEVICE_USB
+  usbMIDI.sendRealTime(event);
+#endif
+}
+
+void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
+  switch(device) {
+  case 1:
+  #ifdef MIDI_DEVICE_USB_HOST
+    midi_usb.sendNoteOn(note, velocity, channel);
+  #endif
+    break;
+  
+  case 2:
+  #ifdef MIDI_DEVICE_DIN
+    midi_serial.sendNoteOn(note, velocity, channel);
+  #endif
+    break;
+  
+  case 3:
+    usbMIDI.sendNoteOn(note, velocity, channel);
+    break;
+  }
+}
+
+void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
+  switch(device) {
+  case 1:
+#ifdef MIDI_DEVICE_USB_HOST
+    midi_usb.sendNoteOff(note, velocity, channel);
+#endif
+    break;
+
+  case 2:
+#ifdef MIDI_DEVICE_DIN
+    midi_serial.sendNoteOff(note, velocity, channel);
+#endif
+    break;
+
+  case 3:
+    usbMIDI.sendNoteOff(note, velocity, channel);
+    break;
+  }
+}
+
 #if defined APC
 extern void print_apc_source_selection_pads();
 extern void apc_print_right_buttons();
