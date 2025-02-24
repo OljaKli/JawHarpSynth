@@ -49,7 +49,6 @@
 #include "psramloader.h"
 #include "playarrayresmp.h"
 
-
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
 #include "virtualkeyboard.h"
@@ -57,6 +56,9 @@
 #include "midi_devices.h"
 #include "effect_dynamics.h"
 #include "TeensyTimerTool.h"
+#ifdef MIDI_DEVICE_USB_HOST
+  #include <USBHost_t36.h>
+#endif
 
 using namespace TeensyTimerTool;
 
@@ -413,7 +415,6 @@ boolean COND_hide() // hide a menu element
   return false;
 }
 
-
 PROGMEM const char cc_names[MAX_CC_DEST][13] = {
     "Volume      ",
     "Panorama    ",
@@ -432,8 +433,6 @@ PROGMEM const char cc_names[MAX_CC_DEST][13] = {
     "Seq. RECORD ",
     "Panic Dexed ",
 };
-
-
 
 PROGMEM const char cc_names_UI_mapping[8][13] = {
 

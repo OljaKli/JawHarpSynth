@@ -58,6 +58,7 @@ using namespace TeensyTimerTool;
 #include "effect_gate.h"
 #include "template_mixer.hpp"
 #include "drums.h"
+#include "sequencer.h"
 #include "synth_mda_epiano.h"
 #include "effect_stereo_panorama.h"
 #include <synth_braids.h>

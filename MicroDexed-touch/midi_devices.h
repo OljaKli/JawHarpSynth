@@ -25,13 +25,7 @@
 #define MIDI_DEVICES_H
 
 #include "config.h"
-
-#include "sequencer.h"
 #include "MIDI.h"
-
-#ifdef MIDI_DEVICE_USB_HOST
-  #include <USBHost_t36.h>
-#endif
   
 static const float midi_ticks_factor[10] = { 0.0, 0.25, 0.375, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0 };
 
