@@ -48,9 +48,28 @@ extern uint8_t LED_MIDI_IN_counter;
 #endif
 
 extern LiveSequencer liveSeq;
-extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern config_t configuration;
+extern sequencer_t seq;
+extern int temp_int;
 
-//void handle_pitchbend((byte inChannel, byte inData1, byte inData2, const char *midi_device, midi::MidiType event));
+extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleAfterTouch(byte inChannel, byte inPressure);
+extern void handlePitchBend(byte inChannel, int16_t inPitch);
+extern void handleControlChange(byte inChannel, byte inData1, byte inData2);
+extern void handleProgramChange(byte inChannel, byte inProgram);
+extern void handleAfterTouchPoly(byte inChannel, byte inNumber, byte inVelocity);
+extern void handleSystemExclusive(byte* data, unsigned len);
+extern void handleTimeCodeQuarterFrame(byte data);
+extern void handleSongSelect(byte inSong);
+extern void handleTuneRequest(void);
+extern void handleClock(void);
+extern void handleContinue(void);
+extern void handleActiveSensing(void);
+extern void handleSystemReset(void);
+extern void handleStart(void);
+extern void handleStop(void);
+extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
 #if defined APC
 extern void print_apc_source_selection_pads();

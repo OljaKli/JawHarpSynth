@@ -77,6 +77,10 @@ extern AudioSynthBraids* synthBraids[NUM_BRAIDS];
 extern bool remote_active;
 extern bool back_button_touch_page_check_and_init_done;
 extern void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level);
+extern void handleStart(void);
+extern void handleStop(void);
+extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
 struct DxPoolSettings {
   uint8_t pool;
@@ -120,7 +124,6 @@ uint8_t gamepad_1_neutral;
 extern uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
 PsramLoader sampleLoader(psram_free_bytes);
-
 
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
 MD_REncoder ENCODER[NUM_ENCODER]{ MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };

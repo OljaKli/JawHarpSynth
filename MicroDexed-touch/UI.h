@@ -58,7 +58,6 @@ struct ScopeSettings {
   bool onlyDrawWhenRunning;
 };
 
-
 void splash_draw_header();
 void splash_draw_D();
 void splash_draw_reverseD();
@@ -161,11 +160,9 @@ bool load_performance_and_check_midi(uint8_t perf);
 void setup_screensaver(void);
 
 #define MAX_CC_DEST 15
-PROGMEM const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
+PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
   // 25,
   26, 27, 32, 91, 200, 201, 202, 203 };
-
-
 
 enum
 {
@@ -173,6 +170,6 @@ enum
   ENC_L
 };
 
-PROGMEM const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
+PROGMEM static const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
 
 #endif //_UI_H_

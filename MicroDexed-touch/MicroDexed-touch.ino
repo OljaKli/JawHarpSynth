@@ -1046,7 +1046,7 @@ FLASHMEM void setup()
 #endif
 
   // zero all malloccable RAM so crashes are deterministic
-  /*std::vector<uint8_t*> blocks;
+  std::vector<uint8_t*> blocks;
   int size = 10000;
   bool done = false;
   while (done == false) {
@@ -1060,7 +1060,7 @@ FLASHMEM void setup()
   for (uint8_t* b : blocks) {
     free(b);
   }
-  blocks.clear();*/
+  blocks.clear();
   // ***********
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
