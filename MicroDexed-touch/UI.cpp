@@ -102,6 +102,7 @@ extern int sidechain_speed;
 extern bool sidechain_active;
 extern uint8_t sidechain_steps;
 
+File frec;
 elapsedMillis gamepad_millis;
 int gamepad_accelerate;
 
@@ -232,7 +233,6 @@ Adafruit_FT6206 touch = Adafruit_FT6206();
 #endif
 
 extern void sequencer(void);
-extern bool check_sd_performance_exists(uint8_t number);
 extern SdVolume volume;
 elapsedMillis record_timer;
 uint16_t record_x_pos;
@@ -276,10 +276,7 @@ extern void dac_mute(void);
 extern void dac_unmute(void);
 extern fm_t fm;
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern void get_sd_performance_name_json(uint8_t number);
-extern bool save_sd_performance_json(uint8_t p);
 extern dexed_live_mod_t dexed_live_mod;
-extern File frec;
 extern AudioRecordQueue record_queue_l;
 extern AudioRecordQueue record_queue_r;
 extern char filename[CONFIG_FILENAME_LEN];
@@ -299,7 +296,6 @@ extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 #endif
 
 extern sequencer_t seq;
-
 extern multisample_t msp[NUM_MULTISAMPLES];
 extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 
@@ -401,6 +397,27 @@ extern bool save_sys_flag;
 extern sdcard_t sdcard_infos;
 extern ts_t ts;
 
+void UI_func_test_mute(uint8_t param);
+void UI_func_test_psram(uint8_t param);
+void UI_func_favorites(uint8_t param);
+void UI_func_map_gamepad(uint8_t param);
+void UI_func_startup_page(uint8_t param);
+void UI_func_sysex_send_bank(uint8_t param);
+void UI_func_startup_performance(uint8_t param);
+void UI_func_sysex_send_voice(uint8_t param);
+void UI_func_velocity_level(uint8_t param); // unused
+void UI_func_save_voice(uint8_t param);
+void UI_func_midi_soft_thru(uint8_t param);
+void UI_func_smart_filter(uint8_t param);
+void UI_func_seq_probabilities(uint8_t param);
+void UI_func_set_multisample_name(uint8_t param);
+void UI_func_clear_song(uint8_t param);
+void UI_func_clear_song_chains(uint8_t param);
+void UI_func_clear_patterns(uint8_t param);
+void UI_func_clear_all(uint8_t param);
+void UI_func_stereo_mono(uint8_t param);
+void UI_handle_OP(uint8_t param);
+
 /***********************************************************************
    GLOBAL
 ************************************************************************/
@@ -408,7 +425,6 @@ elapsedMillis back_from_volume;
 PROGMEM const char accepted_chars[] = " _ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyz";
 
 int temp_int;
-bool menu_select_toggle;
 
 boolean COND_hide() // hide a menu element
 {
@@ -474,26 +490,7 @@ PROGMEM const uint8_t special_chars[24][8] = {
     {B00000000, B00000000, B00000000, B01110000, B11111111, B11111111, B11111111, B11111111}  // [23] File Folder
 };
 
-short wave_type[9] = {
-    WAVEFORM_SINE,
-    WAVEFORM_TRIANGLE,
-    WAVEFORM_SAWTOOTH,
-    WAVEFORM_SQUARE,
-    WAVEFORM_PULSE,
-    WAVEFORM_BANDLIMIT_SAWTOOTH,
-    WAVEFORM_BANDLIMIT_SQUARE,
-    WAVEFORM_BANDLIMIT_PULSE,
-    WAVEFORM_SAMPLE_HOLD };
-
-enum
-{
-  SCROLLBAR,
-  BLOCKBAR,
-  METERBAR
-};
-
-enum
-{
+enum {
   MENU_VOICE_POOL,
   MENU_VOICE_BANK,
   MENU_VOICE_SOUND,
@@ -540,13 +537,6 @@ void locate_previous_favorite();
 void locate_next_favorite();
 void locate_next_non_favorite();
 void locate_random_non_favorite();
-void UI_func_drums(uint8_t param);
-void UI_func_midiplayer(uint8_t param);
-void UI_func_test_mute(uint8_t param);
-void UI_func_test_psram(uint8_t param);
-void UI_func_test_touchscreen(uint8_t param);
-void UI_func_MultiSamplePlay(uint8_t param);
-void UI_func_sample_editor(uint8_t param);
 void splash_screen1();
 void splash_screen2();
 void UI_draw_FM_algorithm(uint8_t algo, uint8_t x, uint8_t y);

@@ -311,6 +311,8 @@ extern uint8_t gamepad_0_neutral;
 extern uint8_t gamepad_1_neutral;
 
 #ifdef COMPILE_FOR_PSRAM
+#include "psramloader.h"
+extern PsramLoader sampleLoader;
 AudioPlayArrayResmp WAV_preview_PSRAM;
 #endif
 
@@ -336,12 +338,6 @@ extern JoystickController joysticks[];
 extern bool remote_console_keystate_select;
 extern bool remote_console_keystate_a;
 extern bool remote_console_keystate_b;
-
-#ifdef COMPILE_FOR_PSRAM
-#include "psramloader.h"
-extern PsramLoader sampleLoader;
-#endif
-
 
 #if defined(TEENSY_AUDIO_BOARD)
 AudioOutputI2S i2s1;
@@ -418,7 +414,6 @@ AudioAnalyzePeak mb_after_r;
 // WAV/AUDIO Recording
 AudioRecordQueue record_queue_l;
 AudioRecordQueue record_queue_r;
-File frec;
 
 //
 // Static patching of audio objects
