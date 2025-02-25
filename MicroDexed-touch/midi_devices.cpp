@@ -27,7 +27,7 @@
 #include <USBHost_t36.h>
 #endif
 #include "sequencer.h"
-
+#include "livesequencer.h"
 
 // override default sysex size settings
 struct MicroDexedSettings : public midi::DefaultSettings
@@ -43,11 +43,39 @@ USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #endif
 
+#ifdef USB_KEYPAD
+KeyboardController keyboard1(usb_host);
+#endif
+
+USBHub hub1(usb_host);
+USBHIDParser hid1(usb_host);
+
+#define COUNT_JOYSTICKS 1
+JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
+
+USBDriver* drivers[] = { &hub1, &joysticks[0], &joysticks[1], &joysticks[2], &joysticks[3], &hid1 };
+#define CNT_DEVICES (sizeof(drivers) / sizeof(drivers[0]))
+
+bool driver_active[CNT_DEVICES] = { false, false, false, false };
+
+// Lets also look at HID Input devices
+USBHIDInput* hiddrivers[] = { &joysticks[0], &joysticks[1], &joysticks[2], &joysticks[3] };
+#define CNT_HIDDEVICES (sizeof(hiddrivers) / sizeof(hiddrivers[0]))
+const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "joystick[2H]", "joystick[3H]" };
+bool hid_driver_active[CNT_DEVICES] = { false };
+bool show_changed_only = true;
+uint64_t joystick_full_notify_mask = (uint64_t)-1;
+
+/* #ifdef MIDI_DEVICE_USB
+  static const unsigned sUsbTransportBufferSize = 16;
+  typedef midi::UsbTransport<sUsbTransportBufferSize> UsbTransport;
+  UsbTransport sUsbTransport;
+  MIDI_CREATE_INSTANCE(UsbTransport, sUsbTransport, midi_onboard_usb);
+  #endif */
+
 #define MIDI_BY_DIN "MIDI_DIN"
 #define MIDI_BY_USB_HOST "MIDI_USB_HOST"
 #define MIDI_BY_USB "USB_MIDI"
-
-#include "livesequencer.h"
 
 #ifdef MIDI_ACTIVITY_LIGHTS
 extern uint8_t LED_MIDI_IN_counter;
@@ -56,7 +84,6 @@ extern uint8_t LED_MIDI_IN_counter;
 extern LiveSequencer liveSeq;
 extern config_t configuration;
 extern sequencer_t seq;
-extern int temp_int;
 
 extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleAfterTouch(byte inChannel, byte inPressure);
@@ -93,18 +120,18 @@ void midiSendRealtime(midi::MidiType event) {
 
 void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
   switch(device) {
+#ifdef MIDI_DEVICE_USB_HOST
   case 1:
-  #ifdef MIDI_DEVICE_USB_HOST
     midi_usb.sendNoteOn(note, velocity, channel);
-  #endif
     break;
-  
+#endif
+
+#ifdef MIDI_DEVICE_DIN
   case 2:
-  #ifdef MIDI_DEVICE_DIN
     midi_serial.sendNoteOn(note, velocity, channel);
-  #endif
     break;
-  
+#endif
+
   case 3:
     usbMIDI.sendNoteOn(note, velocity, channel);
     break;
@@ -113,17 +140,17 @@ void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device)
 
 void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
   switch(device) {
-  case 1:
 #ifdef MIDI_DEVICE_USB_HOST
+  case 1:
     midi_usb.sendNoteOff(note, velocity, channel);
-#endif
     break;
+#endif
 
-  case 2:
 #ifdef MIDI_DEVICE_DIN
+  case 2:
     midi_serial.sendNoteOff(note, velocity, channel);
-#endif
     break;
+#endif
 
   case 3:
     usbMIDI.sendNoteOff(note, velocity, channel);
@@ -141,9 +168,6 @@ extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
 #endif
-
-#define COUNT_JOYSTICKS 1
-JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
