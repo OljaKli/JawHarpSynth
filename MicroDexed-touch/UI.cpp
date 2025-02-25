@@ -48,6 +48,7 @@
 #include "scope.h"
 #include "psramloader.h"
 #include "playarrayresmp.h"
+#include "microsynth.h"
 
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
@@ -280,7 +281,6 @@ extern void psram_test();
 extern uint8_t remote_MIDI_CC;
 extern uint8_t remote_MIDI_CC_value;
 void draw_euclidean_circle();
-extern void microsynth_update_single_setting(uint8_t microsynth_selected_instance);
 extern void update_step_rec_buttons();
 extern void update_latch_button();
 

@@ -942,7 +942,6 @@ uint8_t incomingSerialByte;
 int8_t midi_decay_dexed[NUM_DEXED] = { -1, -1 };
 int8_t midi_decay_microsynth[NUM_MICROSYNTH];
 elapsedMillis midi_decay_timer_microsynth;
-extern void update_microsynth_params(void);
 elapsedMillis microsynth_control_rate;
 elapsedMillis midi_decay_timer_dexed;
 

@@ -18,10 +18,7 @@ extern AudioMixer<2> microsynth_mixer_l[NUM_MICROSYNTH];
 extern AudioMixer<4> microsynth_mixer_filter_osc[NUM_MICROSYNTH];
 extern AudioMixer<4> microsynth_mixer_filter_noise[NUM_MICROSYNTH];
 extern AudioMixer<2> microsynth_mixer_reverb;
-extern AudioAnalyzePeak microsynth_peak_osc_0;
-extern AudioAnalyzePeak microsynth_peak_osc_1;
-extern AudioAnalyzePeak microsynth_peak_noise_0;
-extern AudioAnalyzePeak microsynth_peak_noise_1;
+
 extern microsynth_t microsynth[NUM_MICROSYNTH];
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2*NUM_DRUMS+2>* global_delay_in_mixer[2];
