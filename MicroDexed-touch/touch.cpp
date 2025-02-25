@@ -1,4 +1,3 @@
-#include "config.h"
 #include "touch.h"
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
@@ -14,7 +13,6 @@ extern ILI9341_t3n display;
 extern config_t configuration;
 extern uint8_t selected_instance_id;
 extern void print_voice_settings_in_dexed_voice_select(bool text, bool values);
-extern void print_voice_settings_in_pattern_editor(int x, int y);
 extern void print_voice_select_fav_search_button();
 extern void reset_live_modifiers();
 extern LCDMenuLib2 LCDML;
@@ -52,13 +50,7 @@ extern bool mb_solo_mid;
 extern bool mb_solo_upper_mid;
 extern bool mb_solo_high;
 extern Realtime_Scope scope;
-extern AudioAnalyzePeak mb_before_l;
-extern AudioAnalyzePeak mb_before_r;
-extern AudioAnalyzePeak mb_after_l;
-extern AudioAnalyzePeak mb_after_r;
 extern void draw_volmeter(int x, int y, uint8_t arr, float value);
-extern AudioMixer<4> mb_mixer_l;
-extern AudioMixer<4> mb_mixer_r;
 extern bool multiband_active;
 extern uint8_t generic_active_function;
 extern uint8_t generic_temp_select_menu;
@@ -66,9 +58,6 @@ extern void mb_set_mutes();
 extern void mb_set_master();
 extern void mb_set_compressor();
 extern uint8_t last_menu_depth;
-extern uint8_t drum_midi_channel;
-
-
 
 dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release
 extern int temp_int;

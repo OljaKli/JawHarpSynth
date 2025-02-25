@@ -412,6 +412,8 @@ public:
 };
 
 void boot_animation();
-
+void InitializeCube();
+void cube_screensaver();
+void qix_screensaver();
 
 

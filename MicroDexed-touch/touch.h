@@ -1,6 +1,8 @@
 #ifndef _TOUCH_H
 #define _TOUCH_H
 
+#include "config.h"
+
 #if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 extern XPT2046_Touchscreen touch;

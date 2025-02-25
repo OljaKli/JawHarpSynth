@@ -212,10 +212,6 @@ extern AudioAnalyzePeak mb_before_r;
 extern AudioAnalyzePeak mb_after_l;
 extern AudioAnalyzePeak mb_after_r;
 
-extern void InitializeCube();
-extern void cube_screensaver();
-extern void qix_screensaver();
-
 #define _LCDML_DISP_cols display_cols
 #define _LCDML_DISP_rows display_rows
 
@@ -638,8 +634,6 @@ LCDML_add(61, LCDML_0, 17, "Info", UI_func_information);
 LCDML_addAdvanced(62, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(63, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(64, LCDML_0, 20, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-
-
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 64, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
