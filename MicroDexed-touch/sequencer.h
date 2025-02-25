@@ -337,4 +337,6 @@ typedef struct sequencer_s
 
 } sequencer_t;
 
+void sequencer(void);
+
 #endif

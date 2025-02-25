@@ -53,7 +53,9 @@
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
 #include "virtualkeyboard.h"
-
+#include <synth_braids.h>
+#include "braids.h"
+#include "synth_mda_epiano.h"
 #include "midi_devices.h"
 #include "effect_dynamics.h"
 #include "TeensyTimerTool.h"
@@ -69,19 +71,12 @@ extern bool apc_scroll_message;
 #endif
 
 extern LiveSequencer liveSeq;
-
 extern Realtime_Scope scope;
 extern qix_s qix;
 extern bool touch_ic_found;
-
-#include "synth_mda_epiano.h"
 extern AudioSynthEPiano ep;
 extern JoystickController joysticks[];
-
-#include <synth_braids.h>
-#include "braids.h"
 extern AudioSynthBraids* synthBraids[NUM_BRAIDS];
-
 extern bool remote_active;
 extern bool back_button_touch_page_check_and_init_done;
 extern void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level);
@@ -90,18 +85,18 @@ extern void handleStop(void);
 extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
+// sidechains
+extern uint8_t sidechain_sample_number;
+extern int sidechain_speed;
+extern bool sidechain_active;
+extern uint8_t sidechain_steps;
+
 struct DxPoolSettings {
   uint8_t pool;
   uint8_t bank;
   uint8_t voice;
   uint8_t transpose;
 };
-
-// sidechains
-extern uint8_t sidechain_sample_number;
-extern int sidechain_speed;
-extern bool sidechain_active;
-extern uint8_t sidechain_steps;
 
 File frec;
 elapsedMillis gamepad_millis;
@@ -111,16 +106,12 @@ uint8_t gamepad_last_dir;
 
 uint8_t GAMEPAD_UP_0 = 127;
 uint8_t GAMEPAD_UP_1 = 0;
-
 uint8_t GAMEPAD_DOWN_0 = 127;
 uint8_t GAMEPAD_DOWN_1 = 255;
-
 uint8_t GAMEPAD_RIGHT_0 = 255;
 uint8_t GAMEPAD_RIGHT_1 = 127;
-
 uint8_t GAMEPAD_LEFT_0 = 0;
 uint8_t GAMEPAD_LEFT_1 = 127;
-
 uint32_t GAMEPAD_SELECT = 256;
 uint32_t GAMEPAD_START = 512;
 uint32_t GAMEPAD_BUTTON_A = 2;
@@ -229,7 +220,6 @@ XPT2046_Touchscreen touch(TFT_TOUCH_CS);
 Adafruit_FT6206 touch = Adafruit_FT6206();
 #endif
 
-extern void sequencer(void);
 extern SdVolume volume;
 elapsedMillis record_timer;
 uint16_t record_x_pos;

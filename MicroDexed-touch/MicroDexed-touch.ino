@@ -958,7 +958,6 @@ uint8_t drum_counter;
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
-extern void sequencer(void);
 extern uint8_t seq_prev_note[NUM_SEQ_TRACKS];
 extern void print_arp_start_stop_button(void);
 PeriodicTimer sequencer_timer;

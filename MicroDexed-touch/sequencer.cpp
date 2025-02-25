@@ -27,12 +27,10 @@
 #include <LCDMenuLib2.h>
 #include "synth_dexed.h"
 #include "ILI9341_t3n.h"
-#include "UI.h"
 
 extern ILI9341_t3n display;
 extern LCDMenuLib2 LCDML;
 extern bool remote_active;
-
 extern config_t configuration;
 extern uint8_t drum_midi_channel;
 extern uint8_t slices_midi_channel;
@@ -41,37 +39,22 @@ extern uint8_t get_sample_note(uint8_t sample);
 extern void handleNoteOn(byte, byte, byte, byte);
 extern void handleNoteOff(byte, byte, byte, byte);
 extern const char* seq_find_shortname(uint8_t);
-extern const char* seq_find_shortname_in_track(uint8_t sstep, uint8_t track);
 extern void set_sample_pitch(uint8_t, float); // float32_t not working
 extern float get_sample_vol_max(uint8_t);
 extern float get_sample_p_offset(uint8_t);
 extern void helptext_l(const char* str);
 extern void helptext_r(const char* str);
 extern AudioSynthDexed* MicroDexed[NUM_DEXED];
-extern AudioSynthWaveform microsynth_waveform[NUM_MICROSYNTH];
-extern AudioEffectEnvelope microsynth_envelope_osc[NUM_MICROSYNTH];
-extern AudioSynthNoisePink microsynth_noise[NUM_MICROSYNTH];
-extern AudioEffectEnvelope microsynth_envelope_noise[NUM_MICROSYNTH];
-extern AudioFilterStateVariable microsynth_filter_osc[NUM_MICROSYNTH];
-extern AudioFilterStateVariable microsynth_filter_noise[NUM_MICROSYNTH];
-extern elapsedMillis microsynth_delay_timer[2];
-
 extern uint8_t find_first_song_step_with_pattern(uint8_t pattern);
 extern uint8_t find_first_chain_step_with_pattern(uint8_t pattern);
-sequencer_t seq;
-
-
 extern microsynth_t microsynth[2];
 extern braids_t braids_osc;
-extern uint16_t braids_filter_state[NUM_BRAIDS];
-extern boolean braids_lfo_direction[NUM_BRAIDS];
-extern AudioEffectEnvelope* braids_envelope[NUM_BRAIDS];
-extern AudioFilterBiquad* braids_filter[NUM_BRAIDS];
-extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 extern multisample_s msp[NUM_MULTISAMPLES];
 
 #include "livesequencer.h"
 extern LiveSequencer liveSeq;
+
+sequencer_t seq;
 
 void seq_live_recording(void)
 {
