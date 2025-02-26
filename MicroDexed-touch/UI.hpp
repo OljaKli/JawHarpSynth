@@ -622,8 +622,8 @@ LCDML_add(41, LCDML_0_14, 3, "Name Perf.", UI_func_set_performance_name);
 LCDML_add(42, LCDML_0_14, 4, "Name Multisample", UI_func_set_multisample_name);
 LCDML_add(43, LCDML_0_14, 5, "MIDI", NULL);
 LCDML_add(44, LCDML_0_14_5, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(45, LCDML_0_14_5, 2, "MIDI Snd Bank", UI_func_sysex_send_bank);
-LCDML_add(46, LCDML_0_14_5, 3, "MIDI Snd Voice", UI_func_sysex_send_voice);
+LCDML_add(45, LCDML_0_14_5, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
+LCDML_add(46, LCDML_0_14_5, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
 LCDML_add(47, LCDML_0, 15, "File Manager", UI_func_file_manager);
 LCDML_add(48, LCDML_0, 16, "System", NULL);
 LCDML_add(49, LCDML_0_16, 1, "Stereo/Mono", UI_func_stereo_mono);
@@ -20250,6 +20250,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
   static uint8_t pool_number;
   static uint8_t bank_number;
   static uint8_t voice_number;
+  static uint8_t sysex_send_channel;
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
@@ -20262,6 +20263,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
     pool_number = configuration.dexed[selected_instance_id].pool;
     bank_number = configuration.dexed[selected_instance_id].bank;
     voice_number = configuration.dexed[selected_instance_id].voice;
+    sysex_send_channel = 0;
 
     strcpy(tmp_bank_name, g_bank_name[selected_instance_id]);
     strcpy(tmp_voice_name, g_voice_name[selected_instance_id]);
@@ -20307,6 +20309,22 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         show(2, 1, 2, voice_number + 1);
         show(2, 5, 10, tmp_voice_name);
         break;
+      case 2: // Channel selection
+        if (LCDML.BT_checkDown() && sysex_send_channel < 16)
+          sysex_send_channel = constrain(sysex_send_channel + 1, 0, 16);
+        else if (LCDML.BT_checkUp() && sysex_send_channel > 0)
+          sysex_send_channel = constrain(sysex_send_channel - 1, 0, 16);
+
+        show(2, 1, 16, "Channel");
+        if (sysex_send_channel == MIDI_CHANNEL_OMNI)
+           {
+             show(2, 12, 4, "OMNI");
+           }
+           else
+           {
+             show(2, 12, 2, sysex_send_channel);
+           }
+        break;
       }
     }
     else if (LCDML.BT_checkEnter())
@@ -20323,6 +20341,20 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         break;
       case 2:
+        show(2, 1, 16, "Channel");
+        if (sysex_send_channel == MIDI_CHANNEL_OMNI)
+           {
+             show(2, 12, 4, "OMNI");
+           }
+           else
+           {
+             show(2, 12, 2, sysex_send_channel);
+           }
+        helptext_r("< > SELECT CHANNEL");
+        display.setTextSize(2);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        break;
+      case 3:
         if (strcmp("*ERROR*", tmp_bank_name) != 0)
         {
           char filename[FILENAME_LEN + 10];
@@ -20338,7 +20370,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
           if (!sysex)
           {
 #ifdef DEBUG
-            LOG.println(F("Connot read from SD."));
+            LOG.println(F("Cannot read from SD."));
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
@@ -20354,16 +20386,16 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
             MicroDexed[selected_instance_id]->decodeVoice(voice_data, encoded_voice_data);
 
             show(2, 1, 16, "Sending Ch");
-            if (configuration.dexed[selected_instance_id].midi_channel == MIDI_CHANNEL_OMNI)
+            if (sysex_send_channel == MIDI_CHANNEL_OMNI)
             {
-              show(2, 12, 2, "01");
-              send_sysex_voice(1, voice_data);
-            }
-            else
-            {
-              show(2, 12, 2, configuration.dexed[selected_instance_id].midi_channel);
-              send_sysex_voice(configuration.dexed[selected_instance_id].midi_channel, voice_data);
-            }
+               show(2, 12, 4, "OMNI");
+             }
+             else
+             {
+               show(2, 12, 2, sysex_send_channel);
+             }
+            send_sysex_voice(sysex_send_channel, voice_data);
+            
             delay(MESSAGE_WAIT_TIME);
             show(2, 1, 16, "Done.");
             sysex.close();
