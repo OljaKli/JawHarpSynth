@@ -230,18 +230,8 @@ extern float midi_volume_transform(uint8_t midi_amp);
 extern float volume_transform(float amp);
 extern uint8_t selected_instance_id;
 extern char receive_bank_filename[FILENAME_LEN];
-extern void print_current_chord(void);
-extern void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
 //extern void print_merged_pattern_pianoroll(int xpos, int ypos, uint8_t track_number);
 extern void update_pianoroll();
-extern void set_pattern_content_type_color(uint8_t pattern);
-extern void print_formatted_number(uint16_t v, uint8_t l);
-extern void print_formatted_number_trailing_space(uint16_t v, uint8_t l);
-extern void print_formatted_number_signed(int v, uint8_t l);
-extern void seq_print_current_note_from_step(uint8_t s);
-extern void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw);
-extern void print_chord_name(uint8_t currentstep);
-extern void print_file_manager_buttons(void);
 extern void print_file_manager_active_border(void);
 extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
@@ -401,6 +391,8 @@ void UI_func_clear_patterns(uint8_t param);
 void UI_func_clear_all(uint8_t param);
 void UI_func_stereo_mono(uint8_t param);
 void UI_handle_OP(uint8_t param);
+
+void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
 
 /***********************************************************************
    GLOBAL

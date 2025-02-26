@@ -91,6 +91,8 @@ uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 void helptext_r(const char* str);
 
 void draw_loop_buttons();
+void print_file_manager_buttons();
+void print_current_chord();
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();

@@ -38,9 +38,6 @@
 #include <SD.h>
 extern Sd2Card card;
 
-void print_formatted_number(uint16_t number, uint8_t length);
-void set_pattern_content_type_color(uint8_t pattern);
-
 extern const char noteNames[12][3];
 
 static const float tune_frequencies2_PGM[128] = {
@@ -338,5 +335,12 @@ typedef struct sequencer_s
 } sequencer_t;
 
 void sequencer(void);
+void print_formatted_number(uint16_t number, uint8_t length);
+void print_formatted_number_trailing_space(uint16_t number, uint8_t length);
+void print_formatted_number_signed(int number, uint8_t length);
+void seq_print_current_note_from_step(uint8_t step);
+void set_pattern_content_type_color(uint8_t pattern);
+void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw);
+void print_chord_name(uint8_t currentstep);
 
 #endif
