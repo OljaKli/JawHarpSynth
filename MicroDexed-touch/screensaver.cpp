@@ -2,6 +2,7 @@
 #include "screensaver.h"
 #include "UI.h"
 #include "ILI9341_t3n.h"
+#include "midi_devices.h"
 
 extern ILI9341_t3n display;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
@@ -386,8 +387,6 @@ float PerlinNoise2(float x, float y, float persistance, int octaves)
   }
   return(total);
 }
-
-extern void check_midi_devices();
 
 FLASHMEM void terrain_project(float ax, float ay, float az, float* bx, float* by)
 {
