@@ -50,9 +50,6 @@ KeyboardController keyboard1(usb_host);
 USBHub hub1(usb_host);
 USBHIDParser hid1(usb_host);
 
-#define COUNT_JOYSTICKS 1
-JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
-
 USBDriver* drivers[] = { &hub1, &joysticks[0], &joysticks[1], &joysticks[2], &joysticks[3], &hid1 };
 #define CNT_DEVICES (sizeof(drivers) / sizeof(drivers[0]))
 
@@ -65,6 +62,9 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
+
+#define COUNT_JOYSTICKS 1
+JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
 
 /* #ifdef MIDI_DEVICE_USB
   static const unsigned sUsbTransportBufferSize = 16;
