@@ -2,7 +2,6 @@
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
 #include "ILI9341_t3n.h"
-#include "scope.h"
 #include <Audio.h>
 #include "template_mixer.hpp"
 #include "UI.h"
@@ -39,18 +38,11 @@ extern bool legacy_touch_button_back_page();
 extern bool touch_button_back_page();
 
 extern uint8_t activeSample;
-extern microsynth_t microsynth[NUM_MICROSYNTH];
-
-extern braids_t braids_osc;
 extern bool generic_full_draw_required;
-
-extern void mb_set_mutes();
 extern bool mb_solo_low;
 extern bool mb_solo_mid;
 extern bool mb_solo_upper_mid;
 extern bool mb_solo_high;
-extern Realtime_Scope scope;
-extern void draw_volmeter(int x, int y, uint8_t arr, float value);
 extern bool multiband_active;
 extern uint8_t generic_active_function;
 extern uint8_t generic_temp_select_menu;

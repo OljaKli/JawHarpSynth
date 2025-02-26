@@ -72,7 +72,6 @@ extern bool apc_scroll_message;
 
 extern LiveSequencer liveSeq;
 extern Realtime_Scope scope;
-extern qix_s qix;
 extern bool touch_ic_found;
 extern AudioSynthEPiano ep;
 extern JoystickController joysticks[];

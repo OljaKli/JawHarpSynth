@@ -41,6 +41,9 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroD
 #ifdef MIDI_DEVICE_USB_HOST
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
+
+#define COUNT_JOYSTICKS 1
+JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
 #endif
 
 #ifdef USB_KEYPAD
@@ -63,8 +66,7 @@ bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
 
-#define COUNT_JOYSTICKS 1
-JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
+
 
 /* #ifdef MIDI_DEVICE_USB
   static const unsigned sUsbTransportBufferSize = 16;
