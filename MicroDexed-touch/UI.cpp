@@ -250,7 +250,6 @@ extern uint8_t get_song_length(void);
 extern void helptext_l(const char* str);
 extern void helptext_r(const char* str);
 extern void draw_back_touchbutton();
-extern void seq_pattern_editor_update_dynamic_elements();
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2> microsynth_mixer_reverb;
 extern uint8_t find_longest_chain();
@@ -513,7 +512,6 @@ void display_bar_float(const char* title, float value, float factor, int32_t min
 void display_meter_int(const char* title, uint32_t value, float factor, float offset, int32_t min_value, int32_t max_value, uint8_t size, bool zeros, bool sign, bool init);
 void display_meter_float(const char* title, float value, float factor, float offset, int32_t min_value, int32_t max_value, uint8_t size_number, uint8_t size_fraction, bool zeros, bool sign, bool init);
 void string_trim(char* s);
-void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instance_id);
@@ -531,12 +529,10 @@ void _setup_rotation_and_encoders(bool init);
 void sd_go_parent_folder();
 void sd_update_display();
 void sd_card_count_files_from_directory(const char* path);
-void print_voice_select_default_help();
 char* basename(const char* filename);
 bool load_performance_and_check_midi(uint8_t perf);
 void clear_volmeter(int x, int y);
-void draw_volmeters_mixer();
-void draw_volmeters_multiband_compressor();
+
 
 uint8_t x_pos_menu_header_layer[8];
 uint8_t last_menu_depth = 99;
@@ -18438,7 +18434,7 @@ FLASHMEM void UI_func_smart_filter(uint8_t param)
 
 uint8_t dexed_onscreen_algo = 0;
 
-FLASHMEM void  print_voice_select_fav_search_button()
+FLASHMEM void print_voice_select_fav_search_button()
 {
   switch (configuration.sys.favorites)
   {

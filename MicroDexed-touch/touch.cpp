@@ -11,31 +11,11 @@
 extern ILI9341_t3n display;
 extern config_t configuration;
 extern uint8_t selected_instance_id;
-extern void print_voice_settings_in_dexed_voice_select(bool text, bool values);
-extern void print_voice_select_fav_search_button();
-extern void reset_live_modifiers();
 extern LCDMenuLib2 LCDML;
-extern void pattern_editor_menu_0();
-extern void sub_touchscreen_test_page_init();
 extern bool remote_touched;
 extern sequencer_t seq;
-extern void border3_large_clear();
-extern void border3_large();
-extern void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
-extern void seq_pattern_editor_update_dynamic_elements();
-extern void microsynth_refresh_lower_screen_static_text();
-extern void microsynth_refresh_lower_screen_dynamic_text();
-extern void print_perfmod_buttons();
-extern void print_perfmod_lables();
-extern void print_empty_spaces(uint8_t spaces, bool clear_background);
-extern void print_voice_select_default_help();
 extern void handleStop(void);
 extern void handleStart(void);
-extern void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
-extern void draw_volmeters_mixer();
-extern void draw_volmeters_multiband_compressor();
-extern bool legacy_touch_button_back_page();
-extern bool touch_button_back_page();
 
 extern uint8_t activeSample;
 extern bool generic_full_draw_required;
@@ -46,9 +26,6 @@ extern bool mb_solo_high;
 extern bool multiband_active;
 extern uint8_t generic_active_function;
 extern uint8_t generic_temp_select_menu;
-extern void mb_set_mutes();
-extern void mb_set_master();
-extern void mb_set_compressor();
 extern uint8_t last_menu_depth;
 
 dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release

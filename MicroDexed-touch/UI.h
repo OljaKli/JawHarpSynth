@@ -128,6 +128,23 @@ void clear_song_playhead();
 void sub_song_print_tracknumbers();
 bool load_performance_and_check_midi(uint8_t perf);
 void setup_screensaver(void);
+void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, bool fullrefresh_values);
+void print_voice_select_fav_search_button();
+void reset_live_modifiers();
+void pattern_editor_menu_0();
+void sub_touchscreen_test_page_init();
+void border3_large();
+void border3_large_clear();
+void seq_pattern_editor_update_dynamic_elements();
+void microsynth_refresh_lower_screen_static_text();
+void microsynth_refresh_lower_screen_dynamic_text();
+void print_perfmod_buttons();
+void print_perfmod_lables();
+void print_empty_spaces(uint8_t spaces, bool clear_background);
+void print_voice_select_default_help();
+void draw_volmeters_mixer();
+void draw_volmeters_multiband_compressor();
+void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 
 #define MAX_CC_DEST 15
 PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
