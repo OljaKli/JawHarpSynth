@@ -19413,11 +19413,11 @@ void dexed_setter(Editor* param, int16_t value)
 // allow switching the currently edited operator.
 int16_t dexed_op_getter(Editor* param)
 {
-  return current_voice_op;
+  return current_voice_op + 1;
 };
 void dexed_op_setter(Editor* param, int16_t value)
 {
-  current_voice_op = value;
+  current_voice_op = value - 1;
   ui.draw_editors(true); // as half of the editors have changed when a different operator is selected.
 };
 
@@ -19455,7 +19455,7 @@ FLASHMEM void UI_func_voice_editor(uint8_t param)
 
     // operator parameter set selector
     ui.setCursor(27, 3);
-    ui.addEditor((const char*)F("EDIT OPERATOR"), 0, 5, dexed_op_getter, dexed_op_setter);
+    ui.addEditor((const char*)F("EDIT OPERATOR"), 1, 6, dexed_op_getter, dexed_op_setter);
     ui.enableLeftEncoderEditor(); // also select operator by left encoder
 
     setCursor_textGrid_small(29, 4);
