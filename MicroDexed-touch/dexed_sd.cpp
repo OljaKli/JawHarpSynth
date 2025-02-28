@@ -4289,8 +4289,8 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        // StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-        DynamicJsonDocument data_json(JSON_BUFFER_SIZE);
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        //JsonDocument data_json(JSON_BUFFER_SIZE);
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
