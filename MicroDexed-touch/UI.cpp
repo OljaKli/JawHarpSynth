@@ -67,6 +67,7 @@ using namespace TeensyTimerTool;
 
 #if defined APC
 #include "apc.h"
+extern uint8_t APC_MODE;
 extern bool apc_scroll_message;
 #endif
 
@@ -1425,12 +1426,6 @@ FLASHMEM void fill_up_with_spaces_left_window_filemanager()
 #if defined APC
 extern void apc_mute_matrix();
 extern void check_and_clear_row3();
-
-void apc(uint8_t a, uint8_t b, uint8_t c)
-{
-  midi_usb.sendNoteOn(a, b, c);
-}
-
 #endif
 
 FLASHMEM bool legacy_touch_button_back_page() //legacy, 2 line text pages with touch back button
@@ -6993,27 +6988,27 @@ void seq_printAllSeqSteps()
           if (i < 8)
           {
             if (seq.vel[seq.active_pattern][i] < 210) //normal sample
-              midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+              apc(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
             else
-              midi_usb.sendNoteOn(64 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6);//pitched sample
+              apc(64 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6);//pitched sample
           }
           else
           {
             if (seq.vel[seq.active_pattern][i] < 210) //normal sample
-              midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+              apc(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
             else
-              midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6); //pitched sample
+              apc(64 - 16 - 8 + i, seq.vel[seq.active_pattern][i] - 64, 6); //pitched sample
           }
         }
         else  //instrument track
         {
           if (i < 8)
           {
-            midi_usb.sendNoteOn(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+            apc(64 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
           }
           else
           {
-            midi_usb.sendNoteOn(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+            apc(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
           }
         }
       }
@@ -21739,6 +21734,10 @@ FLASHMEM void UI_func_test_mute(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
   }
 }
+
+#if !defined PSRAM  //PSRAM TEST can only run when a non-psram firmware is loaded
+extern void psram_test();
+#endif
 
 FLASHMEM void UI_func_test_psram(uint8_t param)
 {

@@ -393,6 +393,14 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define BI_BUTTON_B 17
 #endif
 
+#ifdef MUSIKANDMORE
+#define MCP_INTA 8
+#define CV_IN 15
+#define CV_CLOCK_IN 22
+#define CV_GATE_IN 23
+#define GEN3_CS_SDCARD_EXTERNAL 35
+#endif 
+
 #define CONTROL_RATE_MS 50
 #define MICROSYNTH_CONTROL_RATE_MS 30
 #define BRAIDS_CONTROL_RATE_MS 30

@@ -41,7 +41,6 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroD
 #ifdef MIDI_DEVICE_USB_HOST
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
-
 #define COUNT_JOYSTICKS 1
 JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
 #endif
@@ -120,6 +119,9 @@ void midiSendRealtime(midi::MidiType event) {
 #endif
 }
 
+
+
+
 void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
   switch(device) {
 #ifdef MIDI_DEVICE_USB_HOST
@@ -164,6 +166,18 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
 extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
+extern void apc_print_right_buttons();
+extern void apc_NoteOn(byte inChannel, byte inData1, byte inData2);
+extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
+extern uint8_t APC_MODE;
+extern void print_apc_source_selection_pads();
+extern void apc_fader_control(uint8_t in1, uint8_t in2);
+
+void apc(uint8_t a, uint8_t b, uint8_t c)
+{
+  midi_usb.sendNoteOn(a, b, c);
+}
+
 #endif
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)

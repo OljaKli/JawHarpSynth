@@ -87,6 +87,7 @@ using namespace TeensyTimerTool;
 #endif
 
 #if defined APC
+#include "APC.h"
 bool APC_BUTTONS_RIGHT[8];
 uint8_t APC_SAMPLE_SCROLL_OFFSET = 64;
 uint8_t APC_TONAL_SCROLL_OFFSET = 64;
@@ -765,7 +766,7 @@ FLASHMEM void create_audio_braids_chain(uint8_t instance_id)
 
   if (instance_id == 0)
   {
-    
+
     dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 0));
     dynamicConnections.emplace_back(new AudioConnection(braids_mixer, 0, braids_stereo_panorama, 1));
 
@@ -977,6 +978,15 @@ FLASHMEM void setup()
 #ifdef MIDI_ACTIVITY_LIGHTS
   pinMode(LED_MIDI_IN, OUTPUT);
   pinMode(LED_MIDI_OUT, OUTPUT);
+#endif
+
+#ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
+  pinMode(MCP_INTA, INPUT_PULLUP);
+  pinMode(CV_IN, INPUT_PULLUP);
+  pinMode(CV_CLOCK_IN, INPUT_PULLUP);
+  pinMode(CV_GATE_IN, INPUT_PULLUP);
+  pinMode(GEN3_CS_SDCARD_EXTERNAL, OUTPUT);
+  digitalWrite(GEN3_CS_SDCARD_EXTERNAL, HIGH);
 #endif
 
 #ifdef DEBUG
@@ -1337,7 +1347,7 @@ FLASHMEM void setup()
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
     {
       // load default SYSEX data
-       load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
+      load_sd_voice(configuration.dexed[instance_id].pool, configuration.dexed[instance_id].bank, configuration.dexed[instance_id].voice, instance_id);
 
       memset(g_voice_name[instance_id], 0, VOICE_NAME_LEN);
       memset(g_bank_name[instance_id], 0, BANK_NAME_LEN);
@@ -2695,7 +2705,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
     midiNoteOn(inNumber, inVelocity, inChannel, device);
 
 #ifdef MIDI_ACTIVITY_LIGHTS
-      LED_MIDI_OUT_counter = 1;
+    LED_MIDI_OUT_counter = 1;
 #endif
 
     if (device == 0) {

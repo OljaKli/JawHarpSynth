@@ -29,6 +29,7 @@ extern void  _seq_pattern_change();
 extern void  print_content_type();
 extern void virtual_keyboard_smart_preselect_mode();
 extern void _velocity_editor_change_pattern();
+extern void update_latch_button();
 extern void handleStart();
 extern void handleStop();
 extern LCDMenuLib2 LCDML;
