@@ -161,11 +161,6 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
 }
 
 #if defined APC
-extern void print_apc_source_selection_pads();
-extern void apc_print_right_buttons();
-extern void apc_fader_control(uint8_t inData1, uint8_t inData2);
-extern void apc_print_volume_pads();
-extern uint8_t apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;

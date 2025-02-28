@@ -94,7 +94,6 @@ uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
 
-
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 short braids_r_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
