@@ -1,6 +1,8 @@
 #ifndef _TOUCH_H
 #define _TOUCH_H
 
+#include "config.h"
+
 #if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 extern XPT2046_Touchscreen touch;
@@ -10,8 +12,6 @@ extern XPT2046_Touchscreen touch;
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;
 #endif
-
-#include <SD.h>
 
 typedef struct dexed_live_mod_s
 {
@@ -87,7 +87,15 @@ void registerTouchHandler(TouchFn touchFn);
 void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
+uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+void helptext_r(const char* str);
 
+void update_latch_button();
+void draw_back_touchbutton();
+void draw_loop_buttons();
+void print_file_manager_buttons();
+void print_current_chord();
+void handle_page_with_touch_back_button();
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();
@@ -101,12 +109,9 @@ void handle_touchscreen_menu();
 void handle_touchscreen_test_touchscreen();
 void handle_touchscreen_sample_editor();
 void handle_touchscreen_settings_button_test();
-void handle_touchscreen_liveseq_pianoroll();
-void handle_touchscreen_liveseq_listeditor();
 void handle_touchscreen_file_manager();
 void handle_touchscreen_mute_matrix();
 void handle_touchscreen_custom_mappings();
 void handle_touchscreen_drums();
-//void handle_touchscreen_drums();
 
 #endif

@@ -27,7 +27,6 @@ extern void pattern_editor_play_current_step(uint8_t step);
 extern void insert_pattern_step(uint8_t step);
 extern void  _seq_pattern_change();
 extern void  print_content_type();
-extern void update_latch_button();
 extern void virtual_keyboard_smart_preselect_mode();
 extern void _velocity_editor_change_pattern();
 extern void handleStart();

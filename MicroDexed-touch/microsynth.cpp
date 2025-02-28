@@ -18,20 +18,25 @@ extern AudioMixer<2> microsynth_mixer_l[NUM_MICROSYNTH];
 extern AudioMixer<4> microsynth_mixer_filter_osc[NUM_MICROSYNTH];
 extern AudioMixer<4> microsynth_mixer_filter_noise[NUM_MICROSYNTH];
 extern AudioMixer<2> microsynth_mixer_reverb;
-extern AudioAnalyzePeak microsynth_peak_osc_0;
-extern AudioAnalyzePeak microsynth_peak_osc_1;
-extern AudioAnalyzePeak microsynth_peak_noise_0;
-extern AudioAnalyzePeak microsynth_peak_noise_1;
+
 extern microsynth_t microsynth[NUM_MICROSYNTH];
 extern uint8_t microsynth_selected_instance;
-extern short wave_type[9];
 extern AudioMixer<2*NUM_DRUMS+2>* global_delay_in_mixer[2];
 extern uint8_t generic_temp_select_menu;
 
 extern float volume_transform(float amp);
 
-#include "sequencer.h"
-extern sequencer_t seq;
+static constexpr short wave_type[9] = {
+  WAVEFORM_SINE,
+  WAVEFORM_TRIANGLE,
+  WAVEFORM_SAWTOOTH,
+  WAVEFORM_SQUARE,
+  WAVEFORM_PULSE,
+  WAVEFORM_BANDLIMIT_SAWTOOTH,
+  WAVEFORM_BANDLIMIT_SQUARE,
+  WAVEFORM_BANDLIMIT_PULSE,
+  WAVEFORM_SAMPLE_HOLD
+};
 
 FLASHMEM void microsynth_update_all_settings(uint8_t instance_id)
 {

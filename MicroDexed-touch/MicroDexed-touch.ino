@@ -30,12 +30,41 @@
 #include <MIDI.h>
 #include <SD.h>
 #include <SPI.h>
-#include "psramloader.h"
 #include "filemanager.h"
 
 #include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
 
 #include "ILI9341_t3n.h"
+#include <LCDMenuLib2.h>
+#include "screensaver.h"
+#include "UI.h"
+#include "touch.h"
+#include "USBHost_t36.h"
+#include "MD_REncoder.h"
+#include <TeensyTimerTool.h>
+using namespace TeensyTimerTool;
+
+#include "microsynth.h"
+#include "braids.h"
+
+#include "effect_dynamics.h"
+#include "midi_devices.h"
+#include "synth_dexed.h"
+#include "dexed_sd.h"
+#include "effect_modulated_delay.h"
+#include "effect_stereo_mono.h"
+#include "effect_mono_stereo.h"
+#include "effect_platervbstereo.h"
+#include "effect_gate.h"
+#include "template_mixer.hpp"
+#include "drums.h"
+#include "sequencer.h"
+#include "synth_mda_epiano.h"
+#include "effect_stereo_panorama.h"
+#include <synth_braids.h>
+
+#include "livesequencer.h"
+#include <vector>
 
 #if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
@@ -53,6 +82,10 @@
 #include <TeensyVariablePlayback.h>
 #endif
 
+#ifdef PSRAM
+#include "effect_delay_ext8.h"
+#endif
+
 #if defined APC
 bool APC_BUTTONS_RIGHT[8];
 uint8_t APC_SAMPLE_SCROLL_OFFSET = 64;
@@ -61,49 +94,12 @@ uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
 
-extern uint8_t external_psram_size;
-uint32_t psram_free_bytes = 0;
-PsramLoader sampleLoader(psram_free_bytes);
-
-#ifdef PSRAM
-#include "effect_delay_ext8.h"
-#endif
-
-#include <synth_braids.h>
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 short braids_r_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 int braids_flanger_idx = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 int braids_flanger_depth = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 double braids_flanger_freq = .5;
-
-#include <TeensyTimerTool.h>
-using namespace TeensyTimerTool;
-
-#include "microsynth.h"
-#include "braids.h"
-
-#include "effect_dynamics.h"
-
-#include "midi_devices.hpp"
-#include "synth_dexed.h"
-#include "dexed_sd.h"
-#include "effect_modulated_delay.h"
-#include "effect_stereo_mono.h"
-#include "effect_mono_stereo.h"
-#include "effect_platervbstereo.h"
-#include "effect_gate.h"
-#include "template_mixer.hpp"
-#include "UI.hpp"
-#include "drums.h"
-#include "synth_mda_epiano.h"
-#include "effect_stereo_panorama.h"
-
-#include "livesequencer.h"
-#include <vector>
-
-//#include "MidiReader.h"
-
 
 uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
@@ -127,14 +123,12 @@ bool back_button_touch_page_check_and_init_done = false;
 bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
-ILI9341_t3n display = ILI9341_t3n(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
-
 #if defined GENERIC_DISPLAY 
-XPT2046_Touchscreen touch(TFT_TOUCH_CS);
+extern XPT2046_Touchscreen touch;
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
-Adafruit_FT6206 touch = Adafruit_FT6206();
+extern Adafruit_FT6206 touch;
 #endif
 
 // Editor operations
@@ -187,7 +181,7 @@ uint16_t braids_filter_state[NUM_BRAIDS];
 uint16_t braids_filter_state_last_displayed[NUM_BRAIDS];
 extern uint16_t braids_filter_lfo_count[NUM_BRAIDS];
 extern bool braids_lfo_direction[NUM_BRAIDS];
-extern elapsedMillis braids_control_rate;
+elapsedMillis braids_control_rate;
 
 AudioSynthWaveform microsynth_waveform[NUM_MICROSYNTH];
 AudioSynthNoisePink microsynth_noise[NUM_MICROSYNTH];
@@ -248,7 +242,6 @@ AudioAnalyzePeak microdexed_peak_1;
 AudioAnalyzePeak microdexed_peak_2;
 AudioAnalyzePeak microdexed_peak_3;
 
-
 AudioMixer<10> reverb_mixer_r;
 AudioMixer<10> reverb_mixer_l;
 
@@ -270,12 +263,8 @@ AudioMixer<2> audio_thru_mixer_l;
 AudioMixer<3> finalized_mixer_r;
 AudioMixer<3> finalized_mixer_l;
 
-AudioSynthWaveformDc     dc1;
-
-
-#ifdef COMPILE_FOR_PSRAM
-AudioPlayArrayResmp WAV_preview_PSRAM;
-#endif
+AudioSynthWaveformDc dc1;
+microsynth_t microsynth[NUM_MICROSYNTH];
 
 // Drumset
 #if NUM_DRUMS > 0
@@ -306,14 +295,40 @@ AudioMixer<NUM_DRUMS> drum_reverb_send_mixer_l;
 AudioAnalyzePeak reverb_return_peak_r;
 AudioAnalyzePeak reverb_return_peak_l;
 
+LiveSequencer liveSeq;
 
-//SPDIF
-//AsyncAudioInputSPDIF3 spdif_in;
-//AudioInputSPDIF3 spdif_in;
+extern uint32_t gamepad_buttons_neutral;
+extern uint8_t gamepad_0_neutral;
+extern uint8_t gamepad_1_neutral;
 
-// Outputs
+#ifdef COMPILE_FOR_PSRAM
+#include "psramloader.h"
+extern PsramLoader sampleLoader;
+AudioPlayArrayResmp WAV_preview_PSRAM;
+#endif
 
-AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
+extern ILI9341_t3n display;
+extern MD_REncoder ENCODER[];
+extern MD_MIDIFile SMF;
+extern uint8_t activeSample;
+extern uint8_t generic_temp_select_menu;
+extern uint8_t generic_active_function;
+extern uint8_t generic_menu;
+extern bool generic_full_draw_required;
+extern uint8_t num_slices[2];
+extern uint8_t selected_slice_sample[2];
+extern uint32_t slice_start[2][16];
+extern uint32_t slice_end[2][16];
+extern uint16_t slices_scrollspeed;
+extern bool slices_autoalign;
+extern uint8_t external_psram_size;
+extern uint32_t psram_free_bytes;
+extern ts_t ts;
+extern fm_t fm;
+extern JoystickController joysticks[];
+extern bool remote_console_keystate_select;
+extern bool remote_console_keystate_a;
+extern bool remote_console_keystate_b;
 
 #if defined(TEENSY_AUDIO_BOARD)
 AudioOutputI2S i2s1;
@@ -330,10 +345,6 @@ AudioOutputAnalogStereo dacOut;
 AudioMixer<4> invMixer;
 #elif defined(TEENSY_DAC)
 AudioOutputAnalogStereo dacOut;
-#endif
-
-#ifdef AUDIO_DEVICE_USB
-AudioOutputUSB usb1;
 #endif
 
 #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
@@ -390,7 +401,6 @@ AudioAnalyzePeak mb_after_r;
 // WAV/AUDIO Recording
 AudioRecordQueue record_queue_l;
 AudioRecordQueue record_queue_r;
-File frec;
 
 //
 // Static patching of audio objects
@@ -580,14 +590,6 @@ const AudioConnection patchCord[] = {
                {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
                {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
 };
-
-#ifdef AUDIO_DEVICE_USB
-AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
-AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
-#endif
-
-AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
-AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 
 //
 // Dynamic patching of MicroDexed objects
@@ -869,7 +871,6 @@ FLASHMEM void create_audio_wav_preview_chain()
 uint8_t sd_card = 0;
 Sd2Card card;
 SdVolume volume;
-const float midi_ticks_factor[10] = { 0.0, 0.25, 0.375, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0 };
 uint8_t midi_bpm_counter = 0;
 uint8_t midi_bpm = 0;
 int16_t _midi_bpm = -1;
@@ -877,7 +878,6 @@ elapsedMillis midi_bpm_timer;
 elapsedMillis long_button_pressed;
 elapsedMillis control_rate;
 elapsedMillis save_sys;
-elapsedMillis record_timer;
 elapsedMillis touchReadTimer = 0;
 
 static constexpr int SCREENSAVER_RESET_RATE_MS = 500;
@@ -911,7 +911,6 @@ char receive_bank_filename[FILENAME_LEN];
 uint8_t selected_instance_id = 0;
 uint8_t microsynth_selected_instance = 0;
 bool ui_save_notification_icon;
-const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
 uint8_t remote_MIDI_CC = 0;
 uint8_t remote_MIDI_CC_value;
@@ -921,7 +920,6 @@ uint8_t incomingSerialByte;
 int8_t midi_decay_dexed[NUM_DEXED] = { -1, -1 };
 int8_t midi_decay_microsynth[NUM_MICROSYNTH];
 elapsedMillis midi_decay_timer_microsynth;
-extern void update_microsynth_params(void);
 elapsedMillis microsynth_control_rate;
 elapsedMillis midi_decay_timer_dexed;
 
@@ -938,9 +936,6 @@ uint8_t drum_counter;
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
-extern void sequencer(void);
-extern uint8_t seq_prev_note[NUM_SEQ_TRACKS];
-extern void print_arp_start_stop_button(void);
 PeriodicTimer sequencer_timer;
 
 multisample_s msp[NUM_MULTISAMPLES];
@@ -950,12 +945,7 @@ uint8_t msp_sample_slot_trigger_step[NUM_DRUMS];
 
 extern LCDMenuLib2 LCDML;
 
-extern void getNoteName(char* noteName, uint8_t noteNumber);
-extern void update_midi_learn_button(void);
 custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern void print_custom_mappings(void);
-extern void handle_page_with_touch_back_button();
-extern void sequencer_part2(void);
 
 bool touch_ic_found = false;
 
@@ -1217,11 +1207,8 @@ FLASHMEM void setup()
     //global_delay_in_mixer[0]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5);  //phtodo
     //global_delay_in_mixer[1]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5); 
 
-    
-
     SMF.begin(&(SdFat&)SD);
     SMF.setMidiHandler(midiCallback);
-
   }
 
   // Setup EPiano
@@ -2677,7 +2664,6 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
-
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
@@ -2706,40 +2692,13 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
       braids_osc.note_buffer[braids_slot] = inNumber;
     }
 
-#ifdef MIDI_DEVICE_USB_HOST
-    if (device == 1)
-      midi_usb.sendNoteOn(inNumber, inVelocity, inChannel);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-    if (device == 2)
-    {
-      midi_serial.sendNoteOn(inNumber, inVelocity, inChannel);
-      //    #ifdef DEBUG
-      //        LOG.print(F(" DIN OUT Channel:"));
-      //        LOG.print(inChannel);
-      //        LOG.println(F);
-      //        LOG.print(F(" DIN inNumber:"));
-      //        LOG.print(inNumber);
-      //        LOG.println();
-      //        LOG.print(F(" DIN inVelocity:"));
-      //        LOG.print(inVelocity);
-      //        LOG.println();
-      //    #endif
+    midiNoteOn(inNumber, inVelocity, inChannel, device);
 
 #ifdef MIDI_ACTIVITY_LIGHTS
       LED_MIDI_OUT_counter = 1;
 #endif
 
-    }
-#endif
-
-    if (device == 3) //internal Micro USB
-      usbMIDI.sendNoteOn(inNumber, inVelocity, inChannel);
-
-    if (device == 0)
-    {
-
+    if (device == 0) {
       // check custom midi UI KEY mapping
       if (seq.midi_learn_active == false)
       {
@@ -3221,7 +3180,6 @@ uint8_t drum_get_slot(uint8_t dt)
 
 void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
-
   // check custom midi UI KEY mapping
   if (seq.midi_learn_active == false)
   {
@@ -3287,17 +3245,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     }
   }
 
-#ifdef MIDI_DEVICE_USB_HOST
-  if (device == 1)
-    midi_usb.sendNoteOff(inNumber, inVelocity, inChannel);
-#endif
-#ifdef MIDI_DEVICE_DIN
-  if (device == 2)
-    midi_serial.sendNoteOff(inNumber, inVelocity, inChannel);
-#endif
-
-  if (device == 3) //internal Micro USB
-    usbMIDI.sendNoteOff(inNumber, inVelocity, inChannel);
+  midiNoteOff(inNumber, inVelocity, inChannel, device);
 
   if (device == 0)
   {
@@ -4127,19 +4075,7 @@ void handleTuneRequest(void)
 
 void send_midi_clock()
 {
-#ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendRealTime(midi::Clock);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-  midi_serial.sendRealTime(midi::Clock);
-#endif
-
-#ifdef MIDI_DEVICE_USB
-  usbMIDI.sendRealTime(midi::Clock);
-#endif
-
-
+  midiSendRealtime(midi::Clock);
 }
 
 void handleClock(void)
@@ -4207,8 +4143,6 @@ FLASHMEM void dac_unmute(void)
   seq.DAC_mute_state = false;
 }
 
-LiveSequencer liveSeq;
-
 void handleStart(void)
 {
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
@@ -4240,17 +4174,7 @@ void handleStart(void)
       sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), true); // first callback immediately
     }
 
-#ifdef MIDI_DEVICE_USB_HOST
-    midi_usb.sendRealTime(midi::Start);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-    midi_serial.sendRealTime(midi::Start);
-#endif
-
-#ifdef MIDI_DEVICE_USB
-    usbMIDI.sendRealTime(midi::Start);
-#endif
+    midiSendRealtime(midi::Start);
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
@@ -4348,17 +4272,7 @@ void handleStop(void)
         braids_envelope[i]->noteOff();
     }
 
-#ifdef MIDI_DEVICE_USB_HOST
-    midi_usb.sendRealTime(midi::Stop);
-#endif
-
-#ifdef MIDI_DEVICE_DIN
-    midi_serial.sendRealTime(midi::Stop);
-#endif
-
-#ifdef MIDI_DEVICE_USB
-    usbMIDI.sendRealTime(midi::Stop);
-#endif
+    midiSendRealtime(midi::Stop);
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_arpeggio))
     {
@@ -4917,7 +4831,7 @@ FLASHMEM float get_sample_reverb_send(uint8_t sample)
 {
   return (drum_config[sample].reverb_send);
 }
-int16_t get_sample_filter_mode(uint8_t sample)
+FLASHMEM uint8_t get_sample_filter_mode(uint8_t sample)
 {
   return (drum_config[sample].filter_mode);
 }

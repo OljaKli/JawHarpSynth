@@ -82,12 +82,12 @@ FLASHMEM const std::string LiveSequencer::getEventSource(EventSource source) {
 }
 
 FLASHMEM void LiveSequencer::start(void) {
-  DBG_LOG(printf("start\n"));
+  DBG_LOG(printf("start liveseq\n"));
   handleStart();
 }
 
 FLASHMEM void LiveSequencer::stop(void) {
-  DBG_LOG(printf("stop\n"));
+  DBG_LOG(printf("stop liveseq\n"));
   handleStop();
 }
 
@@ -386,7 +386,9 @@ FLASHMEM void LiveSequencer::changeNumberOfBars(uint8_t num) {
 
 FLASHMEM void LiveSequencer::deleteLiveSequencerData(void) {
   allNotesOff();
-  stop(); // stop so we can delete invalidated events
+  if(data.isRunning) {
+    stop(); // stop so we can delete invalidated events
+  }
   data.pendingEvents.clear();
   for (auto& e : data.eventsList) {
     if (e.source == EVENT_PATTERN) {

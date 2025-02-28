@@ -28,14 +28,16 @@
 
 #include "UI.h"
 #include <LCDMenuLib2.h>
-#include <MD_REncoder.h>
 #include <Regexp.h>
-#include "config.h"
 #include "disp_plus.h"
-#include "synth_dexed.h"
 #include "effect_modulated_delay.h"
 #include "effect_stereo_mono.h"
 #include "effect_platervbstereo.h"
+#include "effect_stereo_panorama.h"
+#include "effect_delay_ext8.h"
+#include "effect_midside.h"
+#include "effect_mono_stereo.h"
+#include "effect_gate.h"
 #include "template_mixer.hpp"
 #include "drumset.h"
 #include "sequencer.h"
@@ -44,10 +46,24 @@
 #include "dexed_sd.h"
 #include "screensaver.h"
 #include "scope.h"
+#include "psramloader.h"
+#include "playarrayresmp.h"
+#include "microsynth.h"
 
 #include "ui_liveseq_pianoroll.h"
 #include "livesequencer.h"
 #include "virtualkeyboard.h"
+#include <synth_braids.h>
+#include "braids.h"
+#include "synth_mda_epiano.h"
+#include "midi_devices.h"
+#include "effect_dynamics.h"
+#include "TeensyTimerTool.h"
+#ifdef MIDI_DEVICE_USB_HOST
+  #include <USBHost_t36.h>
+#endif
+
+using namespace TeensyTimerTool;
 
 #if defined APC
 #include "apc.h"
@@ -55,27 +71,22 @@ extern bool apc_scroll_message;
 #endif
 
 extern LiveSequencer liveSeq;
-
-extern Realtime_Scope scope;
-extern qix_s qix;
 extern bool touch_ic_found;
-
-#ifdef COMPILE_FOR_PSRAM
-#include "psramloader.h"
-extern PsramLoader sampleLoader;
-#endif
-
-#include "synth_mda_epiano.h"
 extern AudioSynthEPiano ep;
-#include "effect_stereo_panorama.h"
-
-#include <synth_braids.h>
-#include "braids.h"
-extern AudioSynthBraids* synthBraids[NUM_BRAIDS];
-
+extern JoystickController joysticks[];
 extern bool remote_active;
 extern bool back_button_touch_page_check_and_init_done;
 extern void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level);
+extern void handleStart(void);
+extern void handleStop(void);
+extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
+
+// sidechains
+extern uint8_t sidechain_sample_number;
+extern int sidechain_speed;
+extern bool sidechain_active;
+extern uint8_t sidechain_steps;
 
 struct DxPoolSettings {
   uint8_t pool;
@@ -84,12 +95,7 @@ struct DxPoolSettings {
   uint8_t transpose;
 };
 
-// sidechains
-extern uint8_t sidechain_sample_number;
-extern int sidechain_speed;
-extern bool sidechain_active;
-extern uint8_t sidechain_steps;
-
+File frec;
 elapsedMillis gamepad_millis;
 int gamepad_accelerate;
 
@@ -97,27 +103,41 @@ uint8_t gamepad_last_dir;
 
 uint8_t GAMEPAD_UP_0 = 127;
 uint8_t GAMEPAD_UP_1 = 0;
-
 uint8_t GAMEPAD_DOWN_0 = 127;
 uint8_t GAMEPAD_DOWN_1 = 255;
-
 uint8_t GAMEPAD_RIGHT_0 = 255;
 uint8_t GAMEPAD_RIGHT_1 = 127;
-
 uint8_t GAMEPAD_LEFT_0 = 0;
 uint8_t GAMEPAD_LEFT_1 = 127;
-
 uint32_t GAMEPAD_SELECT = 256;
 uint32_t GAMEPAD_START = 512;
 uint32_t GAMEPAD_BUTTON_A = 2;
 uint32_t GAMEPAD_BUTTON_B = 1;
 
 uint32_t gamepad_buttons_neutral;
-int gamepad_0_neutral;
-int gamepad_1_neutral;
+uint8_t gamepad_0_neutral;
+uint8_t gamepad_1_neutral;
+
+extern uint8_t external_psram_size;
+uint32_t psram_free_bytes = 0;
+PsramLoader sampleLoader(psram_free_bytes);
+
+ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
+MD_REncoder ENCODER[NUM_ENCODER]{ MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };
+MD_MIDIFile SMF;
+uint8_t activeSample;
+uint8_t generic_temp_select_menu;
+uint8_t generic_active_function = 99;
+uint8_t generic_menu;
+bool generic_full_draw_required = false;
+uint8_t num_slices[2] = { 0,0 };
+uint8_t selected_slice_sample[2] = { 99,99 };
+uint32_t slice_start[2][16];
+uint32_t slice_end[2][16];
+uint16_t slices_scrollspeed = 1;
+bool slices_autoalign = true;
 
 bool remote_touched;
-extern void draw_menu_ui_icons();
 
 extern int (*calc_val[2])(int, int, int, int);
 extern int menuhelper_previous_val;
@@ -172,18 +192,19 @@ extern AudioMixer<3> finalized_mixer_r;
 extern AudioMixer<3> finalized_mixer_l;
 
 #ifdef AUDIO_DEVICE_USB
-extern AudioConnection patchCordUsbL;
-extern AudioConnection patchCordUsbR;
+AudioOutputUSB usb1;
+AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
+AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
 #endif
+
+AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
+AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
+AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 
 extern AudioAnalyzePeak mb_before_l;
 extern AudioAnalyzePeak mb_before_r;
 extern AudioAnalyzePeak mb_after_l;
 extern AudioAnalyzePeak mb_after_r;
-
-extern void InitializeCube();
-extern void cube_screensaver();
-extern void qix_screensaver();
 
 #define _LCDML_DISP_cols display_cols
 #define _LCDML_DISP_rows display_rows
@@ -192,20 +213,17 @@ extern void qix_screensaver();
 #define _LCDML_DISP_cfg_scrollbar 1 // enable a scrollbar
 
 extern PeriodicTimer sequencer_timer;
-extern ILI9341_t3n display;
 
 #if defined GENERIC_DISPLAY 
-extern XPT2046_Touchscreen touch;
+XPT2046_Touchscreen touch(TFT_TOUCH_CS);
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
-extern Adafruit_FT6206 touch;
+Adafruit_FT6206 touch = Adafruit_FT6206();
 #endif
 
-extern void sequencer(void);
-extern bool check_sd_performance_exists(uint8_t number);
 extern SdVolume volume;
-extern elapsedMillis record_timer;
+elapsedMillis record_timer;
 uint16_t record_x_pos;
 
 extern config_t configuration;
@@ -215,18 +233,6 @@ extern float midi_volume_transform(uint8_t midi_amp);
 extern float volume_transform(float amp);
 extern uint8_t selected_instance_id;
 extern char receive_bank_filename[FILENAME_LEN];
-extern void print_current_chord(void);
-extern void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
-//extern void print_merged_pattern_pianoroll(int xpos, int ypos, uint8_t track_number);
-extern void update_pianoroll();
-extern void set_pattern_content_type_color(uint8_t pattern);
-extern void print_formatted_number(uint16_t v, uint8_t l);
-extern void print_formatted_number_trailing_space(uint16_t v, uint8_t l);
-extern void print_formatted_number_signed(int v, uint8_t l);
-extern void seq_print_current_note_from_step(uint8_t s);
-extern void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw);
-extern void print_chord_name(uint8_t currentstep);
-extern void print_file_manager_buttons(void);
 extern void print_file_manager_active_border(void);
 extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
@@ -234,36 +240,23 @@ extern uint8_t get_chain_length_from_current_track(uint8_t tr);
 extern uint8_t get_song_length(void);
 extern void helptext_l(const char* str);
 extern void helptext_r(const char* str);
-extern void draw_back_touchbutton();
-extern void seq_pattern_editor_update_dynamic_elements();
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2> microsynth_mixer_reverb;
 extern uint8_t find_longest_chain();
-extern bool get_bank_name(uint8_t p, uint8_t b, char* bank_name);
-extern bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name);
 extern void stop_all_drum_slots();
-extern const char noteNames[12][3];
 extern void dac_mute(void);
 extern void dac_unmute(void);
-extern ts_t ts;
 extern fm_t fm;
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern void get_sd_performance_name_json(uint8_t number);
-extern bool save_sd_performance_json(uint8_t p);
 extern dexed_live_mod_t dexed_live_mod;
-uint8_t activeSample;
-extern File frec;
 extern AudioRecordQueue record_queue_l;
 extern AudioRecordQueue record_queue_r;
 extern char filename[CONFIG_FILENAME_LEN];
-extern void psram_test();
 extern uint8_t remote_MIDI_CC;
 extern uint8_t remote_MIDI_CC_value;
-void draw_euclidean_circle();
-extern JoystickController joysticks[];
-extern void microsynth_update_single_setting(uint8_t microsynth_selected_instance);
 extern void update_step_rec_buttons();
-extern void update_latch_button();
+
+void draw_euclidean_circle();
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -273,14 +266,8 @@ extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 #endif
 
 extern sequencer_t seq;
-
 extern multisample_t msp[NUM_MULTISAMPLES];
 extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
-
-uint8_t generic_active_function = 99;
-uint8_t generic_temp_select_menu;
-uint8_t generic_menu;
-bool generic_full_draw_required = false;
 
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
@@ -319,48 +306,20 @@ extern AudioAnalyzePeak reverb_return_peak_r;
 extern AudioMixer<10> reverb_mixer_r;
 extern AudioMixer<10> reverb_mixer_l;
 
-extern AudioMixer<4> microsynth_mixer_filter_osc[NUM_MICROSYNTH];
-extern AudioMixer<4> microsynth_mixer_filter_noise[NUM_MICROSYNTH];
+
 extern microsynth_t microsynth[NUM_MICROSYNTH];
-extern AudioSynthWaveform microsynth_waveform[NUM_MICROSYNTH];
-extern AudioEffectEnvelope microsynth_envelope_osc[NUM_MICROSYNTH];
-extern AudioFilterStateVariable microsynth_filter_osc[NUM_MICROSYNTH];
-extern AudioFilterStateVariable microsynth_filter_noise[NUM_MICROSYNTH];
-extern AudioSynthNoisePink microsynth_noise[NUM_MICROSYNTH];
-extern AudioEffectEnvelope microsynth_envelope_noise[NUM_MICROSYNTH];
 
 extern braids_t braids_osc;
 extern AudioSynthBraids* synthBraids[NUM_BRAIDS];
 extern AudioMixer<NUM_BRAIDS> braids_mixer;
-extern AudioMixer<4>* braids_mixer_filter[NUM_BRAIDS];
 extern AudioMixer<2> braids_mixer_reverb;
-extern AudioEffectEnvelope* braids_envelope[NUM_BRAIDS];
-extern AudioFilterBiquad* braids_filter[NUM_BRAIDS];
-
-extern AudioEffectStereoPanorama braids_stereo_panorama;
-
-extern AudioEffectFlange braids_flanger_r;
-extern AudioEffectFlange braids_flanger_l;
-
-extern int braids_flanger_idx;
-extern int braids_flanger_depth;
-extern double braids_flanger_freq;
 
 extern AudioEffectPlateReverb reverb;
 
 extern AudioEffectStereoPanorama ep_stereo_panorama;
 extern AudioSynthWaveform ep_chorus_modulator;
-extern AudioFilterBiquad ep_modchorus_filter;
-extern AudioEffectModulatedDelayStereo ep_modchorus;
 extern AudioMixer<2> ep_chorus_mixer_r;
 extern AudioMixer<2> ep_chorus_mixer_l;
-extern AudioMixer<2> ep_delay_fb_mixer_r;
-extern AudioMixer<2> ep_delay_fb_mixer_l;
-extern AudioEffectDelay ep_delay_fx_r;
-extern AudioEffectDelay ep_delay_fx_l;
-extern AudioMixer<2> ep_delay_mixer_r;
-extern AudioMixer<2> ep_delay_mixer_l;
-
 extern AudioMixer<14> master_mixer_r;
 extern AudioMixer<14> master_mixer_l;
 
@@ -377,22 +336,31 @@ extern const float midi_ticks_factor[10];
 extern uint8_t midi_bpm;
 extern elapsedMillis save_sys;
 extern bool save_sys_flag;
-
-bool remote_console_keystate_select;
-bool remote_console_keystate_a;
-bool remote_console_keystate_b;
-
 extern sdcard_t sdcard_infos;
+extern ts_t ts;
 
-uint8_t num_slices[2] = { 0,0 };
-uint8_t selected_slice_sample[2] = { 99,99 };
-uint32_t slice_start[2][16];
-uint32_t slice_end[2][16];
-uint16_t slices_scrollspeed = 1;
-bool slices_autoalign = true;
+void UI_func_test_mute(uint8_t param);
+void UI_func_test_psram(uint8_t param);
+void UI_func_favorites(uint8_t param);
+void UI_func_map_gamepad(uint8_t param);
+void UI_func_startup_page(uint8_t param);
+void UI_func_sysex_send_bank(uint8_t param);
+void UI_func_startup_performance(uint8_t param);
+void UI_func_sysex_send_voice(uint8_t param);
+void UI_func_velocity_level(uint8_t param); // unused
+void UI_func_save_voice(uint8_t param);
+void UI_func_midi_soft_thru(uint8_t param);
+void UI_func_smart_filter(uint8_t param);
+void UI_func_seq_probabilities(uint8_t param);
+void UI_func_set_multisample_name(uint8_t param);
+void UI_func_clear_song(uint8_t param);
+void UI_func_clear_song_chains(uint8_t param);
+void UI_func_clear_patterns(uint8_t param);
+void UI_func_clear_all(uint8_t param);
+void UI_func_stereo_mono(uint8_t param);
+void UI_handle_OP(uint8_t param);
 
-bool loop_start_button = false;
-bool loop_end_button = false;
+void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
 
 /***********************************************************************
    GLOBAL
@@ -401,14 +369,11 @@ elapsedMillis back_from_volume;
 PROGMEM const char accepted_chars[] = " _ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyz";
 
 int temp_int;
-bool menu_select_toggle;
 
 boolean COND_hide() // hide a menu element
 {
   return false;
 }
-
-#define MAX_CC_DEST 15
 
 PROGMEM const char cc_names[MAX_CC_DEST][13] = {
     "Volume      ",
@@ -429,10 +394,6 @@ PROGMEM const char cc_names[MAX_CC_DEST][13] = {
     "Panic Dexed ",
 };
 
-PROGMEM const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
-// 25,
-26, 27, 32, 91, 200, 201, 202, 203 };
-
 PROGMEM const char cc_names_UI_mapping[8][13] = {
 
     "Cursor RIGHT",
@@ -445,7 +406,6 @@ PROGMEM const char cc_names_UI_mapping[8][13] = {
     "BUTTON A    ",
 };
 
-PROGMEM const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
 
 PROGMEM const uint8_t special_chars[24][8] = {
     {B11111111, B11110111, B11100111, B11110111, B11110111, B11110111, B11110111, B11111111}, //  [0] 1 small invers
@@ -474,26 +434,7 @@ PROGMEM const uint8_t special_chars[24][8] = {
     {B00000000, B00000000, B00000000, B01110000, B11111111, B11111111, B11111111, B11111111}  // [23] File Folder
 };
 
-short wave_type[9] = {
-    WAVEFORM_SINE,
-    WAVEFORM_TRIANGLE,
-    WAVEFORM_SAWTOOTH,
-    WAVEFORM_SQUARE,
-    WAVEFORM_PULSE,
-    WAVEFORM_BANDLIMIT_SAWTOOTH,
-    WAVEFORM_BANDLIMIT_SQUARE,
-    WAVEFORM_BANDLIMIT_PULSE,
-    WAVEFORM_SAMPLE_HOLD };
-
-enum
-{
-  SCROLLBAR,
-  BLOCKBAR,
-  METERBAR
-};
-
-enum
-{
+enum {
   MENU_VOICE_POOL,
   MENU_VOICE_BANK,
   MENU_VOICE_SOUND,
@@ -531,7 +472,6 @@ void display_bar_float(const char* title, float value, float factor, int32_t min
 void display_meter_int(const char* title, uint32_t value, float factor, float offset, int32_t min_value, int32_t max_value, uint8_t size, bool zeros, bool sign, bool init);
 void display_meter_float(const char* title, float value, float factor, float offset, int32_t min_value, int32_t max_value, uint8_t size_number, uint8_t size_fraction, bool zeros, bool sign, bool init);
 void string_trim(char* s);
-void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instance_id);
@@ -540,13 +480,6 @@ void locate_previous_favorite();
 void locate_next_favorite();
 void locate_next_non_favorite();
 void locate_random_non_favorite();
-void UI_func_drums(uint8_t param);
-void UI_func_midiplayer(uint8_t param);
-void UI_func_test_mute(uint8_t param);
-void UI_func_test_psram(uint8_t param);
-void UI_func_test_touchscreen(uint8_t param);
-void UI_func_MultiSamplePlay(uint8_t param);
-void UI_func_sample_editor(uint8_t param);
 void splash_screen1();
 void splash_screen2();
 void UI_draw_FM_algorithm(uint8_t algo, uint8_t x, uint8_t y);
@@ -556,16 +489,19 @@ void _setup_rotation_and_encoders(bool init);
 void sd_go_parent_folder();
 void sd_update_display();
 void sd_card_count_files_from_directory(const char* path);
-void print_voice_select_default_help();
 char* basename(const char* filename);
 bool load_performance_and_check_midi(uint8_t perf);
 void clear_volmeter(int x, int y);
-void draw_volmeters_mixer();
-void draw_volmeters_multiband_compressor();
 
 uint8_t x_pos_menu_header_layer[8];
 uint8_t last_menu_depth = 99;
 uint8_t prev_menu_item = 0;    // avoid screen flicker at start / end of menu items
+
+ScopeSettings currentScopeSettings;
+
+bool remote_console_keystate_select;
+bool remote_console_keystate_a;
+bool remote_console_keystate_b;
 
 // normal menu
 LCDMenuLib2_menu LCDML_0(255, 0, 0, NULL, NULL); // normal root menu element (do not change)
@@ -642,15 +578,6 @@ LCDML_add(61, LCDML_0, 17, "Info", UI_func_information);
 LCDML_addAdvanced(62, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(63, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(64, LCDML_0, 20, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-
-struct ScopeSettings {
-  bool enabled;
-  uint16_t x;
-  uint16_t y;
-  uint16_t w;
-  uint16_t h;
-  bool onlyDrawWhenRunning;
-} currentScopeSettings;
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 64, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -757,7 +684,6 @@ FLASHMEM void print_empty_spaces(uint8_t spaces, bool clear_background)
     display.print(" ");
   }
 }
-
 
 FLASHMEM void print_shortcut_navigator()
 {
@@ -1464,7 +1390,6 @@ private:
   bool down;
 };
 
-MD_REncoder ENCODER[NUM_ENCODER] = { MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };
 EncoderDirection encoderDir[NUM_ENCODER];
 bool button[NUM_ENCODER];
 
@@ -2692,10 +2617,6 @@ FLASHMEM void update_display_functions_while_seq_running()
       }
     }
   }
-  // else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pianoroll)) // is in UI of Pianoroll
-  // {
-  //   update_pianoroll();
-  // }
 }
 
 uint8_t screensaver_mode_active;
@@ -7649,19 +7570,7 @@ FLASHMEM void print_loop_data()
   }
 }
 
-FLASHMEM void draw_loop_buttons()
-{
-  if (fm.sample_source == 2 || fm.sample_source == 3)
-  {
-    draw_button_on_grid(1, 23, "LOOP", "START", 1 + loop_start_button);
-    draw_button_on_grid(9, 23, "LOOP", "END", 1 + loop_end_button);
-  }
-  else  if (fm.sample_source == 4)
-  {
-    draw_button_on_grid(1, 23, "LOOP", "START", 0);
-    draw_button_on_grid(9, 23, "LOOP", "END", 0);
-  }
-}
+
 
 FLASHMEM void UI_func_sample_editor(uint8_t param)
 {
@@ -18479,7 +18388,7 @@ FLASHMEM void UI_func_smart_filter(uint8_t param)
 
 uint8_t dexed_onscreen_algo = 0;
 
-FLASHMEM void  print_voice_select_fav_search_button()
+FLASHMEM void print_voice_select_fav_search_button()
 {
   switch (configuration.sys.favorites)
   {
@@ -21280,8 +21189,7 @@ FLASHMEM void load_sd_directory_files_only()
 
 }
 
-#include "MD_MIDIFile.h"
-MD_MIDIFile SMF;
+
 uint8_t smf_line = 14;
 extern bool smf_playing;
 bool smf_track_state[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };

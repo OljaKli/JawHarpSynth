@@ -1,9 +1,7 @@
-#include "config.h"
 #include "touch.h"
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
 #include "ILI9341_t3n.h"
-#include "scope.h"
 #include <Audio.h>
 #include "template_mixer.hpp"
 #include "UI.h"
@@ -13,66 +11,30 @@
 extern ILI9341_t3n display;
 extern config_t configuration;
 extern uint8_t selected_instance_id;
-extern void print_voice_settings_in_dexed_voice_select(bool text, bool values);
-extern void print_voice_settings_in_pattern_editor(int x, int y);
-extern void print_voice_select_fav_search_button();
-extern void reset_live_modifiers();
 extern LCDMenuLib2 LCDML;
-extern void pattern_editor_menu_0();
-extern void sub_touchscreen_test_page_init();
 extern bool remote_touched;
 extern sequencer_t seq;
-extern void border3_large_clear();
-extern void border3_large();
-extern void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
-extern void seq_pattern_editor_update_dynamic_elements();
-extern void microsynth_refresh_lower_screen_static_text();
-extern void microsynth_refresh_lower_screen_dynamic_text();
-extern void print_perfmod_buttons();
-extern void print_perfmod_lables();
-extern void print_empty_spaces(uint8_t spaces, bool clear_background);
-extern void print_voice_select_default_help();
 extern void handleStop(void);
 extern void handleStart(void);
-extern void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
-extern void draw_volmeters_mixer();
-extern void draw_volmeters_multiband_compressor();
-extern bool legacy_touch_button_back_page();
-extern bool touch_button_back_page();
 
 extern uint8_t activeSample;
-extern microsynth_t microsynth[NUM_MICROSYNTH];
-
-extern braids_t braids_osc;
 extern bool generic_full_draw_required;
-
-extern void mb_set_mutes();
 extern bool mb_solo_low;
 extern bool mb_solo_mid;
 extern bool mb_solo_upper_mid;
 extern bool mb_solo_high;
-extern Realtime_Scope scope;
-extern AudioAnalyzePeak mb_before_l;
-extern AudioAnalyzePeak mb_before_r;
-extern AudioAnalyzePeak mb_after_l;
-extern AudioAnalyzePeak mb_after_r;
-extern void draw_volmeter(int x, int y, uint8_t arr, float value);
-extern AudioMixer<4> mb_mixer_l;
-extern AudioMixer<4> mb_mixer_r;
 extern bool multiband_active;
 extern uint8_t generic_active_function;
 extern uint8_t generic_temp_select_menu;
-extern void mb_set_mutes();
-extern void mb_set_master();
-extern void mb_set_compressor();
 extern uint8_t last_menu_depth;
-extern uint8_t drum_midi_channel;
 
-ts_t ts;                         // touch screen
-fm_t fm;                         // file manager
 dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release
 extern int temp_int;
 
+ts_t ts;                         // touch screen
+fm_t fm;                         // file manager
+bool loop_start_button = false;
+bool loop_end_button = false;
 bool isButtonTouched = false;
 int numTouchPoints = 0;
 
@@ -1095,9 +1057,20 @@ FLASHMEM void assign_free_slices_or_increment()
   check_and_print_sliced_message();
 }
 
-extern bool loop_start_button;
-extern bool loop_end_button;
-extern void draw_loop_buttons();
+FLASHMEM void draw_loop_buttons()
+{
+  if (fm.sample_source == 2 || fm.sample_source == 3)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 1 + loop_start_button);
+    draw_button_on_grid(9, 23, "LOOP", "END", 1 + loop_end_button);
+  }
+  else  if (fm.sample_source == 4)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 0);
+    draw_button_on_grid(9, 23, "LOOP", "END", 0);
+  }
+}
+
 extern void print_loop_data();
 
 FLASHMEM void handle_touchscreen_sample_editor()

@@ -85,9 +85,6 @@ extern uint32_t GAMEPAD_START;
 extern uint32_t GAMEPAD_BUTTON_A;
 extern uint32_t GAMEPAD_BUTTON_B;
 
-extern uint8_t gamepad_0_neutral;
-extern uint8_t gamepad_1_neutral;
-
 #include "sequencer.h"
 extern PeriodicTimer sequencer_timer;
 extern void sequencer();
