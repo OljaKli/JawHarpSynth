@@ -59,7 +59,6 @@ void previewWavFilemanager();
 
 bool touch_button_back_page();
 bool legacy_touch_button_back_page();
-void draw_back_touchbutton();
 void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
 void show_no_grid(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, long num);
 void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
@@ -151,10 +150,11 @@ PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 
   // 25,
   26, 27, 32, 91, 200, 201, 202, 203 };
 
-enum
-{
-  ENC_R,
-  ENC_L
+PROGMEM static const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+enum {
+  ENC_R = 0,
+  ENC_L = 1
 };
 
 PROGMEM static const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };

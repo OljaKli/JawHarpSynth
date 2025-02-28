@@ -182,7 +182,7 @@ uint16_t braids_filter_state[NUM_BRAIDS];
 uint16_t braids_filter_state_last_displayed[NUM_BRAIDS];
 extern uint16_t braids_filter_lfo_count[NUM_BRAIDS];
 extern bool braids_lfo_direction[NUM_BRAIDS];
-extern elapsedMillis braids_control_rate;
+elapsedMillis braids_control_rate;
 
 AudioSynthWaveform microsynth_waveform[NUM_MICROSYNTH];
 AudioSynthNoisePink microsynth_noise[NUM_MICROSYNTH];
@@ -265,7 +265,7 @@ AudioMixer<3> finalized_mixer_r;
 AudioMixer<3> finalized_mixer_l;
 
 AudioSynthWaveformDc dc1;
-microsynth_t microsynth[2];
+microsynth_t microsynth[NUM_MICROSYNTH];
 
 // Drumset
 #if NUM_DRUMS > 0
@@ -297,14 +297,6 @@ AudioAnalyzePeak reverb_return_peak_r;
 AudioAnalyzePeak reverb_return_peak_l;
 
 LiveSequencer liveSeq;
-
-//SPDIF
-//AsyncAudioInputSPDIF3 spdif_in;
-//AudioInputSPDIF3 spdif_in;
-
-// Outputs
-
-AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
 
 extern uint32_t gamepad_buttons_neutral;
 extern uint8_t gamepad_0_neutral;
@@ -354,10 +346,6 @@ AudioOutputAnalogStereo dacOut;
 AudioMixer<4> invMixer;
 #elif defined(TEENSY_DAC)
 AudioOutputAnalogStereo dacOut;
-#endif
-
-#ifdef AUDIO_DEVICE_USB
-AudioOutputUSB usb1;
 #endif
 
 #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
@@ -603,14 +591,6 @@ const AudioConnection patchCord[] = {
                {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
                {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
 };
-
-#ifdef AUDIO_DEVICE_USB
-AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
-AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
-#endif
-
-AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
-AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 
 //
 // Dynamic patching of MicroDexed objects
@@ -932,7 +912,6 @@ char receive_bank_filename[FILENAME_LEN];
 uint8_t selected_instance_id = 0;
 uint8_t microsynth_selected_instance = 0;
 bool ui_save_notification_icon;
-const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
 uint8_t remote_MIDI_CC = 0;
 uint8_t remote_MIDI_CC_value;

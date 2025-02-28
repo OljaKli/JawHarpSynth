@@ -90,6 +90,8 @@ void updateTouchScreen();
 uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 void helptext_r(const char* str);
 
+void update_latch_button();
+void draw_back_touchbutton();
 void draw_loop_buttons();
 void print_file_manager_buttons();
 void print_current_chord();

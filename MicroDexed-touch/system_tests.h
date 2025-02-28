@@ -10,5 +10,6 @@ uint32_t *memory_begin, *memory_end;
 
 bool psram_check_fixed_pattern(uint32_t pattern);
 bool psram_check_lfsr_pattern(uint32_t seed);
+void psram_test();
 
 #endif

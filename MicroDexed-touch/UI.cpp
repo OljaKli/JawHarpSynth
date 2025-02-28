@@ -71,11 +71,9 @@ extern bool apc_scroll_message;
 #endif
 
 extern LiveSequencer liveSeq;
-extern Realtime_Scope scope;
 extern bool touch_ic_found;
 extern AudioSynthEPiano ep;
 extern JoystickController joysticks[];
-extern AudioSynthBraids* synthBraids[NUM_BRAIDS];
 extern bool remote_active;
 extern bool back_button_touch_page_check_and_init_done;
 extern void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level);
@@ -194,9 +192,14 @@ extern AudioMixer<3> finalized_mixer_r;
 extern AudioMixer<3> finalized_mixer_l;
 
 #ifdef AUDIO_DEVICE_USB
-extern AudioConnection patchCordUsbL;
-extern AudioConnection patchCordUsbR;
+AudioOutputUSB usb1;
+AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
+AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
 #endif
+
+AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
+AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
+AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
 
 extern AudioAnalyzePeak mb_before_l;
 extern AudioAnalyzePeak mb_before_r;
@@ -230,8 +233,6 @@ extern float midi_volume_transform(uint8_t midi_amp);
 extern float volume_transform(float amp);
 extern uint8_t selected_instance_id;
 extern char receive_bank_filename[FILENAME_LEN];
-//extern void print_merged_pattern_pianoroll(int xpos, int ypos, uint8_t track_number);
-extern void update_pianoroll();
 extern void print_file_manager_active_border(void);
 extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
@@ -239,14 +240,10 @@ extern uint8_t get_chain_length_from_current_track(uint8_t tr);
 extern uint8_t get_song_length(void);
 extern void helptext_l(const char* str);
 extern void helptext_r(const char* str);
-extern void draw_back_touchbutton();
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2> microsynth_mixer_reverb;
 extern uint8_t find_longest_chain();
-extern bool get_bank_name(uint8_t p, uint8_t b, char* bank_name);
-extern bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name);
 extern void stop_all_drum_slots();
-extern const char noteNames[12][3];
 extern void dac_mute(void);
 extern void dac_unmute(void);
 extern fm_t fm;
@@ -255,12 +252,11 @@ extern dexed_live_mod_t dexed_live_mod;
 extern AudioRecordQueue record_queue_l;
 extern AudioRecordQueue record_queue_r;
 extern char filename[CONFIG_FILENAME_LEN];
-extern void psram_test();
 extern uint8_t remote_MIDI_CC;
 extern uint8_t remote_MIDI_CC_value;
-void draw_euclidean_circle();
 extern void update_step_rec_buttons();
-extern void update_latch_button();
+
+void draw_euclidean_circle();
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -310,48 +306,20 @@ extern AudioAnalyzePeak reverb_return_peak_r;
 extern AudioMixer<10> reverb_mixer_r;
 extern AudioMixer<10> reverb_mixer_l;
 
-extern AudioMixer<4> microsynth_mixer_filter_osc[NUM_MICROSYNTH];
-extern AudioMixer<4> microsynth_mixer_filter_noise[NUM_MICROSYNTH];
+
 extern microsynth_t microsynth[NUM_MICROSYNTH];
-extern AudioSynthWaveform microsynth_waveform[NUM_MICROSYNTH];
-extern AudioEffectEnvelope microsynth_envelope_osc[NUM_MICROSYNTH];
-extern AudioFilterStateVariable microsynth_filter_osc[NUM_MICROSYNTH];
-extern AudioFilterStateVariable microsynth_filter_noise[NUM_MICROSYNTH];
-extern AudioSynthNoisePink microsynth_noise[NUM_MICROSYNTH];
-extern AudioEffectEnvelope microsynth_envelope_noise[NUM_MICROSYNTH];
 
 extern braids_t braids_osc;
 extern AudioSynthBraids* synthBraids[NUM_BRAIDS];
 extern AudioMixer<NUM_BRAIDS> braids_mixer;
-extern AudioMixer<4>* braids_mixer_filter[NUM_BRAIDS];
 extern AudioMixer<2> braids_mixer_reverb;
-extern AudioEffectEnvelope* braids_envelope[NUM_BRAIDS];
-extern AudioFilterBiquad* braids_filter[NUM_BRAIDS];
-
-extern AudioEffectStereoPanorama braids_stereo_panorama;
-
-extern AudioEffectFlange braids_flanger_r;
-extern AudioEffectFlange braids_flanger_l;
-
-extern int braids_flanger_idx;
-extern int braids_flanger_depth;
-extern double braids_flanger_freq;
 
 extern AudioEffectPlateReverb reverb;
 
 extern AudioEffectStereoPanorama ep_stereo_panorama;
 extern AudioSynthWaveform ep_chorus_modulator;
-extern AudioFilterBiquad ep_modchorus_filter;
-extern AudioEffectModulatedDelayStereo ep_modchorus;
 extern AudioMixer<2> ep_chorus_mixer_r;
 extern AudioMixer<2> ep_chorus_mixer_l;
-extern AudioMixer<2> ep_delay_fb_mixer_r;
-extern AudioMixer<2> ep_delay_fb_mixer_l;
-extern AudioEffectDelay ep_delay_fx_r;
-extern AudioEffectDelay ep_delay_fx_l;
-extern AudioMixer<2> ep_delay_mixer_r;
-extern AudioMixer<2> ep_delay_mixer_l;
-
 extern AudioMixer<14> master_mixer_r;
 extern AudioMixer<14> master_mixer_l;
 
@@ -524,7 +492,6 @@ void sd_card_count_files_from_directory(const char* path);
 char* basename(const char* filename);
 bool load_performance_and_check_midi(uint8_t perf);
 void clear_volmeter(int x, int y);
-
 
 uint8_t x_pos_menu_header_layer[8];
 uint8_t last_menu_depth = 99;
@@ -717,7 +684,6 @@ FLASHMEM void print_empty_spaces(uint8_t spaces, bool clear_background)
     display.print(" ");
   }
 }
-
 
 FLASHMEM void print_shortcut_navigator()
 {
@@ -2651,10 +2617,6 @@ FLASHMEM void update_display_functions_while_seq_running()
       }
     }
   }
-  // else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pianoroll)) // is in UI of Pianoroll
-  // {
-  //   update_pianoroll();
-  // }
 }
 
 uint8_t screensaver_mode_active;

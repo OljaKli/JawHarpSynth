@@ -5,7 +5,6 @@
 #include <synth_braids.h>
 #include "braids.h"
 
-elapsedMillis braids_control_rate;
 uint16_t braids_filter_lfo_count[NUM_BRAIDS];
 boolean braids_lfo_direction[NUM_BRAIDS];
 
