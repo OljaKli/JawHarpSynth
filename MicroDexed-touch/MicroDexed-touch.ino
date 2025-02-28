@@ -4838,7 +4838,7 @@ FLASHMEM float get_sample_reverb_send(uint8_t sample)
 {
   return (drum_config[sample].reverb_send);
 }
-int16_t get_sample_filter_mode(uint8_t sample)
+FLASHMEM uint8_t get_sample_filter_mode(uint8_t sample)
 {
   return (drum_config[sample].filter_mode);
 }
