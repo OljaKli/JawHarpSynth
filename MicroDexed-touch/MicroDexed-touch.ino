@@ -936,8 +936,6 @@ uint8_t drum_counter;
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
-extern uint8_t seq_prev_note[NUM_SEQ_TRACKS];
-extern void print_arp_start_stop_button(void);
 PeriodicTimer sequencer_timer;
 
 multisample_s msp[NUM_MULTISAMPLES];
@@ -947,12 +945,7 @@ uint8_t msp_sample_slot_trigger_step[NUM_DRUMS];
 
 extern LCDMenuLib2 LCDML;
 
-extern void getNoteName(char* noteName, uint8_t noteNumber);
-extern void update_midi_learn_button(void);
 custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern void print_custom_mappings(void);
-extern void handle_page_with_touch_back_button();
-extern void sequencer_part2(void);
 
 bool touch_ic_found = false;
 

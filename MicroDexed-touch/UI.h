@@ -57,6 +57,10 @@ void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 void previewWavSampleEditor();
 void previewWavFilemanager();
 
+void getNoteName(char* noteName, uint8_t noteNumber);
+void print_arp_start_stop_button();
+void print_custom_mappings(void);
+void update_midi_learn_button();
 bool touch_button_back_page();
 bool legacy_touch_button_back_page();
 void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);

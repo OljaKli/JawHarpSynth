@@ -95,6 +95,7 @@ void draw_back_touchbutton();
 void draw_loop_buttons();
 void print_file_manager_buttons();
 void print_current_chord();
+void handle_page_with_touch_back_button();
 
 void handle_touchscreen_braids(void);
 void handle_touchscreen_arpeggio();

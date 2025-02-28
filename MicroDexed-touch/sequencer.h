@@ -331,6 +331,7 @@ typedef struct sequencer_s
 } sequencer_t;
 
 void sequencer(void);
+void sequencer_part2(void);
 void print_formatted_number(uint16_t number, uint8_t length);
 void print_formatted_number_trailing_space(uint16_t number, uint8_t length);
 void print_formatted_number_signed(int number, uint8_t length);

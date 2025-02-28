@@ -16,7 +16,6 @@
 
 drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
 {
-
   {
     DRUM_POLY,
     210,
