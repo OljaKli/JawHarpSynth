@@ -287,10 +287,12 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
     break;
   case 3:
     display.print(F("DEXED3 "));
+    if (NUM_DEXED>2)
     ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
     break;
   case 4:
     display.print(F("DEXED4 "));
+    if (NUM_DEXED>2)
     ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
     break;
   case 5:

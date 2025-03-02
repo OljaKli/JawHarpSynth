@@ -3783,10 +3783,13 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           MicroDexed[instance_id]->panic();
         }
 
+if (NUM_DEXED>2)
+{
         if (configuration.dexed[2].midi_channel == 0)
           configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
         if (configuration.dexed[3].midi_channel == 0)
           configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
+}
 
 	//load_sd_drumsettings_json(number); check if necessary phtodo
 

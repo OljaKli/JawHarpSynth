@@ -240,8 +240,10 @@ AudioMixer<2> ep_chorus_mixer_l;
 AudioAnalyzePeak microdexed_peak_0;
 AudioAnalyzePeak microdexed_peak_1;
 
+ #if (NUM_DEXED>2)
 AudioAnalyzePeak microdexed_peak_2;
 AudioAnalyzePeak microdexed_peak_3;
+#endif
 
 AudioMixer<10> reverb_mixer_r;
 AudioMixer<10> reverb_mixer_l;
@@ -279,9 +281,10 @@ AudioPlayArrayResmp* Drum[NUM_DRUMS];
 #include "effect_delay_ext8.h"
 #endif
 
+#if defined(DRUMS_FILTERS) 
 AudioFilterBiquad* Drum_filter[NUM_DRUMS * 2];
-
 AudioEffectEnvelope* sample_envelope[NUM_DRUMS * 2];
+#endif
 
 AudioMixer<NUM_DRUMS> drum_mixer_r;
 AudioMixer<NUM_DRUMS> drum_mixer_l;
@@ -641,12 +644,14 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   else
     if (instance_id == 1)
       dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_1, 0));
+     #if defined(DRUMS_FILTERS)  
     else
       if (instance_id == 2)
         dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_2, 0));
       else
         if (instance_id == 3)
           dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_3, 0));
+#endif
 
   // if (instance_id == 0 || instance_id == 1) 
   //   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[instance_id], 0));
@@ -804,10 +809,12 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   // Drum[instance_id] = new AudioPlayMemory();
   // Drum[instance_id] = new AudioPlaySdWav();
 
+#if defined(DRUMS_FILTERS) 
   sample_envelope[instance_id] = new AudioEffectEnvelope();
   sample_envelope[instance_id + NUM_DRUMS] = new AudioEffectEnvelope();
   sample_envelope[instance_id]->releaseNoteOn(0);
   sample_envelope[instance_id + NUM_DRUMS]->releaseNoteOn(0);
+#endif
 
 #ifdef COMPILE_FOR_SDCARD
   Drum[instance_id] = new AudioPlaySdResmp();
@@ -820,23 +827,15 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   Drum[instance_id]->enableInterpolation(false);
   Drum[instance_id]->setPlaybackRate(1.0);
 
+#if defined(DRUMS_FILTERS) 
   Drum_filter[instance_id] = new AudioFilterBiquad();
   Drum_filter[instance_id + NUM_DRUMS] = new AudioFilterBiquad();
 
   Drum_filter[instance_id]->setLowpass(0, 20000, 0.2); //phtodo
   Drum_filter[instance_id + NUM_DRUMS]->setLowpass(0, 20000, 0.2); //phtodo
+#endif
 
-  //no filter code
-    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id);
-    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id);
-    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id);
-    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id);
-    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 8 + instance_id);
-    // dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 8 + instance_id);
-
-  //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
-  //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *Drum_filter[NUM_DRUMS + instance_id], 0);
-
+#if defined(DRUMS_FILTERS) 
   dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *sample_envelope[instance_id], 0));
   dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *sample_envelope[NUM_DRUMS + instance_id], 0));
 
@@ -851,12 +850,24 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
 
   dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 10 + instance_id)); //previously 8
   dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, *global_delay_in_mixer[1], 10 + instance_id)); //previously 8
+#else
+//no filter code
+    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id));
+    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id));
+    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id));
+    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id));
+    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 10 + instance_id));
+    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 10 + instance_id));
+
+  //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
+  //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *Drum_filter[NUM_DRUMS + instance_id], 0);
+#endif
 
 #ifdef DEBUG
-  LOG.print(F("Drum-Instance: "));
-  LOG.println(instance_id);
-  LOG.print(F("Dynamic-Connection-Counter="));
-  LOG.println(dynamicConnections.size());
+    LOG.print(F("Drum-Instance: "));
+    LOG.println(instance_id);
+    LOG.print(F("Dynamic-Connection-Counter="));
+    LOG.println(dynamicConnections.size());
 #endif
 }
 
@@ -1008,6 +1019,7 @@ FLASHMEM void setup()
   LOG.flush();
 #endif
 
+#ifdef PSRAM
   // zero all malloccable RAM so crashes are deterministic
   std::vector<uint8_t*> blocks;
   int size = 10000;
@@ -1025,6 +1037,7 @@ FLASHMEM void setup()
   }
   blocks.clear();
   // ***********
+#endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   pinMode(TFT_TOUCH_IRQ, INPUT);
@@ -1622,8 +1635,10 @@ FLASHMEM void handle_touchscreen_midi_channel_page()
     display.setTextSize(1);
     print_midi_channel_activity(39, 5, microdexed_peak_0.read());
     print_midi_channel_activity(39, 6, microdexed_peak_1.read());
+ #if (NUM_DEXED>2)
     print_midi_channel_activity(39, 7, microdexed_peak_2.read());
     print_midi_channel_activity(39, 8, microdexed_peak_3.read());
+#endif
     print_midi_channel_activity(39, 9, (ep_peak_l.read() + ep_peak_r.read()) / 2);
     if (microsynth_peak_osc_0.available())
       print_midi_channel_activity(39, 11, microsynth_peak_osc_0.read());
@@ -2393,6 +2408,7 @@ void loop()
   MIDI MESSAGE HANDLER
 ******************************************************************************/
 
+#if defined(DRUMS_FILTERS) 
 void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 {
   AudioNoInterrupts();
@@ -2412,6 +2428,7 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
   sample_envelope[instance_id + NUM_DRUMS]->release(pow(drum_config[sample].env_release, 2.5f));
   AudioInterrupts();
 }
+#endif
 
 uint8_t msp_playmode_sample_slot[NUM_DRUMS];
 
@@ -2879,7 +2896,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
           if (slot != 99)
           {
-
+#if defined(DRUMS_FILTERS) 
             if (drum_config[d].filter_mode == 0)
             {
               Drum_filter[slot]->setLowpass(0, 20000, 0.2);
@@ -2900,7 +2917,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
               Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
             }
-
+#endif
             global_delay_in_mixer[0]->gain(slot + 10, drum_config[d].delay1 / 5); //previously 8
             global_delay_in_mixer[1]->gain(slot + 10, drum_config[d].delay2 / 5); //previously 8
 
@@ -2929,9 +2946,11 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 Drum[slot]->setPlaybackRate(drum_config[d].pitch);
                 Drum[slot]->setLoopType(loop_type::looptype_none);
 
+#if defined(DRUMS_FILTERS) 
                 set_stereo_envelopes(slot, d);
                 sample_envelope[slot]->noteOn();
                 sample_envelope[slot + NUM_DRUMS]->noteOn();
+#endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
                 if (seq.hihat_randomizer != 0 && drum_config[d].drum_class == DRUM_HIHAT)
@@ -3118,9 +3137,10 @@ void stop_all_drum_slots()
   {
     if (Drum[i]->isPlaying())
     {
+#if defined(DRUMS_FILTERS) 
       sample_envelope[i]->noteOff();
       sample_envelope[i + NUM_DRUMS]->noteOff();
-
+#endif
       Drum[i]->stop();
       Drum[i]->enableInterpolation(false);
       Drum[i]->setPlaybackRate(1.0);
@@ -3241,9 +3261,10 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         {
           note_buffer_msp[i] = 0;
           //Drum[i]->setLoopType(loop_type::looptype_none);
-
+#if defined(DRUMS_FILTERS) 
           sample_envelope[i]->noteOff();
           sample_envelope[i + NUM_DRUMS]->noteOff();
+#endif
           //delay(3);
 
                     //Drum[i]->stop();
@@ -4482,12 +4503,14 @@ FLASHMEM void initial_values(bool init)
   }
   else
   { // boot without performance - set some defaults
+
     configuration.dexed[0].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST0;
     configuration.dexed[1].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST1;
-
-    configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
-    configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
-
+    if (NUM_DEXED > 2)
+    {
+      configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
+      configuration.dexed[3].midi_channel = MIDI_CHANNEL_OFF;
+    }
     // configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel + 1, 0, 16);
     microsynth[0].midi_channel = DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST0;
     microsynth[1].midi_channel = DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST1;

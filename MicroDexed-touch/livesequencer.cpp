@@ -1124,6 +1124,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].screenSetupFn = (instrument == INSTR_DX1) ? (SetupFn)selectDexed0 : (SetupFn)selectDexed1;
         break;
 
+#if (NUM_DEXED>2)
       case INSTR_DX3:
         data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[2].midi_channel);
         data.tracks[i].screen = UI_func_voice_select;
@@ -1135,6 +1136,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].screen = UI_func_voice_select;
         data.tracks[i].screenSetupFn =  (SetupFn)selectDexed3;
         break;
+#endif
 
       case INSTR_EP:
         data.tracks[i].channel = static_cast<midi::Channel>(configuration.epiano.midi_channel);

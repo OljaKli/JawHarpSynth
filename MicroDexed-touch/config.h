@@ -146,7 +146,13 @@
 //* DEXED SEQUENCER, EPIANO AND EFFECTS SETTINGS
 //*************************************************************************************************
 // Number of Dexed instances
+
+#ifdef PSRAM
 #define NUM_DEXED 4
+#else
+#define NUM_DEXED 2
+#endif
+
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST0 1
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST1 2
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST2 3
@@ -218,13 +224,13 @@
 //*************************************************************************************************
 #define SAMPLE_RATE 44100
 
-// #ifdef PSRAM
-// #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 // needs rework when the delay memory is external
-// #else
-// #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED *DELAY_MAX_TIME / 128000 + 36 + 14
-// #endif
+ #ifdef PSRAM
+ #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 
+ #else
+ #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED *DELAY_MAX_TIME / 128000 + 36 + 14
+ #endif
 
-#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 // tested to work on all versions, including old resistive touch 2/2025
+//#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 // tested to work on all versions, including old resistive touch 2/2025
 
 #ifdef TEENSY_AUDIO_BOARD
 #define SGTL5000_LINEOUT_LEVEL 29
@@ -240,10 +246,6 @@
 #define COLOR_BACKGROUND 0x0000
 #define COLOR_SYSTEXT 0xFFFF
 #define DX_DARKCYAN 0x030D 
-
-// uint16_t COLOR_BACKGROUND =0x0000;
-// uint16_t COLOR_SYSTEXT =0xFFFF;
-// uint16_t DX_DARKCYAN =0x030D;
 
 //#define COLOR_SYSTEXT 0x0000 //inverse
 //#define COLOR_BACKGROUND  0xFFFF  //inverse

@@ -291,8 +291,11 @@ extern AudioEffectMonoStereo* delay_mono2stereo[NUM_DEXED];
 
 extern AudioAnalyzePeak microdexed_peak_0;
 extern AudioAnalyzePeak microdexed_peak_1;
+ #if (NUM_DEXED>2)
 extern AudioAnalyzePeak microdexed_peak_2;
 extern AudioAnalyzePeak microdexed_peak_3;
+#endif
+
 extern AudioAnalyzePeak ep_peak_l;
 extern AudioAnalyzePeak ep_peak_r;
 extern AudioAnalyzePeak microsynth_peak_osc_0;
@@ -6594,21 +6597,35 @@ FLASHMEM void UI_func_drums(uint8_t param)
     display.print("ENVELOPE");
 
     ui.setCursor(0, 13);
-
+ #if (NUM_DEXED>2)
     addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
     addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
     addDrumParameterEditor_uint8_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
     addDrumParameterEditor_uint8_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
     addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
+#else
+    addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 0, &drum_config[0].env_attack);
+    addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 0, &drum_config[0].env_hold);
+    addDrumParameterEditor_uint8_t((const char*)F("DECAY"), 0, 0, &drum_config[0].env_decay);
+    addDrumParameterEditor_uint8_t((const char*)F("SUSTAIN"), 0, 0, &drum_config[0].env_sustain);
+    addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 0, &drum_config[0].env_release);
+#endif
 
     setCursor_textGrid_small(26, 11);
     display.setTextColor(RED);
     display.print("FILTER");
     ui.setCursor(26, 13);
+     #if (NUM_DEXED>2)
     addDrumParameterEditor_uint8_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
     addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
     ui.setCursor(42, 14);
     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
+#else
+ addDrumParameterEditor_uint8_t((const char*)F("FILTER"), 0, 0, &drum_config[0].filter_mode);
+    addDrumParameterEditor((const char*)F("FRQ"), 0, 0, &drum_config[0].filter_freq);
+    ui.setCursor(42, 14);
+    addDrumParameterEditor((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
+#endif
 
     display.setTextColor(RED);
     setCursor_textGrid_small(26, 16);
@@ -12957,10 +12974,12 @@ FLASHMEM uint8_t count_omni()
     count++;
   if (configuration.dexed[1].midi_channel == MIDI_CHANNEL_OMNI)
     count++;
+ #if (NUM_DEXED>2)
   if (configuration.dexed[2].midi_channel == MIDI_CHANNEL_OMNI)
     count++;
   if (configuration.dexed[3].midi_channel == MIDI_CHANNEL_OMNI)
     count++;
+#endif
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI)
     count++;
   if (microsynth[0].midi_channel == MIDI_CHANNEL_OMNI)
@@ -12985,7 +13004,11 @@ FLASHMEM uint8_t count_midi_channel_duplicates(bool find_first)
 {
   uint8_t count = 0;
   uint8_t midi_ch[17] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+   #if (NUM_DEXED>2)
   uint8_t ins[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0 };
+#else
+ uint8_t ins[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0,0 };
+#endif
 
   ins[0] = configuration.dexed[0].midi_channel;
   ins[1] = configuration.dexed[1].midi_channel;
@@ -12997,12 +13020,18 @@ FLASHMEM uint8_t count_midi_channel_duplicates(bool find_first)
   ins[7] = msp[1].midi_channel;
   ins[8] = drum_midi_channel;
   ins[9] = slices_midi_channel;
+   #if (NUM_DEXED>2)
   ins[10] = configuration.dexed[2].midi_channel;
   ins[11] = configuration.dexed[3].midi_channel;
-
+#endif
+ 
   for (uint8_t i = 1; i < 17; i++)
   {
+     #if (NUM_DEXED>2)
     for (uint8_t j = 0; j < 12; j++)
+    #else
+     for (uint8_t j = 0; j < 10; j++)
+    #endif
     {
       if (ins[j] == i)
         midi_ch[i]++;
@@ -13731,11 +13760,17 @@ FLASHMEM void update_selective_values_master_effects()
     print_small_intbar(6, 13, configuration.fx.delay_level1[0], 8, 1, 0);
   if (menu_item_check(9))
     print_small_intbar(6, 14, configuration.fx.delay_level1[1], 9, 1, 0);
+     #if (NUM_DEXED>2)
   if (menu_item_check(10))
     print_small_intbar(6, 15, configuration.fx.delay_level1[2], 10, 1, 0);
   if (menu_item_check(11))
     print_small_intbar(6, 16, configuration.fx.delay_level1[3], 11, 1, 0);
-
+    #else
+    if (menu_item_check(10))
+    print_small_intbar(6, 15, 0, 10, 1, 0);
+  if (menu_item_check(11))
+    print_small_intbar(6, 16, 0, 11, 1, 0);
+#endif
   if (menu_item_check(12))
     print_small_intbar(6, 17, configuration.fx.ep_delay_send_1, 12, 1, 0);
   if (menu_item_check(13))
@@ -13776,12 +13811,17 @@ FLASHMEM void update_selective_values_master_effects()
 
   if (menu_item_check(26))
     print_small_intbar(22, 14, configuration.fx.delay_level2[1], 26, 1, 0);
+     #if (NUM_DEXED>2)
   if (menu_item_check(27))
     print_small_intbar(22, 15, configuration.fx.delay_level2[2], 27, 1, 0);
   if (menu_item_check(28))
     print_small_intbar(22, 16, configuration.fx.delay_level2[3], 28, 1, 0);
-
-
+    #else
+    if (menu_item_check(27))
+    print_small_intbar(22, 15, 0, 27, 1, 0);
+  if (menu_item_check(28))
+    print_small_intbar(22, 16, 0, 28, 1, 0);
+#endif
 
   if (menu_item_check(29))
     print_small_intbar(22, 17, configuration.fx.ep_delay_send_2, 29, 1, 0);
@@ -13795,8 +13835,6 @@ FLASHMEM void update_selective_values_master_effects()
     print_small_intbar(22, 21, configuration.fx.delay2_to_delay1, 33, 1, 0);
   if (menu_item_check(34))
     print_small_intbar(22, 22, configuration.fx.delay_to_reverb[1], 34, 1, 0);
-
-
 
   if (menu_item_check(35))
     print_small_intbar(43, 4, configuration.fx.reverb_roomsize, 35, 1, 0);
@@ -13815,11 +13853,17 @@ FLASHMEM void update_selective_values_master_effects()
     print_small_intbar(43, 13, configuration.fx.reverb_send[0], 41, 1, 0);
   if (menu_item_check(42))
     print_small_intbar(43, 14, configuration.fx.reverb_send[1], 42, 1, 0);
+     #if (NUM_DEXED>2)
   if (menu_item_check(43))
     print_small_intbar(43, 15, configuration.fx.reverb_send[2], 43, 1, 0);
   if (menu_item_check(44))
     print_small_intbar(43, 16, configuration.fx.reverb_send[3], 44, 1, 0);
-
+    #else
+    if (menu_item_check(43))
+    print_small_intbar(43, 15, 0, 43, 1, 0);
+  if (menu_item_check(44))
+    print_small_intbar(43, 16, 0, 44, 1, 0);
+#endif
   if (menu_item_check(45))
     print_small_intbar(43, 17, configuration.fx.ep_reverb_send, 45, 1, 0);
   if (menu_item_check(46))
@@ -13960,7 +14004,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           set_dexed_delay_level(0, 1, configuration.fx.delay_level1[1]);
           print_small_intbar(6, 14, configuration.fx.delay_level1[1], 9, 1, 0);
           break;
-
+ #if (NUM_DEXED>2)
         case 10:
           configuration.fx.delay_level1[2] = constrain(configuration.fx.delay_level1[2] + (factorChange * ENCODER[ENC_R].speed()), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
           set_dexed_delay_level(0, 2, configuration.fx.delay_level1[2]);
@@ -13972,7 +14016,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           set_dexed_delay_level(0, 3, configuration.fx.delay_level1[3]);
           print_small_intbar(6, 16, configuration.fx.delay_level1[3], 11, 1, 0);
           break;
-
+#endif
 
         case 12:
           // epiano delay level
@@ -14073,7 +14117,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           set_dexed_delay_level(1, 1, configuration.fx.delay_level2[1]);
           print_small_intbar(22, 14, configuration.fx.delay_level2[1], 26, 1, 0);
           break;
-
+ #if (NUM_DEXED>2)
         case 27:
           //  delay2 send
           configuration.fx.delay_level2[2] = constrain(configuration.fx.delay_level2[2] + (factorChange * ENCODER[ENC_R].speed()), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
@@ -14087,7 +14131,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           set_dexed_delay_level(1, 3, configuration.fx.delay_level2[3]);
           print_small_intbar(22, 16, configuration.fx.delay_level2[3], 28, 1, 0);
           break;
-
+#endif
 
         case 29:
           // ep send
@@ -14172,7 +14216,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           master_effects_set_reverb_send(1);
           print_small_intbar(43, 14, configuration.fx.reverb_send[1], 42, 1, 0);
           break;
-
+ #if (NUM_DEXED>2)
         case 43:
           master_effects_set_reverb_send(2);
           print_small_intbar(43, 15, configuration.fx.reverb_send[2], 43, 1, 0);
@@ -14182,7 +14226,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           master_effects_set_reverb_send(3);
           print_small_intbar(43, 16, configuration.fx.reverb_send[3], 44, 1, 0);
           break;
-
+#endif
 
         case 45:
           // epiano reverb send
@@ -16956,10 +17000,14 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     helptext_r("EDIT");
     display.setTextSize(1);
     char buf[21];
-    for (uint8_t i = 0; i < NUM_DEXED; i++)
+    for (uint8_t i = 0; i < 4; i++)
     {
-      snprintf_P(buf, sizeof(buf), PSTR("%s%d"), F("DEXED INSTANCE #"), i + 1);
+       snprintf_P(buf, sizeof(buf), PSTR("%s%d"), F("DEXED INSTANCE #"), i + 1);
+       #if (NUM_DEXED>2)
       _show_midi_channel(buf, 5 + i, configuration.dexed[i].midi_channel);
+      #else
+      _show_midi_channel(buf, 5 + i, MIDI_CHANNEL_OFF);
+      #endif
     }
 
     snprintf_P(buf, sizeof(buf), PSTR("%s"), F("MDA ePIANO"));
@@ -16998,11 +17046,12 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
         configuration.dexed[0].midi_channel = calc_val[state_dir](configuration.dexed[0].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 1)
         configuration.dexed[1].midi_channel = calc_val[state_dir](configuration.dexed[1].midi_channel, 1, 0, 17);
+ #if (NUM_DEXED>2)
       else if (generic_temp_select_menu == 2)
         configuration.dexed[2].midi_channel = calc_val[state_dir](configuration.dexed[2].midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 3)
         configuration.dexed[3].midi_channel = calc_val[state_dir](configuration.dexed[3].midi_channel, 1, 0, 17);
-
+#endif
       else if (generic_temp_select_menu == 4)
         configuration.epiano.midi_channel = calc_val[state_dir](configuration.epiano.midi_channel, 1, 0, 17);
       else if (generic_temp_select_menu == 5)
@@ -17050,13 +17099,21 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     {
       setModeColor(2);
       setCursor_textGrid_small(40, 7);
+  #if (NUM_DEXED>2)
       _print_midi_channel(configuration.dexed[2].midi_channel);
+      #else
+       _print_midi_channel(MIDI_CHANNEL_OFF);
+       #endif
     }
     if (menu_item_check(3))
     {
       setModeColor(3);
       setCursor_textGrid_small(40, 8);
+      #if (NUM_DEXED>2)
       _print_midi_channel(configuration.dexed[3].midi_channel);
+       #else
+       _print_midi_channel(MIDI_CHANNEL_OFF);
+       #endif
     }
 
     if (menu_item_check(4))
@@ -17671,10 +17728,13 @@ FLASHMEM void print_mixer_text()
   // print_small_panbar_mixer(4, 17, configuration.dexed[1].pan, 31);
   setCursor_textGrid_small(5, 10);
   print_formatted_number(configuration.dexed[1].sound_intensity, 3);
+
+   #if (NUM_DEXED>2)
   setCursor_textGrid_small(9, 10);
   print_formatted_number(configuration.dexed[2].sound_intensity, 3);
   setCursor_textGrid_small(13, 10);
   print_formatted_number(configuration.dexed[3].sound_intensity, 3);
+#endif
 
   // print_small_panbar_mixer(8, 17, configuration.epiano.pan, 31);
   setCursor_textGrid_small(17, 10);
@@ -17762,13 +17822,14 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       }
       else
       {
-        if (seq.temp_active_menu < 4) // dexed instance #0 to #3
+        if (seq.temp_active_menu < 4 && seq.temp_active_menu <NUM_DEXED) // dexed instance #0 to #3
         {
           if (LCDML.BT_checkDown())
             configuration.dexed[seq.temp_active_menu].sound_intensity = constrain(configuration.dexed[seq.temp_active_menu].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           else if (LCDML.BT_checkUp())
             configuration.dexed[seq.temp_active_menu].sound_intensity = constrain(configuration.dexed[seq.temp_active_menu].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
         }
+
         else if (seq.temp_active_menu == 4) // epiano
         {
           if (LCDML.BT_checkDown())
@@ -17867,12 +17928,20 @@ FLASHMEM void UI_func_mixer(uint8_t param)
     if (seq.temp_active_menu < 4 && seq.edit_state) // dexed 0-3 instance selected
     {
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+       if (NUM_DEXED>2 || seq.temp_active_menu <NUM_DEXED)
       display_bar_int("", configuration.dexed[seq.temp_active_menu].sound_intensity, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
+      else
+      display_bar_int("", 0, 1.0, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 3, false, false, false);
+     
       setCursor_textGrid(1, 1);
       display.print("DEXED #");
       display.print(seq.temp_active_menu + 1);
+
+ if (NUM_DEXED>2 || seq.temp_active_menu <NUM_DEXED)
+ {
       MD_sendControlChange(configuration.dexed[seq.temp_active_menu].midi_channel, 7, configuration.dexed[seq.temp_active_menu].sound_intensity);
       MicroDexed[seq.temp_active_menu]->setGain(midi_volume_transform(map(configuration.dexed[seq.temp_active_menu].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
+ }
     }
     else if (seq.temp_active_menu == 4 && seq.edit_state) // epiano
     {
@@ -21268,11 +21337,13 @@ void midiCallback(midi_event* pev)
     else if (smf_track_inst[pev->channel] == 2)
       inst_channel = configuration.dexed[1].midi_channel;
 
+#if defined(DRUMS_FILTERS) 
     else if (smf_track_inst[pev->channel] == 3)
       inst_channel = configuration.dexed[2].midi_channel;
 
     else if (smf_track_inst[pev->channel] == 4)
       inst_channel = configuration.dexed[3].midi_channel;
+      #endif
 
     else if (smf_track_inst[pev->channel] == 5)
       inst_channel = microsynth[0].midi_channel;
@@ -21588,11 +21659,11 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
       else if (generic_temp_select_menu == 1 && smf_playing)
       {
         //midiSilence();
-        MicroDexed[0]->panic();
-        MicroDexed[1]->panic();
-        MicroDexed[2]->panic();
-        MicroDexed[3]->panic();
-
+        for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
+        {
+ MicroDexed[instance_id]->panic();
+        }
+       
         SMF.close();
         smf_playing = false;
         seq.edit_state = false;
@@ -22992,8 +23063,13 @@ FLASHMEM void draw_volmeters_mixer()
   float meters[15] = {
     microdexed_peak_0.read(),
     microdexed_peak_1.read(),
+     #if (NUM_DEXED>2)
     microdexed_peak_2.read(),
     microdexed_peak_3.read(),
+    #else
+    0,
+    0,
+    #endif
     ep_peak_l.available() && ep_peak_r.available() ? (ep_peak_l.read() + ep_peak_r.read()) / 2 : 0,
     microsynth_peak_osc_0.available() ? microsynth_peak_osc_0.read() : 0,
     microsynth_peak_osc_1.available() ? microsynth_peak_osc_1.read() : 0,
@@ -23017,7 +23093,6 @@ FLASHMEM void draw_volmeters_mixer()
 
     // draw text
     display.setCursor(x, y + 4);
-
     int height = mapfloat(meters[i], 0.0, 1.0, 0, 65);
 
     // draw bar
