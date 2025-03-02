@@ -21845,6 +21845,7 @@ FLASHMEM void UI_func_test_touchscreen(uint8_t param)
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
+    unregisterTouchHandler();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
