@@ -844,33 +844,36 @@ FLASHMEM void print_song_mode_help()
       helptext_l("MOVE X");
       helptext_r("MOVE Y");
     }
-    else if (seq.edit_state && seq.cycle_touch_element == 5)
-    {
-      display.setCursor(7 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-      print_empty_spaces(31, 1);
-      helptext_l("> CHAIN");
-      helptext_r("< > SELECT CHAIN");
-    }
-    else if (seq.edit_state && seq.cycle_touch_element == 6)
-    {
-      helptext_l("SONG < > TRANSPOSE");
-      display.setCursor(CHAR_width_small * 18, DISPLAY_HEIGHT - CHAR_height_small);
-      print_empty_spaces(10, 1);
-      helptext_r("< > SEL. CH. STEP");
-    }
-    else if (seq.edit_state && seq.cycle_touch_element == 7)
-    {
-      helptext_r("< > SEL. PATTERN");
-    }
-    else if (seq.edit_state && seq.cycle_touch_element == 9)
-    {
-      helptext_l("");
-      helptext_r("< > EDIT STEP");
-    }
-    else if (seq.edit_state && seq.cycle_touch_element == 8)
-    {
-      helptext_l("CHAIN < > PATTERN EDITOR");
-      helptext_r("< > SEL. STEP");
+    else if (seq.edit_state) {
+      switch (seq.cycle_touch_element) {
+      case 5:
+        display.setCursor(7 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
+        print_empty_spaces(31, 1);
+        helptext_l("> CHAIN");
+        helptext_r("< > SELECT CHAIN");
+        break;
+
+      case 6:
+        helptext_l("SONG < > TRANSPOSE");
+        display.setCursor(CHAR_width_small * 18, DISPLAY_HEIGHT - CHAR_height_small);
+        print_empty_spaces(10, 1);
+        helptext_r("< > SEL. CH. STEP");
+        break;
+
+      case 7:
+        helptext_r("< > SEL. PATTERN");
+        break;
+
+      case 8:
+        helptext_l("CHAIN < > PATTERN EDITOR");
+        helptext_r("< > SEL. STEP");
+        break;
+
+      case 9:
+        helptext_l("");
+        helptext_r("< > EDIT STEP");
+        break;
+      }
     }
   }
   seq.help_text_needs_refresh = false;
@@ -1678,10 +1681,7 @@ FLASHMEM void edit_song_loop()
       if (seq.loop_edit_step == 2 && y == seq.cursor_scroll)
         display.setTextColor(RED, COLOR_BACKGROUND);
       display.print("<");
-
     }
-
-
   }
 }
 
@@ -3271,16 +3271,6 @@ FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint
   // glow_type=2;
   // check_glow(x,y, input_value,selected_option);
 }
-FLASHMEM void print_small_panbar_mixer(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
-{
-  setCursor_textGrid_small(x, y);
-  setModeColor(selected_option);
-  display.console = true;
-  display.drawRect(CHAR_width_small * x, 10 * y, 3 * CHAR_width_small, 7, COLOR_SYSTEXT);
-  display.console = true;
-  display.fillRect(CHAR_width_small * x + 1, 10 * y + 1, 3 * CHAR_width_small - 2, 5, COLOR_BACKGROUND);
-  display.fillRect(CHAR_width_small * x + 1 + input_value / 2.30, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
-}
 
 // read right encoder change, with optional acceleration.
 FLASHMEM int16_t encoder_change(bool fast)
@@ -3658,16 +3648,6 @@ public:
 /***********************************************************************
    MENU CONTROL
  ***********************************************************************/
-FLASHMEM uint8_t get_current_cursor_id(void)
-{
-  LCDMenuLib2_menu* tmp;
-
-  if ((tmp = LCDML.MENU_getCurrentObj()) != NULL)
-    return (tmp->getChild(LCDML.MENU_getCursorPosAbs())->getID());
-  else
-    return (0);
-}
-
 uint8_t touchX = 0;
 uint8_t touchY = 0;
 extern void boot_animation();
@@ -4744,21 +4724,10 @@ FLASHMEM void UI_func_map_gamepad(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || LCDML.BT_checkEnter())
+    if (LCDML.BT_checkEnter())
     {
-      if (LCDML.BT_checkDown())
-      {
-        ;
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        ;
-      }
-      if (LCDML.BT_checkEnter())
-      {
-        temp_int = 0;
-        display.fillRect(0, 170, DISPLAY_WIDTH, 40, COLOR_BACKGROUND);
-      }
+      temp_int = 0;
+      display.fillRect(0, 170, DISPLAY_WIDTH, 40, COLOR_BACKGROUND);
     }
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -4768,62 +4737,44 @@ FLASHMEM void UI_func_map_gamepad(uint8_t param)
   }
 }
 
-FLASHMEM void reverb_roomsize()
+FLASHMEM void reverb_roomsize(int8_t factorChange)
 {
-  if (LCDML.BT_checkDown())
-    configuration.fx.reverb_roomsize = constrain(configuration.fx.reverb_roomsize + ENCODER[ENC_R].speed(), REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX);
-  else if (LCDML.BT_checkUp())
-    configuration.fx.reverb_roomsize = constrain(configuration.fx.reverb_roomsize - ENCODER[ENC_R].speed(), REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX);
+  configuration.fx.reverb_roomsize = constrain(configuration.fx.reverb_roomsize + factorChange * ENCODER[ENC_R].speed(), REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX);
   // display_bar_int("Reverb Room", configuration.fx.reverb_roomsize, 1.0, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX, 3, false, false, false);
   reverb.size(mapfloat(configuration.fx.reverb_roomsize, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_lowpass()
+FLASHMEM void reverb_lowpass(int8_t factorChange)
 {
-  if (LCDML.BT_checkDown())
-    configuration.fx.reverb_lowpass = constrain(configuration.fx.reverb_lowpass + ENCODER[ENC_R].speed(), REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX);
-  else if (LCDML.BT_checkUp())
-    configuration.fx.reverb_lowpass = constrain(configuration.fx.reverb_lowpass - ENCODER[ENC_R].speed(), REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX);
+  configuration.fx.reverb_lowpass = constrain(configuration.fx.reverb_lowpass + factorChange * ENCODER[ENC_R].speed(), REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX);
   // display_bar_int("Reverb Lowpass", configuration.fx.reverb_lowpass, 1.0, REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX, 3, false, false, false);
   reverb.lowpass(mapfloat(configuration.fx.reverb_lowpass, REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_lodamp()
+FLASHMEM void reverb_lodamp(int8_t factorChange)
 {
-  if (LCDML.BT_checkDown())
-    configuration.fx.reverb_lodamp = constrain(configuration.fx.reverb_lodamp + ENCODER[ENC_R].speed(), REVERB_LODAMP_MIN, REVERB_LODAMP_MAX);
-  else if (LCDML.BT_checkUp())
-    configuration.fx.reverb_lodamp = constrain(configuration.fx.reverb_lodamp - ENCODER[ENC_R].speed(), REVERB_LODAMP_MIN, REVERB_LODAMP_MAX);
+  configuration.fx.reverb_lodamp = constrain(configuration.fx.reverb_lodamp + factorChange * ENCODER[ENC_R].speed(), REVERB_LODAMP_MIN, REVERB_LODAMP_MAX);
   // display_bar_int("Reverb Lodamp.", configuration.fx.reverb_lodamp, 1.0, REVERB_LODAMP_MIN, REVERB_LODAMP_MAX, 3, false, false, false);
   reverb.lodamp(mapfloat(configuration.fx.reverb_lodamp, REVERB_LODAMP_MIN, REVERB_LODAMP_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_hidamp()
+FLASHMEM void reverb_hidamp(int8_t factorChange)
 {
-  if (LCDML.BT_checkDown())
-    configuration.fx.reverb_hidamp = constrain(configuration.fx.reverb_hidamp + ENCODER[ENC_R].speed(), REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX);
-  else if (LCDML.BT_checkUp())
-    configuration.fx.reverb_hidamp = constrain(configuration.fx.reverb_hidamp - ENCODER[ENC_R].speed(), REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX);
+  configuration.fx.reverb_hidamp = constrain(configuration.fx.reverb_hidamp + factorChange * ENCODER[ENC_R].speed(), REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX);
   // display_bar_int("Reverb Hidamp.", configuration.fx.reverb_hidamp, 1.0, REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX, 3, false, false, false);
   reverb.hidamp(mapfloat(configuration.fx.reverb_hidamp, REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_diffusion()
+FLASHMEM void reverb_diffusion(int8_t factorChange)
 {
-  if (LCDML.BT_checkDown())
-    configuration.fx.reverb_diffusion = constrain(configuration.fx.reverb_diffusion + ENCODER[ENC_R].speed(), REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX);
-  else if (LCDML.BT_checkUp())
-    configuration.fx.reverb_diffusion = constrain(configuration.fx.reverb_diffusion - ENCODER[ENC_R].speed(), REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX);
+  configuration.fx.reverb_diffusion = constrain(configuration.fx.reverb_diffusion + factorChange * ENCODER[ENC_R].speed(), REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX);
   // display_bar_int("Reverb Diff.", configuration.fx.reverb_diffusion, 1.0, REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX, 3, false, false, false);
   reverb.diffusion(mapfloat(configuration.fx.reverb_diffusion, REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_level()
+FLASHMEM void reverb_level(int8_t factorChange)
 {
-  if (LCDML.BT_checkDown())
-    configuration.fx.reverb_level = constrain(configuration.fx.reverb_level + ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
-  else if (LCDML.BT_checkUp())
-    configuration.fx.reverb_level = constrain(configuration.fx.reverb_level - ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
+  configuration.fx.reverb_level = constrain(configuration.fx.reverb_level + factorChange * ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
   // display_bar_int("Reverb Level", configuration.fx.reverb_level, 1.0, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 3, false, false, true);
   master_mixer_r.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
   master_mixer_l.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
@@ -7034,69 +6985,6 @@ void seq_printAllSeqSteps()
   }
 }
 
-// void seq_sub_print_track_assignments(int x, int y, bool init)
-//{
-//   if (seq.cycle_touch_element == 0)  // touch keyboard is off
-//   {
-//     display.setTextSize(1);
-//     display.setTextColor(GREY2, COLOR_BACKGROUND);
-//     for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
-//     {
-//       display.setCursor(CHAR_width_small * 36,  (track + 13) * (CHAR_height_small + 1) + 20  );
-//       if (seq.menu - 21 == track)
-//         set_track_type_color_inverted(track);
-//       else
-//         set_track_type_color(track);
-//       display.print(F("T"));
-//       display.print (track + 1);
-//       display.setCursor(CHAR_width_small * 36 + 3 * CHAR_width_small,   (track + 13) * (CHAR_height_small + 1) + 20  );
-//       if (seq.menu - 21 - NUM_SEQ_TRACKS == track)
-//         set_track_type_color_inverted(track);
-//       else
-//         set_track_type_color(track);
-//       if (seq.track_type[track] > 0 && seq.instrument[track] < 2)
-//       {
-//         display.print ("DEXED INST.");
-//         display.print (seq.instrument[track] + 1);
-//       }
-//       else if (seq.track_type[track] > 0 && seq.instrument[track] == 2) //epiano
-//       {
-//         display.print ("ELECTR.PIANO");
-//       }
-//       else if (seq.track_type[track] > 0 && seq.instrument[track] == 3)  //MicroSynth 0
-//       {
-//         display.print ("MICROSYNTH 1");
-//       }
-//       else if (seq.track_type[track] > 0 && seq.instrument[track] == 4)  //MicroSynth 1
-//       {
-//         display.print ("MICROSYNTH 2");
-//       }
-//       else if (seq.instrument[track] == 5) //Braids
-//       {
-//         display.print ("BRAIDS OSC");
-//       }
-//       else if ( seq.instrument[track] > 5 && seq.instrument[track] < 16) //multisamples
-//       {
-//         display.print ("MULTISAMPLE");
-//       }
-//       else if (seq.instrument[track] > 15 && seq.instrument[track] < 32) //external MIDI USB
-//       {
-//         display.print ("MIDI USB #");
-//         print_formatted_number(seq.instrument[track] - 15, 2);
-//       }
-//       else if (seq.instrument[track] > 31 && seq.instrument[track] < 48) //external MIDI MINI JACK/DIN
-//       {
-//         display.print ("MIDI DIN #");
-//         print_formatted_number(seq.instrument[track] - 31, 2);
-//       }
-//       else
-//       {
-//         display.print ("-----------");
-//       }
-//     }
-//   }
-// }
-
 void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col);
 
 void seq_printAllVelocitySteps()
@@ -8298,9 +8186,10 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if (seq.active_function == 99)
+    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
     {
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
+      if (seq.active_function == 99)
       {
         if (LCDML.BT_checkDown())
         {
@@ -8323,71 +8212,39 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
           }
         }
       }
-    }
-    else if (seq.active_function == 0 && seq.menu == 0)
-    {
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+      else if (seq.active_function == 0 && seq.menu == 0)
       {
-        if (LCDML.BT_checkDown())
-          seq.active_pattern = constrain(seq.active_pattern + 1, 0, NUM_SEQ_PATTERN - 1);
-        else if (LCDML.BT_checkUp())
-          seq.active_pattern = constrain(seq.active_pattern - 1, 0, NUM_SEQ_PATTERN - 1);
+        seq.active_pattern = constrain(seq.active_pattern + factorChange * 1, 0, NUM_SEQ_PATTERN - 1);
         display.setCursor(11 * CHAR_width_small, CHAR_height * 3 + 3);
         print_content_type();
         virtual_keyboard_smart_preselect_mode();
         update_latch_button();
       }
-    }
-    else if (seq.active_function == 0 && seq.menu > 0 && seq.menu < 17)
-    {
-      if (seq.note_data[seq.active_pattern][seq.menu - 1] > 0)
+      else if (seq.active_function == 0 && seq.menu > 0 && seq.menu < 17)
       {
-        if (seq.vel[seq.active_pattern][seq.menu - 1] < 210) // it is a normal sample
+        if (seq.note_data[seq.active_pattern][seq.menu - 1] > 0)
         {
-          if ((seq.active_function == 0 && seq.content_type[seq.active_pattern] < 2) || (seq.active_function == 0 && seq.content_type[seq.active_pattern] == 3))
-          { // if is Drum or normal Instrument Track
-            if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-            {
-              if (LCDML.BT_checkDown())
-                seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] + ENCODER[ENC_R].speed(), 0, 127);
-              else if (LCDML.BT_checkUp())
-                seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] - ENCODER[ENC_R].speed(), 0, 127);
-            }
-          }
-          else if (seq.active_function == 0 && seq.content_type[seq.active_pattern] > 1)
-          { // is in Chord or Arp Mode
-            if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-            {
-              if (LCDML.BT_checkDown())
-                seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] + 1, 200, 205);
-              else if (LCDML.BT_checkUp())
-                seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] - 1, 200, 205);
-            }
-          }
-        }
-        else
-        {
-          // is in pitched Sample Mode
-          if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+          if (seq.vel[seq.active_pattern][seq.menu - 1] < 210) // it is a normal sample
           {
-            if (LCDML.BT_checkDown())
-              seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] + 1, 210, 217);
-            else if (LCDML.BT_checkUp())
-              seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] - 1, 210, 217);
+            if ((seq.active_function == 0 && seq.content_type[seq.active_pattern] < 2) || (seq.active_function == 0 && seq.content_type[seq.active_pattern] == 3))
+            { // if is Drum or normal Instrument Track
+              seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] + factorChange * ENCODER[ENC_R].speed(), 0, 127);
+            }
+            else if (seq.active_function == 0 && seq.content_type[seq.active_pattern] > 1)
+            { // is in Chord or Arp Mode
+              seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] + factorChange * 1, 200, 205);
+            }
+          }
+          else
+          {
+            seq.vel[seq.active_pattern][seq.menu - 1] = constrain(seq.vel[seq.active_pattern][seq.menu - 1] + factorChange * 1, 210, 217);
           }
         }
       }
-    }
-    else if (seq.active_function == 0 && seq.menu == 17) // edit content type of current pattern
-    {
-
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+      else if (seq.active_function == 0 && seq.menu == 17) // edit content type of current pattern
       {
         prev_option = seq.note_editor_view;
-        if (LCDML.BT_checkDown())
-          seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] + 1, 0, 3);
-        else if (LCDML.BT_checkUp())
-          seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] - 1, 0, 3);
+        seq.content_type[seq.active_pattern] = constrain(seq.content_type[seq.active_pattern] + factorChange * 1, 0, 3);
 
         seq_printAllSeqSteps();
         border3_clear();
@@ -8395,13 +8252,11 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
         {
           seq.note_editor_view = 0;
           print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, true, true);
-
         }
         else
         {
           seq.note_editor_view = 1;
           print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, seq.menu - 3, true);
-
         }
       }
     }
@@ -12728,42 +12583,22 @@ FLASHMEM void UI_func_arpeggio(uint8_t param)
   {
     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
     {
-      if (LCDML.BT_checkDown())
-      {
-        if (seq.edit_state == false)
-          generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 5);
-        else if (generic_temp_select_menu == 0)
-          seq.arp_length = constrain(seq.arp_length + ENCODER[ENC_R].speed(), 0, 16);
-        else if (generic_temp_select_menu == 1)
-          seq.arp_style = constrain(seq.arp_style + ENCODER[ENC_R].speed(), 0, 3);
-        else if (generic_temp_select_menu == 2)
-          seq.arp_speed = constrain(seq.arp_speed + ENCODER[ENC_R].speed(), 0, 3);
-        else if (generic_temp_select_menu == 3)
-          seq.euclidean_offset = constrain(seq.euclidean_offset + ENCODER[ENC_R].speed(), 0, 15);
-        else if (generic_temp_select_menu == 4)
-          seq.euclidean_active = !seq.euclidean_active;
-        else if (generic_temp_select_menu == 5)
-          seq.arp_num_notes_max = constrain(seq.arp_num_notes_max + 1, 1, 64);
+      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
 
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        if (seq.edit_state == false)
-          generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 0, 5);
-        else if (generic_temp_select_menu == 0)
-          seq.arp_length = constrain(seq.arp_length - ENCODER[ENC_R].speed(), 0, 16);
-        else if (generic_temp_select_menu == 1)
-          seq.arp_style = constrain(seq.arp_style - ENCODER[ENC_R].speed(), 0, 3);
-        else if (generic_temp_select_menu == 2)
-          seq.arp_speed = constrain(seq.arp_speed - ENCODER[ENC_R].speed(), 0, 3);
-        else if (generic_temp_select_menu == 3)
-          seq.euclidean_offset = constrain(seq.euclidean_offset - ENCODER[ENC_R].speed(), 0, 15);
-        else if (generic_temp_select_menu == 4)
-          seq.euclidean_active = !seq.euclidean_active;
-        else if (generic_temp_select_menu == 5)
-          seq.arp_num_notes_max = constrain(seq.arp_num_notes_max - 1, 1, 64);
-
-      }
+      if (seq.edit_state == false)
+        generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 5);
+      else if (generic_temp_select_menu == 0)
+        seq.arp_length = constrain(seq.arp_length + factorChange * ENCODER[ENC_R].speed(), 0, 16);
+      else if (generic_temp_select_menu == 1)
+        seq.arp_style = constrain(seq.arp_style + factorChange * ENCODER[ENC_R].speed(), 0, 3);
+      else if (generic_temp_select_menu == 2)
+        seq.arp_speed = constrain(seq.arp_speed + factorChange * ENCODER[ENC_R].speed(), 0, 3);
+      else if (generic_temp_select_menu == 3)
+        seq.euclidean_offset = constrain(seq.euclidean_offset + factorChange * ENCODER[ENC_R].speed(), 0, 15);
+      else if (generic_temp_select_menu == 4)
+        seq.euclidean_active = !seq.euclidean_active;
+      else if (generic_temp_select_menu == 5)
+        seq.arp_num_notes_max = constrain(seq.arp_num_notes_max + 1, 1, 64);
     }
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
@@ -14178,32 +14013,32 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
         case 35:
           // reverb room size
-          reverb_roomsize();
+          reverb_roomsize(factorChange);
           print_small_intbar(43, 4, configuration.fx.reverb_roomsize, 35, 1, 0);
           break;
 
         case 36:
-          reverb_lowpass();
+          reverb_lowpass(factorChange);
           print_small_intbar(43, 5, configuration.fx.reverb_lowpass, 36, 1, 0);
           break;
 
         case 37:
-          reverb_lodamp();
+          reverb_lodamp(factorChange);
           print_small_intbar(43, 6, configuration.fx.reverb_lodamp, 37, 1, 0);
           break;
 
         case 38:
-          reverb_hidamp();
+          reverb_hidamp(factorChange);
           print_small_intbar(43, 7, configuration.fx.reverb_hidamp, 38, 1, 0);
           break;
 
         case 39:
-          reverb_diffusion();
+          reverb_diffusion(factorChange);
           print_small_intbar(43, 8, configuration.fx.reverb_diffusion, 39, 1, 0);
           break;
 
         case 40:
-          reverb_level();
+          reverb_level(factorChange);
           print_small_intbar(43, 9, configuration.fx.reverb_level, 40, 1, 0);
           break;
 
@@ -14294,7 +14129,6 @@ FLASHMEM void UI_func_information(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-
     registerScope(180, 150, 128, 50);
     sysinfo_chord_state = 0;
     char version_string[display_cols + 10 + 1];
@@ -15137,17 +14971,17 @@ void encodeUint32(File& file, uint32_t value) {
 
 void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCount) {
   // Write the main chunk ID
-  uint8_t mainChunkId[4] = { 'R', 'I', 'F', 'F' };
+  static constexpr uint8_t mainChunkId[4] = { 'R', 'I', 'F', 'F' };
   file.write(mainChunkId, sizeof(mainChunkId));
 
   // Write the main chunk header
   uint32_t mainChunkSize = 0; // placeholder, will be written on closing
   encodeUint32(file, mainChunkSize);
-  uint8_t mainChunkFormat[4] = { 'W', 'A', 'V', 'E' };
+  static constexpr uint8_t mainChunkFormat[4] = { 'W', 'A', 'V', 'E' };
   file.write(mainChunkFormat, sizeof(mainChunkFormat));
 
   // Write the sub-chunk 1 ("format") id and size
-  uint8_t fmtChunkId[4] = { 'f', 'm', 't', ' ' };
+  static constexpr uint8_t fmtChunkId[4] = { 'f', 'm', 't', ' ' };
   file.write(fmtChunkId, sizeof(fmtChunkId));
   uint32_t fmtChunkSize = 16;
   encodeUint32(file, fmtChunkSize);
@@ -15167,7 +15001,7 @@ void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCoun
   encodeUint16(file, bitsPerSample);
 
   // Write the sub-chunk 2 ("data") id and size
-  uint8_t dataChunkId[4] = { 'd', 'a', 't', 'a' };
+  static constexpr uint8_t dataChunkId[4] = { 'd', 'a', 't', 'a' };
   file.write(dataChunkId, sizeof(dataChunkId));
   uint32_t dataChunkSize = 0; // placeholder, will be written on closing
   encodeUint32(file, dataChunkSize);
@@ -15630,9 +15464,9 @@ FLASHMEM void UI_func_braids(uint8_t param)
     drawVirtualKeyboard();
 
     print_braids_static_texts();
-    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
-
+    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
       generic_temp_select_menu = 0;
+    }
     generic_full_draw_required = true;
     update_selective_values_braids();
     generic_full_draw_required = false;
@@ -15948,44 +15782,6 @@ FLASHMEM void calc_low_high(uint8_t preset)
   }
 }
 
-FLASHMEM void sub_MultiSample_setColor(uint8_t row, uint8_t column)
-{
-  uint16_t temp_color = 0;
-  uint16_t temp_background = 0;
-
-  if ((generic_temp_select_menu == row + 3 && seq.selected_track == column && seq.edit_state == false) || (generic_temp_select_menu == row + 3 && column == 99 && seq.edit_state == false))
-  {
-    temp_color = COLOR_BACKGROUND;
-    temp_background = COLOR_SYSTEXT;
-  }
-  else if ((generic_temp_select_menu == row + 3 && seq.selected_track == column && seq.edit_state))
-  {
-    temp_background = RED;
-    temp_color = COLOR_SYSTEXT;
-  }
-  else
-  {
-    temp_background = COLOR_BACKGROUND;
-    if (row == 0)
-      temp_color = COLOR_PITCHSMP;
-    else if (row == 1)
-      temp_color = DX_DARKCYAN;
-    else if (row == 2)
-      temp_color = COLOR_CHORDS;
-    else if (row == 3)
-      temp_color = COLOR_ARP;
-    else if (row == 4)
-      temp_color = COLOR_DRUMS;
-    else if (row == 5)
-      temp_color = GREEN;
-    else if (row == 6)
-      temp_color = MIDDLEGREEN;
-    else if (row == 7)
-      temp_color = YELLOW;
-  }
-  display.setTextColor(temp_color, temp_background);
-}
-
 FLASHMEM uint16_t get_multisample_zone_color(uint8_t row)
 {
   uint16_t temp_color = 0;
@@ -16008,6 +15804,33 @@ FLASHMEM uint16_t get_multisample_zone_color(uint8_t row)
   else if (row == 7)
     temp_color = YELLOW;
   return temp_color;
+}
+
+FLASHMEM void sub_MultiSample_setColor(uint8_t row, uint8_t column)
+{
+  uint16_t temp_color = 0;
+  uint16_t temp_background = 0;
+
+  if ((generic_temp_select_menu == row + 3 && seq.selected_track == column && seq.edit_state == false) || (generic_temp_select_menu == row + 3 && column == 99 && seq.edit_state == false))
+  {
+    temp_color = COLOR_BACKGROUND;
+    temp_background = COLOR_SYSTEXT;
+  }
+  else if ((generic_temp_select_menu == row + 3 && seq.selected_track == column && seq.edit_state))
+  {
+    temp_background = RED;
+    temp_color = COLOR_SYSTEXT;
+  }
+  else
+  {
+    temp_background = COLOR_BACKGROUND;
+    if (row == 0)
+      temp_color = COLOR_PITCHSMP;
+    else {
+      temp_color = get_multisample_zone_color(row);
+    }
+  }
+  display.setTextColor(temp_color, temp_background);
 }
 
 FLASHMEM void print_multisampler_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
@@ -17813,6 +17636,7 @@ FLASHMEM void UI_func_mixer(uint8_t param)
   {
     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
     {
+      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
       if (!seq.edit_state) // select channel
       {
         if (LCDML.BT_checkDown())
@@ -17824,86 +17648,45 @@ FLASHMEM void UI_func_mixer(uint8_t param)
       {
         if (seq.temp_active_menu < 4 && seq.temp_active_menu <NUM_DEXED) // dexed instance #0 to #3
         {
-          if (LCDML.BT_checkDown())
-            configuration.dexed[seq.temp_active_menu].sound_intensity = constrain(configuration.dexed[seq.temp_active_menu].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-          else if (LCDML.BT_checkUp())
-            configuration.dexed[seq.temp_active_menu].sound_intensity = constrain(configuration.dexed[seq.temp_active_menu].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          configuration.dexed[seq.temp_active_menu].sound_intensity = constrain(configuration.dexed[seq.temp_active_menu].sound_intensity + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
         }
 
         else if (seq.temp_active_menu == 4) // epiano
         {
-          if (LCDML.BT_checkDown())
-          {
-            configuration.epiano.sound_intensity = constrain(configuration.epiano.sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-            ep.setVolume(mapfloat(configuration.epiano.sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 1.0));
-          }
-          else if (LCDML.BT_checkUp())
-          {
-            configuration.epiano.sound_intensity = constrain(configuration.epiano.sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-            ep.setVolume(mapfloat(configuration.epiano.sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 1.0));
-          }
+          configuration.epiano.sound_intensity = constrain(configuration.epiano.sound_intensity + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          ep.setVolume(mapfloat(configuration.epiano.sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 1.0));
         }
         else if (seq.temp_active_menu > 4 && seq.temp_active_menu < 7) // microsynth
         {
-          if (LCDML.BT_checkDown())
-            microsynth[seq.temp_active_menu - 5].sound_intensity = constrain(microsynth[seq.temp_active_menu - 5].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-          else if (LCDML.BT_checkUp())
-            microsynth[seq.temp_active_menu - 5].sound_intensity = constrain(microsynth[seq.temp_active_menu - 5].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+            microsynth[seq.temp_active_menu - 5].sound_intensity = constrain(microsynth[seq.temp_active_menu - 5].sound_intensity + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
         }
         else if (seq.temp_active_menu == 7) // braids
         {
-          if (LCDML.BT_checkDown())
-          {
-            braids_osc.sound_intensity = constrain(braids_osc.sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-            update_braids_volume();
-          }
-          else if (LCDML.BT_checkUp())
-          {
-            braids_osc.sound_intensity = constrain(braids_osc.sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-            update_braids_volume();
-          }
+          braids_osc.sound_intensity = constrain(braids_osc.sound_intensity + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          update_braids_volume();
         }
         else if (seq.temp_active_menu == 8) // msp1
         {
-          if (LCDML.BT_checkDown())
-            msp[0].sound_intensity = constrain(msp[0].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-          else if (LCDML.BT_checkUp())
-            msp[0].sound_intensity = constrain(msp[0].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          msp[0].sound_intensity = constrain(msp[0].sound_intensity + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
         }
         else if (seq.temp_active_menu == 9) // msp2
         {
-          if (LCDML.BT_checkDown())
-            msp[1].sound_intensity = constrain(msp[1].sound_intensity + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-          else if (LCDML.BT_checkUp())
-            msp[1].sound_intensity = constrain(msp[1].sound_intensity - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          msp[1].sound_intensity = constrain(msp[1].sound_intensity + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
         }
         else if (seq.temp_active_menu == 10) // drums/samples
         {
-          if (LCDML.BT_checkDown())
-            temp_int = constrain(temp_int + ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-          else if (LCDML.BT_checkUp())
-            temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          temp_int = constrain(temp_int + factorChange * ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           seq.drums_volume = mapfloat(temp_int, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0.0, VOL_MAX_FLOAT);
           master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
           master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
         }
         else if (seq.temp_active_menu == 11) // reverb level
         {
-          if (LCDML.BT_checkDown())
-            configuration.fx.reverb_level = constrain(configuration.fx.reverb_level + ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
-          else if (LCDML.BT_checkUp())
-            configuration.fx.reverb_level = constrain(configuration.fx.reverb_level - ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
+          configuration.fx.reverb_level = constrain(configuration.fx.reverb_level + factorChange * ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
         }
         else if (seq.temp_active_menu == 12) // master level
         {
-          if (LCDML.BT_checkDown())
-          {
-            configuration.sys.vol = constrain(configuration.sys.vol + ENCODER[ENC_R].speed(), VOLUME_MIN, VOLUME_MAX);
-          }
-          else if (LCDML.BT_checkUp())
-          {
-            configuration.sys.vol = constrain(configuration.sys.vol - ENCODER[ENC_R].speed(), VOLUME_MIN, VOLUME_MAX);
-          }
+          configuration.sys.vol = constrain(configuration.sys.vol + factorChange * ENCODER[ENC_R].speed(), VOLUME_MIN, VOLUME_MAX);
         }
       }
     }
@@ -18275,13 +18058,10 @@ FLASHMEM void UI_func_sidechain(uint8_t param)
   {
     if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
     {
-
+      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
       if (!seq.edit_state)
       {
-        if (LCDML.BT_checkDown())
-          generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 12);
-        else if (LCDML.BT_checkUp())
-          generic_temp_select_menu = constrain(generic_temp_select_menu - 1, 0, 12);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + factorChange * 1, 0, 12);
       }
 
       else if (seq.edit_state)
@@ -18289,100 +18069,60 @@ FLASHMEM void UI_func_sidechain(uint8_t param)
 
         if (generic_temp_select_menu == 0) // sidechain on/off
         {
-          if (LCDML.BT_checkDown())
-            sidechain_active = !sidechain_active;
-          else if (LCDML.BT_checkUp())
-            sidechain_active = !sidechain_active;
+          sidechain_active = !sidechain_active;
         }
 
         else  if (generic_temp_select_menu == 1) // sidechain sample
         {
-          if (LCDML.BT_checkDown())
-            sidechain_sample_number = constrain(sidechain_sample_number + 1, 0, NUM_DRUMSET_CONFIG - 1);
-          else if (LCDML.BT_checkUp())
-            sidechain_sample_number = constrain(sidechain_sample_number - 1, 0, NUM_DRUMSET_CONFIG - 1);
+          sidechain_sample_number = constrain(sidechain_sample_number + factorChange * 1, 0, NUM_DRUMSET_CONFIG - 1);
         }
 
         if (generic_temp_select_menu == 2) // sidechain speed
         {
-          if (LCDML.BT_checkDown())
-            sidechain_speed = constrain(sidechain_speed + ENCODER[ENC_R].speed(), 0, 5000);
-          else if (LCDML.BT_checkUp())
-            sidechain_speed = constrain(sidechain_speed - ENCODER[ENC_R].speed(), 0, 5000);
+            sidechain_speed = constrain(sidechain_speed + factorChange * ENCODER[ENC_R].speed(), 0, 5000);
         }
         if (generic_temp_select_menu == 3) // sidechain 1/16 steps
         {
-          if (LCDML.BT_checkDown())
-            sidechain_steps = constrain(sidechain_steps + 1, 1, 16);
-          else if (LCDML.BT_checkUp())
-            sidechain_steps = constrain(sidechain_steps - 1, 1, 16);
-
+          sidechain_steps = constrain(sidechain_steps + factorChange * 1, 1, 16);
           sidechain_speed = uint16_t(60000 / seq.bpm / 4) * sidechain_steps;
         }
 
         else if (generic_temp_select_menu == 4) // dexed 0 target 
         {
-          if (LCDML.BT_checkDown())
-            configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 5) // dexed 1 target 
         {
-          if (LCDML.BT_checkDown())
-            configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 6) // epiano target 
         {
-          if (LCDML.BT_checkDown())
-            configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
 
         else if (generic_temp_select_menu == 7) // microsynth1 target 
         {
-          if (LCDML.BT_checkDown())
-            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 8) // microsynth2 target 
         {
-          if (LCDML.BT_checkDown())
-            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 9) // braids target 
         {
-          if (LCDML.BT_checkDown())
-            braids_osc.sidechain_send = constrain(braids_osc.sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            braids_osc.sidechain_send = constrain(braids_osc.sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          braids_osc.sidechain_send = constrain(braids_osc.sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 10) // delay 1 target 
         {
-          if (LCDML.BT_checkDown())
-            configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 11) // delay 2 target 
         {
-          if (LCDML.BT_checkDown())
-            configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
         else if (generic_temp_select_menu == 12) // reverb target 
         {
-          if (LCDML.BT_checkDown())
-            configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send + ENCODER[ENC_R].speed(), 0, 100);
-          else if (LCDML.BT_checkUp())
-            configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send - ENCODER[ENC_R].speed(), 0, 100);
+          configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
         }
       }
     }

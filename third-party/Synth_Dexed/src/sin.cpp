@@ -19,6 +19,7 @@
 
 #include "synth.h"
 #include "sin.h"
+#include "pgmspace.h"
 
 #define R (1 << 29)
 
