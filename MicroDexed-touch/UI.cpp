@@ -139,10 +139,9 @@ uint16_t slices_scrollspeed = 1;
 bool slices_autoalign = true;
 
 bool remote_touched;
-
 extern int (*calc_val[2])(int, int, int, int);
+
 extern int menuhelper_previous_val;
-extern bool menuhelper_redraw;
 bool check_and_confirm_midi_channels;
 
 extern AudioFilterStateVariable global_delay_filter[NUM_DEXED];
@@ -7457,12 +7456,12 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
     fm.sample_source = 4;
 #endif
 
-    menuhelper_redraw = true;
-
-    if (selected_slice_sample[0] != 99)
+    if (selected_slice_sample[0] != 99) {
       temp_int = selected_slice_sample[0];
-    else
+    }
+    else {
       temp_int = 0;
+    }
 
     fm.psram_sum_files = 0;
     fm.sd_sum_files = 0;
@@ -7498,35 +7497,34 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
-
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
       if (seq.edit_state == 0)
       {
-        if (fm.sample_source == 2 || fm.sample_source == 3)
-          generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5);
-        else  if (fm.sample_source == 4)
-          generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 5 + (num_slices[0] * 2));
-        else
-          generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 2);
-
-        menuhelper_redraw = false;
+        if (fm.sample_source == 2 || fm.sample_source == 3) {
+          generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 5);
+        }
+        else if (fm.sample_source == 4) {
+          generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 5 + (num_slices[0] * 2));
+        }
+        else {
+          generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 2);
+        }
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 0)
       {
         stop_all_drum_slots();
-        if (fm.sample_source == 0)
-          temp_int = calc_val[state_dir](temp_int, 1, 0, fm.sd_sum_files - 1);
-        else if (fm.sample_source == 1)
-          temp_int = calc_val[state_dir](temp_int, 1, 0, fm.psram_sum_files - 1);
-        else if (fm.sample_source == 2 || fm.sample_source == 3) //MSP
-        {
-          temp_int = calc_val[state_dir](temp_int, 1, 0, 7);
+        if (fm.sample_source == 0) {
+          temp_int = constrain(temp_int + e.dir, 0, fm.sd_sum_files - 1);
         }
-        else if (fm.sample_source == 4)
-        {
-          temp_int = calc_val[state_dir](temp_int, 1, 0, NUM_DRUMSET_CONFIG - 2);
+        else if (fm.sample_source == 1) {
+          temp_int = constrain(temp_int + e.dir, 0, fm.psram_sum_files - 1);
+        }
+        else if (fm.sample_source == 2 || fm.sample_source == 3) {//MSP
+          temp_int = constrain(temp_int + e.dir, 0, 7);
+        }
+        else if (fm.sample_source == 4) {
+          temp_int = constrain(temp_int + e.dir, 0, NUM_DRUMSET_CONFIG - 2);
           print_sliced_status();
         }
         draw_header_sample_editor();
@@ -7553,7 +7551,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
-        fm.sample_source = calc_val[state_dir](fm.sample_source, 1, 2, 4);
+        fm.sample_source = constrain(fm.sample_source + e.dir, 2, 4);
         if (fm.sample_source == 2 || fm.sample_source == 3)
         {
           if (temp_int > 7) {
@@ -7572,7 +7570,6 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         if (fm.sample_source != menuhelper_previous_val)
         {
           menuhelper_previous_val = fm.sample_source;
-          menuhelper_redraw = true;
         }
       }
 
@@ -7593,8 +7590,6 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           msz[fm.sample_source - 2][temp_int].loop_end = msz[fm.sample_source - 2][temp_int].loop_start + 1;
         if (msz[fm.sample_source - 2][temp_int].loop_start < 0)
           msz[fm.sample_source - 2][temp_int].loop_start = 0;
-
-        menuhelper_redraw = true;
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 4 && fm.sample_source > 1 && fm.sample_source < 4) //loop end
       {
@@ -7615,13 +7610,11 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
           msz[fm.sample_source - 2][temp_int].loop_start = 0;
         if (msz[fm.sample_source - 2][temp_int].loop_end <= 1)
           msz[fm.sample_source - 2][temp_int].loop_end = 1;
-
-        menuhelper_redraw = true;
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu == 5 && fm.sample_source > 1)
       {
         stop_all_drum_slots();
-        msz[fm.sample_source - 2][temp_int].loop_type = calc_val[state_dir](msz[fm.sample_source - 2][temp_int].loop_type, 1, 0, 2);
+        msz[fm.sample_source - 2][temp_int].loop_type = constrain(msz[fm.sample_source - 2][temp_int].loop_type + e.dir, 0, 2);
       }
       else if (seq.edit_state == 1 && generic_temp_select_menu > 5)
       {
@@ -7662,16 +7655,11 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
         draw_waveform_sample_editor((generic_temp_select_menu - 6) / 2);
       }
     }
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())// handle button presses during menu >>>>>>>>>>>>>>>>
+    if (e.pressed)// handle button presses during menu >>>>>>>>>>>>>>>>
     {
       stop_all_drum_slots();
-      if (seq.edit_state == 0)
-        seq.edit_state = 1;
-      else
-        seq.edit_state = 0;
-
+      seq.edit_state = !seq.edit_state;
       draw_loop_buttons();
-
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -7722,18 +7710,16 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-    if (menuhelper_redraw)
-    {
-      if (fm.sample_source == 4) // PSRAM
-      {
-        draw_waveform_sample_editor(99);
-      }
-      else if (fm.sample_source == 2 || fm.sample_source == 3) //MSP
-        draw_waveform_loop_editor();
 
-      draw_loop_buttons();
-      menuhelper_redraw = false;
+    if (fm.sample_source == 4) {// PSRAM    
+      draw_waveform_sample_editor(99);
     }
+    else if (fm.sample_source == 2 || fm.sample_source == 3) {//MSP
+      draw_waveform_loop_editor();
+    }
+
+    draw_loop_buttons();
+    
     if (fm.sample_source == 4)
     {
       draw_scrollbar_sample_editor();
@@ -10800,100 +10786,88 @@ FLASHMEM void UI_func_epiano(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
-      if (seq.edit_state == 0)
-      {
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 24);
-        if (generic_temp_select_menu != menuhelper_previous_val)
-          menuhelper_redraw = true;
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
+      if (seq.edit_state == 0) {
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 24);
       }
-      else if (seq.edit_state == 1)
-      {
+      else {
         if (generic_temp_select_menu == 0)
         {
-          configuration.epiano.sound_intensity = calc_val[state_dir](configuration.epiano.sound_intensity, ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          configuration.epiano.sound_intensity = constrain(configuration.epiano.sound_intensity + e.dir * e.speed, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           MD_sendControlChange(configuration.epiano.midi_channel, 7, configuration.epiano.sound_intensity);
         }
         else if (generic_temp_select_menu == 1)
         {
-          configuration.epiano.pan = calc_val[state_dir](configuration.epiano.pan, ENCODER[ENC_R].speed(), PANORAMA_MIN, PANORAMA_MAX);
+          configuration.epiano.pan = constrain(configuration.epiano.pan + e.dir * e.speed, PANORAMA_MIN, PANORAMA_MAX);
           MD_sendControlChange(configuration.epiano.midi_channel, 10, map(configuration.epiano.pan, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
         }
         else if (generic_temp_select_menu == 2)
-          configuration.epiano.transpose = calc_val[state_dir](configuration.epiano.transpose, ENCODER[ENC_R].speed(), EP_TRANSPOSE_MIN, EP_TRANSPOSE_MAX);
+          configuration.epiano.transpose = constrain(configuration.epiano.transpose + e.dir * e.speed, EP_TRANSPOSE_MIN, EP_TRANSPOSE_MAX);
         else if (generic_temp_select_menu == 3)
-          configuration.epiano.decay = calc_val[state_dir](configuration.epiano.decay, ENCODER[ENC_R].speed(), EP_DECAY_MIN, EP_DECAY_MAX);
+          configuration.epiano.decay = constrain(configuration.epiano.decay + e.dir * e.speed, EP_DECAY_MIN, EP_DECAY_MAX);
         else if (generic_temp_select_menu == 4)
-          configuration.epiano.release = calc_val[state_dir](configuration.epiano.release, ENCODER[ENC_R].speed(), EP_RELEASE_MIN, EP_RELEASE_MAX);
+          configuration.epiano.release = constrain(configuration.epiano.release + e.dir * e.speed, EP_RELEASE_MIN, EP_RELEASE_MAX);
         else if (generic_temp_select_menu == 5)
-          configuration.epiano.hardness = calc_val[state_dir](configuration.epiano.hardness, ENCODER[ENC_R].speed(), EP_HARDNESS_MIN, EP_HARDNESS_MAX);
+          configuration.epiano.hardness = constrain(configuration.epiano.hardness + e.dir * e.speed, EP_HARDNESS_MIN, EP_HARDNESS_MAX);
         else if (generic_temp_select_menu == 6)
-          configuration.epiano.treble = calc_val[state_dir](configuration.epiano.treble, ENCODER[ENC_R].speed(), EP_TREBLE_MIN, EP_TREBLE_MAX);
+          configuration.epiano.treble = constrain(configuration.epiano.treble + e.dir * e.speed, EP_TREBLE_MIN, EP_TREBLE_MAX);
         else if (generic_temp_select_menu == 7)
-          configuration.epiano.stereo = calc_val[state_dir](configuration.epiano.stereo, ENCODER[ENC_R].speed(), EP_STEREO_MIN, EP_STEREO_MAX);
+          configuration.epiano.stereo = constrain(configuration.epiano.stereo + e.dir * e.speed, EP_STEREO_MIN, EP_STEREO_MAX);
         else if (generic_temp_select_menu == 8)
         {
-          configuration.epiano.tune = calc_val[state_dir](configuration.epiano.tune, ENCODER[ENC_R].speed(), EP_TUNE_MIN, EP_TUNE_MAX);
+          configuration.epiano.tune = constrain(configuration.epiano.tune + e.dir * e.speed, EP_TUNE_MIN, EP_TUNE_MAX);
           MD_sendControlChange(configuration.epiano.midi_channel, 94, configuration.epiano.tune);
         }
         else if (generic_temp_select_menu == 9)
-          configuration.epiano.detune = calc_val[state_dir](configuration.epiano.detune, ENCODER[ENC_R].speed(), EP_DETUNE_MIN, EP_DETUNE_MAX);
+          configuration.epiano.detune = constrain(configuration.epiano.detune + e.dir * e.speed, EP_DETUNE_MIN, EP_DETUNE_MAX);
         else if (generic_temp_select_menu == 10)
-          configuration.epiano.polyphony = calc_val[state_dir](configuration.epiano.polyphony, 1, EP_POLYPHONY_MIN, EP_POLYPHONY_MAX);
+          configuration.epiano.polyphony = constrain(configuration.epiano.polyphony + e.dir, EP_POLYPHONY_MIN, EP_POLYPHONY_MAX);
         else if (generic_temp_select_menu == 11)
-          configuration.epiano.velocity_sense = calc_val[state_dir](configuration.epiano.velocity_sense, ENCODER[ENC_R].speed(), EP_VELOCITY_SENSE_MIN, EP_VELOCITY_SENSE_MAX);
+          configuration.epiano.velocity_sense = constrain(configuration.epiano.velocity_sense + e.dir * e.speed, EP_VELOCITY_SENSE_MIN, EP_VELOCITY_SENSE_MAX);
         else if (generic_temp_select_menu == 12)
-          configuration.epiano.overdrive = calc_val[state_dir](configuration.epiano.overdrive, ENCODER[ENC_R].speed(), EP_OVERDRIVE_MIN, EP_OVERDRIVE_MAX);
+          configuration.epiano.overdrive = constrain(configuration.epiano.overdrive + e.dir * e.speed, EP_OVERDRIVE_MIN, EP_OVERDRIVE_MAX);
         else if (generic_temp_select_menu == 13)
-          configuration.epiano.pan_tremolo = calc_val[state_dir](configuration.epiano.pan_tremolo, ENCODER[ENC_R].speed(), EP_PAN_TREMOLO_MIN, EP_PAN_TREMOLO_MAX);
+          configuration.epiano.pan_tremolo = constrain(configuration.epiano.pan_tremolo + e.dir * e.speed, EP_PAN_TREMOLO_MIN, EP_PAN_TREMOLO_MAX);
         else if (generic_temp_select_menu == 14)
-          configuration.epiano.pan_lfo = calc_val[state_dir](configuration.epiano.pan_lfo, ENCODER[ENC_R].speed(), EP_PAN_LFO_MIN, EP_PAN_LFO_MAX);
+          configuration.epiano.pan_lfo = constrain(configuration.epiano.pan_lfo + e.dir * e.speed, EP_PAN_LFO_MIN, EP_PAN_LFO_MAX);
         else if (generic_temp_select_menu == 15)
-          configuration.fx.ep_chorus_frequency = calc_val[state_dir](configuration.fx.ep_chorus_frequency, ENCODER[ENC_R].speed(), EP_CHORUS_FREQUENCY_MIN, EP_CHORUS_FREQUENCY_MAX);
+          configuration.fx.ep_chorus_frequency = constrain(configuration.fx.ep_chorus_frequency + e.dir * e.speed, EP_CHORUS_FREQUENCY_MIN, EP_CHORUS_FREQUENCY_MAX);
         else if (generic_temp_select_menu == 16)
-          configuration.fx.ep_chorus_waveform = calc_val[state_dir](configuration.fx.ep_chorus_waveform, 1, EP_CHORUS_WAVEFORM_MIN, EP_CHORUS_WAVEFORM_MAX);
+          configuration.fx.ep_chorus_waveform = constrain(configuration.fx.ep_chorus_waveform + e.dir, EP_CHORUS_WAVEFORM_MIN, EP_CHORUS_WAVEFORM_MAX);
         else if (generic_temp_select_menu == 17)
-          configuration.fx.ep_chorus_depth = calc_val[state_dir](configuration.fx.ep_chorus_depth, ENCODER[ENC_R].speed(), EP_CHORUS_DEPTH_MIN, EP_CHORUS_DEPTH_MAX);
+          configuration.fx.ep_chorus_depth = constrain(configuration.fx.ep_chorus_depth + e.dir * e.speed, EP_CHORUS_DEPTH_MIN, EP_CHORUS_DEPTH_MAX);
         else if (generic_temp_select_menu == 18)
         {
-          configuration.fx.ep_chorus_level = calc_val[state_dir](configuration.fx.ep_chorus_level, ENCODER[ENC_R].speed(), EP_CHORUS_LEVEL_MIN, EP_CHORUS_LEVEL_MAX);
+          configuration.fx.ep_chorus_level = constrain(configuration.fx.ep_chorus_level + e.dir * e.speed, EP_CHORUS_LEVEL_MIN, EP_CHORUS_LEVEL_MAX);
           MD_sendControlChange(configuration.epiano.midi_channel, 93, configuration.fx.ep_chorus_level);
         }
         else if (generic_temp_select_menu == 19)
         {
-          configuration.fx.ep_delay_send_1 = calc_val[state_dir](configuration.fx.ep_delay_send_1, ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+          configuration.fx.ep_delay_send_1 = constrain(configuration.fx.ep_delay_send_1 + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
         }
         else if (generic_temp_select_menu == 20)
         {
-          configuration.fx.ep_delay_send_2 = calc_val[state_dir](configuration.fx.ep_delay_send_2, ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+          configuration.fx.ep_delay_send_2 = constrain(configuration.fx.ep_delay_send_2 + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
         }
         else if (generic_temp_select_menu == 21)
         {
-          configuration.fx.ep_reverb_send = calc_val[state_dir](configuration.fx.ep_reverb_send, ENCODER[ENC_R].speed(), REVERB_SEND_MIN, REVERB_SEND_MAX);
+          configuration.fx.ep_reverb_send = constrain(configuration.fx.ep_reverb_send + e.dir * e.speed, REVERB_SEND_MIN, REVERB_SEND_MAX);
           MD_sendControlChange(configuration.epiano.midi_channel, 91, configuration.fx.ep_reverb_send);
         }
         else if (generic_temp_select_menu == 22)
-          configuration.epiano.lowest_note = calc_val[state_dir](configuration.epiano.lowest_note, ENCODER[ENC_R].speed(), EP_LOWEST_NOTE_MIN, EP_LOWEST_NOTE_MAX);
+          configuration.epiano.lowest_note = constrain(configuration.epiano.lowest_note + e.dir * e.speed, EP_LOWEST_NOTE_MIN, EP_LOWEST_NOTE_MAX);
         else if (generic_temp_select_menu == 23)
-          configuration.epiano.highest_note = calc_val[state_dir](configuration.epiano.highest_note, ENCODER[ENC_R].speed(), EP_HIGHEST_NOTE_MIN, EP_HIGHEST_NOTE_MAX);
+          configuration.epiano.highest_note = constrain(configuration.epiano.highest_note + e.dir * e.speed, EP_HIGHEST_NOTE_MIN, EP_HIGHEST_NOTE_MAX);
         else if (generic_temp_select_menu == 24)
-          configuration.epiano.midi_channel = calc_val[state_dir](configuration.epiano.midi_channel, 1, EP_MIDI_CHANNEL_MIN, EP_MIDI_CHANNEL_MAX + 1);
+          configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel + e.dir, EP_MIDI_CHANNEL_MIN, EP_MIDI_CHANNEL_MAX + 1);
       }
     }
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) // handle button presses during menu
-    {
+    if(e.pressed) {
       seq.edit_state = !seq.edit_state;
-      menuhelper_redraw = true;
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-    if (menuhelper_redraw)
-    {
-      update_selective_values_epiano();
-      menuhelper_redraw = false;
-    }
+    update_selective_values_epiano();
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -12861,16 +12835,16 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
+
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
       if (seq.edit_state == 0)
       {
-        temp_int = calc_val[state_dir](temp_int, 1, 0, 99);
+        temp_int = constrain(temp_int + e.dir, 0, 99);
       }
     }
 
-    if (LCDML.BT_checkEnter())
+    if (e.pressed)
     {
       display.fillRect(0, CHAR_height * 3, CHAR_width * 19, CHAR_height * 4, COLOR_BACKGROUND);
       mode = 0xff;
@@ -15940,13 +15914,12 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    multisample_zone_t* zoneEdited = &msz[seq.active_multisample][generic_temp_select_menu - 3];
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
+    multisample_zone_t &zoneEdited = msz[seq.active_multisample][generic_temp_select_menu - 3];
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
       if (seq.edit_state && generic_temp_select_menu == 0)
       {
-        seq.active_multisample = calc_val[state_dir](seq.active_multisample, ENCODER[ENC_R].speed(), 0, NUM_MULTISAMPLES);
+        seq.active_multisample = constrain(seq.active_multisample + e.dir * e.speed, 0, NUM_MULTISAMPLES);
         if (seq.active_multisample < NUM_MULTISAMPLES)
         {
           calc_low_high(seq.active_multisample);
@@ -15964,68 +15937,68 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
       }
       if (seq.edit_state && generic_temp_select_menu == 1)
       {
-        msp[seq.active_multisample].sound_intensity = calc_val[state_dir](msp[seq.active_multisample].sound_intensity, ENCODER[ENC_R].speed(), 0, 100);
+        msp[seq.active_multisample].sound_intensity = constrain(msp[seq.active_multisample].sound_intensity + e.dir * e.speed, 0, 100);
       }
       if (seq.edit_state && generic_temp_select_menu == 2)
       {
-        msp[seq.active_multisample].midi_channel = calc_val[state_dir](msp[seq.active_multisample].midi_channel, 1, 0, 17);
+        msp[seq.active_multisample].midi_channel = constrain(msp[seq.active_multisample].midi_channel + e.dir, 0, 17);
       }
 
       if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 8) // file name selection
       {
 
 #if  defined COMPILE_FOR_PSRAM
-        zoneEdited->entry_number = calc_val[state_dir](zoneEdited->entry_number, 1, 0, NUM_DRUMSET_CONFIG - 1);
+        zoneEdited.entry_number = constrain(zoneEdited.entry_number + e.dir, 0, NUM_DRUMSET_CONFIG - 1);
         if (seq.running == true)
           stop_all_drum_slots();
 
-        if ((zoneEdited->entry_number) - 1 >= 0)
-          fill_msz(drum_config[zoneEdited->entry_number - 1].filename, seq.active_multisample, generic_temp_select_menu - 3, zoneEdited->entry_number - 1);
+        if ((zoneEdited.entry_number) - 1 >= 0)
+          fill_msz(drum_config[zoneEdited.entry_number - 1].filename, seq.active_multisample, generic_temp_select_menu - 3, zoneEdited.entry_number - 1);
 #endif
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 7) // tune/pitch
       {
-        zoneEdited->tune = calc_val[state_dir](zoneEdited->tune, ENCODER[ENC_R].speed(), 1, 200);
+        zoneEdited.tune = constrain(zoneEdited.tune + e.dir * e.speed, 1, 200);
       }
       if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 6) // reverb send selection
       {
-        zoneEdited->rev = calc_val[state_dir](zoneEdited->rev, ENCODER[ENC_R].speed(), 0, 100);
+        zoneEdited.rev = constrain(zoneEdited.rev + e.dir * e.speed, 0, 100);
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 5) // pan selection
       {
-        zoneEdited->pan = calc_val[state_dir](zoneEdited->pan, ENCODER[ENC_R].speed(), PANORAMA_MIN, PANORAMA_MAX);
+        zoneEdited.pan = constrain(zoneEdited.pan + e.dir * e.speed, PANORAMA_MIN, PANORAMA_MAX);
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 4) // volume selection
       {
-        zoneEdited->vol = calc_val[state_dir](zoneEdited->vol, ENCODER[ENC_R].speed(), 0, 100);
+        zoneEdited.vol = constrain(zoneEdited.vol + e.dir * e.speed, 0, 100);
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 3) // playmode selection
       {
-        // zoneEdited->playmode = !zoneEdited->playmode;
-        zoneEdited->playmode = calc_val[state_dir](zoneEdited->playmode, 1, 0, 6);
-        if (zoneEdited->playmode > 1 && zoneEdited->playmode % 2 == 0)
+        // zoneEdited.playmode = !zoneEdited.playmode;
+        zoneEdited.playmode = constrain(zoneEdited.playmode + e.dir, 0, 6);
+        if (zoneEdited.playmode > 1 && zoneEdited.playmode % 2 == 0)
         {
-          if (state_dir == 0)
-            zoneEdited->playmode++;
-          else if (state_dir == 1)
-            zoneEdited->playmode--;
+          if (e.up)
+            zoneEdited.playmode++;
+          else if (e.down)
+            zoneEdited.playmode--;
         }
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 2) // high selection
       {
-        zoneEdited->high = calc_val[state_dir](zoneEdited->high, ENCODER[ENC_R].speed(), 24, 109);
+        zoneEdited.high = constrain(zoneEdited.high + e.dir * e.speed, 24, 109);
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 1) // low selection
       {
-        zoneEdited->low = calc_val[state_dir](zoneEdited->low, ENCODER[ENC_R].speed(), 24, 109);
+        zoneEdited.low = constrain(zoneEdited.low + e.dir * e.speed, 24, 109);
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 0) // root note selection
       {
-        zoneEdited->rootnote = calc_val[state_dir](zoneEdited->rootnote, ENCODER[ENC_R].speed(), 24, 109);
+        zoneEdited.rootnote = constrain(zoneEdited.rootnote + e.dir * e.speed, 24, 109);
       }
       else if (seq.edit_state == false) // no option is selected, scroll parameter rows
       {
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 11);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 11);
       }
     }
 
@@ -16036,7 +16009,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
         seq.active_multisample = 0;
         LCDML.OTHER_jumpToFunc(UI_func_set_multisample_name);
       }
-      else if (zoneEdited->entry_number == 0 && seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 8)
+      else if (zoneEdited.entry_number == 0 && seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 8)
       {
         // clear zone
         msz[seq.active_multisample][generic_temp_select_menu - 3].rootnote = 0;
@@ -16756,49 +16729,40 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
   }
   if (LCDML.FUNC_loop())
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
       if (seq.edit_state == 0)
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 11);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 11);
       else if (generic_temp_select_menu == 0)
-        configuration.dexed[0].midi_channel = calc_val[state_dir](configuration.dexed[0].midi_channel, 1, 0, 17);
+        configuration.dexed[0].midi_channel = constrain(configuration.dexed[0].midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 1)
-        configuration.dexed[1].midi_channel = calc_val[state_dir](configuration.dexed[1].midi_channel, 1, 0, 17);
+        configuration.dexed[1].midi_channel = constrain(configuration.dexed[1].midi_channel + e.dir, 0, 17);
  #if (NUM_DEXED>2)
       else if (generic_temp_select_menu == 2)
-        configuration.dexed[2].midi_channel = calc_val[state_dir](configuration.dexed[2].midi_channel, 1, 0, 17);
+        configuration.dexed[2].midi_channel = constrain(configuration.dexed[2].midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 3)
-        configuration.dexed[3].midi_channel = calc_val[state_dir](configuration.dexed[3].midi_channel, 1, 0, 17);
+        configuration.dexed[3].midi_channel = constrain(configuration.dexed[3].midi_channel + e.dir, 0, 17);
 #endif
       else if (generic_temp_select_menu == 4)
-        configuration.epiano.midi_channel = calc_val[state_dir](configuration.epiano.midi_channel, 1, 0, 17);
+        configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 5)
-        microsynth[0].midi_channel = calc_val[state_dir](microsynth[0].midi_channel, 1, 0, 17);
+        microsynth[0].midi_channel = constrain(microsynth[0].midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 6)
-        microsynth[1].midi_channel = calc_val[state_dir](microsynth[1].midi_channel, 1, 0, 17);
+        microsynth[1].midi_channel = constrain(microsynth[1].midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 7)
-        braids_osc.midi_channel = calc_val[state_dir](braids_osc.midi_channel, 1, 0, 17);
+        braids_osc.midi_channel = constrain(braids_osc.midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 8)
-        msp[0].midi_channel = calc_val[state_dir](msp[0].midi_channel, 1, 0, 17);
+        msp[0].midi_channel = constrain(msp[0].midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 9)
-        msp[1].midi_channel = calc_val[state_dir](msp[1].midi_channel, 1, 0, 17);
+        msp[1].midi_channel = constrain(msp[1].midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 10)
-        drum_midi_channel = calc_val[state_dir](drum_midi_channel, 1, 0, 17);
+        drum_midi_channel = constrain(drum_midi_channel + e.dir, 0, 17);
       else if (generic_temp_select_menu == 11)
-        slices_midi_channel = calc_val[state_dir](slices_midi_channel, 1, 0, 17);
+        slices_midi_channel = constrain(slices_midi_channel + e.dir, 0, 17);
     }
     // handle button presses during menu
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
-    {
-      if (seq.edit_state == 0)
-        seq.edit_state = 1;
-      else
-        seq.edit_state = 0;
-    }
-    else if (LCDML.BT_checkEnter())
-    {
-      ;
+    if(e.pressed) {
+      seq.edit_state = !seq.edit_state;
     }
     // button check end
     display.setTextSize(1);
@@ -18594,7 +18558,6 @@ FLASHMEM void UI_func_voice_select_loop()
       }
 
       load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-      menuhelper_redraw = true;
     } // end UP
     else if (LCDML.BT_checkDown())
     {
@@ -18641,15 +18604,15 @@ FLASHMEM void UI_func_voice_select_loop()
       }
 
       load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-      menuhelper_redraw = true;
     }
     else if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonPressed() && dexed_live_mod.active_button != 99)
     {
-      if (generic_active_function == 0)
+      if (generic_active_function == 0) {
         generic_active_function = 1;
-      else
+      }
+      else {
         generic_active_function = 0;
-      menuhelper_redraw = true;
+      }
     }
   }
 }
@@ -18720,8 +18683,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       if (seq.edit_state == 0 && dexed_live_mod.active_button == 0)
       {
         generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 18);
-        if (generic_temp_select_menu != menuhelper_previous_val)
-          menuhelper_redraw = true;
       }
       else if (seq.edit_state == 1)
       {
@@ -18854,7 +18815,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
             seq.edit_state = 1;
           else
             seq.edit_state = 0;
-          menuhelper_redraw = true;
           print_voice_select_default_help();
         }
       }
@@ -18903,9 +18863,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       dexed_onscreen_algo = MicroDexed[selected_instance_id]->getAlgorithm();
     }
 
-    if (menuhelper_redraw)
-      print_voice_settings_in_dexed_voice_select(false, false);
-    menuhelper_redraw = false;
+    print_voice_settings_in_dexed_voice_select(false, false);
 
     if (dexed_live_mod.active_button == 99) // if button press had confirmed live mod settings and is now unselected,
       dexed_live_mod.active_button = 0;     // skip button push from voice_select once, then back to normal
@@ -19914,12 +19872,10 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         break;
       }
     }
-    else if (LCDML.BT_checkEnter())
-    {
-      if (encoderDir[ENC_R].ButtonShort())
-        mode++;
-      switch (mode)
-      {
+    if(e.pressed) {
+      mode++;
+
+      switch (mode) {
       case 1:
         show(2, 1, 2, voice_number + 1);
         show(2, 5, 10, tmp_voice_name);
@@ -19929,14 +19885,12 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         break;
       case 2:
         show(2, 1, 16, "Channel");
-        if (sysex_send_channel == MIDI_CHANNEL_OMNI)
-           {
-             show(2, 12, 4, "OMNI");
-           }
-           else
-           {
-             show(2, 12, 2, sysex_send_channel);
-           }
+        if (sysex_send_channel == MIDI_CHANNEL_OMNI) {
+          show(2, 12, 4, "OMNI");
+        }
+        else {
+          show(2, 12, 2, sysex_send_channel);
+        }
         helptext_r("< > SELECT CHANNEL");
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -19973,14 +19927,12 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
             MicroDexed[selected_instance_id]->decodeVoice(voice_data, encoded_voice_data);
 
             show(2, 1, 16, "Sending Ch");
-            if (sysex_send_channel == MIDI_CHANNEL_OMNI)
-            {
-               show(2, 12, 4, "OMNI");
-             }
-             else
-             {
-               show(2, 12, 2, sysex_send_channel);
-             }
+            if (sysex_send_channel == MIDI_CHANNEL_OMNI) {
+              show(2, 12, 4, "OMNI");
+            }
+            else {
+              show(2, 12, 2, sysex_send_channel);
+            }
             send_sysex_voice(sysex_send_channel, voice_data);
             
             delay(MESSAGE_WAIT_TIME);
@@ -21221,34 +21173,32 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
-
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
       if (seq.edit_state == 0)
       {
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 17 + 16);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 17 + 16);
       }
       else if (seq.edit_state == 1)
       {
         if (generic_temp_select_menu == 0)
         {
-          if (LCDML.BT_checkDown())
+          if (e.down)
           {
             if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 2 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
               fm.sd_skip_files++;
           }
-          else if (LCDML.BT_checkUp())
+          else
           {
             if (fm.sd_selected_file == 0 && fm.sd_skip_files > 0)
               fm.sd_skip_files--;
           }
-          if (calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows) < fm.sd_sum_files)
-            fm.sd_selected_file = calc_val[state_dir](fm.sd_selected_file, 1, 0, fm.sd_cap_rows);
+          if (constrain(fm.sd_selected_file + e.dir, 0, fm.sd_cap_rows) < fm.sd_sum_files)
+            fm.sd_selected_file = constrain(fm.sd_selected_file + e.dir, 0, fm.sd_cap_rows);
         }
       }
     }
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort() && fm.sd_sum_files != 0) // handle button presses during menu
+    if (e.pressed && fm.sd_sum_files != 0) // handle button presses during menu
     {
       if (generic_temp_select_menu > 1 && generic_temp_select_menu < 18)
       {
@@ -21373,7 +21323,6 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
       _print_smf_track_instruments();
 
     }
-
   }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -21472,13 +21421,12 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if (LCDML.BT_checkEnter())
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.pressed)
     {
-#ifdef PSRAM
-      ;
-#else
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      psram_test();
+#ifndef PSRAM
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    psram_test();
 #endif
     }
     // setCursor_textGrid(1, 2);
