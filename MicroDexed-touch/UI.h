@@ -149,6 +149,8 @@ void draw_volmeters_mixer();
 void draw_volmeters_multiband_compressor();
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 
+const EncoderEvents getEncoderEvents(uint8_t id);
+
 #define MAX_CC_DEST 15
 PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
   // 25,

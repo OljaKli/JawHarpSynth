@@ -24,7 +24,6 @@
 
 #include "freqlut.h"
 #include "synth.h"
-#include "pgmspace.h"
 
 #define LG_N_SAMPLES 10
 #define N_SAMPLES (1 << LG_N_SAMPLES)

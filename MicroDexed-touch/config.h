@@ -1128,3 +1128,18 @@ enum APC_MODE
 #else
 #define LOG Serial
 #endif
+
+enum TurnDir {
+  TURN_UP = -1,
+  TURN_DN = 1
+};
+
+struct EncoderEvents {
+  bool down;
+  bool up;
+  bool turned;
+  TurnDir dir;
+  uint16_t speed;
+  bool pressed;
+  bool longPressed;
+};
