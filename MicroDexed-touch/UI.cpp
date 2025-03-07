@@ -14630,12 +14630,11 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up())) {
-      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
-
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
       if (generic_active_function == 0) {
         // navigate through menu
-        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 22);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + (e.dir * 1), 0, 22);
       }
       else {
         // handle setting change
@@ -14646,11 +14645,11 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
           break;
 
         case 1:
-          mb_global_gain = constrain(mb_global_gain + (factorChange * 0.2), -2, 12);
+          mb_global_gain = constrain(mb_global_gain + (e.dir * 0.2F), -2, 12);
           break;
 
         case 2:
-          mb_global_ratio = constrain(mb_global_ratio + (factorChange * ENCODER[ENC_R].speed()), 1, 60);
+          mb_global_ratio = constrain(mb_global_ratio + (e.dir * e.speed), 1, 60);
           break;
 
         case 3:
@@ -14658,19 +14657,19 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
           break;
 
         case 4:
-          mb_cross_freq_high = constrain(mb_cross_freq_high + (factorChange * ENCODER[ENC_R].speed() * 10), 2000, 12000);
+          mb_cross_freq_high = constrain(mb_cross_freq_high + (e.dir * e.speed * 10), 2000, 12000);
           break;
 
         case 5:
-          mb_q_high = constrain(mb_q_high + (factorChange * 0.1), 0, 2);
+          mb_q_high = constrain(mb_q_high + (e.dir * 0.1F), 0, 2);
           break;
 
         case 6:
-          mb_gain_high = constrain(mb_gain_high + (factorChange * 0.2), -9, 9);
+          mb_gain_high = constrain(mb_gain_high + (e.dir * 0.2F), -9, 9);
           break;
 
         case 7:
-          mb_threshold_high = constrain(mb_threshold_high + (factorChange * ENCODER[ENC_R].speed()), 0, 40);
+          mb_threshold_high = constrain(mb_threshold_high + (e.dir * e.speed), 0, 40);
           break;
 
         case 8:
@@ -14678,19 +14677,19 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
           break;
 
         case 9:
-          mb_cross_freq_upper_mid = constrain(mb_cross_freq_upper_mid + (factorChange * ENCODER[ENC_R].speed() * 10), 1000, 9999);
+          mb_cross_freq_upper_mid = constrain(mb_cross_freq_upper_mid + (e.dir * e.speed * 10), 1000, 9999);
           break;
 
         case 10:
-          mb_q_upper_mid = constrain(mb_q_upper_mid + (factorChange * 0.1), 0, 2);
+          mb_q_upper_mid = constrain(mb_q_upper_mid + (e.dir * 0.1F), 0, 2);
           break;
 
         case 11:
-          mb_gain_upper_mid = constrain(mb_gain_upper_mid + (factorChange * 0.2), -9, 9);
+          mb_gain_upper_mid = constrain(mb_gain_upper_mid + (e.dir * 0.2F), -9, 9);
           break;
 
         case 12:
-          mb_threshold_upper_mid = constrain(mb_threshold_upper_mid + (factorChange * ENCODER[ENC_R].speed()), 0, 40);
+          mb_threshold_upper_mid = constrain(mb_threshold_upper_mid + (e.dir * e.speed), 0, 40);
           break;
 
         case 13:
@@ -14698,19 +14697,19 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
           break;
 
         case 14:
-          mb_cross_freq_mid = constrain(mb_cross_freq_mid + (factorChange * ENCODER[ENC_R].speed() * 10), 400, 7000);
+          mb_cross_freq_mid = constrain(mb_cross_freq_mid + (e.dir * e.speed * 10), 400, 7000);
           break;
 
         case 15:
-          mb_q_mid = constrain(mb_q_mid + (factorChange * 0.1), 0, 2);
+          mb_q_mid = constrain(mb_q_mid + (e.dir * 0.1F), 0, 2);
           break;
 
         case 16:
-          mb_gain_mid = constrain(mb_gain_mid + (factorChange * 0.2), -9, 9);
+          mb_gain_mid = constrain(mb_gain_mid + (e.dir * 0.2F), -9, 9);
           break;
 
         case 17:
-          mb_threshold_mid = constrain(mb_threshold_mid + (factorChange * ENCODER[ENC_R].speed()), 0, 40);
+          mb_threshold_mid = constrain(mb_threshold_mid + (e.dir * e.speed), 0, 40);
           break;
 
         case 18:
@@ -14718,25 +14717,25 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
           break;
 
         case 19:
-          mb_cross_freq_low = constrain(mb_cross_freq_low + (factorChange * ENCODER[ENC_R].speed() * 10), 10, 2000);
+          mb_cross_freq_low = constrain(mb_cross_freq_low + (e.dir * e.speed * 10), 10, 2000);
           break;
 
         case 20:
-          mb_q_low = constrain(mb_q_low + (factorChange * 0.1), 0, 2);
+          mb_q_low = constrain(mb_q_low + (e.dir * 0.1F), 0, 2);
           break;
 
         case 21:
-          mb_gain_low = constrain(mb_gain_low + (factorChange * 0.2), -9, 9);
+          mb_gain_low = constrain(mb_gain_low + (e.dir * 0.2F), -9, 9);
           break;
 
         case 22:
-          mb_threshold_low = constrain(mb_threshold_low + (factorChange * ENCODER[ENC_R].speed()), 0, 40);
+          mb_threshold_low = constrain(mb_threshold_low + (e.dir * e.speed), 0, 40);
           break;
         }
       }
     }
 
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()) {// handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if (e.pressed) {// handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       generic_active_function = !generic_active_function;
     }
 
