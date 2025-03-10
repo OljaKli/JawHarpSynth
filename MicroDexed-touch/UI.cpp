@@ -19289,55 +19289,30 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
   {
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      if (LCDML.BT_checkDown())
-      {
-        switch (mode)
-        {
-        case 0:
-          bank_number = constrain(bank_number + ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
-          get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
-          strcpy(receive_bank_filename, tmp_bank_name);
-          show(2, 1, 2, bank_number);
-          show(2, 4, 10, receive_bank_filename);
-          break;
+    
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
+      switch (mode) {
+      case 0:
+        bank_number = constrain(bank_number + e.dir * e.speed, 0, MAX_BANKS - 1);
+        get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
+        strcpy(receive_bank_filename, tmp_bank_name);
+        show(2, 1, 2, bank_number);
+        show(2, 4, 10, receive_bank_filename);
+        break;
 
-        case 1:
-          yesno = !yesno;
-          show(2, 13, 3, yesno ? "YES" : "NO");
-          break;
+      case 1:
+        yesno = !yesno;
+        show(2, 13, 3, yesno ? "YES" : "NO");
+        break;
 
-        case 2:
-          ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
-          break;
-        }
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        switch (mode)
-        {
-        case 0:
-          bank_number = constrain(bank_number - ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
-          get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
-          strcpy(receive_bank_filename, tmp_bank_name);
-          show(2, 1, 2, bank_number);
-          show(2, 4, 10, receive_bank_filename);
-          break;
-
-        case 1:
-          yesno = !yesno;
-          show(2, 13, 3, yesno ? "YES" : "NO");
-          break;
-
-        case 2:
-          ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
-          break;
-        }
+      case 2:
+        ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
+        break;
       }
     }
-    else if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
-    {
+
+    if (e.pressed) {
       if (mode == 0)
       {
         if (strcmp(receive_bank_filename, "*ERROR*") != 0)
