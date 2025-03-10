@@ -19459,25 +19459,18 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      if (LCDML.BT_checkDown())
-      {
-        if (mode == 0)
-          seq.active_multisample = constrain(seq.active_multisample + ENCODER[ENC_L].speed(), 0, NUM_MULTISAMPLES - 1);
-        else if (mode == 2)
-          ui_select_name_state = UI_select_name(2, 4, seq.name_temp, BANK_NAME_LEN - 1, false);
+
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
+      if (mode == 0) {
+        seq.active_multisample = constrain(seq.active_multisample + e.dir * e.speed, 0, NUM_MULTISAMPLES - 1);
       }
-      else if (LCDML.BT_checkUp())
-      {
-        if (mode == 0)
-          seq.active_multisample = constrain(seq.active_multisample - ENCODER[ENC_L].speed(), 0, NUM_MULTISAMPLES - 1);
-        else if (mode == 2)
-          ui_select_name_state = UI_select_name(2, 4, seq.name_temp, BANK_NAME_LEN - 1, false);
+      else if (mode == 2) {
+        ui_select_name_state = UI_select_name(2, 4, seq.name_temp, BANK_NAME_LEN - 1, false);
       }
     }
-    else if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
-    {
+
+    else if (e.pressed) {
       if (mode == 2)
       {
         ui_select_name_state = UI_select_name(2, 4, seq.name_temp, BANK_NAME_LEN - 1, false);
@@ -19494,8 +19487,9 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
           LCDML.FUNC_goBackToMenu();
         }
       }
-      if (mode == 0)
+      if (mode == 0) {
         mode = 1;
+      }
     }
     if (mode == 0)
     {
