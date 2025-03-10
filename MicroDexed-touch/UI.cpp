@@ -13565,13 +13565,13 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if(e.turned) {
       if (seq.edit_state == 0) {
-        if (LCDML.BT_checkDown() && generic_temp_select_menu < 48)
+        if (e.down && generic_temp_select_menu < 48)
           generic_temp_select_menu++;
-        else if (LCDML.BT_checkDown())
+        else if (e.down)
           generic_temp_select_menu = 1;
-        else if (LCDML.BT_checkUp() && generic_temp_select_menu > 1)
+        else if (e.up && generic_temp_select_menu > 1)
           generic_temp_select_menu--;
-        else if (LCDML.BT_checkUp())
+        else if (e.up)
           generic_temp_select_menu = 48;
         update_selective_values_master_effects();
       }
