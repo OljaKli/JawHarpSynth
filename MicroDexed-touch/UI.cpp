@@ -19503,24 +19503,14 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
-
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      if (LCDML.BT_checkDown())
-      {
-        if (mode == 1)
-          ui_select_name_state = UI_select_name(2, 2, seq.name_temp, BANK_NAME_LEN - 1, false);
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        if (mode == 1)
-          ui_select_name_state = UI_select_name(2, 2, seq.name_temp, BANK_NAME_LEN - 1, false);
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
+      if (mode == 1) {
+        ui_select_name_state = UI_select_name(2, 2, seq.name_temp, BANK_NAME_LEN - 1, false);
       }
     }
-    else if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
-    {
-      if (mode == 1)
-      {
+    else if(e.pressed) {
+      if (mode == 1) {
         ui_select_name_state = UI_select_name(2, 2, seq.name_temp, BANK_NAME_LEN - 1, false);
         if (ui_select_name_state == true)
         {
@@ -19532,9 +19522,7 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
           LCDML.FUNC_goBackToMenu();
         }
       }
-    }
-    if (mode == 0)
-    {
+    } else {
       mode = 1;
       strcpy(seq.name_temp, seq.name);
       setCursor_textGrid(1, 2);
