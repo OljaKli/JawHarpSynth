@@ -453,10 +453,10 @@ void lcdml_menu_clear(void);
 void lcdml_menu_control(void);
 void mFunc_screensaver(uint8_t param);
 void set_delay_sync(uint8_t sync, uint8_t instance);
-void master_effects_set_delay_time(uint8_t instance);
-void master_effects_set_delay_feedback(uint8_t instance);
-void master_effects_set_delay_panorama(uint8_t instance);
-void master_effects_set_reverb_send(uint8_t instance);
+void master_effects_set_delay_time(uint8_t instance, EncoderEvents e);
+void master_effects_set_delay_feedback(uint8_t instance, EncoderEvents e);
+void master_effects_set_delay_panorama(uint8_t instance, EncoderEvents e);
+void master_effects_set_reverb_send(uint8_t instance, EncoderEvents e);
 
 void UI_update_instance_icons();
 bool UI_select_name(uint8_t y, uint8_t x, char* edit_string, uint8_t len, bool init);
@@ -4936,7 +4936,7 @@ FLASHMEM void UI_func_chorus_level(uint8_t param)
   }
 }
 
-FLASHMEM void master_effects_set_delay_time(uint8_t instance)
+FLASHMEM void master_effects_set_delay_time(uint8_t instance, EncoderEvents e)
 {
   if (instance == 0 || instance == 1) {
 
@@ -4991,46 +4991,31 @@ FLASHMEM void master_effects_set_delay_time(uint8_t instance)
   }
 }
 
-FLASHMEM void master_effects_set_delay_feedback(uint8_t instance)
+FLASHMEM void master_effects_set_delay_feedback(uint8_t instance, EncoderEvents e)
 {
-  if (LCDML.BT_checkDown())
-  {
-    configuration.fx.delay_feedback[instance] = constrain(configuration.fx.delay_feedback[instance] + ENCODER[ENC_R].speed(), DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX);
-    MD_sendControlChange(configuration.dexed[instance].midi_channel, 106, configuration.fx.delay_feedback[instance]);
-  }
-  else if (LCDML.BT_checkUp())
-  {
-    configuration.fx.delay_feedback[instance] = constrain(configuration.fx.delay_feedback[instance] - ENCODER[ENC_R].speed(), DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX);
-    MD_sendControlChange(configuration.dexed[instance].midi_channel, 106, configuration.fx.delay_feedback[instance]);
-  }
+  configuration.fx.delay_feedback[instance] = constrain(configuration.fx.delay_feedback[instance] + e.dir * e.speed, DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX);
+  MD_sendControlChange(configuration.dexed[instance].midi_channel, 106, configuration.fx.delay_feedback[instance]);
+ 
   delay_fb_mixer[instance]->gain(1, mapfloat(configuration.fx.delay_feedback[instance], DELAY_FEEDBACK_MIN, DELAY_FEEDBACK_MAX, 0.0, 0.8));
 }
 
-FLASHMEM void master_effects_delay_level_global(uint8_t instance)
+FLASHMEM void master_effects_delay_level_global(uint8_t instance, EncoderEvents e)
 {
-  if (LCDML.BT_checkDown())
-  {
-    configuration.fx.delay_level_global[instance] = constrain(configuration.fx.delay_level_global[instance] + ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-  }
-  else if (LCDML.BT_checkUp())
-  {
-    configuration.fx.delay_level_global[instance] = constrain(configuration.fx.delay_level_global[instance] - ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-  }
+  configuration.fx.delay_level_global[instance] = constrain(configuration.fx.delay_level_global[instance] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
   delay_mixer[instance]->gain(1, mapfloat(configuration.fx.delay_level_global[instance], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
 }
 
-FLASHMEM void master_effects_set_reverb_send(uint8_t instance)
+FLASHMEM void master_effects_set_delay_panorama(uint8_t instance, EncoderEvents e)
 {
-  if (LCDML.BT_checkDown())
-  {
-    configuration.fx.reverb_send[instance] = constrain(configuration.fx.reverb_send[instance] + ENCODER[ENC_R].speed(), REVERB_SEND_MIN, REVERB_SEND_MAX);
-    MD_sendControlChange(configuration.dexed[instance].midi_channel, 91, configuration.fx.reverb_send[instance]);
-  }
-  else if (LCDML.BT_checkUp())
-  {
-    configuration.fx.reverb_send[instance] = constrain(configuration.fx.reverb_send[instance] - ENCODER[ENC_R].speed(), REVERB_SEND_MIN, REVERB_SEND_MAX);
-    MD_sendControlChange(configuration.dexed[instance].midi_channel, 91, configuration.fx.reverb_send[instance]);
-  }
+  configuration.fx.delay_pan[instance] = constrain(configuration.fx.delay_pan[instance] + e.dir * e.speed, PANORAMA_MIN, PANORAMA_MAX);
+  delay_mono2stereo[instance]->panorama(mapfloat(configuration.fx.delay_pan[instance], PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
+}
+
+FLASHMEM void master_effects_set_reverb_send(uint8_t instance, EncoderEvents e)
+{
+  configuration.fx.reverb_send[instance] = constrain(configuration.fx.reverb_send[instance] + e.dir * e.speed, REVERB_SEND_MIN, REVERB_SEND_MAX);
+  MD_sendControlChange(configuration.dexed[instance].midi_channel, 91, configuration.fx.reverb_send[instance]);
+
   // display_bar_int("Reverb Send", configuration.fx.reverb_send[instance], 1.0, REVERB_SEND_MIN, REVERB_SEND_MAX, 3, false, false, false);
   reverb_mixer_r.gain(instance, volume_transform(mapfloat(configuration.fx.reverb_send[instance], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
   reverb_mixer_l.gain(instance, volume_transform(mapfloat(configuration.fx.reverb_send[instance], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
@@ -5153,19 +5138,6 @@ FLASHMEM void UI_func_sound_intensity(uint8_t param)
   {
     encoderDir[ENC_R].reset();
   }
-}
-
-FLASHMEM void master_effects_set_delay_panorama(uint8_t instance)
-{
-  if (LCDML.BT_checkDown())
-  {
-    configuration.fx.delay_pan[instance] = constrain(configuration.fx.delay_pan[instance] + ENCODER[ENC_R].speed(), PANORAMA_MIN, PANORAMA_MAX);
-  }
-  else if (LCDML.BT_checkUp())
-  {
-    configuration.fx.delay_pan[instance] = constrain(configuration.fx.delay_pan[instance] - ENCODER[ENC_R].speed(), PANORAMA_MIN, PANORAMA_MAX);
-  }
-  delay_mono2stereo[instance]->panorama(mapfloat(configuration.fx.delay_pan[instance], PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
 }
 
 FLASHMEM void UI_func_favorites(uint8_t param)
@@ -11361,41 +11333,18 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-    {
-      if (seq.edit_state == false) // NOT in editor mode
-      {
-        if (LCDML.BT_checkDown())
-        {
-          seq.scrollpos++;
-          if (seq.scrollpos > 15)
-            seq.scrollpos = 15;
-        }
-        else if (LCDML.BT_checkUp())
-        {
-          if (seq.scrollpos > 0)
-          {
-            seq.scrollpos--;
-          }
-        }
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      if (seq.edit_state == false) {// NOT in editor mode
+        seq.scrollpos = constrain(seq.scrollpos + e.dir, 0, 15);
       }
       else // IS in editor mode
       {
-        if (LCDML.BT_checkDown())
-        {
-
-          seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] = constrain(seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] + ENCODER[ENC_R].speed(), 0, 254);
-        }
-        else if (LCDML.BT_checkUp())
-        {
-          seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] = constrain(seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] - ENCODER[ENC_R].speed(), 0, 254);
-        }
+        seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] = constrain(seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] + e.dir * e.speed, 0, 254);
       }
-      if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-      {
-        seq.edit_state = !seq.edit_state;
-      }
+    }
+    if(e.pressed) {
+      seq.edit_state = !seq.edit_state;
     }
     for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
     {
@@ -13639,25 +13588,25 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
         case 2:
           // delay time
-          master_effects_set_delay_time(0);
+          master_effects_set_delay_time(0, e);
           print_delay_time(0, 2);
           print_delay_sync_status(0);
           break;
 
         case 3:
-          master_effects_set_delay_feedback(0); // feedback instance 0
+          master_effects_set_delay_feedback(0, e); // feedback instance 0
           print_small_intbar(6, 7, configuration.fx.delay_feedback[0], 3, 1, 0);
           break;
 
         case 4:
           // pan
-          master_effects_set_delay_panorama(0);
+          master_effects_set_delay_panorama(0, e);
           print_small_panbar(6, 8, configuration.fx.delay_pan[0], 4);
           break;
 
         case 5:
           // level
-          master_effects_delay_level_global(0);
+          master_effects_delay_level_global(0, e);
           print_small_intbar(6, 9, configuration.fx.delay_level_global[0], 5, 1, 0);
           break;
 
@@ -13750,25 +13699,25 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
         case 19:
           // delay time
-          master_effects_set_delay_time(1);
+          master_effects_set_delay_time(1, e);
           print_delay_time(1, 16);
           print_delay_sync_status(1);
           break;
 
         case 20:
-          master_effects_set_delay_feedback(1); // feedback
+          master_effects_set_delay_feedback(1, e); // feedback
           print_small_intbar(22, 7, configuration.fx.delay_feedback[1], 20, 1, 0);
           break;
 
         case 21:
           // pan
-          master_effects_set_delay_panorama(1);
+          master_effects_set_delay_panorama(1, e);
           print_small_panbar(22, 8, configuration.fx.delay_pan[1], 21);
           break;
 
         case 22:
           // level
-          master_effects_delay_level_global(1);
+          master_effects_delay_level_global(1, e);
           print_small_intbar(22, 9, configuration.fx.delay_level_global[1], 22, 1, 0);
           break;
 
@@ -13886,22 +13835,22 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
           break;
 
         case 41:
-          master_effects_set_reverb_send(0);
+          master_effects_set_reverb_send(0, e);
           print_small_intbar(43, 13, configuration.fx.reverb_send[0], 41, 1, 0);
           break;
 
         case 42:
-          master_effects_set_reverb_send(1);
+          master_effects_set_reverb_send(1, e);
           print_small_intbar(43, 14, configuration.fx.reverb_send[1], 42, 1, 0);
           break;
  #if (NUM_DEXED>2)
         case 43:
-          master_effects_set_reverb_send(2);
+          master_effects_set_reverb_send(2, e);
           print_small_intbar(43, 15, configuration.fx.reverb_send[2], 43, 1, 0);
           break;
 
         case 44:
-          master_effects_set_reverb_send(3);
+          master_effects_set_reverb_send(3, e);
           print_small_intbar(43, 16, configuration.fx.reverb_send[3], 44, 1, 0);
           break;
 #endif
@@ -15039,25 +14988,19 @@ FLASHMEM void UI_func_recorder(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-    {
-      if (LCDML.BT_checkDown())
-      {
-        temp_int = constrain(temp_int + ENCODER[ENC_R].speed(), 0, 254);
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      temp_int = constrain(temp_int + e.dir * e.speed, 0, 254); 
+    }
+    if(e.pressed) {
+      if (fm.wav_recorder_mode == 0) {
+        startWavRecording();
       }
-      else if (LCDML.BT_checkUp())
-      {
-        temp_int = constrain(temp_int - ENCODER[ENC_R].speed(), 0, 254);
-      }
-
-      if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-      {
-        if (fm.wav_recorder_mode == 0)
-          startWavRecording();
-        else if (fm.wav_recorder_mode == 1)
-          stopWavRecording();
+      else if (fm.wav_recorder_mode == 1) {
+        stopWavRecording();
       }
     }
+
     helptext_r("+/- FILE, PUSH TO RECORD");
     helptext_l(back_text);
     display.setTextColor(GREEN, COLOR_BACKGROUND);
