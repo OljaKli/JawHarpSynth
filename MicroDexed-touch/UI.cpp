@@ -19207,20 +19207,22 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
       switch (mode)
       {
       case 0: // Instance selection
-        if (LCDML.BT_checkDown() || LCDML.BT_checkUp())
+        if(e.down) {
           increment_dexed_instance();
+        }
+        if(e.up) {
+          decrement_dexed_instance();
+        }
         _print_instances_in_save_voice();
         break;
+
       case 1: // Bank selection
-        if (LCDML.BT_checkDown())
-          configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank + ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
-        else if (LCDML.BT_checkUp() && configuration.dexed[selected_instance_id].bank > 0)
-          configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank - ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
+        configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
 
         // get bank name from sysex on SD
         get_bank_name(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, g_bank_name[selected_instance_id]);
@@ -19228,11 +19230,9 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
         show(2, 1, 2, configuration.dexed[selected_instance_id].bank);
         show(2, 5, 10, g_bank_name[selected_instance_id]);
         break;
+
       case 2: // Voice selection
-        if (LCDML.BT_checkDown() && configuration.dexed[selected_instance_id].voice < MAX_VOICES - 1)
-          configuration.dexed[selected_instance_id].voice = constrain(configuration.dexed[selected_instance_id].voice + ENCODER[ENC_R].speed(), 0, MAX_VOICES - 1);
-        else if (LCDML.BT_checkUp() && configuration.dexed[selected_instance_id].voice > 0)
-          configuration.dexed[selected_instance_id].voice = constrain(configuration.dexed[selected_instance_id].voice - ENCODER[ENC_R].speed(), 0, MAX_VOICES - 1);
+        configuration.dexed[selected_instance_id].voice = constrain(configuration.dexed[selected_instance_id].voice + e.dir * e.speed, 0, MAX_VOICES - 1);
 
         // get voice name from sysex on SD
         get_voice_name(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, g_voice_name[selected_instance_id]);
@@ -19241,23 +19241,16 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
         show(2, 1, 2, configuration.dexed[selected_instance_id].voice + 1);
         show(2, 5, 10, g_voice_name[selected_instance_id]);
         break;
+
       case 3: // Yes/No selection
         yesno = !yesno;
-        if (yesno == true)
-        {
-          show(2, 2, 3, "YES");
-        }
-        else
-        {
-          show(2, 2, 3, "NO");
-        }
+        show(2, 2, 3, yesno ? "YES" : "NO");
         break;
       }
     }
-    else if (LCDML.BT_checkEnter())
+    else if (e.pressed)
     {
-      if (encoderDir[ENC_R].ButtonShort())
-        mode++;
+      mode++;
       switch (mode)
       {
       case 1:
@@ -19271,6 +19264,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         break;
+
       case 2:
         show(1, 1, 14, "Save to Voice ");
         // show(1, 16, 2, configuration.dexed[selected_instance_id].bank);
@@ -19280,6 +19274,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         break;
+
       case 3:
         show(1, 1, 16, "Overwrite?");
         show(2, 1, 15, "[NO");
