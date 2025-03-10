@@ -452,13 +452,6 @@ void lcdml_menu_display(void);
 void lcdml_menu_clear(void);
 void lcdml_menu_control(void);
 void mFunc_screensaver(uint8_t param);
-
-void reverb_roomsize();
-void reverb_lowpass();
-void reverb_lodamp();
-void reverb_hidamp();
-void reverb_diffusion();
-void reverb_level();
 void set_delay_sync(uint8_t sync, uint8_t instance);
 void master_effects_set_delay_time(uint8_t instance);
 void master_effects_set_delay_feedback(uint8_t instance);
@@ -19138,15 +19131,18 @@ FLASHMEM void UI_func_volume(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_L].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_L].Up()))
-    {
+    const EncoderEvents e = getEncoderEvents(ENC_L);
+    if (e.turned) {
       back_from_volume = 0;
-      const uint8_t volChange = (ENCODER[ENC_L].speed() > 5) ? ENCODER[ENC_L].speed() / 2 : 1;
-      const int8_t factorChange = LCDML.BT_checkDown() ? +1 : -1;
-      configuration.sys.vol = constrain(configuration.sys.vol + factorChange * volChange, VOLUME_MIN, VOLUME_MAX);
+      const uint8_t volChange = (e.speed > 5) ? e.speed / 2 : 1;
+      configuration.sys.vol = constrain(configuration.sys.vol + e.dir * volChange, VOLUME_MIN, VOLUME_MAX);
     }
-    else if (encoderDir[ENC_R].Down() || encoderDir[ENC_R].Up() || encoderDir[ENC_R].ButtonShort())
-      back_from_volume = BACK_FROM_VOLUME_MS;
+    else {
+      const EncoderEvents e = getEncoderEvents(ENC_R);
+      if (e.turned || e.pressed) {
+        back_from_volume = BACK_FROM_VOLUME_MS;
+      }
+    }
 
     // Master Volume
     display.setTextSize(2);
@@ -19363,13 +19359,12 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
           show(2, 1, 2, bank_number);
           show(2, 4, 10, receive_bank_filename);
           break;
+
         case 1:
           yesno = !yesno;
-          if (yesno)
-            show(2, 13, 3, "YES");
-          else
-            show(2, 13, 3, "NO");
+          show(2, 13, 3, yesno ? "YES" : "NO");
           break;
+
         case 2:
           ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
           break;
@@ -19386,13 +19381,12 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
           show(2, 1, 2, bank_number);
           show(2, 4, 10, receive_bank_filename);
           break;
+
         case 1:
           yesno = !yesno;
-          if (yesno)
-            show(2, 13, 3, "YES");
-          else
-            show(2, 13, 3, "NO");
+          show(2, 13, 3, yesno ? "YES" : "NO");
           break;
+
         case 2:
           ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
           break;
@@ -20403,14 +20397,6 @@ FLASHMEM void display_meter_float(const char* title, float value, float factor, 
   display.fillRect(CHAR_width + 1, 2 * CHAR_height + 4, v + 2, 8, COLOR_BACKGROUND);
   display.fillRect(CHAR_width + v + 5, 2 * CHAR_height + 4, CHAR_width * 10 + 7 - v, 8, COLOR_BACKGROUND);
   display.fillRect(CHAR_width + v + 1, 2 * CHAR_height + 4, 4, 8, COLOR_SYSTEXT);
-}
-
-FLASHMEM uint8_t bit_reverse8(uint8_t v)
-{
-  uint8_t result = 0;
-  for (; v > 0; v >>= 1)
-    (result <<= 1) |= (v & 1);
-  return (result);
 }
 
 FLASHMEM void string_trim(char* s)

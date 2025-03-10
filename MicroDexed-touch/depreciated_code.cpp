@@ -1,5 +1,12 @@
 // this file contains only outdated or no longer used code for easy retrieval in case parts of it might still be useful
 
+// FLASHMEM uint8_t bit_reverse8(uint8_t v)
+// {
+//   uint8_t result = 0;
+//   for (; v > 0; v >>= 1)
+//     (result <<= 1) |= (v & 1);
+//   return (result);
+// }
 
 // void update_pianoroll()
 // {
