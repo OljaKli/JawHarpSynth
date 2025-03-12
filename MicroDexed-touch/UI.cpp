@@ -139,7 +139,6 @@ uint16_t slices_scrollspeed = 1;
 bool slices_autoalign = true;
 
 bool remote_touched;
-extern int (*calc_val[2])(int, int, int, int);
 
 extern int menuhelper_previous_val;
 bool check_and_confirm_midi_channels;
@@ -621,17 +620,6 @@ FLASHMEM void clear_bottom_half_screen_without_backbutton()
   display.fillRect(50, 205, 320 - 50, 35, COLOR_BACKGROUND);
   display.console = false;
 }
-
-uint8_t state_dir;
-FLASHMEM void set_state_dir()
-{
-  if (seq.edit_state == 0)
-    menuhelper_previous_val = generic_temp_select_menu;
-  if (LCDML.BT_checkDown())
-    state_dir = 0;
-  else if (LCDML.BT_checkUp())
-    state_dir = 1;
-};
 
 int favsearcher = 0;
 
@@ -4639,7 +4627,6 @@ FLASHMEM void draw_instance_editor(Editor* editor, bool refresh)
     display.print(F(" LONG:"));
     display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
     display.print(F("TOGGLE INST"));
-
   }
   display.setCursor(CHAR_width_small * 10, 6);
   if (generic_temp_select_menu == editor->select_id)
@@ -8589,13 +8576,12 @@ void print_sample_type(bool dir)
   }
 }
 
-FLASHMEM void seq_sub_copy_swap()
+FLASHMEM void seq_sub_copy_swap(EncoderEvents e)
 {
   if (seq.menu == 30 || seq.menu == 31)
   { // is in sub-function - swap pattern or copy pattern
     seq.active_function = 98;
 
-    const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned)
     {
       temp_int = constrain(temp_int + e.dir, 0, NUM_SEQ_PATTERN - 1);
@@ -8609,7 +8595,7 @@ FLASHMEM void seq_sub_copy_swap()
       }
     }
   }
-  if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   {
     if (seq.menu == 31 && seq.active_function != 40) // copy patterns
     {
@@ -8723,9 +8709,8 @@ FLASHMEM void seq_sub_copy_swap()
   }
 }
 
-FLASHMEM void seq_sub_pattern_fill()
+FLASHMEM void seq_sub_pattern_fill(EncoderEvents e)
 {
-  const EncoderEvents e = getEncoderEvents(ENC_R);
   if(e.turned) {
     if (seq.menu == 33)
     { // is in sub-function - fill pattern
@@ -8883,17 +8868,16 @@ FLASHMEM void seq_sub_pattern_fill()
   }
 }
 
-FLASHMEM void seq_sub_pattern_transpose()
+FLASHMEM void seq_sub_pattern_transpose(EncoderEvents e)
 {
   if (seq.menu == 34)
   { // is in transpose edit
     seq.active_function = 94;
-    const EncoderEvents e = getEncoderEvents(ENC_R);
     if(e.turned) {
       temp_int = constrain(temp_int + e.dir, -36, 36);
     }
   }
-  if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   {
     if (seq.menu == 34) // transpose pattern
     {
@@ -9000,16 +8984,15 @@ FLASHMEM void seq_sub_clear_pattern_or_clear_all()
   // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 }
 
-FLASHMEM void seq_sub_pitch_edit_pitched_sample()
+FLASHMEM void seq_sub_pitch_edit_pitched_sample(EncoderEvents e)
 {
   if (seq.active_function == 40)
   { // pitch edit sample
-    const EncoderEvents e = getEncoderEvents(ENC_R);
     if(e.turned) {
       seq.note_data[seq.active_pattern][seq.menu - 3] = constrain(seq.note_data[seq.active_pattern][seq.menu - 3] + e.dir, 12, 108);
     }
   }
-  if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   {
     if (seq.menu > 2 && seq.menu < 19 && seq.vel[seq.active_pattern][seq.menu - 3] > 209 && seq.active_function != 40 && activeSample != NUM_DRUMSET_CONFIG - 1) // enter edit pitch of sample mode
     {
@@ -9656,16 +9639,18 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    seq_sub_pitch_edit_pitched_sample();
-    seq_sub_pattern_fill();
-    seq_sub_copy_swap();
-    seq_sub_pattern_transpose();
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    
+    seq_sub_pitch_edit_pitched_sample(e);
+    seq_sub_pattern_fill(e);
+    seq_sub_copy_swap(e);
+    seq_sub_pattern_transpose(e);
 
     if (seq.active_function == 99)
     {
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+      if (e.turned)
       {
-        if (LCDML.BT_checkDown())
+        if (e.down)
         {
           if (seq.menu == 18)
           {
@@ -9679,7 +9664,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
             pattern_editor_play_current_step(seq.menu - 3);
           }
         }
-        else if (LCDML.BT_checkUp())
+        else if (e.up)
         {
           if (seq.menu == 0 && seq.quicknav_song_to_pattern_jump == true)
           {
@@ -9700,12 +9685,9 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
     {
       if (seq.content_type[seq.active_pattern] == 0) // is in Drumedit  mode 
       {
-        if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+        if (e.turned)
         {
-          if (LCDML.BT_checkDown())
-            activeSample = constrain(activeSample + 1, 0, NUM_DRUMSET_CONFIG + 5);
-          else if (LCDML.BT_checkUp())
-            activeSample = constrain(activeSample - 1, 0, NUM_DRUMSET_CONFIG + 5);
+          activeSample = constrain(activeSample + e.dir, 0, NUM_DRUMSET_CONFIG + 5);
 
           if (seq.running == false && activeSample < NUM_DRUMSET_CONFIG - 1) {
             handleNoteOn(drum_midi_channel, drum_config[activeSample].midinote, 90, 0);
@@ -9714,12 +9696,9 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       }
       else  if (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) // is in Slice mode 
       {
-        if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+        if (e.turned)
         {
-          if (LCDML.BT_checkDown())
-            activeSample = constrain(activeSample + 1, 30, num_slices[0] + num_slices[1] - 1 + 30);
-          else if (LCDML.BT_checkUp())
-            activeSample = constrain(activeSample - 1, 30, num_slices[0] + num_slices[1] - 1 + 30);
+          activeSample = constrain(activeSample + e.dir, 30, num_slices[0] + num_slices[1] - 1 + 30);
 
           if (seq.running == false)
           {
@@ -9729,23 +9708,17 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       }
       else if (seq.content_type[seq.active_pattern] != 3)// is in Instrument Mode
       {
-        if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+        if (e.turned)
         {
-          if (LCDML.BT_checkDown())
-            temp_int = constrain(temp_int + 1, 0, 116);
-          else if (LCDML.BT_checkUp())
-            temp_int = constrain(temp_int - 1, 0, 116);
+          temp_int = constrain(temp_int + e.dir, 0, 116);
         }
       }
     }
     else if (seq.active_function == 2)
     {
-      if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+      if (e.turned)
       {
-        if (LCDML.BT_checkDown())
-          seq.active_pattern = constrain(seq.active_pattern + 1, 0, NUM_SEQ_PATTERN - 1);
-        else if (LCDML.BT_checkUp())
-          seq.active_pattern = constrain(seq.active_pattern - 1, 0, NUM_SEQ_PATTERN - 1);
+        seq.active_pattern = constrain(seq.active_pattern + e.dir, 0, NUM_SEQ_PATTERN - 1);
 
         display.setCursor(11 * CHAR_width_small, CHAR_height * 3 + 3);
         print_content_type();
@@ -9762,9 +9735,8 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 #endif
       }
     }
-    if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
-
       if (seq.menu == 0 && seq.active_function == 0 && seq.cycle_touch_element != 1)
       {
         if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
@@ -11559,415 +11531,407 @@ FLASHMEM void UI_func_song(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-    {
-      if (LCDML.BT_checkDown())
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    
+    if (e.down) {
+      if (seq.edit_state == false)
       {
-        if (seq.edit_state == false)
+        if (seq.cursor_scroll == 15)
         {
-          if (seq.cursor_scroll == 15)
-          {
-            seq.scrollpos++;
-            if (seq.scrollpos > SONG_LENGTH - 16)
-              seq.scrollpos = SONG_LENGTH - 16;
-            print_song_loop_arrows();
-          }
-
-          else if (seq.tracktype_or_instrument_assign == 10) // go back from loop copy to tracktype
-          {
-            seq.tracktype_or_instrument_assign = 8;
-            print_song_loop_text();
-            seq.help_text_needs_refresh = true;
-          }
-
-          else if (seq.tracktype_or_instrument_assign == 8 && seq.loop_edit_step != 3) // go back from loop clear to tracktype
-          {
-            seq.tracktype_or_instrument_assign = 5;
-            print_song_loop_text();
-
-
-            seq.help_text_needs_refresh = true;
-          }
-          else if (seq.tracktype_or_instrument_assign == 8 && seq.loop_edit_step == 3) // exit clear song loop
-          {
-            seq.tracktype_or_instrument_assign = 0;
-            seq.loop_edit_step = 0;
-            seq.selected_track = 0;
-            print_song_loop_text();
-            print_song_loop_arrows();
-            seq.help_text_needs_refresh = true;
-          }
-          else if (seq.tracktype_or_instrument_assign == 1 && seq.loop_edit_step == 0) // disable edit instruments for tracks
-          {
-            seq.tracktype_or_instrument_assign = 0;
-            sub_song_print_tracknumbers();
-            sub_song_print_tracktypes();
-            sub_song_print_instruments(GREY2, COLOR_BACKGROUND);
-            seq.help_text_needs_refresh = true;
-          }
-          else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
-          {  // 26/01/2026 new dexed instance will start at 70
-            if (seq.instrument[seq.selected_track] < 63 && seq.instrument[seq.selected_track] != 1)
-              seq.instrument[seq.selected_track]++;
-            else  if (seq.instrument[seq.selected_track] == 1) //second dexed instance
-              seq.instrument[seq.selected_track] = 70;
-            else  if (seq.instrument[seq.selected_track] == 70) //third dexed instance
-              seq.instrument[seq.selected_track] = 71;
-            else  if (seq.instrument[seq.selected_track] == 71)
-              seq.instrument[seq.selected_track] = 2;
-
-            if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
-            {
-              if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
-                seq.instrument[seq.selected_track] = 16;
-            }
-          }
-          else if (seq.tracktype_or_instrument_assign == 6 && seq.loop_edit_step == 0) // tracktype change
-          {
-            if (seq.track_type[seq.selected_track] < 4)
-              seq.track_type[seq.selected_track]++;
-          }
-          else if (seq.tracktype_or_instrument_assign == 5 && seq.loop_edit_step == 0) // disable edit tracktype select
-          {
-            seq.help_text_needs_refresh = true;
-            seq.tracktype_or_instrument_assign = 1;
-            sub_song_print_instruments(GREY2, COLOR_BACKGROUND);
-            sub_song_print_tracktypes();
-          }
-          else if (seq.tracktype_or_instrument_assign == 0 || seq.tracktype_or_instrument_assign == 11)
-          {
-            seq.cursor_scroll_previous = seq.cursor_scroll;
-            seq.previous_track = seq.selected_track;
-            seq.cursor_scroll = constrain(seq.cursor_scroll + 1, 0, 15);
-          }
-        }
-        else if (seq.edit_state == true && seq.cycle_touch_element == 5)
-        {
-          if (temp_int == NUM_CHAINS)
-            temp_int = 0;
-          else
-            temp_int = constrain(temp_int + 1, 0, NUM_CHAINS); // not -1: last element is for empty step
-        }
-        else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
-        {
-          // if ( seq.loop_edit_step == 0)
-          seq.menu = constrain(seq.menu + 1, 0, 15);
-        }
-        else if (seq.edit_state == true && seq.cycle_touch_element == 7)
-        {
-          if (seq.sub_menu == 99)
-            seq.sub_menu = 0;
-          else
-            seq.sub_menu = constrain(seq.sub_menu + 1, 0, NUM_CHAINS);
-          song_page_full_draw_chain_complete = false;
-
-        }
-        else if (seq.edit_state == true && seq.cycle_touch_element == 9)
-        {
-          if (seq.sub_menu > NUM_CHAINS)
-            seq.sub_menu = seq.sub_menu - 1;
-          else if (seq.sub_menu >= 0 && seq.sub_menu < NUM_CHAINS - 1)
-            seq.sub_menu = seq.sub_menu + 1;
-          if (seq.sub_menu == NUM_CHAINS)
-            seq.sub_menu = 0;
-
-        }
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        if (seq.edit_state == false)
-        {
-          if ((seq.cursor_scroll == 0 && seq.scrollpos > 0 && seq.tracktype_or_instrument_assign == 0)
-            || (seq.cursor_scroll == 0 && seq.scrollpos > 0 && seq.tracktype_or_instrument_assign == 11))
-          {
-            seq.scrollpos--;
-            print_song_loop_arrows();
-          }
-
-          else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0) // edit instruments for tracks
-          {
-            seq.tracktype_or_instrument_assign = 1;
-            seq.help_text_needs_refresh = true;
-            sub_song_print_tracknumbers();
-            sub_song_print_tracktypes();
-            sub_song_print_instruments(GREY1, COLOR_BACKGROUND);
-          }
-
-          else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step != 0) // go to clear loop 
-          {
-            if (seq.loop_start != 99 || seq.loop_end != 99) //do not go in if no loop is set
-            {
-              seq.tracktype_or_instrument_assign = 8;
-              seq.loop_edit_step = 3;
-              print_song_loop_arrows();
-              sub_song_print_tracktypes();
-              print_song_loop_text();
-              seq.help_text_needs_refresh = true;
-              clear_song_playhead();
-            }
-          }
-          else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
-          {//26/01/2026 new dexed instance will start at 70
-            if (seq.instrument[seq.selected_track] > 0 && seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track] != 2)
-            {
-              seq.instrument[seq.selected_track]--;
-              if (seq.instrument[seq.selected_track] == 5)
-                sub_song_print_tracktypes();
-
-            }
-            else if (seq.instrument[seq.selected_track] == 2)
-              seq.instrument[seq.selected_track] = 71;
-            else if (seq.instrument[seq.selected_track] == 70) // third dexed instance
-              seq.instrument[seq.selected_track] = 1;
-            else if (seq.instrument[seq.selected_track] == 71) // fourth dexed instance
-              seq.instrument[seq.selected_track] = 70;
-
-            if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
-            {
-              if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
-                seq.instrument[seq.selected_track] = 5 + NUM_MULTISAMPLES;
-            }
-          }
-          else if (seq.tracktype_or_instrument_assign == 1 && seq.loop_edit_step == 0) // goto for tracktype change
-          {
-            seq.tracktype_or_instrument_assign = 5;
-            seq.help_text_needs_refresh = true;
-            sub_song_print_instruments(GREY3, COLOR_BACKGROUND);
-          }
-
-
-          else if (seq.tracktype_or_instrument_assign == 6) // tracktype change
-          {
-            if (seq.track_type[seq.selected_track] > 0)
-              seq.track_type[seq.selected_track]--;
-          }
-
-          else if (seq.tracktype_or_instrument_assign == 5) // goto loop clear
-          {
-            if (seq.loop_start != 99 || seq.loop_end != 99) //do not go if no loop is set
-            {
-              seq.tracktype_or_instrument_assign = 8;
-              seq.loop_edit_step = 3;
-              sub_song_print_tracktypes();
-              adjust_scroll_pos_for_loop_visible_on_screen();
-              print_song_loop_text();
-              seq.help_text_needs_refresh = true;
-              clear_song_playhead();
-            }
-          }
-
-          else if (seq.tracktype_or_instrument_assign == 8) // goto loop copy mode
-          {
-            if (seq.loop_start != 99 || seq.loop_end != 99) //do not go if no loop is set
-            {
-
-              seq.tracktype_or_instrument_assign = 10;
-
-              //scroll display if selected loop is out of screen bounds
-
-              adjust_scroll_pos_for_loop_visible_on_screen();
-
-              print_song_loop_text();
-              seq.help_text_needs_refresh = true;
-              clear_song_playhead();
-            }
-          }
-
-          if (seq.tracktype_or_instrument_assign == 0 || seq.tracktype_or_instrument_assign == 11)
-          {
-            seq.cursor_scroll_previous = seq.cursor_scroll;
-            seq.previous_track = seq.selected_track;
-            seq.cursor_scroll = constrain(seq.cursor_scroll - 1, 0, 15);
-          }
+          seq.scrollpos++;
+          if (seq.scrollpos > SONG_LENGTH - 16)
+            seq.scrollpos = SONG_LENGTH - 16;
+          print_song_loop_arrows();
         }
 
-        else if (seq.edit_state == true && seq.cycle_touch_element == 5)
+        else if (seq.tracktype_or_instrument_assign == 10) // go back from loop copy to tracktype
         {
-          if (temp_int == 0)
-            temp_int = NUM_CHAINS;
-          else
-            temp_int = constrain(temp_int - 1, 0, NUM_CHAINS); // not -1:last element is for empty step
-        }
-        else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
-        {
-          seq.menu = constrain(seq.menu - 1, 0, 15);
-
-        }
-        else if ((seq.edit_state == true && seq.cycle_touch_element == 7))
-        {
-          if (seq.sub_menu == 0)
-            seq.sub_menu = 99;
-          else if (seq.sub_menu == 99)
-            ;
-          else
-            seq.sub_menu = constrain(seq.sub_menu - 1, 0, NUM_CHAINS);
-          song_page_full_draw_chain_complete = false;
-        }
-
-        else if (seq.edit_state == true && seq.cycle_touch_element == 9)
-        {
-          if (seq.sub_menu > 0 && seq.sub_menu < NUM_CHAINS)
-            seq.sub_menu--;
-          else if (seq.sub_menu > NUM_CHAINS)
-            seq.sub_menu = seq.sub_menu + 1;
-          else if (seq.sub_menu == 0)
-            seq.sub_menu = NUM_CHAINS + 1;
-          if (seq.sub_menu > NUM_CHAINS * 2 - 1)
-            seq.sub_menu = NUM_CHAINS * 2 - 1;
-
-        }
-      }
-      else if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-      {
-
-        if (seq.tracktype_or_instrument_assign == 5) // tracktype change
-        {
-          seq.tracktype_or_instrument_assign = 6;
+          seq.tracktype_or_instrument_assign = 8;
+          print_song_loop_text();
           seq.help_text_needs_refresh = true;
         }
-        else if (seq.tracktype_or_instrument_assign == 6) // exit track assign menu
+
+        else if (seq.tracktype_or_instrument_assign == 8 && seq.loop_edit_step != 3) // go back from loop clear to tracktype
+        {
+          seq.tracktype_or_instrument_assign = 5;
+          print_song_loop_text();
+          seq.help_text_needs_refresh = true;
+        }
+        else if (seq.tracktype_or_instrument_assign == 8 && seq.loop_edit_step == 3) // exit clear song loop
+        {
+          seq.tracktype_or_instrument_assign = 0;
+          seq.loop_edit_step = 0;
+          seq.selected_track = 0;
+          print_song_loop_text();
+          print_song_loop_arrows();
+          seq.help_text_needs_refresh = true;
+        }
+        else if (seq.tracktype_or_instrument_assign == 1 && seq.loop_edit_step == 0) // disable edit instruments for tracks
+        {
+          seq.tracktype_or_instrument_assign = 0;
+          sub_song_print_tracknumbers();
+          sub_song_print_tracktypes();
+          sub_song_print_instruments(GREY2, COLOR_BACKGROUND);
+          seq.help_text_needs_refresh = true;
+        }
+        else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
+        {  // 26/01/2025 new dexed instance will start at 70
+          if (seq.instrument[seq.selected_track] < 63 && seq.instrument[seq.selected_track] != 1)
+            seq.instrument[seq.selected_track]++;
+          else  if (seq.instrument[seq.selected_track] == 1) //second dexed instance
+            seq.instrument[seq.selected_track] = 70;
+          else  if (seq.instrument[seq.selected_track] == 70) //third dexed instance
+            seq.instrument[seq.selected_track] = 71;
+          else  if (seq.instrument[seq.selected_track] == 71)
+            seq.instrument[seq.selected_track] = 2;
+
+          if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
+          {
+            if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
+              seq.instrument[seq.selected_track] = 16;
+          }
+        }
+        else if (seq.tracktype_or_instrument_assign == 6 && seq.loop_edit_step == 0) // tracktype change
+        {
+          if (seq.track_type[seq.selected_track] < 4)
+            seq.track_type[seq.selected_track]++;
+        }
+        else if (seq.tracktype_or_instrument_assign == 5 && seq.loop_edit_step == 0) // disable edit tracktype select
+        {
+          seq.help_text_needs_refresh = true;
+          seq.tracktype_or_instrument_assign = 1;
+          sub_song_print_instruments(GREY2, COLOR_BACKGROUND);
+          sub_song_print_tracktypes();
+        }
+        else if (seq.tracktype_or_instrument_assign == 0 || seq.tracktype_or_instrument_assign == 11)
+        {
+          seq.cursor_scroll_previous = seq.cursor_scroll;
+          seq.previous_track = seq.selected_track;
+          seq.cursor_scroll = constrain(seq.cursor_scroll + 1, 0, 15);
+        }
+      }
+      else if (seq.edit_state == true && seq.cycle_touch_element == 5)
+      {
+        if (temp_int == NUM_CHAINS)
+          temp_int = 0;
+        else
+          temp_int = constrain(temp_int + 1, 0, NUM_CHAINS); // not -1: last element is for empty step
+      }
+      else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
+      {
+        // if ( seq.loop_edit_step == 0)
+        seq.menu = constrain(seq.menu + 1, 0, 15);
+      }
+      else if (seq.edit_state == true && seq.cycle_touch_element == 7)
+      {
+        if (seq.sub_menu == 99)
+          seq.sub_menu = 0;
+        else
+          seq.sub_menu = constrain(seq.sub_menu + 1, 0, NUM_CHAINS);
+        song_page_full_draw_chain_complete = false;
+
+      }
+      else if (seq.edit_state == true && seq.cycle_touch_element == 9)
+      {
+        if (seq.sub_menu > NUM_CHAINS)
+          seq.sub_menu = seq.sub_menu - 1;
+        else if (seq.sub_menu >= 0 && seq.sub_menu < NUM_CHAINS - 1)
+          seq.sub_menu = seq.sub_menu + 1;
+        if (seq.sub_menu == NUM_CHAINS)
+          seq.sub_menu = 0;
+
+      }
+    }
+    else if (e.up) {
+      if (seq.edit_state == false)
+      {
+        if ((seq.cursor_scroll == 0 && seq.scrollpos > 0 && seq.tracktype_or_instrument_assign == 0)
+          || (seq.cursor_scroll == 0 && seq.scrollpos > 0 && seq.tracktype_or_instrument_assign == 11))
+        {
+          seq.scrollpos--;
+          print_song_loop_arrows();
+        }
+
+        else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0) // edit instruments for tracks
+        {
+          seq.tracktype_or_instrument_assign = 1;
+          seq.help_text_needs_refresh = true;
+          sub_song_print_tracknumbers();
+          sub_song_print_tracktypes();
+          sub_song_print_instruments(GREY1, COLOR_BACKGROUND);
+        }
+
+        else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step != 0) // go to clear loop 
+        {
+          if (seq.loop_start != 99 || seq.loop_end != 99) //do not go in if no loop is set
+          {
+            seq.tracktype_or_instrument_assign = 8;
+            seq.loop_edit_step = 3;
+            print_song_loop_arrows();
+            sub_song_print_tracktypes();
+            print_song_loop_text();
+            seq.help_text_needs_refresh = true;
+            clear_song_playhead();
+          }
+        }
+        else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
+        {//26/01/2025 new dexed instance will start at 70
+          if (seq.instrument[seq.selected_track] > 0 && seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track] != 2)
+          {
+            seq.instrument[seq.selected_track]--;
+            if (seq.instrument[seq.selected_track] == 5)
+              sub_song_print_tracktypes();
+
+          }
+          else if (seq.instrument[seq.selected_track] == 2)
+            seq.instrument[seq.selected_track] = 71;
+          else if (seq.instrument[seq.selected_track] == 70) // third dexed instance
+            seq.instrument[seq.selected_track] = 1;
+          else if (seq.instrument[seq.selected_track] == 71) // fourth dexed instance
+            seq.instrument[seq.selected_track] = 70;
+
+          if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
+          {
+            if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
+              seq.instrument[seq.selected_track] = 5 + NUM_MULTISAMPLES;
+          }
+        }
+        else if (seq.tracktype_or_instrument_assign == 1 && seq.loop_edit_step == 0) // goto for tracktype change
         {
           seq.tracktype_or_instrument_assign = 5;
           seq.help_text_needs_refresh = true;
-        }
-        else if (seq.tracktype_or_instrument_assign == 1) // go into instr. assign menu
-        {
-          if (seq.track_type[seq.selected_track] != 0) // not set to a drum track
-          {
-            seq.tracktype_or_instrument_assign = 2;
-            seq.help_text_needs_refresh = true;
-          }
-          else
-          {
-            helptext_l(back_text);
-            helptext_r("TRACKTYPE [DRUMS] NOT VALID FOR INSTR");
-          }
-        }
-        else if (seq.tracktype_or_instrument_assign == 2) // exit instr. assign menu
-        {
-          seq.tracktype_or_instrument_assign = 1;
-          sub_song_print_tracktypes();
-          seq.help_text_needs_refresh = true;
+          sub_song_print_instruments(GREY3, COLOR_BACKGROUND);
         }
 
-        else if (seq.tracktype_or_instrument_assign == 8) // clear song loop
+        else if (seq.tracktype_or_instrument_assign == 6) // tracktype change
         {
-          seq.tracktype_or_instrument_assign = 0;
-          seq.loop_start = 99;
-          seq.loop_end = 99;
-          seq.scrollpos = 0;
-          seq.loop_edit_step = 0;
-          seq.selected_track = 0;
-          print_song_loop_arrows();
-          print_song_loop_text();
-          clear_song_playhead();
-          seq.help_text_needs_refresh = true;
+          if (seq.track_type[seq.selected_track] > 0)
+            seq.track_type[seq.selected_track]--;
         }
 
-        else if (seq.tracktype_or_instrument_assign == 10) // copy mode - not enabled
+        else if (seq.tracktype_or_instrument_assign == 5) // goto loop clear
         {
-          seq.tracktype_or_instrument_assign = 11;
-          if (seq.scrollpos == 0)
-            seq.cursor_scroll = seq.loop_end + 1;
-
-          if (seq.loop_end > 15) {
-            seq.cursor_scroll = seq.loop_end - seq.loop_start + 1;
-            seq.scrollpos = seq.loop_start;
-          }
-
-          seq.help_text_needs_refresh = true;
-        }
-        else if (seq.tracktype_or_instrument_assign == 11) // confirmed copy mode 
-        {
-          ////copy loop to destination
-          for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
+          if (seq.loop_start != 99 || seq.loop_end != 99) //do not go if no loop is set
           {
-            for (uint8_t y = 0; y < seq.loop_end - seq.loop_start + 1; y++)
-            {
-              if (seq.cursor_scroll + seq.scrollpos + y < SONG_LENGTH - 1) // do not copy out of song bounds
-                seq.song[x][seq.cursor_scroll + seq.scrollpos + y] = seq.song[x][seq.loop_start + y];
-            }
-          }
-
-          seq.tracktype_or_instrument_assign = 0;
-          seq.scrollpos = 0;
-          seq.selected_track = 0;
-          seq.loop_edit_step = 0;
-          print_song_loop_arrows();
-          print_song_loop_text();
-          clear_song_playhead();
-          seq.cursor_scroll = 0;
-          seq.help_text_needs_refresh = true;
-
-        }
-
-        else  if (seq.tracktype_or_instrument_assign == 0)
-        {
-          seq.help_text_needs_refresh = true;
-          if (seq.loop_edit_step == 1) // edit loop step 1, set start
-          {
-            seq.loop_edit_step = 2;
-            seq.loop_start = seq.cursor_scroll + seq.scrollpos;
-          }
-          else if (seq.loop_edit_step == 2) // edit loop step, set end
-          {
-            seq.loop_edit_step = 0;
-            seq.selected_track = 0;
-            seq.loop_end = seq.cursor_scroll + seq.scrollpos;
-            print_song_loop_arrows();
-            clear_song_playhead();
-
-          }
-          else if (seq.cycle_touch_element == 5 && seq.edit_state)
-          {
-            seq.edit_state = !seq.edit_state;
-            seq.cycle_touch_element = 0;
-          }
-          else if (seq.cycle_touch_element == 0)
-          {
-            seq.edit_state = !seq.edit_state;
-            seq.cycle_touch_element = 5;
-            temp_int = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
-          }
-          else if (seq.edit_state && seq.cycle_touch_element == 6)
-          {
-            seq.cycle_touch_element = 7; // edit chain
-            seq.help_text_needs_refresh = true;
-            seq.sub_menu = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu];
-          }
-          else if (seq.edit_state && seq.cycle_touch_element == 7)
-          {
-            seq.cycle_touch_element = 6; // go back from chain
-          }
-          else if (seq.edit_state && seq.cycle_touch_element == 8)
-          {
-            seq.cycle_touch_element = 9; // edit transpose
-            if (seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] != 99)
-              seq.sub_menu = seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu];
-            else
-              seq.sub_menu = 0;
-            song_page_full_draw_transpose_complete = false;
-          }
-          else if (seq.edit_state && seq.cycle_touch_element == 9)
-          {
-            if (seq.sub_menu == 0)
-              seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] = 99;
-            seq.cycle_touch_element = 8; // go back from transpose 
-          }
-          else if (seq.edit_state == false)
-          {
-            seq.cycle_touch_element = 0;
-          }
-
-          if (seq.cycle_touch_element < 7)
-          {
+            seq.tracktype_or_instrument_assign = 8;
+            seq.loop_edit_step = 3;
+            sub_song_print_tracktypes();
+            adjust_scroll_pos_for_loop_visible_on_screen();
             print_song_loop_text();
-            print_song_length();
+            seq.help_text_needs_refresh = true;
+            clear_song_playhead();
           }
+        }
+
+        else if (seq.tracktype_or_instrument_assign == 8) // goto loop copy mode
+        {
+          if (seq.loop_start != 99 || seq.loop_end != 99) //do not go if no loop is set
+          {
+
+            seq.tracktype_or_instrument_assign = 10;
+
+            //scroll display if selected loop is out of screen bounds
+
+            adjust_scroll_pos_for_loop_visible_on_screen();
+
+            print_song_loop_text();
+            seq.help_text_needs_refresh = true;
+            clear_song_playhead();
+          }
+        }
+
+        if (seq.tracktype_or_instrument_assign == 0 || seq.tracktype_or_instrument_assign == 11)
+        {
+          seq.cursor_scroll_previous = seq.cursor_scroll;
+          seq.previous_track = seq.selected_track;
+          seq.cursor_scroll = constrain(seq.cursor_scroll - 1, 0, 15);
+        }
+      }
+
+      else if (seq.edit_state == true && seq.cycle_touch_element == 5)
+      {
+        if (temp_int == 0)
+          temp_int = NUM_CHAINS;
+        else
+          temp_int = constrain(temp_int - 1, 0, NUM_CHAINS); // not -1:last element is for empty step
+      }
+      else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
+      {
+        seq.menu = constrain(seq.menu - 1, 0, 15);
+
+      }
+      else if ((seq.edit_state == true && seq.cycle_touch_element == 7))
+      {
+        if (seq.sub_menu == 0)
+          seq.sub_menu = 99;
+        else if (seq.sub_menu == 99)
+          ;
+        else
+          seq.sub_menu = constrain(seq.sub_menu - 1, 0, NUM_CHAINS);
+        song_page_full_draw_chain_complete = false;
+      }
+
+      else if (seq.edit_state == true && seq.cycle_touch_element == 9)
+      {
+        if (seq.sub_menu > 0 && seq.sub_menu < NUM_CHAINS)
+          seq.sub_menu--;
+        else if (seq.sub_menu > NUM_CHAINS)
+          seq.sub_menu = seq.sub_menu + 1;
+        else if (seq.sub_menu == 0)
+          seq.sub_menu = NUM_CHAINS + 1;
+        if (seq.sub_menu > NUM_CHAINS * 2 - 1)
+          seq.sub_menu = NUM_CHAINS * 2 - 1;
+
+      }
+    }
+    else if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    {
+      if (seq.tracktype_or_instrument_assign == 5) // tracktype change
+      {
+        seq.tracktype_or_instrument_assign = 6;
+        seq.help_text_needs_refresh = true;
+      }
+      else if (seq.tracktype_or_instrument_assign == 6) // exit track assign menu
+      {
+        seq.tracktype_or_instrument_assign = 5;
+        seq.help_text_needs_refresh = true;
+      }
+      else if (seq.tracktype_or_instrument_assign == 1) // go into instr. assign menu
+      {
+        if (seq.track_type[seq.selected_track] != 0) // not set to a drum track
+        {
+          seq.tracktype_or_instrument_assign = 2;
           seq.help_text_needs_refresh = true;
         }
-      } // Button END
-    }
+        else
+        {
+          helptext_l(back_text);
+          helptext_r("TRACKTYPE [DRUMS] NOT VALID FOR INSTR");
+        }
+      }
+      else if (seq.tracktype_or_instrument_assign == 2) // exit instr. assign menu
+      {
+        seq.tracktype_or_instrument_assign = 1;
+        sub_song_print_tracktypes();
+        seq.help_text_needs_refresh = true;
+      }
+
+      else if (seq.tracktype_or_instrument_assign == 8) // clear song loop
+      {
+        seq.tracktype_or_instrument_assign = 0;
+        seq.loop_start = 99;
+        seq.loop_end = 99;
+        seq.scrollpos = 0;
+        seq.loop_edit_step = 0;
+        seq.selected_track = 0;
+        print_song_loop_arrows();
+        print_song_loop_text();
+        clear_song_playhead();
+        seq.help_text_needs_refresh = true;
+      }
+
+      else if (seq.tracktype_or_instrument_assign == 10) // copy mode - not enabled
+      {
+        seq.tracktype_or_instrument_assign = 11;
+        if (seq.scrollpos == 0)
+          seq.cursor_scroll = seq.loop_end + 1;
+
+        if (seq.loop_end > 15) {
+          seq.cursor_scroll = seq.loop_end - seq.loop_start + 1;
+          seq.scrollpos = seq.loop_start;
+        }
+
+        seq.help_text_needs_refresh = true;
+      }
+      else if (seq.tracktype_or_instrument_assign == 11) // confirmed copy mode 
+      {
+        ////copy loop to destination
+        for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
+        {
+          for (uint8_t y = 0; y < seq.loop_end - seq.loop_start + 1; y++)
+          {
+            if (seq.cursor_scroll + seq.scrollpos + y < SONG_LENGTH - 1) // do not copy out of song bounds
+              seq.song[x][seq.cursor_scroll + seq.scrollpos + y] = seq.song[x][seq.loop_start + y];
+          }
+        }
+
+        seq.tracktype_or_instrument_assign = 0;
+        seq.scrollpos = 0;
+        seq.selected_track = 0;
+        seq.loop_edit_step = 0;
+        print_song_loop_arrows();
+        print_song_loop_text();
+        clear_song_playhead();
+        seq.cursor_scroll = 0;
+        seq.help_text_needs_refresh = true;
+      }
+
+      else  if (seq.tracktype_or_instrument_assign == 0)
+      {
+        seq.help_text_needs_refresh = true;
+        if (seq.loop_edit_step == 1) // edit loop step 1, set start
+        {
+          seq.loop_edit_step = 2;
+          seq.loop_start = seq.cursor_scroll + seq.scrollpos;
+        }
+        else if (seq.loop_edit_step == 2) // edit loop step, set end
+        {
+          seq.loop_edit_step = 0;
+          seq.selected_track = 0;
+          seq.loop_end = seq.cursor_scroll + seq.scrollpos;
+          print_song_loop_arrows();
+          clear_song_playhead();
+        }
+        else if (seq.cycle_touch_element == 5 && seq.edit_state)
+        {
+          seq.edit_state = !seq.edit_state;
+          seq.cycle_touch_element = 0;
+        }
+        else if (seq.cycle_touch_element == 0)
+        {
+          seq.edit_state = !seq.edit_state;
+          seq.cycle_touch_element = 5;
+          temp_int = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+        }
+        else if (seq.edit_state && seq.cycle_touch_element == 6)
+        {
+          seq.cycle_touch_element = 7; // edit chain
+          seq.help_text_needs_refresh = true;
+          seq.sub_menu = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu];
+        }
+        else if (seq.edit_state && seq.cycle_touch_element == 7)
+        {
+          seq.cycle_touch_element = 6; // go back from chain
+        }
+        else if (seq.edit_state && seq.cycle_touch_element == 8)
+        {
+          seq.cycle_touch_element = 9; // edit transpose
+          if (seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] != 99)
+            seq.sub_menu = seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu];
+          else
+            seq.sub_menu = 0;
+          song_page_full_draw_transpose_complete = false;
+        }
+        else if (seq.edit_state && seq.cycle_touch_element == 9)
+        {
+          if (seq.sub_menu == 0)
+            seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] = 99;
+          seq.cycle_touch_element = 8; // go back from transpose 
+        }
+        else if (seq.edit_state == false)
+        {
+          seq.cycle_touch_element = 0;
+        }
+
+        if (seq.cycle_touch_element < 7)
+        {
+          print_song_loop_text();
+          print_song_length();
+        }
+        seq.help_text_needs_refresh = true;
+      }
+    } // Button END
+    
 
     if (seq.help_text_needs_refresh)
     {
@@ -12875,95 +12839,65 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
   {
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-    {
-      if (LCDML.BT_checkDown())
-      {
-        if (mode == 0)
-          temp_int = constrain(temp_int + ENCODER[ENC_L].speed(), 0, 99);
-        else
-          yesno = true;
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        if (mode == 0)
-          temp_int = constrain(temp_int - ENCODER[ENC_L].speed(), 0, 99);
-        else
-          yesno = false;
-      }
-      else if (LCDML.BT_checkEnter())
-      {
 
-        if (mode == 0 && overwrite == true)
-        {
-          mode = 1;
-          setCursor_textGrid(1, 2);
-          display.print(F("Overwrite: [   ]"));
-        }
-        else
-        {
-          mode = 0xff;
-          if (overwrite == false || yesno == true)
-          {
-            save_sd_performance_json(temp_int);
-            display.setTextColor(GREEN, COLOR_BACKGROUND);
-            show(2, 1, 16, "Done.");
-            seq.state_last_loadsave = temp_int;
-            delay(MESSAGE_WAIT_TIME);
-            LCDML.FUNC_goBackToMenu();
-          }
-          else if (overwrite == true && yesno == false)
-          {
-            char tmp[10];
-
-            mode = 0;
-            setCursor_textGrid(1, 2);
-            snprintf_P(tmp, sizeof(tmp), PSTR("[%2d]   "), temp_int);
-            display.print(tmp);
-          }
-        }
-      }
-      if (mode == 0)
-      {
-        char tmp[FILENAME_LEN];
-        if (check_sd_performance_exists(temp_int))
-          overwrite = true;
-        else
-          overwrite = false;
-        setCursor_textGrid(1, 2);
-        snprintf_P(tmp, sizeof(tmp), PSTR("[%2d] "), temp_int);
-        display.print(tmp);
-        setCursor_textGrid(6, 2);
-        if (overwrite == false)
-        {
-          display.print(F("-- EMPTY --"));
-        }
-        else if (check_sd_performance_exists(temp_int))
-        {
-          get_sd_performance_name_json(temp_int);
-          if (seq.name_temp[0] != 0)
-            show(2, 6, 11, seq.name_temp);
-          else
-            display.print(F("-- DATA --"));
-        }
-        else
-          print_empty_spaces(10, 1);
-      }
-      else if (mode == 1)
-      {
-        setCursor_textGrid(13, 2);
-        if (yesno == true)
-          display.print(F("YES"));
-        else
-          display.print(F("NO "));
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      if(mode == 0) {
+        temp_int = constrain(temp_int + e.dir * e.speed, 0, 99);
+      } else {
+        yesno = e.down;
       }
     }
-    encoderDir[ENC_R].reset();
+    if(e.pressed) {
+      if (mode == 0 && overwrite == true) {
+        mode = 1;
+        setCursor_textGrid(1, 2);
+        display.print(F("Overwrite: [   ]"));
+      }
+      else {
+        mode = 0xff;
+        if (overwrite == false || yesno == true) {
+          save_sd_performance_json(temp_int);
+          display.setTextColor(GREEN, COLOR_BACKGROUND);
+          show(2, 1, 16, "Done.");
+          seq.state_last_loadsave = temp_int;
+          delay(MESSAGE_WAIT_TIME);
+          LCDML.FUNC_goBackToMenu();
+        }
+        else if (overwrite == true && yesno == false) {
+          mode = 0;
+          setCursor_textGrid(1, 2);
+          display.printf("[%2d]   ", temp_int);
+        }
+      }
+    }
+
+    if (mode == 0) {
+      overwrite = check_sd_performance_exists(temp_int);
+      setCursor_textGrid(1, 2);
+      display.printf("[%2d] ", temp_int);
+      setCursor_textGrid(6, 2);
+      if (overwrite) {
+        get_sd_performance_name_json(temp_int);
+        if (seq.name_temp[0] != 0) {
+          show(2, 6, 11, seq.name_temp);
+        }
+        else {
+          display.print(F("-- DATA --"));
+        }
+      }
+      else {
+        display.print(F("-- EMPTY --"));
+      }
+    }
+    else if (mode == 1) {
+      setCursor_textGrid(13, 2);
+      display.print(yesno ? F("YES") : F("NO "));
+    }
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-    if (mode < 0xff)
-    {
+    if (mode < 0xff) {
       _cancel_message_old_menus();
     }
     encoderDir[ENC_R].reset();
@@ -16986,13 +16920,11 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
   if (LCDML.FUNC_loop())
   {
     // handle encoders
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
-
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
       if (generic_active_function == 0) {
         // navigate through menu
-        generic_temp_select_menu = constrain(generic_temp_select_menu + (factorChange * 1), 0, 10);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + (e.dir * 1), 0, 10);
       }
       else {
         // handle setting change and load save timer
@@ -17001,27 +16933,27 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
         switch (generic_temp_select_menu) {
         case 0:
-          configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed + (factorChange * 10), GAMEPAD_SPEED_MIN, GAMEPAD_SPEED_MAX);
+          configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed + (e.dir * 10), GAMEPAD_SPEED_MIN, GAMEPAD_SPEED_MAX);
           break;
 
         case 1:
-          configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (factorChange * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX);
+          configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (e.dir * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX);
           setup_screensaver();
           break;
 
         case 2:
-          configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (factorChange * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX);
+          configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (e.dir * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX);
           setup_screensaver();
           break;
 
         case 3:
-          configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (factorChange * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX);
+          configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (e.dir * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX);
           display.setRotation(configuration.sys.display_rotation); // rotation 180°
           _render_misc_settings();
           break;
 
         case 4:
-          configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation + (factorChange * 1), TOUCH_ROTATION_MIN, TOUCH_ROTATION_MAX);
+          configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation + (e.dir * 1), TOUCH_ROTATION_MIN, TOUCH_ROTATION_MAX);
 #if defined GENERIC_DISPLAY
           touch.setRotation(configuration.sys.touch_rotation); // rotation 180°
 #endif
@@ -17051,11 +16983,11 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           break;
 
         case 8:
-          configuration.sys.brightness = constrain(configuration.sys.brightness + (factorChange * ENCODER[ENC_R].speed()), 100, 200);
+          configuration.sys.brightness = constrain(configuration.sys.brightness + (e.dir * ENCODER[ENC_R].speed()), 100, 200);
           break;
 
         case 9:
-          configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (factorChange * 1), 0, 2);
+          configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (e.dir * 1), 0, 2);
           for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
             MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
           break;
@@ -17070,13 +17002,8 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
     }
 
     // handle button presses during menu
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
-    {
+    if (e.pressed) {
       generic_active_function = !generic_active_function;
-    }
-    else if (LCDML.BT_checkEnter())
-    {
-      ;
     }
     // button check end
 
@@ -17808,12 +17735,12 @@ FLASHMEM void UI_func_sidechain(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned)
     {
-      const int8_t factorChange = LCDML.BT_checkDown() ? 1 : -1;
       if (!seq.edit_state)
       {
-        generic_temp_select_menu = constrain(generic_temp_select_menu + factorChange * 1, 0, 12);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir * 1, 0, 12);
       }
 
       else if (seq.edit_state)
@@ -17826,55 +17753,55 @@ FLASHMEM void UI_func_sidechain(uint8_t param)
 
         else  if (generic_temp_select_menu == 1) // sidechain sample
         {
-          sidechain_sample_number = constrain(sidechain_sample_number + factorChange * 1, 0, NUM_DRUMSET_CONFIG - 1);
+          sidechain_sample_number = constrain(sidechain_sample_number + e.dir * 1, 0, NUM_DRUMSET_CONFIG - 1);
         }
 
         if (generic_temp_select_menu == 2) // sidechain speed
         {
-            sidechain_speed = constrain(sidechain_speed + factorChange * ENCODER[ENC_R].speed(), 0, 5000);
+            sidechain_speed = constrain(sidechain_speed + e.dir * e.speed, 0, 5000);
         }
         if (generic_temp_select_menu == 3) // sidechain 1/16 steps
         {
-          sidechain_steps = constrain(sidechain_steps + factorChange * 1, 1, 16);
+          sidechain_steps = constrain(sidechain_steps + e.dir * 1, 1, 16);
           sidechain_speed = uint16_t(60000 / seq.bpm / 4) * sidechain_steps;
         }
 
         else if (generic_temp_select_menu == 4) // dexed 0 target 
         {
-          configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          configuration.dexed[0].sidechain_send = constrain(configuration.dexed[0].sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 5) // dexed 1 target 
         {
-          configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          configuration.dexed[1].sidechain_send = constrain(configuration.dexed[1].sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 6) // epiano target 
         {
-          configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          configuration.epiano.sidechain_send = constrain(configuration.epiano.sidechain_send + e.dir * e.speed, 0, 100);
         }
 
         else if (generic_temp_select_menu == 7) // microsynth1 target 
         {
-          microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 8) // microsynth2 target 
         {
-          microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          microsynth[0].sidechain_send = constrain(microsynth[0].sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 9) // braids target 
         {
-          braids_osc.sidechain_send = constrain(braids_osc.sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          braids_osc.sidechain_send = constrain(braids_osc.sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 10) // delay 1 target 
         {
-          configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          configuration.fx.delay1_sidechain_send = constrain(configuration.fx.delay1_sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 11) // delay 2 target 
         {
-          configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          configuration.fx.delay2_sidechain_send = constrain(configuration.fx.delay2_sidechain_send + e.dir * e.speed, 0, 100);
         }
         else if (generic_temp_select_menu == 12) // reverb target 
         {
-          configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send + factorChange * ENCODER[ENC_R].speed(), 0, 100);
+          configuration.fx.reverb_sidechain_send = constrain(configuration.fx.reverb_sidechain_send + e.dir * e.speed, 0, 100);
         }
       }
     }
@@ -18316,9 +18243,8 @@ FLASHMEM void print_voice_select_default_help()
   }
 }
 
-FLASHMEM void UI_func_voice_select_touch_loop()
+FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
 {
-  const EncoderEvents e = getEncoderEvents(ENC_R);
   if (e.turned) {
     if((dexed_live_mod.active_button == 1) || (dexed_live_mod.active_button == 3)) {
       if (dexed_live_mod.attack_mod[selected_instance_id] == 0) {
@@ -18362,27 +18288,28 @@ FLASHMEM void reset_live_modifiers()
   dexed_live_mod.release_mod[selected_instance_id] = 0;
 }
 
-FLASHMEM void UI_func_voice_select_loop()
-{
+FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
   static uint8_t menu_voice_select = MENU_VOICE_SOUND;
 
-  if (generic_temp_select_menu == 2)
+  if (generic_temp_select_menu == 2) {
     menu_voice_select = MENU_VOICE_BANK;
-  if (generic_temp_select_menu == 3)
+  }
+  if (generic_temp_select_menu == 3) {
     menu_voice_select = MENU_VOICE_SOUND;
+  }
 
-  if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && (encoderDir[ENC_R].ButtonShort() || encoderDir[ENC_R].ButtonLong())))
+  if (e.turned)
   {
     uint8_t bank_tmp;
     int8_t voice_tmp;
 
     // Reset Performance Modifiers to 0 after every preset change
     reset_live_modifiers();
-    if (seq.cycle_touch_element != 1)
+    if (seq.cycle_touch_element != 1) {
       print_perfmod_lables();
+    }
 
-    if (LCDML.BT_checkUp())
-    {
+    if (e.up) {
       // start : show all presets
       if (configuration.sys.favorites == 0)
       {
@@ -18406,8 +18333,9 @@ FLASHMEM void UI_func_voice_select_loop()
           {
             voice_tmp = 0;
           }
-          if (voice_tmp < 0)
+          if (voice_tmp < 0) {
             voice_tmp = MAX_VOICES + voice_tmp;
+          }
           configuration.dexed[selected_instance_id].voice = constrain(voice_tmp, 0, MAX_VOICES - 1);
           break;
         }
@@ -18430,8 +18358,7 @@ FLASHMEM void UI_func_voice_select_loop()
 
       load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     } // end UP
-    else if (LCDML.BT_checkDown())
-    {
+    else if (e.down) {
       // start : show all presets
       if (configuration.sys.favorites == 0)
       {
@@ -18458,32 +18385,30 @@ FLASHMEM void UI_func_voice_select_loop()
           break;
         }
       }
-      else
-      { // favs
-        switch (configuration.sys.favorites)
-        {
+      else { // favs
+        switch (configuration.sys.favorites) {
         case 1: // only Favs
           locate_next_favorite();
           break;
+
         case 2: // only non-Favs
           locate_next_non_favorite();
           break;
+
         case 3: // random non-Favs
           locate_random_non_favorite();
           break;
         }
       }
-
       load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     }
-    else if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonPressed() && dexed_live_mod.active_button != 99)
-    {
-      if (generic_active_function == 0) {
-        generic_active_function = 1;
-      }
-      else {
-        generic_active_function = 0;
-      }
+  }
+  else if (e.pressed && dexed_live_mod.active_button != 99) {
+    if (generic_active_function == 0) {
+      generic_active_function = 1;
+    }
+    else {
+      generic_active_function = 0;
     }
   }
 }
@@ -18501,8 +18426,9 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     ts.fav_buttton_state = 0; //clear touch button state when starting page
     seq.cycle_touch_element = 0;
-    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
+    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
       generic_temp_select_menu = 3;
+    }
     draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
     print_voice_settings_in_dexed_voice_select(true, true);
     print_voice_select_default_help();
@@ -18530,14 +18456,14 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if (dexed_live_mod.active_button != 0) // touch button pressed for live modify
-      UI_func_voice_select_touch_loop();
+    const EncoderEvents e = getEncoderEvents(ENC_R);
 
-    if (dexed_live_mod.active_button == 0)
-    {
-      if ((seq.edit_state == 1 && generic_temp_select_menu == 2) || (seq.edit_state == 1 && generic_temp_select_menu == 3))
-
-        UI_func_voice_select_loop();
+    if (dexed_live_mod.active_button != 0) { // touch button pressed for live modify
+      UI_func_voice_select_touch_loop(e);
+    } else {
+      if ((seq.edit_state == 1) && ((generic_temp_select_menu == 2) || (generic_temp_select_menu == 3))) {
+        UI_func_voice_select_loop(e);
+      }
     }
     // generic_temp_select_menu
     // 0 = bank select
@@ -18546,109 +18472,108 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     // 3 = voice select
     // 4 = volume
     //
-
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()))
-    {
-      set_state_dir();
-
+    if (e.turned) {
       if (seq.edit_state == 0 && dexed_live_mod.active_button == 0)
       {
-        generic_temp_select_menu = calc_val[state_dir](generic_temp_select_menu, 1, 0, 18);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 18);
       }
       else if (seq.edit_state == 1)
       {
         if (generic_temp_select_menu == 0)
         {
-          configuration.dexed[selected_instance_id].pool = calc_val[state_dir](configuration.dexed[selected_instance_id].pool, 1, 0, DEXED_POOLS - 1);
-          if (load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id) == false)
+          configuration.dexed[selected_instance_id].pool = constrain(configuration.dexed[selected_instance_id].pool + e.dir, 0, DEXED_POOLS - 1);
+          if (load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id) == false) {
             load_sd_voice(configuration.dexed[selected_instance_id].pool, 0, 0, selected_instance_id);
+          }
         }
         if (generic_temp_select_menu == 1)
         {
-            if (LCDML.BT_checkDown())
-              increment_dexed_instance_in_voice_select();
-            else  if (LCDML.BT_checkUp())
-              decrement_dexed_instance_in_voice_select();
-
-            print_perfmod_buttons();
-            print_perfmod_lables();
-            draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-            load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+          if (e.down) {
+            increment_dexed_instance_in_voice_select();
+          }
+          else if (e.up) {
+            decrement_dexed_instance_in_voice_select();
+          }
+          print_perfmod_buttons();
+          print_perfmod_lables();
+          draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+          load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
         }
 
         if (generic_temp_select_menu == 4)
         {
-          configuration.dexed[selected_instance_id].sound_intensity = calc_val[state_dir](configuration.dexed[selected_instance_id].sound_intensity, ENCODER[ENC_R].speed(), SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+          configuration.dexed[selected_instance_id].sound_intensity = constrain(configuration.dexed[selected_instance_id].sound_intensity + e.dir * e.speed, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
           MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, configuration.dexed[selected_instance_id].sound_intensity);
           MicroDexed[selected_instance_id]->setGain(midi_volume_transform(map(configuration.dexed[selected_instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
         }
         if (generic_temp_select_menu == 5)
         {
-          configuration.dexed[selected_instance_id].transpose = calc_val[state_dir](configuration.dexed[selected_instance_id].transpose, 1, TRANSPOSE_MIN, TRANSPOSE_MAX);
+          configuration.dexed[selected_instance_id].transpose = constrain(configuration.dexed[selected_instance_id].transpose + e.dir, TRANSPOSE_MIN, TRANSPOSE_MAX);
           MicroDexed[selected_instance_id]->setTranspose(configuration.dexed[selected_instance_id].transpose);
           MicroDexed[selected_instance_id]->notesOff();
           send_sysex_param(configuration.dexed[selected_instance_id].midi_channel, 144, configuration.dexed[selected_instance_id].transpose, 0);
         }
         if (generic_temp_select_menu == 6)
         {
-          configuration.dexed[selected_instance_id].pan = calc_val[state_dir](configuration.dexed[selected_instance_id].pan, ENCODER[ENC_R].speed(), PANORAMA_MIN, PANORAMA_MAX);
+          configuration.dexed[selected_instance_id].pan = constrain(configuration.dexed[selected_instance_id].pan + e.dir * e.speed, PANORAMA_MIN, PANORAMA_MAX);
           MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 10, map(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
           dexed_mono2stereo[selected_instance_id]->panorama(mapfloat(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
         }
         if (generic_temp_select_menu == 7) // lowest note
         {
-          configuration.dexed[selected_instance_id].lowest_note = calc_val[state_dir](configuration.dexed[selected_instance_id].lowest_note, ENCODER[ENC_R].speed(), INSTANCE_LOWEST_NOTE_MIN, INSTANCE_LOWEST_NOTE_MAX);
+          configuration.dexed[selected_instance_id].lowest_note = constrain(configuration.dexed[selected_instance_id].lowest_note + e.dir * e.speed, INSTANCE_LOWEST_NOTE_MIN, INSTANCE_LOWEST_NOTE_MAX);
         }
         if (generic_temp_select_menu == 8)
         {
-          configuration.dexed[selected_instance_id].highest_note = calc_val[state_dir](configuration.dexed[selected_instance_id].highest_note, ENCODER[ENC_R].speed(), INSTANCE_HIGHEST_NOTE_MIN, INSTANCE_HIGHEST_NOTE_MAX);
+          configuration.dexed[selected_instance_id].highest_note = constrain(configuration.dexed[selected_instance_id].highest_note + e.dir * e.speed, INSTANCE_HIGHEST_NOTE_MIN, INSTANCE_HIGHEST_NOTE_MAX);
         }
         if (generic_temp_select_menu == 9) // MIDI CHANNEL
         {
-          configuration.dexed[selected_instance_id].midi_channel = calc_val[state_dir](configuration.dexed[selected_instance_id].midi_channel, 1, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
+          configuration.dexed[selected_instance_id].midi_channel = constrain(configuration.dexed[selected_instance_id].midi_channel + e.dir, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
         }
         if (generic_temp_select_menu == 10)
         {
-          configuration.fx.chorus_level[selected_instance_id] = calc_val[state_dir](configuration.fx.chorus_level[selected_instance_id], ENCODER[ENC_R].speed(), CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
+          configuration.fx.chorus_level[selected_instance_id] = constrain(configuration.fx.chorus_level[selected_instance_id] + e.dir * e.speed, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
           MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 93, configuration.fx.chorus_level[selected_instance_id]);
           dexed_chorus_mixer_r[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
           dexed_chorus_mixer_l[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
         }
         if (generic_temp_select_menu == 12) // DELAY (1)
         {
-          configuration.fx.delay_level1[selected_instance_id] = calc_val[state_dir](configuration.fx.delay_level1[selected_instance_id], ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+          configuration.fx.delay_level1[selected_instance_id] = constrain(configuration.fx.delay_level1[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
           set_dexed_delay_level(0, selected_instance_id, configuration.fx.delay_level1[selected_instance_id]);
         }
         if (generic_temp_select_menu == 14) // DELAY (2)
         {
-          configuration.fx.delay_level2[selected_instance_id] = calc_val[state_dir](configuration.fx.delay_level2[selected_instance_id], ENCODER[ENC_R].speed(), DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+          configuration.fx.delay_level2[selected_instance_id] = constrain(configuration.fx.delay_level2[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
           set_dexed_delay_level(1, selected_instance_id, configuration.fx.delay_level2[selected_instance_id]);
         }
 
         if (generic_temp_select_menu == 16) // REVERB SEND
         {
-          configuration.fx.reverb_send[selected_instance_id] = calc_val[state_dir](configuration.fx.reverb_send[selected_instance_id], ENCODER[ENC_R].speed(), REVERB_SEND_MIN, REVERB_SEND_MAX);
+          configuration.fx.reverb_send[selected_instance_id] = constrain(configuration.fx.reverb_send[selected_instance_id] + e.dir * e.speed, REVERB_SEND_MIN, REVERB_SEND_MAX);
           MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 91, configuration.fx.reverb_send[selected_instance_id]);
           reverb_mixer_r.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
           reverb_mixer_l.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
         }
         if (generic_temp_select_menu == 18) // BPM
         {
-          seq.bpm = calc_val[state_dir](seq.bpm, 1, 40, 190);
+          seq.bpm = constrain(seq.bpm + e.dir, 40, 190);
           update_seq_speed();
         }
       }
     }
-    if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonPressed() && dexed_live_mod.active_button != 99)
+    if (e.longPressed && dexed_live_mod.active_button != 99)
     {
       increment_dexed_instance_in_voice_select_round_robin();
-      if (seq.cycle_touch_element == 0)
+      if (seq.cycle_touch_element == 0) {
         virtual_keyboard_smart_preselect_mode();
+      }
       draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
       print_perfmod_buttons();
       print_perfmod_lables();
     }
-    else if (LCDML.BT_checkEnter()) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    else if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
       if (generic_temp_select_menu == 11 && seq.cycle_touch_element == 0)
       {
@@ -18676,10 +18601,12 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       {
         if (dexed_live_mod.active_button == 0)
         {
-          if (seq.edit_state == 0)
+          if (seq.edit_state == 0) {
             seq.edit_state = 1;
-          else
+          }
+          else {
             seq.edit_state = 0;
+          }
           print_voice_select_default_help();
         }
       }
@@ -19815,58 +19742,57 @@ FLASHMEM void UI_func_startup_performance(uint8_t param)
   {
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-    {
-      if (LCDML.BT_checkDown())
-      {
-        if (configuration.sys.load_at_startup_performance == 255)
-          configuration.sys.load_at_startup_performance = PERFORMANCE_NUM_MIN;
-        else if (configuration.sys.load_at_startup_performance >= 0 && configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX)
-          configuration.sys.load_at_startup_performance++;
-        if (configuration.sys.load_at_startup_performance > PERFORMANCE_NUM_MAX)
-          configuration.sys.load_at_startup_performance = 255;
-      }
-      else if (LCDML.BT_checkUp())
-      {
-        if (configuration.sys.load_at_startup_performance == 255)
-          configuration.sys.load_at_startup_performance = PERFORMANCE_NUM_MAX;
-        else if (configuration.sys.load_at_startup_performance >= PERFORMANCE_NUM_MIN && configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX)
-          configuration.sys.load_at_startup_performance--;
-      }
-      else if (LCDML.BT_checkEnter())
-      {
-        stored = true;
-        show(2, 1, 16, "Done.");
-        save_sd_sys_json();
-        if (configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX && configuration.sys.load_at_startup_performance != configuration.sys.performance_number)
-          load_sd_performance_json(configuration.sys.load_at_startup_performance);
-        delay(MESSAGE_WAIT_TIME);
-        LCDML.FUNC_goBackToMenu();
-      }
 
-      display.setCursor(1, 2);
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.down)
+    {
       if (configuration.sys.load_at_startup_performance == 255)
-        show(2, 1, 16, "Last Performance");
-      else if (configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX)
-      {
-        show(2, 1, 16, "Fixed Perf. [");
-        setCursor_textGrid(14, 2);
-        print_formatted_number(configuration.sys.load_at_startup_performance, 2);
-        show(2, 16, 1, "]");
-        display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-        if (check_sd_performance_exists(configuration.sys.load_at_startup_performance))
-        {
-          get_sd_performance_name_json(configuration.sys.load_at_startup_performance);
-          if (seq.name_temp[0] != 0)
-            show(3, 1, 16, seq.name_temp);
-          else
-            show(3, 1, 16, "----  DATA  ----");
-        }
-        else
-          show(3, 1, 16, "-- EMPTY SLOT --");
-      }
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        configuration.sys.load_at_startup_performance = PERFORMANCE_NUM_MIN;
+      else if (configuration.sys.load_at_startup_performance >= 0 && configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX)
+        configuration.sys.load_at_startup_performance++;
+      if (configuration.sys.load_at_startup_performance > PERFORMANCE_NUM_MAX)
+        configuration.sys.load_at_startup_performance = 255;
     }
+    else if (e.up)
+    {
+      if (configuration.sys.load_at_startup_performance == 255)
+        configuration.sys.load_at_startup_performance = PERFORMANCE_NUM_MAX;
+      else if (configuration.sys.load_at_startup_performance >= PERFORMANCE_NUM_MIN && configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX)
+        configuration.sys.load_at_startup_performance--;
+    }
+    else if (e.pressed)
+    {
+      stored = true;
+      show(2, 1, 16, "Done.");
+      save_sd_sys_json();
+      if (configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX && configuration.sys.load_at_startup_performance != configuration.sys.performance_number)
+        load_sd_performance_json(configuration.sys.load_at_startup_performance);
+      delay(MESSAGE_WAIT_TIME);
+      LCDML.FUNC_goBackToMenu();
+    }
+
+    display.setCursor(1, 2);
+    if (configuration.sys.load_at_startup_performance == 255)
+      show(2, 1, 16, "Last Performance");
+    else if (configuration.sys.load_at_startup_performance <= PERFORMANCE_NUM_MAX)
+    {
+      show(2, 1, 16, "Fixed Perf. [");
+      setCursor_textGrid(14, 2);
+      print_formatted_number(configuration.sys.load_at_startup_performance, 2);
+      show(2, 16, 1, "]");
+      display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+      if (check_sd_performance_exists(configuration.sys.load_at_startup_performance))
+      {
+        get_sd_performance_name_json(configuration.sys.load_at_startup_performance);
+        if (seq.name_temp[0] != 0)
+          show(3, 1, 16, seq.name_temp);
+        else
+          show(3, 1, 16, "----  DATA  ----");
+      }
+      else
+        show(3, 1, 16, "-- EMPTY SLOT --");
+    }
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -19896,32 +19822,28 @@ FLASHMEM void UI_func_startup_page(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
-    if ((LCDML.BT_checkDown() && encoderDir[ENC_R].Down()) || (LCDML.BT_checkUp() && encoderDir[ENC_R].Up()) || (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort()))
-    {
-      if (LCDML.BT_checkDown())
+
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.down) {
+      configuration.sys.load_at_startup_page++;
+      if (configuration.sys.load_at_startup_page > 10)
+        configuration.sys.load_at_startup_page = 50; // System Info Page
+    }
+    else if (e.up) {
+      if (configuration.sys.load_at_startup_page > 0)
       {
-        configuration.sys.load_at_startup_page++;
-        if (configuration.sys.load_at_startup_page > 10)
-          configuration.sys.load_at_startup_page = 50; // System Info Page
+        if (configuration.sys.load_at_startup_page == 50) // System Info Page
+          configuration.sys.load_at_startup_page = 10;
+        else
+          configuration.sys.load_at_startup_page--;
       }
-      else if (LCDML.BT_checkUp())
-      {
-        if (configuration.sys.load_at_startup_page > 0)
-        {
-          if (configuration.sys.load_at_startup_page == 50) // System Info Page
-            configuration.sys.load_at_startup_page = 10;
-          else
-            configuration.sys.load_at_startup_page--;
-        }
-      }
-      else if (LCDML.BT_checkEnter())
-      {
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        save_sd_sys_json();
-        show(2, 1, 18, "Done.");
-        delay(MESSAGE_WAIT_TIME);
-        LCDML.FUNC_goBackToMenu();
-      }
+    }
+    else if (e.pressed) {
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      save_sd_sys_json();
+      show(2, 1, 18, "Done.");
+      delay(MESSAGE_WAIT_TIME);
+      LCDML.FUNC_goBackToMenu();
     }
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
     if (configuration.sys.load_at_startup_page == 0)

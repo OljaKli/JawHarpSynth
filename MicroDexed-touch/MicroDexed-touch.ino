@@ -134,22 +134,6 @@ extern Adafruit_FT6206 touch;
 
 // Editor operations
 int menuhelper_previous_val;
-bool menuhelper_redraw = false;
-int sub(int A, int B, int min, int max)
-{
-  if (A != constrain(A - B, min, max))
-    menuhelper_redraw = true;
-  return constrain(A - B, min, max);
-};
-
-int sum(int A, int B, int min, int max)
-{
-  if (A != constrain(A + B, min, max))
-    menuhelper_redraw = true;
-  return constrain(A + B, min, max);
-};
-
-int (*calc_val[2])(int, int, int, int);
 
 Realtime_Scope scope;
 
@@ -1496,10 +1480,6 @@ FLASHMEM void setup()
   gamepad_buttons_neutral = joysticks[0].getButtons();
   gamepad_0_neutral = joysticks[0].getAxis(0);
   gamepad_1_neutral = joysticks[0].getAxis(1);
-
-  // Setup editor helpers
-  calc_val[0] = sum;
-  calc_val[1] = sub;
 
 #ifdef COMPILE_FOR_PSRAM
   display.setTextSize(2);
