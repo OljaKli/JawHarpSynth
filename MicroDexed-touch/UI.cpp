@@ -18300,8 +18300,6 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
 
   if (e.turned)
   {
-    uint8_t bank_tmp;
-    int8_t voice_tmp;
 
     // Reset Performance Modifiers to 0 after every preset change
     reset_live_modifiers();
@@ -18309,99 +18307,63 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
       print_perfmod_lables();
     }
 
-    if (e.up) {
-      // start : show all presets
-      if (configuration.sys.favorites == 0)
-      {
-        switch (menu_voice_select)
-        {
-        case MENU_VOICE_BANK:
-          memset(g_bank_name[selected_instance_id], 0, BANK_NAME_LEN);
-          bank_tmp = constrain(configuration.dexed[selected_instance_id].bank - ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
-          configuration.dexed[selected_instance_id].bank = bank_tmp;
-          break;
+    if (configuration.sys.favorites == 0) {
+      int8_t voice_tmp;
 
-        case MENU_VOICE_SOUND:
-          memset(g_voice_name[selected_instance_id], 0, VOICE_NAME_LEN);
-          voice_tmp = configuration.dexed[selected_instance_id].voice - 1;
-          if (voice_tmp < 0 && configuration.dexed[selected_instance_id].bank - 1 >= 0)
-          {
+      // show all presets
+      switch (menu_voice_select) {
+      case MENU_VOICE_BANK:
+        configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
+        break;
+
+      case MENU_VOICE_SOUND:
+        voice_tmp = configuration.dexed[selected_instance_id].voice + e.dir * e.speed;
+        // check select previous bank
+        if(voice_tmp < 0) {
+          if (configuration.dexed[selected_instance_id].bank > 0) {
+            voice_tmp = MAX_VOICES - 1;
             configuration.dexed[selected_instance_id].bank--;
-            configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank, 0, MAX_BANKS - 1);
-          }
-          else if (voice_tmp < 0 && configuration.dexed[selected_instance_id].voice - 1 <= 0)
-          {
+          } else {
             voice_tmp = 0;
           }
-          if (voice_tmp < 0) {
-            voice_tmp = MAX_VOICES + voice_tmp;
-          }
-          configuration.dexed[selected_instance_id].voice = constrain(voice_tmp, 0, MAX_VOICES - 1);
-          break;
         }
-      }
-      else
-      {
-        switch (configuration.sys.favorites)
-        {
-        case 1: // only Favs
-          locate_previous_favorite();
-          break;
-        case 2: // only non-Favs
-          locate_previous_non_favorite();
-          break;
-        case 3: // random non-Favs
-          locate_random_non_favorite();
-          break;
-        }
-      }
-
-      load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-    } // end UP
-    else if (e.down) {
-      // start : show all presets
-      if (configuration.sys.favorites == 0)
-      {
-        switch (menu_voice_select)
-        {
-        case MENU_VOICE_BANK:
-          bank_tmp = constrain(configuration.dexed[selected_instance_id].bank + ENCODER[ENC_R].speed(), 0, MAX_BANKS - 1);
-          configuration.dexed[selected_instance_id].bank = bank_tmp;
-          break;
-
-        case MENU_VOICE_SOUND:
-          voice_tmp = configuration.dexed[selected_instance_id].voice + 1;
-          if (voice_tmp >= MAX_VOICES && configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS)
-          {
-            voice_tmp %= MAX_VOICES;
+        // check select next bank
+        if(voice_tmp >= MAX_VOICES) {
+          if(configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
+            voice_tmp = 0;
             configuration.dexed[selected_instance_id].bank++;
-            configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank, 0, MAX_BANKS - 1);
+          } else {
+            voice_tmp = MAX_BANKS - 1;
           }
-          else if (voice_tmp >= MAX_VOICES && configuration.dexed[selected_instance_id].bank + 1 >= MAX_BANKS)
-          {
-            voice_tmp = MAX_VOICES - 1;
-          }
-          configuration.dexed[selected_instance_id].voice = constrain(voice_tmp, 0, MAX_VOICES - 1);
-          break;
         }
+        configuration.dexed[selected_instance_id].voice = voice_tmp;
+        break;
       }
-      else { // favs
-        switch (configuration.sys.favorites) {
-        case 1: // only Favs
+    } else {
+      // filter favourites
+      switch (configuration.sys.favorites) {
+      case 1: // only Favs
+        if(e.down) {
           locate_next_favorite();
-          break;
-
-        case 2: // only non-Favs
-          locate_next_non_favorite();
-          break;
-
-        case 3: // random non-Favs
-          locate_random_non_favorite();
-          break;
+        } else {
+          locate_previous_favorite();
         }
+        break;
+
+      case 2: // only non-Favs
+        if(e.down) {
+          locate_next_non_favorite();
+        } else {
+          locate_previous_non_favorite();
+        }
+        break;
+
+      case 3: // random non-Favs
+        locate_random_non_favorite();
+        break;
       }
-      load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     }
+    load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
   }
   else if (e.pressed && dexed_live_mod.active_button != 99) {
     if (generic_active_function == 0) {
