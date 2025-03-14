@@ -18298,81 +18298,70 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
     menu_voice_select = MENU_VOICE_SOUND;
   }
 
-  if (e.turned)
-  {
-    // Reset Performance Modifiers to 0 after every preset change
-    reset_live_modifiers();
-    if (seq.cycle_touch_element != 1) {
-      print_perfmod_lables();
-    }
-
-    if (configuration.sys.favorites == 0) {
-      int8_t voice_tmp;
-
-      // show all presets
-      switch (menu_voice_select) {
-      case MENU_VOICE_BANK:
-        configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
-        break;
-
-      case MENU_VOICE_SOUND:
-        voice_tmp = configuration.dexed[selected_instance_id].voice + e.dir * e.speed;
-        // check select previous bank
-        if(voice_tmp < 0) {
-          if (configuration.dexed[selected_instance_id].bank > 0) {
-            voice_tmp = MAX_VOICES - 1;
-            configuration.dexed[selected_instance_id].bank--;
-          } else {
-            voice_tmp = 0;
-          }
-        }
-        // check select next bank
-        if(voice_tmp >= MAX_VOICES) {
-          if(configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
-            voice_tmp = 0;
-            configuration.dexed[selected_instance_id].bank++;
-          } else {
-            voice_tmp = MAX_BANKS - 1;
-          }
-        }
-        configuration.dexed[selected_instance_id].voice = voice_tmp;
-        break;
-      }
-    }
-    else {
-      // filter favourites
-      switch (configuration.sys.favorites) {
-      case 1: // only Favs
-        if(e.down) {
-          locate_next_favorite();
-        } else {
-          locate_previous_favorite();
-        }
-        break;
-
-      case 2: // only non-Favs
-        if(e.down) {
-          locate_next_non_favorite();
-        } else {
-          locate_previous_non_favorite();
-        }
-        break;
-
-      case 3: // random non-Favs
-        locate_random_non_favorite();
-        break;
-      }
-    }
-    load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+  // Reset Performance Modifiers to 0 after every preset change
+  reset_live_modifiers();
+  if (seq.cycle_touch_element != 1) {
+    print_perfmod_lables();
   }
-  else if (e.pressed && dexed_live_mod.active_button != 99) {
-    if (generic_active_function == 0) {
-      generic_active_function = 1;
-    }
-    else {
-      generic_active_function = 0;
+
+  if (configuration.sys.favorites == 0) {
+    int8_t voice_tmp;
+
+    // show all presets
+    switch (menu_voice_select) {
+    case MENU_VOICE_BANK:
+      configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
+      break;
+
+    case MENU_VOICE_SOUND:
+      voice_tmp = configuration.dexed[selected_instance_id].voice + e.dir * e.speed;
+      // check select previous bank
+      if(voice_tmp < 0) {
+        if (configuration.dexed[selected_instance_id].bank > 0) {
+          voice_tmp = MAX_VOICES - 1;
+          configuration.dexed[selected_instance_id].bank--;
+        } else {
+          voice_tmp = 0;
+        }
+      }
+      // check select next bank
+      if(voice_tmp >= MAX_VOICES) {
+        if(configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
+          voice_tmp = 0;
+          configuration.dexed[selected_instance_id].bank++;
+        } else {
+          voice_tmp = MAX_BANKS - 1;
+        }
+      }
+      configuration.dexed[selected_instance_id].voice = voice_tmp;
+      break;
     }
   }
+  else {
+    // filter favourites
+    switch (configuration.sys.favorites) {
+    case 1: // only Favs
+      if(e.down) {
+        locate_next_favorite();
+      } else {
+        locate_previous_favorite();
+      }
+      break;
+
+    case 2: // only non-Favs
+      if(e.down) {
+        locate_next_non_favorite();
+      } else {
+        locate_previous_non_favorite();
+      }
+      break;
+
+    case 3: // random non-Favs
+      locate_random_non_favorite();
+      break;
+    }
+  }
+  load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
 }
 
 FLASHMEM void UI_func_voice_select(uint8_t param)
@@ -18424,99 +18413,127 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       UI_func_voice_select_touch_loop(e);
     }
 
-    if (e.turned) {
-      if (seq.edit_state == 0 && dexed_live_mod.active_button == 0) {
-        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 18);
+    // 
+    else {
+      if (e.turned) {
+        if (seq.edit_state == 0 && dexed_live_mod.active_button == 0) {
+          generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 18);
+        }
+        else if (seq.edit_state == 1) {
+          switch(generic_temp_select_menu) {
+          case 0: // pool select
+            configuration.dexed[selected_instance_id].pool = constrain(configuration.dexed[selected_instance_id].pool + e.dir, 0, DEXED_POOLS - 1);
+            if (load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id) == false) {
+              load_sd_voice(configuration.dexed[selected_instance_id].pool, 0, 0, selected_instance_id);
+            }
+            break;
+
+          case 1: // dexed select
+            if (e.down) {
+              increment_dexed_instance_in_voice_select();
+            }
+            else if (e.up) {
+              decrement_dexed_instance_in_voice_select();
+            }
+            print_perfmod_buttons();
+            print_perfmod_lables();
+            draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+            load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+            break;
+          
+          case 2: // bank select
+          case 3: // voice select
+            UI_func_voice_select_loop(e);
+            break;
+
+          case 4: // volume
+            configuration.dexed[selected_instance_id].sound_intensity = constrain(configuration.dexed[selected_instance_id].sound_intensity + e.dir * e.speed, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
+            MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, configuration.dexed[selected_instance_id].sound_intensity);
+            MicroDexed[selected_instance_id]->setGain(midi_volume_transform(map(configuration.dexed[selected_instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
+            break;
+
+          case 5: // transpose
+            configuration.dexed[selected_instance_id].transpose = constrain(configuration.dexed[selected_instance_id].transpose + e.dir, TRANSPOSE_MIN, TRANSPOSE_MAX);
+            MicroDexed[selected_instance_id]->setTranspose(configuration.dexed[selected_instance_id].transpose);
+            MicroDexed[selected_instance_id]->notesOff();
+            send_sysex_param(configuration.dexed[selected_instance_id].midi_channel, 144, configuration.dexed[selected_instance_id].transpose, 0);
+            break;
+
+          case 6: // panorama
+            configuration.dexed[selected_instance_id].pan = constrain(configuration.dexed[selected_instance_id].pan + e.dir * e.speed, PANORAMA_MIN, PANORAMA_MAX);
+            MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 10, map(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
+            dexed_mono2stereo[selected_instance_id]->panorama(mapfloat(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
+            break;
+
+          case 7: // lowest note
+            configuration.dexed[selected_instance_id].lowest_note = constrain(configuration.dexed[selected_instance_id].lowest_note + e.dir * e.speed, INSTANCE_LOWEST_NOTE_MIN, INSTANCE_LOWEST_NOTE_MAX);
+            break;
+          
+          case 8: // highest note
+            configuration.dexed[selected_instance_id].highest_note = constrain(configuration.dexed[selected_instance_id].highest_note + e.dir * e.speed, INSTANCE_HIGHEST_NOTE_MIN, INSTANCE_HIGHEST_NOTE_MAX);
+            break;
+          
+          case 9: // MIDI CHANNEL
+            configuration.dexed[selected_instance_id].midi_channel = constrain(configuration.dexed[selected_instance_id].midi_channel + e.dir, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
+            break;
+
+          case 10: // chorus
+            configuration.fx.chorus_level[selected_instance_id] = constrain(configuration.fx.chorus_level[selected_instance_id] + e.dir * e.speed, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
+            MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 93, configuration.fx.chorus_level[selected_instance_id]);
+            dexed_chorus_mixer_r[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
+            dexed_chorus_mixer_l[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
+            break;
+          
+          case 12: // DELAY (1)
+            configuration.fx.delay_level1[selected_instance_id] = constrain(configuration.fx.delay_level1[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+            set_dexed_delay_level(0, selected_instance_id, configuration.fx.delay_level1[selected_instance_id]);
+            break;
+
+          case 14: // DELAY (2)
+            configuration.fx.delay_level2[selected_instance_id] = constrain(configuration.fx.delay_level2[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+            set_dexed_delay_level(1, selected_instance_id, configuration.fx.delay_level2[selected_instance_id]);
+            break;
+
+          case 16: // REVERB SEND
+            configuration.fx.reverb_send[selected_instance_id] = constrain(configuration.fx.reverb_send[selected_instance_id] + e.dir * e.speed, REVERB_SEND_MIN, REVERB_SEND_MAX);
+            MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 91, configuration.fx.reverb_send[selected_instance_id]);
+            reverb_mixer_r.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+            reverb_mixer_l.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+            break;
+
+          case 18: // BPM
+            seq.bpm = constrain(seq.bpm + e.dir, 40, 190);
+            update_seq_speed();
+            break;
+          }
+        }
       }
-      else if (seq.edit_state == 1) {
-        switch(generic_temp_select_menu) {
-        case 0: // pool select
-          configuration.dexed[selected_instance_id].pool = constrain(configuration.dexed[selected_instance_id].pool + e.dir, 0, DEXED_POOLS - 1);
-          if (load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id) == false) {
-            load_sd_voice(configuration.dexed[selected_instance_id].pool, 0, 0, selected_instance_id);
+      
+      if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+      {
+        if(seq.cycle_touch_element == 0) {
+          switch(generic_temp_select_menu) {
+          case 11: //chorus edit
+          case 13: //delay 1 edit 
+          case 15: //delay 2 edit
+            LCDML.FUNC_setGBAToLastFunc();
+            LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
+            break;
+            
+          case 17: //reverb edit
+            LCDML.FUNC_setGBAToLastFunc();
+            LCDML.OTHER_jumpToFunc(UI_func_master_effects);
+            break;
+
+          default:
+            seq.edit_state = !seq.edit_state;
+            print_voice_select_default_help();
+            break;
           }
-          break;
-
-        case 1: // dexed select
-          if (e.down) {
-            increment_dexed_instance_in_voice_select();
-          }
-          else if (e.up) {
-            decrement_dexed_instance_in_voice_select();
-          }
-          print_perfmod_buttons();
-          print_perfmod_lables();
-          draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-          load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-          break;
-        
-        case 2: // bank select
-        case 3: // voice select
-          UI_func_voice_select_loop(e);
-          break;
-
-        case 4: // volume
-          configuration.dexed[selected_instance_id].sound_intensity = constrain(configuration.dexed[selected_instance_id].sound_intensity + e.dir * e.speed, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
-          MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, configuration.dexed[selected_instance_id].sound_intensity);
-          MicroDexed[selected_instance_id]->setGain(midi_volume_transform(map(configuration.dexed[selected_instance_id].sound_intensity, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
-          break;
-
-        case 5: // transpose
-          configuration.dexed[selected_instance_id].transpose = constrain(configuration.dexed[selected_instance_id].transpose + e.dir, TRANSPOSE_MIN, TRANSPOSE_MAX);
-          MicroDexed[selected_instance_id]->setTranspose(configuration.dexed[selected_instance_id].transpose);
-          MicroDexed[selected_instance_id]->notesOff();
-          send_sysex_param(configuration.dexed[selected_instance_id].midi_channel, 144, configuration.dexed[selected_instance_id].transpose, 0);
-          break;
-
-        case 6: // panorama
-          configuration.dexed[selected_instance_id].pan = constrain(configuration.dexed[selected_instance_id].pan + e.dir * e.speed, PANORAMA_MIN, PANORAMA_MAX);
-          MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 10, map(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, 0, 127));
-          dexed_mono2stereo[selected_instance_id]->panorama(mapfloat(configuration.dexed[selected_instance_id].pan, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
-          break;
-
-        case 7: // lowest note
-          configuration.dexed[selected_instance_id].lowest_note = constrain(configuration.dexed[selected_instance_id].lowest_note + e.dir * e.speed, INSTANCE_LOWEST_NOTE_MIN, INSTANCE_LOWEST_NOTE_MAX);
-          break;
-        
-        case 8: // highest note
-          configuration.dexed[selected_instance_id].highest_note = constrain(configuration.dexed[selected_instance_id].highest_note + e.dir * e.speed, INSTANCE_HIGHEST_NOTE_MIN, INSTANCE_HIGHEST_NOTE_MAX);
-          break;
-        
-        case 9: // MIDI CHANNEL
-          configuration.dexed[selected_instance_id].midi_channel = constrain(configuration.dexed[selected_instance_id].midi_channel + e.dir, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
-          break;
-
-        case 10: // chorus
-          configuration.fx.chorus_level[selected_instance_id] = constrain(configuration.fx.chorus_level[selected_instance_id] + e.dir * e.speed, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
-          MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 93, configuration.fx.chorus_level[selected_instance_id]);
-          dexed_chorus_mixer_r[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
-          dexed_chorus_mixer_l[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
-          break;
-        
-        case 12: // DELAY (1)
-          configuration.fx.delay_level1[selected_instance_id] = constrain(configuration.fx.delay_level1[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-          set_dexed_delay_level(0, selected_instance_id, configuration.fx.delay_level1[selected_instance_id]);
-          break;
-
-        case 14: // DELAY (2)
-          configuration.fx.delay_level2[selected_instance_id] = constrain(configuration.fx.delay_level2[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-          set_dexed_delay_level(1, selected_instance_id, configuration.fx.delay_level2[selected_instance_id]);
-          break;
-
-        case 16: // REVERB SEND
-          configuration.fx.reverb_send[selected_instance_id] = constrain(configuration.fx.reverb_send[selected_instance_id] + e.dir * e.speed, REVERB_SEND_MIN, REVERB_SEND_MAX);
-          MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 91, configuration.fx.reverb_send[selected_instance_id]);
-          reverb_mixer_r.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
-          reverb_mixer_l.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
-          break;
-
-        case 18: // BPM
-          seq.bpm = constrain(seq.bpm + e.dir, 40, 190);
-          update_seq_speed();
-          break;
         }
       }
     }
+
     if (e.longPressed && dexed_live_mod.active_button != 99)
     {
       increment_dexed_instance_in_voice_select_round_robin();
@@ -18526,44 +18543,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
       print_perfmod_buttons();
       print_perfmod_lables();
-    }
-    else if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    {
-      if (generic_temp_select_menu == 11 && seq.cycle_touch_element == 0)
-      {
-        //chorus edit 
-        LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
-      }
-      else if (generic_temp_select_menu == 13 && seq.cycle_touch_element == 0)
-      {
-        //delay 1 edit 
-        LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
-      }
-
-      else if (generic_temp_select_menu == 15 && seq.cycle_touch_element == 0)
-      {
-        //delay 2 edit 
-        LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
-      }
-
-      else if (generic_temp_select_menu == 17 && seq.cycle_touch_element == 0)
-      {
-        //reverb edit
-        LCDML.OTHER_jumpToFunc(UI_func_master_effects);
-      }
-      else
-      {
-        if (dexed_live_mod.active_button == 0)
-        {
-          if (seq.edit_state == 0) {
-            seq.edit_state = 1;
-          }
-          else {
-            seq.edit_state = 0;
-          }
-          print_voice_select_default_help();
-        }
-      }
     }
 
     if (seq.cycle_touch_element == 1 && generic_temp_select_menu > 5) {
