@@ -1,5 +1,6 @@
 #include "touch.h"
 #include "sequencer.h"
+#include "livesequencer.h"
 #include <LCDMenuLib2.h>
 #include "ILI9341_t3n.h"
 #include <Audio.h>
@@ -255,8 +256,6 @@ FLASHMEM void print_current_chord()
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 extern void play_sample_off_virtual_drumpads(uint8_t note);
-extern void UI_func_livesequencer(uint8_t param);
-
 extern uint8_t dexed_onscreen_algo;
 
 FLASHMEM void print_perf_modifier_buttons() {
@@ -265,9 +264,7 @@ FLASHMEM void print_perf_modifier_buttons() {
   delay(100);
 }
 
-extern void draw_algo();
-extern uint8_t get_algo();
-extern uint8_t set_algo(uint8_t value);
+
 extern void panic_dexed_current_instance();
 
 FLASHMEM void handle_touchscreen_voice_select()

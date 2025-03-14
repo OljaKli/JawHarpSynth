@@ -2,6 +2,7 @@
 #include "touchbutton.h"
 #include "UI.h"
 #include "sequencer.h"
+#include "livesequencer.h"
 
 #include "touch.h"
 #include "LCDMenuLib2.h"
@@ -16,7 +17,6 @@ static constexpr float KEY_OFFSET_BLACK = 18.7;
 static constexpr float KEY_WIDTH_BLACK = 22;
 static constexpr float KEY_HEIGHT_BLACK = 34;
 
-extern void UI_func_livesequencer(uint8_t param);
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
 extern ts_t ts;

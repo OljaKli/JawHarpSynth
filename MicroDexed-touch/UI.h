@@ -150,6 +150,10 @@ void draw_volmeters_mixer();
 void draw_volmeters_multiband_compressor();
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 
+void draw_algo();
+uint8_t get_algo();
+void set_algo(uint8_t value);
+
 const EncoderEvents getEncoderEvents(uint8_t id);
 
 #define MAX_CC_DEST 15
