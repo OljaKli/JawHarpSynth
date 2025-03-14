@@ -75,6 +75,7 @@ void resetScreenTimer();
 void continueWavRecording();
 ScopeSettings& getCurrentScopeSettings(void);
 void update_display_functions_while_seq_running();
+void loadDexedOrigADSR(int instance);
 
 void UI_func_dexed_audio(uint8_t param);
 void UI_func_dexed_controllers(uint8_t param);

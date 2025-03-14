@@ -322,27 +322,51 @@ FLASHMEM void handle_touchscreen_voice_select()
           draw_algo();
         }
 
-        else  if (check_button_on_grid(20, 23)) {
-          reset_live_modifiers();
-          print_perf_modifier_buttons();
-        }
         else if (check_button_on_grid(45, 23))
           LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
 
+        // A
         else if (check_button_on_grid(2, 23))
         {
           if (dexed_live_mod.active_button != 1)
             dexed_live_mod.active_button = 1;
-          else
+          else {
+            reset_live_modifiers();
             dexed_live_mod.active_button = 0;
+          }
           print_perf_modifier_buttons();
         }
+        // D
         else if (check_button_on_grid(11, 23))
         {
           if (dexed_live_mod.active_button != 2)
             dexed_live_mod.active_button = 2;
-          else
+          else {
+            reset_live_modifiers();
             dexed_live_mod.active_button = 0;
+          }
+          print_perf_modifier_buttons();
+        }
+        // S
+        else if (check_button_on_grid(20, 23))
+        {
+          if (dexed_live_mod.active_button != 3)
+            dexed_live_mod.active_button = 3;
+          else {
+            reset_live_modifiers();
+            dexed_live_mod.active_button = 0;
+          }
+          print_perf_modifier_buttons();
+        }
+        // R
+        else if (check_button_on_grid(29, 23))
+        {
+          if (dexed_live_mod.active_button != 4)
+            dexed_live_mod.active_button = 4;
+          else {
+            reset_live_modifiers();
+            dexed_live_mod.active_button = 0;
+          }
           print_perf_modifier_buttons();
         }
         else //if touched somewhere else reset modifier edit mode

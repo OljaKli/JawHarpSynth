@@ -17980,7 +17980,6 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
     {
       display.print(F("ALGORITHM"));
       print_voice_select_fav_search_button();
-      draw_button_on_grid(20, 23, "CLEAR", "MODS", 0);
       draw_button_on_grid(37, 23, "CHANGE", "ALGO", 0);
       draw_button_on_grid(45, 23, "EDIT", "VOICE", 0);
 
@@ -18178,22 +18177,36 @@ FLASHMEM void UI_update_instance_icons()
 FLASHMEM void print_perfmod_lables()
 {
   if (seq.cycle_touch_element != 1) {
-    char tmp[5];
     display.setTextSize(1);
     if (dexed_live_mod.active_button == 1)
       display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
     else
       display.setTextColor(GREY1, GREY2);
     display.setCursor(5 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-    snprintf_P(tmp, sizeof(tmp), PSTR("%03d"), dexed_live_mod.attack_mod[selected_instance_id]);
-    display.print(tmp);
+    display.printf("%02i", dexed_live_mod.live_adsr_values[ADSR::ATTACK][selected_instance_id][0]);
+
     if (dexed_live_mod.active_button == 2)
       display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
     else
       display.setTextColor(GREY1, GREY2);
     display.setCursor(14 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-    snprintf_P(tmp, sizeof(tmp), PSTR("%03d"), dexed_live_mod.release_mod[selected_instance_id]);
-    display.print(tmp);
+    display.printf("%02i", dexed_live_mod.live_adsr_values[ADSR::DECAY][selected_instance_id][0]);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    if (dexed_live_mod.active_button == 3)
+      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+    else
+      display.setTextColor(GREY1, GREY2);
+    display.setCursor(23 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
+    display.printf("%02i", dexed_live_mod.live_adsr_values[2][selected_instance_id][0]);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    if (dexed_live_mod.active_button == 4)
+      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+    else
+      display.setTextColor(GREY1, GREY2);
+    display.setCursor(32 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
+    display.printf("%02i", dexed_live_mod.live_adsr_values[ADSR::RELEASE][selected_instance_id][0]);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
 }
@@ -18202,15 +18215,11 @@ FLASHMEM void print_perfmod_buttons()
 {
   // Performance Modifier Buttons
   if (seq.cycle_touch_element != 1) {
-
-    if (dexed_live_mod.active_button == 1)
-      draw_button_on_grid(2, 23, "ATTACK", "MD", 1);
-    else
-      draw_button_on_grid(2, 23, "ATTACK", "MD", 0);
-    if (dexed_live_mod.active_button == 2)
-      draw_button_on_grid(11, 23, "REL.", "MD", 1);
-    else
-      draw_button_on_grid(11, 23, "REL.", "MD", 0);
+    //TouchButton::drawButton(GRID.X[0], GRID.Y[5] -10, "ATT", );
+    draw_button_on_grid(2, 23, "ATT", "MD", dexed_live_mod.active_button == 1);
+    draw_button_on_grid(11, 23, "DEC", "MD", dexed_live_mod.active_button == 2);
+    draw_button_on_grid(20, 23, "SUS", "MD", dexed_live_mod.active_button == 3);
+    draw_button_on_grid(29, 23, "REL", "MD", dexed_live_mod.active_button == 4);
   }
 }
 
@@ -18243,35 +18252,28 @@ FLASHMEM void print_voice_select_default_help()
   }
 }
 
+FLASHMEM void loadDexedOrigADSR(int instance) {
+  for(int adsr = 0; adsr < 4; adsr++) {
+    for(int op = 0; op < 6; op++) {
+      const uint8_t rate = MicroDexed[instance]->getOPRate(op, adsr);
+      dexed_live_mod.orig_adsr_values[adsr][instance][op] = rate;
+      dexed_live_mod.live_adsr_values[adsr][instance][op] = rate;
+    }
+  }
+}
+
 FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
 {
   if (e.turned) {
-    if((dexed_live_mod.active_button == 1) || (dexed_live_mod.active_button == 3)) {
-      if (dexed_live_mod.attack_mod[selected_instance_id] == 0) {
-        for (uint8_t i = 0; i < 6; i++) {
-          dexed_live_mod.orig_attack_values[selected_instance_id][i] = MicroDexed[selected_instance_id]->getOPRate(i, ATTACK);
-        }
-      }
-      dexed_live_mod.attack_mod[selected_instance_id] = constrain(dexed_live_mod.attack_mod[selected_instance_id] + e.dir * e.speed, -MAX_PERF_MOD, MAX_PERF_MOD);
-      for (uint8_t i = 0; i < 6; i++) {
-        MicroDexed[selected_instance_id]->setOPRate(i, ATTACK, dexed_live_mod.orig_attack_values[selected_instance_id][i] - dexed_live_mod.attack_mod[selected_instance_id]);
-      }
-    }
-
-    if((dexed_live_mod.active_button == 2) || (dexed_live_mod.active_button == 4)) {
-      if (dexed_live_mod.release_mod[selected_instance_id] == 0) {// Save initial Values
-        for (uint8_t i = 0; i < 6; i++) {
-          dexed_live_mod.orig_release_values[selected_instance_id][i] = MicroDexed[selected_instance_id]->getOPRate(i, RELEASE);
-        }
-      }
-      dexed_live_mod.release_mod[selected_instance_id] = constrain(dexed_live_mod.release_mod[selected_instance_id] + e.dir * e.speed, -MAX_PERF_MOD, MAX_PERF_MOD);
-      for (uint8_t i = 0; i < 6; i++) {
-        MicroDexed[selected_instance_id]->setOPRate(i, RELEASE, dexed_live_mod.orig_release_values[selected_instance_id][i] - dexed_live_mod.release_mod[selected_instance_id]);
-      }
+    uint8_t step = dexed_live_mod.active_button - 1; // buttons 1-4 -> ADSR 0-3
+    
+    dexed_live_mod.live_adsr_values[step][selected_instance_id][0] = constrain(dexed_live_mod.live_adsr_values[step][selected_instance_id][0] + e.dir * e.speed, 0, 99);
+    for (uint8_t i = 0; i < 6; i++) {
+      MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.live_adsr_values[step][selected_instance_id][0]);
     }
   }
-  else if (e.pressed)
-  {
+
+  else if (e.pressed) {
     dexed_live_mod.active_button = 0;
     print_perfmod_buttons();
     dexed_live_mod.active_button = 99;
@@ -18284,15 +18286,13 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
 
 FLASHMEM void reset_live_modifiers()
 {
-  dexed_live_mod.attack_mod[selected_instance_id] = 0;
-  for (uint8_t i = 0; i < 6; i++) {
-    MicroDexed[selected_instance_id]->setOPRate(i, ATTACK, dexed_live_mod.orig_attack_values[selected_instance_id][i]);
+  for(int step = 0; step < 4; step++) {
+    for(int op = 0; op < 6; op++) {
+      dexed_live_mod.live_adsr_values[step][selected_instance_id][op] = dexed_live_mod.orig_adsr_values[step][selected_instance_id][op];
+      MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[step][selected_instance_id][op]);
+    }
   }
-
-  dexed_live_mod.release_mod[selected_instance_id] = 0;
-  for (uint8_t i = 0; i < 6; i++) {
-    MicroDexed[selected_instance_id]->setOPRate(i, RELEASE, dexed_live_mod.orig_release_values[selected_instance_id][i]);
-  }
+  print_perfmod_lables();;
 }
 
 FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
@@ -18303,12 +18303,6 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
   }
   if (generic_temp_select_menu == 3) {
     menu_voice_select = MENU_VOICE_SOUND;
-  }
-
-  // Reset Performance Modifiers to 0 after every preset change
-  reset_live_modifiers();
-  if (seq.cycle_touch_element != 1) {
-    print_perfmod_lables();
   }
 
   if (configuration.sys.favorites == 0) {
@@ -18369,6 +18363,11 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
     }
   }
   load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+
+  //if (seq.cycle_touch_element != 1) {
+    // Reset Performance Modifiers to 0 after every preset change
+    print_perfmod_lables();
+  //}
 }
 
 FLASHMEM void UI_func_voice_select(uint8_t param)

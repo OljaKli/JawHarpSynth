@@ -367,7 +367,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SAMPLES_CONFIG_NAME "samples"
 #define SLICES_CONFIG_NAME "slices"
 #define ENVELOPES_CONFIG_NAME "envelope"
-#define MAX_PERF_MOD 30
+#define MAX_PERF_MOD 20
 
 // SD CARD
 #define MAX_FILES 150

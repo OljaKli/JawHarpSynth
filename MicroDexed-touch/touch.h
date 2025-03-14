@@ -15,18 +15,9 @@ extern Adafruit_FT6206 touch;
 
 typedef struct dexed_live_mod_s
 {
-  uint8_t active_button = 0;
-  uint8_t orig_attack_values[2][7];
-  uint8_t orig_release_values[2][7];
-
-#if NUM_DEXED > 1
-  int attack_mod[NUM_DEXED] = { 0, 0 };
-  int release_mod[NUM_DEXED] = { 0, 0 };
-#else
-  int attack_mod[NUM_DEXED] = { 0 };
-  int release_mod[NUM_DEXED] = { 0 };
-#endif
-
+  int8_t active_button = 0;
+  int8_t orig_adsr_values[4][NUM_DEXED][6];
+  int8_t live_adsr_values[4][NUM_DEXED][6];
 } dexed_live_mod_t;
 
 typedef struct ts_s
