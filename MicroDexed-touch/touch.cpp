@@ -264,7 +264,6 @@ FLASHMEM void print_perf_modifier_buttons() {
   delay(100);
 }
 
-
 extern void panic_dexed_current_instance();
 
 FLASHMEM void handle_touchscreen_voice_select()
@@ -281,8 +280,7 @@ FLASHMEM void handle_touchscreen_voice_select()
         draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
         dexed_onscreen_algo = 88; //dummy value to force draw on screen init
         print_voice_settings_in_dexed_voice_select(true, true);
-        print_perfmod_buttons();
-        print_perfmod_lables();
+        print_perf_modifier_buttons();
         print_voice_select_default_help();
       }
       else

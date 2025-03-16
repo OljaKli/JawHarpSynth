@@ -13,11 +13,18 @@ extern XPT2046_Touchscreen touch;
 extern Adafruit_FT6206 touch;
 #endif
 
+enum Dexed_ADSR {
+  DXD_ATTACK = 0,
+  DXD_DECAY,
+  DXD_SUSTAIN,
+  DXD_RELEASE
+};
+
 typedef struct dexed_live_mod_s
 {
   int8_t active_button = 0;
-  int8_t orig_adsr_values[4][NUM_DEXED][6];
-  int8_t live_adsr_values[4][NUM_DEXED][6];
+  int8_t orig_adsr_values[NUM_DEXED][4][6];
+  int8_t live_adsr_values[NUM_DEXED][4]; // -30 to +30
 } dexed_live_mod_t;
 
 typedef struct ts_s

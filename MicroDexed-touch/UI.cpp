@@ -18178,36 +18178,18 @@ FLASHMEM void print_perfmod_lables()
 {
   if (seq.cycle_touch_element != 1) {
     display.setTextSize(1);
-    if (dexed_live_mod.active_button == 1)
-      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    else
-      display.setTextColor(GREY1, GREY2);
-    display.setCursor(5 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-    display.printf("%02i", dexed_live_mod.live_adsr_values[ADSR::ATTACK][selected_instance_id][0]);
 
-    if (dexed_live_mod.active_button == 2)
-      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    else
-      display.setTextColor(GREY1, GREY2);
-    display.setCursor(14 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-    display.printf("%02i", dexed_live_mod.live_adsr_values[ADSR::DECAY][selected_instance_id][0]);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-    if (dexed_live_mod.active_button == 3)
-      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    else
-      display.setTextColor(GREY1, GREY2);
-    display.setCursor(23 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-    display.printf("%02i", dexed_live_mod.live_adsr_values[2][selected_instance_id][0]);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-    if (dexed_live_mod.active_button == 4)
-      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    else
-      display.setTextColor(GREY1, GREY2);
-    display.setCursor(32 * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-    display.printf("%02i", dexed_live_mod.live_adsr_values[ADSR::RELEASE][selected_instance_id][0]);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    for(uint8_t step = 0; step < 4; step++) {
+      const uint8_t currentButtonStep = dexed_live_mod.active_button - 1;
+      if (step == currentButtonStep) {
+        display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+      }
+      else {
+        display.setTextColor(GREY1, GREY2);
+      }
+      display.setCursor((5 + step * 9) * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
+      display.printf("%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
+    }
   }
 }
 
@@ -18256,8 +18238,7 @@ FLASHMEM void loadDexedOrigADSR(int instance) {
   for(int adsr = 0; adsr < 4; adsr++) {
     for(int op = 0; op < 6; op++) {
       const uint8_t rate = MicroDexed[instance]->getOPRate(op, adsr);
-      dexed_live_mod.orig_adsr_values[adsr][instance][op] = rate;
-      dexed_live_mod.live_adsr_values[adsr][instance][op] = rate;
+      dexed_live_mod.orig_adsr_values[instance][adsr][op] = rate;
     }
   }
 }
@@ -18267,9 +18248,9 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
   if (e.turned) {
     uint8_t step = dexed_live_mod.active_button - 1; // buttons 1-4 -> ADSR 0-3
     
-    dexed_live_mod.live_adsr_values[step][selected_instance_id][0] = constrain(dexed_live_mod.live_adsr_values[step][selected_instance_id][0] + e.dir * e.speed, 0, 99);
+    dexed_live_mod.live_adsr_values[selected_instance_id][step] = constrain(dexed_live_mod.live_adsr_values[selected_instance_id][step] + e.dir * e.speed, -30, +30);
     for (uint8_t i = 0; i < 6; i++) {
-      MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.live_adsr_values[step][selected_instance_id][0]);
+      MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][i] - dexed_live_mod.live_adsr_values[selected_instance_id][step]);
     }
   }
 
@@ -18287,9 +18268,10 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
 FLASHMEM void reset_live_modifiers()
 {
   for(int step = 0; step < 4; step++) {
+    dexed_live_mod.live_adsr_values[selected_instance_id][step] = 0;
+
     for(int op = 0; op < 6; op++) {
-      dexed_live_mod.live_adsr_values[step][selected_instance_id][op] = dexed_live_mod.orig_adsr_values[step][selected_instance_id][op];
-      MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[step][selected_instance_id][op]);
+      MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
     }
   }
   print_perfmod_lables();;
