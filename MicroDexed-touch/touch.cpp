@@ -256,28 +256,40 @@ FLASHMEM void print_current_chord()
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 
-FLASHMEM void handleLiveModButtons(void) {
+FLASHMEM bool handleLiveModButtons(void) {
+  bool pressedOne = false;
   const int8_t buttonStep = dexed_live_mod.active_button - 1;
   for(uint8_t step = 0; step < 4; step++) {
     if(TouchButton::isPressed(GRID.X[step], GRID.Y[5] - 23)) {
+      pressedOne = true;
       if (buttonStep != step) {
+        DBG_LOG(printf("set active %i\n", step + 1));
         dexed_live_mod.active_button = step + 1;
-        //DBG_LOG(printf("set active %i\n", dexed_live_mod.active_button));
-        //printLiveModButton(step);
       }
       else {
-        reset_live_modifiers();
-        //printLiveModButton(step);
+        reset_live_modifier(buttonStep);
         dexed_live_mod.active_button = 0;
       }
       printLiveModButtons();
     }
   }
+  if(pressedOne) {
+    if (dexed_live_mod.active_button > 0) {
+      helptext_r("< > CHANGE MODIFIER VALUE");
+      display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+      print_empty_spaces(38,1);
+      display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
+      print_empty_spaces(9,1);
+      display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+      display.print(F(" PUSH TO RETURN"));
+    }
+  }
+  return pressedOne;
 }
 
 FLASHMEM void handle_touchscreen_voice_select()
 {
-  handleLiveModButtons();
+  bool pressed = handleLiveModButtons();
 
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
     if (seq.cycle_touch_element == 1) {
@@ -319,27 +331,18 @@ FLASHMEM void handle_touchscreen_voice_select()
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
       }
 
-      /*else //if touched somewhere else reset modifier edit mode
+      else if(pressed == false && numTouchPoints > 0) //if touched somewhere else reset modifier edit mode
       {
         //dexed_live_mod.active_button = 0;
         //printLiveModButtons();
-      }*/
+     
+        if (dexed_live_mod.active_button == 0) {
+          DBG_LOG(printf("default\n"));
+          print_voice_select_default_help();
+        }
+        print_voice_settings_in_dexed_voice_select(false, true);
 
-      if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
-      {
-        helptext_r("< > CHANGE MODIFIER VALUE");
-        display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-        print_empty_spaces(38,1);
-        display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-        print_empty_spaces(9,1);
-        display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-        display.print(F(" PUSH TO RETURN"));
       }
-      else
-      {
-        print_voice_select_default_help();
-      }
-      print_voice_settings_in_dexed_voice_select(false, true);
     }
   }
   if (seq.cycle_touch_element == 1) {

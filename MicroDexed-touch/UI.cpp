@@ -18232,14 +18232,19 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
   }
 }
 
+FLASHMEM void reset_live_modifier(uint8_t step)
+{
+  dexed_live_mod.live_adsr_values[selected_instance_id][step] = 0;
+
+  for(int op = 0; op < 6; op++) {
+    MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
+  }
+}
+
 FLASHMEM void reset_live_modifiers()
 {
   for(int step = 0; step < 4; step++) {
-    dexed_live_mod.live_adsr_values[selected_instance_id][step] = 0;
-
-    for(int op = 0; op < 6; op++) {
-      MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
-    }
+    reset_live_modifier(step);
   }
 }
 

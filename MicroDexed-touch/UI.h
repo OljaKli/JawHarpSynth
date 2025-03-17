@@ -134,7 +134,6 @@ bool load_performance_and_check_midi(uint8_t perf);
 void setup_screensaver(void);
 void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, bool fullrefresh_values);
 void print_voice_select_fav_search_button();
-void reset_live_modifiers();
 void pattern_editor_menu_0();
 void sub_touchscreen_test_page_init();
 void border3_large();
@@ -145,6 +144,8 @@ void microsynth_refresh_lower_screen_dynamic_text();
 void panic_dexed_current_instance();
 void printLiveModButtons(void);
 void printLiveModButton(int8_t button); // 0 - 3 ADSR
+void reset_live_modifiers();
+void reset_live_modifier(uint8_t step);
 
 void print_empty_spaces(uint8_t spaces, bool clear_background);
 void print_voice_select_default_help();
