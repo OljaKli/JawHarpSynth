@@ -17953,6 +17953,12 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
       display.print(F("HI NOTE"));
       setCursor_textGrid_small(2, 12);
       display.print(F("MIDI CH"));
+
+      setCursor_textGrid_small(2, 13);
+      display.print(F("VOICE"));
+      setCursor_textGrid_small(16, 13);
+      display.print(F("FX"));
+
       setCursor_textGrid_small(2, 14);
       display.print(F("CHORUS"));
       setCursor_textGrid_small(2, 15);
@@ -17961,15 +17967,6 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
       display.print(F("DELAY2"));
       setCursor_textGrid_small(2, 17);
       display.print(F("REVERB"));
-
-      setCursor_textGrid_small(19, 14);
-      display.print(F("E"));
-      setCursor_textGrid_small(19, 15);
-      display.print(F("E"));
-      setCursor_textGrid_small(19, 16);
-      display.print(F("E"));
-      setCursor_textGrid_small(19, 17);
-      display.print(F("E"));
 
       display.console = true;
       display.drawLine(1, CHAR_height * 5 - 2, DISPLAY_WIDTH - 2, CHAR_height * 5 - 2, GREY4);
@@ -18048,46 +18045,35 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
           print_formatted_number_trailing_space(configuration.dexed[selected_instance_id].midi_channel, 4);
         }
     }
+
     if (menu_item_check(10) || fullrefresh_values)
-      print_small_intbar(9, 14, configuration.fx.chorus_level[selected_instance_id], 10, 1, 1);
+    {
+      setModeColor(10);
+      setCursor_textGrid_small(2, 13);
+      display.print(F("VOICE"));
+    }
+    if (menu_item_check(11) || fullrefresh_values)
+    {
+      setModeColor(11);
+      setCursor_textGrid_small(16, 13);
+      display.print(F("FX"));
+    }
 
     if (menu_item_check(12) || fullrefresh_values)
-      print_small_intbar(9, 15, configuration.fx.delay_level1[selected_instance_id], 12, 1, 1);
+      print_small_intbar(9, 14, configuration.fx.chorus_level[selected_instance_id], 12, 1, 1);
+
+    if (menu_item_check(13) || fullrefresh_values)
+      print_small_intbar(9, 15, configuration.fx.delay_level1[selected_instance_id], 13, 1, 1);
 
     if (menu_item_check(14) || fullrefresh_values)
       print_small_intbar(9, 16, configuration.fx.delay_level2[selected_instance_id], 14, 1, 1);
 
-    if (menu_item_check(16) || fullrefresh_values)
-      print_small_intbar(9, 17, configuration.fx.reverb_send[selected_instance_id], 16, 1, 1);
-
-    if (menu_item_check(11) || fullrefresh_values)
-    {
-      setModeColor(11);
-      setCursor_textGrid_small(19, 14);
-      display.print(F("E"));
-    }
-    if (menu_item_check(13) || fullrefresh_values)
-    {
-      setModeColor(13);
-      setCursor_textGrid_small(19, 15);
-      display.print(F("E"));
-    }
     if (menu_item_check(15) || fullrefresh_values)
-    {
-      setModeColor(15);
-      setCursor_textGrid_small(19, 16);
-      display.print(F("E"));
-    }
-    if (menu_item_check(17) || fullrefresh_values)
-    {
-      setModeColor(17);
-      setCursor_textGrid_small(19, 17);
-      display.print(F("E"));
-    }
+      print_small_intbar(9, 17, configuration.fx.reverb_send[selected_instance_id], 15, 1, 1);
 
-    if (menu_item_check(18) || fullrefresh_values)
+    if (menu_item_check(16) || fullrefresh_values)
     {
-      setModeColor(18);
+      setModeColor(16);
       setCursor_textGrid_small(28, 6);
       print_formatted_number(seq.bpm, 3);
     }
@@ -18230,19 +18216,19 @@ FLASHMEM void loadDexedOrigADSR(int instance) {
 
 FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
 {
+  uint8_t step = dexed_live_mod.active_button - 1; // buttons 1-4 -> ADSR 0-3
+
   if (e.turned) {
-    uint8_t step = dexed_live_mod.active_button - 1; // buttons 1-4 -> ADSR 0-3
-    
     dexed_live_mod.live_adsr_values[selected_instance_id][step] = constrain(dexed_live_mod.live_adsr_values[selected_instance_id][step] + e.dir * e.speed, -MAX_PERF_MOD, +MAX_PERF_MOD);
     for (uint8_t i = 0; i < 6; i++) {
       MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][i] - dexed_live_mod.live_adsr_values[selected_instance_id][step]);
     }
-
     printLiveModButton(step);
   }
 
   else if (e.pressed) {
     dexed_live_mod.active_button = 0;
+    printLiveModButton(step);
     print_voice_select_default_help();
   }
 }
@@ -18378,8 +18364,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     // 
     else {
       if (e.turned) {
-        if (seq.edit_state == 0 && dexed_live_mod.active_button == 0) {
-          generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 18);
+        if (seq.edit_state == 0) {
+          generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 16);
         }
         else if (seq.edit_state == 1) {
           switch(generic_temp_select_menu) {
@@ -18438,14 +18424,14 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
             configuration.dexed[selected_instance_id].midi_channel = constrain(configuration.dexed[selected_instance_id].midi_channel + e.dir, MIDI_CHANNEL_MIN, MIDI_CHANNEL_MAX + 1);
             break;
 
-          case 10: // chorus
+          case 12: // chorus
             configuration.fx.chorus_level[selected_instance_id] = constrain(configuration.fx.chorus_level[selected_instance_id] + e.dir * e.speed, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
             MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 93, configuration.fx.chorus_level[selected_instance_id]);
             dexed_chorus_mixer_r[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
             dexed_chorus_mixer_l[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
             break;
           
-          case 12: // DELAY (1)
+          case 13: // DELAY (1)
             configuration.fx.delay_level1[selected_instance_id] = constrain(configuration.fx.delay_level1[selected_instance_id] + e.dir * e.speed, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
             set_dexed_delay_level(0, selected_instance_id, configuration.fx.delay_level1[selected_instance_id]);
             break;
@@ -18455,14 +18441,14 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
             set_dexed_delay_level(1, selected_instance_id, configuration.fx.delay_level2[selected_instance_id]);
             break;
 
-          case 16: // REVERB SEND
+          case 15: // REVERB SEND
             configuration.fx.reverb_send[selected_instance_id] = constrain(configuration.fx.reverb_send[selected_instance_id] + e.dir * e.speed, REVERB_SEND_MIN, REVERB_SEND_MAX);
             MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 91, configuration.fx.reverb_send[selected_instance_id]);
             reverb_mixer_r.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
             reverb_mixer_l.gain(selected_instance_id, volume_transform(mapfloat(configuration.fx.reverb_send[selected_instance_id], REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
             break;
 
-          case 18: // BPM
+          case 16: // BPM
             seq.bpm = constrain(seq.bpm + e.dir, 40, 190);
             update_seq_speed();
             break;
@@ -18474,14 +18460,12 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       {
         if(seq.cycle_touch_element == 0) {
           switch(generic_temp_select_menu) {
-          case 11: //chorus edit
-          case 13: //delay 1 edit 
-          case 15: //delay 2 edit
+          case 10: //chorus edit
             LCDML.FUNC_setGBAToLastFunc();
             LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
             break;
             
-          case 17: //reverb edit
+          case 11: //reverb edit
             LCDML.FUNC_setGBAToLastFunc();
             LCDML.OTHER_jumpToFunc(UI_func_master_effects);
             break;
@@ -21940,9 +21924,6 @@ FLASHMEM void UI_draw_FM_algorithm(uint8_t algo, uint8_t x, uint8_t y)
 
   display.fillRect(x + 75, y, 50, 22, COLOR_BACKGROUND);
   display.fillRect(x, y + 22, 150, 70, COLOR_BACKGROUND);
-
-  display.drawRect(x + 75, y, 50, 22, COLOR_ARP);
-  display.drawRect(x, y + 22, 150, 70, COLOR_ARP);
 
   setCursor_textGrid_small(27, 9);
   display.setTextSize(1);
