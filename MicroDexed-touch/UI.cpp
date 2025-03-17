@@ -18178,8 +18178,7 @@ FLASHMEM void printLiveModButton(int8_t step) {
 
 FLASHMEM void print_voice_select_default_help()
 {
-  if (seq.cycle_touch_element != 1)
-  {
+  if (seq.cycle_touch_element != 1) {
     helptext_l(back_text);
     helptext_r("< > SELECT VOICE");
     display.setTextColor(GREY2, COLOR_BACKGROUND);
@@ -18194,9 +18193,9 @@ FLASHMEM void print_voice_select_default_help()
     display.setCursor(CHAR_width_small * 25 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
     display.print(F("SHORT:"));
     display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
-    if (generic_active_function == 1)
+    if (seq.edit_state == 1)
       display.print(F("APPLY"));
-    else if (generic_active_function == 0)
+    else if (seq.edit_state == 0)
       display.print(F(" EDIT"));
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.print(F(" LONG:"));
@@ -18312,6 +18311,8 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
     }
   }
   load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+  reset_live_modifiers();
+  printLiveModButtons();
 }
 
 FLASHMEM void UI_func_voice_select(uint8_t param)
@@ -18460,12 +18461,12 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       {
         if(seq.cycle_touch_element == 0) {
           switch(generic_temp_select_menu) {
-          case 10: //chorus edit
+          case 10:
             LCDML.FUNC_setGBAToLastFunc();
             LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
             break;
             
-          case 11: //reverb edit
+          case 11:
             LCDML.FUNC_setGBAToLastFunc();
             LCDML.OTHER_jumpToFunc(UI_func_master_effects);
             break;
@@ -18528,9 +18529,9 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
     if (seq.cycle_touch_element != 1)
     {
-      if ((dexed_live_mod.active_button == 0 && dexed_onscreen_algo != MicroDexed[selected_instance_id]->getAlgorithm()))
-        UI_draw_FM_algorithm(MicroDexed[selected_instance_id]->getAlgorithm(), 140, 86);
-      dexed_onscreen_algo = MicroDexed[selected_instance_id]->getAlgorithm();
+      if (dexed_live_mod.active_button == 0) {
+        draw_algo();
+      }
     }
 
     print_voice_settings_in_dexed_voice_select(false, false);
