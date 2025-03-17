@@ -142,8 +142,10 @@ void border3_large_clear();
 void seq_pattern_editor_update_dynamic_elements();
 void microsynth_refresh_lower_screen_static_text();
 void microsynth_refresh_lower_screen_dynamic_text();
-void print_perfmod_buttons();
-void print_perfmod_lables();
+
+void printLiveModButtons(void);
+void printLiveModButton(int8_t button); // 0 - 3 ADSR
+
 void print_empty_spaces(uint8_t spaces, bool clear_background);
 void print_voice_select_default_help();
 void draw_volmeters_mixer();

@@ -17872,19 +17872,21 @@ uint8_t dexed_onscreen_algo = 0;
 
 FLASHMEM void print_voice_select_fav_search_button()
 {
-  switch (configuration.sys.favorites)
-  {
+  switch (configuration.sys.favorites) {
   case 0:
-    draw_button_on_grid(45, 11, "ALL", "PRESET", 0);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[2], "ALL", "PRESET", TouchButton::BUTTON_NORMAL);
     break;
+
   case 1:
-    draw_button_on_grid(45, 11, "FAVs.", "ONLY", 0);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[2], "FAVs.", "ONLY", TouchButton::BUTTON_NORMAL);
     break;
+
   case 2:
-    draw_button_on_grid(45, 11, "NON", "FAVs.", 0);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[2], "NON", "FAVs.", TouchButton::BUTTON_NORMAL);
     break;
+
   case 3:
-    draw_button_on_grid(45, 11, "RND", "NONFAV", 0);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[2], "RND", "NONFAV", TouchButton::BUTTON_NORMAL);
     break;
   }
 
@@ -17892,10 +17894,10 @@ FLASHMEM void print_voice_select_fav_search_button()
 
 FLASHMEM void draw_algo()
 {
-  if ((dexed_onscreen_algo != MicroDexed[selected_instance_id]->getAlgorithm()))
-  {
-    UI_draw_FM_algorithm(MicroDexed[selected_instance_id]->getAlgorithm(), 147, 86);
-    dexed_onscreen_algo = MicroDexed[selected_instance_id]->getAlgorithm();
+  const uint8_t algo = MicroDexed[selected_instance_id]->getAlgorithm();
+  if (dexed_onscreen_algo != algo) {
+    UI_draw_FM_algorithm(algo, 120, 90);
+    dexed_onscreen_algo = algo;
   }
 }
 
@@ -17961,30 +17963,28 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
       display.print(F("REVERB"));
 
       setCursor_textGrid_small(19, 14);
-      display.print(F("EDIT"));
+      display.print(F("E"));
       setCursor_textGrid_small(19, 15);
-      display.print(F("EDIT"));
+      display.print(F("E"));
       setCursor_textGrid_small(19, 16);
-      display.print(F("EDIT"));
+      display.print(F("E"));
       setCursor_textGrid_small(19, 17);
-      display.print(F("EDIT"));
+      display.print(F("E"));
 
       display.console = true;
       display.drawLine(1, CHAR_height * 5 - 2, DISPLAY_WIDTH - 2, CHAR_height * 5 - 2, GREY4);
       display.drawLine(CHAR_width * 18, 1, CHAR_width * 18, CHAR_height * 5 - 2, GREY4);
     }
-    setCursor_textGrid_small(26, 9);
+    setCursor_textGrid_small(22, 9);
     display.setTextSize(1);
     display.setTextColor(GREY1);
     if (seq.cycle_touch_element != 1)
     {
-      display.print(F("ALGORITHM"));
+      display.print(F("ALGO"));
       print_voice_select_fav_search_button();
-      draw_button_on_grid(37, 23, "CHANGE", "ALGO", 0);
-      draw_button_on_grid(45, 23, "EDIT", "VOICE", 0);
-
+      TouchButton::drawButton(GRID.X[5], GRID.Y[3], "CHANGE", "ALGO", TouchButton::BUTTON_NORMAL);
+      TouchButton::drawButton(GRID.X[5], GRID.Y[5] - 23, "EDIT", "VOICE", TouchButton::BUTTON_NORMAL);
       draw_algo();
-
     }
   }
 
@@ -18064,25 +18064,25 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
     {
       setModeColor(11);
       setCursor_textGrid_small(19, 14);
-      display.print(F("EDIT"));
+      display.print(F("E"));
     }
     if (menu_item_check(13) || fullrefresh_values)
     {
       setModeColor(13);
       setCursor_textGrid_small(19, 15);
-      display.print(F("EDIT"));
+      display.print(F("E"));
     }
     if (menu_item_check(15) || fullrefresh_values)
     {
       setModeColor(15);
       setCursor_textGrid_small(19, 16);
-      display.print(F("EDIT"));
+      display.print(F("E"));
     }
     if (menu_item_check(17) || fullrefresh_values)
     {
       setModeColor(17);
       setCursor_textGrid_small(19, 17);
-      display.print(F("EDIT"));
+      display.print(F("E"));
     }
 
     if (menu_item_check(18) || fullrefresh_values)
@@ -18174,34 +18174,19 @@ FLASHMEM void UI_update_instance_icons()
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
 
-FLASHMEM void print_perfmod_lables()
-{
-  if (seq.cycle_touch_element != 1) {
-    display.setTextSize(1);
-
-    for(uint8_t step = 0; step < 4; step++) {
-      const uint8_t currentButtonStep = dexed_live_mod.active_button - 1;
-      if (step == currentButtonStep) {
-        display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-      }
-      else {
-        display.setTextColor(GREY1, GREY2);
-      }
-      display.setCursor((5 + step * 9) * CHAR_width_small + 3, 25 * CHAR_height_small + 2);
-      display.printf("%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
-    }
+FLASHMEM void printLiveModButtons(void) {
+  for(uint8_t step = 0; step < 4; step++) {
+    printLiveModButton(step);
   }
 }
 
-FLASHMEM void print_perfmod_buttons()
-{
-  // Performance Modifier Buttons
+FLASHMEM void printLiveModButton(int8_t step) {
+  const char *labels[4] = { "ATTACK", "DECAY", "SUSTAIN", "RELEASE" };
   if (seq.cycle_touch_element != 1) {
-    //TouchButton::drawButton(GRID.X[0], GRID.Y[5] -10, "ATT", );
-    draw_button_on_grid(2, 23, "ATT", "MD", dexed_live_mod.active_button == 1);
-    draw_button_on_grid(11, 23, "DEC", "MD", dexed_live_mod.active_button == 2);
-    draw_button_on_grid(20, 23, "SUS", "MD", dexed_live_mod.active_button == 3);
-    draw_button_on_grid(29, 23, "REL", "MD", dexed_live_mod.active_button == 4);
+    char buf[4];
+    snprintf(buf, 4, "%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
+    const TouchButton::Color c = (dexed_live_mod.active_button - 1) == step ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL;
+    TouchButton::drawButton(GRID.X[step], GRID.Y[5] - 23, labels[step], buf, c);
   }
 }
 
@@ -18248,20 +18233,17 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
   if (e.turned) {
     uint8_t step = dexed_live_mod.active_button - 1; // buttons 1-4 -> ADSR 0-3
     
-    dexed_live_mod.live_adsr_values[selected_instance_id][step] = constrain(dexed_live_mod.live_adsr_values[selected_instance_id][step] + e.dir * e.speed, -30, +30);
+    dexed_live_mod.live_adsr_values[selected_instance_id][step] = constrain(dexed_live_mod.live_adsr_values[selected_instance_id][step] + e.dir * e.speed, -MAX_PERF_MOD, +MAX_PERF_MOD);
     for (uint8_t i = 0; i < 6; i++) {
       MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][i] - dexed_live_mod.live_adsr_values[selected_instance_id][step]);
     }
+
+    printLiveModButton(step);
   }
 
   else if (e.pressed) {
     dexed_live_mod.active_button = 0;
-    print_perfmod_buttons();
-    dexed_live_mod.active_button = 99;
     print_voice_select_default_help();
-  }
-  if (seq.cycle_touch_element != 1) {
-    print_perfmod_lables();
   }
 }
 
@@ -18274,7 +18256,6 @@ FLASHMEM void reset_live_modifiers()
       MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
     }
   }
-  print_perfmod_lables();;
 }
 
 FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
@@ -18345,11 +18326,6 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
     }
   }
   load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-
-  //if (seq.cycle_touch_element != 1) {
-    // Reset Performance Modifiers to 0 after every preset change
-    print_perfmod_lables();
-  //}
 }
 
 FLASHMEM void UI_func_voice_select(uint8_t param)
@@ -18368,11 +18344,10 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
       generic_temp_select_menu = 3;
     }
-    draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
+    TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
     print_voice_settings_in_dexed_voice_select(true, true);
     print_voice_select_default_help();
-    print_perfmod_buttons();
-    print_perfmod_lables();
+    printLiveModButtons();
     UI_update_instance_icons();
     draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
@@ -18388,7 +18363,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
     show_smallfont_noGrid(9 * CHAR_height_small - 2, CHAR_width_small * 25, 10, seq.name);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    //if (seq.cycle_touch_element == 0)
     virtual_keyboard_smart_preselect_mode();
     encoderDir[ENC_R].reset();
   }
@@ -18423,8 +18397,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
             else if (e.up) {
               decrement_dexed_instance_in_voice_select();
             }
-            print_perfmod_buttons();
-            print_perfmod_lables();
+            printLiveModButtons();
             draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
             load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
             break;
@@ -18529,8 +18502,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
         virtual_keyboard_smart_preselect_mode();
       }
       draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-      print_perfmod_buttons();
-      print_perfmod_lables();
+      printLiveModButtons();
     }
 
     if (seq.cycle_touch_element == 1 && generic_temp_select_menu > 5) {
@@ -18573,7 +18545,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     if (seq.cycle_touch_element != 1)
     {
       if ((dexed_live_mod.active_button == 0 && dexed_onscreen_algo != MicroDexed[selected_instance_id]->getAlgorithm()))
-        UI_draw_FM_algorithm(MicroDexed[selected_instance_id]->getAlgorithm(), 147, 86);
+        UI_draw_FM_algorithm(MicroDexed[selected_instance_id]->getAlgorithm(), 140, 86);
       dexed_onscreen_algo = MicroDexed[selected_instance_id]->getAlgorithm();
     }
 
@@ -21359,33 +21331,27 @@ FLASHMEM void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instan
   v = constrain(v, 0, MAX_VOICES - 1);
   char tmp[CONFIG_FILENAME_LEN];
   display.console = true;
-  File myFav;
-  if (sd_card > 0)
-  {
+  if (sd_card > 0) {
     display.setTextSize(1);
-    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d/%d.fav"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, v);
-    if (SD.exists(tmp))
-    { // is Favorite
+    sprintf(tmp, "/%s/%d/%s/%d/%d.fav", DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, v);
+    if (SD.exists(tmp)) { // is Favorite
       display.fillRect(4 * CHAR_width + 18, 5, 9, 9, GREEN);
       display.setCursor(4 * CHAR_width + 20, 6);
       display.setTextColor(COLOR_BACKGROUND, GREEN);
       display.print(F("F"));
-      if (ts.fav_buttton_state != 2)
-      {
-        draw_button_on_grid(37, 1, "REMOVE", "FAV.", 2);
+      if (ts.fav_buttton_state != 2) {
+        TouchButton::drawButton(GRID.X[4], GRID.Y[0], "REMOVE", "FAV", TouchButton::BUTTON_RED);
         ts.fav_buttton_state = 2;
       }
     }
-    else
-    {
+    else {
       // it is not a favorite
       display.fillRect(4 * CHAR_width + 18, 5, 9, 9, GREY2);
       display.setCursor(4 * CHAR_width + 20, 6);
       display.setTextColor(COLOR_BACKGROUND, GREY2);
       display.print(F("F"));
-      if (ts.fav_buttton_state != 1)
-      {
-        draw_button_on_grid(37, 1, "SET AS", "FAV.", 1);
+      if (ts.fav_buttton_state != 1) {
+        TouchButton::drawButton(GRID.X[4], GRID.Y[0], "SET AS", "FAV", TouchButton::BUTTON_ACTIVE);
         ts.fav_buttton_state = 1;
       }
     }
@@ -21894,15 +21860,8 @@ FLASHMEM void displayOp(char id, int _gridX, int _gridY, char link, char fb)
   display.print(id + 0);
 
   // Draw lines
-  uint16_t color;
-  if (opOn)
-  {
-    color = GREY2;
-  }
-  else
-  {
-    color = RED;
-  }
+  const uint16_t color = opOn ? GREY2 : RED;
+
   display.console = true;
   switch (link)
   {
@@ -21941,6 +21900,7 @@ FLASHMEM void displayOp(char id, int _gridX, int _gridY, char link, char fb)
     break;
   }
 
+
   switch (fb)
   {
   case 0:
@@ -21975,13 +21935,16 @@ FLASHMEM void displayOp(char id, int _gridX, int _gridY, char link, char fb)
 FLASHMEM void UI_draw_FM_algorithm(uint8_t algo, uint8_t x, uint8_t y)
 {
   UI_FM_offset_x = x;
-  UI_FM_offset_y = y + 3;
+  UI_FM_offset_y = y;
   display.console = true;
-  display.fillRect(x + 75, y + 4, 37, 22, COLOR_BACKGROUND);
-  display.fillRect(x + 23, y + 25, 93, 41, COLOR_BACKGROUND);
-  display.fillRect(x + 2, y + 66, 138, 27, COLOR_BACKGROUND);
 
-  setCursor_textGrid_small(33, 10);
+  display.fillRect(x + 75, y, 50, 22, COLOR_BACKGROUND);
+  display.fillRect(x, y + 22, 150, 70, COLOR_BACKGROUND);
+
+  display.drawRect(x + 75, y, 50, 22, COLOR_ARP);
+  display.drawRect(x, y + 22, 150, 70, COLOR_ARP);
+
+  setCursor_textGrid_small(27, 9);
   display.setTextSize(1);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   print_formatted_number(algo + 1, 2);
