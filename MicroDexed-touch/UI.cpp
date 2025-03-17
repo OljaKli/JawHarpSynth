@@ -4739,188 +4739,47 @@ FLASHMEM void UI_func_map_gamepad(uint8_t param)
   }
 }
 
-FLASHMEM void reverb_roomsize(int8_t factorChange)
+FLASHMEM void reverb_roomsize(int8_t change)
 {
-  configuration.fx.reverb_roomsize = constrain(configuration.fx.reverb_roomsize + factorChange * ENCODER[ENC_R].speed(), REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX);
+  configuration.fx.reverb_roomsize = constrain(configuration.fx.reverb_roomsize + change, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX);
   // display_bar_int("Reverb Room", configuration.fx.reverb_roomsize, 1.0, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX, 3, false, false, false);
   reverb.size(mapfloat(configuration.fx.reverb_roomsize, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_lowpass(int8_t factorChange)
+FLASHMEM void reverb_lowpass(int8_t change)
 {
-  configuration.fx.reverb_lowpass = constrain(configuration.fx.reverb_lowpass + factorChange * ENCODER[ENC_R].speed(), REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX);
+  configuration.fx.reverb_lowpass = constrain(configuration.fx.reverb_lowpass + change, REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX);
   // display_bar_int("Reverb Lowpass", configuration.fx.reverb_lowpass, 1.0, REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX, 3, false, false, false);
   reverb.lowpass(mapfloat(configuration.fx.reverb_lowpass, REVERB_LOWPASS_MIN, REVERB_LOWPASS_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_lodamp(int8_t factorChange)
+FLASHMEM void reverb_lodamp(int8_t change)
 {
-  configuration.fx.reverb_lodamp = constrain(configuration.fx.reverb_lodamp + factorChange * ENCODER[ENC_R].speed(), REVERB_LODAMP_MIN, REVERB_LODAMP_MAX);
+  configuration.fx.reverb_lodamp = constrain(configuration.fx.reverb_lodamp + change, REVERB_LODAMP_MIN, REVERB_LODAMP_MAX);
   // display_bar_int("Reverb Lodamp.", configuration.fx.reverb_lodamp, 1.0, REVERB_LODAMP_MIN, REVERB_LODAMP_MAX, 3, false, false, false);
   reverb.lodamp(mapfloat(configuration.fx.reverb_lodamp, REVERB_LODAMP_MIN, REVERB_LODAMP_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_hidamp(int8_t factorChange)
+FLASHMEM void reverb_hidamp(int8_t change)
 {
-  configuration.fx.reverb_hidamp = constrain(configuration.fx.reverb_hidamp + factorChange * ENCODER[ENC_R].speed(), REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX);
+  configuration.fx.reverb_hidamp = constrain(configuration.fx.reverb_hidamp + change, REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX);
   // display_bar_int("Reverb Hidamp.", configuration.fx.reverb_hidamp, 1.0, REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX, 3, false, false, false);
   reverb.hidamp(mapfloat(configuration.fx.reverb_hidamp, REVERB_HIDAMP_MIN, REVERB_HIDAMP_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_diffusion(int8_t factorChange)
+FLASHMEM void reverb_diffusion(int8_t change)
 {
-  configuration.fx.reverb_diffusion = constrain(configuration.fx.reverb_diffusion + factorChange * ENCODER[ENC_R].speed(), REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX);
+  configuration.fx.reverb_diffusion = constrain(configuration.fx.reverb_diffusion + change, REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX);
   // display_bar_int("Reverb Diff.", configuration.fx.reverb_diffusion, 1.0, REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX, 3, false, false, false);
   reverb.diffusion(mapfloat(configuration.fx.reverb_diffusion, REVERB_DIFFUSION_MIN, REVERB_DIFFUSION_MAX, 0.0, 1.0));
 }
 
-FLASHMEM void reverb_level(int8_t factorChange)
+FLASHMEM void reverb_level(int8_t change)
 {
-  configuration.fx.reverb_level = constrain(configuration.fx.reverb_level + factorChange * ENCODER[ENC_R].speed(), REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
+  configuration.fx.reverb_level = constrain(configuration.fx.reverb_level + change, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX);
   // display_bar_int("Reverb Level", configuration.fx.reverb_level, 1.0, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 3, false, false, true);
   master_mixer_r.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
   master_mixer_l.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
-}
-
-FLASHMEM void UI_func_chorus_frequency(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    encoderDir[ENC_R].reset();
-
-    display_bar_float("Chorus Frq.", configuration.fx.chorus_frequency[selected_instance_id], 0.1, CHORUS_FREQUENCY_MIN, CHORUS_FREQUENCY_MAX, 2, 1, false, false, true);
-    UI_update_instance_icons();
-  }
-
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
-      configuration.fx.chorus_frequency[selected_instance_id] = constrain(configuration.fx.chorus_frequency[selected_instance_id] + e.dir * e.speed, CHORUS_FREQUENCY_MIN, CHORUS_FREQUENCY_MAX);
-    }
-    if(e.pressed) {
-      selected_instance_id = !selected_instance_id;
-      UI_update_instance_icons();
-    }
-    display_bar_float("Chorus Frq.", configuration.fx.chorus_frequency[selected_instance_id], 0.1, CHORUS_FREQUENCY_MIN, CHORUS_FREQUENCY_MAX, 2, 1, false, false, false);
-    chorus_modulator[selected_instance_id]->frequency(configuration.fx.chorus_frequency[selected_instance_id] / 20.0);
-  }
-
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    encoderDir[ENC_R].reset();
-  }
-}
-
-FLASHMEM void UI_func_chorus_waveform(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    encoderDir[ENC_R].reset();
-
-    setCursor_textGrid(1, 1);
-    display.print(F("Chorus Wavefrm"));
-    UI_update_instance_icons();
-  }
-
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
-      configuration.fx.chorus_waveform[selected_instance_id] = constrain(configuration.fx.chorus_waveform[selected_instance_id] + e.dir, CHORUS_WAVEFORM_MIN, CHORUS_WAVEFORM_MAX);
-    }
-    if(e.pressed) {
-      selected_instance_id = !selected_instance_id;
-      UI_update_instance_icons();
-    }
-
-    setCursor_textGrid(1, 2);
-    switch (configuration.fx.chorus_waveform[selected_instance_id])
-    {
-    case 0:
-      chorus_modulator[selected_instance_id]->begin(WAVEFORM_TRIANGLE);
-      display.print(F("[TRIANGLE]"));
-      break;
-    case 1:
-      chorus_modulator[selected_instance_id]->begin(WAVEFORM_SINE);
-      display.print(F("[SINE    ]"));
-      break;
-    default:
-      chorus_modulator[selected_instance_id]->begin(WAVEFORM_TRIANGLE);
-      display.print(F("[TRIANGLE]"));
-      break;
-    }
-  }
-
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    encoderDir[ENC_R].reset();
-  }
-}
-
-FLASHMEM void UI_func_chorus_depth(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    encoderDir[ENC_R].reset();
-
-    display_bar_int("Chorus Dpt.", configuration.fx.chorus_depth[selected_instance_id], 1.0, CHORUS_DEPTH_MIN, CHORUS_DEPTH_MAX, 3, false, false, true);
-    UI_update_instance_icons();
-  }
-
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
-      configuration.fx.chorus_depth[selected_instance_id] = constrain(configuration.fx.chorus_depth[selected_instance_id] + e.dir * e.speed, CHORUS_DEPTH_MIN, CHORUS_DEPTH_MAX);
-    }
-    if(e.pressed) {
-      selected_instance_id = !selected_instance_id;
-      UI_update_instance_icons();
-    }
-
-    display_bar_int("Chorus Dpt.", configuration.fx.chorus_depth[selected_instance_id], 1.0, CHORUS_DEPTH_MIN, CHORUS_DEPTH_MAX, 3, false, false, false);
-    chorus_modulator[selected_instance_id]->amplitude(configuration.fx.chorus_depth[selected_instance_id] / 1000.0);
-  }
-
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    encoderDir[ENC_R].reset();
-  }
-}
-
-FLASHMEM void UI_func_chorus_level(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    encoderDir[ENC_R].reset();
-
-    display_bar_int("Chorus Lvl.", configuration.fx.chorus_level[selected_instance_id], 1.0, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 3, false, false, true);
-
-    UI_update_instance_icons();
-  }
-
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
-      configuration.fx.chorus_level[selected_instance_id] = constrain(configuration.fx.chorus_level[selected_instance_id] + e.dir * e.speed, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
-      MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 93, configuration.fx.chorus_level[selected_instance_id]);
-    }
-    if(e.pressed) {
-      selected_instance_id = !selected_instance_id;
-      UI_update_instance_icons();
-    }
-
-    display_bar_int("Chorus Lvl.", configuration.fx.chorus_level[selected_instance_id], 1.0, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 3, false, false, false);
-    dexed_chorus_mixer_r[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
-    dexed_chorus_mixer_l[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
-  }
-
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    encoderDir[ENC_R].reset();
-  }
 }
 
 FLASHMEM void master_effects_set_delay_time(uint8_t instance, int8_t change)
@@ -4969,7 +4828,6 @@ FLASHMEM void master_effects_set_delay_time(uint8_t instance, int8_t change)
     }
     else
     {
-
       if (configuration.fx.delay_time[instance] <= DELAY_TIME_MIN)
         delay_fx[instance]->disable(0);
       else
@@ -5407,7 +5265,7 @@ FLASHMEM void UI_func_dexed_audio(uint8_t param)
       &fx_current_instance_getter, [](Editor* editor, int16_t value)
       {
         fx_current_instance_setter(editor, value);
-        chorus_modulator[selected_instance_id]->amplitude(value / 1000.0); });
+        chorus_modulator[selected_instance_id]->amplitude(value / 100.0); });
     ui.addEditor("LEVEL", CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, &configuration.fx.chorus_level[0],
       &fx_current_instance_getter, [](Editor* editor, int16_t value)
       {
@@ -7833,10 +7691,12 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
         {
           if (seq.note_data[seq.active_pattern][i] == 130) // it is a latched note
           {
-            if (i == currentstep)
+            if (i == currentstep) {
               display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-            else
+            }
+            else {
               display.setTextColor(GREEN, COLOR_BACKGROUND);
+            }
             display.write(0x7E);
             display.print("LATCH"); // Tilde Symbol for latched note
           }
@@ -7861,7 +7721,6 @@ void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool in
       }
       while (display.getCursorX() < CHAR_width_small * 32)
       {
-
         sub_set_color_print_track_step_detailed(i, currentstep);
         display.print(" ");
       }
@@ -7883,7 +7742,6 @@ FLASHMEM void seq_sub_pattern_editor_print_slicename_toprow()
   {
     sel = 1;
   }
-
 
   if (seq.menu == 0)
   {
@@ -7948,9 +7806,7 @@ FLASHMEM void print_seq_step_slicename_textonly()
     display.print(name);
     display.print("#");
     print_formatted_number(seq.note_data[seq.active_pattern][seq.menu - 3] - 48 - num_slices[0] + 1, 2);
-
   }
-
 }
 
 FLASHMEM void print_active_slice_textonly()
@@ -13739,32 +13595,32 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
         case 35:
           // reverb room size
-          reverb_roomsize(e.dir);
+          reverb_roomsize(e.dir * e.speed);
           print_small_intbar(43, 4, configuration.fx.reverb_roomsize, 35, 1, 0);
           break;
 
         case 36:
-          reverb_lowpass(e.dir);
+          reverb_lowpass(e.dir * e.speed);
           print_small_intbar(43, 5, configuration.fx.reverb_lowpass, 36, 1, 0);
           break;
 
         case 37:
-          reverb_lodamp(e.dir);
+          reverb_lodamp(e.dir * e.speed);
           print_small_intbar(43, 6, configuration.fx.reverb_lodamp, 37, 1, 0);
           break;
 
         case 38:
-          reverb_hidamp(e.dir);
+          reverb_hidamp(e.dir * e.speed);
           print_small_intbar(43, 7, configuration.fx.reverb_hidamp, 38, 1, 0);
           break;
 
         case 39:
-          reverb_diffusion(e.dir);
+          reverb_diffusion(e.dir * e.speed);
           print_small_intbar(43, 8, configuration.fx.reverb_diffusion, 39, 1, 0);
           break;
 
         case 40:
-          reverb_level(e.dir);
+          reverb_level(e.dir * e.speed);
           print_small_intbar(43, 9, configuration.fx.reverb_level, 40, 1, 0);
           break;
 
@@ -18541,8 +18397,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
     print_voice_settings_in_dexed_voice_select(false, false);
 
-    if (dexed_live_mod.active_button == 99) // if button press had confirmed live mod settings and is now unselected,
-      dexed_live_mod.active_button = 0;     // skip button push from voice_select once, then back to normal
     // debug
     //     display.setCursor(CHAR_width, 11 * CHAR_height  );
     //     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);

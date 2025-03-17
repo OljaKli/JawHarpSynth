@@ -263,7 +263,6 @@ FLASHMEM bool handleLiveModButtons(void) {
     if(TouchButton::isPressed(GRID.X[step], GRID.Y[5] - 23)) {
       pressedOne = true;
       if (buttonStep != step) {
-        DBG_LOG(printf("set active %i\n", step + 1));
         dexed_live_mod.active_button = step + 1;
       }
       else {
@@ -282,6 +281,9 @@ FLASHMEM bool handleLiveModButtons(void) {
       print_empty_spaces(9,1);
       display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
       display.print(F(" PUSH TO RETURN"));
+    } 
+    else {
+      print_voice_select_default_help();
     }
   }
   return pressedOne;
@@ -289,9 +291,10 @@ FLASHMEM bool handleLiveModButtons(void) {
 
 FLASHMEM void handle_touchscreen_voice_select()
 {
-  bool pressed = handleLiveModButtons();
-
-  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+  if(handleLiveModButtons()) {
+    // touch handled
+  }
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
     if (seq.cycle_touch_element == 1) {
       border3_large_clear();
       seq.cycle_touch_element = 0;
@@ -299,7 +302,7 @@ FLASHMEM void handle_touchscreen_voice_select()
       print_voice_settings_in_dexed_voice_select(true, true);
       printLiveModButtons();
       print_voice_select_default_help();
-      draw_algo(true);
+      draw_algo(true); // force redraw
     }
     else {
       border3_large_clear();
@@ -331,22 +334,15 @@ FLASHMEM void handle_touchscreen_voice_select()
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
       }
 
-      else if(pressed == false && numTouchPoints > 0) //if touched somewhere else reset modifier edit mode
-      {
-        //dexed_live_mod.active_button = 0;
-        //printLiveModButtons();
-     
-        if (dexed_live_mod.active_button == 0) {
-          DBG_LOG(printf("default\n"));
-          print_voice_select_default_help();
-        }
-        print_voice_settings_in_dexed_voice_select(false, true);
-
+      else if(TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
+        //if touched somewhere else, reset live modifier edit mode
+        dexed_live_mod.active_button = 0;
+        printLiveModButtons();
       }
     }
-  }
-  if (seq.cycle_touch_element == 1) {
-    handleTouchVirtualKeyboard();
+    else {
+      handleTouchVirtualKeyboard();
+    }
   }
 }
 
@@ -365,10 +361,7 @@ FLASHMEM void update_step_rec_buttons()
 {
   if (seq.cycle_touch_element == 1)
   {
-    if (seq.content_type[seq.active_pattern] == 0)
-      draw_button_on_grid(36, 6, "LATCH", "NOTE", 98);
-    else
-      draw_button_on_grid(36, 6, "LATCH", "NOTE", 1);
+    update_latch_button();
 
     draw_button_on_grid(45, 6, "EMPTY", "STEP", 1);
 

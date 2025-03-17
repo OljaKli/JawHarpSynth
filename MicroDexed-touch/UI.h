@@ -114,7 +114,6 @@ void UI_func_sample_editor(uint8_t param);
 void UI_func_midiplayer(uint8_t param);
 void UI_func_test_touchscreen(uint8_t param);
 void UI_func_sound_intensity(uint8_t param);
-void UI_func_chorus_level(uint8_t param);
 void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
 

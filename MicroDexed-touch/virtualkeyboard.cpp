@@ -41,15 +41,14 @@ void touch_check_all_keyboard_buttons();
 
 FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 {
-  if ((ts.virtual_keyboard_instrument == VK_LIVESEQUENCER) && (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer))) {
-    ts.virtual_keyboard_instrument = VK_DEXED0;
-  }
   if (ts.virtual_keyboard_instrument == VK_LIVESEQUENCER) {
+    if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_livesequencer)) {
+      ts.virtual_keyboard_instrument = VK_DEXED0;
+    }
     // do not draw instrument buttons for live sequencer
     drawFlags &= ~VK_DRAW_INSTRUMENT_BUTTONS;
   }
-
-  if (ts.virtual_keyboard_instrument != 0) { // livesequencer assigns display mode itself
+  else { // livesequencer assigns display mode itself
     ts.current_virtual_keyboard_display_mode = (ts.virtual_keyboard_instrument == VK_DRUMS) ? 1 : 0; // pad view for drums, key for other
   }
   const bool modeChanged = ts.current_virtual_keyboard_display_mode != ts.previous_virtual_keyboard_display_mode;
