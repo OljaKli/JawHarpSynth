@@ -142,7 +142,7 @@ void border3_large_clear();
 void seq_pattern_editor_update_dynamic_elements();
 void microsynth_refresh_lower_screen_static_text();
 void microsynth_refresh_lower_screen_dynamic_text();
-
+void panic_dexed_current_instance();
 void printLiveModButtons(void);
 void printLiveModButton(int8_t button); // 0 - 3 ADSR
 
@@ -152,7 +152,7 @@ void draw_volmeters_mixer();
 void draw_volmeters_multiband_compressor();
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 
-void draw_algo();
+void draw_algo(bool forceDraw = false);
 uint8_t get_algo();
 void set_algo(uint8_t value);
 

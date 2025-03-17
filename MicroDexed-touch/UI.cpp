@@ -17892,10 +17892,10 @@ FLASHMEM void print_voice_select_fav_search_button()
 
 }
 
-FLASHMEM void draw_algo()
+FLASHMEM void draw_algo(bool forceDraw)
 {
   const uint8_t algo = MicroDexed[selected_instance_id]->getAlgorithm();
-  if (dexed_onscreen_algo != algo) {
+  if (forceDraw || (dexed_onscreen_algo != algo)) {
     UI_draw_FM_algorithm(algo, 120, 90);
     dexed_onscreen_algo = algo;
   }

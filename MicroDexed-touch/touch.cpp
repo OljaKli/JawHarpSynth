@@ -255,11 +255,6 @@ FLASHMEM void print_current_chord()
 }
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
-extern void play_sample_off_virtual_drumpads(uint8_t note);
-extern uint8_t dexed_onscreen_algo;
-
-extern void panic_dexed_current_instance();
-
 
 FLASHMEM void handleLiveModButtons(void) {
   const int8_t buttonStep = dexed_live_mod.active_button - 1;
@@ -289,10 +284,10 @@ FLASHMEM void handle_touchscreen_voice_select()
       border3_large_clear();
       seq.cycle_touch_element = 0;
       TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
-      dexed_onscreen_algo = 88; //dummy value to force draw on screen init
       print_voice_settings_in_dexed_voice_select(true, true);
       printLiveModButtons();
       print_voice_select_default_help();
+      draw_algo(true);
     }
     else {
       border3_large_clear();
