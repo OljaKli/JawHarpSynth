@@ -24,14 +24,13 @@ typedef struct dexed_live_mod_s
 {
   int8_t active_button = 0;
   int8_t orig_adsr_values[NUM_DEXED][4][6];
-  int8_t live_adsr_values[NUM_DEXED][4]; // -30 to +30
+  int8_t live_adsr_values[NUM_DEXED][4]; // -50 to +50 ADSR live mod
 } dexed_live_mod_t;
 
 typedef struct ts_s
 {
   uint8_t virtual_keyboard_octave = 3;
   uint8_t virtual_keyboard_instrument = VK_DEXED0;
-  uint8_t virtual_keyboard_prev_instrument = 0xFF;
   uint8_t virtual_keyboard_midi_channel = 1;
   uint8_t virtual_keyboard_velocity = 120;
   uint8_t msp_peak[NUM_MULTISAMPLES];
@@ -57,7 +56,6 @@ typedef struct fm_s
   uint8_t wav_recorder_mode = 0;
 
   uint8_t sample_source = 0; // 0 = SD, 1 = UNUSED, 2 = MSP1, 3 = MSP2, 4 = PSRAM
-  int sample_screen_position_x = 0;
   uint8_t active_window = 0; // 0 = left window (SDCARD) , 1 = PSRAM
   uint16_t sd_sum_files = 0;
   uint8_t sd_cap_rows;
