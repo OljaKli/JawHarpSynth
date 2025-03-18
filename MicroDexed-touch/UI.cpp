@@ -1403,7 +1403,7 @@ FLASHMEM const EncoderEvents getEncoderEvents(uint8_t id) {
   return result;
 }
 
-long g_LCDML_CONTROL_button_press_time[NUM_ENCODER] = { 0, 0 };
+uint32_t g_LCDML_CONTROL_button_press_time[NUM_ENCODER] = { 0, 0 };
 bool g_LCDML_CONTROL_button_prev[NUM_ENCODER] = { HIGH, HIGH };
 
 FLASHMEM void fill_up_with_spaces_right_window()
@@ -3651,7 +3651,6 @@ public:
  ***********************************************************************/
 uint8_t touchX = 0;
 uint8_t touchY = 0;
-extern void boot_animation();
 
 FLASHMEM void lcdml_menu_control(void)
 {
@@ -3670,7 +3669,7 @@ FLASHMEM void lcdml_menu_control(void)
   }
 
   // Volatile Variables
-  long g_LCDML_CONTROL_Encoder_position[NUM_ENCODER] = { ENCODER[ENC_R].read(), ENCODER[ENC_L].read() };
+  int8_t g_LCDML_CONTROL_Encoder_position[NUM_ENCODER] = { ENCODER[ENC_R].read(), ENCODER[ENC_L].read() };
 
   button[0] = digitalRead(BUT_R_PIN);
   button[1] = digitalRead(BUT_L_PIN);
