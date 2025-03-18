@@ -349,7 +349,6 @@ void UI_func_startup_page(uint8_t param);
 void UI_func_sysex_send_bank(uint8_t param);
 void UI_func_startup_performance(uint8_t param);
 void UI_func_sysex_send_voice(uint8_t param);
-void UI_func_velocity_level(uint8_t param); // unused
 void UI_func_save_voice(uint8_t param);
 void UI_func_midi_soft_thru(uint8_t param);
 void UI_func_smart_filter(uint8_t param);
@@ -17934,35 +17933,6 @@ FLASHMEM void decrement_dexed_instance_in_voice_select()
   print_voice_settings_in_dexed_voice_select(false, true);
   UI_update_instance_icons();
 };
-
-FLASHMEM void UI_func_velocity_level(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    encoderDir[ENC_R].reset();
-    display_bar_int("Velocity Lvl", configuration.dexed[selected_instance_id].velocity_level, 1.0, VELOCITY_LEVEL_MIN, VELOCITY_LEVEL_MAX, 3, false, false, true);
-
-    UI_update_instance_icons();
-  }
-
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    if (e.turned) {
-      configuration.dexed[selected_instance_id].velocity_level = constrain(configuration.dexed[selected_instance_id].velocity_level + e.dir * e.speed, VELOCITY_LEVEL_MIN, VELOCITY_LEVEL_MAX);
-    }
-    if (e.pressed) {
-      selected_instance_id = !selected_instance_id;
-      UI_update_instance_icons();
-    }
-    
-    display_bar_int("Velocity Lvl", configuration.dexed[selected_instance_id].velocity_level, 1.0, VELOCITY_LEVEL_MIN, VELOCITY_LEVEL_MAX, 3, false, false, false);
-  }
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    encoderDir[ENC_R].reset();
-  }
-}
 
 FLASHMEM void UI_update_instance_icons()
 {
