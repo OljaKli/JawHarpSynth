@@ -145,15 +145,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     }
   }
   if (LCDML.FUNC_loop()) {
-    if (LCDML.BT_checkDown()) {
-      handleEncoderRight(+1);
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      handleEncoderRight(e.dir);
     }
-    if (LCDML.BT_checkUp()) {
-      handleEncoderRight(-1);
-    }
-    if (LCDML.BT_checkEnter()) {
+    if (e.pressed) {
       toggleSettingActivated();
     }
+    
     const bool runningChanged = isRunningHere != data.isRunning;
     const bool justStopped = isRunningHere && !data.isRunning;
     if (runningChanged) {

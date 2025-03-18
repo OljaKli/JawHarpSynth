@@ -437,10 +437,8 @@ PROGMEM const uint8_t special_chars[24][8] = {
 };
 
 enum {
-  MENU_VOICE_POOL,
-  MENU_VOICE_BANK,
-  MENU_VOICE_SOUND,
-  MENU_VOICE_NONE
+  MENU_VOICE_BANK = 2,
+  MENU_VOICE_SOUND = 3
 };
 
 void selectSample(uint8_t sample);
@@ -1235,7 +1233,7 @@ FLASHMEM void drawScrollbar(uint16_t x, uint16_t y, uint8_t sbNbLines, uint8_t n
     int8_t posOffset = 0;
     if (currentItem == nbTotalItems - 1)
       posOffset = -1;
-    //    if(currentItem > 0 && currentItem < nbTotalItems -1)
+    //    if (currentItem > 0 && currentItem < nbTotalItems -1)
     //      posOffset = -1;
     display.fillRect(x, y + currentItem * sbItemSize + posOffset, CHAR_width_small, sbItemSize, COLOR_SYSTEXT);
   }
@@ -1382,23 +1380,23 @@ bool button[NUM_ENCODER];
 
 FLASHMEM const EncoderEvents getEncoderEvents(uint8_t id) {
   EncoderEvents result = { 0 };
-  if(LCDML.BT_checkDown() && encoderDir[id].Down()) {
+  if (LCDML.BT_checkDown() && encoderDir[id].Down()) {
     result.down = true;
     result.dir = TurnDir::TURN_DN;
   }
-  if(LCDML.BT_checkUp() && encoderDir[id].Up()) {
+  if (LCDML.BT_checkUp() && encoderDir[id].Up()) {
     result.up = true;
     result.dir = TurnDir::TURN_UP;
   }
-  if(result.up || result.down) {
+  if (result.up || result.down) {
     result.turned = true;
     result.speed = ENCODER[id].speed();
   }
-  if(LCDML.BT_checkEnter()) {
-    if(encoderDir[id].ButtonShort()) {
+  if (LCDML.BT_checkEnter()) {
+    if (encoderDir[id].ButtonShort()) {
       result.pressed = true;
     }
-    if(encoderDir[id].ButtonLong()) {
+    if (encoderDir[id].ButtonLong()) {
       result.longPressed = true;
     }
   }
@@ -4880,11 +4878,11 @@ FLASHMEM void UI_func_filter_cutoff(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       configuration.fx.filter_cutoff[selected_instance_id] = constrain(configuration.fx.filter_cutoff[selected_instance_id] + e.dir * e.speed, FILTER_CUTOFF_MIN, FILTER_CUTOFF_MAX);
       MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 104, configuration.fx.filter_cutoff[selected_instance_id]);
     }
-    if(e.pressed) {
+    if (e.pressed) {
       selected_instance_id = !selected_instance_id;
       UI_update_instance_icons();
     }
@@ -4913,11 +4911,11 @@ FLASHMEM void UI_func_filter_resonance(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       configuration.fx.filter_resonance[selected_instance_id] = constrain(configuration.fx.filter_resonance[selected_instance_id] + e.dir * e.speed, FILTER_RESONANCE_MIN, FILTER_RESONANCE_MAX);
       MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 103, configuration.fx.filter_resonance[selected_instance_id]);
     }
-    if(e.pressed) {
+    if (e.pressed) {
       selected_instance_id = !selected_instance_id;
       UI_update_instance_icons();
     }
@@ -4966,11 +4964,11 @@ FLASHMEM void UI_func_sound_intensity(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       configuration.dexed[selected_instance_id].sound_intensity = constrain(configuration.dexed[selected_instance_id].sound_intensity + e.dir * e.speed, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX);
       MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, configuration.dexed[selected_instance_id].sound_intensity);
     }
-    if(e.pressed) {
+    if (e.pressed) {
       selected_instance_id = !selected_instance_id;
       UI_update_instance_icons();
     }
@@ -5020,10 +5018,11 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   {
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(2);
-    if (LCDML.BT_checkDown())
-      configuration.sys.favorites = constrain(configuration.sys.favorites + 1, 0, 3);
-    else if (LCDML.BT_checkUp())
-      configuration.sys.favorites = constrain(configuration.sys.favorites - 1, 0, 3);
+
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
+      configuration.sys.favorites = constrain(configuration.sys.favorites + e.dir, 0, 3);
+    }
 
     setCursor_textGrid(1, 2);
     switch (configuration.sys.favorites)
@@ -5094,10 +5093,11 @@ FLASHMEM void UI_func_stereo_mono(uint8_t param)
   {
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(2);
-    if (LCDML.BT_checkDown())
-      configuration.sys.mono = constrain(configuration.sys.mono + 1, MONO_MIN, MONO_MAX);
-    else if (LCDML.BT_checkUp())
-      configuration.sys.mono = constrain(configuration.sys.mono - 1, MONO_MIN, MONO_MAX);
+
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if(e.turned) {
+      configuration.sys.mono = constrain(configuration.sys.mono + e.dir, MONO_MIN, MONO_MAX);
+    }
 
     setCursor_textGrid(1, 2);
     switch (configuration.sys.mono)
@@ -5457,11 +5457,11 @@ FLASHMEM void UI_handle_OP(uint8_t param)
     display.setTextSize(2);
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       op_selected = constrain(op_selected + e.dir, 0, 5);
     }
     
-    if(e.longPressed) {
+    if (e.longPressed) {
       if (selected_instance_id < NUM_DEXED - 1) {
         selected_instance_id++;
       } else {
@@ -5470,7 +5470,7 @@ FLASHMEM void UI_handle_OP(uint8_t param)
       UI_update_instance_icons();
     }
 
-    if(e.pressed) {
+    if (e.pressed) {
       if (bitRead(configuration.dexed[selected_instance_id].op_enabled, op_selected)) {
         bitClear(configuration.dexed[selected_instance_id].op_enabled, op_selected);
       } else {
@@ -5626,9 +5626,9 @@ FLASHMEM void UI_func_seq_probabilities(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (generic_menu == 0) {
-        if(e.down) {
+        if (e.down) {
           temp_int = constrain(temp_int + 1, 0, NUM_SEQ_PATTERN - 1);
           if (generic_temp_select_menu < NUM_SEQ_PATTERN - 1 - 13 && temp_int > 13) {
             generic_temp_select_menu++;
@@ -5646,7 +5646,7 @@ FLASHMEM void UI_func_seq_probabilities(uint8_t param)
       }
     }
 
-    if(e.pressed) {
+    if (e.pressed) {
       generic_menu++;
       if (generic_menu > 2) {
         generic_menu = 0;
@@ -5899,7 +5899,7 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
         draw_scrollbar_custom_mappings();
       }
     }
-    if(e.longPressed) {
+    if (e.longPressed) {
       selected_instance_id = !selected_instance_id;
       print_custom_mapping_cc();
     }
@@ -6492,7 +6492,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (generic_active_function == 0) {
         // navigate through menu
         generic_temp_select_menu = constrain(generic_temp_select_menu + (e.dir * 1), 0, 10);
@@ -6554,7 +6554,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
         }
       }
     }
-    if(e.pressed) {
+    if (e.pressed) {
       generic_active_function = !generic_active_function;
     }
 
@@ -7292,7 +7292,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0)
       {
         if (fm.sample_source == 2 || fm.sample_source == 3) {
@@ -7414,35 +7414,17 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
       {
         if ((generic_temp_select_menu - 6) % 2 == 0)
         {
-          if (LCDML.BT_checkDown())
-          {
-            slice_start[0][(generic_temp_select_menu - 6) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
-            //
-            if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0)
-              slice_end[0][(generic_temp_select_menu - 7) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2];
-          }
-          else if (LCDML.BT_checkUp())
-          {
-            slice_start[0][(generic_temp_select_menu - 6) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
-            //
-            if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0)
-              slice_end[0][(generic_temp_select_menu - 7) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2];
+          // slice start
+          slice_start[0][(generic_temp_select_menu - 6) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2] + e.dir * slices_scrollspeed;
+          if (slices_autoalign && (generic_temp_select_menu - 7) / 2 >= 0) {
+            slice_end[0][(generic_temp_select_menu - 7) / 2] = slice_start[0][(generic_temp_select_menu - 6) / 2];
           }
         }
-        else
-        {
-          if (LCDML.BT_checkDown())
-          {
-            slice_end[0][(generic_temp_select_menu - 6) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2] + slices_scrollspeed;
-            //
-            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices[0])
-              slice_start[0][(generic_temp_select_menu - 5) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2];
-          }
-          else if (LCDML.BT_checkUp())
-          {
-            slice_end[0][(generic_temp_select_menu - 6) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2] - slices_scrollspeed;
-            if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices[0])
-              slice_start[0][(generic_temp_select_menu - 5) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2];
+        else {
+          // slice end
+          slice_end[0][(generic_temp_select_menu - 6) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2] + e.dir * slices_scrollspeed;
+          if (slices_autoalign && (generic_temp_select_menu - 5) / 2 >= 0 && (generic_temp_select_menu - 5) / 2 < num_slices[0]) {
+            slice_start[0][(generic_temp_select_menu - 5) / 2] = slice_end[0][(generic_temp_select_menu - 6) / 2];
           }
         }
 
@@ -7931,7 +7913,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.active_function == 99)
       {
         if (e.down) {
@@ -8567,7 +8549,7 @@ FLASHMEM void seq_sub_copy_swap(EncoderEvents e)
 
 FLASHMEM void seq_sub_pattern_fill(EncoderEvents e)
 {
-  if(e.turned) {
+  if (e.turned) {
     if (seq.menu == 33)
     { // is in sub-function - fill pattern
       seq.active_function = 95;
@@ -8729,7 +8711,7 @@ FLASHMEM void seq_sub_pattern_transpose(EncoderEvents e)
   if (seq.menu == 34)
   { // is in transpose edit
     seq.active_function = 94;
-    if(e.turned) {
+    if (e.turned) {
       temp_int = constrain(temp_int + e.dir, -36, 36);
     }
   }
@@ -8844,7 +8826,7 @@ FLASHMEM void seq_sub_pitch_edit_pitched_sample(EncoderEvents e)
 {
   if (seq.active_function == 40)
   { // pitch edit sample
-    if(e.turned) {
+    if (e.turned) {
       seq.note_data[seq.active_pattern][seq.menu - 3] = constrain(seq.note_data[seq.active_pattern][seq.menu - 3] + e.dir, 12, 108);
     }
   }
@@ -10538,7 +10520,7 @@ FLASHMEM void UI_func_epiano(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0) {
         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 24);
       }
@@ -10614,7 +10596,7 @@ FLASHMEM void UI_func_epiano(uint8_t param)
           configuration.epiano.midi_channel = constrain(configuration.epiano.midi_channel + e.dir, EP_MIDI_CHANNEL_MIN, EP_MIDI_CHANNEL_MAX + 1);
       }
     }
-    if(e.pressed) {
+    if (e.pressed) {
       seq.edit_state = !seq.edit_state;
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -10881,7 +10863,7 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0) {
         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 35);
       }
@@ -10966,11 +10948,11 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
       }
     }
 
-    if(e.pressed) {
+    if (e.pressed) {
       seq.edit_state = !seq.edit_state;
       generic_full_draw_required = true;
     }
-    if(e.longPressed) {
+    if (e.longPressed) {
       if (microsynth_selected_instance == 0) {
         microsynth_selected_instance = 1;
       }
@@ -11171,7 +11153,7 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
         seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] = constrain(seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] + e.dir * e.speed, 0, 254);
       }
     }
-    if(e.pressed) {
+    if (e.pressed) {
       seq.edit_state = !seq.edit_state;
     }
     for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
@@ -12200,7 +12182,7 @@ FLASHMEM void UI_func_arpeggio(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == false)
         generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 5);
       else if (generic_temp_select_menu == 0)
@@ -12557,7 +12539,7 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
     display.setTextSize(2);
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0)
       {
         temp_int = constrain(temp_int + e.dir, 0, 99);
@@ -12698,13 +12680,13 @@ FLASHMEM void UI_func_save_performance(uint8_t param)
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
-      if(mode == 0) {
+      if (mode == 0) {
         temp_int = constrain(temp_int + e.dir * e.speed, 0, 99);
       } else {
         yesno = e.down;
       }
     }
-    if(e.pressed) {
+    if (e.pressed) {
       if (mode == 0 && overwrite == true) {
         mode = 1;
         setCursor_textGrid(1, 2);
@@ -13353,7 +13335,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
       update_selective_values_master_effects();
     }
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0) {
         if (e.down && generic_temp_select_menu < 48)
           generic_temp_select_menu++;
@@ -14782,7 +14764,7 @@ FLASHMEM void UI_func_recorder(uint8_t param)
     if (e.turned) {
       temp_int = constrain(temp_int + e.dir * e.speed, 0, 254); 
     }
-    if(e.pressed) {
+    if (e.pressed) {
       if (fm.wav_recorder_mode == 0) {
         startWavRecording();
       }
@@ -15049,7 +15031,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0) {
         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 22);
       }
@@ -15599,7 +15581,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
   {
     multisample_zone_t &zoneEdited = msz[seq.active_multisample][generic_temp_select_menu - 3];
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state && generic_temp_select_menu == 0)
       {
         seq.active_multisample = constrain(seq.active_multisample + e.dir * e.speed, 0, NUM_MULTISAMPLES);
@@ -16062,7 +16044,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (fm.active_window == 0) { // left window, SDCARD
         if (e.down) {
           if (fm.sd_selected_file == fm.sd_cap_rows && fm.sd_cap_rows > 8 && fm.sd_skip_files < fm.sd_sum_files - fm.sd_cap_rows - 1)
@@ -16146,7 +16128,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
             const uint8_t sampleIndex = fm.psram_selected_file + 6 + fm.psram_skip_files;
             sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
-            if(drum_config[sampleIndex].drum_data != nullptr) {
+            if (drum_config[sampleIndex].drum_data != nullptr) {
               strcpy(drum_config[sampleIndex].filename, fm.sd_full_name.c_str());
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);
               print_psram_stats_filemanager();
@@ -16221,7 +16203,7 @@ FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
     display.setTextSize(2);
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       configuration.sys.soft_midi_thru = constrain(configuration.sys.soft_midi_thru + e.dir, SOFT_MIDI_THRU_MIN, SOFT_MIDI_THRU_MAX);
     }
     
@@ -16344,10 +16326,10 @@ FLASHMEM void UI_func_sd_content_not_found(uint8_t param)
   if (LCDML.FUNC_loop())
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       // nothing yet
     }
-    if(e.pressed) {
+    if (e.pressed) {
       // nothing yet
     }
   }
@@ -16413,7 +16395,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
   if (LCDML.FUNC_loop())
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0)
         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 11);
       else if (generic_temp_select_menu == 0)
@@ -16444,7 +16426,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
         slices_midi_channel = constrain(slices_midi_channel + e.dir, 0, 17);
     }
     // handle button presses during menu
-    if(e.pressed) {
+    if (e.pressed) {
       seq.edit_state = !seq.edit_state;
     }
     // button check end
@@ -17171,13 +17153,10 @@ FLASHMEM void UI_func_mixer(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (!seq.edit_state) // select channel
       {
-        if (LCDML.BT_checkDown())
-          seq.temp_active_menu = constrain(seq.temp_active_menu + 1, 0, 12);
-        else if (LCDML.BT_checkUp())
-          seq.temp_active_menu = constrain(seq.temp_active_menu - 1, 0, 12);
+        seq.temp_active_menu = constrain(seq.temp_active_menu + e.dir, 0, 12);
       }
       else
       {
@@ -17703,7 +17682,7 @@ FLASHMEM void UI_func_smart_filter(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       seq.smartfilter = !seq.smartfilter;
     }
 
@@ -17970,10 +17949,10 @@ FLASHMEM void UI_func_velocity_level(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       configuration.dexed[selected_instance_id].velocity_level = constrain(configuration.dexed[selected_instance_id].velocity_level + e.dir * e.speed, VELOCITY_LEVEL_MIN, VELOCITY_LEVEL_MAX);
     }
-    if(e.pressed) {
+    if (e.pressed) {
       selected_instance_id = !selected_instance_id;
       UI_update_instance_icons();
     }
@@ -18017,7 +17996,7 @@ FLASHMEM void UI_update_instance_icons()
 }
 
 FLASHMEM void printLiveModButtons(void) {
-  for(uint8_t step = 0; step < 4; step++) {
+  for (uint8_t step = 0; step < 4; step++) {
     printLiveModButton(step);
   }
 }
@@ -18025,8 +18004,8 @@ FLASHMEM void printLiveModButtons(void) {
 FLASHMEM void printLiveModButton(int8_t step) {
   const char *labels[4] = { "ATTACK", "DECAY", "SUSTAIN", "RELEASE" };
   if (seq.cycle_touch_element != 1) {
-    char buf[4];
-    snprintf(buf, 4, "%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
+    char buf[5];
+    snprintf(buf, 5, "%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
     const TouchButton::Color c = (dexed_live_mod.active_button - 1) == step ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL;
     TouchButton::drawButton(GRID.X[step], GRID.Y[5] - 23, labels[step], buf, c);
   }
@@ -18061,8 +18040,8 @@ FLASHMEM void print_voice_select_default_help()
 }
 
 FLASHMEM void loadDexedOrigADSR(int instance) {
-  for(int adsr = 0; adsr < 4; adsr++) {
-    for(int op = 0; op < 6; op++) {
+  for (int adsr = 0; adsr < 4; adsr++) {
+    for (int op = 0; op < 6; op++) {
       const uint8_t rate = MicroDexed[instance]->getOPRate(op, adsr);
       dexed_live_mod.orig_adsr_values[instance][adsr][op] = rate;
     }
@@ -18074,11 +18053,14 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
   uint8_t step = dexed_live_mod.active_button - 1; // buttons 1-4 -> ADSR 0-3
 
   if (e.turned) {
-    dexed_live_mod.live_adsr_values[selected_instance_id][step] = constrain(dexed_live_mod.live_adsr_values[selected_instance_id][step] + e.dir * e.speed, -MAX_PERF_MOD, +MAX_PERF_MOD);
-    for (uint8_t i = 0; i < 6; i++) {
-      MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][i] - dexed_live_mod.live_adsr_values[selected_instance_id][step]);
+    const int8_t valueTemp = constrain(dexed_live_mod.live_adsr_values[selected_instance_id][step] + e.dir * e.speed, -MAX_PERF_MOD, +MAX_PERF_MOD);
+    if(valueTemp != dexed_live_mod.live_adsr_values[selected_instance_id][step]) {
+      dexed_live_mod.live_adsr_values[selected_instance_id][step] = valueTemp;
+      for (uint8_t i = 0; i < 6; i++) {
+        MicroDexed[selected_instance_id]->setOPRate(i, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][i] - dexed_live_mod.live_adsr_values[selected_instance_id][step]);
+      }
+      printLiveModButton(step);
     }
-    printLiveModButton(step);
   }
 
   else if (e.pressed) {
@@ -18092,58 +18074,56 @@ FLASHMEM void reset_live_modifier(uint8_t step)
 {
   dexed_live_mod.live_adsr_values[selected_instance_id][step] = 0;
 
-  for(int op = 0; op < 6; op++) {
+  for (int op = 0; op < 6; op++) {
     MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
   }
 }
 
 FLASHMEM void reset_live_modifiers()
 {
-  for(int step = 0; step < 4; step++) {
+  for (int step = 0; step < 4; step++) {
     reset_live_modifier(step);
   }
 }
 
 FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
-  static uint8_t menu_voice_select = MENU_VOICE_SOUND;
 
-  if (generic_temp_select_menu == 2) {
-    menu_voice_select = MENU_VOICE_BANK;
-  }
-  if (generic_temp_select_menu == 3) {
-    menu_voice_select = MENU_VOICE_SOUND;
-  }
+  bool changed = true;
 
   if (configuration.sys.favorites == 0) {
-    int8_t voice_tmp;
+    int8_t tempValue = 0;
 
     // show all presets
-    switch (menu_voice_select) {
+    switch (generic_temp_select_menu) {
     case MENU_VOICE_BANK:
-      configuration.dexed[selected_instance_id].bank = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
+      tempValue = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
+      changed = (tempValue != configuration.dexed[selected_instance_id].bank);
+      configuration.dexed[selected_instance_id].bank = tempValue;
       break;
 
     case MENU_VOICE_SOUND:
-      voice_tmp = configuration.dexed[selected_instance_id].voice + e.dir * e.speed;
+    tempValue = configuration.dexed[selected_instance_id].voice + e.dir * e.speed;
       // check select previous bank
-      if(voice_tmp < 0) {
+      if (tempValue < 0) {
         if (configuration.dexed[selected_instance_id].bank > 0) {
-          voice_tmp = MAX_VOICES - 1;
+          tempValue = MAX_VOICES - 1;
           configuration.dexed[selected_instance_id].bank--;
         } else {
-          voice_tmp = 0;
+          changed = false;
+          tempValue = 0;
         }
       }
       // check select next bank
-      if(voice_tmp >= MAX_VOICES) {
-        if(configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
-          voice_tmp = 0;
+      if (tempValue >= MAX_VOICES) {
+        if (configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
+          tempValue = 0;
           configuration.dexed[selected_instance_id].bank++;
         } else {
-          voice_tmp = MAX_BANKS - 1;
+          changed = false;
+          tempValue = MAX_BANKS - 1;
         }
       }
-      configuration.dexed[selected_instance_id].voice = voice_tmp;
+      configuration.dexed[selected_instance_id].voice = tempValue;
       break;
     }
   }
@@ -18151,7 +18131,7 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
     // filter favourites
     switch (configuration.sys.favorites) {
     case 1: // only Favs
-      if(e.down) {
+      if (e.down) {
         locate_next_favorite();
       } else {
         locate_previous_favorite();
@@ -18159,7 +18139,7 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
       break;
 
     case 2: // only non-Favs
-      if(e.down) {
+      if (e.down) {
         locate_next_non_favorite();
       } else {
         locate_previous_non_favorite();
@@ -18171,9 +18151,11 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
       break;
     }
   }
-  load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-  reset_live_modifiers();
-  printLiveModButtons();
+  if (changed) {
+    load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+    reset_live_modifiers();
+    printLiveModButtons();
+  }
 }
 
 FLASHMEM void UI_func_voice_select(uint8_t param)
@@ -18219,18 +18201,18 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
 
-    if (dexed_live_mod.active_button != 0) { // touch button pressed for live modify
+    if (dexed_live_mod.active_button != 0) { // handle live modify buttons
       UI_func_voice_select_touch_loop(e);
     }
 
-    // 
+    // handle main entries
     else {
       if (e.turned) {
         if (seq.edit_state == 0) {
           generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 16);
         }
         else if (seq.edit_state == 1) {
-          switch(generic_temp_select_menu) {
+          switch (generic_temp_select_menu) {
           case 0: // pool select
             configuration.dexed[selected_instance_id].pool = constrain(configuration.dexed[selected_instance_id].pool + e.dir, 0, DEXED_POOLS - 1);
             if (load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id) == false) {
@@ -18320,8 +18302,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       
       if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       {
-        if(seq.cycle_touch_element == 0) {
-          switch(generic_temp_select_menu) {
+        if (seq.cycle_touch_element == 0) {
+          switch (generic_temp_select_menu) {
           case 10:
             LCDML.FUNC_setGBAToLastFunc();
             LCDML.OTHER_jumpToFunc(UI_func_dexed_audio);
@@ -18816,10 +18798,10 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
       switch (mode)
       {
       case 0: // Instance selection
-        if(e.down) {
+        if (e.down) {
           increment_dexed_instance();
         }
-        if(e.up) {
+        if (e.up) {
           decrement_dexed_instance();
         }
         _print_instances_in_save_voice();
@@ -18956,7 +18938,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       switch (mode) {
       case 0:
         bank_number = constrain(bank_number + e.dir * e.speed, 0, MAX_BANKS - 1);
@@ -19076,12 +19058,12 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
   {
     display.setTextSize(2);
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (mode == 1) {
         ui_select_name_state = UI_select_name(2, 2, seq.name_temp, BANK_NAME_LEN - 1, false);
       }
     }
-    else if(e.pressed) {
+    else if (e.pressed) {
       if (mode == 1) {
         ui_select_name_state = UI_select_name(2, 2, seq.name_temp, BANK_NAME_LEN - 1, false);
         if (ui_select_name_state == true)
@@ -19126,7 +19108,7 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
     display.setTextSize(2);
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (mode == 0) {
         seq.active_multisample = constrain(seq.active_multisample + e.dir * e.speed, 0, NUM_MULTISAMPLES - 1);
       }
@@ -19211,7 +19193,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       bank_number = constrain(bank_number + e.dir, 0, MAX_BANKS - 1);
       get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
 #ifdef DEBUG
@@ -19221,7 +19203,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
       show(2, 4, 10, tmp_bank_name);
     }
 
-    if(e.pressed) {
+    if (e.pressed) {
       if (strcmp("*ERROR*", tmp_bank_name) != 0)
       {
         char filename[FILENAME_LEN + 10];
@@ -19322,7 +19304,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       switch (mode)
       {
       case 0: // Bank selection
@@ -19355,7 +19337,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         break;
       }
     }
-    if(e.pressed) {
+    if (e.pressed) {
       mode++;
 
       switch (mode) {
@@ -20644,7 +20626,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    if(e.turned) {
+    if (e.turned) {
       if (seq.edit_state == 0)
       {
         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 17 + 16);
@@ -21606,7 +21588,7 @@ FLASHMEM void splash_screen1()
 
 FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
 {
-  if(progress > 10) { // progress 0-10
+  if (progress > 10) { // progress 0-10
     return;
   }
   const uint8_t incrementY = 11 - progress;
