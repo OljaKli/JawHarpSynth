@@ -331,6 +331,7 @@ FLASHMEM void handle_touchscreen_voice_select()
         draw_algo();
       }
       else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23)) {
+        LCDML.FUNC_setGBAToLastFunc();
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
       }
 
@@ -1134,12 +1135,7 @@ FLASHMEM void handle_touchscreen_test_touchscreen()
 
 FLASHMEM void handle_page_with_touch_back_button()
 {
-  if (numTouchPoints > 0)
-  {
-    // if (seq.cycle_touch_element != 1 && check_button_on_grid(2, 25)) // back button
-    if (seq.cycle_touch_element != 1 && TouchButton::isPressed(GRID.X[0], GRID.Y[5])) // back button
-    {
-      LCDML.BT_quit();
-    }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]) && seq.cycle_touch_element != 1) {// back button
+    LCDML.BT_quit();
   }
 }

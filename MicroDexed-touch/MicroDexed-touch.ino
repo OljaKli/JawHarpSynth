@@ -2029,7 +2029,6 @@ void loop()
     else if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) {
       // menu
       handle_touchscreen_menu();
-      // registerTouchHandler(handle_touchscreen_menu);
       scope.draw_scope(230, 18, 87, 64);
     }
 
@@ -2072,27 +2071,6 @@ void loop()
       display.setTextSize(1);
       for (uint8_t d = 0; d < NUM_DRUMS; d++)
       {
-
-        // if (  sample_envelope[d]->isActive() != display_buffer_envelopes[d])
-        // {
-        //   if (d < NUM_DRUMS / 2)
-        //     setCursor_textGrid_small(12 + d * 2, 19);
-        //   else
-        //     setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
-        //   if (sample_envelope[d]->isActive() )
-        //   {
-        //     display.setTextColor(GREEN, COLOR_BACKGROUND);
-        //     display.print("o");
-        //   }
-        //   else
-        //   {
-        //     display.setTextColor(GREY2, COLOR_BACKGROUND);
-        //     display.print("-");
-        //   }
-        //    display_buffer_envelopes[d] = sample_envelope[d]->isActive();
-        // }
-
-
         if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
           setCursor_textGrid_small(26 + d * 2, 22);
@@ -2109,7 +2087,6 @@ void loop()
           }
           display_buffer_samples[d] = Drum[d]->isPlaying();
         }
-
       }
     }
     else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
@@ -2131,7 +2108,6 @@ void loop()
         print_gate_state(1);
         gate_state_old[1] = Gate[1]->get_state();
       }
-
     }
     else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
     {

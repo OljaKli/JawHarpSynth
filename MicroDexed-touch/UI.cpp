@@ -1463,11 +1463,12 @@ FLASHMEM bool touch_button_back_page() //modern pages with touch back button
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth) ||
-    LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_dexed_setup))
-
+    LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_dexed_setup)) {
     return true;
-  else
+  }
+  else {
     return false;
+  }
 }
 
 FLASHMEM void border1_clear() // upper left
@@ -1639,7 +1640,6 @@ FLASHMEM void edit_song_loop()
 
     if ((seq.loop_edit_step == 1 && y == seq.cursor_scroll) || (y + seq.scrollpos == seq.loop_start))
     {
-
       if (y < 15 && y - 1 >= 0 && y + seq.scrollpos - 1 != seq.loop_start && y - 1 == seq.cursor_scroll - 1)
       {
         display.console = true;
@@ -1657,9 +1657,7 @@ FLASHMEM void edit_song_loop()
       if (seq.loop_edit_step == 1 && y == seq.cursor_scroll)
         display.setTextColor(RED, COLOR_BACKGROUND);
       display.print(">");
-
     }
-
 
     if ((seq.loop_edit_step == 2 && y == seq.cursor_scroll) || (y + seq.scrollpos == seq.loop_end))
     {
@@ -1687,7 +1685,6 @@ FLASHMEM void edit_song_loop()
 
 FLASHMEM void print_chain_matrix_in_song_page()
 {
-
   if (seq.tracktype_or_instrument_assign > 0 && seq.tracktype_or_instrument_assign < 3) // select track for instrument assignment
   {
     sub_song_print_instruments(DARKGREEN, COLOR_BACKGROUND);
@@ -1707,9 +1704,7 @@ FLASHMEM void print_chain_matrix_in_song_page()
       song_page_full_draw_pattern_complete = false;
 
     if (seq.cursor_scroll < 16 && song_page_full_draw_pattern_complete && seq.tracktype_or_instrument_assign != 1)
-
     {
-
       if (seq.selected_track == 0)
       {
         drawtrack[7] = true;
