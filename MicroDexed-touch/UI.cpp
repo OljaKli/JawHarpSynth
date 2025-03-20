@@ -12177,7 +12177,7 @@ FLASHMEM void UI_func_arpeggio(uint8_t param)
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
       if (seq.edit_state == false)
-        generic_temp_select_menu = constrain(generic_temp_select_menu + 1, 0, 5);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 5);
       else if (generic_temp_select_menu == 0)
         seq.arp_length = constrain(seq.arp_length + e.dir * e.speed, 0, 16);
       else if (generic_temp_select_menu == 1)
@@ -12189,7 +12189,7 @@ FLASHMEM void UI_func_arpeggio(uint8_t param)
       else if (generic_temp_select_menu == 4)
         seq.euclidean_active = !seq.euclidean_active;
       else if (generic_temp_select_menu == 5)
-        seq.arp_num_notes_max = constrain(seq.arp_num_notes_max + 1, 1, 64);
+        seq.arp_num_notes_max = constrain(seq.arp_num_notes_max + e.dir, 1, 64);
     }
     if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
