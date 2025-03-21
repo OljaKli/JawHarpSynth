@@ -513,6 +513,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     display.fillScreen(COLOR_BACKGROUND);
     numberOfBarsTemp = data.numberOfBars;
     liveSeq.onGuiInit();
+    updateTrackChannelSetupButtons(data.activeTrack); // update GUI for the case a new perf was loaded
 
     display.setTextSize(1);
     display.setCursor(GRID.X[2], 6);
@@ -527,12 +528,15 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
+
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+
     msCount += 25;
     if(msCount >= 200 ) {
       drawUpdates(drawCpuLoad);
       msCount = 0;
     }
-    if (LCDML.BT_checkDown()) {
+    if (e.down) {
       if (currentValue.valueBase != nullptr) {
         currentValue.valueBase->next();
       }
@@ -545,7 +549,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
         }
       }
     }
-    if (LCDML.BT_checkUp()) {
+    if (e.up) {
       if (currentValue.valueBase != nullptr) {
         currentValue.valueBase->previous();
       }
@@ -559,7 +563,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
       }
     }
 
-    if (LCDML.BT_checkEnter()) {
+    if (e.pressed) {
       if (currentValue.valueBase != nullptr) {
         currentValue.button->setSelected(false);
         currentValue.valueBase = nullptr;

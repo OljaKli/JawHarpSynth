@@ -1,5 +1,6 @@
 #include "touch.h"
 #include "sequencer.h"
+#include "livesequencer.h"
 #include <LCDMenuLib2.h>
 #include "ILI9341_t3n.h"
 #include <Audio.h>
@@ -254,126 +255,97 @@ FLASHMEM void print_current_chord()
 }
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
-extern void play_sample_off_virtual_drumpads(uint8_t note);
-extern void UI_func_livesequencer(uint8_t param);
 
-extern uint8_t dexed_onscreen_algo;
-
-FLASHMEM void print_perf_modifier_buttons() {
-  print_perfmod_buttons();
-  print_perfmod_lables();
-  delay(100);
+FLASHMEM bool handleLiveModButtons(void) {
+  bool pressedOne = false;
+  const int8_t buttonStep = dexed_live_mod.active_button - 1;
+  for(uint8_t step = 0; step < 4; step++) {
+    if(TouchButton::isPressed(GRID.X[step], GRID.Y[5] - 23)) {
+      pressedOne = true;
+      if (buttonStep != step) {
+        dexed_live_mod.active_button = step + 1;
+      }
+      else {
+        reset_live_modifier(buttonStep);
+        dexed_live_mod.active_button = 0;
+      }
+      printLiveModButtons();
+    }
+  }
+  if(pressedOne) {
+    if (dexed_live_mod.active_button > 0) {
+      helptext_r("< > CHANGE MODIFIER VALUE");
+      display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+      print_empty_spaces(38,1);
+      display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
+      print_empty_spaces(9,1);
+      display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+      display.print(F(" PUSH TO RETURN"));
+    } 
+    else {
+      print_voice_select_default_help();
+    }
+  }
+  return pressedOne;
 }
-
-extern void draw_algo();
-extern uint8_t get_algo();
-extern uint8_t set_algo(uint8_t value);
-extern void panic_dexed_current_instance();
 
 FLASHMEM void handle_touchscreen_voice_select()
 {
-  if (numTouchPoints > 0)
-  {
-    if (check_button_on_grid(45, 1))
-    {
-      if (seq.cycle_touch_element == 1)
-      {
-        border3_large_clear();
-        seq.cycle_touch_element = 0;
-        // display.drawRect(DISPLAY_WIDTH / 2, CHAR_height * 6 - 4 , DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 1,  GREY4);
-        draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
-        dexed_onscreen_algo = 88; //dummy value to force draw on screen init
-        print_voice_settings_in_dexed_voice_select(true, true);
-        print_perfmod_buttons();
-        print_perfmod_lables();
-        print_voice_select_default_help();
-      }
-      else
-      {
-        border3_large_clear();
-        seq.cycle_touch_element = 1;
-        draw_button_on_grid(45, 1, "DEXED", "DETAIL", 0);
-        drawVirtualKeyboard();
-      }
-    }
-    if (check_button_on_grid(37, 1))
-    {
-      save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-    }
-    else if (check_button_on_grid(45, 11)) //toggle fav. preset search modes
-    {
-      configuration.sys.favorites++;
-      if (configuration.sys.favorites > 3)
-        configuration.sys.favorites = 0;
-      print_voice_select_fav_search_button();
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+    if (seq.cycle_touch_element == 1) {
+      border3_large_clear();
+      seq.cycle_touch_element = 0;
+      TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
+      print_voice_settings_in_dexed_voice_select(true, true);
+      printLiveModButtons();
+      print_voice_select_default_help();
+      draw_algo(true); // force redraw
     }
     else {
-      if (seq.cycle_touch_element != 1)
-      {
-        if (check_button_on_grid(37, 23)) //algo
-        {
-          uint8_t value = get_algo();
-
-          value++;
-          if (value > 31)
-            value = 0;
-          panic_dexed_current_instance();
-          set_algo(value);
-          draw_algo();
-        }
-
-        else  if (check_button_on_grid(20, 23)) {
-          reset_live_modifiers();
-          print_perf_modifier_buttons();
-        }
-        else if (check_button_on_grid(45, 23))
-          LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
-
-        else if (check_button_on_grid(2, 23))
-        {
-          if (dexed_live_mod.active_button != 1)
-            dexed_live_mod.active_button = 1;
-          else
-            dexed_live_mod.active_button = 0;
-          print_perf_modifier_buttons();
-        }
-        else if (check_button_on_grid(11, 23))
-        {
-          if (dexed_live_mod.active_button != 2)
-            dexed_live_mod.active_button = 2;
-          else
-            dexed_live_mod.active_button = 0;
-          print_perf_modifier_buttons();
-        }
-        else //if touched somewhere else reset modifier edit mode
-        {
-          dexed_live_mod.active_button = 0;
-          print_perf_modifier_buttons();
-        }
-
-        if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
-        {
-          helptext_r("< > CHANGE MODIFIER VALUE");
-          display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-          print_empty_spaces(38,1);
-          display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-          print_empty_spaces(9,1);
-          display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-          display.print(F(" PUSH TO RETURN"));
-        }
-        else
-        {
-          print_voice_select_default_help();
-        }
-        print_voice_settings_in_dexed_voice_select(false, true);
-      }
+      border3_large_clear();
+      seq.cycle_touch_element = 1;
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "DEXED", "DETAIL", TouchButton::BUTTON_NORMAL);
+      drawVirtualKeyboard();
     }
   }
-  if (seq.cycle_touch_element == 1) {
-    handleTouchVirtualKeyboard();
+  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
+    save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+  }
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2])) {
+    if (++configuration.sys.favorites > 3) {
+      configuration.sys.favorites = 0;
+    }
+    print_voice_select_fav_search_button();
+  }
+  else {
+    if (seq.cycle_touch_element != 1) {
+      if(handleLiveModButtons()) {
+        // touch handled
+      }
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
+        uint8_t value = get_algo() + 1;
+        value %= 32; // 0-31
+        
+        panic_dexed_current_instance();
+        set_algo(value);
+        draw_algo();
+      }
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23)) {
+        LCDML.FUNC_setGBAToLastFunc();
+        LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
+      }
+
+      else if(TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
+        //if touched somewhere else, reset live modifier edit mode
+        dexed_live_mod.active_button = 0;
+        printLiveModButtons();
+      }
+    }
+    else {
+      handleTouchVirtualKeyboard();
+    }
   }
 }
-
 
 FLASHMEM void update_latch_button()
 {
@@ -390,10 +362,7 @@ FLASHMEM void update_step_rec_buttons()
 {
   if (seq.cycle_touch_element == 1)
   {
-    if (seq.content_type[seq.active_pattern] == 0)
-      draw_button_on_grid(36, 6, "LATCH", "NOTE", 98);
-    else
-      draw_button_on_grid(36, 6, "LATCH", "NOTE", 1);
+    update_latch_button();
 
     draw_button_on_grid(45, 6, "EMPTY", "STEP", 1);
 
@@ -1166,12 +1135,7 @@ FLASHMEM void handle_touchscreen_test_touchscreen()
 
 FLASHMEM void handle_page_with_touch_back_button()
 {
-  if (numTouchPoints > 0)
-  {
-    // if (seq.cycle_touch_element != 1 && check_button_on_grid(2, 25)) // back button
-    if (seq.cycle_touch_element != 1 && TouchButton::isPressed(GRID.X[0], GRID.Y[5])) // back button
-    {
-      LCDML.BT_quit();
-    }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]) && seq.cycle_touch_element != 1) {// back button
+    LCDML.BT_quit();
   }
 }

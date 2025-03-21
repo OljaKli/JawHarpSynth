@@ -20,8 +20,6 @@
 #include "synth.h"
 #include "exp2.h"
 
-//#include <stdio.h>
-
 #ifdef _MSC_VER
 #define exp2(arg) pow(2.0, arg)
 #endif

@@ -367,7 +367,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SAMPLES_CONFIG_NAME "samples"
 #define SLICES_CONFIG_NAME "slices"
 #define ENVELOPES_CONFIG_NAME "envelope"
-#define MAX_PERF_MOD 30
+#define MAX_PERF_MOD 50
 
 // SD CARD
 #define MAX_FILES 150
@@ -1043,7 +1043,7 @@ typedef struct custom_midi_map_s
 
 enum virtual_keyboard_instruments
 {
- VK_LIVESEQUENCER,
+ VK_LIVESEQUENCER = 0,
  VK_DEXED0,
  VK_DEXED1,
  VK_DEXED2,
@@ -1128,3 +1128,18 @@ enum APC_MODE
 #else
 #define LOG Serial
 #endif
+
+enum TurnDir {
+  TURN_UP = -1,
+  TURN_DN = 1
+};
+
+struct EncoderEvents {
+  bool down;
+  bool up;
+  bool turned;
+  TurnDir dir;
+  uint16_t speed;
+  bool pressed;
+  bool longPressed;
+};

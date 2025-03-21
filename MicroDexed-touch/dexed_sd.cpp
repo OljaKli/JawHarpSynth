@@ -280,6 +280,7 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
       MicroDexed[instance_id]->getVoiceData(data_copy);
       send_sysex_voice(configuration.dexed[instance_id].midi_channel, data_copy);
       init_MIDI_send_CC();
+      loadDexedOrigADSR(instance_id);
       return (ret);
     }
     else

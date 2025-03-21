@@ -134,22 +134,6 @@ extern Adafruit_FT6206 touch;
 
 // Editor operations
 int menuhelper_previous_val;
-bool menuhelper_redraw = false;
-int sub(int A, int B, int min, int max)
-{
-  if (A != constrain(A - B, min, max))
-    menuhelper_redraw = true;
-  return constrain(A - B, min, max);
-};
-
-int sum(int A, int B, int min, int max)
-{
-  if (A != constrain(A + B, min, max))
-    menuhelper_redraw = true;
-  return constrain(A + B, min, max);
-};
-
-int (*calc_val[2])(int, int, int, int);
 
 Realtime_Scope scope;
 
@@ -1497,10 +1481,6 @@ FLASHMEM void setup()
   gamepad_0_neutral = joysticks[0].getAxis(0);
   gamepad_1_neutral = joysticks[0].getAxis(1);
 
-  // Setup editor helpers
-  calc_val[0] = sum;
-  calc_val[1] = sub;
-
 #ifdef COMPILE_FOR_PSRAM
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -2049,7 +2029,6 @@ void loop()
     else if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) {
       // menu
       handle_touchscreen_menu();
-      // registerTouchHandler(handle_touchscreen_menu);
       scope.draw_scope(230, 18, 87, 64);
     }
 
@@ -2092,27 +2071,6 @@ void loop()
       display.setTextSize(1);
       for (uint8_t d = 0; d < NUM_DRUMS; d++)
       {
-
-        // if (  sample_envelope[d]->isActive() != display_buffer_envelopes[d])
-        // {
-        //   if (d < NUM_DRUMS / 2)
-        //     setCursor_textGrid_small(12 + d * 2, 19);
-        //   else
-        //     setCursor_textGrid_small(12 + (d - NUM_DRUMS / 2) * 2, 20);
-        //   if (sample_envelope[d]->isActive() )
-        //   {
-        //     display.setTextColor(GREEN, COLOR_BACKGROUND);
-        //     display.print("o");
-        //   }
-        //   else
-        //   {
-        //     display.setTextColor(GREY2, COLOR_BACKGROUND);
-        //     display.print("-");
-        //   }
-        //    display_buffer_envelopes[d] = sample_envelope[d]->isActive();
-        // }
-
-
         if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
           setCursor_textGrid_small(26 + d * 2, 22);
@@ -2129,7 +2087,6 @@ void loop()
           }
           display_buffer_samples[d] = Drum[d]->isPlaying();
         }
-
       }
     }
     else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
@@ -2151,7 +2108,6 @@ void loop()
         print_gate_state(1);
         gate_state_old[1] = Gate[1]->get_state();
       }
-
     }
     else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
     {
@@ -3544,11 +3500,6 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           configuration.fx.chorus_level[selected_instance_id] = map(inValue, 0, 0x7f, CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX);
           dexed_chorus_mixer_r[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
           dexed_chorus_mixer_l[selected_instance_id].gain(1, mapfloat(configuration.fx.chorus_level[selected_instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
-          if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chorus_level))
-          {
-            LCDML.OTHER_updateFunc();
-            LCDML.loop_menu();
-          }
           break;
         case 103: // CC 103: filter resonance
           configuration.fx.filter_resonance[instance_id] = map(inValue, 0, 0x7f, FILTER_RESONANCE_MIN, FILTER_RESONANCE_MAX);
@@ -4923,11 +4874,12 @@ FLASHMEM void set_fx_params(void)
       chorus_modulator[instance_id]->begin(WAVEFORM_TRIANGLE);
     }
     chorus_modulator[instance_id]->phase(0);
-
     chorus_modulator[instance_id]->frequency(configuration.fx.chorus_frequency[instance_id] / 10.0);
     chorus_modulator[instance_id]->amplitude(mapfloat(configuration.fx.chorus_depth[instance_id], CHORUS_DEPTH_MIN, CHORUS_DEPTH_MAX, 0.0, 1.0));
-
     chorus_modulator[instance_id]->offset(0.0);
+    
+    dexed_chorus_mixer_r[instance_id].gain(1, mapfloat(configuration.fx.chorus_level[instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
+    dexed_chorus_mixer_l[instance_id].gain(1, mapfloat(configuration.fx.chorus_level[instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
 
     // DELAY
     set_dexed_delay_level(0, instance_id, configuration.fx.delay_level1[instance_id]);
@@ -4968,7 +4920,6 @@ FLASHMEM void set_fx_params(void)
     global_delay_in_mixer[0]->gain(9, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));//previously 7
 
     // REVERB SEND
-
     reverb_mixer_l.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
     reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
     reverb_mixer_l.gain(REVERB_MIX_CH_AUX_DELAY2, mapfloat(configuration.fx.delay_to_reverb[1], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));

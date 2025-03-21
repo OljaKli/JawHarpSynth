@@ -1,5 +1,12 @@
 // this file contains only outdated or no longer used code for easy retrieval in case parts of it might still be useful
 
+// FLASHMEM uint8_t bit_reverse8(uint8_t v)
+// {
+//   uint8_t result = 0;
+//   for (; v > 0; v >>= 1)
+//     (result <<= 1) |= (v & 1);
+//   return (result);
+// }
 
 // void update_pianoroll()
 // {
@@ -838,6 +845,91 @@
   // print_fast_level_indicator(17, 14, random(100), 0, 100);
 
 //}
+
+// FLASHMEM uint8_t get_current_cursor_id(void)
+// {
+//   LCDMenuLib2_menu* tmp;
+
+//   if ((tmp = LCDML.MENU_getCurrentObj()) != NULL)
+//     return (tmp->getChild(LCDML.MENU_getCursorPosAbs())->getID());
+//   else
+//     return (0);
+// }
+
+
+// void seq_sub_print_track_assignments(int x, int y, bool init)
+//{
+//   if (seq.cycle_touch_element == 0)  // touch keyboard is off
+//   {
+//     display.setTextSize(1);
+//     display.setTextColor(GREY2, COLOR_BACKGROUND);
+//     for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
+//     {
+//       display.setCursor(CHAR_width_small * 36,  (track + 13) * (CHAR_height_small + 1) + 20  );
+//       if (seq.menu - 21 == track)
+//         set_track_type_color_inverted(track);
+//       else
+//         set_track_type_color(track);
+//       display.print(F("T"));
+//       display.print (track + 1);
+//       display.setCursor(CHAR_width_small * 36 + 3 * CHAR_width_small,   (track + 13) * (CHAR_height_small + 1) + 20  );
+//       if (seq.menu - 21 - NUM_SEQ_TRACKS == track)
+//         set_track_type_color_inverted(track);
+//       else
+//         set_track_type_color(track);
+//       if (seq.track_type[track] > 0 && seq.instrument[track] < 2)
+//       {
+//         display.print ("DEXED INST.");
+//         display.print (seq.instrument[track] + 1);
+//       }
+//       else if (seq.track_type[track] > 0 && seq.instrument[track] == 2) //epiano
+//       {
+//         display.print ("ELECTR.PIANO");
+//       }
+//       else if (seq.track_type[track] > 0 && seq.instrument[track] == 3)  //MicroSynth 0
+//       {
+//         display.print ("MICROSYNTH 1");
+//       }
+//       else if (seq.track_type[track] > 0 && seq.instrument[track] == 4)  //MicroSynth 1
+//       {
+//         display.print ("MICROSYNTH 2");
+//       }
+//       else if (seq.instrument[track] == 5) //Braids
+//       {
+//         display.print ("BRAIDS OSC");
+//       }
+//       else if ( seq.instrument[track] > 5 && seq.instrument[track] < 16) //multisamples
+//       {
+//         display.print ("MULTISAMPLE");
+//       }
+//       else if (seq.instrument[track] > 15 && seq.instrument[track] < 32) //external MIDI USB
+//       {
+//         display.print ("MIDI USB #");
+//         print_formatted_number(seq.instrument[track] - 15, 2);
+//       }
+//       else if (seq.instrument[track] > 31 && seq.instrument[track] < 48) //external MIDI MINI JACK/DIN
+//       {
+//         display.print ("MIDI DIN #");
+//         print_formatted_number(seq.instrument[track] - 31, 2);
+//       }
+//       else
+//       {
+//         display.print ("-----------");
+//       }
+//     }
+//   }
+// }
+
+// FLASHMEM void print_small_panbar_mixer(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
+// {
+//   setCursor_textGrid_small(x, y);
+//   setModeColor(selected_option);
+//   display.console = true;
+//   display.drawRect(CHAR_width_small * x, 10 * y, 3 * CHAR_width_small, 7, COLOR_SYSTEXT);
+//   display.console = true;
+//   display.fillRect(CHAR_width_small * x + 1, 10 * y + 1, 3 * CHAR_width_small - 2, 5, COLOR_BACKGROUND);
+//   display.fillRect(CHAR_width_small * x + 1 + input_value / 2.30, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
+// }
 
 // Bar
   // if (vi == 0) {

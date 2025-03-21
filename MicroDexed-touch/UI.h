@@ -75,6 +75,7 @@ void resetScreenTimer();
 void continueWavRecording();
 ScopeSettings& getCurrentScopeSettings(void);
 void update_display_functions_while_seq_running();
+void loadDexedOrigADSR(int instance);
 
 void UI_func_dexed_audio(uint8_t param);
 void UI_func_dexed_controllers(uint8_t param);
@@ -113,7 +114,6 @@ void UI_func_sample_editor(uint8_t param);
 void UI_func_midiplayer(uint8_t param);
 void UI_func_test_touchscreen(uint8_t param);
 void UI_func_sound_intensity(uint8_t param);
-void UI_func_chorus_level(uint8_t param);
 void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
 
@@ -133,7 +133,6 @@ bool load_performance_and_check_midi(uint8_t perf);
 void setup_screensaver(void);
 void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, bool fullrefresh_values);
 void print_voice_select_fav_search_button();
-void reset_live_modifiers();
 void pattern_editor_menu_0();
 void sub_touchscreen_test_page_init();
 void border3_large();
@@ -141,13 +140,23 @@ void border3_large_clear();
 void seq_pattern_editor_update_dynamic_elements();
 void microsynth_refresh_lower_screen_static_text();
 void microsynth_refresh_lower_screen_dynamic_text();
-void print_perfmod_buttons();
-void print_perfmod_lables();
+void panic_dexed_current_instance();
+void printLiveModButtons(void);
+void printLiveModButton(int8_t button); // 0 - 3 ADSR
+void reset_live_modifiers();
+void reset_live_modifier(uint8_t step);
+
 void print_empty_spaces(uint8_t spaces, bool clear_background);
 void print_voice_select_default_help();
 void draw_volmeters_mixer();
 void draw_volmeters_multiband_compressor();
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+
+void draw_algo(bool forceDraw = false);
+uint8_t get_algo();
+void set_algo(uint8_t value);
+
+const EncoderEvents getEncoderEvents(uint8_t id);
 
 #define MAX_CC_DEST 15
 PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,

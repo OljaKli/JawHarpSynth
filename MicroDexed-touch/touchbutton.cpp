@@ -2,12 +2,9 @@
 #include "touch.h"
 #include "ILI9341_t3n.h"
 
-#include "sequencer.h"
-
 extern ILI9341_t3n display;
 extern ts_t ts;
 extern int numTouchPoints;
-extern sequencer_t seq;
 
 static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { GREY1, GREY3 },               // COLOR_NORMAL
@@ -87,24 +84,18 @@ FLASHMEM void TouchButton::drawVirtualKeyboardButton(uint16_t x, uint16_t y) {
   display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
   display.console = true;
   display.fillRect(x, y + 16, BUTTON_SIZE_X, 36 - 16, COLOR_BACKGROUND);
-  uint8_t offset[6] = { 1, 2, 2, 4, 6,7 }; //+ is the offset to left
-  int offcount = 0;
   display.setTextSize(1);
   display.setTextColor(GREY1, GREY3);
   display.setCursor(x + 5, y + 5);
   display.print(F("V.KEYB"));
 
-  for (uint8_t i = 0; i < 9; i++) //draw white keys
-  {
+  for (uint8_t i = 0; i < 7; i++) {//draw white keys
     display.console = true;
-    display.fillRect(x + 6 * i, y + 17, 5, 18, COLOR_SYSTEXT); // pianoroll white key
+    display.fillRect(x + 7 * i, y + 17, 6, 18, COLOR_SYSTEXT); // pianoroll white key
   }
-  for (uint8_t i = 0; i < 14; i++)
-  {
-    if (seq.piano[i] == 1)
-    {
-      display.fillRect(x + 4 * i - offset[offcount], y + 17, 4, 9, COLOR_BACKGROUND); // BLACK key
-      offcount++;
+  for (uint8_t i = 0; i < 6; i++) {
+    if (i != 2) { // no black key here
+      display.fillRect(4 + x + (7 * i) , y + 17, 5, 9, COLOR_BACKGROUND); // BLACK key
     }
   }
 }
