@@ -224,11 +224,11 @@
 //*************************************************************************************************
 #define SAMPLE_RATE 44100
 
- #ifdef PSRAM
- #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 
- #else
- #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED *DELAY_MAX_TIME / 128000 + 36 + 14
- #endif
+#ifdef PSRAM
+#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14
+#else
+#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED *DELAY_MAX_TIME / 128000 + 36 + 14
+#endif
 
 //#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 // tested to work on all versions, including old resistive touch 2/2025
 
@@ -314,6 +314,27 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 //*************************************************************************************************
 //* HARDWARE SETTINGS
 //*************************************************************************************************
+
+#if (defined RGB_ENCODERS && defined MCP_23008) || (defined RGB_ENCODERS && defined MCP_23017)
+
+#define RGB_LED_L_RED 0                            // MCP GPA0  = LED_ENC_L RED
+#define RGB_LED_L_GREEN 1                          // MCP GPA1  = LED_ENC_L GREEN
+#define RGB_LED_L_BLUE 2                           // MCP GPA2  = LED_ENC_L BLUE
+#define RGB_LED_R_RED 3                            // MCP GPA3  = LED_ENC_R RED
+#define RGB_LED_R_GREEN 4                          // MCP GPA4  = LED_ENC_R GREEN
+#define RGB_LED_R_BLUE 5                           // MCP GPA5  = LED_ENC_R BLUE
+#endif
+
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#define LED_UP 8                                   // MCP GPB0  = LED Button UP
+#define LED_DOWN 9                                 // MCP GPB1  = LED Button DOWN
+#define LED_LEFT 10                                // MCP GPB2  = LED Button LEFT
+#define LED_RIGHT 11                                // MCP GPB3  = LED Button RIGHT
+#define LED_SEL 12                                  // MCP GPB4   = LED Button SEL
+#define LED_START 13                                // MCP GPB5  = LED Button START
+#define LED_BUT_A 14                                // MCP GPB6  = LED Button A
+#define LED_BUT_B 15                                // MCP GPB7  = LED Button B
+#endif
 
 // Encoders with push button
 #define NUM_ENCODER 2
@@ -414,18 +435,13 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #endif
 
 // MAX_NOTES SETTINGS
-// Teensy-4.x settings
-#ifdef TEENSY4
+
 #define MAX_NOTES 64
 #define MIDI_DECAY_LEVEL_TIME 500
-#endif
-
-// Some optimizations
-#define USE_TEENSY_DSP 1
 
 // HELPER MACROS
 #define TIME_MS2SAMPLES(x) floor(uint32_t(x) * AUDIO_SAMPLE_RATE / 1000) * sizeof(int16_t)
-#define SAMPLES2TIME_MS(x) float(uint32_t(x) * 1000 / AUDIO_SAMPLE_RATE * sizeof(int16_t)
+//#define SAMPLES2TIME_MS(x) float(uint32_t(x) * 1000 / AUDIO_SAMPLE_RATE * sizeof(int16_t))
 #define XSTR(x) STR(x)
 #define STR(x) #x
 

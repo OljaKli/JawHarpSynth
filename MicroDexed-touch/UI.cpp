@@ -592,6 +592,13 @@ FLASHMEM void unregisterScope(void) {
   };
 }
 
+
+ #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+//#include "MCP23008.h"
+//#include "MCP23017.h"
+extern void setled(uint8_t pin,bool state);
+#endif
+
 FLASHMEM uint16_t getContentTypeColor(uint8_t contentType) {
   switch (contentType) {
   case 0:
@@ -2828,7 +2835,12 @@ FLASHMEM boolean key_right()
 
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_RIGHT) == false)
+  {
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+     setled(LED_RIGHT,HIGH);
+#endif
     return true;
+  }
 #endif
 
   if (joysticks[0].getAxis(0) == GAMEPAD_RIGHT_0 && joysticks[0].getAxis(1) == GAMEPAD_RIGHT_1)
@@ -2847,7 +2859,12 @@ FLASHMEM boolean key_left()
 
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_LEFT) == false)
+  {
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+    setled(LED_LEFT,HIGH);
+#endif
     return true;
+  }
 #endif
 
   if (joysticks[0].getAxis(0) == GAMEPAD_LEFT_0 && joysticks[0].getAxis(1) == GAMEPAD_LEFT_1)
@@ -2867,7 +2884,12 @@ FLASHMEM boolean key_up()
 
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_UP) == false)
+  {
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+    setled(LED_UP,HIGH);
+#endif
     return true;
+  }
 #endif
 
   if (joysticks[0].getAxis(0) == GAMEPAD_UP_0 && joysticks[0].getAxis(1) == GAMEPAD_UP_1)
@@ -2887,7 +2909,12 @@ FLASHMEM boolean key_down()
 
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_DOWN) == false)
+  {
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+    setled(LED_DOWN,HIGH);
+#endif
     return true;
+  }
 #endif
 
   if (joysticks[0].getAxis(0) == GAMEPAD_DOWN_0 && joysticks[0].getAxis(1) == GAMEPAD_DOWN_1)
@@ -3643,6 +3670,11 @@ public:
 /***********************************************************************
    MENU CONTROL
  ***********************************************************************/
+
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+  extern void All_Button_LEDS(bool state);
+ #endif
+
 uint8_t touchX = 0;
 uint8_t touchY = 0;
 
@@ -3665,8 +3697,14 @@ FLASHMEM void lcdml_menu_control(void)
   // Volatile Variables
   int8_t g_LCDML_CONTROL_Encoder_position[NUM_ENCODER] = { ENCODER[ENC_R].read(), ENCODER[ENC_L].read() };
 
+ #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+  button[0] = !digitalRead(BUT_R_PIN);
+  button[1] = !digitalRead(BUT_L_PIN);
+#else
   button[0] = digitalRead(BUT_R_PIN);
   button[1] = digitalRead(BUT_L_PIN);
+#endif
+
 
 #ifdef USB_KEYPAD // USB KEYPAD CONTROL TEST
   if (USB_KEY != 0)
@@ -3787,7 +3825,12 @@ FLASHMEM void lcdml_menu_control(void)
   {
 
     if (digitalRead(BI_SELECT) == false)
+    {
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+      setled(LED_SEL,HIGH);
+#endif
       buttons = GAMEPAD_SELECT;
+    }
     if (digitalRead(BI_START) == false)
     {
       if (buttons == GAMEPAD_SELECT)
@@ -3796,11 +3839,21 @@ FLASHMEM void lcdml_menu_control(void)
         buttons = GAMEPAD_START;
     }
     if (digitalRead(BI_BUTTON_A) == false)
+    {
+     #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+      setled(LED_BUT_A,HIGH);
+#endif
       // buttons = buttons + GAMEPAD_BUTTON_A;
       buttons = GAMEPAD_BUTTON_A;
+    }
     if (digitalRead(BI_BUTTON_B) == false)
+    {
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+      setled(LED_BUT_B,HIGH);
+#endif
       // buttons = buttons + GAMEPAD_BUTTON_B;
       buttons = GAMEPAD_BUTTON_B;
+    }
     //}
   }
 #endif
@@ -4032,6 +4085,9 @@ FLASHMEM void lcdml_menu_control(void)
           handleStop();
       }
     }
+  #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+    All_Button_LEDS(false);
+   #endif
   }
 
   /************************************************************************************
