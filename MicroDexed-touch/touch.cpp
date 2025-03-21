@@ -291,10 +291,7 @@ FLASHMEM bool handleLiveModButtons(void) {
 
 FLASHMEM void handle_touchscreen_voice_select()
 {
-  if(handleLiveModButtons()) {
-    // touch handled
-  }
-  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
     if (seq.cycle_touch_element == 1) {
       border3_large_clear();
       seq.cycle_touch_element = 0;
@@ -322,7 +319,10 @@ FLASHMEM void handle_touchscreen_voice_select()
   }
   else {
     if (seq.cycle_touch_element != 1) {
-      if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
+      if(handleLiveModButtons()) {
+        // touch handled
+      }
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
         uint8_t value = get_algo() + 1;
         value %= 32; // 0-31
         

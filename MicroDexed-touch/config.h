@@ -1043,7 +1043,7 @@ typedef struct custom_midi_map_s
 
 enum virtual_keyboard_instruments
 {
- VK_LIVESEQUENCER,
+ VK_LIVESEQUENCER = 0,
  VK_DEXED0,
  VK_DEXED1,
  VK_DEXED2,
