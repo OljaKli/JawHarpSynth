@@ -1300,7 +1300,7 @@ FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)
   // Send SYSEX data also via MIDI
   // vd[0] = 0xF0; // SysEx start
   vd[0] = 0x43;         // ID=Yamaha
-  vd[1] = midi_channel; // Sub-status and MIDI channel
+  vd[1] = midi_channel - 1; // Sub-status and MIDI channel: n=0, ch=1
   vd[2] = 0x00;         // Format number (0=1 voice)
   vd[3] = 0x01;         // Byte count MSB
   vd[4] = 0x1B;         // Byte count LSB
