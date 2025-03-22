@@ -19189,13 +19189,17 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 {
   static uint8_t pool_number;
   static uint8_t bank_number;
-
+  static uint8_t mode;
+  static uint8_t sysex_send_channel;
+  
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     pool_number = configuration.dexed[selected_instance_id].pool;
     bank_number = configuration.dexed[selected_instance_id].bank;
+    mode = 0;
+    sysex_send_channel = 1;
     strcpy(tmp_bank_name, g_bank_name[selected_instance_id]);
     setCursor_textGrid(1, 1);
     display.setTextSize(2);
@@ -19214,65 +19218,83 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
     
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
-      bank_number = constrain(bank_number + e.dir, 0, MAX_BANKS - 1);
-      get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
+      switch (mode)
+      {
+       case 0: // Bank selection
+        bank_number = constrain(bank_number + e.dir, 0, MAX_BANKS - 1);
+        get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
 #ifdef DEBUG
       LOG.printf_P(PSTR("send bank sysex %d - bank:[%s]\n"), bank_number, tmp_bank_name);
 #endif
-      show(2, 1, 2, bank_number);
-      show(2, 4, 10, tmp_bank_name);
+        show(2, 1, 2, bank_number);
+        show(2, 4, 10, tmp_bank_name);
+        break;
+        
+       case 1: // Channel selection
+        sysex_send_channel = constrain(sysex_send_channel + e.dir, 1, 16);
+        show(2, 1, 16, "Channel");
+        show(2, 12, 2, sysex_send_channel);
+        break;
+      }
     }
 
     if (e.pressed) {
-      if (strcmp("*ERROR*", tmp_bank_name) != 0)
-      {
-        char filename[FILENAME_LEN + 10];
-        snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, pool_number, bank_number, tmp_bank_name);
+      
+        mode++;
+        switch (mode)
+        {
+         case 1:
+         show(2, 1, 16, "Channel");
+         show(2, 12, 2, sysex_send_channel);
+         helptext_r("< > SELECT CHANNEL");
+         display.setTextSize(2);
+         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+         break;
+         
+         case 2:
+         if (strcmp("*ERROR*", tmp_bank_name) != 0)
+         {
+          char filename[FILENAME_LEN + 10];
+          snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, pool_number, bank_number, tmp_bank_name);
 #ifdef DEBUG
         LOG.print(F("Send bank "));
         LOG.print(filename);
         LOG.println(F(" from SD."));
 #endif
-        File sysex = SD.open(filename);
-        if (!sysex)
-        {
+          File sysex = SD.open(filename);
+          if (!sysex)
+          {
 #ifdef DEBUG
           LOG.println(F("Cannot read from SD."));
 #endif
-          show(2, 1, 16, "Read error.");
-          bank_number = 0xff;
-        }
-        else
-        {
-          uint8_t bank_data[4104];
-          sysex.read(bank_data, 4104);
-          sysex.close();
-
-          show(2, 1, 16, "Sending Ch");
-          if (configuration.dexed[selected_instance_id].midi_channel == MIDI_CHANNEL_OMNI)
-          {
-            show(2, 12, 2, "01");
-            send_sysex_bank(1, bank_data);
+           show(2, 1, 16, "Read error.");
+           bank_number = 0xff;
           }
           else
           {
-            show(2, 12, 2, configuration.dexed[selected_instance_id].midi_channel);
-            send_sysex_bank(configuration.dexed[selected_instance_id].midi_channel, bank_data);
-          }
-          show(2, 1, 16, "Done.");
-          bank_number = 0xff;
-        }
-      }
-      else
-      {
-        show(2, 1, 16, "No bank.");
-        bank_number = 0xff;
-      }
+           uint8_t bank_data[4104];
+           sysex.read(bank_data, 4104);
+           sysex.close();
 
-      delay(MESSAGE_WAIT_TIME);
-      LCDML.FUNC_goBackToMenu();
-    }
+           show(2, 1, 16, "Sending Ch");
+           show(2, 12, 2, sysex_send_channel );
+           send_sysex_bank(sysex_send_channel, bank_data);
+   
+           show(2, 1, 16, "Done.");
+           bank_number = 0xff;
+          }
+        } 
+        else
+        {
+         show(2, 1, 16, "No bank.");
+         bank_number = 0xff;
+        }
+       mode = 0xff;
+       delay(MESSAGE_WAIT_TIME);
+       LCDML.FUNC_goBackToMenu();
+      }
   }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -19282,7 +19304,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
       _cancel_message_old_menus();
     }
   }
-}
+ }
 
 FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 {
