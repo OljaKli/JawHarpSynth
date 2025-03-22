@@ -1325,6 +1325,8 @@ FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)
 
 FLASHMEM void send_sysex_bank(uint8_t midi_channel, uint8_t* bank_data)
 {
+  bank_data[2] = midi_channel - 1; //n=0, ch=1 
+
 #ifdef MIDI_DEVICE_DIN
   midi_serial.sendSysEx(4104, bank_data); // Send to DIN MIDI
 #endif
