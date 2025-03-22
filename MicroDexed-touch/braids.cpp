@@ -22,7 +22,6 @@ extern AudioEffectFlange braids_flanger_r;
 extern AudioEffectFlange braids_flanger_l;
 extern int braids_flanger_idx;
 extern int braids_flanger_depth;
-extern double braids_flanger_freq;
 extern uint8_t generic_temp_select_menu;
 extern AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
 
