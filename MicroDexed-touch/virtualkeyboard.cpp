@@ -272,45 +272,45 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
   switch (ts.virtual_keyboard_instrument) {
-  case 0:
+  case VK_LIVESEQUENCER:
     display.print(F("LIVESEQ"));
     ts.virtual_keyboard_midi_channel = 20;  //fake channel for livesequencer
     break;
-  case 1:
+  case VK_DEXED0:
     display.print(F("DEXED1 "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[0].midi_channel;
     break;
-  case 2:
+  case VK_DEXED1:
     display.print(F("DEXED2 "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[1].midi_channel;
     break;
-  case 3:
+  case VK_DEXED2:
     display.print(F("DEXED3 "));
     if (NUM_DEXED>2)
     ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
     break;
-  case 4:
+  case VK_DEXED3:
     display.print(F("DEXED4 "));
     if (NUM_DEXED>2)
     ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
     break;
-  case 5:
+  case VK_MICROSYNTH0:
     display.print(F("MSYNTH1"));
     ts.virtual_keyboard_midi_channel = microsynth[0].midi_channel;
     break;
-  case 6:
+  case VK_MICROSYNTH1:
     display.print(F("MSYNTH2"));
     ts.virtual_keyboard_midi_channel = microsynth[1].midi_channel;
     break;
-  case 7:
+  case VK_EPIANO:
     display.print(F("EPIANO "));
     ts.virtual_keyboard_midi_channel = configuration.epiano.midi_channel;
     break;
-  case 8:
+  case VK_DRUMS:
     display.print(F("DRUMS  "));
     ts.virtual_keyboard_midi_channel = drum_midi_channel;
     break;
-  case 9:
+  case VK_BRAIDS:
     display.print(F("BRAIDS "));
     ts.virtual_keyboard_midi_channel = braids_osc.midi_channel;
     break;
@@ -331,7 +331,7 @@ FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
     line1 = std::string(&drum_config[sampleIndex].name[0], LINECHARS);
     line2 = std::string(&drum_config[sampleIndex].name[LINECHARS], LINECHARS);
   }
-  TouchButton::drawButton(GRID.X[padIndex % 6], GRID.Y[4 + (padIndex / 6)], std::string(line1), std::string(line2), color);
+  TouchButton::drawButton(GRID.X[padIndex % 6], GRID.Y[4 + (padIndex / 6)], line1, line2, color);
 }
 
 FLASHMEM void print_drumpads() {
