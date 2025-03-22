@@ -19325,7 +19325,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
     pool_number = configuration.dexed[selected_instance_id].pool;
     bank_number = configuration.dexed[selected_instance_id].bank;
     voice_number = configuration.dexed[selected_instance_id].voice;
-    sysex_send_channel = 0;
+    sysex_send_channel = 1;
 
     strcpy(tmp_bank_name, g_bank_name[selected_instance_id]);
     strcpy(tmp_voice_name, g_voice_name[selected_instance_id]);
@@ -19366,16 +19366,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         break;
 
       case 2: // Channel selection
-        sysex_send_channel = constrain(sysex_send_channel + e.dir, 0, 16);
+        sysex_send_channel = constrain(sysex_send_channel + e.dir, 1, 16);
         show(2, 1, 16, "Channel");
-        if (sysex_send_channel == MIDI_CHANNEL_OMNI)
-           {
-             show(2, 12, 4, "OMNI");
-           }
-           else
-           {
-             show(2, 12, 2, sysex_send_channel);
-           }
+        show(2, 12, 2, sysex_send_channel);
         break;
       }
     }
@@ -19392,12 +19385,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         break;
       case 2:
         show(2, 1, 16, "Channel");
-        if (sysex_send_channel == MIDI_CHANNEL_OMNI) {
-          show(2, 12, 4, "OMNI");
-        }
-        else {
-          show(2, 12, 2, sysex_send_channel);
-        }
+        show(2, 12, 2, sysex_send_channel);
         helptext_r("< > SELECT CHANNEL");
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -19434,12 +19422,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
             MicroDexed[selected_instance_id]->decodeVoice(voice_data, encoded_voice_data);
 
             show(2, 1, 16, "Sending Ch");
-            if (sysex_send_channel == MIDI_CHANNEL_OMNI) {
-              show(2, 12, 4, "OMNI");
-            }
-            else {
-              show(2, 12, 2, sysex_send_channel);
-            }
+            show(2, 12, 2, sysex_send_channel);
             send_sysex_voice(sysex_send_channel, voice_data);
             
             delay(MESSAGE_WAIT_TIME);
