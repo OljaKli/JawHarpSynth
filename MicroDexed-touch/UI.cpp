@@ -3145,10 +3145,13 @@ FLASHMEM void gamepad_learn_func(uint32_t buttons)
    GENERAL UI ELEMENTS
  ***********************************************************************/
 
-FLASHMEM void increment_dexed_instance()
+FLASHMEM bool increment_dexed_instance()
 {
-  if (selected_instance_id < NUM_DEXED - 1)
+  const bool change = selected_instance_id < (NUM_DEXED - 1);
+  if(change) {
     selected_instance_id++;
+  }
+  return change;
 }
 
 FLASHMEM void increment_dexed_instance_round_robin()
@@ -3158,10 +3161,13 @@ FLASHMEM void increment_dexed_instance_round_robin()
     selected_instance_id = 0;
 }
 
-FLASHMEM void decrement_dexed_instance()
+FLASHMEM bool decrement_dexed_instance()
 {
-  if (selected_instance_id > 0)
+  const bool change = selected_instance_id > 0;
+  if(change) {
     selected_instance_id--;
+  }
+  return change;  
 }
 
 FLASHMEM void setModeColor(uint8_t selected_option)
@@ -3294,29 +3300,6 @@ FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint
   // check_glow(x,y, input_value,selected_option);
 }
 
-// read right encoder change, with optional acceleration.
-FLASHMEM int16_t encoder_change(bool fast)
-{
-  int16_t dir = 0;
-  if (LCDML.BT_checkDown())
-    dir = 1;
-  if (LCDML.BT_checkUp())
-    dir = -1;
-
-  if (fast)
-    return dir * (ENCODER[ENC_R].speed());
-  else
-    return dir;
-}
-
-// check if certain encoder changed.
-// as this resets internal state by the way, it should only be called once per menu loop cycle.
-// TODO get rid of the side-effects.
-bool encoder_changed(uint8_t id)
-{
-  return (LCDML.BT_checkDown() && encoderDir[id].Down()) || (LCDML.BT_checkUp() && encoderDir[id].Up()) || LCDML.BT_checkEnter();
-}
-
 // Store a generic parameter editor.
 //
 // The editor has
@@ -3386,9 +3369,12 @@ private:
 
   // read encoders / other input sources and adjust the assigned value
   // by using the getter and setter functions. And redraw afterwards.
-  void handle_parameter_editor()
+  void handle_parameter_editor(EncoderEvents e)
   {
-    const int16_t change = encoder_change(fast);
+    int16_t change = e.dir;
+    if (fast) {
+      change *= e.speed;
+    }
     const int16_t value = get();
     const int16_t newValue = constrain(value + change, limit_min, limit_max);
     if (newValue != value) {
@@ -3629,40 +3615,42 @@ public:
       editors[generic_temp_select_menu].draw_editor(true);
     }
 
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+
     // handle right encoder
-    if (encoder_changed(ENC_R))
-    {
-      if (seq.edit_state == 0)
-      {
+    if (e.turned) {
+      if (seq.edit_state == 0) {
         // handle parameter selection
         uint8_t last = generic_temp_select_menu;
-        generic_temp_select_menu = constrain(generic_temp_select_menu + encoder_change(false), 0, num_editors - 1);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, num_editors - 1);
         editors[last].draw_editor(true);
         editors[generic_temp_select_menu].draw_editor(true);
       }
-      else
+      else {
         // change currently selected editor's value by right encoder
-        editors[generic_temp_select_menu].handle_parameter_editor();
-    }
-
-    // optionally set a specific editor's value by left encoder
-    if (encoderLeftHandler && encoder_changed(ENC_L))
-    {
-      encoderLeftHandler->handle_parameter_editor();
+        editors[generic_temp_select_menu].handle_parameter_editor(e);
+      }
     }
 
     // optionally toggle a specific editor by long button press
-    if (buttonLongHandler && encoderDir[ENC_R].ButtonLong())
-    {
-      if (instance_select_flag)
-      {
+    if (buttonLongHandler && e.longPressed) {
+      if (instance_select_flag) {
         increment_dexed_instance_round_robin();
         buttonLongHandler->set(selected_instance_id);
       }
-      else
+      else {
         buttonLongHandler->set(1 - buttonLongHandler->get()); // toggle value between 0 and 1
+      }
 
       buttonLongHandler->draw_editor(true);
+    }
+
+    // optionally set a specific editor's value by left encoder
+    if (encoderLeftHandler) {
+      const EncoderEvents e = getEncoderEvents(ENC_L);
+      if (e.turned) {
+        encoderLeftHandler->handle_parameter_editor(e);
+      }
     }
   };
 } ui;
@@ -17971,20 +17959,6 @@ FLASHMEM void increment_dexed_instance_in_voice_select_round_robin()
   UI_update_instance_icons();
 };
 
-FLASHMEM void increment_dexed_instance_in_voice_select()
-{
-  increment_dexed_instance();
-  print_voice_settings_in_dexed_voice_select(false, true);
-  UI_update_instance_icons();
-};
-
-FLASHMEM void decrement_dexed_instance_in_voice_select()
-{
-  decrement_dexed_instance();
-  print_voice_settings_in_dexed_voice_select(false, true);
-  UI_update_instance_icons();
-};
-
 FLASHMEM void UI_update_instance_icons()
 {
   display.setTextSize(1);
@@ -18228,6 +18202,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     // handle main entries
     else {
       if (e.turned) {
+        bool changed = false;
         if (seq.edit_state == 0) {
           generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 16);
         }
@@ -18242,14 +18217,18 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
           case 1: // dexed select
             if (e.down) {
-              increment_dexed_instance_in_voice_select();
+              changed = increment_dexed_instance();
             }
             else if (e.up) {
-              decrement_dexed_instance_in_voice_select();
+              changed = decrement_dexed_instance();
             }
-            printLiveModButtons();
-            draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-            load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+            if (changed) {
+              print_voice_settings_in_dexed_voice_select(false, true);
+              UI_update_instance_icons();
+              printLiveModButtons();
+              draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+              load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+            }
             break;
           
           case 2: // bank select

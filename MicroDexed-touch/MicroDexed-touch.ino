@@ -119,7 +119,7 @@ short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 short braids_r_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 int braids_flanger_idx = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 int braids_flanger_depth = BRAIDS_FLANGE_DELAY_LENGTH / 4;
-double braids_flanger_freq = .5;
+const float braids_flanger_freq = 0.5F;
 
 uint8_t check_sd_cards(void);
 void check_and_create_directories(void);
@@ -938,8 +938,6 @@ elapsedMillis midi_decay_timer_microsynth;
 elapsedMillis microsynth_control_rate;
 elapsedMillis midi_decay_timer_dexed;
 
-int perform_attack_mod[NUM_DEXED] = { 0, 0 };
-int perform_release_mod[NUM_DEXED] = { 0, 0 };
 // Allocate the delay lines for chorus
 int16_t* delayline[NUM_DEXED];
 int16_t* ep_delayline_r;
@@ -947,7 +945,6 @@ int16_t* ep_delayline_l;
 
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 uint8_t drum_counter;
-//uint8_t drum_type[NUM_DRUMS];
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
@@ -956,7 +953,6 @@ PeriodicTimer sequencer_timer;
 multisample_s msp[NUM_MULTISAMPLES];
 multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 uint8_t note_buffer_msp[NUM_DRUMS];
-uint8_t msp_sample_slot_trigger_step[NUM_DRUMS];
 
 extern LCDMenuLib2 LCDML;
 

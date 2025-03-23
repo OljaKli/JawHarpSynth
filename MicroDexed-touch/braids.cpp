@@ -22,7 +22,6 @@ extern AudioEffectFlange braids_flanger_r;
 extern AudioEffectFlange braids_flanger_l;
 extern int braids_flanger_idx;
 extern int braids_flanger_depth;
-extern double braids_flanger_freq;
 extern uint8_t generic_temp_select_menu;
 extern AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
 
@@ -46,12 +45,10 @@ FLASHMEM void _update_braids_filter(uint8_t d)
 
 FLASHMEM void update_braids_params()
 {
-
   for (uint8_t d = 0; d < NUM_BRAIDS; d++)
   {
     if (braids_envelope[d]->isActive())
     {
-
       if (braids_osc.filter_freq_from > braids_osc.filter_freq_to && braids_osc.filter_speed != 0)
       {
         if (braids_filter_state[d] > braids_osc.filter_freq_to) // osc filter down
@@ -96,7 +93,6 @@ FLASHMEM void update_braids_params()
 
 FLASHMEM void braids_update_all_settings()
 {
-
   if (braids_osc.flanger > 0)
   {
     braids_flanger_r.voices(braids_flanger_idx, braids_flanger_depth, (float)braids_osc.flanger * 0.003);
@@ -150,12 +146,10 @@ FLASHMEM void braids_update_all_settings()
       braids_filter_state[instance_id] = braids_osc.filter_freq_from;
     }
   }
-
 }
 
 FLASHMEM void braids_update_single_setting()
 {
-
   if ((generic_temp_select_menu == 19 && seq.edit_state) || (generic_temp_select_menu == 20 && seq.edit_state))
   {
     global_delay_in_mixer[0]->gain(6, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.80)); //previously 4
