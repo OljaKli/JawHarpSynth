@@ -16690,6 +16690,7 @@ FLASHMEM void _system_settings_long_help_texts()
     previous_select_menu = generic_temp_select_menu;
   }
   else {
+    if (generic_temp_select_menu != 9)
     return;
   }
 
