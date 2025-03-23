@@ -3145,10 +3145,13 @@ FLASHMEM void gamepad_learn_func(uint32_t buttons)
    GENERAL UI ELEMENTS
  ***********************************************************************/
 
-FLASHMEM void increment_dexed_instance()
+FLASHMEM bool increment_dexed_instance()
 {
-  if (selected_instance_id < NUM_DEXED - 1)
+  const bool change = selected_instance_id < (NUM_DEXED - 1);
+  if(change) {
     selected_instance_id++;
+  }
+  return change;
 }
 
 FLASHMEM void increment_dexed_instance_round_robin()
@@ -3158,10 +3161,13 @@ FLASHMEM void increment_dexed_instance_round_robin()
     selected_instance_id = 0;
 }
 
-FLASHMEM void decrement_dexed_instance()
+FLASHMEM bool decrement_dexed_instance()
 {
-  if (selected_instance_id > 0)
+  const bool change = selected_instance_id > 0;
+  if(change) {
     selected_instance_id--;
+  }
+  return change;  
 }
 
 FLASHMEM void setModeColor(uint8_t selected_option)
@@ -17953,20 +17959,6 @@ FLASHMEM void increment_dexed_instance_in_voice_select_round_robin()
   UI_update_instance_icons();
 };
 
-FLASHMEM void increment_dexed_instance_in_voice_select()
-{
-  increment_dexed_instance();
-  print_voice_settings_in_dexed_voice_select(false, true);
-  UI_update_instance_icons();
-};
-
-FLASHMEM void decrement_dexed_instance_in_voice_select()
-{
-  decrement_dexed_instance();
-  print_voice_settings_in_dexed_voice_select(false, true);
-  UI_update_instance_icons();
-};
-
 FLASHMEM void UI_update_instance_icons()
 {
   display.setTextSize(1);
@@ -18210,6 +18202,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     // handle main entries
     else {
       if (e.turned) {
+        bool changed = false;
         if (seq.edit_state == 0) {
           generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 16);
         }
@@ -18224,14 +18217,18 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
           case 1: // dexed select
             if (e.down) {
-              increment_dexed_instance_in_voice_select();
+              changed = increment_dexed_instance();
             }
             else if (e.up) {
-              decrement_dexed_instance_in_voice_select();
+              changed = decrement_dexed_instance();
             }
-            printLiveModButtons();
-            draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-            load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+            if (changed) {
+              print_voice_settings_in_dexed_voice_select(false, true);
+              UI_update_instance_icons();
+              printLiveModButtons();
+              draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+              load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+            }
             break;
           
           case 2: // bank select

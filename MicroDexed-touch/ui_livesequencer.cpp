@@ -513,7 +513,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     display.fillScreen(COLOR_BACKGROUND);
     numberOfBarsTemp = data.numberOfBars;
     liveSeq.onGuiInit();
-    updateTrackChannelSetupButtons(data.activeTrack);
+    updateTrackChannelSetupButtons(data.activeTrack); // update GUI for the case a new perf was loaded
 
     display.setTextSize(1);
     display.setCursor(GRID.X[2], 6);
