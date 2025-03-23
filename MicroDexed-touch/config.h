@@ -1024,6 +1024,8 @@ typedef struct sys_s
   bool invert_colors;
   uint8_t brightness;
   bool skip_midi_channel_warning;
+  bool send_sysex_on_voice_change;
+  bool send_midi_cc;
 } sys_t;
 
 typedef struct storage_file_s

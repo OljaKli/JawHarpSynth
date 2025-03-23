@@ -119,6 +119,8 @@ uint32_t gamepad_buttons_neutral;
 uint8_t gamepad_0_neutral;
 uint8_t gamepad_1_neutral;
 
+uint8_t previous_scroll_position = 255;
+
 extern uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
 PsramLoader sampleLoader(psram_free_bytes);
@@ -16672,6 +16674,20 @@ FLASHMEM void print_screensaver_mode()
 
 FLASHMEM void _system_settings_long_help_texts()
 {
+  static uint8_t previous_select_menu = 255;
+  
+  //Exit if the selected menu item is unchanged
+  if (generic_temp_select_menu != previous_select_menu) {
+    previous_select_menu = generic_temp_select_menu;
+  } else {
+    return;  
+  }
+
+  setCursor_textGrid_small(2, 18);
+  print_empty_spaces(47, 1);
+  setCursor_textGrid_small(2, 19);
+  print_empty_spaces(47, 1);
+
   display.setTextColor(GREY1, COLOR_BACKGROUND);
 
   if (generic_temp_select_menu == 8) {
@@ -16712,248 +16728,188 @@ FLASHMEM void _system_settings_long_help_texts()
     setCursor_textGrid_small(2, 19);
     display.print(F("CHANNELS OR MIDI SYNC IS SET TO EXTERNAL SOURCE"));
   }
-  else
-  {
+  
+  else if (generic_temp_select_menu == 11) {
+
     setCursor_textGrid_small(2, 18);
+    display.print(F("TRANSMIT SYSEX WHEN CHANGING DEXED VOICE OR ROM"));
+    setCursor_textGrid_small(2, 19);
     print_empty_spaces(47, 1);
+  }
+
+  else if (generic_temp_select_menu == 12) {
+
+    setCursor_textGrid_small(2, 18);
+    display.print(F("TRANSMIT MIDI CC ON VOICE CHANGE & STARTUP"));
     setCursor_textGrid_small(2, 19);
     print_empty_spaces(47, 1);
   }
 }
 
-FLASHMEM void _render_misc_settings()
+FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
 {
-  display.fillScreen(COLOR_BACKGROUND);
-  display.setTextSize(2);
-  setCursor_textGrid(1, 1);
-  display.setTextColor(RED, COLOR_BACKGROUND);
-  display.print(F("SYSTEM SETTINGS"));
-  helptext_r("SELECT PARAMETER");
+  const uint8_t max_visible_settings = 10;
 
-  draw_button_on_grid(42, 1, "TOUCH", "TEST", 0);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  auto clear_desc = [](uint8_t line) {
+    setCursor_textGrid_small(2, line);
+    print_empty_spaces(42, 1);
+  };
 
-  setCursor_textGrid_small(2, 6);
-  display.print(F("GAMEPAD/NATIVE KEY SPEED"));
-  setCursor_textGrid_small(2, 7);
-  display.print(F("SCREENSAVER START"));
-  setCursor_textGrid_small(2, 8);
-  display.print(F("SCREENSAVER MODE"));
-  setCursor_textGrid_small(2, 9);
-  display.print(F("DISPLAY ROTATION"));
-  setCursor_textGrid_small(2, 10);
-  display.print(F("TOUCH SCREEN ROTATION"));
-  setCursor_textGrid_small(2, 11);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(F("SWAP ENCODER DIRECTION (A/B PINS)"));
-  setCursor_textGrid_small(42, 6);
-  print_formatted_number(configuration.sys.gamepad_speed, 3);
-  setCursor_textGrid_small(46, 6);
-  display.print(F("ms"));
-  setCursor_textGrid_small(2, 12);
-  display.print(F("SKIP BOOT ANIMATION"));
-  setCursor_textGrid_small(2, 13);
-  display.print(F("INVERT COLORS (EXPERIMENTAL)"));
-  setCursor_textGrid_small(2, 14);
-  display.print(F("DISPLAY BRIGHTNESS"));
-  setCursor_textGrid_small(2, 15);
-  display.print(F("DEXED ENGINE"));
-  setCursor_textGrid_small(2, 16);
-  display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS"));
-  setCursor_textGrid_small(42, 7);
-  display.print(configuration.sys.screen_saver_start);
-  setCursor_textGrid_small(42, 8);
-  print_screensaver_mode();
-  setCursor_textGrid_small(42, 9);
-  display.print(configuration.sys.display_rotation);
-  setCursor_textGrid_small(42, 10);
-  display.print(configuration.sys.touch_rotation);
-  setCursor_textGrid_small(42, 11);
-  display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF"));
-  setCursor_textGrid_small(42, 12);
-  display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO "));
-  setCursor_textGrid_small(42, 13);
-  display.print(configuration.sys.invert_colors ? F("YES") : F("NO "));
-  setCursor_textGrid_small(42, 14);
-  print_formatted_number(configuration.sys.brightness, 3);
-  setCursor_textGrid_small(42, 15);
-  display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO "));
+  auto clear_val = [](uint8_t line) {
+    setCursor_textGrid_small(42, line);
+    print_empty_spaces(8, 1);
+  };
 
+  auto render_label = [](uint8_t setting_index, uint8_t line) {
+    setCursor_textGrid_small(2, line);
+    switch (setting_index) {
+      case 0: display.print(F("GAMEPAD/NATIVE KEY SPEED")); break;
+      case 1: display.print(F("SCREENSAVER START")); break;
+      case 2: display.print(F("SCREENSAVER MODE")); break;
+      case 3: display.print(F("DISPLAY ROTATION")); break;
+      case 4: display.print(F("TOUCH SCREEN ROTATION")); break;
+      case 5: display.print(F("SWAP ENCODER DIRECTION (A/B PINS)")); break;
+      case 6: display.print(F("SKIP BOOT ANIMATION")); break;
+      case 7: display.print(F("INVERT COLORS (EXPERIMENTAL)")); break;
+      case 8: display.print(F("DISPLAY BRIGHTNESS")); break;
+      case 9: display.print(F("DEXED ENGINE")); break;
+      case 10: display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS")); break;
+      case 11: display.print(F("SEND SYSEX ON VOICE CHANGE")); break;
+      case 12: display.print(F("SEND MIDI CC DUMPS")); break;
+    }
+  };
+
+  auto render_value = [](uint8_t setting_index, uint8_t line) {
+    setModeColor(setting_index);
+    setCursor_textGrid_small(42, line);
+    switch (setting_index) {
+      case 0: print_formatted_number(configuration.sys.gamepad_speed, 3); setCursor_textGrid_small(46, line); display.print(F("ms")); break;
+      case 1: print_formatted_number(configuration.sys.screen_saver_start, 2); setCursor_textGrid_small(45, line); display.print(configuration.sys.screen_saver_start > 1 ? F("MINS") : F("MIN ")); break;
+      case 2: print_screensaver_mode(); break;
+      case 3: display.print(configuration.sys.display_rotation); break;
+      case 4: display.print(configuration.sys.touch_rotation); break;
+      case 5: display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF")); break;
+      case 6: display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO ")); break;
+      case 7: display.print(configuration.sys.invert_colors ? F("YES") : F("NO ")); break;
+      case 8: print_formatted_number(configuration.sys.brightness, 3); break;
+      case 9: 
+        if (MicroDexed[0]->getEngineType() == 0) display.print(F("MSFA"));
+        else if (MicroDexed[0]->getEngineType() == 1) display.print(F("MK-I"));
+        else if (MicroDexed[0]->getEngineType() == 2) display.print(F("OPL "));
+        break;
+      case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
+      case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
+      case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
+    }
+  };
+
+  // Only update description if the scroll position changes
+  if (scroll_position != previous_scroll_position) {
+    previous_scroll_position = scroll_position;
+
+    for (uint8_t i = 0; i < max_visible_settings; i++) {
+      uint8_t setting_index = scroll_position + i;
+      if (setting_index >= total_menu_items) break;
+      clear_desc(6 + i);
+      render_label(setting_index, 6 + i);
+    }
+  }
+  
+  for (uint8_t i = 0; i < max_visible_settings; i++) {
+    uint8_t setting_index = scroll_position + i;
+    if (setting_index >= total_menu_items) break;  
+    clear_val(6 + i);
+    render_value(setting_index, 6 + i);
+  }
+
+  drawScrollbar(308, 60, 10, total_menu_items, generic_temp_select_menu, 10);
   _system_settings_long_help_texts();
 }
 
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
+  static uint8_t scroll_position = 0; // Track the current scroll position
+  static uint8_t total_menu_items = 13; // Zero Indexed
+
   if (LCDML.FUNC_setup())
   {
     registerTouchHandler(handle_touchscreen_settings_button_test);
     encoderDir[ENC_R].reset();
     generic_active_function = 0;
     generic_temp_select_menu = 0;
-    _render_misc_settings();
+    scroll_position = 0; // Reset scroll position on setup
+
+    display.fillScreen(COLOR_BACKGROUND);
+    display.setTextSize(2);
+    setCursor_textGrid(1, 1);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F("SYSTEM SETTINGS"));
+    helptext_r("SELECT PARAMETER");
+  
+    draw_button_on_grid(42, 1, "TOUCH", "TEST", 0);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    _render_misc_settings(scroll_position, total_menu_items);
   }
+
   if (LCDML.FUNC_loop())
   {
-    // handle encoders
+    // Handle encoders
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
       if (generic_active_function == 0) {
-        // navigate through menu
-        generic_temp_select_menu = constrain(generic_temp_select_menu + (e.dir * 1), 0, 10);
-      }
-      else {
-        // handle setting change and load save timer
+        // Navigate through menu
+        generic_temp_select_menu = constrain(generic_temp_select_menu + (e.dir * 1), 0, total_menu_items - 1);
+
+        // Update scroll position if necessary
+        if (generic_temp_select_menu < scroll_position) {
+          scroll_position = generic_temp_select_menu;
+        } else if (generic_temp_select_menu >= scroll_position + 10) {
+          scroll_position = generic_temp_select_menu - 9;
+        }
+      } else {
+        // Handle setting change and load save timer
         save_sys_flag = true;
         save_sys = SAVE_SYS_MS / 2;
 
         switch (generic_temp_select_menu) {
-        case 0:
-          configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed + (e.dir * 10), GAMEPAD_SPEED_MIN, GAMEPAD_SPEED_MAX);
-          break;
-
-        case 1:
-          configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (e.dir * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX);
-          setup_screensaver();
-          break;
-
-        case 2:
-          configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (e.dir * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX);
-          setup_screensaver();
-          break;
-
-        case 3:
-          configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (e.dir * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX);
-          display.setRotation(configuration.sys.display_rotation); // rotation 180°
-          _render_misc_settings();
-          break;
-
-        case 4:
-          configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation + (e.dir * 1), TOUCH_ROTATION_MIN, TOUCH_ROTATION_MAX);
-#if defined GENERIC_DISPLAY
-          touch.setRotation(configuration.sys.touch_rotation); // rotation 180°
-#endif
-          break;
-
-        case 5:
-          configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins;
-          ENCODER[ENC_L].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
-          ENCODER[ENC_R].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
-
-          // // set hardware rotations for display/touch and pins for encoders
-          // _setup_rotation_and_encoders(false);
-
-          // // Re render the page
-          // generic_active_function = 0;
-          // generic_temp_select_menu = 0;
-          // _render_misc_settings();
-          break;
-
-        case 6:
-          configuration.sys.boot_anim_skip = !configuration.sys.boot_anim_skip;
-          break;
-
-        case 7:
-          configuration.sys.invert_colors = !configuration.sys.invert_colors;
-          display.invertDisplay(!configuration.sys.invert_colors);
-          break;
-
-        case 8:
-          configuration.sys.brightness = constrain(configuration.sys.brightness + (e.dir * ENCODER[ENC_R].speed()), 100, 200);
-          break;
-
-        case 9:
-          configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (e.dir * 1), 0, 2);
-          for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
+          case 0: configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed + (e.dir * 10), GAMEPAD_SPEED_MIN, GAMEPAD_SPEED_MAX); break;
+          case 1: configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (e.dir * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX); setup_screensaver(); break;
+          case 2: configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (e.dir * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX); setup_screensaver(); break;
+          case 3: configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (e.dir * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX); display.setRotation(configuration.sys.display_rotation); break;
+          case 4: configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation + (e.dir * 1), TOUCH_ROTATION_MIN, TOUCH_ROTATION_MAX); break;
+          case 5: configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins; break;
+          case 6: configuration.sys.boot_anim_skip = !configuration.sys.boot_anim_skip; break;
+          case 7: configuration.sys.invert_colors = !configuration.sys.invert_colors; display.invertDisplay(!configuration.sys.invert_colors); break;
+          case 8: configuration.sys.brightness = constrain(configuration.sys.brightness + (e.dir * ENCODER[ENC_R].speed()), 100, 200); break;
+          case 9: 
+           configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (e.dir * 1), 0, 2);
+           for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
             MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
-          break;
-
-        case 10:
-          configuration.sys.skip_midi_channel_warning = !configuration.sys.skip_midi_channel_warning;
-          break;
+           break;
+          case 10: configuration.sys.skip_midi_channel_warning = !configuration.sys.skip_midi_channel_warning; break;
+          case 11: configuration.sys.send_sysex_on_voice_change = !configuration.sys.send_sysex_on_voice_change; break;
+          case 12: configuration.sys.send_midi_cc = !configuration.sys.send_midi_cc; break;
         }
       }
+      _render_misc_settings(scroll_position, total_menu_items);
       set_sys_params();
-      _system_settings_long_help_texts();
     }
 
-    // handle button presses during menu
+    // Handle button presses during menu
     if (e.pressed) {
       generic_active_function = !generic_active_function;
+      _render_misc_settings(scroll_position, total_menu_items);
     }
-    // button check end
-
-    // Gamepad settings
-    setModeColor(0);
-    setCursor_textGrid_small(42, 6);
-    print_formatted_number(configuration.sys.gamepad_speed, 3);
-    setCursor_textGrid_small(46, 6);
-    display.print(F("ms"));
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-    // Screen saver starts after xx seconds
-    setModeColor(1);
-    setCursor_textGrid_small(42, 7);
-    print_formatted_number(configuration.sys.screen_saver_start, 2);
-    setCursor_textGrid_small(45, 7);
-    display.print(configuration.sys.screen_saver_start > 1 ? F("MINS") : F("MIN "));
-
-    setModeColor(2);
-    setCursor_textGrid_small(42, 8);
-    print_screensaver_mode();
-
-    setModeColor(3);
-    setCursor_textGrid_small(42, 9);
-    display.print(configuration.sys.display_rotation);
-
-    // Touch rotation
-    setModeColor(4);
-    setCursor_textGrid_small(42, 10);
-    display.print(configuration.sys.touch_rotation);
-
-    // UI reverse
-    setModeColor(5);
-    setCursor_textGrid_small(42, 11);
-    display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF"));
-
-    setModeColor(6);
-    setCursor_textGrid_small(42, 12);
-    display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO "));
-    setModeColor(7);
-    setCursor_textGrid_small(42, 13);
-    display.print(configuration.sys.invert_colors ? F("YES") : F("NO "));
-
-    setModeColor(8);
-    setCursor_textGrid_small(42, 14);
-    print_formatted_number(configuration.sys.brightness, 3);
-
-    setModeColor(9);
-    setCursor_textGrid_small(42, 15);
-
-    if (MicroDexed[0]->getEngineType() == 0)
-    {
-      display.print(F("MSFA"));
-    }
-    else if (MicroDexed[0]->getEngineType() == 1)
-    {
-      display.print(F("MK-I"));
-    }
-    else if (MicroDexed[0]->getEngineType() == 2)
-    {
-      display.print(F("OPL "));
-    }
-
-    setModeColor(10);
-    setCursor_textGrid_small(42, 16);
-    display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO "));
-
   }
-  // ****** STABLE END *********
+
   if (LCDML.FUNC_close())
   {
     unregisterTouchHandler();
     generic_active_function = 99;
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
+    previous_scroll_position = 255; //reset
   }
 }
 
