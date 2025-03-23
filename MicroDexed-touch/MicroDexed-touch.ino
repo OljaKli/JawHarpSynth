@@ -5229,7 +5229,10 @@ FLASHMEM void set_fx_params(void)
   master_mixer_r.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
   master_mixer_l.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
 
-  init_MIDI_send_CC();
+  if (configuration.sys.send_midi_cc) {
+   init_MIDI_send_CC();
+  }
+  
 }
 
 FLASHMEM void set_voiceconfig_params(uint8_t instance_id)

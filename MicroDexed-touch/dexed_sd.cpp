@@ -278,8 +278,12 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 
       uint8_t data_copy[156];
       MicroDexed[instance_id]->getVoiceData(data_copy);
-      send_sysex_voice(configuration.dexed[instance_id].midi_channel, data_copy);
-      init_MIDI_send_CC();
+      if (configuration.sys.send_sysex_on_voice_change) {
+       send_sysex_voice(configuration.dexed[instance_id].midi_channel, data_copy);
+      }
+      if (configuration.sys.send_midi_cc) {
+       init_MIDI_send_CC();
+      }
       loadDexedOrigADSR(instance_id);
       return (ret);
     }
@@ -2108,6 +2112,8 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.reverse_encoder_pins = data_json["encoder_reversed"];
         configuration.sys.invert_colors = data_json["invert_colors"];
         configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
+        configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
+        configuration.sys.send_midi_cc = data_json["send_midi_cc"];
        
         if (data_json["brightness"] == 0)
           configuration.sys.brightness = 183;
@@ -2196,6 +2202,8 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["screen_saver_mode"] = configuration.sys.screen_saver_mode;
       data_json["brightness"] = configuration.sys.brightness;
       data_json["skip_midi_channel_warning"] = configuration.sys.skip_midi_channel_warning;
+      data_json["send_sysex_on_voice_change"] = configuration.sys.send_sysex_on_voice_change;
+      data_json["send_midi_cc"] = configuration.sys.send_midi_cc;
       data_json["gp_speed"] = configuration.sys.gamepad_speed;
       if (GAMEPAD_BUTTON_A != GAMEPAD_BUTTON_B)
       {
