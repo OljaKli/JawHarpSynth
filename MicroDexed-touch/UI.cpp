@@ -16732,7 +16732,6 @@ FLASHMEM void _system_settings_long_help_texts()
     }
   }
   else if (generic_temp_select_menu == 10) {
-
     setCursor_textGrid_small(2, 18);
     display.print(F("ENABLE TO SKIP WARNINGS ABOUT DUPLICATE MIDI-  "));
     setCursor_textGrid_small(2, 19);
@@ -16740,7 +16739,6 @@ FLASHMEM void _system_settings_long_help_texts()
   }
 
   else if (generic_temp_select_menu == 11) {
-
     setCursor_textGrid_small(2, 18);
     display.print(F("TRANSMIT SYSEX WHEN CHANGING DEXED VOICE OR ROM"));
     setCursor_textGrid_small(2, 19);
@@ -16748,12 +16746,38 @@ FLASHMEM void _system_settings_long_help_texts()
   }
 
   else if (generic_temp_select_menu == 12) {
-
     setCursor_textGrid_small(2, 18);
     display.print(F("TRANSMIT MIDI CC ON VOICE CHANGE & STARTUP"));
     setCursor_textGrid_small(2, 19);
     print_empty_spaces(47, 1);
   }
+  else if (generic_temp_select_menu == 13||generic_temp_select_menu == 14) {
+    setCursor_textGrid_small(2, 18);
+    display.print(F("SET ENCODER RGB COLORS FOR DEFAULT AND"));
+    setCursor_textGrid_small(2, 19);
+    display.print(F("EDIT/ACTIVATED MODE"));
+  }
+
+}
+
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+extern void set_custom_enc_colors();
+#endif
+
+FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line,uint8_t value)
+{
+  bool red,green,blue;
+  red = bitRead(value, 0);
+   green = bitRead(value, 1);
+    blue = bitRead(value, 2);
+  display.console = true;
+ display.fillRect(268  , 10*(line), 30, 8, RGB24toRGB565(red*254,green*254,blue*254));
+  display.console = false;
+
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+ set_custom_enc_colors();
+#endif
+
 }
 
 FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
@@ -16786,6 +16810,8 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 10: display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS")); break;
     case 11: display.print(F("SEND SYSEX ON VOICE CHANGE")); break;
     case 12: display.print(F("SEND MIDI CC DUMPS")); break;
+    case 13: display.print(F("RGB ENCODER DEFAULT COLOR")); break;
+    case 14: display.print(F("RGB ENCODER EDITOR COLOR")); break;
     }
     };
 
@@ -16810,6 +16836,14 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
     case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
     case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
+
+    case 13: display.print(configuration.sys.rgb_enc_color_def); 
+_render_rgb_enc_preview_system_settings(line,configuration.sys.rgb_enc_color_def);
+    break;
+    case 14: display.print(configuration.sys.rgb_enc_color_sel);
+_render_rgb_enc_preview_system_settings(line,configuration.sys.rgb_enc_color_sel);
+     break;
+
     }
     };
 
@@ -16845,7 +16879,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 13; // Zero Indexed
+  static uint8_t total_menu_items = 15; // Zero Indexed
 
   if (LCDML.FUNC_setup())
   {
@@ -16896,7 +16930,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 2: configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (e.dir * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX); setup_screensaver(); break;
         case 3: configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (e.dir * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX); display.setRotation(configuration.sys.display_rotation); break;
         case 4: configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation + (e.dir * 1), TOUCH_ROTATION_MIN, TOUCH_ROTATION_MAX); break;
-        case 5: configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins; break;
+        case 5: configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins; _setup_rotation_and_encoders(false); break;
         case 6: configuration.sys.boot_anim_skip = !configuration.sys.boot_anim_skip; break;
         case 7: configuration.sys.invert_colors = !configuration.sys.invert_colors; display.invertDisplay(!configuration.sys.invert_colors); break;
         case 8: configuration.sys.brightness = constrain(configuration.sys.brightness + (e.dir * ENCODER[ENC_R].speed()), 100, 200); break;
@@ -16908,6 +16942,9 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 10: configuration.sys.skip_midi_channel_warning = !configuration.sys.skip_midi_channel_warning; break;
         case 11: configuration.sys.send_sysex_on_voice_change = !configuration.sys.send_sysex_on_voice_change; break;
         case 12: configuration.sys.send_midi_cc = !configuration.sys.send_midi_cc; break;
+
+         case 13: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
+        case 14: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
         }
       }
       _render_misc_settings(scroll_position, total_menu_items);
@@ -16925,7 +16962,6 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
   {
     unregisterTouchHandler();
     generic_active_function = 99;
-    menuhelper_previous_val=99;
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     previous_scroll_position = 255; //reset

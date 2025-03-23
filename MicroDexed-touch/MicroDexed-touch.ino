@@ -107,12 +107,7 @@ uint8_t APC_MODE = APC_OFF;
 #endif
 
 
- #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
- void setled(uint8_t pin,bool state)
- {
-   mcp.write1(pin, state);
- }
- #endif
+
 
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
@@ -243,7 +238,7 @@ AudioMixer<2> ep_chorus_mixer_l;
 AudioAnalyzePeak microdexed_peak_0;
 AudioAnalyzePeak microdexed_peak_1;
 
- #if (NUM_DEXED>2)
+#if (NUM_DEXED>2)
 AudioAnalyzePeak microdexed_peak_2;
 AudioAnalyzePeak microdexed_peak_3;
 #endif
@@ -647,7 +642,7 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   else
     if (instance_id == 1)
       dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_1, 0));
-     #if defined(DRUMS_FILTERS)  
+#if defined(DRUMS_FILTERS)  
     else
       if (instance_id == 2)
         dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_2, 0));
@@ -854,23 +849,23 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[instance_id], 0, *global_delay_in_mixer[0], 10 + instance_id)); //previously 8
   dynamicConnections.emplace_back(new AudioConnection(*Drum_filter[NUM_DRUMS + instance_id], 0, *global_delay_in_mixer[1], 10 + instance_id)); //previously 8
 #else
-//no filter code
-    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id));
-    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id));
-    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id));
-    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id));
-    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 10 + instance_id));
-    dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 10 + instance_id));
+  //no filter code
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_mixer_l, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, drum_reverb_send_mixer_r, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, drum_reverb_send_mixer_l, instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *global_delay_in_mixer[0], 10 + instance_id));
+  dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *global_delay_in_mixer[1], 10 + instance_id));
 
   //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 0, *Drum_filter[instance_id], 0);
   //dynamicConnections.emplace_back(new AudioConnection(*Drum[instance_id], 1, *Drum_filter[NUM_DRUMS + instance_id], 0);
 #endif
 
 #ifdef DEBUG
-    LOG.print(F("Drum-Instance: "));
-    LOG.println(instance_id);
-    LOG.print(F("Dynamic-Connection-Counter="));
-    LOG.println(dynamicConnections.size());
+  LOG.print(F("Drum-Instance: "));
+  LOG.println(instance_id);
+  LOG.print(F("Dynamic-Connection-Counter="));
+  LOG.println(dynamicConnections.size());
 #endif
 }
 
@@ -968,6 +963,42 @@ bool touch_ic_found = false;
 //   // force millis() to be 300 to skip startup delays
 //   systick_millis_count = 300;
 
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+
+void setled(uint8_t pin, bool state)
+{
+  mcp.write1(pin, state);
+}
+
+void set_custom_enc_colors()
+{
+
+  mcp.write1(RGB_LED_L_RED, !bitRead(configuration.sys.rgb_enc_color_def, 0));
+  mcp.write1(RGB_LED_L_GREEN, !bitRead(configuration.sys.rgb_enc_color_def, 1));
+  mcp.write1(RGB_LED_L_BLUE, !bitRead(configuration.sys.rgb_enc_color_def, 2));
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) && generic_active_function)
+  {
+    mcp.write1(RGB_LED_R_RED, !bitRead(configuration.sys.rgb_enc_color_sel, 0));
+    mcp.write1(RGB_LED_R_GREEN, !bitRead(configuration.sys.rgb_enc_color_sel, 1));
+    mcp.write1(RGB_LED_R_BLUE, !bitRead(configuration.sys.rgb_enc_color_sel, 2));
+  }
+  else if (seq.edit_state == 0)
+  {
+    mcp.write1(RGB_LED_R_RED, !bitRead(configuration.sys.rgb_enc_color_def, 0));
+    mcp.write1(RGB_LED_R_GREEN, !bitRead(configuration.sys.rgb_enc_color_def, 1));
+    mcp.write1(RGB_LED_R_BLUE, !bitRead(configuration.sys.rgb_enc_color_def, 2));
+  }
+  else
+  {
+    mcp.write1(RGB_LED_R_RED, !bitRead(configuration.sys.rgb_enc_color_sel, 0));
+    mcp.write1(RGB_LED_R_GREEN, !bitRead(configuration.sys.rgb_enc_color_sel, 1));
+    mcp.write1(RGB_LED_R_BLUE, !bitRead(configuration.sys.rgb_enc_color_sel, 2));
+  }
+}
+
+#endif
+
 /***********************************************************************
    SETUP
  ***********************************************************************/
@@ -985,39 +1016,39 @@ void updateEncoderR(void)
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
 FLASHMEM void All_Button_LEDS(bool state)
 {
-    if (state)
-    {
-      setled(LED_UP, HIGH);
-  setled(LED_DOWN, HIGH);
-  setled(LED_LEFT, HIGH);
-  setled(LED_RIGHT, HIGH);
-  setled(LED_SEL, HIGH);
-  setled(LED_START, HIGH);
+  if (state)
+  {
+    setled(LED_UP, HIGH);
+    setled(LED_DOWN, HIGH);
+    setled(LED_LEFT, HIGH);
+    setled(LED_RIGHT, HIGH);
+    setled(LED_SEL, HIGH);
+    setled(LED_START, HIGH);
 
-  setled(LED_BUT_B, HIGH);
+    setled(LED_BUT_B, HIGH);
     setled(LED_BUT_A, HIGH);
-    }
-    else{
-        setled(LED_UP, LOW);
-  setled(LED_DOWN, LOW);
+  }
+  else {
+    setled(LED_UP, LOW);
+    setled(LED_DOWN, LOW);
     setled(LED_LEFT, LOW);
-  setled(LED_RIGHT, LOW);
-  setled(LED_SEL, LOW);
+    setled(LED_RIGHT, LOW);
+    setled(LED_SEL, LOW);
 
-  setled(LED_BUT_B, LOW);
-if (seq.running==false)
-  setled(LED_START, LOW);
+    setled(LED_BUT_B, LOW);
+    if (seq.running == false)
+      setled(LED_START, LOW);
 
-  //if (seq.edit_state==0)
-  setled(LED_BUT_A, LOW);
-    }
+    //if (seq.edit_state==0)
+    setled(LED_BUT_A, LOW);
+  }
 }
 #endif
 
 FLASHMEM void setup()
 {
 
- #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
   Wire.begin();
 
@@ -1039,7 +1070,7 @@ FLASHMEM void setup()
   setled(RGB_LED_R_GREEN, HIGH);
   setled(RGB_LED_R_BLUE, LOW);
 
- // mcp.setAllPins(B, HIGH);
+  // mcp.setAllPins(B, HIGH);
 
 #endif
 
@@ -1056,8 +1087,8 @@ FLASHMEM void setup()
 #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
- setled(LED_LEFT,ON);
- delay(100);
+  setled(LED_LEFT, ON);
+  delay(100);
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
@@ -1117,7 +1148,7 @@ FLASHMEM void setup()
   pinMode(TFT_TOUCH_IRQ, INPUT);
 #endif
 
- #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
   pinMode(BUT_R_PIN, INPUT);
   pinMode(BUT_L_PIN, INPUT);
 #else
@@ -1154,9 +1185,9 @@ FLASHMEM void setup()
 #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
- setled(LED_LEFT,OFF);
-  setled(LED_UP,ON);
-   delay(100);
+  setled(LED_LEFT, OFF);
+  setled(LED_UP, ON);
+  delay(100);
 #endif
 
 #if defined GENERIC_DISPLAY
@@ -1189,8 +1220,8 @@ FLASHMEM void setup()
 #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_UP,OFF);
-   setled(LED_DOWN,ON);
+  setled(LED_UP, OFF);
+  setled(LED_DOWN, ON);
 #endif
 
   // Setup MIDI devices
@@ -1424,8 +1455,8 @@ FLASHMEM void setup()
 #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_DOWN,OFF);
-   setled(LED_RIGHT,ON);
+  setled(LED_DOWN, OFF);
+  setled(LED_RIGHT, ON);
 #endif
 
   AudioNoInterrupts();
@@ -1465,15 +1496,15 @@ FLASHMEM void setup()
 
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
-  
+
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_RIGHT,OFF);
-   setled(LED_BUT_B,ON);
-    delay(100);
+  setled(LED_RIGHT, OFF);
+  setled(LED_BUT_B, ON);
+  delay(100);
 #endif
 
- #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
   if (digitalRead(BUT_R_PIN) || digitalRead(BUT_L_PIN)) // is pushed
     bootup_performance_loading = false;
 #else
@@ -1522,9 +1553,9 @@ FLASHMEM void setup()
 #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_BUT_B,OFF);
-   setled(LED_BUT_A,ON);
-    delay(100);
+  setled(LED_BUT_B, OFF);
+  setled(LED_BUT_A, ON);
+  delay(100);
 #endif
 
   // Init master_mixer
@@ -1608,8 +1639,8 @@ FLASHMEM void setup()
   initial_values(false);
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_BUT_A,OFF);
-   setled(LED_SEL,ON);
+  setled(LED_BUT_A, OFF);
+  setled(LED_SEL, ON);
 #endif
 
   setup_ui();
@@ -1655,9 +1686,9 @@ FLASHMEM void setup()
 #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_SEL,OFF);
-   setled(LED_START,ON);
-    delay(100);
+  setled(LED_SEL, OFF);
+  setled(LED_START, ON);
+  delay(100);
 #endif
 
   //SD CARD PRESET CONTENT NOT FOUND, PROVIDE POSSIBLE SOLUTIONS TO USER
@@ -1722,12 +1753,12 @@ FLASHMEM void setup()
 
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_START,OFF);
+  setled(LED_START, OFF);
 #endif
 
-// #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-//   All_Button_LEDS(false);
-// #endif
+  // #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+  //   All_Button_LEDS(false);
+  // #endif
 
 }
 
@@ -1768,7 +1799,7 @@ FLASHMEM void handle_touchscreen_midi_channel_page()
     display.setTextSize(1);
     print_midi_channel_activity(39, 5, microdexed_peak_0.read());
     print_midi_channel_activity(39, 6, microdexed_peak_1.read());
- #if (NUM_DEXED>2)
+#if (NUM_DEXED>2)
     print_midi_channel_activity(39, 7, microdexed_peak_2.read());
     print_midi_channel_activity(39, 8, microdexed_peak_3.read());
 #endif
@@ -2098,39 +2129,39 @@ int apc_scroll_counter = 0;
 char apc_scrolltext[16];
 #endif
 
- #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 uint8_t RGB_state = 199;
 FLASHMEM void setRGBencoderColor()
 {
   if (RGB_state != seq.edit_state) {
 
-    if (seq.edit_state == 0)
-    {
-      setled(RGB_LED_L_RED, HIGH);
-      setled(RGB_LED_L_GREEN, HIGH);
-      setled(RGB_LED_L_BLUE, LOW);
+    //     if (seq.edit_state == 0)
+    //     {
+    //       setled(RGB_LED_L_RED, HIGH);
+    //       setled(RGB_LED_L_GREEN, HIGH);
+    //       setled(RGB_LED_L_BLUE, LOW);
+    //       setled(RGB_LED_R_RED, HIGH);
+    //       setled(RGB_LED_R_GREEN, HIGH);
+    //       setled(RGB_LED_R_BLUE, LOW);
+    // // #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+    // //       setled(LED_BUT_A, LOW);
+    // // #endif
+    //     }
+    //     else
+    //     {
+    //       setled(RGB_LED_L_RED, HIGH);
+    //       setled(RGB_LED_L_GREEN, HIGH);
+    //       setled(RGB_LED_L_BLUE, LOW);
 
-      setled(RGB_LED_R_RED, HIGH);
-      setled(RGB_LED_R_GREEN, HIGH);
-      setled(RGB_LED_R_BLUE, LOW);
-// #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-//       setled(LED_BUT_A, LOW);
-// #endif
-    }
-    else
-    {
-      setled(RGB_LED_L_RED, HIGH);
-      setled(RGB_LED_L_GREEN, HIGH);
-      setled(RGB_LED_L_BLUE, LOW);
+    //       setled(RGB_LED_R_RED, LOW);
+    //       setled(RGB_LED_R_GREEN, HIGH);
+    //       setled(RGB_LED_R_BLUE, HIGH);
+    // // #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+    // //       setled(LED_BUT_A, HIGH);
+    // //       #endif
+    //     }
 
-      setled(RGB_LED_R_RED, LOW);
-      setled(RGB_LED_R_GREEN, HIGH);
-      setled(RGB_LED_R_BLUE, HIGH);
-// #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-//       setled(LED_BUT_A, HIGH);
-//       #endif
-    }
-
+    set_custom_enc_colors();
     RGB_state = seq.edit_state;
   }
 }
@@ -2337,7 +2368,7 @@ void loop()
   {
 
 
- #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
     setRGBencoderColor();
 #endif
 
@@ -2404,13 +2435,13 @@ void loop()
       ;
     update_sidechain();  //work in progress
   }
-    #ifdef MIDI_ACTIVITY_LIGHTS
+#ifdef MIDI_ACTIVITY_LIGHTS
   else
   {
-midi_activity_leds();
- }
+    midi_activity_leds();
+  }
 #endif
- 
+
 
 
   if (control_rate > CONTROL_RATE_MS)
@@ -5103,7 +5134,7 @@ FLASHMEM void set_fx_params(void)
     chorus_modulator[instance_id]->frequency(configuration.fx.chorus_frequency[instance_id] / 10.0);
     chorus_modulator[instance_id]->amplitude(mapfloat(configuration.fx.chorus_depth[instance_id], CHORUS_DEPTH_MIN, CHORUS_DEPTH_MAX, 0.0, 1.0));
     chorus_modulator[instance_id]->offset(0.0);
-    
+
     dexed_chorus_mixer_r[instance_id].gain(1, mapfloat(configuration.fx.chorus_level[instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
     dexed_chorus_mixer_l[instance_id].gain(1, mapfloat(configuration.fx.chorus_level[instance_id], CHORUS_LEVEL_MIN, CHORUS_LEVEL_MAX, 0.0, 0.5));
 
@@ -5226,9 +5257,9 @@ FLASHMEM void set_fx_params(void)
   master_mixer_l.gain(MASTER_MIX_CH_REVERB, volume_transform(mapfloat(configuration.fx.reverb_level, REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, VOL_MAX_FLOAT)));
 
   if (configuration.sys.send_midi_cc) {
-   init_MIDI_send_CC();
+    init_MIDI_send_CC();
   }
-  
+
 }
 
 FLASHMEM void set_voiceconfig_params(uint8_t instance_id)
@@ -5285,6 +5316,11 @@ FLASHMEM void set_sys_params(void)
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   display.brightness(configuration.sys.brightness);
 #endif
+
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+  set_custom_enc_colors();
+#endif
+
 }
 
 /******************************************************************************

@@ -2114,7 +2114,12 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
-       
+
+        if (data_json["rgb_enc_color_def"]!=0)
+        configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
+         if (data_json["rgb_enc_color_sel"]!=0)
+        configuration.sys.rgb_enc_color_sel = data_json["rgb_enc_color_sel"];
+        
         if (data_json["brightness"] == 0)
           configuration.sys.brightness = 183;
         else
@@ -2204,6 +2209,12 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["skip_midi_channel_warning"] = configuration.sys.skip_midi_channel_warning;
       data_json["send_sysex_on_voice_change"] = configuration.sys.send_sysex_on_voice_change;
       data_json["send_midi_cc"] = configuration.sys.send_midi_cc;
+
+if (configuration.sys.rgb_enc_color_def!=0)
+       data_json["rgb_enc_color_def"]=configuration.sys.rgb_enc_color_def;
+if (configuration.sys.rgb_enc_color_sel!=0)
+       data_json["rgb_enc_color_sel"]=configuration.sys.rgb_enc_color_sel;
+
       data_json["gp_speed"] = configuration.sys.gamepad_speed;
       if (GAMEPAD_BUTTON_A != GAMEPAD_BUTTON_B)
       {
