@@ -14,6 +14,8 @@
 #define SAMPLE_SIZE(s) 0
 #endif
 
+CustomSample customSamples[NUM_CUSTOM_SAMPLES];
+
 drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
 {
   {
