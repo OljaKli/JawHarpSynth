@@ -59,10 +59,9 @@ typedef struct drum_config_s
 
 } drum_config_t;
 
-struct CustomSample {
-  char filepath[FULLPATH_MAX_LEN];
-  uint32_t start;
-  uint32_t end;
+struct CustomSamplePart {
+  float32_t start;
+  float32_t end;
   uint8_t mode;
 };
 

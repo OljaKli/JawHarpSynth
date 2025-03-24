@@ -944,6 +944,7 @@ int16_t* ep_delayline_r;
 int16_t* ep_delayline_l;
 
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
+extern CustomSamplePart customSamples[NUM_CUSTOM_SAMPLES];
 uint8_t drum_counter;
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
@@ -1743,6 +1744,11 @@ FLASHMEM void load_custom_samples_to_psram()
       snprintf_P(temp_name, 12, PSTR("CUSTOM%02d"), i - NUM_STATIC_PITCHED_SAMPLES + 1);
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
+    } else {
+      //success
+      CustomSamplePart &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
+      s.start = 0.0F;
+      s.end = 1.0F;
     }
   }
 }
@@ -3121,14 +3127,23 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                if (seq.hihat_randomizer != 0 && drum_config[d].drum_class == DRUM_HIHAT)
-                {
-                  int randomizer = random(seq.hihat_randomizer * 50);
-                  if (drum_config[d].len - randomizer > 1000)
-                    Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data + randomizer, drum_config[d].len - randomizer, drum_config[d].numChannels);
+                const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
+                const bool customSample = (d >= NUM_STATIC_PITCHED_SAMPLES) && (d < NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES);
+                uint32_t offStart = 0;
+                uint32_t offEnd = 0;
+                if(customSample) {
+                  offStart = customSamples[d - NUM_STATIC_PITCHED_SAMPLES].start * drum_config[d].len;
+                  DBG_LOG(printf("off start: %i-%i\n", offStart, customSamples[d - NUM_STATIC_PITCHED_SAMPLES].start));
+                  //offEnd = customSamples[d - NUM_CUSTOM_SAMPLES].end * drum_config[d].len / drum_config[d].numChannels;
                 }
-                else
-                  Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+                if (hihatRand) {
+                  uint32_t randomizer = random(seq.hihat_randomizer * 50);
+                  if (drum_config[d].len - randomizer > 1000) {
+                    offStart = randomizer;
+                    offEnd = randomizer;
+                  }
+                }
+                Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data + offStart, drum_config[d].len - offStart, drum_config[d].numChannels);
 #endif
 
 #ifdef COMPILE_FOR_SDCARD
