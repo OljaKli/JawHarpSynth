@@ -18022,10 +18022,12 @@ FLASHMEM void UI_func_voice_select_touch_loop(EncoderEvents e)
 
 FLASHMEM void reset_live_modifier(uint8_t step)
 {
-  dexed_live_mod.live_adsr_values[selected_instance_id][step] = 0;
-
-  for (int op = 0; op < 6; op++) {
-    MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
+  if (dexed_live_mod.live_adsr_values[selected_instance_id][step] != 0) {
+    dexed_live_mod.live_adsr_values[selected_instance_id][step] = 0;
+    for (int op = 0; op < 6; op++) {
+      MicroDexed[selected_instance_id]->setOPRate(op, step, dexed_live_mod.orig_adsr_values[selected_instance_id][step][op]);
+    }
+    printLiveModButton(step);
   }
 }
 
@@ -18104,7 +18106,6 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
   if (changed) {
     load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     reset_live_modifiers();
-    printLiveModButtons();
   }
 }
 
