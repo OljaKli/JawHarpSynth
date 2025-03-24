@@ -264,12 +264,14 @@ FLASHMEM bool handleLiveModButtons(void) {
       pressedOne = true;
       if (buttonStep != step) {
         dexed_live_mod.active_button = step + 1;
+        printLiveModButton(step); // draw newly active
       }
       else {
-        reset_live_modifier(buttonStep);
         dexed_live_mod.active_button = 0;
       }
-      printLiveModButtons();
+      if(buttonStep >= 0) {
+        printLiveModButton(buttonStep); // draw previously active
+      }
     }
   }
   if(pressedOne) {
@@ -337,8 +339,11 @@ FLASHMEM void handle_touchscreen_voice_select()
 
       else if(TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
         //if touched somewhere else, reset live modifier edit mode
-        dexed_live_mod.active_button = 0;
-        printLiveModButtons();
+        const int8_t buttonOld = dexed_live_mod.active_button - 1;
+        if (buttonOld >= 0) {
+          dexed_live_mod.active_button = 0;
+          printLiveModButton(buttonOld);
+        }
       }
     }
     else {
