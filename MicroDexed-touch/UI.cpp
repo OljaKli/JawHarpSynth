@@ -12554,11 +12554,15 @@ FLASHMEM void _cancel_message_old_menus()
 
 }
 
+extern uint8_t perf_load_options;
+
 FLASHMEM void UI_func_load_performance(uint8_t param)
 {
   static uint8_t mode;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    registerTouchHandler(handle_load_performance);
+
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     char tmp[10];
@@ -12577,14 +12581,32 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
     setCursor_textGrid(1, 1);
     display.print(F("Load Performance"));
     setCursor_textGrid(1, 2);
-    snprintf_P(tmp, sizeof(tmp), PSTR("[%2d]"), param);
+    snprintf_P(tmp, sizeof(tmp), PSTR("[%02d]"), param);
     display.print(tmp);
+
+    display.setTextSize(1);
+    setCursor_textGrid(0, 4);
+    display.print(F("SELECT PERFORMANCE PARTS:"));
+
+    TouchButton::drawButton(GRID.X[0], GRID.Y[2], "DEXED", "", bitRead(perf_load_options, perf_dexed) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[2], "MSYNTH", "", bitRead(perf_load_options, perf_msynth) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[2], GRID.Y[2], "EPIANO", "", bitRead(perf_load_options, perf_epiano) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[3], GRID.Y[2], "BRAIDS", "", bitRead(perf_load_options, perf_braids) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[2], "CUST.", "SAMPLES", bitRead(perf_load_options, perf_samples) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+
+    TouchButton::drawButton(GRID.X[0], GRID.Y[3], "EFFECT", "SET.", bitRead(perf_load_options, perf_effects) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SEQ", "DATA", bitRead(perf_load_options, perf_seq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+
+    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "NONE", "", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[4], "ALL", "", TouchButton::BUTTON_NORMAL);
+
+    helptext_r("LOAD PERF.");
   }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
-
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
       if (seq.edit_state == 0)
@@ -12595,7 +12617,7 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
 
     if (e.pressed)
     {
-      display.fillRect(0, CHAR_height * 3, CHAR_width * 19, CHAR_height * 4, COLOR_BACKGROUND);
+      display.fillRect(0, CHAR_height * 3, CHAR_width * 19, CHAR_height * 1, COLOR_BACKGROUND);
       mode = 0xff;
       setCursor_textGrid(1, 2);
 
@@ -12622,7 +12644,7 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       setCursor_textGrid(1, 2);
       char tmp[10];
-      snprintf_P(tmp, sizeof(tmp), PSTR("[%2d] "), temp_int);
+      snprintf_P(tmp, sizeof(tmp), PSTR("[%02d] "), temp_int);
       display.print(tmp);
       if (check_sd_performance_exists(temp_int))
       {
@@ -12664,9 +12686,10 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+    unregisterTouchHandler();
     if (mode < 0xff)
     {
-      display.fillRect(0, CHAR_height * 3, CHAR_width * 19, CHAR_height * 4, COLOR_BACKGROUND);
+      display.fillRect(0, CHAR_height * 3, CHAR_width * 19, CHAR_height * 1, COLOR_BACKGROUND);
       _cancel_message_old_menus();
     }
     else
@@ -12676,6 +12699,7 @@ FLASHMEM void UI_func_load_performance(uint8_t param)
       save_sd_sys_json();
       encoderDir[ENC_R].reset();
     }
+    display.fillScreen(COLOR_BACKGROUND);
   }
 }
 
@@ -16691,7 +16715,7 @@ FLASHMEM void _system_settings_long_help_texts()
   }
   else {
     if (generic_temp_select_menu != 9)
-    return;
+      return;
   }
 
   setCursor_textGrid_small(2, 18);
@@ -16752,7 +16776,7 @@ FLASHMEM void _system_settings_long_help_texts()
     setCursor_textGrid_small(2, 19);
     print_empty_spaces(47, 1);
   }
-  else if (generic_temp_select_menu == 13||generic_temp_select_menu == 14) {
+  else if (generic_temp_select_menu == 13 || generic_temp_select_menu == 14) {
     setCursor_textGrid_small(2, 18);
     display.print(F("SET ENCODER RGB COLORS FOR DEFAULT AND"));
     setCursor_textGrid_small(2, 19);
@@ -16765,18 +16789,18 @@ FLASHMEM void _system_settings_long_help_texts()
 extern void set_custom_enc_colors();
 #endif
 
-FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line,uint8_t value)
+FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t value)
 {
-  bool red,green,blue;
+  bool red, green, blue;
   red = bitRead(value, 0);
-   green = bitRead(value, 1);
-    blue = bitRead(value, 2);
+  green = bitRead(value, 1);
+  blue = bitRead(value, 2);
   display.console = true;
- display.fillRect(268  , 10*(line), 30, 8, RGB24toRGB565(red*254,green*254,blue*254));
+  display.fillRect(268, 10 * (line), 30, 8, RGB24toRGB565(red * 254, green * 254, blue * 254));
   display.console = false;
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
- set_custom_enc_colors();
+  set_custom_enc_colors();
 #endif
 
 }
@@ -16838,12 +16862,12 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
     case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
 
-    case 13: display.print(configuration.sys.rgb_enc_color_def); 
-_render_rgb_enc_preview_system_settings(line,configuration.sys.rgb_enc_color_def);
-    break;
+    case 13: display.print(configuration.sys.rgb_enc_color_def);
+      _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_def);
+      break;
     case 14: display.print(configuration.sys.rgb_enc_color_sel);
-_render_rgb_enc_preview_system_settings(line,configuration.sys.rgb_enc_color_sel);
-     break;
+      _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
+      break;
 
     }
     };
@@ -16869,7 +16893,7 @@ _render_rgb_enc_preview_system_settings(line,configuration.sys.rgb_enc_color_sel
       render_value(setting_index, 6 + i);
     }
   }
- 
+
   if (scroll_position != previous_scroll_position)
     previous_scroll_position = scroll_position;
 
@@ -16944,7 +16968,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 11: configuration.sys.send_sysex_on_voice_change = !configuration.sys.send_sysex_on_voice_change; break;
         case 12: configuration.sys.send_midi_cc = !configuration.sys.send_midi_cc; break;
 
-         case 13: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
+        case 13: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
         case 14: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
         }
       }
@@ -20227,10 +20251,10 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-    }
+  }
   else
     return false;
-  }
+}
 
 FLASHMEM float eraseBytesPerSecond(const unsigned char* id)
 {
@@ -20904,14 +20928,14 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
 #endif
     }
     // setCursor_textGrid(1, 2);
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 void sub_touchscreen_test_page_init()
 {
@@ -21237,7 +21261,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
   }
   else
     return false;
-  }
+}
 
 FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id)
 {
@@ -21276,7 +21300,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Added to Favorites..."));
 #endif
-  }
+    }
     else
     { // delete the file, is no longer a favorite
       SD.remove(tmp);
@@ -21289,7 +21313,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d/%d.fav"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, i);
         if (SD.exists(tmp))
           countfavs++;
-    }
+      }
       if (countfavs == 0)
       {
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b);
@@ -21307,7 +21331,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Removed from Favorites..."));
 #endif
-      }
+    }
   }
 }
 

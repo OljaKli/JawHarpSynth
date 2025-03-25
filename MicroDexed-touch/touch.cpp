@@ -259,8 +259,8 @@ extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 FLASHMEM bool handleLiveModButtons(void) {
   bool pressedOne = false;
   const int8_t buttonStep = dexed_live_mod.active_button - 1;
-  for(uint8_t step = 0; step < 4; step++) {
-    if(TouchButton::isPressed(GRID.X[step], GRID.Y[5] - 23)) {
+  for (uint8_t step = 0; step < 4; step++) {
+    if (TouchButton::isPressed(GRID.X[step], GRID.Y[5] - 23)) {
       pressedOne = true;
       if (buttonStep != step) {
         dexed_live_mod.active_button = step + 1;
@@ -269,21 +269,21 @@ FLASHMEM bool handleLiveModButtons(void) {
       else {
         dexed_live_mod.active_button = 0;
       }
-      if(buttonStep >= 0) {
+      if (buttonStep >= 0) {
         printLiveModButton(buttonStep); // draw previously active
       }
     }
   }
-  if(pressedOne) {
+  if (pressedOne) {
     if (dexed_live_mod.active_button > 0) {
       helptext_r("< > CHANGE MODIFIER VALUE");
       display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-      print_empty_spaces(38,1);
+      print_empty_spaces(38, 1);
       display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-      print_empty_spaces(9,1);
+      print_empty_spaces(9, 1);
       display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
       display.print(F(" PUSH TO RETURN"));
-    } 
+    }
     else {
       print_voice_select_default_help();
     }
@@ -321,13 +321,13 @@ FLASHMEM void handle_touchscreen_voice_select()
   }
   else {
     if (seq.cycle_touch_element != 1) {
-      if(handleLiveModButtons()) {
+      if (handleLiveModButtons()) {
         // touch handled
       }
       else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
         uint8_t value = get_algo() + 1;
         value %= 32; // 0-31
-        
+
         panic_dexed_current_instance();
         set_algo(value);
         draw_algo();
@@ -337,7 +337,7 @@ FLASHMEM void handle_touchscreen_voice_select()
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
       }
 
-      else if(TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
+      else if (TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
         //if touched somewhere else, reset live modifier edit mode
         const int8_t buttonOld = dexed_live_mod.active_button - 1;
         if (buttonOld >= 0) {
@@ -573,7 +573,7 @@ FLASHMEM void print_file_manager_buttons()
     }
     else
     {
-      print_empty_spaces(48,1);
+      print_empty_spaces(48, 1);
     }
   }
   menuhelper_previous_val = fm.sd_mode;
@@ -1142,5 +1142,80 @@ FLASHMEM void handle_page_with_touch_back_button()
 {
   if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]) && seq.cycle_touch_element != 1) {// back button
     LCDML.BT_quit();
+  }
+}
+
+uint8_t perf_load_options = 255;
+
+FLASHMEM void draw_all_performance_load_buttons()
+{
+  TouchButton::drawButton(GRID.X[0], GRID.Y[2], "DEXED", "", bitRead(perf_load_options, perf_dexed) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[2], "MSYNTH", "", bitRead(perf_load_options, perf_msynth) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[2], "EPIANO", "", bitRead(perf_load_options, perf_epiano) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[2], "BRAIDS", "", bitRead(perf_load_options, perf_braids) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[4], GRID.Y[2], "CUST.", "SAMPLES", bitRead(perf_load_options, perf_samples) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[0], GRID.Y[3], "EFFECT", "SET.", bitRead(perf_load_options, perf_effects) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SEQ.", "DATA", bitRead(perf_load_options, perf_seq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+}
+
+FLASHMEM void handle_load_performance()
+{
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[4]))
+  {
+    perf_load_options = 0;
+    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "NONE", "", TouchButton::BUTTON_RED);
+    draw_all_performance_load_buttons();
+    delay(300);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "NONE", "", TouchButton::BUTTON_NORMAL);
+  }
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[4]))
+  {
+    perf_load_options = 255;
+
+    TouchButton::drawButton(GRID.X[5], GRID.Y[4], "ALL", "", TouchButton::BUTTON_RED);
+    draw_all_performance_load_buttons();
+    delay(300);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[4], "ALL", "", TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_dexed, !bitRead(perf_load_options, perf_dexed));
+    TouchButton::drawButton(GRID.X[0], GRID.Y[2], "DEXED", "", bitRead(perf_load_options, perf_dexed) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[1], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_msynth, !bitRead(perf_load_options, perf_msynth));
+    TouchButton::drawButton(GRID.X[1], GRID.Y[2], "MSYNTH", "", bitRead(perf_load_options, perf_msynth) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[2], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_epiano, !bitRead(perf_load_options, perf_epiano));
+    TouchButton::drawButton(GRID.X[2], GRID.Y[2], "EPIANO", "", bitRead(perf_load_options, perf_epiano) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[3], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_braids, !bitRead(perf_load_options, perf_braids));
+    TouchButton::drawButton(GRID.X[3], GRID.Y[2], "BRAIDS", "", bitRead(perf_load_options, perf_braids) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_samples, !bitRead(perf_load_options, perf_samples));
+    TouchButton::drawButton(GRID.X[4], GRID.Y[2], "CUST.", "SAMPLES", bitRead(perf_load_options, perf_samples) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[3]))
+  {
+    bitWrite(perf_load_options, perf_effects, !bitRead(perf_load_options, perf_effects));
+    TouchButton::drawButton(GRID.X[0], GRID.Y[3], "EFFECT", "SET.", bitRead(perf_load_options, perf_effects) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
+  {
+    bitWrite(perf_load_options, perf_seq, !bitRead(perf_load_options, perf_seq));
+    TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SEQ.", "DATA", bitRead(perf_load_options, perf_seq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
+  {
+    bitWrite(perf_load_options, perf_liveseq, !bitRead(perf_load_options, perf_liveseq));
+    TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
   }
 }

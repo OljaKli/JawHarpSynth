@@ -1163,3 +1163,15 @@ struct EncoderEvents {
   bool pressed;
   bool longPressed;
 };
+
+enum perf_load_opt
+{
+ perf_dexed,
+ perf_msynth,
+ perf_epiano,
+ perf_braids,
+ perf_samples,
+ perf_effects,
+ perf_seq,
+ perf_liveseq
+};
