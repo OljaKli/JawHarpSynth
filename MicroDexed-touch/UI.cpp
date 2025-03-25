@@ -6109,7 +6109,7 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
     NULL);
 }
 
-void addCustomSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr)
+void addCustomSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr, void (* const renderer)(Editor* param, bool refresh))
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
@@ -6118,16 +6118,16 @@ void addCustomSampleParameterEditor(const char* name, int16_t limit_min, int16_t
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
-      return round(*ptr * 100.0f);
+      return round(*ptr * 1000.0f);
     },
     [](Editor* editor, int16_t value)
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
-      *ptr = value / 100.0f;
+      *ptr = value / 1000.0f;
     },
-    NULL);
+    renderer);
 }
 
 
@@ -6217,9 +6217,12 @@ void drawDrumsSampleWave() {
   static constexpr uint16_t plotY = 19 + 8;
   static constexpr uint16_t plotW = 200;
   static constexpr uint16_t plotH = 63 + 8;
-  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)drum_config[activeSample].drum_data, drum_config[activeSample].len, drum_config[activeSample].numChannels);
 
-  if ((activeSample >= NUM_STATIC_PITCHED_SAMPLES) && (activeSample < NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES)) {
+  const drum_config_t &slot = drum_config[activeSample];
+
+  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
+
+  if ((slot.drum_data != nullptr) && (activeSample >= NUM_STATIC_PITCHED_SAMPLES) && (activeSample < NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES)) {
     drawCustomSampleStartEnd(plotX, plotY, plotW, plotH);
   }
 #endif
@@ -6281,13 +6284,11 @@ uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
 }
 
 FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
-  const bool isFilterSelected = (generic_temp_select_menu == 15); // adapt number when drums page layout changes
+  const bool isFilterSelected = (generic_temp_select_menu == 13); // adapt number when drums page layout changes
   if (forceDraw || isFilterSelected) {
     display.setTextSize(1);
-    setCursor_textGrid_small(43, 13);
-    const bool isEditingFilter = (seq.edit_state) && isFilterSelected;
-    const uint16_t color = isEditingFilter ? RED : COLOR_BACKGROUND;
-    display.setTextColor(COLOR_SYSTEXT, color);
+    setCursor_textGrid_small(10, 17);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
     switch (drum_config[activeSample].filter_mode) {
     case 0:
@@ -6307,6 +6308,20 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
 }
 
 extern void print_sample_type(bool dir);
+
+void sampleStartEndRenderer(Editor *param, bool refresh) {
+  setCursor_textGrid_small(param->x, param->y);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.printf("%s", param->name);
+
+  setModeColor(param->select_id);
+
+  setCursor_textGrid_small(param->x + 5, param->y);
+  display.printf("%04i", param->get());
+  if(refresh) {
+    drawDrumsSampleWave();
+  }
+}
 
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
@@ -6377,14 +6392,11 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
     addDrumParameterEditor((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
 
-    addCustomSampleParameterEditor((const char*)F("FROM"), 0, 100, &customSamples[0].start);
-    addCustomSampleParameterEditor((const char*)F("UPTO"), 0, 100, &customSamples[0].end);
-
-    setCursor_textGrid_small(0, 11);
+    setCursor_textGrid_small(0, 10);
     display.setTextColor(RED);
     display.print("ENVELOPE");
 
-    ui.setCursor(0, 13);
+    ui.setCursor(0, 11);
  #if (NUM_DEXED>2)
     addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
     addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
@@ -6399,27 +6411,35 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 0, &drum_config[0].env_release);
 #endif
 
-    setCursor_textGrid_small(26, 11);
+    setCursor_textGrid_small(0, 16);
     display.setTextColor(RED);
     display.print("FILTER");
-    ui.setCursor(26, 13);
+    ui.setCursor(0, 17);
      #if (NUM_DEXED>2)
-    addDrumParameterEditor_uint8_t((const char*)F("FILTER"), 0, 3, &drum_config[0].filter_mode);
+    addDrumParameterEditor_uint8_t("", 0, 3, &drum_config[0].filter_mode);
     addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
-    ui.setCursor(42, 14);
+    ui.setCursor(0, 19);
     addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
 #else
- addDrumParameterEditor_uint8_t((const char*)F("FILTER"), 0, 0, &drum_config[0].filter_mode);
+    addDrumParameterEditor_uint8_t("FILTER", 0, 0, &drum_config[0].filter_mode);
     addDrumParameterEditor((const char*)F("FRQ"), 0, 0, &drum_config[0].filter_freq);
-    ui.setCursor(42, 14);
+    ui.setCursor(0, 19);
     addDrumParameterEditor((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
 #endif
+    
+    setCursor_textGrid_small(20, 11);
+    display.setTextColor(RED);
+    display.print("SAMPLE POINTS");
+    
+    ui.setCursor(20, 12);
+    addCustomSampleParameterEditor((const char*)F("FROM"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
+    addCustomSampleParameterEditor((const char*)F("UPTO"), 0, 1000, &customSamples[0].end, sampleStartEndRenderer);
 
     display.setTextColor(RED);
-    setCursor_textGrid_small(26, 16);
+    setCursor_textGrid_small(20, 17);
     display.print("GLOBAL");
 
-    ui.setCursor(26, 18);
+    ui.setCursor(20, 18);
     ui.addEditor((const char*)F("DRM MAIN VOLUME"), 0, 100,
       [](Editor* editor) -> int16_t
       {
@@ -6433,7 +6453,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
       });
     ui.addEditor((const char*)F("DRM MIDI CHANNEL"), 0, 17, &drum_midi_channel, NULL, NULL, midi_channel_renderer);
 
-    ui.setCursor(26, 20);
+    ui.setCursor(20, 20);
     ui.addEditor((const char*)F("SMART FILTER"), 0, 1,
       [](Editor* editor) -> int16_t
       {
@@ -6448,11 +6468,6 @@ FLASHMEM void UI_func_drums(uint8_t param)
   {
     ui.handle_input();
     checkDrawFilterText();
-
-    const bool isStartEndSelected = (generic_temp_select_menu == 8 || generic_temp_select_menu == 9); // adapt number when drums page layout changes)
-    if(isStartEndSelected) {
-      drawDrumsSampleWave();
-    }
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
