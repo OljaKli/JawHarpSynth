@@ -944,7 +944,7 @@ int16_t* ep_delayline_r;
 int16_t* ep_delayline_l;
 
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
-extern CustomSamplePart customSamples[NUM_CUSTOM_SAMPLES];
+extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 uint8_t drum_counter;
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
@@ -1737,16 +1737,18 @@ FLASHMEM void load_custom_samples_to_psram()
 {
   // load CUSTOM samples
   for (int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
-    sampleLoader.loadSampleToDrums(drum_config[i].filename, drum_config[i]);
-    if (drum_config[i].len == 0 || drum_config[i].len > 10000000)
-    {
+    String fullpath = customSamples[i - NUM_STATIC_PITCHED_SAMPLES].filepath;
+    fullpath += "/";
+    fullpath += drum_config[i].filename;
+    sampleLoader.loadSampleToDrums(fullpath, drum_config[i]);
+    if (drum_config[i].len == 0 || drum_config[i].len > 10000000) {
       char temp_name[36];
-      snprintf_P(temp_name, 12, PSTR("CUSTOM%02d"), i - NUM_STATIC_PITCHED_SAMPLES + 1);
+      sprintf(temp_name, "CUSTOM%02d", i - NUM_STATIC_PITCHED_SAMPLES + 1);
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
     } else {
       //success
-      CustomSamplePart &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
+      CustomSample &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
       s.start = 0.0F;
       s.end = 1.0F;
     }

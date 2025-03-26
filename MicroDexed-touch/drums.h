@@ -36,7 +36,7 @@ typedef struct drum_config_s
   uint8_t drum_class; // Type of drum
   uint8_t midinote; // Triggered by note
   char name[FILENAME_MAX_LEN];
-  char filename[FULLPATH_MAX_LEN];
+  char filename[FILENAME_MAX_LEN];
   const uint8_t* drum_data;
   char shortname[2];     // 1 char name for sequencer
   uint32_t len;          // number of elements in drum_data
@@ -56,10 +56,10 @@ typedef struct drum_config_s
   uint8_t env_decay;
   uint8_t env_sustain;
   uint8_t env_release;
-
 } drum_config_t;
 
-struct CustomSamplePart {
+struct CustomSample {
+  char filepath[FULLPATH_MAX_LEN];
   float32_t start;
   float32_t end;
   uint8_t mode;
