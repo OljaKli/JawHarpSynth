@@ -2261,15 +2261,19 @@ FLASHMEM bool save_sd_sys_json(void)
    SD BRAIDS
  ******************************************************************************/
 
-FLASHMEM bool load_sd_braids_json(uint8_t number)
+FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
 {
+  // mode 0 = default/performance , mode 1 = individual braids patch/preset system in /BRAIDS/ folder
   if (number < 0)
     return (false);
 
   if (sd_card > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, BRAIDS_CONFIG_NAME);
+    if (braidsmode == 0)
+      snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, BRAIDS_CONFIG_NAME);
+    else if (braidsmode == 1)
+      snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
 
     // first check if file exists...
     AudioNoInterrupts();
@@ -2341,11 +2345,16 @@ FLASHMEM bool load_sd_braids_json(uint8_t number)
   return (false);
 }
 
-FLASHMEM bool save_sd_braids_json(uint8_t number)
+FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 {
+  // mode 0 = default/performance , mode 1 = individual braids patch/preset system in /BRAIDS/ folder
   if (sd_card > 0)
   {
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, BRAIDS_CONFIG_NAME);
+    if (braidsmode == 0)
+      snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, BRAIDS_CONFIG_NAME);
+    else if (braidsmode == 1)
+      snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
+
 #ifdef DEBUG
     LOG.print(F("Saving braids"));
     LOG.print(number);
@@ -3333,7 +3342,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_fx_json(number);
   save_sd_epiano_json(number);
   save_sd_multisample_presets_json(number);
-  save_sd_braids_json(number);
+  save_sd_braids_json(number, 0);
   save_sd_multiband_json(number);
   save_sd_sidechain_json(number);
   save_sd_livesequencer_json(number);
@@ -3701,7 +3710,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
     load_sd_multisample_presets_json(number);
 
   if (bitRead(perf_load_options, perf_braids))
-    load_sd_braids_json(number);
+    load_sd_braids_json(number, 0);
 
   if (bitRead(perf_load_options, perf_effects))
   {
@@ -3923,6 +3932,39 @@ FLASHMEM bool check_sd_performance_exists(uint8_t number)
     return (false);
   }
 }
+
+FLASHMEM bool check_sd_braids_patch_exists(uint8_t number)
+{
+  if (number < 0)
+    return (false);
+
+  number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+  AudioNoInterrupts();
+  if (sd_card > 0)
+  {
+    char filename[CONFIG_FILENAME_LEN];
+
+    snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
+
+    // check if file exists...
+    if (SD.exists(filename))
+    {
+      AudioInterrupts();
+      return (true);
+    }
+    else
+    {
+      AudioInterrupts();
+      return (false);
+    }
+  }
+  else
+  {
+    AudioInterrupts();
+    return (false);
+  }
+}
+
 
 /******************************************************************************
    HELPER FUNCTIONS

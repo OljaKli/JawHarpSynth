@@ -14882,6 +14882,13 @@ FLASHMEM void print_braids_static_texts()
   setCursor_textGrid_small(1, 1);
   display.setTextColor(RED);
   display.print(F("BRAIDS"));
+
+  setCursor_textGrid_small(30, 1);
+  display.setTextColor(GREY1);
+  display.print(F("SAVE"));
+  setCursor_textGrid_small(37, 1);
+  display.print(F("NAME"));
+
   display.setTextColor(GREY1);
   setCursor_textGrid_small(1, 3);
   display.print(F("VOLUME"));
@@ -14946,17 +14953,69 @@ FLASHMEM void print_braids_static_texts()
   display.print(F(">"));
 }
 
-void update_selective_values_braids()
+
+FLASHMEM void _print_braids_patchname(uint8_t presetno)
 {
+  if (check_sd_braids_patch_exists(presetno))
+    display.print(F("UNNAMED PATCH"));
+  else
+    display.print(F("----EMPTY----"));
+}
+
+FLASHMEM void update_selective_values_braids(uint8_t presetno)
+{
+  char tmp[4];
   display.setTextSize(1);
+
   if (menu_item_check(0))
   {
     setModeColor(0);
-    print_small_intbar(9, 3, braids_osc.sound_intensity, 0, 1, 0);
+    setCursor_textGrid_small(9, 1);
+    snprintf_P(tmp, sizeof(tmp), PSTR("P%02d"), presetno);
+    display.print(tmp);
+
+    setCursor_textGrid_small(13, 1);
+    _print_braids_patchname(presetno);
+
   }
+
   if (menu_item_check(1))
   {
+
     setModeColor(1);
+    setCursor_textGrid_small(30, 1);
+    if (seq.edit_state == 0)
+      display.print(F(" SAVE "));
+    else
+    {
+      if (generic_temp_select_menu == 1)
+      {
+        display.print(F("SELECT"));
+        display.setTextColor(COLOR_SYSTEXT, RED);
+        setCursor_textGrid_small(9, 1);
+        snprintf_P(tmp, sizeof(tmp), PSTR("P%02d"), presetno);
+        display.print(tmp);
+        setCursor_textGrid_small(13, 1);
+        _print_braids_patchname(presetno);
+      }
+    }
+  }
+  if (menu_item_check(2))
+  {
+    setModeColor(2);
+    setCursor_textGrid_small(37, 1);
+    display.print(F("NAME"));
+  }
+
+  if (menu_item_check(3))
+  {
+    setModeColor(3);
+    print_small_intbar(9, 3, braids_osc.sound_intensity, 3, 1, 0);
+  }
+
+  if (menu_item_check(4))
+  {
+    setModeColor(4);
     setCursor_textGrid_small(9, 4);
     print_formatted_number(braids_osc.algo, 2);
     setCursor_textGrid_small(13, 4);
@@ -14964,51 +15023,51 @@ void update_selective_values_braids()
     display.print(synthBraids[0]->get_name(braids_osc.algo));
     // braids_print (synthBraids[0]->get_name(braids_osc.algo)[i],i);
   }
-  if (menu_item_check(2))
-  {
-    setModeColor(2);
-    setCursor_textGrid_small(9, 5);
-    print_formatted_number(braids_osc.color, 3);
-  }
-  if (menu_item_check(3))
-  {
-    setModeColor(3);
-    setCursor_textGrid_small(9, 6);
-    print_formatted_number(braids_osc.timbre, 3);
-  }
-  if (menu_item_check(4))
-  {
-    setModeColor(4);
-    setCursor_textGrid_small(9, 7);
-    print_formatted_number_signed(braids_osc.coarse, 2);
-  }
   if (menu_item_check(5))
   {
     setModeColor(5);
-    setCursor_textGrid_small(10, 8);
-    print_formatted_number(braids_osc.env_attack * 4, 4);
+    setCursor_textGrid_small(9, 5);
+    print_formatted_number(braids_osc.color, 3);
   }
   if (menu_item_check(6))
   {
     setModeColor(6);
-    setCursor_textGrid_small(10, 9);
-    print_formatted_number(braids_osc.env_decay * 4, 4);
+    setCursor_textGrid_small(9, 6);
+    print_formatted_number(braids_osc.timbre, 3);
   }
   if (menu_item_check(7))
   {
     setModeColor(7);
-    setCursor_textGrid_small(11, 10);
-    print_formatted_number(braids_osc.env_sustain * 2, 3);
+    setCursor_textGrid_small(9, 7);
+    print_formatted_number_signed(braids_osc.coarse, 2);
   }
   if (menu_item_check(8))
   {
     setModeColor(8);
-    setCursor_textGrid_small(10, 11);
-    print_formatted_number(braids_osc.env_release * braids_osc.env_release, 4);
+    setCursor_textGrid_small(10, 8);
+    print_formatted_number(braids_osc.env_attack * 4, 4);
   }
   if (menu_item_check(9))
   {
     setModeColor(9);
+    setCursor_textGrid_small(10, 9);
+    print_formatted_number(braids_osc.env_decay * 4, 4);
+  }
+  if (menu_item_check(10))
+  {
+    setModeColor(10);
+    setCursor_textGrid_small(11, 10);
+    print_formatted_number(braids_osc.env_sustain * 2, 3);
+  }
+  if (menu_item_check(11))
+  {
+    setModeColor(11);
+    setCursor_textGrid_small(10, 11);
+    print_formatted_number(braids_osc.env_release * braids_osc.env_release, 4);
+  }
+  if (menu_item_check(12))
+  {
+    setModeColor(12);
     setCursor_textGrid_small(32, 3);
     if (braids_osc.filter_mode == 0)
       display.print(F("OFF   "));
@@ -15019,56 +15078,56 @@ void update_selective_values_braids()
     else if (braids_osc.filter_mode == 3)
       display.print(F("HI12dB"));
   }
-  if (menu_item_check(10))
-    print_small_intbar(32, 4, braids_osc.filter_freq_from / 100, 10, 0, 1);
-  if (menu_item_check(11))
-    print_small_intbar(38, 4, braids_osc.filter_freq_to / 100, 11, 0, 1);
-  if (menu_item_check(12))
-    print_small_intbar(27, 5, braids_osc.filter_resonance, 12, 0, 1);
   if (menu_item_check(13))
-    print_small_intbar(38, 5, braids_osc.filter_speed / 10, 13, 0, 1);
+    print_small_intbar(32, 4, braids_osc.filter_freq_from / 100, 13, 0, 1);
   if (menu_item_check(14))
-    print_small_intbar(27, 6, braids_osc.filter_lfo_intensity / 100, 14, 0, 1);
+    print_small_intbar(38, 4, braids_osc.filter_freq_to / 100, 14, 0, 1);
   if (menu_item_check(15))
-    print_small_intbar(38, 6, braids_osc.filter_lfo_speed, 15, 0, 1);
+    print_small_intbar(27, 5, braids_osc.filter_resonance, 15, 0, 1);
   if (menu_item_check(16))
-  {
-    setCursor_textGrid_small(33, 7);
-    setModeColor(16);
-    print_formatted_number(braids_osc.rev_send, 3);
-  }
+    print_small_intbar(38, 5, braids_osc.filter_speed / 10, 16, 0, 1);
   if (menu_item_check(17))
-  {
-    setCursor_textGrid_small(33, 8);
-    setModeColor(17);
-    print_formatted_number(braids_osc.flanger, 3);
-  }
+    print_small_intbar(27, 6, braids_osc.filter_lfo_intensity / 100, 17, 0, 1);
   if (menu_item_check(18))
-  {
-    setModeColor(18);
-    setCursor_textGrid_small(38, 8);
-    print_formatted_number(braids_osc.flanger_spread, 3);
-  }
+    print_small_intbar(38, 6, braids_osc.filter_lfo_speed, 18, 0, 1);
   if (menu_item_check(19))
   {
+    setCursor_textGrid_small(33, 7);
     setModeColor(19);
-    setCursor_textGrid_small(33, 9);
-    print_formatted_number(braids_osc.delay_send_1, 3);
+    print_formatted_number(braids_osc.rev_send, 3);
   }
   if (menu_item_check(20))
   {
-    setCursor_textGrid_small(38, 9);
+    setCursor_textGrid_small(33, 8);
     setModeColor(20);
-    print_formatted_number(braids_osc.delay_send_2, 3);
+    print_formatted_number(braids_osc.flanger, 3);
   }
   if (menu_item_check(21))
   {
     setModeColor(21);
-    print_small_panbar(33, 10, braids_osc.pan, 21);
+    setCursor_textGrid_small(38, 8);
+    print_formatted_number(braids_osc.flanger_spread, 3);
   }
   if (menu_item_check(22))
   {
     setModeColor(22);
+    setCursor_textGrid_small(33, 9);
+    print_formatted_number(braids_osc.delay_send_1, 3);
+  }
+  if (menu_item_check(23))
+  {
+    setCursor_textGrid_small(38, 9);
+    setModeColor(23);
+    print_formatted_number(braids_osc.delay_send_2, 3);
+  }
+  if (menu_item_check(24))
+  {
+    setModeColor(24);
+    print_small_panbar(33, 10, braids_osc.pan, 24);
+  }
+  if (menu_item_check(25))
+  {
+    setModeColor(25);
     setCursor_textGrid_small(33, 11);
     if (braids_osc.midi_channel == MIDI_CHANNEL_OFF)
     {
@@ -15079,10 +15138,20 @@ void update_selective_values_braids()
   }
 }
 
+extern bool save_sd_braids_json(uint8_t number, uint8_t braidsmode);
+extern bool load_sd_braids_json(uint8_t number, uint8_t braidsmode);
+
 FLASHMEM void UI_func_braids(uint8_t param)
 {
+  static uint8_t presetno;
+
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    static constexpr char BRAIDS[] = "BRAIDS";
+    // Auto create missing folders if needed
+    if (!SD.exists(BRAIDS)) {
+      SD.mkdir(BRAIDS);
+    }
     // setup function
     registerTouchHandler(handle_touchscreen_braids);
     registerScope(250, 0, 62, 50);
@@ -15097,7 +15166,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
       generic_temp_select_menu = 0;
     }
     generic_full_draw_required = true;
-    update_selective_values_braids();
+    update_selective_values_braids(presetno);
     generic_full_draw_required = false;
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -15105,66 +15174,106 @@ FLASHMEM void UI_func_braids(uint8_t param)
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
       if (seq.edit_state == 0) {
-        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 22);
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 25);
       }
       else {
-        if (generic_temp_select_menu == 0)
+        if (generic_temp_select_menu == 0) //select patch
+        {
+          presetno = constrain(presetno + e.dir * e.speed, 0, 99);
+
+          if (seq.edit_state) // load preset 
+          {
+            load_sd_braids_json(presetno, 1);
+            generic_full_draw_required = true;
+            update_selective_values_braids(presetno);
+            generic_full_draw_required = false;
+          }
+        }
+
+        else if (generic_temp_select_menu == 1 && seq.edit_state) // save slot select
+          presetno = constrain(presetno + e.dir * e.speed, 0, 99);
+
+        else  if (generic_temp_select_menu == 3)
           braids_osc.sound_intensity = constrain(braids_osc.sound_intensity + e.dir * e.speed, 0, 100);
-        else if (generic_temp_select_menu == 1)
-          braids_osc.algo = constrain(braids_osc.algo + e.dir, 0, 42);
-        else if (generic_temp_select_menu == 2)
-          braids_osc.color = constrain(braids_osc.color + e.dir * e.speed, 0, 255);
-        else if (generic_temp_select_menu == 3)
-          braids_osc.timbre = constrain(braids_osc.timbre + e.dir * e.speed, 0, 255);
         else if (generic_temp_select_menu == 4)
-          braids_osc.coarse = constrain(braids_osc.coarse + e.dir, -36, 36);
+          braids_osc.algo = constrain(braids_osc.algo + e.dir, 0, 42);
         else if (generic_temp_select_menu == 5)
-          braids_osc.env_attack = constrain(braids_osc.env_attack + e.dir, 0, 255);
+          braids_osc.color = constrain(braids_osc.color + e.dir * e.speed, 0, 255);
         else if (generic_temp_select_menu == 6)
-          braids_osc.env_decay = constrain(braids_osc.env_decay + e.dir, 0, 255);
+          braids_osc.timbre = constrain(braids_osc.timbre + e.dir * e.speed, 0, 255);
         else if (generic_temp_select_menu == 7)
-          braids_osc.env_sustain = constrain(braids_osc.env_sustain + e.dir, 0, 50);
+          braids_osc.coarse = constrain(braids_osc.coarse + e.dir, -36, 36);
         else if (generic_temp_select_menu == 8)
-          braids_osc.env_release = constrain(braids_osc.env_release + e.dir, 0, 99);
+          braids_osc.env_attack = constrain(braids_osc.env_attack + e.dir, 0, 255);
         else if (generic_temp_select_menu == 9)
-          braids_osc.filter_mode = constrain(braids_osc.filter_mode + e.dir, 0, 3);
+          braids_osc.env_decay = constrain(braids_osc.env_decay + e.dir, 0, 255);
         else if (generic_temp_select_menu == 10)
-          braids_osc.filter_freq_from = constrain(braids_osc.filter_freq_from + e.dir * 80, 0, 15000);
+          braids_osc.env_sustain = constrain(braids_osc.env_sustain + e.dir, 0, 50);
         else if (generic_temp_select_menu == 11)
-          braids_osc.filter_freq_to = constrain(braids_osc.filter_freq_to + e.dir * 80, 0, 15000);
+          braids_osc.env_release = constrain(braids_osc.env_release + e.dir, 0, 99);
         else if (generic_temp_select_menu == 12)
-          braids_osc.filter_resonance = constrain(braids_osc.filter_resonance + e.dir, 0, 99);
+          braids_osc.filter_mode = constrain(braids_osc.filter_mode + e.dir, 0, 3);
         else if (generic_temp_select_menu == 13)
-          braids_osc.filter_speed = constrain(braids_osc.filter_speed + e.dir * 5, 0, 999);
+          braids_osc.filter_freq_from = constrain(braids_osc.filter_freq_from + e.dir * 80, 0, 15000);
         else if (generic_temp_select_menu == 14)
-          braids_osc.filter_lfo_intensity = constrain(braids_osc.filter_lfo_intensity + e.dir * 80, 0, 15000);
+          braids_osc.filter_freq_to = constrain(braids_osc.filter_freq_to + e.dir * 80, 0, 15000);
         else if (generic_temp_select_menu == 15)
-          braids_osc.filter_lfo_speed = constrain(braids_osc.filter_lfo_speed + e.dir, 0, 255);
+          braids_osc.filter_resonance = constrain(braids_osc.filter_resonance + e.dir, 0, 99);
         else if (generic_temp_select_menu == 16)
-          braids_osc.rev_send = constrain(braids_osc.rev_send + e.dir, 0, REVERB_SEND_MAX);
+          braids_osc.filter_speed = constrain(braids_osc.filter_speed + e.dir * 5, 0, 999);
         else if (generic_temp_select_menu == 17)
-          braids_osc.flanger = constrain(braids_osc.flanger + e.dir, 0, REVERB_SEND_MAX);
+          braids_osc.filter_lfo_intensity = constrain(braids_osc.filter_lfo_intensity + e.dir * 80, 0, 15000);
         else if (generic_temp_select_menu == 18)
-          braids_osc.flanger_spread = constrain(braids_osc.flanger_spread + e.dir, 0, REVERB_SEND_MAX);
+          braids_osc.filter_lfo_speed = constrain(braids_osc.filter_lfo_speed + e.dir, 0, 255);
         else if (generic_temp_select_menu == 19)
-          braids_osc.delay_send_1 = constrain(braids_osc.delay_send_1 + e.dir, 0, DELAY_LEVEL_MAX);
+          braids_osc.rev_send = constrain(braids_osc.rev_send + e.dir, 0, REVERB_SEND_MAX);
         else if (generic_temp_select_menu == 20)
-          braids_osc.delay_send_2 = constrain(braids_osc.delay_send_2 + e.dir, 0, DELAY_LEVEL_MAX);
+          braids_osc.flanger = constrain(braids_osc.flanger + e.dir, 0, REVERB_SEND_MAX);
         else if (generic_temp_select_menu == 21)
-          braids_osc.pan = constrain(braids_osc.pan + e.dir, PANORAMA_MIN, PANORAMA_MAX);
+          braids_osc.flanger_spread = constrain(braids_osc.flanger_spread + e.dir, 0, REVERB_SEND_MAX);
         else if (generic_temp_select_menu == 22)
+          braids_osc.delay_send_1 = constrain(braids_osc.delay_send_1 + e.dir, 0, DELAY_LEVEL_MAX);
+        else if (generic_temp_select_menu == 23)
+          braids_osc.delay_send_2 = constrain(braids_osc.delay_send_2 + e.dir, 0, DELAY_LEVEL_MAX);
+        else if (generic_temp_select_menu == 24)
+          braids_osc.pan = constrain(braids_osc.pan + e.dir, PANORAMA_MIN, PANORAMA_MAX);
+        else if (generic_temp_select_menu == 25)
           braids_osc.midi_channel = constrain(braids_osc.midi_channel + e.dir, 1, 17);
       }
     }
 
     if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
-      seq.edit_state = !seq.edit_state;
+
+      if (generic_temp_select_menu == 1 && seq.edit_state) // save 
+      {
+        display.setTextSize(1);
+        setCursor_textGrid_small(30, 1);
+        if (save_sd_braids_json(presetno, 1))
+        {
+          display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
+          display.print(F("SAVED!"));
+          if (remote_active)
+            display.flushSysEx();
+          delay(100);
+        }
+        else
+        {
+          display.setTextColor(COLOR_SYSTEXT, RED);
+          display.print(F(" FAIL "));
+          if (remote_active)
+            display.flushSysEx();
+        }
+        delay(1000);
+        seq.edit_state = 0;
+      }
+      else
+        seq.edit_state = !seq.edit_state;
     }
 
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     braids_update_single_setting();
-    update_selective_values_braids();
+    update_selective_values_braids(presetno);
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -15903,7 +16012,7 @@ FLASHMEM void sd_card_count_files_from_directory(const char* dir_name)
   }
 
   dir.close();
-}
+  }
 
 FLASHMEM void sd_go_parent_folder()
 {
@@ -16043,6 +16152,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   static constexpr char CUSTOM_DIR[] = "CUSTOM";
   static constexpr char RECORDINGS_DIR[] = "RECORDINGS";
   static constexpr char MIDI_DIR[] = "MIDI";
+  static constexpr char BRAIDS[] = "BRAIDS";
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
@@ -16060,6 +16170,9 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       }
       if (!SD.exists(MIDI_DIR)) {
         SD.mkdir(MIDI_DIR);
+      }
+      if (!SD.exists(BRAIDS)) {
+        SD.mkdir(BRAIDS);
       }
     }
     fm.sd_mode = FM_BROWSE_FILES;
@@ -16534,7 +16647,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 #else
       _print_midi_channel(MIDI_CHANNEL_OFF);
 #endif
-    }
+  }
 
     if (menu_item_check(4))
     {
@@ -16673,7 +16786,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       if (remote_active)
         display.console = false;
     }
-  }
+}
   // ****** STABLE END *********
   if (LCDML.FUNC_close())
   {
@@ -19855,7 +19968,7 @@ FLASHMEM uint8_t search_accepted_char(uint8_t c)
       return (i);
   }
   return (0);
-}
+  }
 
 FLASHMEM void display_int(int16_t var, uint8_t size, bool zeros, bool brackets, bool sign)
 {
@@ -20242,7 +20355,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-    }
+  }
     else
     { // it was not a favorite
 
@@ -20935,7 +21048,7 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 void sub_touchscreen_test_page_init()
 {
@@ -21250,7 +21363,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-    }
+  }
     else
     { // no favorites in bank stored
       return (false);
@@ -21258,7 +21371,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-  }
+}
   else
     return false;
 }
@@ -21300,7 +21413,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Added to Favorites..."));
 #endif
-    }
+  }
     else
     { // delete the file, is no longer a favorite
       SD.remove(tmp);
@@ -21331,8 +21444,8 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Removed from Favorites..."));
 #endif
-    }
-  }
+      }
+}
 }
 
 FLASHMEM char* basename(const char* filename)
