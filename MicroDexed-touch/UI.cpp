@@ -6202,7 +6202,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 }
 
 FLASHMEM void drawCustomSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  const CustomSamplePart &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
+  const CustomSample &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
   const uint16_t from = x + w * s.start;
   const uint16_t to = x + w * s.end - 1;
   display.drawFastVLine(from, y, h, COLOR_ARP);
@@ -16225,7 +16225,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             const uint8_t sampleIndex = fm.psram_selected_file + 6 + fm.psram_skip_files;
             sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
             if (drum_config[sampleIndex].drum_data != nullptr) {
-              CustomSamplePart &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
+              CustomSample &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
               s.start = 0.0F;
               s.end = 1.0F;
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);

@@ -41,6 +41,7 @@ using namespace TeensyTimerTool;
 #include "drums.h"
 extern void set_drums_volume(float vol);
 extern drum_config_t drum_config[];
+extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
 #endif
 
@@ -2585,8 +2586,16 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
 #endif
 
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
-          strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, data_json[i]["filename"]);
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
+
+          char fullpath[FULLPATH_MAX_LEN] = { 0 };
+          strcpy(fullpath, data_json[i]["filename"]);
+          char *lastSlash = strrchr(fullpath, '/');
+          if(lastSlash != nullptr) {
+            strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, lastSlash + 1);
+            *lastSlash = '\0';
+            strcpy(customSamples[i].filepath, fullpath);
+          }
         }
         load_custom_samples_to_psram();
 
