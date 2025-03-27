@@ -36,7 +36,7 @@ typedef struct drum_config_s
   uint8_t drum_class; // Type of drum
   uint8_t midinote; // Triggered by note
   char name[FILENAME_MAX_LEN];
-  char filename[FILENAME_MAX_LEN];
+  char filename[20];
   const uint8_t* drum_data;
   char shortname[2];     // 1 char name for sequencer
   uint32_t len;          // number of elements in drum_data

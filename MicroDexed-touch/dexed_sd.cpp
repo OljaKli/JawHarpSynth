@@ -933,7 +933,7 @@ FLASHMEM bool load_sd_drumsettings_json(uint8_t number)
         }
 
         if (oldformat) {
-          for (uint8_t i = 6; i < NUM_CUSTOM_SAMPLES + 6; i++)
+          for (uint8_t i = NUM_STATIC_PITCHED_SAMPLES; i < NUM_CUSTOM_SAMPLES + NUM_STATIC_PITCHED_SAMPLES; i++)
           {
             set_sample_filter_freq(i, 0);
           }
@@ -2644,7 +2644,10 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
         // if (drum_config[i].len != 0)
         data_json[i]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
-        data_json[i]["filename"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
+        String fullpath = customSamples[i].filepath;
+        fullpath += "/";
+        fullpath += drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
+        data_json[i]["filename"] = fullpath;
       }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)

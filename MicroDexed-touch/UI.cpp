@@ -16222,7 +16222,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         case FM_COPY_TO_PSRAM:
           if (fm.sd_temp_name.endsWith(".wav")) {
             fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
-            const uint8_t sampleIndex = fm.psram_selected_file + 6 + fm.psram_skip_files;
+            const uint8_t sampleIndex = fm.psram_selected_file + NUM_STATIC_PITCHED_SAMPLES + fm.psram_skip_files;
             sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
             if (drum_config[sampleIndex].drum_data != nullptr) {
               CustomSample &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
