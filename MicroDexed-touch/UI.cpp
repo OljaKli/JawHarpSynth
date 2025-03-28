@@ -15020,24 +15020,20 @@ FLASHMEM void _print_braids_patchname(uint8_t presetno)
 
 FLASHMEM void update_selective_values_braids(uint8_t presetno)
 {
-  char tmp[4];
   display.setTextSize(1);
 
   if (menu_item_check(0))
   {
     setModeColor(0);
     setCursor_textGrid_small(9, 1);
-    snprintf_P(tmp, sizeof(tmp), PSTR("P%02d"), presetno);
-    display.print(tmp);
+    display.printf("P%02d", presetno);
 
     setCursor_textGrid_small(13, 1);
     _print_braids_patchname(presetno);
-
   }
 
   if (menu_item_check(1))
   {
-
     setModeColor(1);
     setCursor_textGrid_small(30, 1);
     if (seq.edit_state == 0)
@@ -15049,8 +15045,7 @@ FLASHMEM void update_selective_values_braids(uint8_t presetno)
         display.print(F("SELECT"));
         display.setTextColor(COLOR_SYSTEXT, RED);
         setCursor_textGrid_small(9, 1);
-        snprintf_P(tmp, sizeof(tmp), PSTR("P%02d"), presetno);
-        display.print(tmp);
+        display.printf("P%02d", presetno);
         setCursor_textGrid_small(13, 1);
         _print_braids_patchname(presetno);
       }
@@ -16373,7 +16368,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
               CustomSample &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
               s.start = 0.0F;
               s.end = 1.0F;
-              // todo: copy path
+              strcpy(s.filepath, fm.sd_new_name.c_str());
+              strcpy(drum_config[sampleIndex].filename, fm.sd_temp_name.c_str());
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);
               print_psram_stats_filemanager();
               psram_printCustomSamplesList();
