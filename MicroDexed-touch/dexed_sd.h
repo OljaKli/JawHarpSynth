@@ -48,6 +48,7 @@ extern void set_sys_params(void);
 extern void set_epiano_params(void);
 
 bool check_sd_performance_exists(uint8_t number);
+bool check_sd_braids_patch_exists(uint8_t number);
 void get_sd_performance_name_json(uint8_t number);
 
 bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);

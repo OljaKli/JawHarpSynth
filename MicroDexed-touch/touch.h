@@ -109,5 +109,5 @@ void handle_touchscreen_file_manager();
 void handle_touchscreen_mute_matrix();
 void handle_touchscreen_custom_mappings();
 void handle_touchscreen_drums();
-
+void handle_load_performance();
 #endif

@@ -1026,6 +1026,8 @@ typedef struct sys_s
   bool skip_midi_channel_warning;
   bool send_sysex_on_voice_change;
   bool send_midi_cc;
+  uint8_t rgb_enc_color_def;
+  uint8_t rgb_enc_color_sel;
 } sys_t;
 
 typedef struct storage_file_s
@@ -1160,4 +1162,16 @@ struct EncoderEvents {
   uint16_t speed;
   bool pressed;
   bool longPressed;
+};
+
+enum perf_load_opt
+{
+ perf_dexed,
+ perf_msynth,
+ perf_epiano,
+ perf_braids,
+ perf_samples,
+ perf_effects,
+ perf_seq,
+ perf_liveseq
 };
