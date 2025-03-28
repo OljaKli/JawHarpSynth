@@ -33,10 +33,10 @@
 
 typedef struct drum_config_s
 {
-  uint8_t drum_class; // Type of drum
-  uint8_t midinote; // Triggered by note
+  uint8_t drum_class;    // Type of drum
+  uint8_t midinote;      // Triggered by note
   char name[FILENAME_MAX_LEN];
-  char filename[20];
+  char filename[FILENAME_MAX_LEN];
   const uint8_t* drum_data;
   char shortname[2];     // 1 char name for sequencer
   uint32_t len;          // number of elements in drum_data
@@ -48,21 +48,22 @@ typedef struct drum_config_s
   float32_t reverb_send; // how much signal to send to the reverb (0.0 - 1.0)
   uint8_t filter_mode;   // multimode filter mode
   float32_t filter_freq; // multimode filter frequency
-  float32_t filter_q; // multimode filter Q
-  float32_t delay1; // delay1 send 
-  float32_t delay2; // selay2 send
+  float32_t filter_q;    // multimode filter Q
+  float32_t delay1;      // delay1 send 
+  float32_t delay2;      // selay2 send
   uint8_t env_attack;
   uint8_t env_hold;
   uint8_t env_decay;
   uint8_t env_sustain;
   uint8_t env_release;
+  float32_t start;
+  float32_t end;
+  uint8_t loopType;
 } drum_config_t;
 
 struct CustomSample {
   char filepath[FULLPATH_MAX_LEN];
-  float32_t start;
-  float32_t end;
-  uint8_t mode;
+  bool isHighHat; // high hat randomization
 };
 
 enum

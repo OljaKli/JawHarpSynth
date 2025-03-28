@@ -6116,7 +6116,7 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
     NULL);
 }
 
-void addCustomSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr, void (* const renderer)(Editor* param, bool refresh))
+void addSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr, void (* const renderer)(Editor* param, bool refresh))
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
@@ -6124,14 +6124,14 @@ void addCustomSampleParameterEditor(const char* name, int16_t limit_min, int16_t
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
+      float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
       return round(*ptr * 1000.0f);
     },
     [](Editor* editor, int16_t value)
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
+      float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
       *ptr = value / 1000.0f;
     },
     renderer);
@@ -6207,10 +6207,9 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   }
 }
 
-FLASHMEM void drawCustomSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  const CustomSample &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
-  const uint16_t from = x + w * s.start;
-  const uint16_t to = x + w * s.end - 1;
+FLASHMEM void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  const uint16_t from = x + w * drum_config[activeSample].start;
+  const uint16_t to = x + w * drum_config[activeSample].end - 1;
   display.drawFastVLine(from, y, h, COLOR_ARP);
   display.drawFastVLine(to - 1, y, h, COLOR_ARP);
 }
@@ -6228,8 +6227,8 @@ void drawDrumsSampleWave() {
 
   printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
 
-  if ((slot.drum_data != nullptr) && (activeSample >= NUM_STATIC_PITCHED_SAMPLES) && (activeSample < NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES)) {
-    drawCustomSampleStartEnd(plotX, plotY, plotW, plotH);
+  if (slot.drum_data != nullptr) {
+    drawSampleStartEnd(plotX, plotY, plotW, plotH);
   }
 #endif
 }
@@ -6438,8 +6437,8 @@ FLASHMEM void UI_func_drums(uint8_t param)
     display.print("SAMPLE POINTS");
     
     ui.setCursor(20, 12);
-    addCustomSampleParameterEditor((const char*)F("FROM"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
-    addCustomSampleParameterEditor((const char*)F("UPTO"), 0, 1000, &customSamples[0].end, sampleStartEndRenderer);
+    addSampleParameterEditor((const char*)F("FROM"), 0, 1000, &drum_config[0].start, sampleStartEndRenderer);
+    addSampleParameterEditor((const char*)F("UPTO"), 0, 1000, &drum_config[0].end, sampleStartEndRenderer);
 
     display.setTextColor(RED);
     setCursor_textGrid_small(20, 17);
@@ -16366,8 +16365,9 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
             if (drum_config[sampleIndex].drum_data != nullptr) {
               CustomSample &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
-              s.start = 0.0F;
-              s.end = 1.0F;
+              s.isHighHat = false;
+              drum_config[sampleIndex].start = 0.0F;
+              drum_config[sampleIndex].end = 1.0F;
               strcpy(s.filepath, fm.sd_new_name.c_str());
               strcpy(drum_config[sampleIndex].filename, fm.sd_temp_name.c_str());
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);

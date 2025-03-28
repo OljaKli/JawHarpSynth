@@ -42,8 +42,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
-    
+    50,
+
+    0.0F,
+    1.0F,
+    0
   },
   {
     DRUM_POLY,
@@ -69,7 +72,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -96,7 +103,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -123,7 +134,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -150,7 +165,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -177,7 +196,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -204,7 +227,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -231,7 +258,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -258,7 +289,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -285,7 +320,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -312,7 +351,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -339,7 +382,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -366,7 +413,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -393,7 +444,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -420,7 +475,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -447,7 +506,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -474,7 +537,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -501,7 +568,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -528,7 +599,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -555,7 +630,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -582,7 +661,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -609,7 +692,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -636,7 +723,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 {
@@ -663,7 +754,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -690,7 +785,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -717,7 +816,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 
@@ -746,7 +849,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -773,7 +880,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -800,7 +911,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -827,7 +942,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -854,7 +973,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -881,7 +1004,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -898,12 +1025,21 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     0.0,
     0.8,
     0.0,
+    0,
+    20000,
+    0.2,
+    0.0,
+    0.0,
 
     0,
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -930,7 +1066,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -957,7 +1097,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -984,13 +1128,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_HIHAT,
     MIDI_FIS3,
-    "S_hhClosed_1",
+    "S HiHat Closed 1",
     "S_hhClosed_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_hhClosed_1),
     "H",
@@ -1011,13 +1159,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_LOWTOM,
     MIDI_G3,
-    "S_loTom_1",
+    "S Low Tom 1",
     "S_loTom_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_loTom_1),
     "T",
@@ -1038,7 +1190,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1065,13 +1221,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_HIGHTOM,
     MIDI_A3,
-    "S_hiTom_5",
+    "S hiTom 5",
     "S_hiTom_5",
     CHECK_PROGMEM_SAMPLE(DRUM_S_hiTom_5),
     "T",
@@ -1092,13 +1252,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_HIHAT,
     MIDI_AIS3,
-    "S_hh_o_5_4",
+    "S hh o 5 4",
     "S_hh_o_5_4",
     CHECK_PROGMEM_SAMPLE(DRUM_S_hh_o_5_4),
     "H",
@@ -1119,13 +1283,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_HIGHTOM,
     MIDI_B3,
-    "S_hiTom_5",
+    "S hiTom 5",
     "S_hiTom_5",
     CHECK_PROGMEM_SAMPLE(DRUM_S_hiTom_5),
     "T",
@@ -1146,13 +1314,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_HIGHTOM,
     MIDI_C4,
-    "S_hiTom_5",
+    "S hiTom 5",
     "S_hiTom_5",
     CHECK_PROGMEM_SAMPLE(DRUM_S_hiTom_5),
     "T",
@@ -1173,13 +1345,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_CRASH,
     MIDI_CIS4,
-    "S_splash1_1",
+    "S splash1 1",
     "S_splash1_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_splash1_1),
     "C",
@@ -1200,13 +1376,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_HIGHTOM,
     MIDI_D4,
-    "S_hiTom_5",
+    "S hiTom 5",
     "S_hiTom_5",
     CHECK_PROGMEM_SAMPLE(DRUM_S_hiTom_5),
     "T",
@@ -1227,13 +1407,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_CRASH,
     MIDI_DIS4,
-    "S_china1_4",
+    "S china1 4",
     "S_china1_4",
     CHECK_PROGMEM_SAMPLE(DRUM_S_china1_4),
     "C",
@@ -1254,13 +1438,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_CRASH,
     MIDI_E4,
-    "S_china2_1",
+    "S china2 1",
     "S_china2_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_china2_1),
     "C",
@@ -1281,13 +1469,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_RIDE,
     MIDI_F4,
-    "S_ride1Bell_1",
+    "S ride1Bell 1",
     "S_ride1Bell_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_ride1Bell_1),
     "R",
@@ -1308,13 +1500,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_RIDE,
     MIDI_FIS4,
-    "S_ride1Bell_1",
+    "S ride1Bell 1",
     "S_ride1Bell_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_ride1Bell_1),
     "R",
@@ -1335,13 +1531,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_CRASH,
     MIDI_G4,
-    "S_crash1_1",
+    "S crash1 1",
     "S_crash1_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_crash1_1),
     "C",
@@ -1362,13 +1562,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_PERCUSSION,
     MIDI_GIS4,
-    "S_cowbell_2",
+    "S cowbell 2",
     "S_cowbell_2",
     CHECK_PROGMEM_SAMPLE(DRUM_S_cowbell_2),
     "C",
@@ -1389,13 +1593,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_RIDE,
     MIDI_A4,
-    "S_ride2Crash_2",
+    "S ride2Crash 2",
     "S_ride2Crash_2",
     CHECK_PROGMEM_SAMPLE(DRUM_S_ride2Crash_2),
     "C",
@@ -1416,13 +1624,17 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
     DRUM_RIDE,
     MIDI_AIS4,
-    "S_ride2_1",
+    "S ride2 1",
     "S_ride2_1",
     CHECK_PROGMEM_SAMPLE(DRUM_S_ride2_1),
     "R",
@@ -1443,7 +1655,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1470,7 +1686,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1497,7 +1717,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1514,12 +1738,21 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     -0.2,
     0.7,
     0.0,
+    0,
+    20000,
+    0.2,
+    0.0,
+    0.0,
 
     0,
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1546,7 +1779,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1573,7 +1810,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1600,7 +1841,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1627,7 +1872,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1654,7 +1903,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1681,7 +1934,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1708,7 +1965,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1735,7 +1996,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1762,7 +2027,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1789,7 +2058,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1816,7 +2089,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1843,7 +2120,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1870,7 +2151,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1897,7 +2182,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1924,7 +2213,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1951,7 +2244,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1968,12 +2265,21 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     -0.2,
     0.6,
     0.0,
+    0,
+    20000,
+    0.2,
+    0.0,
+    0.0,
 
     0,
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -1990,12 +2296,21 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     0.0,
     0.6,
     0.0,
+    0,
+    20000,
+    0.2,
+    0.0,
+    0.0,
 
     0,
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
    {
@@ -2012,12 +2327,21 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     0.2,
     0.6,
     0.0,
+    0,
+    20000,
+    0.2,
+    0.0,
+    0.0,
 
     0,
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2044,7 +2368,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2071,7 +2399,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2098,7 +2430,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2125,7 +2461,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2152,7 +2492,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2179,7 +2523,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2206,7 +2554,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2233,7 +2585,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2260,7 +2616,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2287,7 +2647,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2314,7 +2678,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2341,7 +2709,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2368,7 +2740,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2395,7 +2771,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   {
@@ -2422,7 +2802,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
 
@@ -2450,7 +2834,11 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
     100,
     100,
     90,
-    50
+    50,
+
+    0.0F,
+    1.0F,
+    0
     
   },
   
