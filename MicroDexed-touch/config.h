@@ -976,6 +976,8 @@ typedef struct braids_s
   uint8_t pan;
   uint8_t note_buffer[NUM_BRAIDS];
   uint8_t sidechain_send;
+  char name[FILENAME_MAX_LEN];
+  char temp_name[FILENAME_MAX_LEN];
 } braids_t;
 
 typedef struct multisample_s
