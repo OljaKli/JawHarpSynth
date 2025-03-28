@@ -2261,6 +2261,48 @@ FLASHMEM bool save_sd_sys_json(void)
 /******************************************************************************
    SD BRAIDS
  ******************************************************************************/
+extern uint8_t braids_presetno;
+
+bool save_sd_braids_json(uint8_t number, uint8_t braidsmode);
+
+FLASHMEM bool get_sd_braids_name(uint8_t number, uint8_t mode)
+{
+
+  if (sd_card > 0)
+  {
+    number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+    snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
+    AudioNoInterrupts();
+    if (SD.exists(filename))
+    {
+      json = SD.open(filename);
+      if (json)
+      {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        deserializeJson(data_json, json);
+        json.close();
+        AudioInterrupts();
+        if (mode == 0)
+        {
+          if (check_sd_braids_patch_exists(number))
+            strcpy(braids_osc.name, data_json["name"]);
+          else
+            strcpy(braids_osc.name, "-----EMPTY-----");
+        }
+        else if (mode == 1)
+        {
+          if (check_sd_braids_patch_exists(number))
+            strcpy(braids_osc.temp_name, data_json["name"]);
+          else
+            strcpy(braids_osc.temp_name, "-----EMPTY-----");
+        }
+      }
+      return (true);
+    }
+  }
+  AudioInterrupts();
+  return (false);
+}
 
 FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
 {
@@ -2322,6 +2364,19 @@ FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
         braids_osc.pan = data_json["pan"];
         braids_osc.sidechain_send = data_json["sidechain_send"];
 
+        if (braidsmode == 0)
+        {
+          strcpy(braids_osc.name, "---FROM PERF---");
+          braids_presetno = 0;
+          save_sd_braids_json(0, 1);
+        }
+        else if (braidsmode == 1)
+        {
+          if (check_sd_braids_patch_exists(number))
+            strcpy(braids_osc.name, data_json["name"]);
+          else
+            strcpy(braids_osc.name, "-----EMPTY-----");
+        }
         braids_update_all_settings();
         return (true);
       }
@@ -2391,6 +2446,12 @@ FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
       data_json["midi"] = braids_osc.midi_channel;
       data_json["pan"] = braids_osc.pan;
       data_json["sidechain_send"] = braids_osc.sidechain_send;
+
+      if (braidsmode == 0)
+        data_json["name"] = "-FROM PERF-";
+      else if (braidsmode == 1)
+        data_json["name"] = braids_osc.name;
+
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
       serializeJsonPretty(data_json, Serial);

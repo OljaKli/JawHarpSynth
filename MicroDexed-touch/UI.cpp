@@ -362,7 +362,7 @@ void UI_func_clear_patterns(uint8_t param);
 void UI_func_clear_all(uint8_t param);
 void UI_func_stereo_mono(uint8_t param);
 void UI_handle_OP(uint8_t param);
-
+void UI_func_set_braids_name(uint8_t param);
 void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
 
 /***********************************************************************
@@ -550,30 +550,31 @@ LCDML_add(39, LCDML_0_14, 1, "Load Perf.", UI_func_load_performance);
 LCDML_add(40, LCDML_0_14, 2, "Save Perf.", UI_func_save_performance);
 LCDML_add(41, LCDML_0_14, 3, "Name Perf.", UI_func_set_performance_name);
 LCDML_add(42, LCDML_0_14, 4, "Name Multisample", UI_func_set_multisample_name);
-LCDML_add(43, LCDML_0_14, 5, "MIDI", NULL);
-LCDML_add(44, LCDML_0_14_5, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(45, LCDML_0_14_5, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
-LCDML_add(46, LCDML_0_14_5, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
-LCDML_add(47, LCDML_0, 15, "File Manager", UI_func_file_manager);
-LCDML_add(48, LCDML_0, 16, "System", NULL);
-LCDML_add(49, LCDML_0_16, 1, "Stereo/Mono", UI_func_stereo_mono);
-LCDML_add(50, LCDML_0_16, 2, "MIDI channels", UI_func_midi_channels);
-LCDML_add(51, LCDML_0_16, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
-LCDML_add(52, LCDML_0_16, 4, "MIDI Mapping", UI_func_custom_mappings);
-LCDML_add(53, LCDML_0_16, 5, "Favorites", UI_func_favorites);
-LCDML_add(54, LCDML_0_16, 6, "Startup Perform.", UI_func_startup_performance);
-LCDML_add(55, LCDML_0_16, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(56, LCDML_0_16, 8, "System Settings", UI_func_system_settings);
-LCDML_add(57, LCDML_0_16, 9, "Map Gamepad", UI_func_map_gamepad);
-LCDML_add(58, LCDML_0_16, 10, "TEST Touchscreen", UI_func_test_touchscreen);
-LCDML_add(59, LCDML_0_16, 11, "TEST Audio Mute", UI_func_test_mute);
-LCDML_add(60, LCDML_0_16, 12, "TEST PSRAM", UI_func_test_psram);
-LCDML_add(61, LCDML_0, 17, "Info", UI_func_information);
-LCDML_addAdvanced(62, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(63, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(64, LCDML_0, 20, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(43, LCDML_0_14, 5, "Name Braids", UI_func_set_braids_name);
+LCDML_add(44, LCDML_0_14, 6, "MIDI", NULL);
+LCDML_add(45, LCDML_0_14_6, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
+LCDML_add(46, LCDML_0_14_6, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
+LCDML_add(47, LCDML_0_14_6, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
+LCDML_add(48, LCDML_0, 15, "File Manager", UI_func_file_manager);
+LCDML_add(49, LCDML_0, 16, "System", NULL);
+LCDML_add(50, LCDML_0_16, 1, "Stereo/Mono", UI_func_stereo_mono);
+LCDML_add(51, LCDML_0_16, 2, "MIDI channels", UI_func_midi_channels);
+LCDML_add(52, LCDML_0_16, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
+LCDML_add(53, LCDML_0_16, 4, "MIDI Mapping", UI_func_custom_mappings);
+LCDML_add(54, LCDML_0_16, 5, "Favorites", UI_func_favorites);
+LCDML_add(55, LCDML_0_16, 6, "Startup Perform.", UI_func_startup_performance);
+LCDML_add(56, LCDML_0_16, 7, "Startup Page", UI_func_startup_page);
+LCDML_add(57, LCDML_0_16, 8, "System Settings", UI_func_system_settings);
+LCDML_add(58, LCDML_0_16, 9, "Map Gamepad", UI_func_map_gamepad);
+LCDML_add(59, LCDML_0_16, 10, "TEST Touchscreen", UI_func_test_touchscreen);
+LCDML_add(60, LCDML_0_16, 11, "TEST Audio Mute", UI_func_test_mute);
+LCDML_add(61, LCDML_0_16, 12, "TEST PSRAM", UI_func_test_psram);
+LCDML_add(62, LCDML_0, 17, "Info", UI_func_information);
+LCDML_addAdvanced(63, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(64, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(65, LCDML_0, 20, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 
-FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 64, bool onlyDrawWhenRunning = false) {
+FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
     .enabled = true,
     .x = x,
@@ -1453,6 +1454,7 @@ FLASHMEM bool legacy_touch_button_back_page() //legacy, 2 line text pages with t
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_save_performance) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_performance_name) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_multisample_name) ||
+    LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_braids_name) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_receive_bank) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_send_bank) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_stereo_mono) ||
@@ -7592,7 +7594,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
   }
 }
 
-FLASHMEM void print_content_type()
+void print_content_type()
 {
   set_pattern_content_type_color(seq.active_pattern);
   display.setTextSize(1);
@@ -9036,7 +9038,7 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
   }
 }
 
-FLASHMEM void set_sample_type_color()
+void set_sample_type_color()
 {
   if (drum_config[activeSample].midinote > 209)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
@@ -9044,7 +9046,7 @@ FLASHMEM void set_sample_type_color()
     display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
 }
 
-FLASHMEM void set_sample_type_color_of(uint8_t samplekey)
+void set_sample_type_color_of(uint8_t samplekey)
 {
   if (samplekey > 209)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
@@ -14989,15 +14991,34 @@ FLASHMEM void print_braids_static_texts()
 }
 
 
-FLASHMEM void _print_braids_patchname(uint8_t presetno)
+uint8_t braids_presetno;
+extern bool save_sd_braids_json(uint8_t number, uint8_t braidsmode);
+extern bool load_sd_braids_json(uint8_t number, uint8_t braidsmode);
+extern bool get_sd_braids_name(uint8_t number, uint8_t mode);
+
+FLASHMEM void _print_braids_patchname(uint8_t number, uint8_t mode)
 {
-  if (check_sd_braids_patch_exists(presetno))
-    display.print(F("UNNAMED PATCH"));
+  if (check_sd_braids_patch_exists(number))
+  {
+    if (generic_temp_select_menu == 1 && seq.edit_state == 1)  //while in selection of destination patch 
+    {
+      get_sd_braids_name(number, 1);
+      display.print(braids_osc.temp_name);
+    }
+    else
+    {
+      get_sd_braids_name(number, 0);
+      display.print(braids_osc.name);
+    }
+  }
   else
-    display.print(F("----EMPTY----"));
+  {
+    if (number > 0)
+      display.print(F("-----EMPTY-----"));
+  }
 }
 
-FLASHMEM void update_selective_values_braids(uint8_t presetno)
+FLASHMEM void update_selective_values_braids()
 {
   display.setTextSize(1);
 
@@ -15005,10 +15026,10 @@ FLASHMEM void update_selective_values_braids(uint8_t presetno)
   {
     setModeColor(0);
     setCursor_textGrid_small(9, 1);
-    display.printf("P%02d", presetno);
+    display.printf("P%02d", braids_presetno);
 
     setCursor_textGrid_small(13, 1);
-    _print_braids_patchname(presetno);
+    _print_braids_patchname(braids_presetno, 0);
   }
 
   if (menu_item_check(1))
@@ -15024,9 +15045,9 @@ FLASHMEM void update_selective_values_braids(uint8_t presetno)
         display.print(F("SELECT"));
         display.setTextColor(COLOR_SYSTEXT, RED);
         setCursor_textGrid_small(9, 1);
-        display.printf("P%02d", presetno);
+        display.printf("P%02d", seq.cycle_touch_element);
         setCursor_textGrid_small(13, 1);
-        _print_braids_patchname(presetno);
+        _print_braids_patchname(seq.cycle_touch_element, 1);
       }
     }
   }
@@ -15168,13 +15189,91 @@ FLASHMEM void update_selective_values_braids(uint8_t presetno)
   }
 }
 
-extern bool save_sd_braids_json(uint8_t number, uint8_t braidsmode);
-extern bool load_sd_braids_json(uint8_t number, uint8_t braidsmode);
+FLASHMEM void UI_func_set_braids_name(uint8_t param)
+{
+  static uint8_t mode;
+  static uint8_t ui_select_name_state;
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+    display.setTextSize(2);
+    mode = 0;
+    setCursor_textGrid(1, 1);
+    display.print(F("Braids Name"));
+  }
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      if (mode == 0) {
+        braids_presetno = constrain(braids_presetno + e.dir, 0, 99);
+      }
+      else if (mode == 2) {
+        ui_select_name_state = UI_select_name(2, 4, seq.name_temp, FILENAME_MAX_LEN - 1, false);
+      }
+    }
+    else if (e.pressed) {
+      if (mode == 2)
+      {
+        ui_select_name_state = UI_select_name(2, 4, seq.name_temp, FILENAME_MAX_LEN - 1, false);
+        if (ui_select_name_state == true)
+        {
+          strcpy(braids_osc.name, seq.name_temp);
+          mode = 0xff;
+          setCursor_textGrid(1, 2);
+          display.print(F("OK.                     "));
+          save_sd_braids_json(braids_presetno, 1);
+          delay(MESSAGE_WAIT_TIME);
+          LCDML.FUNC_goBackToMenu();
+        }
+      }
+      if (mode == 0) {
+        mode = 1;
+      }
+    }
+    if (mode == 0)
+    {
+      setCursor_textGrid(1, 2);
+      display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+      print_formatted_number(braids_presetno, 2);
+      setCursor_textGrid(3, 2);
+      display.print(F("["));
+      setCursor_textGrid(19, 2);
+      display.print(F("]"));
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+      if (check_sd_braids_patch_exists(braids_presetno))
+      {
+        load_sd_braids_json(braids_presetno, 1);
+        show(2, 4, FILENAME_MAX_LEN - 1, braids_osc.name);
+      }
+      else
+      {
+        show(2, 4, FILENAME_MAX_LEN - 1, "-----EMPTY-----");
+        strcpy(braids_osc.name, "MyNewPresetName");
+      }
+    }
+    if (mode == 1)
+    {
+      mode = 2;
+      strcpy(seq.name_temp, braids_osc.name);
+      setCursor_textGrid(3, 2);
+      display.print(F("[               ]      "));
+      ui_select_name_state = UI_select_name(2, 4, seq.name_temp, FILENAME_MAX_LEN - 1, true);
+    }
+  }
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
 
 FLASHMEM void UI_func_braids(uint8_t param)
 {
-  static uint8_t presetno;
-
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     static constexpr char BRAIDS[] = "BRAIDS";
@@ -15196,7 +15295,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
       generic_temp_select_menu = 0;
     }
     generic_full_draw_required = true;
-    update_selective_values_braids(presetno);
+    update_selective_values_braids();
     generic_full_draw_required = false;
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -15205,24 +15304,34 @@ FLASHMEM void UI_func_braids(uint8_t param)
     if (e.turned) {
       if (seq.edit_state == 0) {
         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 25);
+        if (generic_temp_select_menu == 1 && seq.edit_state == false)
+          seq.cycle_touch_element = braids_presetno;
       }
       else {
         if (generic_temp_select_menu == 0) //select patch
         {
-          presetno = constrain(presetno + e.dir * e.speed, 0, 99);
+          braids_presetno = constrain(braids_presetno + e.dir * e.speed, 0, 99);
 
           if (seq.edit_state) // load preset 
           {
-            load_sd_braids_json(presetno, 1);
-            generic_full_draw_required = true;
-            update_selective_values_braids(presetno);
-            generic_full_draw_required = false;
+            if (check_sd_braids_patch_exists(braids_presetno))
+            {
+              load_sd_braids_json(braids_presetno, 1);
+              generic_full_draw_required = true;
+              update_selective_values_braids();
+              generic_full_draw_required = false;
+            }
           }
         }
-
         else if (generic_temp_select_menu == 1 && seq.edit_state) // save slot select
-          presetno = constrain(presetno + e.dir * e.speed, 0, 99);
-
+        {
+          seq.cycle_touch_element = constrain(seq.cycle_touch_element + e.dir * e.speed, 1, 99);
+          // load_sd_braids_json(seq.cycle_touch_element, 2);
+          get_sd_braids_name(seq.cycle_touch_element, 1);
+          generic_full_draw_required = true;
+          update_selective_values_braids();
+          generic_full_draw_required = false;
+        }
         else  if (generic_temp_select_menu == 3)
           braids_osc.sound_intensity = constrain(braids_osc.sound_intensity + e.dir * e.speed, 0, 100);
         else if (generic_temp_select_menu == 4)
@@ -15274,27 +15383,37 @@ FLASHMEM void UI_func_braids(uint8_t param)
 
     if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
-
       if (generic_temp_select_menu == 1 && seq.edit_state) // save 
       {
         display.setTextSize(1);
         setCursor_textGrid_small(30, 1);
-        if (save_sd_braids_json(presetno, 1))
+        if (check_sd_braids_patch_exists(seq.cycle_touch_element) == false && seq.cycle_touch_element == braids_presetno)
+          strcpy(braids_osc.name, "MyNewPresetName");
+
+        if (save_sd_braids_json(seq.cycle_touch_element, 1))
         {
           display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
           display.print(F("SAVED!"));
           if (remote_active)
             display.flushSysEx();
           delay(100);
+          braids_presetno = seq.cycle_touch_element;
         }
         else
         {
           display.setTextColor(COLOR_SYSTEXT, RED);
-          display.print(F(" FAIL "));
+          display.print(F("FAILED"));
           if (remote_active)
             display.flushSysEx();
         }
-        delay(1000);
+        delay(500);
+        seq.edit_state = 0;
+        setCursor_textGrid_small(13, 1);
+        _print_braids_patchname(braids_presetno, 1);
+      }
+      else if (generic_temp_select_menu == 2 && seq.edit_state == false) // edit name
+      {
+        LCDML.OTHER_jumpToFunc(UI_func_set_braids_name);
         seq.edit_state = 0;
       }
       else
@@ -15303,7 +15422,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
 
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     braids_update_single_setting();
-    update_selective_values_braids(presetno);
+    update_selective_values_braids();
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -15312,7 +15431,8 @@ FLASHMEM void UI_func_braids(uint8_t param)
     generic_active_function = 99;
     seq.cycle_touch_element = 0;
     encoderDir[ENC_R].reset();
-    display.fillScreen(COLOR_BACKGROUND);
+    if (generic_temp_select_menu != 2)
+      display.fillScreen(COLOR_BACKGROUND);
   }
 }
 
@@ -16042,7 +16162,7 @@ FLASHMEM void sd_card_count_files_from_directory(const char* dir_name)
   }
 
   dir.close();
-  }
+}
 
 FLASHMEM void sd_go_parent_folder()
 {
@@ -16682,7 +16802,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 #else
       _print_midi_channel(MIDI_CHANNEL_OFF);
 #endif
-  }
+    }
 
     if (menu_item_check(4))
     {
@@ -16821,7 +16941,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       if (remote_active)
         display.console = false;
     }
-}
+  }
   // ****** STABLE END *********
   if (LCDML.FUNC_close())
   {
@@ -19295,6 +19415,7 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
@@ -19317,9 +19438,6 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
           setCursor_textGrid(1, 2);
           display.print(F("OK.                 "));
           delay(MESSAGE_WAIT_TIME);
-          //          if (LCDML.MENU_getLastActiveFunctionID() == LCDML.OTHER_getIDFromFunction(UI_func_set_multisample_name) )
-          //            LCDML.OTHER_jumpToID(LCDML.MENU_getLastActiveFunctionID());
-          //          else
           LCDML.FUNC_goBackToMenu();
         }
       }
@@ -20003,7 +20121,7 @@ FLASHMEM uint8_t search_accepted_char(uint8_t c)
       return (i);
   }
   return (0);
-  }
+}
 
 FLASHMEM void display_int(int16_t var, uint8_t size, bool zeros, bool brackets, bool sign)
 {
@@ -20390,7 +20508,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-  }
+    }
     else
     { // it was not a favorite
 
