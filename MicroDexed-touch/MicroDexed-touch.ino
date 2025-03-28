@@ -106,9 +106,6 @@ uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
 
-
-
-
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 short braids_r_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
@@ -1781,8 +1778,8 @@ FLASHMEM void load_custom_samples_to_psram()
       //success
       CustomSample &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
       s.isHighHat = false; // todo dsr
-      drum_config[i].start = 0.0F;
-      drum_config[i].end = 1.0F;
+      drum_config[i].start = 0;
+      drum_config[i].end = 1000;
     }
   }
 }
@@ -2109,7 +2106,7 @@ void update_sidechain()
 //     glow_count = glow_smoothness_pts / 2;
 // }
 
-void print_gate_state(uint8_t g)
+FLASHMEM void print_gate_state(uint8_t g)
 {
   if (Gate[g]->get_state() == 0)
     display.print("BYPASS ");
@@ -3164,9 +3161,9 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 int16_t *start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
 
-                const uint32_t offStart = drum_config[d].start * length;
+                const uint32_t offStart = (drum_config[d].start / float(1000)) * length;
                 start += offStart;
-                const uint32_t offEnd = length - drum_config[d].end * length;
+                const uint32_t offEnd = length - (drum_config[d].end / float(1000)) * length;
                 length -= (offStart + offEnd);
 
                 const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
@@ -3177,9 +3174,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                     length -= randomizer;
                   }
                 }
-
-                
-                
                 Drum[slot]->playRaw(start, length, drum_config[d].numChannels);
 #endif
 
@@ -3344,7 +3338,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
   }
 }
 
-void printLoadedSample(const uint8_t i, const char* name) {
+FLASHMEM void printLoadedSample(const uint8_t i, const char* name) {
   display.setTextSize(2);
   display.setCursor(18 * CHAR_width, CHAR_height * 1);
   display.print(i);
@@ -3354,7 +3348,7 @@ void printLoadedSample(const uint8_t i, const char* name) {
   display.print(F("       "));
 }
 
-void stop_all_drum_slots()
+FLASHMEM void stop_all_drum_slots()
 {
   for (uint8_t i = 0; i < NUM_DRUMS; i++)
   {
@@ -3558,7 +3552,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
   }
 }
 
-void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
+FLASHMEM void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
   if (delay_no == 0)
   {
@@ -4397,7 +4391,7 @@ FLASHMEM void dac_unmute(void)
   seq.DAC_mute_state = false;
 }
 
-void handleStart(void)
+FLASHMEM void handleStart(void)
 {
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
@@ -4458,12 +4452,12 @@ void handleStart(void)
 
 }
 
-void handleContinue(void)
+FLASHMEM void handleContinue(void)
 {
   ;
 }
 
-void handleStop(void)
+FLASHMEM void handleStop(void)
 {
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
@@ -4548,7 +4542,7 @@ void handleActiveSensing(void)
   ;
 }
 
-void handleSystemReset(void)
+FLASHMEM void handleSystemReset(void)
 {
   for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
   {

@@ -56,8 +56,8 @@ typedef struct drum_config_s
   uint8_t env_decay;
   uint8_t env_sustain;
   uint8_t env_release;
-  float32_t start;
-  float32_t end;
+  int16_t start; // value / 1000
+  int16_t end;   // value / 1000
   uint8_t loopType;
 } drum_config_t;
 

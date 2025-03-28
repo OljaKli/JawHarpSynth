@@ -363,7 +363,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define VOICE_NAME_LEN 12 // 11 (plus '\0')
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
-#define FILENAME_MAX_LEN 18
+#define FILENAME_MAX_LEN 17
 #define FULLPATH_MAX_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"

@@ -1937,7 +1937,7 @@ FLASHMEM void print_transpose_in_song_page()
 uint8_t song_previous_displayed_chain = 99;
 uint8_t chain_endline = 99;
 
-void calc_chain_endline()
+FLASHMEM void calc_chain_endline()
 {
   for (uint8_t y = 0; y < 16; y++) // chain
   {
@@ -2636,7 +2636,7 @@ extern void flock_frame();
 
 extern bool wakeScreenFlag;
 
-void resetScreenTimer() {
+FLASHMEM void resetScreenTimer() {
   LCDML.SCREEN_resetTimer();
   // exit screensaver if active
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -5174,14 +5174,14 @@ FLASHMEM void UI_func_stereo_mono(uint8_t param)
 }
 
 // get and set dexed configuration to our dexed configuration structure
-int16_t dexed_current_instance_getter(Editor* editor)
+FLASHMEM int16_t dexed_current_instance_getter(Editor* editor)
 {
   // the controller parameter may be from either instance, which may be
   // switched at any time. So recompute the value pointer in respect of the instance!
   uint8_t* ptr = (uint8_t*)((char*)editor->value - (char*)&configuration.dexed[0] + (char*)&configuration.dexed[selected_instance_id]);
   return *ptr;
 }
-void dexed_current_instance_setter(Editor* editor, int16_t value)
+FLASHMEM void dexed_current_instance_setter(Editor* editor, int16_t value)
 {
   // the controller parameter may be from either instance, which may be
   // switched at any time. So recompute the value pointer in respect of the instance!
@@ -5190,7 +5190,7 @@ void dexed_current_instance_setter(Editor* editor, int16_t value)
 }
 
 // prepare rendering for an editor field providing multiple options to select between
-void prepare_multi_options(Editor* editor, bool refresh)
+FLASHMEM void prepare_multi_options(Editor* editor, bool refresh)
 {
   display.setTextSize(1);
   if (!refresh)
@@ -5206,7 +5206,7 @@ void prepare_multi_options(Editor* editor, bool refresh)
 }
 
 // set portamento setup to dexed engine and send SysEx for it.
-void dexed_portamento_setter(Editor* editor, int16_t value)
+FLASHMEM void dexed_portamento_setter(Editor* editor, int16_t value)
 {
   dexed_current_instance_setter(editor, value);
   dexed_t& dexed = configuration.dexed[selected_instance_id];
@@ -5218,14 +5218,14 @@ void dexed_portamento_setter(Editor* editor, int16_t value)
 
 // display the voice name for the currently selected instance
 // used by mutliple UI pages.
-void dexed_voice_name_renderer(Editor* param, bool refresh)
+FLASHMEM void dexed_voice_name_renderer(Editor* param, bool refresh)
 {
   draw_instance_editor(param, refresh);
   display.setTextSize(2);
   show(1, 1, 10, g_voice_name[selected_instance_id]);
 }
 
-int16_t fx_current_instance_getter(struct Editor* editor)
+FLASHMEM int16_t fx_current_instance_getter(struct Editor* editor)
 {
   // the parameter may be from either instance, which may be
   // switched at any time. So recompute the value pointer in respect of the instance!
@@ -5233,7 +5233,7 @@ int16_t fx_current_instance_getter(struct Editor* editor)
   return *ptr;
 }
 
-void fx_current_instance_setter(struct Editor* editor, int16_t value)
+FLASHMEM void fx_current_instance_setter(struct Editor* editor, int16_t value)
 {
   // the parameter may be from either instance, which may be
   // switched at any time. So recompute the value pointer in respect of the instance!
@@ -5343,7 +5343,7 @@ FLASHMEM void UI_func_dexed_audio(uint8_t param)
   }
 }
 
-void note_name_renderer(struct Editor* editor, bool refresh)
+FLASHMEM void note_name_renderer(struct Editor* editor, bool refresh)
 {
   prepare_multi_options(editor, refresh);
   char note_name[4];
@@ -5550,7 +5550,7 @@ FLASHMEM void UI_handle_OP(uint8_t param)
   }
 }
 
-void pattern_preview_in_probability_editor(uint8_t line, uint8_t patternno)
+FLASHMEM void pattern_preview_in_probability_editor(uint8_t line, uint8_t patternno)
 {
   display.setTextSize(1);
   seq.active_pattern = patternno;
@@ -5882,15 +5882,6 @@ FLASHMEM void draw_scrollbar_custom_mappings()
   print_custom_mappings();
 }
 
-uint16_t get_overview_factor(unsigned long filelength)
-{
-  uint16_t overview_factor = 0;
-  overview_factor = (filelength / 140);
-  if (overview_factor % 2 != 0)
-    overview_factor = overview_factor - 1;
-  return overview_factor;
-}
-
 FLASHMEM void UI_func_custom_mappings(uint8_t param)
 {
   char displayname[8] = { 0, 0, 0, 0, 0, 0, 0 };
@@ -6078,7 +6069,7 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
 
 // MIDI channel renderer
 // just a "small bar" but showing "OMN" for zero value and "OFF" for (virtual) channel 17
-void midi_channel_renderer(Editor* editor, bool refresh)
+FLASHMEM void midi_channel_renderer(Editor* editor, bool refresh)
 {
   display.setTextSize(1);
   if (!refresh)
@@ -6095,7 +6086,7 @@ void midi_channel_renderer(Editor* editor, bool refresh)
 
 // the drum parameter editors depend on the currently selected sample activesample.
 // So we need custom getters and setters respecting activesample.
-void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr)
+FLASHMEM void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr)
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
@@ -6116,7 +6107,7 @@ void addDrumParameterEditor(const char* name, int16_t limit_min, int16_t limit_m
     NULL);
 }
 
-void addSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, float32_t* valuePtr, void (* const renderer)(Editor* param, bool refresh))
+FLASHMEM void addSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit_max, int16_t* valuePtr, void (* const renderer)(Editor* param, bool refresh))
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
@@ -6124,20 +6115,20 @@ void addSampleParameterEditor(const char* name, int16_t limit_min, int16_t limit
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      return round(*ptr * 1000.0f);
+      int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
+      return *ptr;
     },
     [](Editor* editor, int16_t value)
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      float32_t* ptr = (float32_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
-      *ptr = value / 1000.0f;
+      int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
+      *ptr = value;
     },
     renderer);
 }
 
-void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr)
+FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr)
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
@@ -6208,13 +6199,13 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 }
 
 FLASHMEM void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  const uint16_t from = x + w * drum_config[activeSample].start;
-  const uint16_t to = x + w * drum_config[activeSample].end - 1;
+  const uint16_t from = x + w * (drum_config[activeSample].start / float(1000));
+  const uint16_t to = x + w * (drum_config[activeSample].end / float(1000)) - 1;
   display.drawFastVLine(from, y, h, COLOR_ARP);
   display.drawFastVLine(to - 1, y, h, COLOR_ARP);
 }
 
-void drawDrumsSampleWave() {
+FLASHMEM void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   DBG_LOG(printf("draw sample wave()\n"));
 
@@ -6234,7 +6225,7 @@ void drawDrumsSampleWave() {
 }
 
 bool drumScreenActive = false;
-void selectSample(uint8_t sample) {
+FLASHMEM void selectSample(uint8_t sample) {
   const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
   if (newSample != activeSample) {
     activeSample = newSample;
@@ -6246,7 +6237,7 @@ void selectSample(uint8_t sample) {
   }
 }
 
-uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
+FLASHMEM uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
   uint8_t result = sample;
 
   if (direction != 0) {
@@ -6314,7 +6305,7 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
 
 extern void print_sample_type(bool dir);
 
-void sampleStartEndRenderer(Editor *param, bool refresh) {
+FLASHMEM void sampleStartEndRenderer(Editor *param, bool refresh) {
   setCursor_textGrid_small(param->x, param->y);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.printf("%s", param->name);
@@ -6757,17 +6748,6 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
   }
 }
 
-void set_pattern_content_type_color_with_green_highlight(uint8_t pattern)
-{
-  const bool isActivePattern = pattern == seq.active_pattern;
-  display.setTextColor(getContentTypeColor(seq.content_type[pattern]), isActivePattern ? DARKGREEN : COLOR_BACKGROUND);
-}
-
-void set_pattern_content_type_color_inverted(uint8_t pattern)
-{
-  display.setTextColor(COLOR_BACKGROUND, getContentTypeColor(seq.content_type[pattern]));
-}
-
 FLASHMEM void print_performance_name(int x, int y)
 {
   display.setTextSize(1);
@@ -6785,7 +6765,7 @@ FLASHMEM void print_performance_name(int x, int y)
   display.setTextSize(2);
 }
 
-void seq_printAllSeqSteps()
+FLASHMEM void seq_printAllSeqSteps()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
@@ -6847,7 +6827,7 @@ void seq_printAllSeqSteps()
 
 void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col);
 
-void seq_printAllVelocitySteps()
+FLASHMEM void seq_printAllVelocitySteps()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
@@ -6901,7 +6881,7 @@ void seq_printAllVelocitySteps()
   }
 }
 
-void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
+FLASHMEM void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
 {
   if (remote_active)
     display.console = true;
@@ -6975,7 +6955,7 @@ FLASHMEM uint8_t get_current_sliced_sample_in_ui()
   return sel;
 }
 
-void clear_slices()
+FLASHMEM void clear_slices()
 {
   if (selected_slice_sample[get_current_sliced_sample_in_ui()] != 99)
   {
@@ -7612,7 +7592,7 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
   }
 }
 
-void print_content_type()
+FLASHMEM void print_content_type()
 {
   set_pattern_content_type_color(seq.active_pattern);
   display.setTextSize(1);
@@ -7627,7 +7607,7 @@ void print_content_type()
   display.setTextColor(GREY1, COLOR_BACKGROUND);
 }
 
-void print_edit_mode()
+FLASHMEM void print_edit_mode()
 {
   display.setTextSize(1);
   display.setCursor(136 - 12, 71 - 17);
@@ -7650,7 +7630,7 @@ void print_edit_mode()
   display.setTextSize(2);
 }
 
-void sub_set_color_print_track_step_detailed(uint8_t i, uint8_t currentstep)
+FLASHMEM void sub_set_color_print_track_step_detailed(uint8_t i, uint8_t currentstep)
 {
   if (i > 15 - seq.pattern_len_dec && i != currentstep)  //above current pattern length setting
     display.setTextColor(GREY3, COLOR_BACKGROUND);
@@ -7662,7 +7642,7 @@ void sub_set_color_print_track_step_detailed(uint8_t i, uint8_t currentstep)
     display.setTextColor(GREY1, COLOR_BACKGROUND);
 
 }
-void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps)
+FLASHMEM void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps)
 {
   if (seq.cycle_touch_element == 0) // touch keyboard is off
   {
@@ -8434,7 +8414,7 @@ FLASHMEM void seq_clear_chain_data()
   }
 }
 
-void seq_refresh_display_play_status()
+FLASHMEM void seq_refresh_display_play_status()
 {
   display.fillRect(12 * CHAR_width, 0, 13, 16, COLOR_BACKGROUND);
   if (seq.running == false && seq.recording == false)
@@ -8452,7 +8432,7 @@ void seq_refresh_display_play_status()
     drawBitmap(12 * CHAR_width + 3, 0 + 3, special_chars[21], 8, 8, COLOR_PITCHSMP);
   }
 }
-void check_variable_samples_basespeed()
+FLASHMEM void check_variable_samples_basespeed()
 {
   for (uint8_t i = 0; i < 6; i++)
   {
@@ -8461,7 +8441,7 @@ void check_variable_samples_basespeed()
   }
 }
 
-void print_sample_type(bool dir)
+FLASHMEM void print_sample_type(bool dir)
 {
   char text[13];
   uint8_t len = 0;
@@ -9056,7 +9036,7 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
   }
 }
 
-void set_sample_type_color()
+FLASHMEM void set_sample_type_color()
 {
   if (drum_config[activeSample].midinote > 209)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
@@ -9064,7 +9044,7 @@ void set_sample_type_color()
     display.setTextColor(COLOR_BACKGROUND, COLOR_DRUMS);
 }
 
-void set_sample_type_color_of(uint8_t samplekey)
+FLASHMEM void set_sample_type_color_of(uint8_t samplekey)
 {
   if (samplekey > 209)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
@@ -10139,7 +10119,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
   }
 }
 
-void UI_toplineInfoText(uint8_t s)
+FLASHMEM void UI_toplineInfoText(uint8_t s)
 {
   // s=size 1/2 lines
   if (remote_active)
@@ -14639,7 +14619,7 @@ FLASHMEM void UI_func_multiband_dynamics(uint8_t param)
 
 uint32_t totalBytesWritten;
 
-void encodeUint16(File& file, uint16_t value) {
+FLASHMEM void encodeUint16(File& file, uint16_t value) {
   uint8_t bytes[] =
   {
       static_cast<uint8_t>(value & 0xFF),
@@ -14648,7 +14628,7 @@ void encodeUint16(File& file, uint16_t value) {
   file.write(reinterpret_cast<const uint8_t*>(bytes), sizeof(bytes));
 }
 
-void encodeUint32(File& file, uint32_t value) {
+FLASHMEM void encodeUint32(File& file, uint32_t value) {
   uint8_t bytes[] =
   {
       static_cast<uint8_t> (value & 0x000000FF),
@@ -14659,7 +14639,7 @@ void encodeUint32(File& file, uint32_t value) {
   file.write(reinterpret_cast<const uint8_t*>(bytes), sizeof(bytes));
 }
 
-void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCount) {
+FLASHMEM void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCount) {
   // Write the main chunk ID
   static constexpr uint8_t mainChunkId[4] = { 'R', 'I', 'F', 'F' };
   file.write(mainChunkId, sizeof(mainChunkId));
@@ -16366,8 +16346,8 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             if (drum_config[sampleIndex].drum_data != nullptr) {
               CustomSample &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
               s.isHighHat = false;
-              drum_config[sampleIndex].start = 0.0F;
-              drum_config[sampleIndex].end = 1.0F;
+              drum_config[sampleIndex].start = 0;
+              drum_config[sampleIndex].end = 1000;
               strcpy(s.filepath, fm.sd_new_name.c_str());
               strcpy(drum_config[sampleIndex].filename, fm.sd_temp_name.c_str());
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);
@@ -18680,23 +18660,23 @@ uint8_t current_voice_op = 0; // currently selected operator for edits
 // -Global voice parameters go after the operator values, starting with DEXED_VOICE_OFFSET.
 //  They are load and stored to the engine depending on the current selected_instance_id and current_voice_op operator.
 //
-int16_t dexed_getter(Editor* param)
+FLASHMEM int16_t dexed_getter(Editor* param)
 {
   int8_t addr = param->select_id - 1 < num_voice_params ? param->select_id - 1 + DEXED_VOICE_OFFSET : param->select_id - 2 - num_voice_params + current_voice_op * num_voice_op_params;
   return MicroDexed[selected_instance_id]->getVoiceDataElement(addr);
 };
-void dexed_setter(Editor* param, int16_t value)
+FLASHMEM void dexed_setter(Editor* param, int16_t value)
 {
   uint8_t addr = param->select_id - 1 < num_voice_params ? param->select_id - 1 + DEXED_VOICE_OFFSET : param->select_id - 2 - num_voice_params + current_voice_op * num_voice_op_params;
   MicroDexed[selected_instance_id]->setVoiceDataElement(addr, value);
 };
 
 // allow switching the currently edited operator.
-int16_t dexed_op_getter(Editor* param)
+FLASHMEM int16_t dexed_op_getter(Editor* param)
 {
   return current_voice_op + 1;
 };
-void dexed_op_setter(Editor* param, int16_t value)
+FLASHMEM void dexed_op_setter(Editor* param, int16_t value)
 {
   current_voice_op = value - 1;
   ui.draw_editors(true); // as half of the editors have changed when a different operator is selected.
@@ -18770,7 +18750,7 @@ FLASHMEM void UI_func_voice_editor(uint8_t param)
 // ======================
 
 // display modes a controller can interact
-void dexed_mode_renderer(Editor* editor, bool refresh)
+FLASHMEM void dexed_mode_renderer(Editor* editor, bool refresh)
 {
   prepare_multi_options(editor, refresh);
   display.print("          ");
@@ -18785,7 +18765,7 @@ void dexed_mode_renderer(Editor* editor, bool refresh)
 }
 
 // display the targets a controller can be assigned to (multiple choice bit field)
-void dexed_assign_renderer(Editor* editor, bool refresh)
+FLASHMEM void dexed_assign_renderer(Editor* editor, bool refresh)
 {
   prepare_multi_options(editor, refresh);
   display.print("          ");
@@ -18800,7 +18780,7 @@ void dexed_assign_renderer(Editor* editor, bool refresh)
 }
 
 // compare edited parameter location to a given one and send SysEx message if they match
-void send_sysex_if_changed(uint8_t id, uint8_t* valuePtr, uint8_t* changedValuePtr)
+FLASHMEM void send_sysex_if_changed(uint8_t id, uint8_t* valuePtr, uint8_t* changedValuePtr)
 {
   if (valuePtr == changedValuePtr)
     send_sysex_param(configuration.dexed[selected_instance_id].midi_channel, id, *((uint8_t*)valuePtr), 2);
@@ -18810,7 +18790,7 @@ void send_sysex_if_changed(uint8_t id, uint8_t* valuePtr, uint8_t* changedValueP
 // SysEx messages are only send for the actual chaged parameter.
 //
 
-void dexed_controller_setter(Editor* editor, int16_t value)
+FLASHMEM void dexed_controller_setter(Editor* editor, int16_t value)
 {
 
   // call base setter to store editor value into our dexed parameter storage.
@@ -21105,7 +21085,7 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
   }
 }
 
-void sub_touchscreen_test_page_init()
+FLASHMEM void sub_touchscreen_test_page_init()
 {
   display.fillScreen(COLOR_BACKGROUND);
   encoderDir[ENC_R].reset();

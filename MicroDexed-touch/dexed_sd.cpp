@@ -1807,7 +1807,7 @@ FLASHMEM void deserializeJSONToEvent(JsonObject& o, LiveSequencer::MidiEvent& e)
   e.note_in_velocity = o["note_in_velocity"];
 }
 
-void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER_FILE, uint16_t numEvents, std::list<LiveSequencer::MidiEvent>::iterator& it) {
+FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER_FILE, uint16_t numEvents, std::list<LiveSequencer::MidiEvent>::iterator& it) {
   SD.remove(filename);
   json = SD.open(filename, FILE_WRITE);
   if (json) {
@@ -1827,7 +1827,7 @@ void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER
   }
 }
 
-void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) {
+FLASHMEM void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
     StaticJsonDocument<JSON_BUFFER_SIZE> doc;
@@ -4464,7 +4464,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   return (false);
 }
 
-int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
+FLASHMEM int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
 {
   String strA = fileA.name.toLowerCase();
   String strB = fileB.name.toLowerCase();
