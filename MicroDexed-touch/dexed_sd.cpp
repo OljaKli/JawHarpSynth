@@ -4515,8 +4515,11 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
 
 int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
 {
-  String strA = fileA.name.toLowerCase();
-  String strB = fileB.name.toLowerCase();
+ // String strA = fileA.name.toLowerCase();
+ // String strB = fileB.name.toLowerCase();
+
+  String strA = fileA.name;
+  String strB = fileB.name;
 
   if (strA.length() == 1)
   {

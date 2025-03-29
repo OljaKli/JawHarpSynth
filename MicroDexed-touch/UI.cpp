@@ -16318,7 +16318,17 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.print(sdcard_infos.type);
     display.setCursor(CHAR_width_small * 12, 2 * CHAR_height_small);
     uint32_t volumesize = volume.blocksPerCluster(); // clusters are collections of blocks
-    volumesize *= volume.clusterCount();    // we'll have a lot of clusters
+    volumesize *= volume.clusterCount();  // we'll have a lot of clusters
+    if (volumesize < 0X800000)
+    {
+      volumesize *= 512;  // SD card blocks are always 512 bytes
+      volumesize /= 1024;
+    }
+    else
+    {
+      volumesize /= 2;
+    }
+
     display.setTextColor(GREY1);
     display.print(F("TOTAL: "));
     display.setTextColor(COLOR_PITCHSMP);
@@ -16326,13 +16336,11 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.print(volumesize);
     display.setTextColor(COLOR_CHORDS);
     display.print(F(" MB"));
+
     display.setTextSize(1);
     display.setCursor(CHAR_width_small * 1, 3 * CHAR_height_small);
     display.setTextColor(COLOR_CHORDS, COLOR_BACKGROUND);
     display.print(F("PATH:"));
-    // display.setCursor(CHAR_width_small * 1, 4 * CHAR_height_small);
-    // display.setTextColor(GREY2);
-    // display.print(F("CURRENT FILE/FOLDER :"));
 
 #ifdef COMPILE_FOR_PSRAM
     print_psram_stats_filemanager();
