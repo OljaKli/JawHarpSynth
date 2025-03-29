@@ -2071,6 +2071,11 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
  ******************************************************************************/
 FLASHMEM bool load_sd_sys_json(void)
 {
+
+      #ifdef RGB_ENCODERS
+        configuration.sys.reverse_encoder_pins=true;
+        #endif
+
   if (sd_card > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), SYS_CONFIG_NAME);
@@ -2115,11 +2120,16 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
 
-        if (data_json["rgb_enc_color_def"] != 0)
+        if (data_json["rgb_enc_color_def"] >0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
-        if (data_json["rgb_enc_color_sel"] != 0)
+       
+        if (data_json["rgb_enc_color_sel"] > 0)
           configuration.sys.rgb_enc_color_sel = data_json["rgb_enc_color_sel"];
-
+       
+         #ifdef RGB_ENCODERS
+        configuration.sys.reverse_encoder_pins=true;
+        #endif
+        
         if (data_json["brightness"] == 0)
           configuration.sys.brightness = 183;
         else
@@ -4515,8 +4525,8 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
 
 int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
 {
- // String strA = fileA.name.toLowerCase();
- // String strB = fileB.name.toLowerCase();
+  // String strA = fileA.name.toLowerCase();
+  // String strB = fileB.name.toLowerCase();
 
   String strA = fileA.name;
   String strB = fileB.name;

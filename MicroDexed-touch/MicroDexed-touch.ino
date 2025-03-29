@@ -1184,6 +1184,11 @@ FLASHMEM void setup()
   //display.invertDisplay(configuration.sys.invert_colors);
 #endif
 
+ #ifdef MIDI_ACTIVITY_LIGHTS
+ digitalWrite(LED_MIDI_IN, HIGH);
+    digitalWrite(LED_MIDI_OUT, LOW);
+   #endif
+
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_LEFT, OFF);
   setled(LED_UP, ON);
@@ -1218,6 +1223,11 @@ FLASHMEM void setup()
 #ifdef COMPILE_FOR_PSRAM
   psram_free_bytes = external_psram_size * 1048576;
 #endif
+
+ #ifdef MIDI_ACTIVITY_LIGHTS
+ digitalWrite(LED_MIDI_IN, LOW);
+    digitalWrite(LED_MIDI_OUT, HIGH);
+   #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_UP, OFF);
@@ -1454,6 +1464,11 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
+ #ifdef MIDI_ACTIVITY_LIGHTS
+ digitalWrite(LED_MIDI_IN, HIGH);
+    digitalWrite(LED_MIDI_OUT, LOW);
+   #endif
+
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_DOWN, OFF);
   setled(LED_RIGHT, ON);
@@ -1685,6 +1700,11 @@ FLASHMEM void setup()
   display.console = false;
 #endif
 
+ #ifdef MIDI_ACTIVITY_LIGHTS
+ digitalWrite(LED_MIDI_IN, LOW);
+    digitalWrite(LED_MIDI_OUT, HIGH);
+   #endif
+
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_SEL, OFF);
   setled(LED_START, ON);
@@ -1751,6 +1771,10 @@ FLASHMEM void setup()
       }
   }
 
+ #ifdef MIDI_ACTIVITY_LIGHTS
+ digitalWrite(LED_MIDI_IN, LOW);
+    digitalWrite(LED_MIDI_OUT, LOW);
+   #endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_START, OFF);
