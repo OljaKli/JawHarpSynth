@@ -5094,6 +5094,43 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
+FLASHMEM void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  const uint16_t from = x + w * (drum_config[activeSample].start / float(1000));
+  const uint16_t to = x + w * (drum_config[activeSample].end / float(1000)) - 1;
+  display.drawFastVLine(from, y, h, COLOR_ARP);
+  display.drawFastVLine(to - 1, y, h, COLOR_ARP);
+}
+
+FLASHMEM void drawDrumsSampleWave() {
+#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+  DBG_LOG(printf("draw sample wave()\n"));
+
+  static constexpr uint16_t plotX = 120;
+  static constexpr uint16_t plotY = 19 + 8;
+  static constexpr uint16_t plotW = 200;
+  static constexpr uint16_t plotH = 63 + 8;
+
+  const drum_config_t &slot = drum_config[activeSample];
+
+  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
+
+  if (slot.drum_data != nullptr) {
+    drawSampleStartEnd(plotX, plotY, plotW, plotH);
+  }
+#endif
+}
+
+FLASHMEM void sampleStartEndRenderer(Editor *param, bool refresh) {
+  setCursor_textGrid_small(param->x, param->y);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.printf("%s", param->name);
+
+  setModeColor(param->select_id);
+
+  setCursor_textGrid_small(param->x + 5, param->y);
+  display.printf("%04i", param->get());
+}
+
 FLASHMEM void UI_func_stereo_mono(uint8_t param)
 {
   static uint8_t old_mono;
@@ -6126,6 +6163,8 @@ FLASHMEM void addSampleParameterEditor(const char* name, int16_t limit_min, int1
       // switched at any time. So recompute the value pointer in respect of to activesample !
       int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&drum_config[0] + (char*)&drum_config[activeSample]);
       *ptr = value;
+      sampleStartEndRenderer(editor, true);
+      drawDrumsSampleWave();
     },
     renderer);
 }
@@ -6217,32 +6256,6 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   }
 }
 
-FLASHMEM void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  const uint16_t from = x + w * (drum_config[activeSample].start / float(1000));
-  const uint16_t to = x + w * (drum_config[activeSample].end / float(1000)) - 1;
-  display.drawFastVLine(from, y, h, COLOR_ARP);
-  display.drawFastVLine(to - 1, y, h, COLOR_ARP);
-}
-
-FLASHMEM void drawDrumsSampleWave() {
-#if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
-  DBG_LOG(printf("draw sample wave()\n"));
-
-  static constexpr uint16_t plotX = 120;
-  static constexpr uint16_t plotY = 19 + 8;
-  static constexpr uint16_t plotW = 200;
-  static constexpr uint16_t plotH = 63 + 8;
-
-  const drum_config_t &slot = drum_config[activeSample];
-
-  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
-
-  if (slot.drum_data != nullptr) {
-    drawSampleStartEnd(plotX, plotY, plotW, plotH);
-  }
-#endif
-}
-
 bool drumScreenActive = false;
 FLASHMEM void selectSample(uint8_t sample) {
   const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
@@ -6323,20 +6336,6 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
 }
 
 extern void print_sample_type(bool dir);
-
-FLASHMEM void sampleStartEndRenderer(Editor *param, bool refresh) {
-  setCursor_textGrid_small(param->x, param->y);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.printf("%s", param->name);
-
-  setModeColor(param->select_id);
-
-  setCursor_textGrid_small(param->x + 5, param->y);
-  display.printf("%04i", param->get());
-  if(refresh) {
-    drawDrumsSampleWave();
-  }
-}
 
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
