@@ -4535,13 +4535,10 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   return (false);
 }
 
-FLASHMEM int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
+FLASHMEM int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
 {
-  // String strA = fileA.name.toLowerCase();
-  // String strB = fileB.name.toLowerCase();
-
-  String strA = fileA.name;
-  String strB = fileB.name;
+  String strA = fileA.name.toLowerCase();
+  String strB = fileB.name.toLowerCase();
 
   if (strA.length() == 1)
   {
