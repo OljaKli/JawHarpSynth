@@ -6415,14 +6415,14 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.setCursor(0, 17);
 #if (NUM_DEXED>2)
     addDrumParameterEditor_uint8_t("", 0, 3, &drum_config[0].filter_mode);
-    addDrumParameterEditor((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
+    addDrumParameterEditor_uint8_t((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
     ui.setCursor(0, 19);
-    addDrumParameterEditor((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
+    addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
 #else
     addDrumParameterEditor_uint8_t("FILTER", 0, 0, &drum_config[0].filter_mode);
-    addDrumParameterEditor((const char*)F("FRQ"), 0, 0, &drum_config[0].filter_freq);
+    addDrumParameterEditor_uint8_t((const char*)F("FRQ"), 0, 0, &drum_config[0].filter_freq);
     ui.setCursor(0, 19);
-    addDrumParameterEditor((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
+    addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
 #endif
     
     setCursor_textGrid_small(20, 11);

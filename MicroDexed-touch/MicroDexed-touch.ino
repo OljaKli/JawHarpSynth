@@ -5045,14 +5045,13 @@ FLASHMEM void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
 
 FLASHMEM void set_sample_filter_freq(uint8_t sample, float s_freq)
 {
-  if (s_freq > 0.999)
-    s_freq = 0.999;
-  drum_config[sample].filter_freq = s_freq;
+  drum_config[sample].filter_freq = static_cast<uint8_t>(s_freq * 100.0F);
+  DBG_LOG(printf("filter freq: %i\n", drum_config[sample].filter_freq));
 }
 
 FLASHMEM void set_sample_filter_q(uint8_t sample, float s_q)
 {
-  drum_config[sample].filter_q = s_q;
+  drum_config[sample].filter_q = static_cast<uint8_t>(s_q * 100.0F);
 }
 
 FLASHMEM void set_sample_delay1(uint8_t sample, float s_d1)
@@ -5117,11 +5116,11 @@ FLASHMEM uint8_t get_sample_filter_mode(uint8_t sample)
 }
 FLASHMEM float get_sample_filter_freq(uint8_t sample)
 {
-  return (drum_config[sample].filter_freq);
+  return (drum_config[sample].filter_freq / 100.0F);
 }
 FLASHMEM float get_sample_filter_q(uint8_t sample)
 {
-  return (drum_config[sample].filter_q);
+  return (drum_config[sample].filter_q / 100.0F);
 }
 FLASHMEM float get_sample_delay1(uint8_t sample)
 {
