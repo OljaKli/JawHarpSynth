@@ -3150,7 +3150,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5); //previously 8
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5); //previously 8
 
-            float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
+            float pan = mapfloat(drum_config[d].pan, -99, 99, 0.0, 1.0);
             if (drum_config[d].numChannels == 1) //mono
             {
               drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
@@ -3294,7 +3294,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(selected_slice_sample[s]) / 5); //previously 8
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(selected_slice_sample[s]) / 5); //previously 8
 
-            float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -1.0, 1.0, 0.0, 1.0);
+            float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -99, 99, 0.0, 1.0);
             if (drum_config[selected_slice_sample[s]].numChannels == 1) //mono
             {
               drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
@@ -5025,7 +5025,7 @@ FLASHMEM void set_sample_p_offset(uint8_t sample, float s_offset)
 
 FLASHMEM void set_sample_pan(uint8_t sample, float s_pan)
 {
-  drum_config[sample].pan = s_pan;
+  drum_config[sample].pan = static_cast<int8_t>(s_pan * 100.0F);
 }
 
 FLASHMEM void set_sample_vol_max(uint8_t sample, float s_max)
@@ -5099,7 +5099,7 @@ FLASHMEM float get_sample_p_offset(uint8_t sample)
 }
 FLASHMEM float get_sample_pan(uint8_t sample)
 {
-  return (drum_config[sample].pan);
+  return (drum_config[sample].pan / 100.0F);
 }
 FLASHMEM float get_sample_vol_max(uint8_t sample)
 {

@@ -6147,6 +6147,23 @@ FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min
     NULL);
 }
 
+FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min, int16_t limit_max, int8_t* valuePtr)
+{
+  ui.addCustomEditor(
+    name, limit_min, limit_max, valuePtr,
+    [](Editor* editor) -> int16_t
+    {
+      int8_t* ptr = (int8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
+      return *ptr;
+    },
+    [](Editor* editor, int16_t value)
+    {
+      int8_t* ptr = (int8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
+      *ptr = static_cast<int8_t>(value);
+    },
+    NULL);
+}
+
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
   uint32_t sampleOffset = from * (length / numChannels);
   uint32_t zoomedLength = (to - from) * length;
@@ -6383,7 +6400,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     // but they will act on current slot activesample later.
 
     addDrumParameterEditor((const char*)F("VOLUME"), 0, 100, &drum_config[0].vol_max);
-    addDrumParameterEditor((const char*)F("PAN"), -99, 99, &drum_config[0].pan);
+    addDrumParameterEditor_int8_t((const char*)F("PAN"), -99, 99, &drum_config[0].pan);
     addDrumParameterEditor_uint8_t((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY1"), 0, 100, &drum_config[0].delay1);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY2"), 0, 100, &drum_config[0].delay2);
