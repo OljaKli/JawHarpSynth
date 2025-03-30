@@ -49,8 +49,8 @@ typedef struct drum_config_s
   uint8_t filter_mode;   // multimode filter mode
   uint8_t filter_freq;   // multimode filter frequency
   uint8_t filter_q;      // multimode filter Q
-  float32_t delay1;      // delay1 send 
-  float32_t delay2;      // selay2 send
+  uint8_t delay1;        // delay1 send 
+  uint8_t delay2;        // selay2 send
   uint8_t env_attack;
   uint8_t env_hold;
   uint8_t env_decay;

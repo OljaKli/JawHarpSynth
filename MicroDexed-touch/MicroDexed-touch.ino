@@ -2704,8 +2704,8 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
         drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
 
-        global_delay_in_mixer[0]->gain(slot + 10, drum_config[msz[instance][y].psram_entry_number].delay1 / 5); //previously 8
-        global_delay_in_mixer[1]->gain(slot + 10, drum_config[msz[instance][y].psram_entry_number].delay2 / 5); //previously 8
+        global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(msz[instance][y].psram_entry_number) / 5); //previously 8
+        global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5); //previously 8
 
         msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
 
@@ -3147,8 +3147,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
 #endif
-            global_delay_in_mixer[0]->gain(slot + 10, drum_config[d].delay1 / 5); //previously 8
-            global_delay_in_mixer[1]->gain(slot + 10, drum_config[d].delay2 / 5); //previously 8
+            global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5); //previously 8
+            global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5); //previously 8
 
             float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
             if (drum_config[d].numChannels == 1) //mono
@@ -3291,8 +3291,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             }
 #endif
 
-            global_delay_in_mixer[0]->gain(slot + 10, drum_config[selected_slice_sample[s]].delay1 / 5); //previously 8
-            global_delay_in_mixer[1]->gain(slot + 10, drum_config[selected_slice_sample[s]].delay2 / 5); //previously 8
+            global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(selected_slice_sample[s]) / 5); //previously 8
+            global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(selected_slice_sample[s]) / 5); //previously 8
 
             float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -1.0, 1.0, 0.0, 1.0);
             if (drum_config[selected_slice_sample[s]].numChannels == 1) //mono
@@ -5055,11 +5055,11 @@ FLASHMEM void set_sample_filter_q(uint8_t sample, float s_q)
 
 FLASHMEM void set_sample_delay1(uint8_t sample, float s_d1)
 {
-  drum_config[sample].delay1 = s_d1;
+  drum_config[sample].delay1 = static_cast<uint8_t>(s_d1 * 100.0F);
 }
 FLASHMEM void set_sample_delay2(uint8_t sample, float s_d2)
 {
-  drum_config[sample].delay2 = s_d2;
+  drum_config[sample].delay2 = static_cast<uint8_t>(s_d2 * 100.0F);
 }
 
 FLASHMEM void set_sample_env_attack(uint8_t sample, uint8_t value)
@@ -5123,13 +5123,12 @@ FLASHMEM float get_sample_filter_q(uint8_t sample)
 }
 FLASHMEM float get_sample_delay1(uint8_t sample)
 {
-  return (drum_config[sample].delay1);
+  return (drum_config[sample].delay1 / 100.0F);
 }
 FLASHMEM float get_sample_delay2(uint8_t sample)
 {
-  return (drum_config[sample].delay2);
+  return (drum_config[sample].delay2 / 100.0F);
 }
-
 FLASHMEM uint8_t get_sample_env_attack(uint8_t sample)
 {
   return (drum_config[sample].env_attack);
