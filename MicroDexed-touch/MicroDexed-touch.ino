@@ -1106,11 +1106,6 @@ FLASHMEM void setup()
   delay(100);
 #endif
 
-#ifdef MIDI_ACTIVITY_LIGHTS
-  pinMode(LED_MIDI_IN, OUTPUT);
-  pinMode(LED_MIDI_OUT, OUTPUT);
-#endif
-
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
   pinMode(CV_IN, INPUT_PULLUP);
@@ -1196,6 +1191,11 @@ FLASHMEM void setup()
   display.invertDisplay(1);
   //display.invertDisplay(configuration.sys.invert_colors);
 #endif
+
+// Setup MIDI LED pins
+set_midi_led_pins();
+pinMode(LED_MIDI_IN, OUTPUT);
+pinMode(LED_MIDI_OUT, OUTPUT);
 
 #ifdef MIDI_ACTIVITY_LIGHTS
   digitalWrite(LED_MIDI_IN, HIGH);
@@ -1671,11 +1671,12 @@ FLASHMEM void setup()
   // Load initial Performance or the last used one
   initial_values(false);
 
+
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_BUT_A, OFF);
   setled(LED_SEL, ON);
 #endif
-
+  
   setup_ui();
 
   gamepad_buttons_neutral = joysticks[0].getButtons();
@@ -1802,6 +1803,11 @@ FLASHMEM void setup()
   //   All_Button_LEDS(false);
   // #endif
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+set_midi_led_pins();
+pinMode(LED_MIDI_IN, OUTPUT);
+pinMode(LED_MIDI_OUT, OUTPUT);
+#endif
 }
 
 #ifdef COMPILE_FOR_PSRAM
