@@ -3162,8 +3162,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
             }
 
-            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
-            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(d)));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(d)));
 
 
 
@@ -3306,8 +3306,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
             }
 
-            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
-            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(selected_slice_sample[s])));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(selected_slice_sample[s])));
 
             // if (sidechain_active && d == sidechain_sample_number)
             //   sidechain_trigger = true;
@@ -5035,7 +5035,7 @@ FLASHMEM void set_sample_vol_max(uint8_t sample, float s_max)
 
 FLASHMEM void set_sample_reverb_send(uint8_t sample, float s_reverb)
 {
-  drum_config[sample].reverb_send = s_reverb;
+  drum_config[sample].reverb_send = static_cast<uint8_t>(s_reverb * 100.0F);
 }
 
 FLASHMEM void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
@@ -5107,7 +5107,7 @@ FLASHMEM float get_sample_vol_max(uint8_t sample)
 }
 FLASHMEM float get_sample_reverb_send(uint8_t sample)
 {
-  return (drum_config[sample].reverb_send);
+  return (drum_config[sample].reverb_send / 100.0F);
 }
 FLASHMEM uint8_t get_sample_filter_mode(uint8_t sample)
 {

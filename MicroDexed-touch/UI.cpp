@@ -6384,7 +6384,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     addDrumParameterEditor((const char*)F("VOLUME"), 0, 100, &drum_config[0].vol_max);
     addDrumParameterEditor((const char*)F("PAN"), -99, 99, &drum_config[0].pan);
-    addDrumParameterEditor((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
+    addDrumParameterEditor_uint8_t((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY1"), 0, 100, &drum_config[0].delay1);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY2"), 0, 100, &drum_config[0].delay2);
     addDrumParameterEditor_uint8_t((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
