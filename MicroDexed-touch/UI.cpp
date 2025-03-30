@@ -15421,7 +15421,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
   }
 
   fm.sd_is_folder = false;
-  fm.sd_cap_rows = 9;
+  fm.sd_cap_rows = 10;
   if (fm.sd_parent_folder && fm.sd_folder_depth > 0)
   {
     fm.sd_is_folder = true;
@@ -15433,49 +15433,49 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 
   if (fm.sd_folder_depth > 0)
   {
-    drawBitmap(CHAR_width_small, 5 * 11 - 1, special_chars[23], 8, 8, YELLOW);
-    display.setCursor(CHAR_width_small * 3, +5 * 11);
+    drawBitmap(CHAR_width_small, 4 * 11 - 1, special_chars[23], 8, 8, YELLOW);
+    display.setCursor(CHAR_width_small * 3, 4 * 11);
     display.print("..");
   }
   else
   {
-    drawBitmap(CHAR_width_small, 5 * 11 - 1, special_chars[23], 8, 8, COLOR_BACKGROUND);
-    display.setCursor(CHAR_width_small * 3, +5 * 11);
+    drawBitmap(CHAR_width_small, 4 * 11 - 1, special_chars[23], 8, 8, COLOR_BACKGROUND);
+    display.setCursor(CHAR_width_small * 3, 4 * 11);
     display.print("/ ");
   }
-  for (uint8_t f = 0; f < 10; f++)
+  for (uint8_t f = 0; f < 11; f++)
   {
     if (f >= fm.sd_sum_files || f >= (fm.sd_sum_files - fm.sd_skip_files))
     {
       fm.sd_cap_rows = f - 1;
       display.console = true;
-      display.fillRect(CHAR_width_small, f * 11 + 6 * 11 - 1, CHAR_width_small * 26, (10 - f) * 11, COLOR_BACKGROUND);
+      display.fillRect(CHAR_width_small, f * 11 + 5 * 11 - 1, CHAR_width_small * 26, (11 - f) * 11, COLOR_BACKGROUND);
       break;
     }
 
     storage_file_t sd_entry = sdcard_infos.files[fm.sd_skip_files + f];
     if (sd_entry.isDirectory)
     {
-      drawBitmap(CHAR_width_small, f * 11 - 1 + 6 * 11, special_chars[23], 8, 8, YELLOW);
+      drawBitmap(CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[23], 8, 8, YELLOW);
       if (f == fm.sd_selected_file && fm.sd_parent_folder == false && fm.active_window == 0)
         display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
       else
         display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-      show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name.c_str());
-      display.setCursor(CHAR_width_small * 21, f * 11 + 6 * 11);
+      show_smallfont_noGrid(f * 11 + 5 * 11, CHAR_width_small * 3, 17, sd_entry.name.c_str());
+      display.setCursor(CHAR_width_small * 21, f * 11 + 5 * 11);
       display.setTextColor(DX_DARKCYAN, COLOR_BACKGROUND);
       display.print("DIR   ");
     }
     else
     {
-      drawBitmap(CHAR_width_small, f * 11 - 1 + 6 * 11, special_chars[23], 8, 8, COLOR_BACKGROUND);
+      drawBitmap(CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[23], 8, 8, COLOR_BACKGROUND);
       if (f == fm.sd_selected_file && fm.sd_parent_folder == false && fm.active_window == 0)
         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
       else
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      show_smallfont_noGrid(f * 11 + 6 * 11, CHAR_width_small * 3, 17, sd_entry.name.c_str());
+      show_smallfont_noGrid(f * 11 + 5 * 11, CHAR_width_small * 3, 17, sd_entry.name.c_str());
       display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
-      display.setCursor(CHAR_width_small * 20, f * 11 + 6 * 11);
+      display.setCursor(CHAR_width_small * 20, f * 11 + 5 * 11);
       // if (sd_entry.size / 1024 / 1024 > 0)
       // {
       //   snprintf_P(tmp, sizeof(tmp), PSTR("%4d"), sd_entry.size / 1024 / 1024);
@@ -16409,6 +16409,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
           if (fm.sd_folder_depth < 2) {
             fm.sd_folder_depth = 0;
             fm.sd_new_name = "/";
+            fm.sd_parent_folder = false ;
           }
           else {
             // path has at least one parent folder
