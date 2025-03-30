@@ -577,6 +577,12 @@ FLASHMEM void print_file_manager_buttons()
     }
   }
   menuhelper_previous_val = fm.sd_mode;
+
+
+#ifdef MUSIKANDMORE
+    TouchButton::drawButton(GRID.X[2], GRID.Y[5], "INT/EXT", "SD-CARD", ( fm.SD_CARD_READER_INT_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+#endif
+
 }
 
 FLASHMEM void print_file_manager_active_border()
@@ -602,6 +608,12 @@ FLASHMEM void print_file_manager_active_border()
 extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 #endif
 
+#ifdef MUSIKANDMORE
+extern void sd_printDirectory(bool forceReload);
+extern void sd_go_parent_folder();
+extern void   _print_filemanager_header();
+#endif
+
 FLASHMEM void handle_touchscreen_file_manager()
 {
   if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
@@ -622,6 +634,18 @@ FLASHMEM void handle_touchscreen_file_manager()
     fm.sd_mode = FM_DELETE_FILE;
     print_file_manager_buttons();
   }
+
+#ifdef MUSIKANDMORE
+   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
+    fm.SD_CARD_READER_INT_EXT = !fm.SD_CARD_READER_INT_EXT;
+    fm.sd_selected_file = 0;
+    sd_go_parent_folder();
+    print_file_manager_buttons();
+      _print_filemanager_header();
+    sd_printDirectory(true);
+  }  
+#endif
+
 #if defined COMPILE_FOR_PSRAM
   else if (TouchButton::isPressed(GRID.X[3], GRID.Y[5])) {
     fm.sd_mode = FM_COPY_TO_PSRAM;

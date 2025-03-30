@@ -189,7 +189,7 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
   v = constrain(v, 0, MAX_VOICES - 1);
   b = constrain(b, 0, MAX_BANKS - 1);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     File sysex_dir;
     char bankdir[FILENAME_LEN];
@@ -316,7 +316,7 @@ FLASHMEM bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
   v = constrain(v, 0, MAX_VOICES - 1);
   b = constrain(b, 0, MAX_BANKS - 1);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     File sysex;
     char filename[FILENAME_LEN];
@@ -524,7 +524,7 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
   int bank_number;
   File root, entry;
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
 #ifdef DEBUG
     LOG.print(F("Trying so store "));
@@ -604,7 +604,7 @@ FLASHMEM bool load_sd_envelopes_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, ENVELOPES_CONFIG_NAME);
@@ -667,7 +667,7 @@ FLASHMEM bool load_sd_envelopes_json(uint8_t number)
 
 FLASHMEM bool save_sd_envelopes_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, ENVELOPES_CONFIG_NAME);
 
@@ -709,7 +709,7 @@ FLASHMEM bool load_sd_drummappings_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, DRUMS_MAPPING_NAME);
@@ -769,7 +769,7 @@ FLASHMEM bool load_sd_drummappings_json(uint8_t number)
 FLASHMEM bool save_sd_drummappings_json(uint8_t number)
 {
 #if NUM_DRUMS > 0
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, 0, 99);
     if (check_performance_directory(number))
@@ -847,7 +847,7 @@ FLASHMEM bool load_sd_drumsettings_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, DRUMS_CONFIG_NAME);
@@ -963,7 +963,7 @@ FLASHMEM bool load_sd_drumsettings_json(uint8_t number)
 FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
 {
 #if NUM_DRUMS > 0
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     if (check_performance_directory(number))
@@ -1056,7 +1056,7 @@ FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
  ******************************************************************************/
 FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     vc = constrain(vc, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, vc, VOICE_CONFIG_NAME, instance_id + 1);
@@ -1148,7 +1148,7 @@ FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
 
 FLASHMEM bool load_sd_voiceconfig_minimal_boot_json(uint8_t vc, uint8_t instance_id)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     vc = constrain(vc, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, vc, VOICE_CONFIG_NAME, instance_id + 1);
@@ -1193,7 +1193,7 @@ FLASHMEM bool load_sd_voiceconfig_minimal_boot_json(uint8_t vc, uint8_t instance
 
 FLASHMEM bool save_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     vc = constrain(vc, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, vc, VOICE_CONFIG_NAME, instance_id + 1);
@@ -1277,7 +1277,7 @@ FLASHMEM bool save_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
  ******************************************************************************/
 FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     ms = constrain(ms, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, ms, MICROSYNTH_CONFIG_NAME, instance_id + 1);
@@ -1365,7 +1365,7 @@ FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
 
 FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     ms = constrain(ms, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, ms, MICROSYNTH_CONFIG_NAME, instance_id + 1);
@@ -1453,7 +1453,7 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
 
   load_sd_drumsettings_json(number);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, FX_CONFIG_NAME);
     sprintf(filename, "/%s/%d/%s.json", PERFORMANCE_CONFIG_PATH, number, FX_CONFIG_NAME);
@@ -1558,7 +1558,7 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
 
   save_sd_drumsettings_json(number);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, FX_CONFIG_NAME);
 
@@ -1646,7 +1646,7 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
  ******************************************************************************/
 FLASHMEM bool load_sd_epiano_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, EPIANO_CONFIG_NAME);
@@ -1721,7 +1721,7 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
 
 FLASHMEM bool save_sd_epiano_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, EPIANO_CONFIG_NAME);
@@ -1849,7 +1849,7 @@ void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) 
 
 FLASHMEM bool save_sd_livesequencer_json(uint8_t number)
 {
-  if (sd_card > 0) {
+  if (sd_card_internal > 0) {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, LIVESEQUENCER_CONFIG_NAME);
 
@@ -1950,7 +1950,7 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
 
   liveSeq.deleteLiveSequencerData();
 
-  if (sd_card > 0) {
+  if (sd_card_internal > 0) {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, LIVESEQUENCER_CONFIG_NAME);
     if (SD.exists(filename)) {
@@ -2076,7 +2076,7 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.reverse_encoder_pins=true;
         #endif
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), SYS_CONFIG_NAME);
 
@@ -2119,6 +2119,7 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
+         configuration.sys.modular_inputs =  data_json["modular_inputs"];
 
         if (data_json["rgb_enc_color_def"] >0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
@@ -2186,7 +2187,7 @@ FLASHMEM bool load_sd_sys_json(void)
 
 FLASHMEM bool save_sd_sys_json(void)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), SYS_CONFIG_NAME);
 
@@ -2219,6 +2220,7 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["skip_midi_channel_warning"] = configuration.sys.skip_midi_channel_warning;
       data_json["send_sysex_on_voice_change"] = configuration.sys.send_sysex_on_voice_change;
       data_json["send_midi_cc"] = configuration.sys.send_midi_cc;
+      data_json["modular_inputs"] = configuration.sys.modular_inputs;
 
       if (configuration.sys.rgb_enc_color_def != 0)
         data_json["rgb_enc_color_def"] = configuration.sys.rgb_enc_color_def;
@@ -2277,7 +2279,7 @@ bool save_sd_braids_json(uint8_t number, uint8_t braidsmode);
 FLASHMEM bool get_sd_braids_name(uint8_t number, uint8_t mode)
 {
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
@@ -2319,7 +2321,7 @@ FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     if (braidsmode == 0)
@@ -2413,7 +2415,7 @@ FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
 FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 {
   // mode 0 = default/performance , mode 1 = individual braids patch/preset system in /BRAIDS/ folder
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     if (braidsmode == 0)
       snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, BRAIDS_CONFIG_NAME);
@@ -2495,7 +2497,7 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTIBAND_CONFIG_NAME);
@@ -2572,7 +2574,7 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
 
 FLASHMEM bool save_sd_multiband_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTIBAND_CONFIG_NAME);
 #ifdef DEBUG
@@ -2648,7 +2650,7 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SAMPLES_CONFIG_NAME);
@@ -2706,7 +2708,7 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
 
 FLASHMEM bool save_sd_samples_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SAMPLES_CONFIG_NAME);
 #ifdef DEBUG
@@ -2774,7 +2776,7 @@ FLASHMEM bool load_sd_slices_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SLICES_CONFIG_NAME);
@@ -2818,7 +2820,7 @@ FLASHMEM bool load_sd_slices_json(uint8_t number)
 
 FLASHMEM bool save_sd_slices_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SLICES_CONFIG_NAME);
 
@@ -2867,7 +2869,7 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SIDECHAIN_CONFIG_NAME);
@@ -2927,7 +2929,7 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
 
 FLASHMEM bool save_sd_sidechain_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SIDECHAIN_CONFIG_NAME);
 #ifdef DEBUG
@@ -2986,7 +2988,7 @@ FLASHMEM bool load_sd_chain_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, CHAIN_CONFIG_NAME);
@@ -3037,7 +3039,7 @@ FLASHMEM bool load_sd_chain_json(uint8_t number)
 
 FLASHMEM bool save_sd_chain_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, CHAIN_CONFIG_NAME);
@@ -3083,7 +3085,7 @@ FLASHMEM bool load_sd_transpose_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, TRANSPOSE_CONFIG_NAME);
@@ -3134,7 +3136,7 @@ FLASHMEM bool load_sd_transpose_json(uint8_t number)
 
 FLASHMEM bool save_sd_transpose_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, TRANSPOSE_CONFIG_NAME);
@@ -3180,7 +3182,7 @@ FLASHMEM bool load_sd_song_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SONG_CONFIG_NAME);
@@ -3234,7 +3236,7 @@ FLASHMEM bool load_sd_song_json(uint8_t number)
 
 FLASHMEM bool save_sd_song_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SONG_CONFIG_NAME);
@@ -3277,7 +3279,7 @@ FLASHMEM bool save_sd_song_json(uint8_t number)
 
 FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, VELOCITY_CONFIG_NAME);
@@ -3331,7 +3333,7 @@ FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
 
 FLASHMEM bool save_sd_seq_sub_patterns_json(uint8_t number)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, PATTERN_CONFIG_NAME);
@@ -3435,7 +3437,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
 
     save_sd_voiceconfig_json(number, i);
   }
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
 #ifdef DEBUG
@@ -3526,7 +3528,7 @@ FLASHMEM bool check_performance_directory(uint8_t number)
 {
   char dir[CONFIG_FILENAME_LEN];
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     snprintf_P(dir, sizeof(dir), PSTR("/%s/%d"), PERFORMANCE_CONFIG_PATH, number);
 
@@ -3565,7 +3567,7 @@ FLASHMEM bool check_performance_directory(uint8_t number)
 FLASHMEM void get_sd_performance_name_json(uint8_t number)
 {
   memset(seq.name_temp, 0, FILENAME_LEN);
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
@@ -3615,7 +3617,7 @@ FLASHMEM bool load_sd_seq_sub_vel_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, VELOCITY_CONFIG_NAME);
@@ -3682,7 +3684,7 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, PATTERN_CONFIG_NAME);
@@ -3798,7 +3800,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
 
   configuration.sys.performance_number = number;
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
     sprintf(filename, "/%s/%d/%s.json", PERFORMANCE_CONFIG_PATH, number, SEQUENCER_CONFIG_NAME);
@@ -3979,7 +3981,7 @@ FLASHMEM bool check_sd_performance_exists(uint8_t number)
 
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   // AudioNoInterrupts();
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     char filename[CONFIG_FILENAME_LEN];
 
@@ -4011,7 +4013,7 @@ FLASHMEM bool check_sd_braids_patch_exists(uint8_t number)
 
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   AudioNoInterrupts();
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     char filename[CONFIG_FILENAME_LEN];
 
@@ -4196,7 +4198,7 @@ FLASHMEM bool get_bank_name(uint8_t p, uint8_t b, char* bank_name)
 #endif
   b = constrain(b, 0, MAX_BANKS - 1);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     File sysex_dir;
     char bankdir[FILENAME_LEN + 4];
@@ -4256,7 +4258,7 @@ FLASHMEM bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name)
 #endif
   b = constrain(b, 0, MAX_BANKS - 1);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     File sysex_dir;
     char bankdir[FILENAME_LEN + 4];
@@ -4361,7 +4363,7 @@ FLASHMEM bool save_sd_multisample_presets_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTISAMPLE_PRESETS_CONFIG_NAME);
@@ -4444,7 +4446,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   if (number < 0)
     return (false);
 
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTISAMPLE_PRESETS_CONFIG_NAME);
@@ -4548,10 +4550,22 @@ int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
   }
 }
 
+#ifdef  MUSIKANDMORE
+extern SDClass SD_EXTERNAL;
+#endif
+
 FLASHMEM void load_sd_directory()
 {
   fm.sd_prev_dir = fm.sd_new_name;
-  File sd_root = SD.open(fm.sd_new_name.c_str());
+
+File sd_root;
+
+  if (fm.active_window == 0 && fm.SD_CARD_READER_INT_EXT==false)
+  sd_root = SD.open(fm.sd_new_name.c_str());
+  #ifdef MUSIKANDMORE
+else
+  sd_root = SD_EXTERNAL.open(fm.sd_new_name.c_str());
+#endif
 
   fm.sd_sum_files = 0;
   sdcard_infos.files.clear();

@@ -1030,6 +1030,7 @@ typedef struct sys_s
   bool send_midi_cc;
   uint8_t rgb_enc_color_def=4;
   uint8_t rgb_enc_color_sel=1;
+  bool modular_inputs;
 } sys_t;
 
 typedef struct storage_file_s

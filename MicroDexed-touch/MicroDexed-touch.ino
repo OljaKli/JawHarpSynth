@@ -29,6 +29,11 @@
 #include <Wire.h>
 #include <MIDI.h>
 #include <SD.h>
+
+#ifdef MUSIKANDMORE
+SDClass SD_EXTERNAL;
+#endif
+
 #include <SPI.h>
 #include "filemanager.h"
 
@@ -116,7 +121,10 @@ int braids_flanger_idx = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 int braids_flanger_depth = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 const float braids_flanger_freq = 0.5F;
 
-uint8_t check_sd_cards(void);
+uint8_t check_internal_sd_card(void);
+#ifdef MUSIKANDMORE
+void  check_external_sd_card(void);
+#endif
 void check_and_create_directories(void);
 void show_cpu_and_mem_usage(void);
 void initial_values(bool init);
@@ -878,9 +886,16 @@ FLASHMEM void create_audio_wav_preview_chain()
 
 }
 
-uint8_t sd_card = 0;
-Sd2Card card;
-SdVolume volume;
+uint8_t sd_card_internal = 0;
+Sd2Card card_internal;
+SdVolume volume_internal;
+
+#ifdef MUSIKANDMORE
+uint8_t sd_card_external = 0;
+Sd2Card card_external;
+SdVolume volume_external;
+#endif
+
 uint8_t midi_bpm_counter = 0;
 uint8_t midi_bpm = 0;
 int16_t _midi_bpm = -1;
@@ -1101,8 +1116,6 @@ FLASHMEM void setup()
   pinMode(CV_IN, INPUT_PULLUP);
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
   pinMode(CV_GATE_IN, INPUT_PULLUP);
-  // pinMode(GEN3_CS_SDCARD_EXTERNAL, OUTPUT);
-  //digitalWrite(GEN3_CS_SDCARD_EXTERNAL, HIGH);
 #endif
 
 #ifdef DEBUG
@@ -1184,10 +1197,10 @@ FLASHMEM void setup()
   //display.invertDisplay(configuration.sys.invert_colors);
 #endif
 
- #ifdef MIDI_ACTIVITY_LIGHTS
- digitalWrite(LED_MIDI_IN, HIGH);
-    digitalWrite(LED_MIDI_OUT, LOW);
-   #endif
+#ifdef MIDI_ACTIVITY_LIGHTS
+  digitalWrite(LED_MIDI_IN, HIGH);
+  digitalWrite(LED_MIDI_OUT, LOW);
+#endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_LEFT, OFF);
@@ -1224,10 +1237,10 @@ FLASHMEM void setup()
   psram_free_bytes = external_psram_size * 1048576;
 #endif
 
- #ifdef MIDI_ACTIVITY_LIGHTS
- digitalWrite(LED_MIDI_IN, LOW);
-    digitalWrite(LED_MIDI_OUT, HIGH);
-   #endif
+#ifdef MIDI_ACTIVITY_LIGHTS
+  digitalWrite(LED_MIDI_IN, LOW);
+  digitalWrite(LED_MIDI_OUT, HIGH);
+#endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_UP, OFF);
@@ -1464,10 +1477,10 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
- #ifdef MIDI_ACTIVITY_LIGHTS
- digitalWrite(LED_MIDI_IN, HIGH);
-    digitalWrite(LED_MIDI_OUT, LOW);
-   #endif
+#ifdef MIDI_ACTIVITY_LIGHTS
+  digitalWrite(LED_MIDI_IN, HIGH);
+  digitalWrite(LED_MIDI_OUT, LOW);
+#endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_DOWN, OFF);
@@ -1476,9 +1489,14 @@ FLASHMEM void setup()
 
   AudioNoInterrupts();
   // Start SD card
-  sd_card = check_sd_cards();
+  sd_card_internal = check_internal_sd_card();
+
+#ifdef MUSIKANDMORE
+  check_external_sd_card();
+#endif
+
   AudioInterrupts();
-  if (sd_card < 1)
+  if (sd_card_internal < 1)
   {
 #ifdef DEBUG
     LOG.println(F("SD card not accessible."));
@@ -1700,10 +1718,10 @@ FLASHMEM void setup()
   display.console = false;
 #endif
 
- #ifdef MIDI_ACTIVITY_LIGHTS
- digitalWrite(LED_MIDI_IN, LOW);
-    digitalWrite(LED_MIDI_OUT, HIGH);
-   #endif
+#ifdef MIDI_ACTIVITY_LIGHTS
+  digitalWrite(LED_MIDI_IN, LOW);
+  digitalWrite(LED_MIDI_OUT, HIGH);
+#endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_SEL, OFF);
@@ -1771,10 +1789,10 @@ FLASHMEM void setup()
       }
   }
 
- #ifdef MIDI_ACTIVITY_LIGHTS
- digitalWrite(LED_MIDI_IN, LOW);
-    digitalWrite(LED_MIDI_OUT, LOW);
-   #endif
+#ifdef MIDI_ACTIVITY_LIGHTS
+  digitalWrite(LED_MIDI_IN, LOW);
+  digitalWrite(LED_MIDI_OUT, LOW);
+#endif
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_START, OFF);
@@ -2228,12 +2246,53 @@ void midi_activity_leds()
       }
     }
   }
-
 }
+#endif
+
+#ifdef MUSIKANDMORE
+bool cv_clock;
+bool cv_gate;
+bool cv_clock_previous;
+bool cv_gate_previous;
+int analog_in;
+int analog_in_previous = 99;
 #endif
 
 void loop()
 {
+
+  // MM Test Stuff
+
+#ifdef MUSIKANDMORE
+if (configuration.sys.modular_inputs)
+{
+  cv_clock = digitalRead(CV_CLOCK_IN);
+  cv_gate = digitalRead(CV_GATE_IN);
+
+  if (cv_clock != cv_clock_previous)
+  {
+    setled(LED_UP, cv_clock);
+    cv_clock_previous = cv_clock;
+  }
+  if (cv_gate != cv_gate_previous)
+  {
+    setled(LED_DOWN, cv_gate);
+    cv_gate_previous = cv_gate;
+  }
+
+  analog_in = analogRead(CV_IN);
+  if (analog_in != analog_in_previous && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) && generic_temp_select_menu==15)
+  {
+    display.setTextSize(1);
+     setCursor_textGrid_small(2, 18);
+    display.setTextColor(COLOR_SYSTEXT, RED);
+    display.print(F("CV-IN: "));
+    display.print(analog_in);
+    display.print(F("   "));
+    analog_in_previous = analog_in;
+  }
+}
+#endif
 
   // Serial read (commands from web remote)
   incomingSerialByte = 0;
@@ -2582,7 +2641,7 @@ void loop()
 #ifdef DEBUG
       LOG.println(F("Saved."));
 #endif
-    }
+      }
     else
     {
 #ifdef DEBUG
@@ -2590,7 +2649,7 @@ void loop()
 #endif
       save_sys = 0;
     }
-  }
+      }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2610,7 +2669,7 @@ void loop()
       ui_save_notification_icon = false;
       display.console = false;
     }
-  }
+    }
 
 #if defined(DEBUG) && defined(SHOW_CPU_LOAD_MSEC)
   if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
@@ -2622,7 +2681,7 @@ void loop()
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-}
+  }
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -3204,8 +3263,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 // #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+                }
               }
-            }
 #endif
             // #ifdef DEBUG
             //                 LOG.print(F("Drum "));
@@ -3224,8 +3283,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             //                 LOG.println(drum_config[d].reverb_send, 2);
             // #endif
 
+            }
           }
-        }
         //
         // Sliced Samples
         //
@@ -3342,10 +3401,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             // #endif
           }
         }
+          }
+        }
       }
     }
-  }
-}
 
 void printLoadedSample(const uint8_t i, const char* name) {
   display.setTextSize(2);
@@ -3556,10 +3615,10 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         LOG.print(inChannel, DEC);
         LOG.println();
 #endif
-      }
     }
   }
 }
+  }
 
 void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
@@ -3709,7 +3768,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           {
             LCDML.OTHER_updateFunc();
             LCDML.loop_menu();
-          }
+        }
           break;
 
         case 32: // BankSelect LSB
@@ -3858,10 +3917,10 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           for (uint8_t i = 0; i < NUM_DEXED; i++)
             MicroDexed[i]->panic();
           break;
-        }
       }
     }
   }
+}
 
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
     ep.processMidiController(inCtrl, inValue);
@@ -4307,8 +4366,8 @@ void handleSystemExclusive(byte* sysex, unsigned len)
     else
       LOG.println(F("E : SysEx parameter length wrong."));
 #endif
-  }
-}
+      }
+      }
 
 void handleTimeCodeQuarterFrame(byte data)
 {
@@ -4372,7 +4431,7 @@ void handleClock(void)
     }
     midi_bpm_counter++;
   }
-}
+    }
 
 FLASHMEM void dac_mute(void)
 {
@@ -4689,7 +4748,7 @@ FLASHMEM void set_volume(uint8_t v, uint8_t m)
       dexed_mono2stereo[instance_id]->panorama(mapfloat(PANORAMA_MIN, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
     break;
   }
-}
+  }
 
 /******************************************************************************
   SD HELPER
@@ -4760,7 +4819,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
   show_configuration();
 #endif
-}
+  }
 
 FLASHMEM void check_configuration(void)
 {
@@ -5406,13 +5465,13 @@ FLASHMEM void generate_version_string(char* buffer, uint8_t len)
 #endif
 }
 
-FLASHMEM uint8_t check_sd_cards(void)
+FLASHMEM uint8_t check_internal_sd_card(void)
 {
   uint8_t ret = 0;
 
   memset(sd_string, 0, sizeof(sd_string));
 
-  if (!card.init(SPI_HALF_SPEED, BUILTIN_SDCARD))
+  if (!card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD))
   {
 #ifdef DEBUG
     LOG.println("Initialization failed. Things to check:");
@@ -5433,7 +5492,7 @@ FLASHMEM uint8_t check_sd_cards(void)
 #ifdef DEBUG
     LOG.print(F("Card type : "));
 #endif
-    switch (card.type())
+    switch (card_internal.type())
     {
     case SD_CARD_TYPE_SD1:
       strcpy(sdcard_infos.type, "SD1");
@@ -5452,7 +5511,7 @@ FLASHMEM uint8_t check_sd_cards(void)
     LOG.println(sdcard_infos.type);
 #endif
 
-    if (!volume.init(card))
+    if (!volume_internal.init(card_internal))
     {
 #ifdef DEBUG
       LOG.println(F("Could not find FAT16 / FAT32 partition."));
@@ -5465,19 +5524,19 @@ FLASHMEM uint8_t check_sd_cards(void)
   {
     uint32_t volumesize;
 
-    volumesize = volume.blocksPerCluster() * volume.clusterCount() / 2097152;
+    volumesize = volume_internal.blocksPerCluster() * volume_internal.clusterCount() / 2097152;
 
     if (volumesize == 0)
       ret = 0;
 
 #ifdef DEBUG
     LOG.print(F("Volume type is FAT"));
-    LOG.println(volume.fatType(), DEC);
+    LOG.println(volume_internal.fatType(), DEC);
     LOG.print(F("Volume size (GB) : "));
     LOG.println(volumesize);
 #endif
 
-    snprintf_P(sd_string + 5, sizeof(sd_string), PSTR("FAT %2d %02dGB"), volume.fatType(), int(volumesize));
+    snprintf_P(sd_string + 5, sizeof(sd_string), PSTR("FAT %2d %02dGB"), volume_internal.fatType(), int(volumesize));
   }
 
 #ifdef DEBUG
@@ -5487,9 +5546,16 @@ FLASHMEM uint8_t check_sd_cards(void)
   return ret;
 }
 
+#ifdef MUSIKANDMORE
+FLASHMEM  void check_external_sd_card(void)
+{
+  SD_EXTERNAL.sdfs.begin(GEN3_CS_SDCARD_EXTERNAL);
+}
+#endif
+
 FLASHMEM void check_and_create_directories(void)
 {
-  if (sd_card > 0)
+  if (sd_card_internal > 0)
   {
     uint8_t i;
     char tmp[FILENAME_LEN];
@@ -5525,7 +5591,7 @@ FLASHMEM void check_and_create_directories(void)
           SD.mkdir(tmp);
         }
       }
-    }
+        }
     // Create directory for performances
     snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), PERFORMANCE_CONFIG_PATH);
     if (!SD.exists(tmp))
@@ -5536,7 +5602,7 @@ FLASHMEM void check_and_create_directories(void)
 #endif
       SD.mkdir(tmp);
     }
-  }
+      }
 #ifdef DEBUG
   LOG.println(F("SD card check end"));
 #endif
