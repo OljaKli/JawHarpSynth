@@ -1028,8 +1028,8 @@ typedef struct sys_s
   bool skip_midi_channel_warning;
   bool send_sysex_on_voice_change;
   bool send_midi_cc;
-  uint8_t rgb_enc_color_def;
-  uint8_t rgb_enc_color_sel;
+  uint8_t rgb_enc_color_def=4;
+  uint8_t rgb_enc_color_sel=1;
 } sys_t;
 
 typedef struct storage_file_s
