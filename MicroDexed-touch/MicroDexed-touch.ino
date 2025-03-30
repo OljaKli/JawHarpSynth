@@ -3133,18 +3133,18 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             }
             else if (drum_config[d].filter_mode == 1)
             {
-              Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
             else if (drum_config[d].filter_mode == 2)
             {
-              Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
             else if (drum_config[d].filter_mode == 3)
             {
-              Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
 #endif
             global_delay_in_mixer[0]->gain(slot + 10, drum_config[d].delay1 / 5); //previously 8
@@ -3276,18 +3276,18 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             }
             else if (drum_config[selected_slice_sample[s]].filter_mode == 1)
             {
-              Drum_filter[slot]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
             }
             else if (drum_config[selected_slice_sample[s]].filter_mode == 2)
             {
-              Drum_filter[slot]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
             }
             else if (drum_config[selected_slice_sample[s]].filter_mode == 3)
             {
-              Drum_filter[slot]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
             }
 #endif
 
@@ -5046,7 +5046,6 @@ FLASHMEM void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
 FLASHMEM void set_sample_filter_freq(uint8_t sample, float s_freq)
 {
   drum_config[sample].filter_freq = static_cast<uint8_t>(s_freq * 100.0F);
-  DBG_LOG(printf("filter freq: %i\n", drum_config[sample].filter_freq));
 }
 
 FLASHMEM void set_sample_filter_q(uint8_t sample, float s_q)
