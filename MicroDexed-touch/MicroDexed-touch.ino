@@ -3153,13 +3153,13 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             float pan = mapfloat(drum_config[d].pan, -99, 99, 0.0, 1.0);
             if (drum_config[d].numChannels == 1) //mono
             {
-              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
+              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
+              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
             }
             else //stereo
             {
-              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
+              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
+              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
             }
 
             drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(d)));
@@ -3297,13 +3297,13 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -99, 99, 0.0, 1.0);
             if (drum_config[selected_slice_sample[s]].numChannels == 1) //mono
             {
-              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
+              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
             }
             else //stereo
             {
-              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
+              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
             }
 
             drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(selected_slice_sample[s])));
@@ -5030,7 +5030,7 @@ FLASHMEM void set_sample_pan(uint8_t sample, float s_pan)
 
 FLASHMEM void set_sample_vol_max(uint8_t sample, float s_max)
 {
-  drum_config[sample].vol_max = s_max;
+  drum_config[sample].vol_max = static_cast<int8_t>(s_max * 100.0F);
 }
 
 FLASHMEM void set_sample_reverb_send(uint8_t sample, float s_reverb)
@@ -5103,7 +5103,7 @@ FLASHMEM float get_sample_pan(uint8_t sample)
 }
 FLASHMEM float get_sample_vol_max(uint8_t sample)
 {
-  return (drum_config[sample].vol_max);
+  return (drum_config[sample].vol_max / 100.0);
 }
 FLASHMEM float get_sample_reverb_send(uint8_t sample)
 {

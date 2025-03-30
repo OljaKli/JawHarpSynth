@@ -69,6 +69,9 @@ public:
     uint8_t note_in_velocity;
   };
 
+  const int s = sizeof(MidiEvent);
+
+  
   struct Track {
     midi::Channel channel;
     char name[10];

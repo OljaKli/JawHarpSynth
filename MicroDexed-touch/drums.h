@@ -44,7 +44,7 @@ typedef struct drum_config_s
   uint8_t pitch;         // variable pitch per note for sequencer
   uint8_t p_offset;      // "static" pitch offset to correct root note to root of other samples
   int8_t pan;            // Panorama (-1.0 - +1.0)
-  float32_t vol_max;     // max. Volume (0.0 - 1.0)
+  uint8_t vol_max;       // max. Volume (0.0 - 1.0)
   uint8_t reverb_send;   // how much signal to send to the reverb (0.0 - 1.0)
   uint8_t filter_mode;   // multimode filter mode
   uint8_t filter_freq;   // multimode filter frequency

@@ -6399,7 +6399,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     // the parameter editors depend on activesample. We define them by sample index 0,
     // but they will act on current slot activesample later.
 
-    addDrumParameterEditor((const char*)F("VOLUME"), 0, 100, &drum_config[0].vol_max);
+    addDrumParameterEditor_uint8_t((const char*)F("VOLUME"), 0, 100, &drum_config[0].vol_max);
     addDrumParameterEditor_int8_t((const char*)F("PAN"), -99, 99, &drum_config[0].pan);
     addDrumParameterEditor_uint8_t((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY1"), 0, 100, &drum_config[0].delay1);
