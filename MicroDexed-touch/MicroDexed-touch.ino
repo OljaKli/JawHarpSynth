@@ -3172,7 +3172,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
               if ((d >= 0 && d < NUM_DRUMSET_CONFIG - 1) || (d >= 210 && d < 216)) {
 #endif
                 Drum[slot]->enableInterpolation(true);
-                Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+                Drum[slot]->setPlaybackRate(get_sample_pitch(d));
                 Drum[slot]->setLoopType(loop_type::looptype_none);
 
 #if defined(DRUMS_FILTERS) 
@@ -5015,12 +5015,12 @@ FLASHMEM void set_sample_pitch(uint8_t sample, float playbackspeed)
   if (playbackspeed == 0.0) {
     playbackspeed = 1.0;
   }
-  drum_config[sample].pitch = playbackspeed;
+  drum_config[sample].pitch = static_cast<uint8_t>(playbackspeed * 100.0F);
 }
 
 FLASHMEM void set_sample_p_offset(uint8_t sample, float s_offset)
 {
-  drum_config[sample].p_offset = s_offset;
+  drum_config[sample].p_offset = static_cast<uint8_t>(s_offset * 100.0F);
 }
 
 FLASHMEM void set_sample_pan(uint8_t sample, float s_pan)
@@ -5091,11 +5091,11 @@ FLASHMEM uint8_t get_sample_note(uint8_t sample)
 }
 FLASHMEM float get_sample_pitch(uint8_t sample)
 {
-  return (drum_config[sample].pitch);
+  return (drum_config[sample].pitch / 100.0F);
 }
 FLASHMEM float get_sample_p_offset(uint8_t sample)
 {
-  return (drum_config[sample].p_offset);
+  return (drum_config[sample].p_offset / 100.0F);
 }
 FLASHMEM float get_sample_pan(uint8_t sample)
 {

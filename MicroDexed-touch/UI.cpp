@@ -6387,8 +6387,8 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY1"), 0, 100, &drum_config[0].delay1);
     addDrumParameterEditor_uint8_t((const char*)F("DELAY2"), 0, 100, &drum_config[0].delay2);
-    addDrumParameterEditor((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
-    addDrumParameterEditor((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
+    addDrumParameterEditor_uint8_t((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
+    addDrumParameterEditor_uint8_t((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
 
     setCursor_textGrid_small(0, 10);
     display.setTextColor(RED);
@@ -8439,7 +8439,7 @@ FLASHMEM void check_variable_samples_basespeed()
   for (uint8_t i = 0; i < 6; i++)
   {
     if (drum_config[i].p_offset == 0)
-      drum_config[i].p_offset = 1;
+      drum_config[i].p_offset = 100; // %
   }
 }
 
