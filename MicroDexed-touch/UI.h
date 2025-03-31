@@ -156,6 +156,8 @@ void draw_algo(bool forceDraw = false);
 uint8_t get_algo();
 void set_algo(uint8_t value);
 
+void set_midi_led_pins();
+
 const EncoderEvents getEncoderEvents(uint8_t id);
 
 #define MAX_CC_DEST 15
