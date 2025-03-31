@@ -156,7 +156,9 @@ void draw_algo(bool forceDraw = false);
 uint8_t get_algo();
 void set_algo(uint8_t value);
 
+#ifdef MIDI_ACTIVITY_LIGHTS
 void set_midi_led_pins();
+#endif
 
 const EncoderEvents getEncoderEvents(uint8_t id);
 

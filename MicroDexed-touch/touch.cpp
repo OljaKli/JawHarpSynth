@@ -562,7 +562,6 @@ FLASHMEM void print_file_manager_buttons()
     TouchButton::drawButton(GRID.X[4], GRID.Y[5], "DELETE", "PSRAM", (fm.sd_mode == FM_DELETE_FROM_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
 #endif
 
-    //TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", (WavFileIsPlaying()) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
 
     display.setTextSize(1);
@@ -580,27 +579,27 @@ FLASHMEM void print_file_manager_buttons()
 
 
 #ifdef MUSIKANDMORE
-    TouchButton::drawButton(GRID.X[2], GRID.Y[5], "INT/EXT", "SD-CARD", ( fm.SD_CARD_READER_INT_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
 #endif
 
 }
 
 FLASHMEM void print_file_manager_active_border()
 {
-  // active_window   0 = left window (SDCARD) , 1 = PSRAM
+  // active_window   0 = left window (SDCARD) , 1 = PSRAM OR SDCARD2
   if (fm.active_window == 0)
   {
     display.console = true;
-    display.drawRect(CHAR_width_small * 28 - 1, 0, CHAR_width_small * 25 + 3, CHAR_height_small * 23, GREY2);
+    display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, GREY2);
     display.console = true;
-    display.drawRect(0, 0, CHAR_width_small * 28, CHAR_height_small * 23, COLOR_SYSTEXT);
+    display.drawRect(0, 0, CHAR_width_small * 27, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
   else
   {
     display.console = true;
-    display.drawRect(0, 0, CHAR_width_small * 28, CHAR_height_small * 23, GREY2);
+    display.drawRect(0, 0, CHAR_width_small * 27, CHAR_height_small * 23, GREY2);
     display.console = true;
-    display.drawRect(CHAR_width_small * 28 - 1, 0, CHAR_width_small * 25 + 3, CHAR_height_small * 23, COLOR_SYSTEXT);
+    display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
 }
 
@@ -612,6 +611,10 @@ extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, con
 extern void sd_printDirectory(bool forceReload);
 extern void sd_go_parent_folder();
 extern void   _print_filemanager_header();
+extern void _print_filemanager_sd_extern_header();
+extern void print_psram_stats_filemanager();
+extern void  psram_printCustomSamplesList();
+extern void load_sd_directory();
 #endif
 
 FLASHMEM void handle_touchscreen_file_manager()
@@ -619,11 +622,19 @@ FLASHMEM void handle_touchscreen_file_manager()
   if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
     fm.active_window = 0;
     print_file_manager_active_border();
+    #ifdef MUSIKANDMORE
+    load_sd_directory();
+    sd_printDirectory(true);
+    #endif
   }
 #if defined COMPILE_FOR_PSRAM
   else if (TouchButton::isInArea(DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
     fm.active_window = 1;
     print_file_manager_active_border();
+     #ifdef MUSIKANDMORE
+    load_sd_directory();
+    sd_printDirectory(true);
+    #endif
   }
 #endif
   else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
@@ -636,14 +647,32 @@ FLASHMEM void handle_touchscreen_file_manager()
   }
 
 #ifdef MUSIKANDMORE
-   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
-    fm.SD_CARD_READER_INT_EXT = !fm.SD_CARD_READER_INT_EXT;
+  else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
+    fm.SD_CARD_READER_EXT = !fm.SD_CARD_READER_EXT;
     fm.sd_selected_file = 0;
     sd_go_parent_folder();
     print_file_manager_buttons();
-      _print_filemanager_header();
-    sd_printDirectory(true);
-  }  
+    //  _print_filemanager_header();
+    display.console = true;
+    display.fillRect(27 * CHAR_width_small, 7, CHAR_width_small * 26, 170, COLOR_BACKGROUND);
+
+    if (fm.SD_CARD_READER_EXT)
+    {
+      fm.active_window = 1;
+      // fm.sd_selected_file=0;
+      print_file_manager_active_border();
+      _print_filemanager_sd_extern_header();
+      sd_printDirectory(true);
+    }
+    else
+    {
+      print_psram_stats_filemanager();
+      fm.active_window = 1;
+      psram_printCustomSamplesList();
+      // fm.active_window = 0;
+      // print_file_manager_active_border();
+    }
+  }
 #endif
 
 #if defined COMPILE_FOR_PSRAM

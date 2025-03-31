@@ -74,7 +74,7 @@ typedef struct fm_s
   uint16_t psram_cap_rows;
   uint16_t psram_selected_file = 0;
   uint16_t psram_skip_files = 0;
-  bool SD_CARD_READER_INT_EXT;
+  bool SD_CARD_READER_EXT;
 } fm_t;
 
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz

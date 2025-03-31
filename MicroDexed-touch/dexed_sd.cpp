@@ -4561,10 +4561,11 @@ FLASHMEM void load_sd_directory()
 
 File sd_root;
 
-  if (fm.active_window == 0 && fm.SD_CARD_READER_INT_EXT==false)
+  if (fm.SD_CARD_READER_EXT==false  || fm.active_window == 0 )
   sd_root = SD.open(fm.sd_new_name.c_str());
   #ifdef MUSIKANDMORE
 else
+ if ( fm.SD_CARD_READER_EXT )
   sd_root = SD_EXTERNAL.open(fm.sd_new_name.c_str());
 #endif
 
@@ -4578,6 +4579,7 @@ else
       break;
 
     // skip special files
+    /////||strcmp(sd_entry.name(), ".Spotlight-V100")  == NULL
     if (strcmp(sd_entry.name(), "System Volume Information") && strstr(sd_entry.name(), "._") == NULL)
     {
       storage_file_s entry;
