@@ -1106,6 +1106,11 @@ FLASHMEM void setup()
   delay(100);
 #endif
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+  pinMode(LED_MIDI_IN, OUTPUT);
+  pinMode(LED_MIDI_OUT, OUTPUT);
+#endif
+
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
   pinMode(CV_IN, INPUT_PULLUP);
@@ -1191,11 +1196,6 @@ FLASHMEM void setup()
   display.invertDisplay(1);
   //display.invertDisplay(configuration.sys.invert_colors);
 #endif
-
-// Setup MIDI LED pins
-set_midi_led_pins();
-pinMode(LED_MIDI_IN, OUTPUT);
-pinMode(LED_MIDI_OUT, OUTPUT);
 
 #ifdef MIDI_ACTIVITY_LIGHTS
   digitalWrite(LED_MIDI_IN, HIGH);
@@ -1804,9 +1804,7 @@ pinMode(LED_MIDI_OUT, OUTPUT);
   // #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
-set_midi_led_pins();
-pinMode(LED_MIDI_IN, OUTPUT);
-pinMode(LED_MIDI_OUT, OUTPUT);
+  set_midi_led_pins();
 #endif
 }
 

@@ -122,8 +122,10 @@ uint8_t gamepad_1_neutral;
 
 uint8_t previous_scroll_position = 255;
 
+#ifdef MIDI_ACTIVITY_LIGHTS
 uint8_t LED_MIDI_IN = 40;
 uint8_t LED_MIDI_OUT = 36;
+#endif 
 
 extern uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
@@ -17152,14 +17154,13 @@ display.print(F(" [NA]"));
     case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
     case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
     case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
-
     case 13: display.print(configuration.sys.rgb_enc_color_def);
       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_def);
       break;
     case 14: display.print(configuration.sys.rgb_enc_color_sel);
       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
       break;
-
+    case 16: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
     }
     };
 
@@ -17195,7 +17196,7 @@ display.print(F(" [NA]"));
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 16; // Zero Indexed
+  static uint8_t total_menu_items = 17; // Zero Indexed
 
   if (LCDML.FUNC_setup())
   {
@@ -17261,6 +17262,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
         case 13: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
         case 14: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
+        case 16: configuration.sys.swap_midi_leds = !configuration.sys.swap_midi_leds; set_midi_led_pins(); break;
         }
       }
       _render_misc_settings(scroll_position, total_menu_items);
