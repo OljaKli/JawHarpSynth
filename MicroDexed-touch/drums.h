@@ -43,7 +43,7 @@ typedef struct drum_config_s
   uint8_t numChannels;   // 1 for mono, 2 for stereo
   uint8_t pitch;         // variable pitch per note for sequencer
   uint8_t p_offset;      // "static" pitch offset to correct root note to root of other samples
-  int8_t pan;            // Panorama (-100 - 100)
+  int8_t pan;            // Panorama (-99 - 99)
   uint8_t vol_max;       // max. Volume (0 - 100)
   uint8_t reverb_send;   // how much signal to send to the reverb (0 - 100)
   uint8_t filter_mode;   // multimode filter mode
@@ -56,13 +56,13 @@ typedef struct drum_config_s
   uint8_t env_decay;
   uint8_t env_sustain;
   uint8_t env_release;
-  int16_t start; // (length / 1000)
-  int16_t end;   // (length / 1000)
-  uint8_t loopType;
 } drum_config_t;
 
 struct CustomSample {
   char filepath[FULLPATH_MAX_LEN];
+  int16_t start; // (length / 1000)
+  int16_t end;   // (length / 1000)
+  uint8_t loopType;
   bool isHighHat; // high hat randomization
 };
 

@@ -1802,8 +1802,8 @@ FLASHMEM void load_custom_samples_to_psram()
       //success
       CustomSample &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
       s.isHighHat = false; // todo dsr
-      drum_config[i].start = 0;
-      drum_config[i].end = 1000;
+      s.start = 0;
+      s.end = 1000;
     }
   }
 }
@@ -3184,12 +3184,15 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
                 int16_t *start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
-
-                const uint32_t offStart = (drum_config[d].start / float(1000)) * length;
-                start += offStart;
-                const uint32_t offEnd = length - (drum_config[d].end / float(1000)) * length;
-                length -= (offStart + offEnd);
-
+                
+                if ((d >= NUM_STATIC_PITCHED_SAMPLES) && d < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES)) {
+                  CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];
+                  const uint32_t offStart = (s.start / float(1000)) * length;
+                  start += offStart;
+                  const uint32_t offEnd = length - (s.end / float(1000)) * length;
+                  length -= (offStart + offEnd);
+                }
+                
                 const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
                 if (hihatRand) {
                   uint32_t randomizer = random(seq.hihat_randomizer * 50);
