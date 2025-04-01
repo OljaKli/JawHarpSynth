@@ -4579,7 +4579,6 @@ else
       break;
 
     // skip special files
-    /////||strcmp(sd_entry.name(), ".Spotlight-V100")  == NULL
     if (strcmp(sd_entry.name(), "System Volume Information") && strstr(sd_entry.name(), "._") == NULL)
     {
       storage_file_s entry;
