@@ -26,6 +26,7 @@
 */
 
 #include <Arduino.h>
+#include "arm_math.h" // float32_t
 
 #ifndef _DRUMS_H
 #define _DRUMS_H
@@ -33,20 +34,29 @@
 typedef struct drum_config_s
 {
   uint8_t drum_class; // Type of drum
-  // uint8_t id;         // ID for reference in sequencer
   uint8_t midinote; // Triggered by note
-  char name[DRUM_NAME_LEN];
-#ifdef COMPILE_FOR_PROGMEM
-  const uint8_t *drum_data;
-#endif
+  char name[FILENAME_MAX_LEN];
+  char filename[FULLPATH_MAX_LEN];
+  const uint8_t* drum_data;
   char shortname[2];     // 1 char name for sequencer
   uint32_t len;          // number of elements in drum_data
+  uint8_t numChannels;   // 1 for mono, 2 for stereo
   float32_t pitch;       // variable pitch per note for sequencer
   float32_t p_offset;    // "static" pitch offset to correct root note to root of other samples
   float32_t pan;         // Panorama (-1.0 - +1.0)
   float32_t vol_max;     // max. Volume (0.0 - 1.0)
-  float32_t vol_min;     // min. Volume (0.0 - 1.0, should be <= vol_max)
   float32_t reverb_send; // how much signal to send to the reverb (0.0 - 1.0)
+  uint8_t filter_mode;   // multimode filter mode
+  float32_t filter_freq; // multimode filter frequency
+  float32_t filter_q; // multimode filter Q
+  float32_t delay1; // delay1 send 
+  float32_t delay2; // selay2 send
+  uint8_t env_attack;
+  uint8_t env_hold;
+  uint8_t env_decay;
+  uint8_t env_sustain;
+  uint8_t env_release;
+
 } drum_config_t;
 
 enum

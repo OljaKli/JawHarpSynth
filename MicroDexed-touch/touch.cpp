@@ -1,92 +1,105 @@
-#include "config.h"
 #include "touch.h"
 #include "sequencer.h"
+#include "livesequencer.h"
 #include <LCDMenuLib2.h>
 #include "ILI9341_t3n.h"
-#include "scope.h"
 #include <Audio.h>
 #include "template_mixer.hpp"
+#include "UI.h"
+#include "touchbutton.h"
+#include "virtualkeyboard.h"
 
 extern ILI9341_t3n display;
 extern config_t configuration;
 extern uint8_t selected_instance_id;
-extern void handleNoteOn_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte inVelocity);
-extern void handleNoteOff_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte inVelocity);
-extern void print_voice_settings(bool fullrefresh);
-extern void print_voice_settings_in_pattern_editor(int x, int y);
-extern void UI_update_instance_icons();
 extern LCDMenuLib2 LCDML;
-extern void pattern_editor_menu_0();
-extern void UI_func_test_touchscreen(uint8_t param);
-extern void sub_touchscreen_test_page_init();
 extern bool remote_touched;
 extern sequencer_t seq;
-extern void border3_large_clear();
-extern void border3_large();
-#ifdef COMPILE_FOR_FLASH
-extern void flash_loadDirectory();
-extern void flash_printDirectory();
-#endif
-extern void sd_printDirectory(bool forceReload);
-extern uint8_t find_longest_chain();
-extern void print_formatted_number(uint16_t v, uint8_t l);
-extern void virtual_keyboard_print_buttons();
-extern void draw_button_on_grid(uint8_t x, uint8_t y, const char *t1, const char *t2, uint8_t color);
-extern void seq_pattern_editor_update_dynamic_elements();
-extern void microsynth_refresh_lower_screen_static_text();
-extern void microsynth_refresh_lower_screen_dynamic_text();
-extern float get_sample_p_offset(uint8_t sample);
-extern void set_sample_pitch(uint8_t sample, float playbackspeed);
-extern void show_small_font(int pos_y, int pos_x, uint8_t field_size, const char *str);
-extern const char *find_long_drum_name_from_note(uint8_t note);
-extern void print_perfmod_buttons();
-extern void print_perfmod_lables();
-extern void print_empty_spaces(uint8_t spaces);
-extern void print_voice_select_default_help();
-extern void playWAVFile(const char *filename);
 extern void handleStop(void);
 extern void handleStart(void);
-extern void UI_func_load_performance(uint8_t param);
-extern void UI_func_save_performance(uint8_t param);
-extern void UI_func_seq_pattern_editor(uint8_t param);
-extern void UI_func_seq_vel_editor(uint8_t param);
-extern void UI_func_mixer(uint8_t param);
-extern void UI_func_song(uint8_t param);
-extern void UI_func_voice_select(uint8_t param);
-extern void save_favorite(uint8_t b, uint8_t v, uint8_t instance_id);
-extern uint8_t activesample;
 
-extern microsynth_t microsynth[NUM_MICROSYNTH];
-
-extern braids_t braids_osc;
-
-extern void mb_set_mutes();
+extern uint8_t activeSample;
+extern bool generic_full_draw_required;
 extern bool mb_solo_low;
 extern bool mb_solo_mid;
 extern bool mb_solo_upper_mid;
 extern bool mb_solo_high;
-extern Realtime_Scope scope;
-extern AudioAnalyzePeak mb_before_l;
-extern AudioAnalyzePeak mb_before_r;
-extern AudioAnalyzePeak mb_after_l;
-extern AudioAnalyzePeak mb_after_r;
-extern void draw_volmeter(int x, int y, uint8_t arr, float value);
-extern AudioMixer<4> mb_mixer_l;
-extern AudioMixer<4> mb_mixer_r;
 extern bool multiband_active;
 extern uint8_t generic_active_function;
 extern uint8_t generic_temp_select_menu;
-extern void mb_set_mutes();
-extern void mb_set_master();
-extern void mb_set_compressor();
+extern uint8_t last_menu_depth;
+
+dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release
+extern int temp_int;
 
 ts_t ts;                         // touch screen
 fm_t fm;                         // file manager
-dexed_live_mod_t dexed_live_mod; // dexed quick live modifiers for attack and release
-extern int temp_int;
-extern elapsedMillis touch_control_rate;
+bool loop_start_button = false;
+bool loop_end_button = false;
+bool isButtonTouched = false;
+int numTouchPoints = 0;
 
-FLASHMEM void helptext_l(const char *str)
+extern bool wakeScreenFlag;
+
+#if defined APC
+extern void apc_mute_matrix();
+#endif
+
+TouchFn currentTouchHandler;
+FLASHMEM void registerTouchHandler(TouchFn touchFn) {
+  currentTouchHandler = touchFn;
+}
+
+FLASHMEM void unregisterTouchHandler(void) {
+  currentTouchHandler = 0;
+}
+
+TouchFn getCurrentTouchHandler(void) {
+  return currentTouchHandler;
+}
+
+FLASHMEM void updateTouchScreen() {
+  if (remote_touched) {
+    numTouchPoints = 1;
+  }
+  else {
+    // no remote touch, so update to check for real touch
+    numTouchPoints = touch.touched();
+    if (numTouchPoints > 0) {
+
+#if defined GENERIC_DISPLAY    
+      // Scale from ~0->4000 to tft
+      ts.p = touch.getPoint();
+      ts.p.x = map(ts.p.x, 205, 3860, 0, TFT_HEIGHT);
+      ts.p.y = map(ts.p.y, 310, 3720, 0, TFT_WIDTH);
+#endif
+
+#ifdef CAPACITIVE_TOUCH_DISPLAY
+      // Retrieve a point
+      TS_Point p = touch.getPoint();
+
+      switch (configuration.sys.touch_rotation) {
+      case 1: //damster capacitive touch rotation (1)
+        ts.p.x = p.y;
+        ts.p.y = DISPLAY_HEIGHT - p.x;
+        break;
+
+      case 0: //positionhigh capacitive touch rotation (0)
+      default:// in case configuration.sys.touch_rotation in config-file has stored 2 or 3 from the old screen, better behave like new default for now
+        ts.p.x = DISPLAY_WIDTH - p.y;
+        ts.p.y = p.x;
+        break;
+      }
+#endif
+    }
+    else {
+      isButtonTouched = false;
+    }
+  }
+  wakeScreenFlag |= (numTouchPoints > 0);
+}
+
+FLASHMEM void helptext_l(const char* str)
 {
   display.setTextSize(1);
   uint8_t l = strlen(str);
@@ -104,8 +117,43 @@ FLASHMEM void helptext_l(const char *str)
 
   ts.old_helptext_length[0] = l;
 }
+extern void clear_bottom_half_screen_without_backbutton();
 
-FLASHMEM void helptext_r(const char *str)
+FLASHMEM void draw_back_touchbutton()
+{
+  if (ts.keyb_in_menu_activated == false)
+  {
+    // back text can be drawn as a touch button
+    if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
+    {
+      TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+    }
+    else
+      if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
+      {
+        TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
+
+      }
+  }
+  if (legacy_touch_button_back_page() && (LCDML.FUNC_getID() > _LCDML_DISP_cnt))
+  {
+    //remove unusable touch buttons from screen
+    clear_bottom_half_screen_without_backbutton();
+    //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
+
+  }
+  //else if (legacy_touch_button_back_page()&& ts.keyb_in_menu_activated  )
+  else if (legacy_touch_button_back_page())
+  { // but when virtual keyboard was active when coming from main menu, it must be redrawn
+    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+  }
+  else if (touch_button_back_page() && seq.cycle_touch_element != 1)
+  {
+    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+  }
+}
+
+FLASHMEM void helptext_r(const char* str)
 {
   display.setTextSize(1);
   uint8_t l = strlen(str);
@@ -122,7 +170,7 @@ FLASHMEM void helptext_r(const char *str)
   ts.old_helptext_length[1] = l;
 }
 
-FLASHMEM void helptext_c(const char *str)
+FLASHMEM void helptext_c(const char* str)
 {
   display.setTextSize(1);
   uint8_t l = strlen(str);
@@ -184,7 +232,18 @@ FLASHMEM uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val)
     break;
   }
   return RGB24toRGB565(r, g, b);
-  //  }
+}
+
+FLASHMEM bool check_button_on_grid(uint8_t x, uint8_t y)
+{
+  bool result = false;
+  if (ts.p.x > x * CHAR_width_small && ts.p.x < (x + button_size_x) * CHAR_width_small && ts.p.y > y * CHAR_height_small && ts.p.y < (y + button_size_y) * CHAR_height_small) {
+    if (isButtonTouched == false) {
+      isButtonTouched = true;
+      result = true;
+    }
+  }
+  return result;
 }
 
 FLASHMEM void print_current_chord()
@@ -195,561 +254,129 @@ FLASHMEM void print_current_chord()
   }
 }
 
-FLASHMEM void virtual_keyboard_print_velocity_bar()
-{
-  // velocity bar disabled
-  if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.step_recording == false && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.step_recording == false && seq.cycle_touch_element == 1))
-  {
-    display.console = 1;
-    display.fillRect(1, 10 * CHAR_height_small, DISPLAY_WIDTH, 32, COLOR_BACKGROUND);
-    display.console = 0;
-  }
-  else if (seq.cycle_touch_element == 1)
-  {
-    // velocity bar enabled
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(1);
-    display.setCursor(1 * CHAR_width_small, 11 * CHAR_height_small + 1);
-    display.print(F("VELOCITY"));
-    display.setCursor(1 * CHAR_width_small, 12 * CHAR_height_small + 3);
-    print_formatted_number(ts.virtual_keyboard_velocity, 3);
-    display.console = 1;
-    display.drawRect(CHAR_width_small * 10, 11 * CHAR_height_small, CHAR_width * 17 - CHAR_width_small * 10, 20, GREY1);
-    display.console = 1;
-    display.fillRect(CHAR_width_small * 10 + 1, 11 * CHAR_height_small + 2, ts.virtual_keyboard_velocity * 1.12, 16, COLOR_PITCHSMP);
-    display.console = 1;
-    display.fillRect(CHAR_width_small * 10 + 2 + ts.virtual_keyboard_velocity * 1.13, 11 * CHAR_height_small + 2, CHAR_width * 17 - CHAR_width_small * 10 - 3 - ts.virtual_keyboard_velocity * 1.13, 16, COLOR_BACKGROUND);
-    display.console = 0;
-  }
-}
+extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 
-FLASHMEM void virtual_keyboard_print_current_instrument()
-{
-  display.setTextColor(GREY2, COLOR_BACKGROUND);
-  display.setTextSize(2);
-  display.setCursor(17 * CHAR_width_small, 16 * CHAR_height_small);
-  if (ts.virtual_keyboard_instrument < 8)
-    display.print(F("PLAYING"));
-  else
-  {
-    display.setTextSize(1);
-    display.print(F("PITCHED SAMPLE "));
-    display.console = 1;
-    display.fillRect(17 * CHAR_width_small, 17 * CHAR_height_small, 14 * CHAR_width_small, 8, COLOR_BACKGROUND);
-    display.console = 0;
-  }
-  display.setTextSize(2);
-  display.setCursor(17 * CHAR_width_small, 18 * CHAR_height_small + 1);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  if (ts.virtual_keyboard_instrument == 1)
-  {
-    display.print(F("DEXED1  "));
-    ts.virtual_keyboard_midi_channel = configuration.dexed[0].midi_channel;
-  }
-  else if (ts.virtual_keyboard_instrument == 2)
-  {
-    display.print(F("DEXED2  "));
-    ts.virtual_keyboard_midi_channel = configuration.dexed[1].midi_channel;
-  }
-  else if (ts.virtual_keyboard_instrument == 3)
-  {
-    display.print(F("MSYNTH1 "));
-    ts.virtual_keyboard_midi_channel = microsynth[0].midi_channel;
-  }
-  else if (ts.virtual_keyboard_instrument == 4)
-  {
-    display.print(F("MSYNTH2 "));
-    ts.virtual_keyboard_midi_channel = microsynth[1].midi_channel;
-  }
-  else if (ts.virtual_keyboard_instrument == 5)
-  {
-    display.print(F("EPIANO  "));
-    ts.virtual_keyboard_midi_channel = configuration.epiano.midi_channel;
-  }
-  else if (ts.virtual_keyboard_instrument == 6)
-  {
-    display.print(F("DRUMS   "));
-    ts.virtual_keyboard_midi_channel = DRUM_MIDI_CHANNEL;
-  }
-  else if (ts.virtual_keyboard_instrument == 7)
-  {
-    display.print(F("BRAIDS   "));
-    ts.virtual_keyboard_midi_channel = braids_osc.midi_channel;
-  }
-  else if (ts.virtual_keyboard_instrument > 7)
-  {
-    display.print(ts.virtual_keyboard_instrument - 7);
-    display.print(" ");
-
-    show_small_font(18 * CHAR_height_small + 1, 20 * CHAR_width_small, 7, find_long_drum_name_from_note(ts.virtual_keyboard_instrument - 8 + 210));
-
-    ts.virtual_keyboard_midi_channel = DRUM_MIDI_CHANNEL;
-  }
-}
-
-FLASHMEM void virtual_keyboard_key_on()
-{
-  int offcount = 0;
-  uint8_t halftones = 0;
-  display.setTextColor(COLOR_SYSTEXT);
-  display.setTextSize(1);
-
-  // draw white keys
-  if (ts.p.y > VIRT_KEYB_YPOS + 36)
-  {
-    for (uint8_t x = 0; x < 10; x++)
-    {
-      if (ts.p.x > x * 32.22 && ts.p.x < x * 32.22 + 32)
-      {
-        if (ts.virtual_keyboard_state_white[x] == 0)
-        {
-          ts.virtual_keyboard_state_white[x] = 254;
-          for (uint8_t z = 0; z < x; z++)
-          {
-            if (seq.piano2[z] == 1)
-              halftones = halftones + 1;
-          }
-          // handleNoteOn_MIDI_DEVICE_DIN(configuration.dexed[selected_instance_id].midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 120);
-          if (ts.virtual_keyboard_instrument > 7) // pitched samples
-          {
-            set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x + halftones - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
-            if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
-              handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
-            else
-              handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
-            touch_control_rate = TOUCH_CONTROL_RATE_MS - 50;
-          }
-          else
-          {
-            if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
-              handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, ts.virtual_keyboard_velocity);
-            else
-              handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 120);
-            touch_control_rate = TOUCH_CONTROL_RATE_MS - 50;
-            display.console = true;
-            display.fillRect(1 + x * 32.22, VIRT_KEYB_YPOS + 34, 29.33, 39, RED); // white key
-            display.console = false;
-          }
-        }
+FLASHMEM bool handleLiveModButtons(void) {
+  bool pressedOne = false;
+  const int8_t buttonStep = dexed_live_mod.active_button - 1;
+  for (uint8_t step = 0; step < 4; step++) {
+    if (TouchButton::isPressed(GRID.X[step], GRID.Y[5] - 23)) {
+      pressedOne = true;
+      if (buttonStep != step) {
+        dexed_live_mod.active_button = step + 1;
+        printLiveModButton(step); // draw newly active
+      }
+      else {
+        dexed_live_mod.active_button = 0;
+      }
+      if (buttonStep >= 0) {
+        printLiveModButton(buttonStep); // draw previously active
       }
     }
   }
-  else if (ts.p.y > VIRT_KEYB_YPOS && ts.p.y < VIRT_KEYB_YPOS + 34)
-  {
-    for (uint8_t x = 0; x < 16; x++)
-    {
-      if (seq.piano[x] == 1)
-      {
-        if (ts.p.x > x * 18.46 && ts.p.x < x * 18.46 + 24)
-
-          if (ts.virtual_keyboard_state_black[x] == 0)
-          {
-            ts.virtual_keyboard_state_black[x] = 254;
-            if (ts.virtual_keyboard_instrument > 7) // pitched samples
-            {
-              set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
-              if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
-                handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
-              else
-                handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
-              touch_control_rate = TOUCH_CONTROL_RATE_MS - 50;
-            }
-            else
-            {
-              if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
-                handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x, ts.virtual_keyboard_velocity);
-              else
-                handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x, 120);
-              touch_control_rate = TOUCH_CONTROL_RATE_MS - 50;
-              display.console = true;
-              display.fillRect(x * 18.56, VIRT_KEYB_YPOS, 21.33, 34.5, RED); // BLACK key
-              display.console = false;
-            }
-            offcount++;
-            if (offcount == 5)
-              offcount = 0;
-          }
-      }
+  if (pressedOne) {
+    if (dexed_live_mod.active_button > 0) {
+      helptext_r("< > CHANGE MODIFIER VALUE");
+      display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+      print_empty_spaces(38, 1);
+      display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
+      print_empty_spaces(9, 1);
+      display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
+      display.print(F(" PUSH TO RETURN"));
+    }
+    else {
+      print_voice_select_default_help();
     }
   }
-  // display.fillRect(ts.p.x-1,ts.p.y-1,3,3,YELLOW);
-  display.setTextSize(2);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.console = false;
-}
-
-FLASHMEM void virtual_keyboard_key_off_white(uint8_t note)
-{
-  uint8_t halftones = 0;
-  display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-  display.setTextSize(1);
-
-  // draw white keys
-
-  for (uint8_t x = 0; x < 10; x++)
-  {
-    if (x == note)
-    {
-      for (uint8_t z = 0; z < x; z++)
-      {
-        if (seq.piano2[z] == 1)
-          halftones = halftones + 1;
-      }
-      // handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note, 120);
-      handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note + halftones, 0);
-      display.console = true;
-      display.fillRect(1 + x * 32.22, VIRT_KEYB_YPOS + 34, 29.33, 39, COLOR_SYSTEXT); // white key
-      display.console = false;
-
-      if (x == 0 || x == 7)
-      {
-        display.setCursor(1 + x * 32.22 + 11.3, VIRT_KEYB_YPOS + 57.75);
-        display.print("C");
-        if (x == 0)
-          display.print(ts.virtual_keyboard_octave);
-        else if (x == 7)
-          display.print(ts.virtual_keyboard_octave + 1);
-      }
-    }
-  }
-  display.setTextSize(2);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.console = false;
-}
-
-FLASHMEM void virtual_keyboard_key_off_black(uint8_t note)
-{
-  display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-  display.setTextSize(1);
-
-  for (uint8_t x = 0; x < 16; x++)
-  {
-    if (x == note)
-    {
-      //  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note, 120);
-      handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + note, 0);
-      display.console = true;
-      display.fillRect(x * 18.56, VIRT_KEYB_YPOS, 21.33, 34.5, COLOR_BACKGROUND); // BLACK key
-      display.console = false;
-    }
-  }
-  display.setTextSize(2);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.console = false;
-}
-
-FLASHMEM void virtual_keyboard()
-{
-  int offcount = 0;
-  uint8_t oct_count = 0;
-  display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-  display.setTextSize(1);
-  display.console = true;
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_select))
-    display.fillRect(0, DISPLAY_HEIGHT - 18, 1, 18, GREY3); // clear 1 column of pixels from previous displayed help text
-
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1 && seq.step_recording)
-    virtual_keyboard_print_velocity_bar();
-
-  // draw white keys
-  for (uint8_t x = 0; x < 10; x++)
-  {
-    display.console = true;
-    display.fillRect(1 + x * 32.22, VIRT_KEYB_YPOS, 29.33, 73.5, COLOR_SYSTEXT); // WHITE key
-    display.console = false;
-    if (x == 0 || x == 7 || x == 14)
-    {
-      display.setCursor(1 + x * 32.22 + 11.3, VIRT_KEYB_YPOS + 57.75);
-      display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      display.print("C");
-      display.print(ts.virtual_keyboard_octave + oct_count);
-      oct_count++;
-    }
-  }
-  for (uint8_t x = 0; x < 16; x++)
-  {
-    if (seq.piano[x] == 1)
-    {
-      display.console = true;
-      display.fillRect(x * 18.56, VIRT_KEYB_YPOS, 21.33, 34.5, COLOR_BACKGROUND); // BLACK key
-      display.console = false;
-      offcount++;
-      if (offcount == 5)
-        offcount = 0;
-    }
-  }
-  display.setTextSize(2);
-  display.console = false;
-}
-
-FLASHMEM void print_virtual_keyboard_octave()
-{
-  uint8_t oct_count = 0;
-  display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-  display.setTextSize(1);
-
-  // draw white keys
-  for (uint8_t x = 0; x < 10; x++)
-  {
-    if (x == 0 || x == 7 || x == 14)
-    {
-      display.setCursor(1 + x * 32.22 + 11.3, VIRT_KEYB_YPOS + 57.75);
-      display.print("C");
-      display.print(ts.virtual_keyboard_octave + oct_count);
-      oct_count++;
-    }
-  }
-  // display.setTextSize(2);
-}
-
-FLASHMEM bool check_button_on_grid(uint8_t x, uint8_t y)
-{
-  if (ts.p.x > x * CHAR_width_small && ts.p.x < (x + button_size_x) * CHAR_width_small && ts.p.y > y * CHAR_height_small && ts.p.y < (y + button_size_y) * CHAR_height_small)
-    return true;
-  else
-    return false;
-}
-
-FLASHMEM void touch_button_oct_up()
-{
-  ts.virtual_keyboard_octave++;
-  if (ts.virtual_keyboard_octave > 8)
-    ts.virtual_keyboard_octave = 8;
-  ts.update_virtual_keyboard_octave = true;
-}
-FLASHMEM void touch_button_oct_down()
-{
-  ts.virtual_keyboard_octave--;
-  if (ts.virtual_keyboard_octave < 1)
-    ts.virtual_keyboard_octave = 1;
-  ts.update_virtual_keyboard_octave = true;
-}
-FLASHMEM void touch_button_inst_up()
-{
-  ts.virtual_keyboard_instrument++;
-  if (ts.virtual_keyboard_instrument > 12)
-    ts.virtual_keyboard_instrument = 12;
-  virtual_keyboard_print_current_instrument();
-  ts.update_virtual_keyboard_octave = true;
-}
-FLASHMEM void touch_button_inst_down()
-{
-  ts.virtual_keyboard_instrument--;
-  if (ts.virtual_keyboard_instrument < 1)
-    ts.virtual_keyboard_instrument = 1;
-  virtual_keyboard_print_current_instrument();
-  ts.update_virtual_keyboard_octave = true;
-}
-
-FLASHMEM void touch_check_all_keyboard_buttons()
-{
-  if (check_button_on_grid(1, 16))
-    touch_button_oct_down();
-  else if (check_button_on_grid(45, 16))
-    touch_button_oct_up();
-
-  if ((check_button_on_grid(9, 16) && seq.cycle_touch_element == 1) || (check_button_on_grid(9, 16) && ts.keyb_in_menu_activated))
-    touch_button_inst_down();
-  else if ((check_button_on_grid(37, 16) && seq.cycle_touch_element == 1) || (check_button_on_grid(37, 16) && ts.keyb_in_menu_activated))
-    touch_button_inst_up();
-}
-
-FLASHMEM void virtual_keyboard_update_all_key_states()
-{
-  ts.slowdown_UI_input++;
-  if (ts.slowdown_UI_input > 7)
-  {
-    for (uint8_t x = 0; x < 10; x++)
-    {
-      if (ts.virtual_keyboard_state_white[x] > 0)
-        ts.virtual_keyboard_state_white[x]--;
-      if (ts.virtual_keyboard_state_white[x] == 1)
-        virtual_keyboard_key_off_white(x);
-    }
-    for (uint8_t x = 0; x < 16; x++)
-    {
-      if (ts.virtual_keyboard_state_black[x] > 0)
-        ts.virtual_keyboard_state_black[x]--;
-
-      if (ts.virtual_keyboard_state_black[x] == 1)
-        virtual_keyboard_key_off_black(x);
-    }
-    ts.slowdown_UI_input = 0;
-  }
-}
-
-FLASHMEM void get_scaled_touch_point()
-{
-  LCDML.SCREEN_resetTimer();
-  if (remote_touched == false)
-  {
-#ifdef GENERIC_DISPLAY
-    if (ts.finished_calibration)
-    {
-      ts.p = touch.getPixel();
-      // ts.p.x = map(ts.p.x, ts.calib_x_min, ts.calib_x_max, 0, TFT_HEIGHT);
-      // ts.p.y = map(ts.p.y, ts.calib_y_min, ts.calib_y_max, 0, TFT_WIDTH);
-    }
-    else
-    {
-      // Scale from ~0->4000 to tft
-      ts.p = touch.getPoint();
-      ts.p.x = map(ts.p.x, 205, 3860, 0, TFT_HEIGHT);
-      ts.p.y = map(ts.p.y, 310, 3720, 0, TFT_WIDTH);
-    }
-#endif
-
-#ifdef ADAFRUIT_DISPLAY
-
-    // Retrieve a point
-    ts.p = touch.getPoint();
-    // rotate coordinate system
-    // flip it around to match the screen.
-    // ts.p.x = map(ts.p.x, 0, 240, 240, 0);
-    // ts.p.y = map(ts.p.y, 0, 320, 320, 0);
-    int y = DISPLAY_HEIGHT - ts.p.x;
-    int x = ts.p.y;
-    ts.p.x = x;
-    ts.p.y = y;
-#endif
-  }
+  return pressedOne;
 }
 
 FLASHMEM void handle_touchscreen_voice_select()
 {
-
-  if (touch.touched())
-  {
-    get_scaled_touch_point();
-    if (check_button_on_grid(45, 1))
-    {
-      if (seq.cycle_touch_element == 1)
-      {
-        border3_large_clear();
-        seq.cycle_touch_element = 0;
-        // display.drawRect(DISPLAY_WIDTH / 2, CHAR_height * 6 - 4 , DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - 1,  GREY4);
-        draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
-        uint8_t t = generic_temp_select_menu;
-        generic_temp_select_menu = 199;
-        print_voice_settings(true);
-        generic_temp_select_menu = t;
-        print_perfmod_buttons();
-        print_perfmod_lables();
-        print_voice_select_default_help();
-      }
-      else
-      {
-        border3_large_clear();
-        seq.cycle_touch_element = 1;
-        draw_button_on_grid(45, 1, "DEXED", "DETAIL", 0);
-        virtual_keyboard();
-
-        virtual_keyboard_print_buttons();
-        virtual_keyboard_print_current_instrument();
-      }
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+    if (seq.cycle_touch_element == 1) {
+      border3_large_clear();
+      seq.cycle_touch_element = 0;
+      TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
+      print_voice_settings_in_dexed_voice_select(true, true);
+      printLiveModButtons();
+      print_voice_select_default_help();
+      draw_algo(true); // force redraw
     }
-    if (seq.cycle_touch_element != 1)
-    {
-      if (check_button_on_grid(37, 1))
-      {
-        save_favorite(configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-      }
-      else if (selected_instance_id == 0)
-      {
-        if (check_button_on_grid(2, 25))
-        {
-          if (dexed_live_mod.active_button != 1)
-            dexed_live_mod.active_button = 1;
-          else
-            dexed_live_mod.active_button = 0;
-        }
-        else if (check_button_on_grid(11, 25))
-        {
-          if (dexed_live_mod.active_button != 2)
-            dexed_live_mod.active_button = 2;
-          else
-            dexed_live_mod.active_button = 0;
-        }
-      }
-      else if (selected_instance_id == 1)
-      {
-        if (check_button_on_grid(2, 25))
-        {
-          if (dexed_live_mod.active_button != 3)
-            dexed_live_mod.active_button = 3;
-          else
-            dexed_live_mod.active_button = 0;
-        }
-        else if (check_button_on_grid(11, 25))
-        {
-          if (dexed_live_mod.active_button != 4)
-            dexed_live_mod.active_button = 4;
-          else
-            dexed_live_mod.active_button = 0;
-        }
-      }
-      else
-        dexed_live_mod.active_button = 0;
-
-      if (dexed_live_mod.active_button > 0 && dexed_live_mod.active_button < 5)
-      {
-        helptext_r("< > CHANGE MODIFIER VALUE");
-        display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-        print_empty_spaces(38);
-        display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);
-        print_empty_spaces(9);
-        display.setCursor(CHAR_width_small * 38 + 2, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
-        display.print(F(" PUSH TO RETURN"));
-      }
-      else
-      {
-        print_voice_select_default_help();
-      }
-      uint8_t t = generic_temp_select_menu;
-      generic_temp_select_menu = 199;
-      print_voice_settings(false);
-      generic_temp_select_menu = t;
-      print_perfmod_buttons();
-      print_perfmod_lables();
-    }
-
-    if (ts.update_virtual_keyboard_octave == false && seq.cycle_touch_element == 1)
-    {
-      touch_check_all_keyboard_buttons();
-    }
-
-    if (ts.p.x > 1 && ts.p.y > VIRT_KEYB_YPOS && seq.cycle_touch_element == 1)
-    {
-      virtual_keyboard_key_on();
+    else {
+      border3_large_clear();
+      seq.cycle_touch_element = 1;
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "DEXED", "DETAIL", TouchButton::BUTTON_NORMAL);
+      drawVirtualKeyboard();
     }
   }
-  if (touch.touched() == false)
-  {
-    if (ts.update_virtual_keyboard_octave && seq.cycle_touch_element == 1)
-    {
-      print_virtual_keyboard_octave();
-      ts.update_virtual_keyboard_octave = false;
-    }
-    //    if ( ts.switch_active_instance && seq.cycle_touch_element != 1)
-    //    {
-    //      UI_update_instance_icons();
-    //      print_voice_settings(CHAR_width_small, 104, selected_instance_id, 0);
-    //    }
+  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
+    save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
   }
-  virtual_keyboard_update_all_key_states();
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2])) {
+    if (++configuration.sys.favorites > 3) {
+      configuration.sys.favorites = 0;
+    }
+    print_voice_select_fav_search_button();
+  }
+  else {
+    if (seq.cycle_touch_element != 1) {
+      if (handleLiveModButtons()) {
+        // touch handled
+      }
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
+        uint8_t value = get_algo() + 1;
+        value %= 32; // 0-31
+
+        panic_dexed_current_instance();
+        set_algo(value);
+        draw_algo();
+      }
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23)) {
+        LCDML.FUNC_setGBAToLastFunc();
+        LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
+      }
+
+      else if (TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
+        //if touched somewhere else, reset live modifier edit mode
+        const int8_t buttonOld = dexed_live_mod.active_button - 1;
+        if (buttonOld >= 0) {
+          dexed_live_mod.active_button = 0;
+          printLiveModButton(buttonOld);
+        }
+      }
+    }
+    else {
+      handleTouchVirtualKeyboard();
+    }
+  }
+}
+
+FLASHMEM void update_latch_button()
+{
+  if (seq.cycle_touch_element == 1)
+  {
+    if (seq.content_type[seq.active_pattern] == 0)
+      draw_button_on_grid(36, 6, "LATCH", "NOTE", 98);
+    else
+      draw_button_on_grid(36, 6, "LATCH", "NOTE", 1);
+  }
 }
 
 FLASHMEM void update_step_rec_buttons()
 {
-  // if (seq.step_recording && seq.cycle_touch_element == 1) {
-  if (seq.cycle_touch_element == 1 && seq.step_recording)
+  if (seq.cycle_touch_element == 1)
   {
+    update_latch_button();
+
+    draw_button_on_grid(45, 6, "EMPTY", "STEP", 1);
+
     if (seq.auto_advance_step == 1)
-      draw_button_on_grid(45, 10, "AUTO", "ADV.", 1); // print step recorder icon
+      draw_button_on_grid(45, 11, "AUTO", "ADV.", 1); // print step recorder icon
     else if (seq.auto_advance_step == 2)
-      draw_button_on_grid(45, 10, "AUTO", "AD+ST", 1); // print step recorder icon
+      draw_button_on_grid(45, 11, "A.ADV.", ">STOP", 1); // print step recorder icon
     else
-      draw_button_on_grid(45, 10, "KEEP", "STEP", 1); // print step recorder icon
+      draw_button_on_grid(45, 11, "KEEP", "STEP", 1); // print step recorder icon
   }
   if (seq.step_recording)
   {
@@ -763,33 +390,35 @@ FLASHMEM void update_step_rec_buttons()
 
 FLASHMEM void handle_touchscreen_pattern_editor()
 {
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
-    if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
+    if (seq.cycle_touch_element == 1)
     {
-      if (ts.p.y > 6 * CHAR_height_small && ts.p.y < 12 * CHAR_height_small + 20 && ts.p.x < 230)
+      if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) ||
+        (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
       {
-        ts.p.x = ts.p.x / 1.4;
-        if (ts.p.x - 22 < 22)
-          ts.p.x = 22;
-        if (ts.p.x > 127 + 22)
-          ts.p.x = 127 + 22;
-        ts.virtual_keyboard_velocity = ts.p.x - 22;
-        virtual_keyboard_print_velocity_bar();
-        update_step_rec_buttons();
+        if (ts.p.y > 7 * CHAR_height_small && ts.p.y < 12 * CHAR_height_small + 20 && ts.p.x < 230)
+        {
+          ts.virtual_keyboard_velocity = ts.p.x - 70;
+          if (ts.p.x - 70 < 1)
+            ts.virtual_keyboard_velocity = 0;
+          else
+            if (ts.virtual_keyboard_velocity > 127)
+              ts.virtual_keyboard_velocity = 127;
+          virtual_keyboard_print_velocity_bar();
+        }
       }
-    }
-    if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
-    {
-
-      if (check_button_on_grid(45, 10) && seq.step_recording)
+      if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) ||
+        (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
       {
-        seq.auto_advance_step++;
-        if (seq.auto_advance_step > 2)
-          seq.auto_advance_step = 0;
+        if (check_button_on_grid(45, 10) && seq.step_recording)
+        {
+          seq.auto_advance_step++;
+          if (seq.auto_advance_step > 2)
+            seq.auto_advance_step = 0;
+          update_step_rec_buttons();
+        }
       }
-      update_step_rec_buttons();
     }
     if (check_button_on_grid(36, 1) && seq.running == false)
     {
@@ -806,348 +435,352 @@ FLASHMEM void handle_touchscreen_pattern_editor()
       {
         seq.cycle_touch_element = 0;
         draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
+        display.console = true;
         display.fillRect(0, CHAR_height_small * 12 + 1, DISPLAY_WIDTH, 1, COLOR_BACKGROUND);
+        display.console = true;
+        display.fillRect(215, 48, 97, 42, COLOR_BACKGROUND);
+        display.console = false;
         seq_pattern_editor_update_dynamic_elements();
       }
       else
       {
         seq.cycle_touch_element = 1;
-        draw_button_on_grid(45, 1, "BACK", "TO SEQ", 0);
+        draw_button_on_grid(45, 1, back_text, "TO SEQ", 0);
+        display.console = true;
         display.fillRect(216, CHAR_height_small * 6, 95, CHAR_height_small * 6 + 1, COLOR_BACKGROUND);
+        display.console = true;
         display.fillRect(0, CHAR_height_small * 10 + 1, 195, CHAR_height_small * 2 + 1, COLOR_BACKGROUND);
-        virtual_keyboard();
-        virtual_keyboard_print_buttons();
-        virtual_keyboard_print_current_instrument();
+        display.console = true;
+        display.fillRect(0, CHAR_height_small * 10 + 1, 2, CHAR_height_small * 12 + 1, COLOR_BACKGROUND);
+        display.console = false;
+        update_step_rec_buttons();
+        virtual_keyboard_print_velocity_bar();
+        drawVirtualKeyboard();
       }
     }
-    else if (check_button_on_grid(36, 16) && seq.cycle_touch_element != 1) // toggle seq. playmode song/pattern only
+    else if (check_button_on_grid(45, 6) && seq.cycle_touch_element == 1)//rest button
     {
-      if (seq.play_mode)
-        seq.play_mode = false;
-      else
-        seq.play_mode = true;
+      sub_step_recording(true, 1);
+    }
+    else if (check_button_on_grid(36, 6) && seq.cycle_touch_element == 1)//latch button
+    {
+      sub_step_recording(true, 2);
+    }
 
-      if (seq.play_mode == false) // is in full song more
+    if (seq.cycle_touch_element != 1)
+    {
+      if (check_button_on_grid(36, 16)) // toggle seq. playmode song/pattern only
       {
-        draw_button_on_grid(36, 16, "PLAYNG", "SONG", 0);
-        seq.hunt_pattern = false;
-        draw_button_on_grid(45, 22, "HUNT", "PATT", 0);
-      }
-      else // play only current pattern
-        draw_button_on_grid(36, 16, "LOOP", "PATT", 2);
-    }
-    else if (check_button_on_grid(45, 22) && seq.cycle_touch_element != 1) // hunt pattern
-    {
-      if (seq.hunt_pattern)
-        seq.hunt_pattern = false;
-      else
-        seq.hunt_pattern = true;
+        seq.play_mode = !seq.play_mode;
 
-      if (seq.hunt_pattern == false)
-        draw_button_on_grid(45, 22, "HUNT", "PATT", 0);
-      else // play only current pattern
-        draw_button_on_grid(45, 22, "HUNT", "PATT", 2);
-    }
-    else if (check_button_on_grid(36, 22) && seq.cycle_touch_element != 1) // jump song editor
-    {
-      LCDML.OTHER_jumpToFunc(UI_func_song);
-    }
-    else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element != 1)
-      if (check_button_on_grid(45, 16)) // jump pattern editor functions
-      {
-
-        if (seq.content_type[seq.active_pattern] == 0)
+        if (seq.play_mode == false) // is in full song more
         {
+          draw_button_on_grid(36, 16, "PLAYNG", "SONG", 0);
+          seq.hunt_pattern = false;
+          draw_button_on_grid(45, 22, "HUNT", "PATT", 0);
+        }
+        else // play only current pattern
+          draw_button_on_grid(36, 16, "LOOP", "PATT", 2);
+      }
+      else if (check_button_on_grid(45, 22)) // hunt pattern
+      {
+        seq.hunt_pattern = !seq.hunt_pattern;
+
+        if (seq.hunt_pattern == false)
+          draw_button_on_grid(45, 22, "HUNT", "PATT", 0);
+        else // play only current pattern
+          draw_button_on_grid(45, 22, "HUNT", "PATT", 2);
+      }
+      else if (check_button_on_grid(36, 22) && seq.cycle_touch_element != 1) // jump song editor
+      {
+        LCDML.OTHER_jumpToFunc(UI_func_song);
+      }
+      else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element != 1)
+        if (check_button_on_grid(45, 16)) // jump pattern editor functions
+        {
+          if (seq.content_type[seq.active_pattern] == 0)
+          {
+            activeSample = NUM_DRUMSET_CONFIG;
+          }
+          else
+          {
+            temp_int = 111;
+          }
           draw_button_on_grid(45, 16, "JUMP", "TOOLS", 2);
-          activesample = NUM_DRUMSET_CONFIG;
           seq.menu = 0;
           seq.active_function = 0;
           pattern_editor_menu_0();
         }
-        else
-        {
-          draw_button_on_grid(45, 16, "JUMP", "TOOLS", 2);
-          temp_int = 111;
-          seq.menu = 0;
-          seq.active_function = 0;
-          pattern_editor_menu_0();
-        }
-      }
+    }
+  }
 
-    if (ts.update_virtual_keyboard_octave == false && seq.cycle_touch_element == 1)
-    {
-      touch_check_all_keyboard_buttons();
-    }
-    if (ts.p.x > 1 && ts.p.y > VIRT_KEYB_YPOS && seq.cycle_touch_element == 1)
-    {
-      virtual_keyboard_key_on();
-    }
+  if (seq.cycle_touch_element == 1) {
+    handleTouchVirtualKeyboard();
   }
-  if (touch.touched() == false)
-  {
-    if (ts.update_virtual_keyboard_octave && seq.cycle_touch_element == 1)
-    {
-      print_virtual_keyboard_octave();
-      ts.update_virtual_keyboard_octave = false;
-    }
-  }
-  virtual_keyboard_update_all_key_states();
 }
 
 FLASHMEM void handle_touchscreen_microsynth()
 {
-  if (touch.touched())
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0]))
   {
-    get_scaled_touch_point();
-
-    if (check_button_on_grid(45, 1))
+    display.console = true;
+    display.fillRect(0, VIRT_KEYB_YPOS - 6 * CHAR_height_small, DISPLAY_WIDTH,
+      DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 6 * CHAR_height_small, COLOR_BACKGROUND);
+    display.console = false;
+    if (seq.cycle_touch_element == 1)
     {
-      display.fillRect(0, VIRT_KEYB_YPOS - 6 * CHAR_height_small, DISPLAY_WIDTH, DISPLAY_HEIGHT, COLOR_BACKGROUND);
-      if (seq.cycle_touch_element == 1)
-      {
-        seq.cycle_touch_element = 0;
-        draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
-        microsynth_refresh_lower_screen_static_text();
-        microsynth_refresh_lower_screen_dynamic_text();
-      }
-      else
-      {
-        seq.cycle_touch_element = 1;
-        draw_button_on_grid(45, 1, "MORE", "PARAM.", 0);
-        virtual_keyboard();
-        virtual_keyboard_print_buttons();
-        virtual_keyboard_print_current_instrument();
-      }
+      seq.cycle_touch_element = 0;
+      TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
+      generic_full_draw_required = true;
+      microsynth_refresh_lower_screen_static_text();
+      microsynth_refresh_lower_screen_dynamic_text();
+      draw_back_touchbutton();
+      generic_full_draw_required = false;
     }
-
-    if (ts.update_virtual_keyboard_octave == false && seq.cycle_touch_element == 1)
+    else
     {
-      touch_check_all_keyboard_buttons();
-    }
-
-    if (ts.p.x > 1 && ts.p.y > VIRT_KEYB_YPOS && seq.cycle_touch_element == 1)
-    {
-      virtual_keyboard_key_on();
+      seq.cycle_touch_element = 1;
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "MORE", "PARAM.", TouchButton::BUTTON_ACTIVE);
+      drawVirtualKeyboard();
     }
   }
-  if (touch.touched() == false)
-  {
-    if (ts.update_virtual_keyboard_octave && seq.cycle_touch_element == 1)
-    {
-      print_virtual_keyboard_octave();
-      ts.update_virtual_keyboard_octave = false;
-    }
+  if (seq.cycle_touch_element == 1) {
+    handleTouchVirtualKeyboard();
   }
-  virtual_keyboard_update_all_key_states();
 }
+
+extern int menuhelper_previous_val;
 
 FLASHMEM void print_file_manager_buttons()
 {
-  draw_button_on_grid(1, 25, "BROWSE", "FILES", fm.sd_mode == FM_BROWSE_FILES ? 1 : 0);
-  draw_button_on_grid(10, 25, "DELETE", "FILE", fm.sd_mode == FM_DELETE_FILE ? 1 : 0);
-#ifdef COMPILE_FOR_FLASH
-  draw_button_on_grid(19, 25, "COPY", "PRESET", fm.sd_mode == FM_COPY_PRESETS ? 1 : 0);
-  draw_button_on_grid(28, 25, "COPY >", "FLASH", fm.sd_mode == FM_COPY_TO_FLASH ? 1 : 0);
+  if (menuhelper_previous_val != fm.sd_mode)
+  {
+    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BROWSE", "FILES", (fm.sd_mode == FM_BROWSE_FILES) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[5], "DELETE", "FILE", (fm.sd_mode == FM_DELETE_FILE) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+#ifdef COMPILE_FOR_PSRAM
+    TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "PSRAM", (fm.sd_mode == FM_COPY_TO_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "DELETE", "PSRAM", (fm.sd_mode == FM_DELETE_FROM_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
 #endif
-  draw_button_on_grid(46, 25, "PLAY", "SAMPLE", fm.sd_mode == FM_PLAY_SAMPLE ? 1 : 0);
+
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+
+    display.setTextSize(1);
+    display.setCursor(CHAR_width_small, (CHAR_height_small * 23) + 5);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE) {
+      display.print(F("SELECT, THEN CONFIRM OPERATION > PUSH ENCODER[R]"));
+    }
+    else
+    {
+      print_empty_spaces(48, 1);
+    }
+  }
+  menuhelper_previous_val = fm.sd_mode;
+
+
+#ifdef MUSIKANDMORE
+  TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+#endif
+
 }
 
 FLASHMEM void print_file_manager_active_border()
 {
-  // active_window   0 = left window (SDCARD) , 1 = FLASH
+  // active_window   0 = left window (SDCARD) , 1 = PSRAM OR SDCARD2
   if (fm.active_window == 0)
   {
     display.console = true;
-    display.drawRect(CHAR_width_small * 28 - 1, 0, CHAR_width_small * 25 + 3, CHAR_height_small * 23, GREY2);
+    display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, GREY2);
     display.console = true;
-    display.drawRect(0, 0, CHAR_width_small * 28, CHAR_height_small * 23, COLOR_SYSTEXT);
+    display.drawRect(0, 0, CHAR_width_small * 27, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
   else
   {
     display.console = true;
-    display.drawRect(0, 0, CHAR_width_small * 28, CHAR_height_small * 23, GREY2);
+    display.drawRect(0, 0, CHAR_width_small * 27, CHAR_height_small * 23, GREY2);
     display.console = true;
-    display.drawRect(CHAR_width_small * 28 - 1, 0, CHAR_width_small * 25 + 3, CHAR_height_small * 23, COLOR_SYSTEXT);
+    display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
 }
 
+#ifdef COMPILE_FOR_PSRAM
+extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str);
+#endif
+
+#ifdef MUSIKANDMORE
+extern void sd_printDirectory(bool forceReload);
+extern void sd_go_parent_folder();
+extern void   _print_filemanager_header();
+extern void _print_filemanager_sd_extern_header();
+extern void print_psram_stats_filemanager();
+extern void  psram_printCustomSamplesList();
+extern void load_sd_directory();
+#endif
+
 FLASHMEM void handle_touchscreen_file_manager()
 {
-  if (touch.touched() && ts.block_screen_update == false)
-  {
-    get_scaled_touch_point();
+  if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
+    fm.active_window = 0;
+    print_file_manager_active_border();
+    #ifdef MUSIKANDMORE
+    load_sd_directory();
+    sd_printDirectory(true);
+    #endif
+  }
+#if defined COMPILE_FOR_PSRAM
+  else if (TouchButton::isInArea(DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
+    fm.active_window = 1;
+    print_file_manager_active_border();
+     #ifdef MUSIKANDMORE
+    load_sd_directory();
+    sd_printDirectory(true);
+    #endif
+  }
+#endif
+  else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+    fm.sd_mode = FM_BROWSE_FILES;
+    print_file_manager_buttons();
+  }
+  else if (TouchButton::isPressed(GRID.X[1], GRID.Y[5])) {
+    fm.sd_mode = FM_DELETE_FILE;
+    print_file_manager_buttons();
+  }
 
-    // check touch buttons
-    if (ts.p.y > CHAR_height_small * 20)
-    {
-      if (check_button_on_grid(1, 25))
-      {
-        fm.sd_mode = FM_BROWSE_FILES;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(10, 25))
-      {
-        fm.sd_mode = FM_DELETE_FILE;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(19, 25))
-      {
-        fm.sd_mode = FM_COPY_PRESETS;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(28, 25))
-      {
-        fm.sd_mode = FM_COPY_TO_FLASH;
-        print_file_manager_buttons();
-      }
-      else if (check_button_on_grid(46, 25))
-      {
-        fm.sd_mode = FM_PLAY_SAMPLE;
-        print_file_manager_buttons();
-      }
-    }
-    // active_window   0 = left window (SDCARD) , 1 = FLASH
-    else if (ts.p.x > 1 && ts.p.x < CHAR_width_small * 29)
-    {
-      fm.active_window = 0;
-      print_file_manager_active_border();
-    }
-    else if (ts.p.x > CHAR_width_small * 29)
+#ifdef MUSIKANDMORE
+  else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
+    fm.SD_CARD_READER_EXT = !fm.SD_CARD_READER_EXT;
+    fm.sd_selected_file = 0;
+    sd_go_parent_folder();
+    print_file_manager_buttons();
+    //  _print_filemanager_header();
+    display.console = true;
+    display.fillRect(27 * CHAR_width_small, 7, CHAR_width_small * 26, 170, COLOR_BACKGROUND);
+
+    if (fm.SD_CARD_READER_EXT)
     {
       fm.active_window = 1;
+      // fm.sd_selected_file=0;
       print_file_manager_active_border();
+      _print_filemanager_sd_extern_header();
+      sd_printDirectory(true);
     }
-    // sd_printDirectory(true);
-    // #ifdef COMPILE_FOR_FLASH
-    //     flash_loadDirectory();
-    //     flash_printDirectory();
-    // #endif
-    ts.block_screen_update = true;
-    ts.slowdown_UI_input = 0;
+    else
+    {
+      print_psram_stats_filemanager();
+      fm.active_window = 1;
+      psram_printCustomSamplesList();
+      // fm.active_window = 0;
+      // print_file_manager_active_border();
+    }
   }
-  ts.slowdown_UI_input++;
-  if (ts.slowdown_UI_input > 1000)
-  {
-    ts.block_screen_update = false;
+#endif
+
+#if defined COMPILE_FOR_PSRAM
+  else if (TouchButton::isPressed(GRID.X[3], GRID.Y[5])) {
+    fm.sd_mode = FM_COPY_TO_PSRAM;
+    print_file_manager_buttons();
+  }
+  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
+    fm.sd_mode = FM_DELETE_FROM_PSRAM;
+    print_file_manager_buttons();
+  }
+#endif
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
+    if ((!fm.sd_is_folder && fm.active_window == 0) || (fm.active_window == 1))
+    {
+      fm.sd_mode = FM_PLAY_SAMPLE;
+      previewWavFilemanager();
+      print_file_manager_buttons();
+    }
   }
 }
 
 FLASHMEM void update_midi_learn_button()
 {
-  if (seq.midi_learn_active == true)
-  {
-    draw_button_on_grid(45, 1, "MIDI", "LEARN", 2); // RED button
-  }
-  else
-  {
-    draw_button_on_grid(45, 1, "MIDI", "LEARN", 0);
-    // seq.midi_learn_active = false;
-  }
+  draw_button_on_grid(45, 1, "MIDI", "LEARN", seq.midi_learn_active ? 2 : 0); // RED or grey button
 }
 
 FLASHMEM void handle_touchscreen_custom_mappings()
 {
-  if (touch.touched() && ts.block_screen_update == false)
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
     if (check_button_on_grid(45, 1))
     {
       seq.midi_learn_active = !seq.midi_learn_active;
-      ts.block_screen_update = true;
-      ts.slowdown_UI_input = 0;
       update_midi_learn_button();
     }
   }
-  ts.slowdown_UI_input++;
-  if (ts.slowdown_UI_input > 7115)
-    ts.block_screen_update = false;
 }
 
-FLASHMEM void handle_touchscreen_cc_mappings()
+extern void play_sample(uint8_t note);
+FLASHMEM void handle_touchscreen_drums()
 {
-  if (touch.touched() && ts.block_screen_update == false)
+  if (TouchButton::isPressed(GRID.X[1], GRID.Y[5]))
   {
-    get_scaled_touch_point();
-    if (check_button_on_grid(45, 1))
-    {
-      seq.midi_learn_active = !seq.midi_learn_active;
-      ts.block_screen_update = true;
-      ts.slowdown_UI_input = 0;
-      update_midi_learn_button();
-    }
+    TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_RED);
+    play_sample(activeSample);
+    delay(60);
+    TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
   }
-  ts.slowdown_UI_input++;
-  if (ts.slowdown_UI_input > 7115)
-    ts.block_screen_update = false;
 }
 
 FLASHMEM void handle_touchscreen_mute_matrix()
 {
-  if (touch.touched())
+  uint8_t button_count = 0;
+  char buf[4];
+  uint8_t spacerx = 90;
+  for (uint8_t y = 0; y < 3; y++)
   {
-    get_scaled_touch_point();
-    uint8_t button_count = 0;
-    char buf[4];
-    for (uint8_t y = 0; y < 3; y++)
+    for (uint8_t x = 0; x < 4; x++)
     {
-      for (uint8_t x = 0; x < 4; x++)
+      if (y < 2)
       {
-        if (y < 2)
+        if (TouchButton::isPressed(x * spacerx, 95 + y * 55))
         {
-          if (check_button_on_grid(2 + x * 14, 12 + y * 8))
-          {
-            seq.track_mute[button_count] = !seq.track_mute[button_count];
-            if (!seq.track_mute[button_count])
-              draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), 1);
-            else
-              draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), 0);
-          }
-          button_count++;
+          seq.track_mute[button_count] = !seq.track_mute[button_count];
+          //const uint8_t color = seq.track_mute[button_count] ? 0 : 1; // grey or active color
+          //draw_button_on_grid(2 + x * 14, 12 + y * 8, "TRACK:", itoa(button_count + 1, buf, 10), color);
+          TouchButton::drawButton(x * spacerx, 95 + y * 55, "TRACK:", itoa(button_count + 1, buf, 10), seq.track_mute[button_count] ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE);
         }
-        else
+        button_count++;
+      }
+      else
+      {
+        if (TouchButton::isPressed(x * spacerx, 35))
         {
-          if (check_button_on_grid(2 + x * 14, 4))
-          {
-            if (x == 1)
-              seq.mute_mode = 0;
-            else if (x == 2)
-              seq.mute_mode = 1;
-            else if (x == 3)
-              seq.mute_mode = 2;
-          }
           if (x == 1)
-          {
-            if (seq.mute_mode == 0)
-              draw_button_on_grid(2 + x * 14, 4, "REAL", "TIME", 1);
-            else
-              draw_button_on_grid(2 + x * 14, 4, "REAL", "TIME", 0);
-          }
+            seq.mute_mode = 0;
           else if (x == 2)
-          {
-            if (seq.mute_mode == 1)
-              draw_button_on_grid(2 + x * 14, 4, "NEXT", "PATTRN", 1);
-            else
-              draw_button_on_grid(2 + x * 14, 4, "NEXT", "PATTRN", 0);
-          }
+            seq.mute_mode = 1;
           else if (x == 3)
-          {
-            if (seq.mute_mode == 2)
-              draw_button_on_grid(2 + x * 14, 4, "SONG", "STEP", 1);
-            else
-              draw_button_on_grid(2 + x * 14, 4, "SONG", "STEP", 0);
-          }
+            seq.mute_mode = 2;
+
+          if (seq.mute_mode == 0)
+            TouchButton::drawButton(1 * spacerx, 35, "REAL", "TIME", TouchButton::BUTTON_ACTIVE);
+          else
+            TouchButton::drawButton(1 * spacerx, 35, "REAL", "TIME", TouchButton::BUTTON_NORMAL);
+          if (seq.mute_mode == 1)
+            TouchButton::drawButton(2 * spacerx, 35, "NEXT", "PATTRN", TouchButton::BUTTON_ACTIVE);
+          else
+            TouchButton::drawButton(2 * spacerx, 35, "NEXT", "PATTRN", TouchButton::BUTTON_NORMAL);
+          if (seq.mute_mode == 2)
+            TouchButton::drawButton(3 * spacerx, 35, "SONG", "STEP", TouchButton::BUTTON_ACTIVE);
+          else
+            TouchButton::drawButton(3 * spacerx, 35, "SONG", "STEP", TouchButton::BUTTON_NORMAL);
         }
       }
     }
   }
+#if defined APC
+  apc_mute_matrix();
+#endif
 }
 
 FLASHMEM void handle_touchscreen_arpeggio()
 {
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
-    if (check_button_on_grid(2, 16))
+    if (check_button_on_grid(2, 23))
     {
       if (seq.running)
         handleStop();
@@ -1159,167 +792,140 @@ FLASHMEM void handle_touchscreen_arpeggio()
 
 FLASHMEM void handle_touchscreen_braids()
 {
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
     seq.cycle_touch_element = 1;
-    if (ts.update_virtual_keyboard_octave == false && seq.cycle_touch_element == 1)
-    {
-      touch_check_all_keyboard_buttons();
-    }
-    if (ts.p.x > 1 && ts.p.y > VIRT_KEYB_YPOS && seq.cycle_touch_element == 1)
-    {
-      virtual_keyboard_key_on();
-    }
   }
-  if (touch.touched() == false)
-  {
-    if (ts.update_virtual_keyboard_octave && seq.cycle_touch_element == 1)
-    {
-      print_virtual_keyboard_octave();
-      ts.update_virtual_keyboard_octave = false;
-    }
+  if (seq.cycle_touch_element == 1) {
+    handleTouchVirtualKeyboard();
   }
-  virtual_keyboard_update_all_key_states();
 }
 
 FLASHMEM void draw_menu_ui_icons()
 {
-  draw_button_on_grid(2, 18, "DEXED", "VOICE", 0);
-  draw_button_on_grid(13, 18, "SONG", "EDIT", 0);
-  draw_button_on_grid(24, 18, "PATT", "EDIT", 0);
+  TouchButton::drawButton(GRID.X[0], GRID.Y[3], "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SONG", "EDITOR", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[3], "PATT", "EDITOR", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[3], "LIVE", "SEQ", TouchButton::BUTTON_NORMAL);
+
   if (seq.running)
-    draw_button_on_grid(45, 18, "SEQ.", "STOP", 2);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
   else
-    draw_button_on_grid(45, 18, "SEQ.", "START", 1);
-  draw_button_on_grid(13, 25, "LOAD", "PERF", 0);
-  draw_button_on_grid(24, 25, "SAVE", "PERF", 0);
-  if (multiband_active)
-    draw_button_on_grid(35, 25, "MULTI", "BAND", 2);
-  else
-    draw_button_on_grid(35, 25, "MULTI", "BAND", 0);
-  draw_button_on_grid(45, 25, "MAIN", "MIX", 0);
-  draw_button_on_grid(45, 11, "", "", 99); // print keyboard icon
+    TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
+
+  TouchButton::drawButton(GRID.X[2], GRID.Y[5], "LOAD", "PERF", TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[5], "SAVE", "PERF", TouchButton::BUTTON_NORMAL);
+
+  TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[5], GRID.Y[5], "MAIN", "MIXER", TouchButton::BUTTON_NORMAL);
+
+  TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
 }
 
 FLASHMEM void handle_touchscreen_menu()
 {
-  if (ts.touch_ui_drawn_in_menu == false)
+  if ((ts.keyb_in_menu_activated == false) && TouchButton::isPressed(GRID.X[4], GRID.Y[5]))
   {
-    if (ts.keyb_in_menu_activated)
-    {
-      display.console = true;
-      display.fillRect(0, VIRT_KEYB_YPOS - 38, DISPLAY_WIDTH, DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 38, COLOR_BACKGROUND);
-      display.console = false;
-      virtual_keyboard();
-      virtual_keyboard_print_buttons();
-      virtual_keyboard_print_current_instrument();
-      draw_button_on_grid(45, 11, "KEYB", "OFF", 0);
-    }
-    else
-    {
-      draw_menu_ui_icons();
-    }
-    ts.touch_ui_drawn_in_menu = true;
-  }
-  if (touch.touched())
-  {
-    get_scaled_touch_point();
+    multiband_active = !multiband_active;
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
 
-    if (check_button_on_grid(45, 11))
+    mb_set_mutes();
+    mb_set_master();
+    mb_set_compressor();
+  }
+
+  if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) // only when not in UI_func_volume
+  {
+    if (ts.touch_ui_drawn_in_menu == false)
     {
-      display.console = true;
-      display.fillRect(0, VIRT_KEYB_YPOS - 38, DISPLAY_WIDTH, DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 38, COLOR_BACKGROUND);
-      display.console = false;
-      ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
       if (ts.keyb_in_menu_activated)
       {
-        virtual_keyboard();
-        virtual_keyboard_print_buttons();
-        virtual_keyboard_print_current_instrument();
-        draw_button_on_grid(45, 11, "KEYB", "OFF", 0);
+        drawVirtualKeyboard();
+        TouchButton::drawButton(GRID.X[5], GRID.Y[2], "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
       }
       else
       {
         draw_menu_ui_icons();
       }
+      ts.touch_ui_drawn_in_menu = true;
+    }
+
+    if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
+    {
+      display.console = true;
+      display.fillRect(0, GRID.Y[3], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[3], COLOR_BACKGROUND);
+      display.console = false;
+      ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
+      if (ts.keyb_in_menu_activated)
+      {
+        drawVirtualKeyboard();
+        TouchButton::drawButton(GRID.X[5], GRID.Y[2], "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
+      }
+      else
+      {
+        draw_menu_ui_icons();
+        if (LCDML.MENU_getLayer() > last_menu_depth)
+        {
+          draw_back_touchbutton();
+        }
+      }
     }
     if (ts.keyb_in_menu_activated == false)
     {
-      if (check_button_on_grid(2, 18))
+      if (TouchButton::isPressed(GRID.X[0], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_voice_select);
       }
-      else if (check_button_on_grid(13, 18))
+      else if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_song);
       }
-      else if (check_button_on_grid(24, 18))
+      else if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
       }
-      else if (check_button_on_grid(45, 18))
+      else if (TouchButton::isPressed(GRID.X[3], GRID.Y[3]))
+      {
+        LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
+      }
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3]))
       {
         if (seq.running)
         {
           handleStop();
-          draw_button_on_grid(45, 18, "SEQ.", "START", 1);
         }
         else
         {
           handleStart();
-          draw_button_on_grid(45, 18, "SEQ.", "STOP", 2);
         }
       }
-      else if (check_button_on_grid(13, 25))
+      else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5]))
       {
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         LCDML.OTHER_jumpToFunc(UI_func_load_performance);
       }
-      else if (check_button_on_grid(24, 25))
+      else if (TouchButton::isPressed(GRID.X[3], GRID.Y[5]))
       {
         display.setTextSize(2);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         LCDML.OTHER_jumpToFunc(UI_func_save_performance);
       }
-      else if (check_button_on_grid(45, 25))
+      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
       {
         LCDML.OTHER_jumpToFunc(UI_func_mixer);
       }
-      else if (check_button_on_grid(35, 25))
+      else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]))// back button
       {
-        multiband_active = !multiband_active;
-        if (multiband_active)
-          draw_button_on_grid(35, 25, "MULTI", "BAND", 2);
-        else
-          draw_button_on_grid(35, 25, "MULTI", "BAND", 0);
-        mb_set_mutes();
-        mb_set_master();
-        mb_set_compressor();
+        LCDML.BT_quit();
       }
     }
 
-    if (ts.update_virtual_keyboard_octave == false && ts.keyb_in_menu_activated)
-    {
-      touch_check_all_keyboard_buttons();
-    }
-    if (ts.p.x > 1 && ts.p.y > VIRT_KEYB_YPOS && ts.keyb_in_menu_activated)
-    {
-      virtual_keyboard_key_on();
-    }
     ts.touch_ui_drawn_in_menu = true;
   }
-  if (touch.touched() == false)
-  {
-    if (ts.update_virtual_keyboard_octave && ts.keyb_in_menu_activated)
-    {
-      print_virtual_keyboard_octave();
-      ts.update_virtual_keyboard_octave = false;
-    }
+  if (ts.keyb_in_menu_activated) {
+    handleTouchVirtualKeyboard();
   }
-  if (ts.keyb_in_menu_activated)
-    virtual_keyboard_update_all_key_states();
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
@@ -1332,12 +938,15 @@ FLASHMEM void toggle_generic_active_function()
     generic_active_function = 0;
 }
 
+FLASHMEM void handle_touchscreen_mixer()
+{
+  draw_volmeters_mixer();
+}
+
 FLASHMEM void handle_touchscreen_multiband()
 {
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
-
     if (multiband_active)
     {
       if (check_button_on_grid(12, 8))
@@ -1415,73 +1024,144 @@ FLASHMEM void handle_touchscreen_multiband()
       }
     }
   }
-  if (touch.touched() == false)
-  {
-    ;
-  }
-  display.setTextSize(1);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  if (scope.scope_delay % 60 == 0)
-  {
-
-    float l, r;
-    l = mb_before_l.read();
-    r = mb_before_r.read();
-    draw_volmeter(CHAR_width_small * 1, 228, 0, l);
-    draw_volmeter(CHAR_width_small * 5, 228, 1, r);
-
-    if (multiband_active)
-    {
-      draw_volmeter(DISPLAY_WIDTH - CHAR_width_small * 8 + 2, 228, 2, mb_after_l.read());
-      draw_volmeter(DISPLAY_WIDTH - CHAR_width_small * 4 + 2, 228, 3, mb_after_r.read());
-    }
-    else
-    {
-      draw_volmeter(DISPLAY_WIDTH - CHAR_width_small * 8 + 2, 228, 2, l);
-      draw_volmeter(DISPLAY_WIDTH - CHAR_width_small * 4 + 2, 228, 3, r);
-    }
-  }
-  display.setTextSize(2);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  draw_volmeters_multiband_compressor();
 }
 
 extern int temp_int;
+extern uint8_t num_slices[2];
+extern void draw_waveform_sample_editor(uint8_t sliceno);
+extern void fill_slices();
+extern void clear_slices();
+extern bool slices_autoalign;
+extern  uint16_t slices_scrollspeed;
+extern uint8_t selected_slice_sample[2];
+extern void print_sliced_status();
+extern void check_and_print_sliced_message();
+
+FLASHMEM void assign_free_slices_or_increment()
+{
+  if (num_slices[0] == 0 && selected_slice_sample[0] == 99)
+  {
+    num_slices[0] = 1;
+    selected_slice_sample[0] = temp_int; // set sliced sample
+    draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+  }
+  else if (num_slices[1] == 0 && selected_slice_sample[1] == 99 && selected_slice_sample[0] != 99 && selected_slice_sample[0] != temp_int)
+  {
+    num_slices[1] = 1;
+    selected_slice_sample[1] = temp_int; // set sliced sample
+    draw_button_on_grid(45, 23, "PLAY", "SLC", 0);
+  }
+  else if (selected_slice_sample[0] == temp_int && selected_slice_sample[0] != 99)
+  {
+    num_slices[0] = num_slices[0] * 2;
+    if (num_slices[0] > 16)
+    {
+      clear_slices();
+      num_slices[0] = 0;
+      selected_slice_sample[0] = 99; // clear selected sliced sample 1
+      draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+      //generic_temp_select_menu = 6;
+      display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+    }
+  }
+  else if (selected_slice_sample[1] == temp_int && selected_slice_sample[1] != 99)
+  {
+    num_slices[1] = num_slices[1] * 2;
+    if (num_slices[1] > 16)
+    {
+      clear_slices();
+      num_slices[1] = 0;
+      selected_slice_sample[1] = 99; // clear selected sliced sample 2
+      draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 0);
+      //generic_temp_select_menu = 6;
+      display.fillRect(CHAR_width_small * 26, 4 * CHAR_height_small - 2, 160, 39, COLOR_BACKGROUND);  //slices + scrollbar
+    }
+  }
+  fill_slices();
+  print_sliced_status();
+  draw_waveform_sample_editor(99);
+  check_and_print_sliced_message();
+}
+
+FLASHMEM void draw_loop_buttons()
+{
+  if (fm.sample_source == 2 || fm.sample_source == 3)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 1 + loop_start_button);
+    draw_button_on_grid(9, 23, "LOOP", "END", 1 + loop_end_button);
+  }
+  else  if (fm.sample_source == 4)
+  {
+    draw_button_on_grid(1, 23, "LOOP", "START", 0);
+    draw_button_on_grid(9, 23, "LOOP", "END", 0);
+  }
+}
+
+extern void print_loop_data();
 
 FLASHMEM void handle_touchscreen_sample_editor()
 {
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
-
-    if (check_button_on_grid(45, 23) && fm.sample_preview_playing == false)
-    {
-      draw_button_on_grid(45, 23, "PLAY", "SAMPLE", 2);
-
-      if (fm.sample_source == 1) // FLASH
-      {
-        char filename[26];
-        uint32_t filesize;
-        SerialFlash.opendir();
-        if (temp_int > 0)
-        {
-          for (int f = 0; f < temp_int; f++)
-          {
-            if (SerialFlash.readdir(filename, sizeof(filename), filesize))
-              ;
-            else
-              break;
-          }
-        }
-
-        fm.sample_screen_position_x = 0;
-        fm.sample_preview_playing = true;
-        playWAVFile(filename);
-      }
+    if (check_button_on_grid(45, 23)) {
+      previewWavSampleEditor();
     }
-  }
-  if (touch.touched() == false)
-  {
-    ;
+
+    if (check_button_on_grid(1, 23) && fm.sample_source > 1 && fm.sample_source < 4) //loop start
+    {
+      // draw_button_on_grid(1, 23, "LOOP", "START", 0);
+      if (loop_start_button == false) {
+        loop_start_button = true;
+        loop_end_button = false;
+        seq.edit_state = 1;
+        generic_temp_select_menu = 3;
+      }
+      else {
+        loop_start_button = false;
+        seq.edit_state = 0;
+      }
+      draw_loop_buttons();
+      print_loop_data();
+
+    }
+    else  if (check_button_on_grid(9, 23) && fm.sample_source > 1 && fm.sample_source < 4)  //loop end
+    {
+      draw_button_on_grid(9, 23, "LOOP", "END", 0);
+      if (loop_end_button == false) {
+        loop_end_button = true;
+        loop_start_button = false;
+        seq.edit_state = 1;
+        generic_temp_select_menu = 4;
+      }
+      else {
+        loop_end_button = false;
+        seq.edit_state = 0;
+      }
+      draw_loop_buttons();
+      print_loop_data();
+    }
+
+    if (check_button_on_grid(33, 23) && fm.sample_source == 4) // num slices
+    {
+      assign_free_slices_or_increment();
+    }
+
+    if (check_button_on_grid(25, 23) && fm.sample_source == 4) // auto align (slices only)
+    {
+      slices_autoalign = !slices_autoalign;
+      draw_button_on_grid(25, 23, "AUTO", "ALIGN", 1 + slices_autoalign);
+    }
+
+    if (check_button_on_grid(17, 23)) // scrolling speed
+    {
+      slices_scrollspeed = slices_scrollspeed * 2;
+      if (slices_scrollspeed > 512)
+        slices_scrollspeed = 1;
+
+      char buf[4] = { 0 };
+      draw_button_on_grid(17, 23, "SCRSPD", itoa(slices_scrollspeed, buf, 10), 1);
+    }
   }
 }
 
@@ -1489,9 +1169,8 @@ FLASHMEM void handle_touchscreen_settings_button_test()
 {
   static bool button_state = false;
 
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
     if (check_button_on_grid(42, 1))
     {
       draw_button_on_grid(42, 1, "TOUCH", button_state ? "OK" : "TEST", button_state ? 2 : 0);
@@ -1502,13 +1181,94 @@ FLASHMEM void handle_touchscreen_settings_button_test()
 
 FLASHMEM void handle_touchscreen_test_touchscreen()
 {
-  if (touch.touched())
+  if (numTouchPoints > 0)
   {
-    get_scaled_touch_point();
     if (check_button_on_grid(42, 1))
       sub_touchscreen_test_page_init();
     display.console = true;
     display.fillRect(ts.p.x, ts.p.y, 2, 2, COLOR_SYSTEXT);
     display.console = false;
+  }
+}
+
+FLASHMEM void handle_page_with_touch_back_button()
+{
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]) && seq.cycle_touch_element != 1) {// back button
+    LCDML.BT_quit();
+  }
+}
+
+uint8_t perf_load_options = 255;
+
+FLASHMEM void draw_all_performance_load_buttons()
+{
+  TouchButton::drawButton(GRID.X[0], GRID.Y[2], "DEXED", "", bitRead(perf_load_options, perf_dexed) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[2], "MSYNTH", "", bitRead(perf_load_options, perf_msynth) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[2], "EPIANO", "", bitRead(perf_load_options, perf_epiano) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[3], GRID.Y[2], "BRAIDS", "", bitRead(perf_load_options, perf_braids) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[4], GRID.Y[2], "CUST.", "SAMPLES", bitRead(perf_load_options, perf_samples) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[0], GRID.Y[3], "EFFECT", "SET.", bitRead(perf_load_options, perf_effects) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SEQ.", "DATA", bitRead(perf_load_options, perf_seq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+}
+
+FLASHMEM void handle_load_performance()
+{
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[4]))
+  {
+    perf_load_options = 0;
+    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "NONE", "", TouchButton::BUTTON_RED);
+    draw_all_performance_load_buttons();
+    delay(300);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "NONE", "", TouchButton::BUTTON_NORMAL);
+  }
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[4]))
+  {
+    perf_load_options = 255;
+
+    TouchButton::drawButton(GRID.X[5], GRID.Y[4], "ALL", "", TouchButton::BUTTON_RED);
+    draw_all_performance_load_buttons();
+    delay(300);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[4], "ALL", "", TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_dexed, !bitRead(perf_load_options, perf_dexed));
+    TouchButton::drawButton(GRID.X[0], GRID.Y[2], "DEXED", "", bitRead(perf_load_options, perf_dexed) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[1], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_msynth, !bitRead(perf_load_options, perf_msynth));
+    TouchButton::drawButton(GRID.X[1], GRID.Y[2], "MSYNTH", "", bitRead(perf_load_options, perf_msynth) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[2], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_epiano, !bitRead(perf_load_options, perf_epiano));
+    TouchButton::drawButton(GRID.X[2], GRID.Y[2], "EPIANO", "", bitRead(perf_load_options, perf_epiano) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[3], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_braids, !bitRead(perf_load_options, perf_braids));
+    TouchButton::drawButton(GRID.X[3], GRID.Y[2], "BRAIDS", "", bitRead(perf_load_options, perf_braids) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[2]))
+  {
+    bitWrite(perf_load_options, perf_samples, !bitRead(perf_load_options, perf_samples));
+    TouchButton::drawButton(GRID.X[4], GRID.Y[2], "CUST.", "SAMPLES", bitRead(perf_load_options, perf_samples) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[3]))
+  {
+    bitWrite(perf_load_options, perf_effects, !bitRead(perf_load_options, perf_effects));
+    TouchButton::drawButton(GRID.X[0], GRID.Y[3], "EFFECT", "SET.", bitRead(perf_load_options, perf_effects) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
+  {
+    bitWrite(perf_load_options, perf_seq, !bitRead(perf_load_options, perf_seq));
+    TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SEQ.", "DATA", bitRead(perf_load_options, perf_seq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+  if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
+  {
+    bitWrite(perf_load_options, perf_liveseq, !bitRead(perf_load_options, perf_liveseq));
+    TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
   }
 }

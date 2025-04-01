@@ -16,8 +16,12 @@
   MIT license, all text above must be included in any redistribution
  ****************************************************/
 
+#include "config.h"
 #include "ILI9341_t3n.h"
 #include <SPI.h>
+
+extern bool remote_active;
+extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 
 // 5x7 font
 PROGMEM const unsigned char font[] = {
@@ -34,19 +38,19 @@ PROGMEM const unsigned char font[] = {
     0xFF, 0xE7, 0xDB, 0xE7, 0xFF, //
     0x30, 0x48, 0x3A, 0x06, 0x0E, //
     0x26, 0x29, 0x79, 0x29, 0x26, //
-    0x40, 0x7F, 0x05, 0x05, 0x07, //
-    0x40, 0x7F, 0x05, 0x25, 0x3F, //
-    0x5A, 0x3C, 0xE7, 0x3C, 0x5A, //
-    0x7F, 0x3E, 0x1C, 0x1C, 0x08, //
-    0x08, 0x1C, 0x1C, 0x3E, 0x7F, //
-    0x14, 0x22, 0x7F, 0x22, 0x14, //
-    0x5F, 0x5F, 0x00, 0x5F, 0x5F, //
-    0x06, 0x09, 0x7F, 0x01, 0x7F, //
-    0x00, 0x66, 0x89, 0x95, 0x6A, //
-    0x60, 0x60, 0x60, 0x60, 0x60, //
-    0x94, 0xA2, 0xFF, 0xA2, 0x94, //
-    0x08, 0x04, 0x7E, 0x04, 0x08, //
-    0x10, 0x20, 0x7E, 0x20, 0x10, //
+    0x40, 0x30, 0x0c, 0x02, 0x7F, // BRAIDS Wave 1 SAW  // 0x39, 0x55, 0x55, 0x55, 0x59,  // note: grid is vertical slices
+    0x10, 0x08, 0x04, 0x1e, 0x00, // BRAIDS Centered SAW
+    0x40, 0x20, 0x10, 0x08, 0x7C, // BRAIDS BABY SAW
+    0x60, 0x1C, 0x03, 0x1C, 0x60, // BRAIDS TRIANGLE
+    0x7f, 0x01, 0x01, 0x01, 0x7f, // BRAIDS SQUARE //160
+    0x78, 0x08, 0x08, 0x08, 0x78, // BRAIDS BABY SQUARE
+    0x40, 0x40, 0x7F, 0x01, 0x7F, // BRAIDS PULSE  0x7D, 0x12, 0x11, 0x12, 0x7D A-umlaut
+    0xF0, 0x28, 0x25, 0x28, 0xF0,
+    0x3e, 0x08, 0x00, 0x08, 0x00, // Sample Play Mode : Trigger Mode. part1 //144
+    0x08, 0x00, 0x3E, 0x1C, 0x08, // Sample Play Mode : Trigger Mode. part2 //145
+    0x3e, 0x08, 0x08, 0x08, 0x08, // Sample Play Mode : Hold Mode part1
+    0x08, 0x08, 0x08, 0x08, 0x3e, // Sample Play Mode : Hold Mode part2    0x10, 0x20, 0x7E, 0x20, 0x10, //
+    0x06, 0x0F, 0x09, 0x0F, 0x06, //
     0x08, 0x08, 0x2A, 0x1C, 0x08, //
     0x08, 0x1C, 0x2A, 0x08, 0x08, //
     0x1E, 0x10, 0x10, 0x10, 0x10, //
@@ -149,143 +153,48 @@ PROGMEM const unsigned char font[] = {
     0x00, 0x41, 0x36, 0x08, 0x00, // }
     0x08, 0x08, 0x2A, 0x1C, 0x08, // ->
     0x08, 0x1C, 0x2A, 0x08, 0x08, // <-
-    0x1E, 0xA1, 0xA1, 0x61, 0x12,
-    0x3A, 0x40, 0x40, 0x20, 0x7A,
-    0x38, 0x54, 0x54, 0x55, 0x59,
-    0x21, 0x55, 0x55, 0x79, 0x41,
-    0x22, 0x54, 0x54, 0x78, 0x42, // a-umlaut
-    0x21, 0x55, 0x54, 0x78, 0x40,
-    0x20, 0x54, 0x55, 0x79, 0x40,
-    0x0C, 0x1E, 0x52, 0x72, 0x12,
-    0x40, 0x30, 0x0c, 0x02, 0x7F, // BRAIDS Wave 1 SAW  // 0x39, 0x55, 0x55, 0x55, 0x59,  // note: grid is vertical slices
-    0x10, 0x08, 0x04, 0x1e, 0x00, // BRAIDS Centered SAW
-    0x40, 0x20, 0x10, 0x08, 0x7C, // BRAIDS BABY SAW
-    0x60, 0x1C, 0x03, 0x1C, 0x60, // BRAIDS TRIANGLE
-    0x7f, 0x01, 0x01, 0x01, 0x7f, // BRAIDS SQUARE //160
-    0x78, 0x08, 0x08, 0x08, 0x78, // BRAIDS BABY SQUARE
-    0x40, 0x40, 0x7F, 0x01, 0x7F, // BRAIDS PULSE  0x7D, 0x12, 0x11, 0x12, 0x7D A-umlaut
-    0xF0, 0x28, 0x25, 0x28, 0xF0,
-    0x3e, 0x08, 0x00, 0x08, 0x00, // Sample Play Mode : Trigger Mode. part1 //144
-    0x08, 0x00, 0x3E, 0x1C, 0x08, // Sample Play Mode : Trigger Mode. part2 //145
-    0x3e, 0x08, 0x08, 0x08, 0x08, // Sample Play Mode : Hold Mode part1
-    0x08, 0x08, 0x08, 0x08, 0x3e, // Sample Play Mode : Hold Mode part2
-    0x3A, 0x44, 0x44, 0x44, 0x3A, // o-umlaut
-    0x32, 0x4A, 0x48, 0x48, 0x30,
-    0x3A, 0x41, 0x41, 0x21, 0x7A, // 150
-    0x3A, 0x42, 0x40, 0x20, 0x78,
-    0x00, 0x9D, 0xA0, 0xA0, 0x7D,
-    0x3D, 0x42, 0x42, 0x42, 0x3D, // O-umlaut
-    0x3D, 0x40, 0x40, 0x40, 0x3D,
-    0x3C, 0x24, 0xFF, 0x24, 0x24,
-    0x48, 0x7E, 0x49, 0x43, 0x66,
-    0x2B, 0x2F, 0xFC, 0x2F, 0x2B,
-    0xFF, 0x09, 0x29, 0xF6, 0x20,
-    0xC0, 0x88, 0x7E, 0x09, 0x03,
-    0x20, 0x54, 0x54, 0x79, 0x41, // 160
-    0x00, 0x00, 0x44, 0x7D, 0x41,
-    0x30, 0x48, 0x48, 0x4A, 0x32,
-    0x38, 0x40, 0x40, 0x22, 0x7A,
-    0x00, 0x7A, 0x0A, 0x0A, 0x72,
-    0x7D, 0x0D, 0x19, 0x31, 0x7D,
-    0x26, 0x29, 0x29, 0x2F, 0x28,
-    0x26, 0x29, 0x29, 0x29, 0x26,
-    0x30, 0x48, 0x4D, 0x40, 0x20,
-    0x38, 0x08, 0x08, 0x08, 0x08,
-    0x08, 0x08, 0x08, 0x08, 0x38, // 170
-    0x2F, 0x10, 0xC8, 0xAC, 0xBA,
-    0x2F, 0x10, 0x28, 0x34, 0xFA,
-    0x00, 0x00, 0x7B, 0x00, 0x00,
-    0x08, 0x14, 0x2A, 0x14, 0x22,
-    0x22, 0x14, 0x2A, 0x14, 0x08,
-    0x55, 0x00, 0x55, 0x00, 0x55, // #176 (25% block) missing in old // code
-    0xAA, 0x55, 0xAA, 0x55, 0xAA, // 50% block
-    0xFF, 0x55, 0xFF, 0x55, 0xFF, // 75% block
-    0x00, 0x00, 0x00, 0xFF, 0x00,
-    0x10, 0x10, 0x10, 0xFF, 0x00,
-    0x14, 0x14, 0x14, 0xFF, 0x00,
-    0x10, 0x10, 0xFF, 0x00, 0xFF,
-    0x10, 0x10, 0xF0, 0x10, 0xF0,
-    0x14, 0x14, 0x14, 0xFC, 0x00,
-    0x14, 0x14, 0xF7, 0x00, 0xFF,
-    0x00, 0x00, 0xFF, 0x00, 0xFF,
-    0x14, 0x14, 0xF4, 0x04, 0xFC,
-    0x14, 0x14, 0x17, 0x10, 0x1F,
-    0x10, 0x10, 0x1F, 0x10, 0x1F,
-    0x14, 0x14, 0x14, 0x1F, 0x00,
-    0x10, 0x10, 0x10, 0xF0, 0x00,
-    0x00, 0x00, 0x00, 0x1F, 0x10,
-    0x10, 0x10, 0x10, 0x1F, 0x10,
-    0x10, 0x10, 0x10, 0xF0, 0x10,
-    0x00, 0x00, 0x00, 0xFF, 0x10,
-    0x10, 0x10, 0x10, 0x10, 0x10,
-    0x10, 0x10, 0x10, 0xFF, 0x10,
-    0x00, 0x00, 0x00, 0xFF, 0x14,
-    0x00, 0x00, 0xFF, 0x00, 0xFF,
-    0x00, 0x00, 0x1F, 0x10, 0x17,
-    0x00, 0x00, 0xFC, 0x04, 0xF4,
-    0x14, 0x14, 0x17, 0x10, 0x17,
-    0x14, 0x14, 0xF4, 0x04, 0xF4,
-    0x00, 0x00, 0xFF, 0x00, 0xF7,
-    0x14, 0x14, 0x14, 0x14, 0x14,
-    0x14, 0x14, 0xF7, 0x00, 0xF7,
-    0x14, 0x14, 0x14, 0x17, 0x14,
-    0x10, 0x10, 0x1F, 0x10, 0x1F,
-    0x14, 0x14, 0x14, 0xF4, 0x14,
-    0x10, 0x10, 0xF0, 0x10, 0xF0,
-    0x00, 0x00, 0x1F, 0x10, 0x1F,
-    0x00, 0x00, 0x00, 0x1F, 0x14,
-    0x00, 0x00, 0x00, 0xFC, 0x14,
-    0x00, 0x00, 0xF0, 0x10, 0xF0,
-    0x10, 0x10, 0xFF, 0x10, 0xFF,
-    0x14, 0x14, 0x14, 0xFF, 0x14,
-    0x10, 0x10, 0x10, 0x1F, 0x00,
-    0x00, 0x00, 0x00, 0xF0, 0x10,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xF0, 0xF0, 0xF0, 0xF0, 0xF0,
-    0xFF, 0xFF, 0xFF, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0xFF, 0xFF,
-    0x0F, 0x0F, 0x0F, 0x0F, 0x0F,
-    0x38, 0x44, 0x44, 0x38, 0x44,
-    0xFC, 0x4A, 0x4A, 0x4A, 0x34, // sharp-s or beta
-    0x7E, 0x02, 0x02, 0x06, 0x06,
-    0x02, 0x7E, 0x02, 0x7E, 0x02,
-    0x63, 0x55, 0x49, 0x41, 0x63,
-    0x38, 0x44, 0x44, 0x3C, 0x04,
-    0x40, 0x7E, 0x20, 0x1E, 0x20,
-    0x06, 0x02, 0x7E, 0x02, 0x02,
-    0x99, 0xA5, 0xE7, 0xA5, 0x99,
-    0x1C, 0x2A, 0x49, 0x2A, 0x1C,
-    0x4C, 0x72, 0x01, 0x72, 0x4C,
-    0x30, 0x4A, 0x4D, 0x4D, 0x30,
-    0x30, 0x48, 0x78, 0x48, 0x30,
-    0xBC, 0x62, 0x5A, 0x46, 0x3D,
-    0x3E, 0x49, 0x49, 0x49, 0x00,
-    0x7E, 0x01, 0x01, 0x01, 0x7E,
-    0x2A, 0x2A, 0x2A, 0x2A, 0x2A,
-    0x44, 0x44, 0x5F, 0x44, 0x44,
-    0x40, 0x51, 0x4A, 0x44, 0x40,
-    0x40, 0x44, 0x4A, 0x51, 0x40,
-    0x00, 0x00, 0xFF, 0x01, 0x03,
-    0xE0, 0x80, 0xFF, 0x00, 0x00,
-    0x08, 0x08, 0x6B, 0x6B, 0x08,
-    0x36, 0x12, 0x36, 0x24, 0x36,
-    0x06, 0x0F, 0x09, 0x0F, 0x06,
-    0x00, 0x00, 0x18, 0x18, 0x00,
-    0x00, 0x00, 0x10, 0x10, 0x00,
-    0x30, 0x40, 0xFF, 0x01, 0x01,
-    0x00, 0x1F, 0x01, 0x01, 0x1E,
-    0x00, 0x19, 0x1D, 0x17, 0x12,
-    0x00, 0x3C, 0x3C, 0x3C, 0x3C,
-    0x00, 0x00, 0x00, 0x00, 0x00 // #255 NBSP
 };
+
+
+#if defined APC
+extern void apc(uint8_t a, uint8_t b, uint8_t c);
+// Draw a character on apc
+void apc_drawChar(int xoff, unsigned char c)
+{
+  uint8_t x, y;
+
+  for (y = 0; y < 8; y++)
+  {
+    for (x = 0; x < 6; x++)
+    {
+      if (x + xoff >= 0 && x + xoff < 8 && x < 5)
+      {
+        if (bitRead(font[c * 5 + x], y) == 1)
+
+          apc((64 - 8 - 8 * y + x + xoff), 5, 6);
+        else
+          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+      }
+      else
+        if (x + xoff >= 0 && x + xoff < 8 && x == 5)
+          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+    }
+  }
+}
+#endif
+
+
+// MIDI sysex render header for remote
+const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
 
 // Teensy 3.1 can only generate 30 MHz SPI when running at 120 MHz (overclock)
 
 // Constructor when using hardware ILI9241_KINETISK__pspi->  Faster, but must
 // use SPI pins
 // specific to each board type (e.g. 11,13 for Uno, 51,52 for Mega, etc.)
+
 ILI9341_t3n::ILI9341_t3n(uint8_t cs, uint8_t dc, uint8_t rst, uint8_t mosi,
-                         uint8_t sclk, uint8_t miso)
+  uint8_t sclk, uint8_t miso)
 {
   _cs = cs;
   _dc = dc;
@@ -307,24 +216,29 @@ ILI9341_t3n::ILI9341_t3n(uint8_t cs, uint8_t dc, uint8_t rst, uint8_t mosi,
   // Added to see how much impact actually using non hardware CS pin might be
   _cspinmask = 0;
   _csport = NULL;
-}
+};
 
 //=======================================================================
 
 void ILI9341_t3n::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1,
-                                uint16_t y1)
+  uint16_t y1)
 {
+
   beginSPITransaction(_SPI_CLOCK);
   setAddr(x0, y0, x1, y1);
   writecommand_last(ILI9341_RAMWR); // write to RAM
   endSPITransaction();
+
 }
+
 
 void ILI9341_t3n::pushColor(uint16_t color)
 {
+
   beginSPITransaction(_SPI_CLOCK);
   writedata16_last(color);
   endSPITransaction();
+
 }
 
 void ILI9341_t3n::drawPixel(int16_t x, int16_t y, uint16_t color)
@@ -334,21 +248,22 @@ void ILI9341_t3n::drawPixel(int16_t x, int16_t y, uint16_t color)
   if ((x < _displayclipx1) || (x >= _displayclipx2) || (y < _displayclipy1) || (y >= _displayclipy2))
     return;
 
-#ifdef REMOTE_CONSOLE
-  if (console)
+  if (console && remote_active)
   {
-    Serial.write(99);
-    Serial.write(90);
-    Serial.write(highByte(x));
-    Serial.write(lowByte(x));
-    Serial.write(highByte(y));
-    Serial.write(lowByte(y));
-    Serial.write(highByte(color));
-    Serial.write(lowByte(color));
-    Serial.write(88);
-    // delayMicroseconds(60);  //necessary to avoid random pixels in remote console
+    static uint8_t sysexDrawPixel[9] = {
+      0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0 // could be a unknown color
+    };
+
+    fillSysexData(sysexDrawPixel, 2, x, y);
+    uint8_t colors[4];
+    uint8_t nbBytes = fillSysexDataColor(colors, 1, color);
+    sysexDrawPixel[4] = nbBytes;
+    memcpy(sysexDrawPixel + 4 + 1, colors, nbBytes);
+
+    sendSysEx(90, 4 + 1 + nbBytes, sysexDrawPixel, true);
+    delayMicroseconds(40);
   }
-#endif
 
   beginSPITransaction(_SPI_CLOCK);
   setAddr(x, y, x, y);
@@ -358,7 +273,7 @@ void ILI9341_t3n::drawPixel(int16_t x, int16_t y, uint16_t color)
 }
 
 void ILI9341_t3n::drawFastVLine(int16_t x, int16_t y, int16_t h,
-                                uint16_t color)
+  uint16_t color)
 {
   x += _originx;
   y += _originy;
@@ -387,7 +302,7 @@ void ILI9341_t3n::drawFastVLine(int16_t x, int16_t y, int16_t h,
 }
 
 void ILI9341_t3n::drawFastHLine(int16_t x, int16_t y, int16_t w,
-                                uint16_t color)
+  uint16_t color)
 {
   x += _originx;
   y += _originy;
@@ -418,14 +333,13 @@ void ILI9341_t3n::drawFastHLine(int16_t x, int16_t y, int16_t w,
 
 void ILI9341_t3n::fillScreen(uint16_t color)
 {
-#ifdef REMOTE_CONSOLE
-  console = true;
-#endif
+  if (remote_active)
+    console = true;
   fillRect(0, 0, _width, _height, color);
 }
 
 void ILI9341_t3n::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-                           uint16_t color)
+  uint16_t color)
 {
   x += _originx;
   y += _originy;
@@ -450,36 +364,20 @@ void ILI9341_t3n::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
   if ((y + h - 1) >= _displayclipy2)
     h = _displayclipy2 - y;
 
-  if (console)
+  if (console && remote_active)
   {
-#ifdef REMOTE_CONSOLE
-    // remote console
-    if (w != DISPLAY_WIDTH && h != DISPLAY_HEIGHT)
-    {
-      Serial.write(99);
-      Serial.write(94);
-      Serial.write(highByte(x));
-      Serial.write(lowByte(x));
-      Serial.write(highByte(y));
-      Serial.write(lowByte(y));
-      Serial.write(highByte(w));
-      Serial.write(lowByte(w));
-      Serial.write(highByte(h));
-      Serial.write(lowByte(h));
-      Serial.write(highByte(color));
-      Serial.write(lowByte(color));
-      Serial.write(88);
-      // delayMicroseconds(50);  //necessary to avoid random pixels in remote console
-    }
-    else // is fillscreen
-    {
-      Serial.write(99);
-      Serial.write(93);
-      Serial.write(highByte(color));
-      Serial.write(lowByte(color));
-      Serial.write(88);
-    }
-#endif
+    static uint8_t sysexFillRect[13] = {
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0 // could be unknown color
+    };
+
+    fillSysexData(sysexFillRect, 4, x, y, w, h);
+    uint8_t colors[4];
+    uint8_t nbBytes = fillSysexDataColor(colors, 1, color);
+    sysexFillRect[8] = nbBytes;
+    memcpy(sysexFillRect + 8 + 1, colors, nbBytes);
+
+    sendSysEx(94, 8 + 1 + nbBytes, sysexFillRect, true);
   }
 
   // TODO: this can result in a very long transaction time
@@ -495,15 +393,39 @@ void ILI9341_t3n::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
       writedata16_cont(color);
     }
     writedata16_last(color);
-#if 0
-    if (y > 1 && (y & 1)) {
+
+    if (y > 1 && (y & 1))
+    {
       endSPITransaction();
       beginSPITransaction(_SPI_CLOCK);
     }
-#endif
   }
   endSPITransaction();
 }
+
+// draw rectangle with rainbow gradient
+FLASHMEM void ILI9341_t3n::fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h)
+{
+  int z = 0;
+  do
+  {
+    uint16_t color = ColorHSV((100 - h + z), 200, 200);
+    drawFastHLine(x, y - h + z, w, color);
+    z++;
+  } while (z < h - last_h);
+
+  // issue FILL_RECT_RAINBOW command in MicroDexed-WebRemote.
+  if (console && remote_active)
+  {
+    static uint8_t sysex[8] = {
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    };
+
+    fillSysexData(sysex, 4, x, y - h, w, h);
+    sendSysEx(95, 8, sysex, true);
+  }
+}
+
 
 #define MADCTL_MY 0x80
 #define MADCTL_MX 0x40
@@ -512,6 +434,7 @@ void ILI9341_t3n::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
 #define MADCTL_RGB 0x00
 #define MADCTL_BGR 0x08
 #define MADCTL_MH 0x04
+
 
 FLASHMEM void ILI9341_t3n::setRotation(uint8_t m)
 {
@@ -556,6 +479,14 @@ void ILI9341_t3n::invertDisplay(boolean i)
   endSPITransaction();
 }
 
+void ILI9341_t3n::brightness(uint8_t value)
+{
+  beginSPITransaction(_SPI_CLOCK);
+  writecommand_cont(ILI9341_VMCTR2);
+  writedata8_last(value);
+  endSPITransaction();
+}
+
 ///============================================================================
 // writeRect1BPP - 	write 1 bit per pixel paletted bitmap
 //					bitmap data in array at pixels, 4 bits per
@@ -563,8 +494,8 @@ void ILI9341_t3n::invertDisplay(boolean i)
 //					color palette data in array at palette
 //					width must be at least 8 pixels
 void ILI9341_t3n::writeRect1BPP(int16_t x, int16_t y, int16_t w, int16_t h,
-                                const uint8_t *pixels,
-                                const uint16_t *palette)
+  const uint8_t* pixels,
+  const uint16_t* palette)
 {
   // Simply call through our helper
   writeRectNBPP(x, y, w, h, 1, pixels, palette);
@@ -573,17 +504,18 @@ void ILI9341_t3n::writeRect1BPP(int16_t x, int16_t y, int16_t w, int16_t h,
 ///============================================================================
 // writeRectNBPP - 	write N(1, 2, 4, 8) bit per pixel paletted bitmap
 //					bitmap data in array at pixels
+
 void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
-                                uint8_t bits_per_pixel, const uint8_t *pixels,
-                                const uint16_t *palette)
+  uint8_t bits_per_pixel, const uint8_t* pixels,
+  const uint16_t* palette)
 {
   x += _originx;
   y += _originy;
   uint8_t pixels_per_byte = 8 / bits_per_pixel;
   uint16_t count_of_bytes_per_row =
-      (w + pixels_per_byte - 1) / pixels_per_byte; // Round up to handle non multiples
+    (w + pixels_per_byte - 1) / pixels_per_byte; // Round up to handle non multiples
   uint8_t row_shift_init =
-      8 - bits_per_pixel;                             // We shift down 6 bits by default
+    8 - bits_per_pixel;                             // We shift down 6 bits by default
   uint8_t pixel_bit_mask = (1 << bits_per_pixel) - 1; // get mask to use below
   // Rectangular clipping
 
@@ -621,7 +553,7 @@ void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
     uint8_t x_clip_left_bytes_incr = x_clip_left / pixels_per_byte;
     pixels += x_clip_left_bytes_incr;
     row_shift_init =
-        8 - (x_clip_left - (x_clip_left_bytes_incr * pixels_per_byte) + 1) * bits_per_pixel;
+      8 - (x_clip_left - (x_clip_left_bytes_incr * pixels_per_byte) + 1) * bits_per_pixel;
   }
 
   if ((x + w - 1) >= _displayclipx2)
@@ -629,8 +561,8 @@ void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
     w = _displayclipx2 - x;
   }
 
-  const uint8_t *pixels_row_start =
-      pixels; // remember our starting position offset into row
+  const uint8_t* pixels_row_start =
+    pixels; // remember our starting position offset into row
 
   beginSPITransaction(_SPI_CLOCK);
   setAddr(x, y, x + w - 1, y + h - 1);
@@ -657,9 +589,10 @@ void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
   }
   writecommand_last(ILI9341_NOP);
   endSPITransaction();
+
 }
 
-static const uint8_t PROGMEM init_commands[] = {4, 0xEF, 0x03, 0x80, 0x02,
+static const uint8_t PROGMEM init_commands[] = { 4, 0xEF, 0x03, 0x80, 0x02,
                                                 4, 0xCF, 0x00, 0XC1, 0X30,
                                                 5, 0xED, 0x64, 0x03, 0X12, 0X81,
                                                 4, 0xE8, 0x85, 0x00, 0x78,
@@ -669,26 +602,34 @@ static const uint8_t PROGMEM init_commands[] = {4, 0xEF, 0x03, 0x80, 0x02,
                                                 2, ILI9341_PWCTR1, 0x23,       // Power control
                                                 2, ILI9341_PWCTR2, 0x10,       // Power control
                                                 3, ILI9341_VMCTR1, 0x3e, 0x28, // VCM control
-                                                2, ILI9341_VMCTR2, 0x86,       // VCM control2
-                                                2, ILI9341_MADCTL, 0x48,       // Memory Access Control
-                                                2, ILI9341_PIXFMT, 0x55,
-                                                3, ILI9341_FRMCTR1, 0x00, 0x18,
-                                                4, ILI9341_DFUNCTR, 0x08, 0x82, 0x27, // Display Function Control
-                                                2, 0xF2, 0x00,                        // Gamma Function Disable
-                                                2, ILI9341_GAMMASET, 0x01,            // Gamma curve selected
-                                                16, ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E,
-                                                0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00, // Set Gamma
-                                                16, ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31,
-                                                0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F, // Set Gamma
-                                                3, 0xb1, 0x00, 0x10,                            // FrameRate Control 119Hz
-                                                0};
+  //2, ILI9341_VMCTR2, 0x86,       // VCM control2 b7
+  2, ILI9341_VMCTR2, 0xb7,       // VCM control2 
+  2, ILI9341_MADCTL, 0x48,       // Memory Access Control
+  2, ILI9341_PIXFMT, 0x55,
+  3, ILI9341_FRMCTR1, 0x00, 0x18,
+  4, ILI9341_DFUNCTR, 0x08, 0x82, 0x27, // Display Function Control
+  2, 0xF2, 0x00,                        // Gamma Function Disable
+  2, ILI9341_GAMMASET, 0x01,            // Gamma curve selected
+  16, ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E,
+  0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00, // Set Gamma
+  16, ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31,
+  0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F, // Set Gamma
+  3, 0xb1, 0x00, 0x10,                            // FrameRate Control 119Hz
+  0 };
 
+#if defined GENERIC_DISPLAY
 FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
+#else
+FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
+#endif
 {
   // verify SPI pins are valid;
   // allow user to say use current ones...
   _SPI_CLOCK = spi_clock;           // #define ILI9341_SPICLOCK 30000000
+
+#if defined GENERIC_DISPLAY
   _SPI_CLOCK_READ = spi_clock_read; // #define ILI9341_SPICLOCK_READ 2000000
+#endif
 
   // LOG.printf_P(PSTR("_t3n::begin mosi:%d miso:%d SCLK:%d CS:%d DC:%d SPI clocks: %lu %lu\n"), _mosi, _miso, _sclk, _cs, _dc, _SPI_CLOCK, _SPI_CLOCK_READ);
   // LOG.flush();
@@ -697,16 +638,8 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
   {
     _pspi = &SPI;
     _spi_num = 0; // Which buss is this spi on?
-#ifdef KINETISK
-    _pkinetisk_spi = &KINETISK_SPI0; // Could hack our way to grab this from SPI
-    // object, but...
-    _fifo_full_test = (3 << 12);
-#elif defined(__IMXRT1052__) || defined(__IMXRT1062__) // Teensy 4.x
+
     _pimxrt_spi = &IMXRT_LPSPI4_S; // Could hack our way to grab this from SPI
-                                   // object, but...
-#else
-    _pkinetisl_spi = &KINETISL_SPI0;
-#endif
 
 #if defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__IMXRT1062__) || defined(__MKL26Z64__)
   }
@@ -714,43 +647,20 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
   {
     _pspi = &SPI1;
     _spi_num = 1; // Which buss is this spi on?
-#ifdef KINETISK
-    _pkinetisk_spi = &KINETISK_SPI1; // Could hack our way to grab this from SPI
-    // object, but...
-    _fifo_full_test = (0 << 12);
-#elif defined(__IMXRT1052__) || defined(__IMXRT1062__) // Teensy 4.x
     _pimxrt_spi = &IMXRT_LPSPI3_S; // Could hack our way to grab this from SPI
-                                   // object, but...
-#else
-    _pkinetisl_spi = &KINETISL_SPI1;
-#endif
 #if !defined(__MKL26Z64__)
   }
   else if (SPI2.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI2.pinIsMISO(_miso)) && SPI2.pinIsSCK(_sclk))
   {
     _pspi = &SPI2;
     _spi_num = 2; // Which buss is this spi on?
-#ifdef KINETISK
-    _pkinetisk_spi = &KINETISK_SPI2; // Could hack our way to grab this from SPI
-    // object, but...
-    _fifo_full_test = (0 << 12);
-#elif defined(__IMXRT1052__) || defined(__IMXRT1062__) // Teensy 4.x
     _pimxrt_spi = &IMXRT_LPSPI1_S; // Could hack our way to grab this from SPI
-                                   // object, but...
-#endif
 #endif
 #endif
   }
   else
   {
-#ifdef DEBUG
-    LOG.println(
-        "ILI9341_t3n: The IO pins on the constructor are not valid SPI pins");
 
-    LOG.printf_P(PSTR("    mosi:%d miso:%d SCLK:%d CS:%d DC:%d\n"), _mosi, _miso,
-                 _sclk, _cs, _dc);
-    LOG.flush();
-#endif
     return; // most likely will go bomb
   }
   // Make sure we have all of the proper SPI pins selected.
@@ -760,8 +670,8 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
     _pspi->setMISO(_miso);
 
   // Hack to get hold of the SPI Hardware information...
-  uint32_t *pa = (uint32_t *)((void *)_pspi);
-  _spi_hardware = (SPIClass::SPI_Hardware_t *)(void *)pa[1];
+  uint32_t* pa = (uint32_t*)((void*)_pspi);
+  _spi_hardware = (SPIClass::SPI_Hardware_t*)(void*)pa[1];
 
   _pspi->begin();
 
@@ -810,7 +720,7 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
   }
 
   beginSPITransaction(_SPI_CLOCK / 4);
-  const uint8_t *addr = init_commands;
+  const uint8_t* addr = init_commands;
   while (1)
   {
     uint8_t count = *addr++;
@@ -873,7 +783,7 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
 */
 /**************************************************************************/
 void ILI9341_t3n::drawCircle(int16_t x0, int16_t y0, int16_t r,
-                             uint16_t color)
+  uint16_t color)
 {
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
@@ -921,7 +831,7 @@ void ILI9341_t3n::drawCircle(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 void ILI9341_t3n::drawCircleHelper(int16_t x0, int16_t y0, int16_t r,
-                                   uint8_t cornername, uint16_t color)
+  uint8_t cornername, uint16_t color)
 {
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
@@ -973,30 +883,27 @@ void ILI9341_t3n::drawCircleHelper(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 void ILI9341_t3n::fillCircle(int16_t x0, int16_t y0, int16_t r,
-                             uint16_t color)
+  uint16_t color)
 {
+  if (remote_active)
+  {
+    static uint8_t sysexFillCircle[11] = {
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknow color
+    };
 
-#ifdef REMOTE_CONSOLE
-  // remote console
-  Serial.write(99);
-  Serial.write(97);
-  Serial.write(highByte(x0));
-  Serial.write(lowByte(x0));
-  Serial.write(highByte(y0));
-  Serial.write(lowByte(y0));
-  Serial.write(highByte(r));
-  Serial.write(lowByte(r));
-  Serial.write(highByte(color));
-  Serial.write(lowByte(color));
-  Serial.write(88);
-  console = false;
-#endif
+    fillSysexData(sysexFillCircle, 3, x0, y0, r);
+    uint8_t colors[4];
+    uint8_t nbBytes = fillSysexDataColor(colors, 1, color);
+    sysexFillCircle[6] = nbBytes;
+    memcpy(sysexFillCircle + 6 + 1, colors, nbBytes);
+
+    sendSysEx(97, 6 + 1 + nbBytes, sysexFillCircle, true);
+    console = false;
+  }
 
   drawFastVLine(x0, y0 - r, 2 * r + 1, color);
   fillCircleHelper(x0, y0, r, 3, 0, color);
-#ifdef REMOTE_CONSOLE
-  console = true;
-#endif
 }
 
 /**************************************************************************/
@@ -1011,8 +918,8 @@ void ILI9341_t3n::fillCircle(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 void ILI9341_t3n::fillCircleHelper(int16_t x0, int16_t y0, int16_t r,
-                                   uint8_t corners, int16_t delta,
-                                   uint16_t color)
+  uint8_t corners, int16_t delta,
+  uint16_t color)
 {
 
   int16_t f = 1 - r;
@@ -1057,27 +964,126 @@ void ILI9341_t3n::fillCircleHelper(int16_t x0, int16_t y0, int16_t r,
   }
 }
 
+
+#define CLIPLEFT  1
+#define CLIPRIGHT 2
+#define CLIPLOWER 4
+#define CLIPUPPER 8
+
+// Cohen Sutherland Line Clipping - thx Wikipedia
+int get_clips(int16_t& x, int16_t& y, int16_t XMin, int16_t YMin, int16_t XMax, int16_t YMax)
+{
+  int K = 0;
+  if (y < YMin) K = CLIPLOWER;
+  if (y > YMax) K = CLIPUPPER;
+  if (x < XMin) K |= CLIPLEFT;
+  if (x > XMax) K |= CLIPRIGHT;
+
+  return K;
+}
+
+bool clipline(int16_t& x1, int16_t& y1, int16_t& x2, int16_t& y2, int16_t XMin, int16_t YMin, int16_t XMax, int16_t YMax)
+{
+  int K1 = 0, K2 = 0;
+  int32_t dx, dy;
+
+  dx = x2 - x1;
+  dy = y2 - y1;
+
+  //  if(dx == 0 && dy == 0)
+  //    return false;
+
+  K1 = get_clips(x1, y1, XMin, YMin, XMax, YMax);
+  K2 = get_clips(x2, y2, XMin, YMin, XMax, YMax);
+
+  int i = 0;
+  while (K1 || K2)
+  {
+    if (i++ >= 2)
+      return false;
+
+    if (K1 & K2)
+      return false;
+
+    if (K1)
+    {
+      if (K1 & CLIPLEFT)
+      {
+        y1 += (XMin - x1) * dy / dx;
+        x1 = XMin;
+      }
+      else if (K1 & CLIPRIGHT)
+      {
+        y1 += (XMax - x1) * dy / dx;
+        x1 = XMax;
+      }
+      if (K1 & CLIPLOWER)
+      {
+        x1 += (YMin - y1) * dx / dy;
+        y1 = YMin;
+      }
+      else if (K1 & CLIPUPPER)
+      {
+        x1 += (YMax - y1) * dx / dy;
+        y1 = YMax;
+      }
+
+      K1 = get_clips(x1, y1, XMin, YMin, XMax, YMax);
+    }
+
+    if (K2)
+    {
+      if (K2 & CLIPLEFT)
+      {
+        y2 += (XMin - x2) * dy / dx;
+        x2 = XMin;
+      }
+      else if (K2 & CLIPRIGHT)
+      {
+        y2 += (XMax - x2) * dy / dx;
+        x2 = XMax;
+      }
+      if (K2 & CLIPLOWER)
+      {
+        x2 += (YMin - y2) * dx / dy;
+        y2 = YMin;
+      }
+      else if (K2 & CLIPUPPER)
+      {
+        x2 += (YMax - y2) * dx / dy;
+        y2 = YMax;
+      }
+
+      K2 = get_clips(x2, y2, XMin, YMin, XMax, YMax);
+    }
+  }
+  return true;
+}
+
 // Bresenham's algorithm - thx wikpedia
 void ILI9341_t3n::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                           uint16_t color)
+  uint16_t color)
 {
+  if (!clipline(x0, y0, x1, y1, _displayclipx1, _displayclipy1, _displayclipx2, _displayclipy2))
+    return;
 
-#ifdef REMOTE_CONSOLE
-  Serial.write(99);
-  Serial.write(96);
-  Serial.write(highByte(x0));
-  Serial.write(lowByte(x0));
-  Serial.write(highByte(y0));
-  Serial.write(lowByte(y0));
-  Serial.write(highByte(x1));
-  Serial.write(lowByte(x1));
-  Serial.write(highByte(y1));
-  Serial.write(lowByte(y1));
-  Serial.write(highByte(color));
-  Serial.write(lowByte(color));
-  Serial.write(88);
-  console = false;
-#endif
+  if (remote_active)
+  {
+    static uint8_t sysexDrawLine[13] = {
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknown color
+    };
+
+    fillSysexData(sysexDrawLine, 4, x0, y0, x1, y1);
+    uint8_t colors[4];
+    uint8_t nbBytes = fillSysexDataColor(colors, 1, color);
+    sysexDrawLine[8] = nbBytes;
+    memcpy(sysexDrawLine + 8 + 1, colors, nbBytes);
+
+    sendSysEx(96, 8 + 1 + nbBytes, sysexDrawLine, true);
+
+    console = false;
+  }
 
   if (y0 == y1)
   {
@@ -1106,9 +1112,6 @@ void ILI9341_t3n::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
       drawFastVLine(x0, y1, y0 - y1 + 1, color);
     }
     return;
-#ifdef REMOTE_CONSOLE
-    console = true; // maybe a good idea to remove this line
-#endif
   }
 
   bool steep = abs(y1 - y0) > abs(x1 - x0);
@@ -1197,27 +1200,23 @@ void ILI9341_t3n::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
 // Draw a rectangle
 void ILI9341_t3n::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 {
-
-  if (console)
+  if (console && remote_active)
   {
-#ifdef REMOTE_CONSOLE
-    Serial.write(99);
-    Serial.write(98);
-    Serial.write(highByte(x));
-    Serial.write(lowByte(x));
-    Serial.write(highByte(y));
-    Serial.write(lowByte(y));
-    Serial.write(highByte(w));
-    Serial.write(lowByte(w));
-    Serial.write(highByte(h));
-    Serial.write(lowByte(h));
-    Serial.write(highByte(color));
-    Serial.write(lowByte(color));
-    Serial.write(88);
-    // delayMicroseconds(50);  //necessary to avoid random pixels in remote console
+    static uint8_t sysexDrawRect[13] = {
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknown color
+    };
+
+    fillSysexData(sysexDrawRect, 4, x, y, w, h);
+    uint8_t colors[4];
+    uint8_t nbBytes = fillSysexDataColor(colors, 1, color);
+    sysexDrawRect[8] = nbBytes;
+    memcpy(sysexDrawRect + 8 + 1, colors, nbBytes);
+
+    sendSysEx(98, 8 + 1 + nbBytes, sysexDrawRect, true);
     console = false;
-#endif
   }
+
   drawFastHLine(x, y, w, color);
   drawFastHLine(x, y + h - 1, w, color);
   drawFastVLine(x, y, h, color);
@@ -1231,78 +1230,117 @@ size_t ILI9341_t3n::write(uint8_t c)
   return write(&c, 1);
 }
 
-size_t ILI9341_t3n::write(const uint8_t *buffer, size_t size)
+size_t ILI9341_t3n::write(const uint8_t* buffer, size_t size)
 {
-  // Lets try to handle some of the special font centering code that was done
-  // for default fonts.
 
-#ifdef REMOTE_CONSOLE
-  Serial.write(99);
-  Serial.write(72);
-  Serial.write(size);
-  Serial.write(highByte(cursor_x));
-  Serial.write(lowByte(cursor_x));
-  Serial.write(highByte(cursor_y));
-  Serial.write(lowByte(cursor_y));
-  Serial.write(highByte(textcolor));
-  Serial.write(lowByte(textcolor));
-  Serial.write(highByte(textbgcolor));
-  Serial.write(lowByte(textbgcolor));
-  Serial.write(textsize_x);
-  Serial.write(buffer, size);
-  Serial.write(88);
-  console = false;
+  if (remote_active)
+  {
+    uint8_t colors[8];
+    uint8_t nbBytes = fillSysexDataColor(colors, 2, textcolor, textbgcolor);
+
+    uint8_t sizeMsg = 2 * 2 + 1 + nbBytes + 1 + size;
+
+    uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
+    if (sysexDrawString == NULL)
+    {
+#ifdef DEBUG
+      LOG.println("malloc failed");
 #endif
+    }
+    else
+    {
+      fillSysexData(sysexDrawString, 2, cursor_x, cursor_y);
+      sysexDrawString[4] = nbBytes;
+      memcpy(sysexDrawString + 4 + 1, colors, nbBytes);
+      sysexDrawString[4 + 1 + nbBytes] = textsize_x;
+      memcpy(sysexDrawString + 4 + 1 + nbBytes + 1, buffer, size);
+
+      sendSysEx(72, sizeMsg, sysexDrawString, true);
+
+      free(sysexDrawString);
+    }
+
+    console = false;
+  }
 
   size_t cb = size;
   while (cb)
   {
     uint8_t c = *buffer++;
     cb--;
-
-    // if (c == '\n') {
-    //   // cursor_y += textsize_y * 8;
-    //   // cursor_x = 0;
-    // } else if (c == '\r') {
-    //   // skip em
-    // } else {
     drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize_x,
-             textsize_y);
+      textsize_y);
     cursor_x += textsize_x * 6;
-    // }
   }
   return size;
 }
 
+
+// Draw vertically a repeated string
+// void ILI9341_t3n::repeatWrite(const uint8_t* buffer, size_t size, uint8_t nbRepeat)
+// {
+//   if (remote_active)
+//   {
+//     uint8_t colors[8];
+//     uint8_t nbBytes = fillSysexDataColor(colors, 2, textcolor, textbgcolor);
+
+//     uint8_t sizeMsg = 6 + 1 + 2 * 2 + 1 + nbBytes + 1 + 1 + size + 1;
+
+//     uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
+//     if (sysexDrawString == NULL)
+//     {
+// #ifdef DEBUG
+//       LOG.println("malloc failed");
+// #endif
+//     }
+//     else
+//     {
+//       memcpy(sysexDrawString, sysexRenderHeader, sizeof(sysexRenderHeader));
+//       sysexDrawString[6] = 73;
+//       fillSysexData(sysexDrawString, 2, cursor_x, cursor_y);
+//       sysexDrawString[7 + 4] = nbBytes;
+//       memcpy(sysexDrawString + 7 + 4 + 1, colors, nbBytes);
+
+//       sysexDrawString[7 + 4 + 1 + nbBytes] = textsize_x;
+//       sysexDrawString[7 + 4 + 1 + nbBytes + 1] = nbRepeat;
+//       memcpy(sysexDrawString + 7 + 4 + 1 + nbBytes + 2, buffer, size);
+//       sysexDrawString[sizeMsg - 1] = 0xf7;
+
+//       sendSysEx(sizeMsg, sysexDrawString, true);
+//       usbMIDI.send_now();
+
+//       free(sysexDrawString);
+//     }
+
+//     delayMicroseconds(20); // necessary to avoid screen freeze in remote console TEST 21/03/2023
+//   }
+//   console = false;
+
+//   uint8_t x_init = cursor_x;
+//   for (uint8_t i = 0; i < nbRepeat; i++) {
+
+//     for (uint8_t j = 0; j < size; j++) {
+//       uint8_t c = *(buffer + j);
+//       drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize_x,
+//         textsize_y);
+//       cursor_x += textsize_x * 6;
+//     }
+//     cursor_y += textsize_y * 10;
+//     cursor_x = x_init;
+//   }
+// }
+
+
 // Draw a character
 void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
-                           uint16_t fgcolor, uint16_t bgcolor, uint8_t size_x,
-                           uint8_t size_y)
+  uint16_t fgcolor, uint16_t bgcolor, uint8_t size_x,
+  uint8_t size_y)
 {
   if ((x >= _width) ||              // Clip right
-      (y >= _height) ||             // Clip bottom
-      ((x + 6 * size_x - 1) < 0) || // Clip left  TODO: is this correct?
-      ((y + 8 * size_y - 1) < 0))   // Clip top   TODO: is this correct?
+    (y >= _height) ||             // Clip bottom
+    ((x + 6 * size_x - 1) < 0) || // Clip left  TODO: is this correct?
+    ((y + 8 * size_y - 1) < 0))   // Clip top   TODO: is this correct?
     return;
-
-  // #ifdef REMOTE_CONSOLE
-  //   //remote console
-  //   Serial.write(99);
-  //   Serial.write(95);
-  //   Serial.write(highByte(x));
-  //   Serial.write(lowByte(x));
-  //   Serial.write(highByte(y));
-  //   Serial.write(lowByte(y));
-  //   Serial.write(highByte(fgcolor));
-  //   Serial.write(lowByte(fgcolor));
-  //   Serial.write(highByte(bgcolor));
-  //   Serial.write(lowByte(bgcolor));
-  //   Serial.write(c);
-  //   Serial.write(size_x);
-  //   Serial.write(88);
-  //   // delayMicroseconds(60); //necessary to avoid random pixels in remote console
-  //   console = false;
-  // #endif
 
   if (c == 32)
   {
@@ -1395,33 +1433,33 @@ void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
           if (line == 0x1F)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 5 * size_x, size_y,
-                     fgcolor);
+              fgcolor);
             break;
           }
           else if (line == 0x1E)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 4 * size_x, size_y,
-                     fgcolor);
+              fgcolor);
             break;
           }
           else if ((line & 0x1C) == 0x1C)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 3 * size_x, size_y,
-                     fgcolor);
+              fgcolor);
             line <<= 4;
             xoff += 4;
           }
           else if ((line & 0x18) == 0x18)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 2 * size_x, size_y,
-                     fgcolor);
+              fgcolor);
             line <<= 3;
             xoff += 3;
           }
           else if ((line & 0x10) == 0x10)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, size_x, size_y,
-                     fgcolor);
+              fgcolor);
             line <<= 2;
             xoff += 2;
           }
@@ -1437,6 +1475,7 @@ void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
   }
   else
   {
+
     // This solid background approach is about 5 time faster
     uint8_t xc, yc;
     uint8_t xr, yr;
@@ -1449,9 +1488,9 @@ void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
     int16_t x_char_start = x; // remember our X where we start outputting...
 
     if ((x >= _displayclipx2) ||                   // Clip right
-        (y >= _displayclipy2) ||                   // Clip bottom
-        ((x + 6 * size_x - 1) < _displayclipx1) || // Clip left  TODO: this is not correct
-        ((y + 8 * size_y - 1) < _displayclipy1))   // Clip top   TODO: this is not correct
+      (y >= _displayclipy2) ||                   // Clip bottom
+      ((x + 6 * size_x - 1) < _displayclipx1) || // Clip left  TODO: this is not correct
+      ((y + 8 * size_y - 1) < _displayclipy1))   // Clip top   TODO: this is not correct
       return;
 
     // need to build actual pixel rectangle we will output into.
@@ -1474,10 +1513,12 @@ void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
     if ((y + h - 1) >= _displayclipy2)
       h = _displayclipy2 - y;
 
+
     beginSPITransaction(_SPI_CLOCK);
     setAddr(x, y, x + w - 1, y + h - 1);
     y = y_char_top; // restore the actual y.
     writecommand_cont(ILI9341_RAMWR);
+
     for (yc = 0; (yc < 8) && (y < _displayclipy2); yc++)
     {
       for (yr = 0; (yr < size_y) && (y < _displayclipy2); yr++)
@@ -1522,31 +1563,6 @@ void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
   }
 }
 
-// void ILI9341_t3n::charBounds(char c, int16_t *x, int16_t *y, int16_t *minx,
-//                              int16_t *miny, int16_t *maxx, int16_t *maxy) {
-//
-//   // Default font
-//
-//   if (c == '\n') {        // Newline?
-//     *x = 0;               // Reset x to zero,
-//     *y += textsize_y * 8; // advance y one line
-//     // min/max x/y unchaged -- that waits for next 'normal' character
-//   } else if (c != '\r') { // Normal char; ignore carriage returns
-//
-//     int x2 = *x + textsize_x * 6 - 1, // Lower-right pixel of char
-//         y2 = *y + textsize_y * 8 - 1;
-//     if (x2 > *maxx)
-//       *maxx = x2; // Track max x, y
-//     if (y2 > *maxy)
-//       *maxy = y2;
-//     if (*x < *minx)
-//       *minx = *x; // Track min x, y
-//     if (*y < *miny)
-//       *miny = *y;
-//     *x += textsize_x * 6; // Advance x one char
-//   }
-// }
-
 void ILI9341_t3n::setCursor(int16_t x, int16_t y, bool autoCenter)
 {
   _center_x_text = autoCenter; // remember the state.
@@ -1573,7 +1589,7 @@ void ILI9341_t3n::setCursor(int16_t x, int16_t y, bool autoCenter)
   cursor_y = y;
 }
 
-void ILI9341_t3n::getCursor(int16_t *x, int16_t *y)
+void ILI9341_t3n::getCursor(int16_t* x, int16_t* y)
 {
   *x = cursor_x;
   *y = cursor_y;
@@ -1598,27 +1614,9 @@ void ILI9341_t3n::setTextColor(uint16_t c, uint16_t b)
   textbgcolor = b;
   // pre-expand colors for fast alpha-blending later
   textcolorPrexpanded =
-      (textcolor | (textcolor << 16)) & 0b00000111111000001111100000011111;
+    (textcolor | (textcolor << 16)) & 0b00000111111000001111100000011111;
   textbgcolorPrexpanded =
-      (textbgcolor | (textbgcolor << 16)) & 0b00000111111000001111100000011111;
-}
-
-void ILI9341_t3n::sleep(bool enable)
-{
-  beginSPITransaction(_SPI_CLOCK);
-  if (enable)
-  {
-    writecommand_cont(ILI9341_DISPOFF);
-    writecommand_last(ILI9341_SLPIN);
-    endSPITransaction();
-  }
-  else
-  {
-    writecommand_cont(ILI9341_DISPON);
-    writecommand_last(ILI9341_SLPOUT);
-    endSPITransaction();
-    delay(5);
-  }
+    (textbgcolor | (textbgcolor << 16)) & 0b00000111111000001111100000011111;
 }
 
 /***************************************************************************************
@@ -1626,7 +1624,7 @@ void ILI9341_t3n::sleep(bool enable)
 ** Description :            draw string with padding if it is defined
 ***************************************************************************************/
 // Without font number, uses font set by setTextFont()
-int16_t ILI9341_t3n::drawString(const String &string, int poX, int poY)
+int16_t ILI9341_t3n::drawString(const String& string, int poX, int poY)
 {
   int16_t len = string.length() + 2;
   char buffer[len];
@@ -1715,4 +1713,158 @@ void ILI9341_t3n::waitTransmitComplete(uint32_t mcr)
 {
   // BUGBUG:: figure out if needed...
   waitTransmitComplete();
+}
+
+
+// send sysex bundled.
+FLASHMEM void ILI9341_t3n::flushSysEx() {
+  if (sysex_len <= SYSEX_HEADER_SIZE)
+    return;
+
+  memcpy(sysex_buffer, sysexRenderHeader, SYSEX_HEADER_SIZE); // place sysex MIDI header
+  sysex_buffer[sysex_len] = 0xF7; // place sysex end byte
+
+  usbMIDI.sendSysEx(sysex_len + 1, sysex_buffer, true);
+
+  sysex_len = SYSEX_HEADER_SIZE;
+}
+
+
+// append sysex data to buffer for sending in a bundled fashion
+// a size field added to split the messages on receiver side.
+FLASHMEM void ILI9341_t3n::sendSysEx(uint8_t renderCmd, uint8_t length, uint8_t* data, bool hasStartEnd)
+{
+  if (sysex_len + length > sizeof(sysex_buffer) - 2) // flush if full, keep space for end byte
+    flushSysEx();
+
+  if (hasStartEnd)
+  {
+    sysex_buffer[sysex_len] = length + 1; // store length (with renderCmd byte added) to slice bundled messages on receiver side
+    sysex_len++;
+    sysex_buffer[sysex_len] = renderCmd;
+    sysex_len++;
+    memcpy(&sysex_buffer[sysex_len], data, length);
+    sysex_len += length;
+  }
+  else
+  {
+    // TODO IMPLEMENT or remove hasStartEnd parameter
+  }
+}
+
+// Fill MIDI sysex data with two 7bits bytes for each value
+FLASHMEM void ILI9341_t3n::fillSysexData(uint8_t arr[], uint8_t nbArg, ...)
+{
+  va_list args;
+  va_start(args, nbArg);
+  for (uint8_t x = 0; x < nbArg; x++)
+  {
+    int val = va_arg(args, int);
+    uint8_t posInArray = x * 2;
+
+    // Convert value to two 7bit bytes for MIDI
+    arr[posInArray] = val / 128;
+    arr[posInArray + 1] = val % 128;
+  }
+}
+
+FLASHMEM uint8_t ILI9341_t3n::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
+{
+  va_list args;
+  va_start(args, nbArg);
+  int prev_val = -1;
+
+  uint8_t pos = 0;
+  for (uint8_t i = 0; i < nbArg; i++)
+  {
+    int val = va_arg(args, int);
+
+    uint8_t colorCode = 0;
+    switch (val) {
+    case COLOR_BACKGROUND:
+      colorCode = 0;
+      break;
+    case COLOR_SYSTEXT:
+      colorCode = 1;
+      break;
+    case COLOR_INSTR:
+      colorCode = 2;
+      break;
+    case COLOR_CHORDS:
+      colorCode = 3;
+      break;
+    case COLOR_ARP:
+      colorCode = 4;
+      break;
+    case COLOR_DRUMS:
+      colorCode = 5;
+      break;
+    case COLOR_PITCHSMP:
+      colorCode = 6;
+      break;
+
+    case RED:
+      colorCode = 7;
+      break;
+    case PINK:
+      colorCode = 8;
+      break;
+    case YELLOW:
+      colorCode = 9;
+      break;
+
+    case GREEN:
+      colorCode = 10;
+      break;
+    case MIDDLEGREEN:
+      colorCode = 11;
+      break;
+    case DARKGREEN:
+      colorCode = 12;
+      break;
+
+    case GREY1:
+      colorCode = 13;
+      break;
+    case GREY2:
+      colorCode = 14;
+      break;
+    case GREY3:
+      colorCode = 15;
+      break;
+    case GREY4:
+      colorCode = 16;
+      break;
+      // #define GREY4 0xC638 //only for UI test
+    case DX_DARKCYAN:
+      colorCode = 17;
+      break;
+    default:
+      colorCode = 255;
+      if (val == prev_val) {
+        colorCode = 0;
+      }
+      else {
+        // unknown color => to be sent on four 7bits bytes
+        uint16_t hByte = highByte(val);
+        arr[pos] = hByte / 128;
+        arr[pos + 1] = hByte % 128;
+        uint16_t lByte = lowByte(val);
+        arr[pos + 2] = lByte / 128;
+        arr[pos + 3] = lByte % 128;
+
+        pos += 4;
+      }
+    }
+
+    if (colorCode != 255) {
+      // avoid sending known color on 4 bytes, just send a 1 byte code by MIDI
+      arr[pos] = colorCode;
+      pos++;
+    }
+
+    prev_val = val;
+  }
+
+  return pos;
 }

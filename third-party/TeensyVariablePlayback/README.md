@@ -9,12 +9,42 @@
 [![Commits](https://img.shields.io/github/commit-activity/m/newdigate/teensy-variable-playback)](https://github.com/newdigate/teensy-variable-playback/graphs/contributors)
 ![s](https://img.shields.io/badge/dynamic/json?color=%23e85b46&label=Patreon&query=data.attributes.patron_count&suffix=%20patrons&url=https%3A%2F%2Fwww.patreon.com%2Fapi%2Fcampaigns%2F4105381)
 
-play 16-bit audio samples at variable playback rates on teensy
+play 16-bit PCM raw or wav audio samples at variable playback rates on teensy
+* **Note** : this library only works with signed 16-bit integer samples. Floating point samples will not play. 
 
 * for best performance, use SDXC UHS 30MB/sec Application Performance Class 2 (A2) class micro sd-card. 
   * [sd classes on wikipedia](https://en.wikipedia.org/wiki/SD_card#cite_ref-93) 
 
 ## updates
+* 26/02/2022: v1.0.16:
+  * add option for starting sample at begining or at loop start
+  ``` c
+  typedef enum play_start {
+      play_start_sample,
+      play_start_loop,
+  };
+
+  wave.setPlayStart(play_start::play_start_loop); 
+  ```
+* 26/02/2022: v1.0.15:
+  * added support for dual playback head for seemless looping
+    * enable dual playback using linear crossfading
+    * set crossfade duration in number of samples
+  ``` c
+        AudioPlaySdResmp         wave;      
+        wave.setUseDualPlaybackHead(true);
+        wave.setCrossfadeDurationInSamples(1000);
+        wave.playRaw((int16_t*)kick_raw, kick_raw_len / 2, numberOfChannels);
+        wave.setLoopStart(0); 
+        wave.setLoopFinish(3000);
+  ```
+* 16/06/2022: v1.0.14: 
+  * refactored code to generic classes
+  * improve memory leaks
+  * remove calls to StartUsingSPI(), StopUsingSPI(), __disable_irq(), __enable_irq()
+  * intergated with SerialFlash and LittleFS 
+* 25/09/2021: v1.0.13: positionMillis() implemented for AudioPlaySdResmp
+* 25/08/2021: v1.0.12: Skip over RIFF tags in .wav header
 * 12/08/2021: v1.0.11: When playing a mono sample, transmit on both channels (credit to @atoktoto) 
 * 28/07/2021: v1.0.10: Fix issues when starting playback in reverse
 * 23/07/2021: v1.0.9: Fix issue which crashes teensy when playing multiple files from SD card using array of filenames
@@ -100,10 +130,11 @@ graph G {
 
 <details>
   <summary>linux</summary>
+  You can run and test this code on your linux computer. You can write a teensy sketch, and with a few modifications, you can redirect the audio input and output to and from your soundcard. [Soundio](https://github.com/newdigate/teensy-audio-x86-stubs/tree/main/extras/soundio) bindings are optional, you can also run sketches and tests with no audio input or output.
+  You will need to install the following libraries.
   
 ```cmake``` ```gcc or llvm``` ```teensy-x86-stubs```[^](https://github.com/newdigate/teensy-x86-stubs) ```teensy-audio-x86-stubs```[^](https://github.com/newdigate/teensy-audio-x86-stubs) ```teensy-x86-sd-stubs```[^](https://github.com/newdigate/teensy-x86-sd-stubs) ```boost-test``` 
 
-By using stub libraries, we can compile teensy code to native device architecture. To a certain extent, this allows sketches and libraries to be developed, emulated, debugged and unit-tested using linux, on your local device or a build server. In this case I have a few basic tests for the ResamplingSdReader class.
   * install boost unit-test library: 
     * linux: ```sudo apt-get install -yq libboost-test-dev```
     * macos: ```brew install boost```

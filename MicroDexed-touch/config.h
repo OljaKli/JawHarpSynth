@@ -29,6 +29,13 @@
 #include <Arduino.h>
 #include "midinotes.h"
 #include "teensy_board_detection.h"
+#include <vector>
+
+#ifdef DEBUG
+#define DBG_LOG(s) LOG.s
+#else
+#define DBG_LOG(s)
+#endif
 
 // If you want to test the system with Linux and without any keyboard and/or audio equipment, you can do the following:
 // 1. In Arduino-IDE enable "Tools->USB-Type->Serial + MIDI + Audio"
@@ -60,7 +67,10 @@
 //*************************************************************************************************
 //* DEVICE SETTINGS
 //*************************************************************************************************
-// #define UI_REVERSE
+
+#if defined APC
+#define APC_NUM_PADS 64
+#endif
 
 //*************************************************************************************************
 //* MIDI HARDWARE SETTINGS
@@ -76,9 +86,6 @@
 // USB_KEYBOARD is for a PC-Numeric Keypad, connected via USB
 // ONBOARD_BUTTON_Interface is for directly attached buttons to the teensy.
 
-// IF YOU WANT TO USE REMOTE CONSOLE ON PC WITH PC KEYBOARD + AUDIO ETC. DON'T CHANGE ANYTHING IN THIS SECTION,
-// JUST ENABLE REMOTE_CONSOLE AND IT WILL TAKE CARE FOR EVERYTHING ELSE
-
 // #define USB_KEYPAD 1
 // #define ONBOARD_BUTTON_INTERFACE 1
 
@@ -88,15 +95,12 @@
 // If nothing is defined Teensy internal DAC is used as audio output device!
 // Left and right channel audio signal is presented on pins A21 and A22.
 
-// IF YOU WANT TO USE REMOTE CONSOLE ON PC WITH PC KEYBOARD + AUDIO ETC. DON'T CHANGE ANYTHING IN THIS SECTION,
-// JUST ENABLE REMOTE_CONSOLE AND IT WILL TAKE CARE FOR EVERYTHING ELSE REQUIRED.
-
 #define I2S_AUDIO_ONLY // for PCM5102 or other I2S DACs
 
 // #define AUDIO_DEVICE_USB
 // #define TEENSY_AUDIO_BOARD // for legacy reasons, only
-// #define PT8211_AUDIO
-// #define TGA_AUDIO_BOARD
+
+// #define PSRAM  // opt. 8MB PSRAM Chip soldered to Teensy 4.1
 
 //*************************************************************************************************
 //* MIDI SOFTWARE SETTINGS
@@ -111,47 +115,56 @@
 //*************************************************************************************************
 // #define DEBUG 1    // 1 for normal Serial, 2 for dual serial (only for developers)
 // #define DEBUG_SHOW_JSON 1
-// #define REMOTE_CONSOLE  //enable USB Display + USB AUDIO - This is NOT for serial monitor from Teensyduino! For that, please use #define DEBUG 1
+
 #define SERIAL_SPEED 230400
-#define SHOW_XRUN 1
 #define SHOW_CPU_LOAD_MSEC 5000
 
 //*************************************************************************************************
-//* PROGMEM AND FLASH COMPILE MODES
+//* PROGMEM AND SDCARD COMPILE MODES
 //*************************************************************************************************
 
-// #define COMPILE_FOR_PROGMEM  // enable this if you do not have a SPI FLASH chip
-// #define COMPILE_FOR_FLASH  // this is the intended configuration, with SPI FLASH chip
+// #define COMPILE_FOR_PROGMEM  // enable this if you do not have a PSRAM chip
 // #define COMPILE_FOR_SDCARD  // experimental, for testing purposes only
 
-#if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_FLASH) && !defined(COMPILE_FOR_SDCARD)
+#if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
 #define COMPILE_FOR_PROGMEM // default
 #endif
 
 //*************************************************************************************************
 //* DISPLAY AND TOUCHSCREEN
 //*************************************************************************************************
-
+#ifndef CAPACITIVE_TOUCH_DISPLAY // TFT with Capacitive Touchscreen, currently for testing purposes only
 #define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (default)
-// #define ADAFRUIT_DISPLAY  // Adafruit 2.8" TFT with Capacitive FT6206 Touchscreen, currently for testing purposes only
+#endif
 
 //*************************************************************************************************
 //* DEXED SEQUENCER, EPIANO AND EFFECTS SETTINGS
 //*************************************************************************************************
 // Number of Dexed instances
-#define NUM_DEXED 2 // 1 or 2 - nothing else!
+
+#ifdef PSRAM
+#define NUM_DEXED 4
+#else
+#define NUM_DEXED 2
+#endif
+
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST0 1
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST1 2
+#define DEFAULT_DEXED_MIDI_CHANNEL_INST2 3
+#define DEFAULT_DEXED_MIDI_CHANNEL_INST3 4
 
 // NUMBER OF PARALLEL SAMPLEDRUMS
 #define NUM_DRUMS 8 // set 0 to disable Drums
 
 // DEFAULT MIDI CHANNEL FOR DRUMSAMPLER
-#define DRUM_MIDI_CHANNEL 10
+#define DEFAULT_DRUM_MIDI_CHANNEL 10
 #define NUM_CUSTOM_MIDI_MAPPINGS 18 // Number of Custom Key, CC and Button Mappings
 
+#define NUM_CUSTOM_SAMPLES 20
+#define NUM_STATIC_PITCHED_SAMPLES 6
+
 // NUMBER OF SAMPLES IN DRUMSET
-#define NUM_DRUMSET_CONFIG 71
+#define NUM_DRUMSET_CONFIG 71 + NUM_CUSTOM_SAMPLES
 
 // SEQUENCER
 #define NUM_SEQ_PATTERN 32
@@ -159,24 +172,24 @@
 #define SONG_LENGTH 64
 #define NUM_CHAINS 32
 
-// SAMPLER
-#define NUM_MULTISAMPLES 2
-#define NUM_MULTISAMPLE_ZONES 8
-#define DEFAULT_MSP_MIDI_CHANNEL_INST0 7
-#define DEFAULT_MSP_MIDI_CHANNEL_INST1 8
-
 // EPIANO
 #define NUM_EPIANO_VOICES 16
-#define DEFAULT_EP_MIDI_CHANNEL 3
+#define DEFAULT_EP_MIDI_CHANNEL 5
 
 // MICROSYNTH
 #define NUM_MICROSYNTH 2
-#define DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST0 4
-#define DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST1 5
+#define DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST0 6
+#define DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST1 7
 
 // BRAIDS
 #define NUM_BRAIDS 8
-#define DEFAULT_BRAIDS_MIDI_CHANNEL 6
+#define DEFAULT_BRAIDS_MIDI_CHANNEL 8
+
+// SAMPLER
+#define NUM_MULTISAMPLES 2
+#define NUM_MULTISAMPLE_ZONES 8
+#define DEFAULT_MSP_MIDI_CHANNEL_INST0 11
+#define DEFAULT_MSP_MIDI_CHANNEL_INST1 12
 
 #define VIRT_KEYB_YPOS 166
 
@@ -192,11 +205,13 @@
 #define SGTL5000_HEADPHONE_VOLUME 0.8
 #endif
 
+#define byte __uint8_t // workarounds "error: reference to 'byte' is ambiguous"
+
 // DELAYTIME
 #ifdef PSRAM
-#define DELAY_MAX_TIME 9999
+#define DELAY_MAX_TIME 10000 // 10s
 #else
-#define DELAY_MAX_TIME 500
+#define DELAY_MAX_TIME 500  // 0.5s
 #endif
 
 //*************************************************************************************************
@@ -205,33 +220,14 @@
 #define SAMPLE_RATE 44100
 
 #ifdef PSRAM
-#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 // needs rework when the delay memory is external..
+#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14
 #else
 #define AUDIO_MEM SAMPLE_RATE *NUM_DEXED *DELAY_MAX_TIME / 128000 + 36 + 14
 #endif
 
+//#define AUDIO_MEM SAMPLE_RATE *NUM_DEXED * 200 / 128000 + 36 + 14 // tested to work on all versions, including old resistive touch 2/2025
+
 #ifdef TEENSY_AUDIO_BOARD
-/*
-  13: 3.16 Volts p-p
-  14: 2.98 Volts p-p
-  15: 2.83 Volts p-p
-  16: 2.67 Volts p-p
-  17: 2.53 Volts p-p
-  18: 2.39 Volts p-p
-  19: 2.26 Volts p-p
-  20: 2.14 Volts p-p
-  21: 2.02 Volts p-p
-  22: 1.91 Volts p-p
-  23: 1.80 Volts p-p
-  24: 1.71 Volts p-p
-  25: 1.62 Volts p-p
-  26: 1.53 Volts p-p
-  27: 1.44 Volts p-p
-  28: 1.37 Volts p-p
-  29: 1.29 Volts p-p  (default)
-  30: 1.22 Volts p-p
-  31: 1.16 Volts p-p
-*/
 #define SGTL5000_LINEOUT_LEVEL 29
 #endif
 
@@ -244,14 +240,19 @@
 
 #define COLOR_BACKGROUND 0x0000
 #define COLOR_SYSTEXT 0xFFFF
-#define COLOR_SYSTEXT_ACCENT 0x159A
+#define DX_DARKCYAN 0x030D 
+
+//#define COLOR_SYSTEXT 0x0000 //inverse
+//#define COLOR_BACKGROUND  0xFFFF  //inverse
+//#define DX_DARKCYAN 0x0698  //inverse
+
 #define COLOR_INSTR 0x7BBD
 #define COLOR_CHORDS 0xE2FA
 #define COLOR_ARP 0xFC80
 #define COLOR_DRUMS 0xFE4F
 #define COLOR_PITCHSMP 0x159A
 
-#define RED 0xF000
+#define RED 0xD000
 #define PINK 0xF81F
 #define YELLOW 0xFFEB
 
@@ -263,10 +264,13 @@
 #define GREY2 0x52AA
 #define GREY3 0x2104
 #define GREY4 0x10A2
+
 // #define GREY4 0xC638 //only for UI test
-#define DX_DARKCYAN 0x03EF
 
 // Display
+
+const char back_text[5] = { 'B', 'A', 'C', 'K' };
+const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 
 #define TFT_WIDTH 240
 #define TFT_HEIGHT 320
@@ -293,11 +297,9 @@
 // IRQ valid for both display types:
 #define TFT_TOUCH_IRQ 33
 
-#ifdef GENERIC_DISPLAY
+#if defined GENERIC_DISPLAY
 #define TFT_TOUCH_CS 38
 #endif
-
-#define TOUCH_CONTROL_RATE_MS 200
 
 #define VOICE_SELECTION_MS 60000
 #define BACK_FROM_VOLUME_MS 2000
@@ -308,19 +310,28 @@
 //* HARDWARE SETTINGS
 //*************************************************************************************************
 
-// Teensy Audio Shield
-#define SDCARD_AUDIO_CS_PIN 10
-#define SDCARD_AUDIO_MOSI_PIN 7
-#define SDCARD_AUDIO_SCK_PIN 14
+#if (defined RGB_ENCODERS && defined MCP_23008) || (defined RGB_ENCODERS && defined MCP_23017)
 
-#define SDCARD_TEENSY_CS_PIN BUILTIN_SDCARD
-#define SDCARD_TEENSY_MOSI_PIN 11
-#define SDCARD_TEENSY_SCK_PIN 13
+#define RGB_LED_L_RED 0                            // MCP GPA0  = LED_ENC_L RED
+#define RGB_LED_L_GREEN 1                          // MCP GPA1  = LED_ENC_L GREEN
+#define RGB_LED_L_BLUE 2                           // MCP GPA2  = LED_ENC_L BLUE
+#define RGB_LED_R_RED 3                            // MCP GPA3  = LED_ENC_R RED
+#define RGB_LED_R_GREEN 4                          // MCP GPA4  = LED_ENC_R GREEN
+#define RGB_LED_R_BLUE 5                           // MCP GPA5  = LED_ENC_R BLUE
+#endif
 
-const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Shield)
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#define LED_UP 8                                   // MCP GPB0  = LED Button UP
+#define LED_DOWN 9                                 // MCP GPB1  = LED Button DOWN
+#define LED_LEFT 10                                // MCP GPB2  = LED Button LEFT
+#define LED_RIGHT 11                                // MCP GPB3  = LED Button RIGHT
+#define LED_SEL 12                                  // MCP GPB4   = LED Button SEL
+#define LED_START 13                                // MCP GPB5  = LED Button START
+#define LED_BUT_A 14                                // MCP GPB6  = LED Button A
+#define LED_BUT_B 15                                // MCP GPB7  = LED Button B
+#endif
 
 // Encoders with push button
-// #define ENCODER_USE_INTERRUPTS
 #define NUM_ENCODER 2
 #define ENC_L_PIN_A 32
 #define ENC_L_PIN_B 31
@@ -336,19 +347,19 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 // Internal timer
 #define AUTOSTORE_MS 5000
 
-// EEPROM address
-#define EEPROM_START_ADDRESS 0xFF
+#define DEXED_POOLS 100
 
 #define DEXED_CONFIG_PATH "DEXED"
+#define FAV_CONFIG_PATH "FAVCFG"
+
 #define MAX_BANKS 100
 #define MAX_VOICES 32     // voices per bank
 #define BANK_NAME_LEN 11  // 10 (plus '\0')
 #define VOICE_NAME_LEN 12 // 11 (plus '\0')
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
-#define DRUM_NAME_LEN 21
-
-#define FAV_CONFIG_PATH "DEXED/FAVCFG"
+#define FILENAME_MAX_LEN 16
+#define FULLPATH_MAX_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"
 #define SEQUENCER_CONFIG_NAME "sequencer"
@@ -368,12 +379,14 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define BRAIDS_CONFIG_NAME "braids"
 #define MULTIBAND_CONFIG_NAME "multiband"
 #define SIDECHAIN_CONFIG_NAME "sc"
+#define LIVESEQUENCER_CONFIG_NAME "liveseq"
+#define SAMPLES_CONFIG_NAME "samples"
+#define SLICES_CONFIG_NAME "slices"
+#define ENVELOPES_CONFIG_NAME "envelope"
+#define MAX_PERF_MOD 50
 
-#define MAX_PERF_MOD 30
-
-// SerialFlash
-#define MAX_FLASH_FILES 255
-#define MAX_FLASH_FILENAME_LEN 64
+// SD CARD
+#define MAX_FILES 150
 
 //*************************************************************************************************
 //* DO NO CHANGE ANYTHING BEYOND IF YOU DON'T KNOW WHAT YOU ARE DOING !!!
@@ -385,9 +398,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define PCM5102_MUTE_PIN 34 // hardware pin for PCM5102 XSMT soft mute function
 #endif
 
-#ifdef REMOTE_CONSOLE
 #define AUDIO_DEVICE_USB
-#endif
 
 #ifdef ONBOARD_BUTTON_INTERFACE
 #define BI_UP 2
@@ -400,32 +411,32 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define BI_BUTTON_B 17
 #endif
 
-#define MAX_DEXED 2 // No! - even don't think about increasing this number! IT _WILL_ PRODUCE MASSIVE PROBLEMS!
+#ifdef MUSIKANDMORE
+#define MCP_INTA 8
+#define CV_IN 15
+#define CV_CLOCK_IN 22
+#define CV_GATE_IN 23
+#define GEN3_CS_SDCARD_EXTERNAL 35
+#endif 
+
 #define CONTROL_RATE_MS 50
-#define MICROSYNTH_CONTROL_RATE_MS 20
-#define BRAIDS_CONTROL_RATE_MS 20
+#define MICROSYNTH_CONTROL_RATE_MS 30
+#define BRAIDS_CONTROL_RATE_MS 30
 #define SAVE_SYS_MS 5000
 #define VOL_MAX_FLOAT 0.98
-
-#define EEPROM_MARKER 0x4243
 
 #ifndef NUM_DRUMS
 #define NUM_DRUMS 0
 #endif
 
 // MAX_NOTES SETTINGS
-// Teensy-4.x settings
-#ifdef TEENSY4
-#define MAX_NOTES 32
-#define MIDI_DECAY_LEVEL_TIME 500
-#endif
 
-// Some optimizations
-#define USE_TEENSY_DSP 1
+#define MAX_NOTES 64
+#define MIDI_DECAY_LEVEL_TIME 500
 
 // HELPER MACROS
 #define TIME_MS2SAMPLES(x) floor(uint32_t(x) * AUDIO_SAMPLE_RATE / 1000) * sizeof(int16_t)
-#define SAMPLES2TIME_MS(x) float(uint32_t(x) * 1000 / AUDIO_SAMPLE_RATE * sizeof(int16_t)
+//#define SAMPLES2TIME_MS(x) float(uint32_t(x) * 1000 / AUDIO_SAMPLE_RATE * sizeof(int16_t))
 #define XSTR(x) STR(x)
 #define STR(x) #x
 
@@ -449,7 +460,6 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define VOLUME_MIN 0
 #define VOLUME_MAX 100
 #define VOLUME_DEFAULT 80
-// #define VOLUME_ENC_STEPS 5
 
 #define PANORAMA_MIN 0
 #define PANORAMA_MAX 40
@@ -553,7 +563,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define SOUND_INTENSITY_DEFAULT 100
 
 #define POLYPHONY_MIN 0
-#define POLYPHONY_MAX MAX_NOTES
+#define POLYPHONY_MAX MAX_NOTES / NUM_DEXED
 #define POLYPHONY_DEFAULT MAX_NOTES / NUM_DEXED
 
 #define MONOPOLY_MIN 0
@@ -667,12 +677,16 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 
 #define TOUCH_ROTATION_MIN 0
 #define TOUCH_ROTATION_MAX 3
-#define TOUCH_ROTATION_DEFAULT 1
+#define TOUCH_ROTATION_DEFAULT 2
 #define TOUCH_ROTATION_INVERTED 3
 
 #define SCREEN_SAVER_START_MIN 1
 #define SCREEN_SAVER_START_MAX 59
 #define SCREEN_SAVER_START_DEFAULT 4
+#define SCREEN_SAVER_MODE_DEFAULT 0 //random mode
+#define SCREEN_SAVER_MODE_MIN 0
+#define SCREEN_SAVER_MODE_MAX 5
+
 
 #define GAMEPAD_SPEED_MIN 60
 #define GAMEPAD_SPEED_MAX 300
@@ -680,7 +694,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 
 #define EP_CHORUS_FREQUENCY_MIN 0
 #define EP_CHORUS_FREQUENCY_MAX 100
-#define EP_CHORUS_FREQUENCY_DEFAULT 0
+#define EP_CHORUS_FREQUENCY_DEFAULT 40
 
 #define EP_CHORUS_WAVEFORM_MIN 0
 #define EP_CHORUS_WAVEFORM_MAX 1
@@ -688,7 +702,7 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 
 #define EP_CHORUS_DEPTH_MIN 0
 #define EP_CHORUS_DEPTH_MAX 100
-#define EP_CHORUS_DEPTH_DEFAULT 0
+#define EP_CHORUS_DEPTH_DEFAULT 30
 
 #define EP_CHORUS_LEVEL_MIN 0
 #define EP_CHORUS_LEVEL_MAX 100
@@ -762,6 +776,8 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define EP_MIDI_CHANNEL_MAX 16
 #define EP_MIDI_CHANNEL_DEFAULT DEFAULT_EP_MIDI_CHANNEL
 
+#define MIDI_CHANNEL_OFF 17
+
 // Number of samples in each delay line
 #define BRAIDS_FLANGE_DELAY_LENGTH (6 * AUDIO_BLOCK_SAMPLES)
 
@@ -773,14 +789,19 @@ const int FlashChipSelect = 6; // digital pin for flash chip CS pin (on Audio Sh
 #define STARTUP_NUM_MAX 255
 #define STARTUP_NUM_DEFAULT 0
 
-#define VOLUME_MULTIPLIER 1.4
-
 // Buffer-size define for load/save configuration as JSON
-#define JSON_BUFFER_SIZE 12000
+#define JSON_BUFFER_SIZE 19000
+
+// LED Pin Assignments
+#ifdef MIDI_ACTIVITY_LIGHTS
+  extern uint8_t LED_MIDI_IN;
+  extern uint8_t LED_MIDI_OUT;
+#endif
 
 // Internal configuration structure
 typedef struct dexed_s
 {
+  uint8_t pool;
   uint8_t bank;
   uint8_t voice;
   uint8_t lowest_note;
@@ -812,27 +833,29 @@ typedef struct dexed_s
   uint8_t portamento_time;
   uint8_t op_enabled;
   uint8_t midi_channel;
+  uint8_t sidechain_send;
 } dexed_t;
 
 typedef struct fx_s
 {
-  uint8_t filter_cutoff[MAX_DEXED];
-  uint8_t filter_resonance[MAX_DEXED];
-  uint8_t chorus_frequency[MAX_DEXED];
-  uint8_t chorus_waveform[MAX_DEXED];
-  uint8_t chorus_depth[MAX_DEXED];
-  uint8_t chorus_level[MAX_DEXED];
-  uint8_t delay_multiplier[MAX_DEXED];
-  uint16_t delay_time[MAX_DEXED];
-  uint8_t delay_feedback[MAX_DEXED];
-  uint8_t delay_level[MAX_DEXED];
-  uint8_t delay_level_global[MAX_DEXED];
-  uint8_t delay_sync[MAX_DEXED];
-  uint8_t delay_pan[MAX_DEXED];
-  uint8_t reverb_send[MAX_DEXED];
-  uint8_t delay_to_reverb[MAX_DEXED];
-  uint8_t delay_filter_mode[MAX_DEXED];
-  uint16_t delay_filter_freq[MAX_DEXED];
+  uint8_t filter_cutoff[NUM_DEXED];
+  uint8_t filter_resonance[NUM_DEXED];
+  uint8_t chorus_frequency[NUM_DEXED];
+  uint8_t chorus_waveform[NUM_DEXED];
+  uint8_t chorus_depth[NUM_DEXED];
+  uint8_t chorus_level[NUM_DEXED];
+  uint8_t delay_multiplier[NUM_DEXED];
+  uint16_t delay_time[NUM_DEXED];
+  uint8_t delay_feedback[NUM_DEXED];
+  uint8_t delay_level1[NUM_DEXED];
+  uint8_t delay_level2[NUM_DEXED];
+  uint8_t delay_level_global[NUM_DEXED];
+  uint8_t delay_sync[NUM_DEXED];
+  uint8_t delay_pan[NUM_DEXED];
+  uint8_t reverb_send[NUM_DEXED];
+  uint8_t delay_to_reverb[NUM_DEXED];
+  uint8_t delay_filter_mode[NUM_DEXED];
+  uint16_t delay_filter_freq[NUM_DEXED];
   uint8_t delay1_to_delay2;
   uint8_t delay2_to_delay1;
   uint8_t reverb_roomsize;
@@ -842,18 +865,16 @@ typedef struct fx_s
   uint8_t reverb_hidamp;
   uint8_t reverb_diffusion;
   uint8_t reverb_level;
-  uint8_t eq_1;
-  int8_t eq_2;
-  int8_t eq_3;
-  int8_t eq_4;
-  int8_t eq_5;
-  int8_t eq_6;
-  uint8_t eq_7;
   uint8_t ep_chorus_frequency;
   uint8_t ep_chorus_waveform;
   uint8_t ep_chorus_depth;
   uint8_t ep_chorus_level;
   uint8_t ep_reverb_send;
+  uint8_t ep_delay_send_1;
+  uint8_t ep_delay_send_2;
+  uint8_t reverb_sidechain_send;
+  uint8_t delay1_sidechain_send;
+  uint8_t delay2_sidechain_send;
 } fx_t;
 
 typedef struct epiano_s
@@ -876,8 +897,7 @@ typedef struct epiano_s
   uint8_t sound_intensity;
   uint8_t pan;
   uint8_t midi_channel;
-  uint8_t delay_send_1;
-  uint8_t delay_send_2;
+  uint8_t sidechain_send;
 } epiano_t;
 
 typedef struct microsynth_s
@@ -927,6 +947,7 @@ typedef struct microsynth_s
   uint8_t delay_send[NUM_MICROSYNTH];
   uint8_t vel_mod_filter_osc = 0;
   uint8_t vel_mod_filter_noise = 0;
+  uint8_t sidechain_send;
 } microsynth_t;
 
 typedef struct braids_s
@@ -955,32 +976,42 @@ typedef struct braids_s
   uint8_t midi_channel;
   uint8_t pan;
   uint8_t note_buffer[NUM_BRAIDS];
+  uint8_t sidechain_send;
+  char name[FILENAME_MAX_LEN];
+  char temp_name[FILENAME_MAX_LEN];
 } braids_t;
 
 typedef struct multisample_s
 {
-  char name[18];
+  char name[FILENAME_MAX_LEN];
   uint8_t sound_intensity;
   uint8_t midi_channel;
 } multisample_t;
 
 typedef struct multisample_zone_s
 {
-  char filename[MAX_FLASH_FILENAME_LEN];
+  char filename[FULLPATH_MAX_LEN];
   uint8_t entry_number;
   uint8_t rootnote; // sample root note
   uint8_t low;      // lowest note in range
   uint8_t high;     // highest note in range
-  bool playmode;    // Trigger/Hold Mode
+  uint8_t playmode;    // Trigger/Hold Mode, seq play length (4 steps)
   uint8_t vol;      // volume
   uint8_t pan;      // panorama
   uint8_t rev;      // reverb send
+  uint8_t tune;     // tune/pitch offset
+  uint8_t loop_type;
+  uint32_t loop_start;
+  uint32_t loop_end;
+  uint8_t psram_entry_number;
+  //uint32_t filelength; // runtime value, do not store
 } multisample_zone_t;
 
 typedef struct sys_s
 {
   uint8_t vol;
   uint8_t mono;
+  uint8_t dexed_engine_type;
   uint8_t soft_midi_thru;
   uint8_t performance_number;
   uint8_t favorites;
@@ -988,43 +1019,41 @@ typedef struct sys_s
   uint8_t load_at_startup_page;
   uint8_t display_rotation;
   uint8_t touch_rotation;
-  uint16_t calib_x_min;
-  uint16_t calib_y_min;
-  uint16_t calib_x_max;
-  uint16_t calib_y_max;
   uint8_t screen_saver_start; // minutes
+  uint8_t screen_saver_mode; // 0 = random, modes 1...4 , 99 = off
   uint16_t gamepad_speed;     // milliseconds
-  bool ui_reverse;
+  bool reverse_encoder_pins;
+  bool boot_anim_skip;
+  bool invert_colors;
+  uint8_t brightness;
+  bool skip_midi_channel_warning;
+  bool send_sysex_on_voice_change;
+  bool send_midi_cc;
+  bool swap_midi_leds;
+  uint8_t rgb_enc_color_def=4;
+  uint8_t rgb_enc_color_sel=1;
+  bool modular_inputs;
 } sys_t;
 
 typedef struct storage_file_s
 {
-  char name[26];
-  uint16_t size;
+  String name;
+  uint32_t size;
   bool isDirectory;
 } storage_file_t;
 
 typedef struct sdcard_s
 {
   char type[5];
-  storage_file_t files[200];
+  std::vector<storage_file_t> files;
   uint32_t used;
   uint32_t capacity;
 } sdcard_t;
 
-#ifdef COMPILE_FOR_FLASH
-typedef struct flash_s
-{
-  storage_file_t files[200];
-  uint32_t used;
-  uint32_t capacity;
-} flash_t;
-#endif
-
 typedef struct configuration_s
 {
   sys_t sys;
-  dexed_t dexed[MAX_DEXED];
+  dexed_t dexed[NUM_DEXED];
   epiano_t epiano;
   fx_t fx;
 } config_t;
@@ -1037,25 +1066,46 @@ typedef struct custom_midi_map_s
   uint8_t out;     // Destination Key / Value
 } custom_midi_map_t;
 
+enum virtual_keyboard_instruments
+{
+ VK_LIVESEQUENCER = 0,
+ VK_DEXED0,
+ VK_DEXED1,
+ VK_DEXED2,
+ VK_DEXED3,
+ VK_MICROSYNTH0,
+ VK_MICROSYNTH1,
+ VK_EPIANO,
+ VK_DRUMS,
+ VK_BRAIDS,
+ VK_PS_1,
+ VK_PS_2,
+ VK_PS_3
+};
+
 enum master_mixer_ports
 {
   MASTER_MIX_CH_DEXED1,
   MASTER_MIX_CH_DEXED2,
+  MASTER_MIX_CH_DEXED3,
+  MASTER_MIX_CH_DEXED4,
   MASTER_MIX_CH_REVERB,
   MASTER_MIX_CH_DRUMS,
   MASTER_MIX_CH_EPIANO,
   MASTER_MIX_CH_MICROSYNTH,
   MASTER_MIX_CH_BRAIDS,
-  MASTER_MIX_CH_WAV_PREVIEW_SD,
-  MASTER_MIX_CH_WAV_PREVIEW_FLASH,
+  MASTER_MIX_CH_WAV_PREVIEW_PSRAM,
   MASTER_MIX_CH_DELAY1,
   MASTER_MIX_CH_DELAY2,
+  MASTER_MIX_CH_SIDECHAIN,
 };
 
 enum reverb_mixer_ports
 {
   REVERB_MIX_CH_DEXED1,
   REVERB_MIX_CH_DEXED2,
+  REVERB_MIX_CH_DEXED3,
+  REVERB_MIX_CH_DEXED4,
   REVERB_MIX_CH_DRUMS,
   REVERB_MIX_CH_EPIANO,
   REVERB_MIX_CH_MICROSYNTH,
@@ -1069,8 +1119,15 @@ enum fm_modes
   FM_BROWSE_FILES,
   FM_DELETE_FILE,
   FM_COPY_PRESETS,
-  FM_COPY_TO_FLASH,
-  FM_PLAY_SAMPLE
+  FM_PLAY_SAMPLE,
+  FM_COPY_TO_PSRAM,
+  FM_DELETE_FROM_PSRAM
+};
+
+enum fav_search_direction
+{
+  LEFT,
+  RIGHT
 };
 
 #ifndef _MAPFLOAT
@@ -1081,9 +1138,45 @@ inline float mapfloat(float val, float in_min, float in_max, float out_min, floa
 }
 #endif
 
+enum APC_MODE
+{
+  APC_OFF,
+  APC_PATTERN_EDITOR,
+  APC_SONG,
+  APC_MUTE_MATRIX,
+  APC_MIXER
+};
+
 // For developers only
 #if defined DEBUG && DEBUG == 2
 #define LOG SerialUSB1 // dual serial : SerialUSB1 to separate logs
 #else
 #define LOG Serial
 #endif
+
+enum TurnDir {
+  TURN_UP = -1,
+  TURN_DN = 1
+};
+
+struct EncoderEvents {
+  bool down;
+  bool up;
+  bool turned;
+  TurnDir dir;
+  uint16_t speed;
+  bool pressed;
+  bool longPressed;
+};
+
+enum perf_load_opt
+{
+ perf_dexed,
+ perf_msynth,
+ perf_epiano,
+ perf_braids,
+ perf_samples,
+ perf_effects,
+ perf_seq,
+ perf_liveseq
+};

@@ -1,80 +1,50 @@
 #include "scope.h"
 #include "ILI9341_t3n.h"
-#include "sequencer.h"
 extern ILI9341_t3n display;
-extern sequencer_t seq;
 
-FLASHMEM void Realtime_Scope::FillArray()
+void Realtime_Scope::update(void)
 {
-  __disable_irq();
-  uint16_t i = 0;
-  do
-  {
-    int16_t wave_data = buffer[i];
-    int8_t y = map(wave_data, 32767, -32768, 20, -20) + 32;
-    scopebuffer[i] = y;
-    i = i + 1;
-  } while (i < (AUDIO_BLOCK_SAMPLES));
-  __enable_irq();
-}
+  audio_block_t* block = receiveReadOnly(0);
+  if (block) {
+    if (updateBuffer) {
+      updateBuffer = false;
 
-FLASHMEM void Realtime_Scope::AddtoBuffer(int16_t *audio)
-{
-  const int16_t *end = audio + AUDIO_BLOCK_SAMPLES;
-  __disable_irq();
-  do
-  {
-    buffer[count++] = *audio;
-    audio++;
-  } while (audio < end);
-  if (count > (AUDIO_BLOCK_SAMPLES)-1)
-  {
-    count = 0;
-  }
-  __enable_irq();
-  if (scope_is_drawing == false)
-    FillArray();
-}
-
-FLASHMEM void Realtime_Scope::update(void)
-{
-  audio_block_t *block;
-  block = receiveReadOnly(0);
-  if (block)
-  {
-    AddtoBuffer(block->data);
+      if (scope_is_drawing == false) {
+        __disable_irq();
+        memcpy(scopebuffer, block->data, AUDIO_BLOCK_SAMPLES * 2);
+        __enable_irq();
+      }
+    }
     release(block);
   }
 }
 
-FLASHMEM void Realtime_Scope::clear(void)
+void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
 {
-  for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++)
-  {
-    scopebuffer_old[i] = 32;
-  }
-}
+  scope_is_drawing = true;
+  display.console = false;
 
-FLASHMEM void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w)
-{
-  if (scope_delay > 84)
-  {
-    uint16_t i = 0;
-    scope_is_drawing = true;
-    display.console = false;
-    do
-    {
-      if (scopebuffer_old[i] != scopebuffer[i])
-      {
-        display.drawPixel(x + i, scopebuffer_old[i] + y, COLOR_BACKGROUND);
-        display.drawPixel(x + i, scopebuffer[i] + y, COLOR_SYSTEXT);
-      }
+  w = std::min(uint8_t(AUDIO_BLOCK_SAMPLES), w); // limit width AUDIO_BLOCK size (128)
+
+  //display.drawRect(x, y, w, h, DX_DARKCYAN); // comment in to fit scope into screen
+  //display.drawLine(x,y+h/2,x+w,y+h/2,GREEN); //zero line
+  const int16_t halfHeight = h / 2;
+  for (uint16_t i = 0; i < w; i++) {
+    const int16_t signFactor = (scopebuffer[i] & 0x8000) ? -halfHeight : halfHeight;
+    const uint16_t value = abs(scopebuffer[i]);
+
+    scopebuffer[i] = signFactor * log10f(1.0 + (9 * value / 32768.0)) + halfHeight; // log plot
+    // scopebuffer[i] = map(scopebuffer[i], 32767, -32768, h, 0); // linear plot
+     //scopebuffer[i] = map(scopebuffer[i], 32, -33, h, 0); // close inspection
+     //scopebuffer[i] = 512 * i - 32767; // test data
+     //DBG_LOG(printf("s: %i\ti: %i\to: %i\n", signFactor, value, scopebuffer[i]));
+
+    if (scopebuffer_old[i] != scopebuffer[i]) {
+      display.drawPixel(x + i, scopebuffer_old[i] + y, COLOR_BACKGROUND);
+      display.drawPixel(x + i, scopebuffer[i] + y, COLOR_SYSTEXT);
       scopebuffer_old[i] = scopebuffer[i];
-      i = i + 1;
-
-    } while (i < w);
-    scope_delay = 0;
-    scope_is_drawing = false;
+    }
   }
-  scope_delay++;
+  updateBuffer = true;
+  scope_is_drawing = false;
 }

@@ -25,81 +25,155 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-boolean COND_hide() // hide a menu element
-{
-  return false;
-}
+#define _LCDML_DISP_cnt 64
+#define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
+#define SCREENSAVER_STAY_TIME 1500  // 60s @ 25Hz rate
+#define SCREENSAVER_FADE_TIME 25    // 1s @ 25Hz rate
+#define SCREENSAVER_BRIGHTNESS_STEP (255/SCREENSAVER_FADE_TIME)
+#define SCREENSAVER_MAX_COUNTHUE 359
 
-// the id numbers MUST be kept in incrementing sequence.
-// when menu options are added or removed, they must be renumbered!
-// To do this automatically, paste the code below beginning with the second line
-//  into the following command:
-// cat -n | sed -E 's/([0-9]+)([^0-9]+)([0-9]+)(.*+)/\2\1\4/'
+#include "touchbutton.h"
+#include "ILI9341_t3n.h"
+#include "MD_REncoder.h"
+#include "MD_MIDIFile.h"
 
-LCDML_add(0, LCDML_0, 1, "Dexed", NULL);
-LCDML_add(1, LCDML_0_1, 1, "Select Voice", UI_func_voice_select);
-LCDML_add(2, LCDML_0_1, 2, "Edit Voice", UI_func_voice_editor);
-LCDML_add(3, LCDML_0_1, 3, "Audio", UI_func_dexed_audio);
-LCDML_add(4, LCDML_0_1, 4, "Controller", UI_func_dexed_controllers);
-LCDML_add(5, LCDML_0_1, 5, "Setup", UI_func_dexed_setup);
-LCDML_add(6, LCDML_0_1, 6, "Operator", UI_handle_OP);
-LCDML_add(7, LCDML_0_1, 7, "MIDI Send Voice", UI_func_sysex_send_voice);
-LCDML_add(8, LCDML_0_1, 8, "Save Voice", UI_func_save_voice);
-LCDML_add(9, LCDML_0, 2, "E-Piano", UI_func_epiano);
-LCDML_add(10, LCDML_0, 3, "MicroSynth", UI_func_microsynth);
-LCDML_add(11, LCDML_0, 4, "Braids", UI_func_braids);
-LCDML_add(12, LCDML_0, 5, "MultiSample", UI_func_MultiSamplePlay);
-LCDML_add(13, LCDML_0, 6, "Drums", UI_func_drums);
-LCDML_add(14, LCDML_0, 7, "Master Effects", NULL);
-LCDML_add(15, LCDML_0_7, 1, "Delay+Reverb", UI_func_master_effects);
-LCDML_add(16, LCDML_0_7, 2, "SideChain", UI_func_sidechain);
-LCDML_add(17, LCDML_0_7, 3, "Multiband", UI_func_multiband_dynamics);
-LCDML_add(18, LCDML_0, 8, "Sequencer", NULL);
-LCDML_add(19, LCDML_0_8, 1, "Song", UI_func_song);
-LCDML_add(20, LCDML_0_8, 2, "Pattern Editor", UI_func_seq_pattern_editor);
-LCDML_add(21, LCDML_0_8, 3, "Vel./Chrd Edit", UI_func_seq_vel_editor);
-LCDML_add(22, LCDML_0_8, 4, "Tracker", UI_func_seq_tracker);
-LCDML_add(23, LCDML_0_8, 5, "Arpeggio", UI_func_arpeggio);
-LCDML_add(24, LCDML_0_8, 6, "Mute Matrix", UI_func_seq_mute_matrix);
-LCDML_add(25, LCDML_0_8, 7, "PianoRoll", UI_func_seq_pianoroll);
-LCDML_add(26, LCDML_0_8, 8, "Probabilities", UI_func_seq_probabilities);
-LCDML_add(27, LCDML_0_8, 9, "Smart Filter", UI_func_smart_filter);
-LCDML_add(28, LCDML_0_8, 10, "Clear ALL", UI_func_clear_all);
-LCDML_add(29, LCDML_0_8, 11, "Clear Song", UI_func_clear_song);
-LCDML_add(30, LCDML_0_8, 12, "Clear Chains", UI_func_clear_song_chains);
-LCDML_add(31, LCDML_0_8, 13, "Clear Patterns", UI_func_clear_patterns);
-LCDML_add(32, LCDML_0_8, 14, "Settings", UI_func_seq_settings);
-LCDML_add(33, LCDML_0, 9, "Mixer", UI_func_mixer);
-LCDML_add(34, LCDML_0, 11, "Sample Editor", UI_func_sample_editor);
-LCDML_add(35, LCDML_0, 12, "Audio/SMP Record", UI_func_recorder);
-LCDML_add(36, LCDML_0, 13, "Load/Save", NULL);
-LCDML_add(37, LCDML_0_13, 1, "Load Perf.", UI_func_load_performance);
-LCDML_add(38, LCDML_0_13, 2, "Save Perf.", UI_func_save_performance);
-LCDML_add(39, LCDML_0_13, 3, "Name Perf.", UI_func_set_performance_name);
-LCDML_add(40, LCDML_0_13, 4, "Name Multisample", UI_func_set_multisample_name);
-LCDML_add(41, LCDML_0_13, 5, "MIDI", NULL);
-LCDML_add(42, LCDML_0_13_5, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(43, LCDML_0_13_5, 2, "MIDI Snd Bank", UI_func_sysex_send_bank);
-LCDML_add(44, LCDML_0_13_5, 3, "MIDI Snd Voice", UI_func_sysex_send_voice);
-LCDML_add(45, LCDML_0, 14, "File Manager", UI_func_file_manager);
-LCDML_add(46, LCDML_0, 15, "System", NULL);
-LCDML_add(47, LCDML_0_15, 1, "Stereo/Mono", UI_func_stereo_mono);
-LCDML_add(48, LCDML_0_15, 2, "MIDI channels", UI_func_midi_channels);
-LCDML_add(49, LCDML_0_15, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
-LCDML_add(50, LCDML_0_15, 4, "MIDI Mapping", UI_func_custom_mappings);
-LCDML_add(51, LCDML_0_15, 5, "Favorites", UI_func_favorites);
-LCDML_add(52, LCDML_0_15, 6, "Startup Perform.", UI_func_startup_performance);
-LCDML_add(53, LCDML_0_15, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(54, LCDML_0_15, 8, "Misc. Settings", UI_func_misc_settings);
-LCDML_add(55, LCDML_0_15, 9, "Map Gamepad", UI_func_map_gamepad);
-LCDML_add(56, LCDML_0_15, 10, "Calibrate Touch", UI_func_calibrate_touch);
-LCDML_add(57, LCDML_0_15, 11, "TEST Touchscreen", UI_func_test_touchscreen);
-LCDML_add(58, LCDML_0_15, 12, "TEST Audio Mute", UI_func_test_mute);
-LCDML_add(59, LCDML_0_15, 13, "TEST PSRAM", UI_func_test_psram);
-LCDML_add(60, LCDML_0_15, 14, "FORMAT FLASH", UI_func_format_flash);
-LCDML_add(61, LCDML_0, 16, "Info", UI_func_information);
-LCDML_addAdvanced(62, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(63, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-#define _LCDML_DISP_cnt 63
+struct ScopeSettings {
+  bool enabled;
+  uint16_t x;
+  uint16_t y;
+  uint16_t w;
+  uint16_t h;
+  bool onlyDrawWhenRunning;
+};
 
+void splash_draw_header();
+void splash_draw_D();
+void splash_draw_reverseD();
+void splash_draw_X(uint8_t c);
+void draw_logo2(uint8_t yoffset, uint8_t progress = 10);
+void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
+void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
+
+void previewWavSampleEditor();
+void previewWavFilemanager();
+
+void getNoteName(char* noteName, uint8_t noteNumber);
+void print_arp_start_stop_button();
+void print_custom_mappings(void);
+void update_midi_learn_button();
+bool touch_button_back_page();
+bool legacy_touch_button_back_page();
+void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
+void show_no_grid(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, long num);
+void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
+uint8_t midiNoteToSampleNote(uint8_t note);
+const char* get_drum_name_from_note(uint8_t note);
+const char* seq_find_shortname(uint8_t sstep);
+void seq_printAllVelocitySteps_single_step(uint8_t step, int color);
+void print_track_steps_detailed_only_current_playing_note(int xpos, int ypos, uint8_t currentstep);
+void resetScreenTimer();
+void continueWavRecording();
+ScopeSettings& getCurrentScopeSettings(void);
+void update_display_functions_while_seq_running();
+void loadDexedOrigADSR(int instance);
+
+void UI_func_dexed_audio(uint8_t param);
+void UI_func_dexed_controllers(uint8_t param);
+void UI_func_dexed_setup(uint8_t param);
+void UI_func_information(uint8_t param);
+void UI_func_master_effects(uint8_t param);
+void UI_func_braids(uint8_t param);
+void UI_func_multiband_dynamics(uint8_t param);
+void UI_func_recorder(uint8_t param);
+void UI_func_file_manager(uint8_t param);
+void UI_func_custom_mappings(uint8_t param);
+void UI_func_microsynth(uint8_t param);
+void UI_func_seq_pattern_editor(uint8_t param);
+void UI_func_seq_vel_editor(uint8_t param);
+void UI_func_seq_settings(uint8_t param);
+void UI_func_seq_tracker(uint8_t param);
+void UI_func_drums(uint8_t param);
+void UI_func_MultiSamplePlay(uint8_t param);
+void UI_func_arpeggio(uint8_t param);
+void UI_func_seq_mute_matrix(uint8_t param);
+void UI_func_set_performance_name(uint8_t param);
+void UI_func_volume(uint8_t param);
+void UI_func_mixer(uint8_t param);
+void UI_func_sidechain(uint8_t param);
+void UI_func_song(uint8_t param);
+void UI_func_load_performance(uint8_t param);
+void UI_func_save_performance(uint8_t param);
+void UI_func_midi_channels(uint8_t param);
+void UI_func_sd_content_not_found(uint8_t param);
+void UI_func_system_settings(uint8_t param);
+void UI_func_voice_select(uint8_t param);
+void UI_func_voice_editor(uint8_t param);
+void UI_func_sysex_receive_bank(uint8_t param);
+void UI_func_epiano(uint8_t param);
+void UI_func_sample_editor(uint8_t param);
+void UI_func_midiplayer(uint8_t param);
+void UI_func_test_touchscreen(uint8_t param);
+void UI_func_sound_intensity(uint8_t param);
+void UI_func_filter_resonance(uint8_t param);
+void UI_func_filter_cutoff(uint8_t param);
+
+void setup_ui(void);
+void midiCallback(midi_event* pev);
+uint8_t count_omni();
+uint8_t count_midi_channel_duplicates(bool find_first);
+void print_smf_parameters();
+void selectSample(uint8_t sample);
+void update_seq_speed();
+void mb_set_mutes();
+void mb_set_master();
+void mb_set_compressor();
+void clear_song_playhead();
+void sub_song_print_tracknumbers();
+bool load_performance_and_check_midi(uint8_t perf);
+void setup_screensaver(void);
+void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, bool fullrefresh_values);
+void print_voice_select_fav_search_button();
+void pattern_editor_menu_0();
+void sub_touchscreen_test_page_init();
+void border3_large();
+void border3_large_clear();
+void seq_pattern_editor_update_dynamic_elements();
+void microsynth_refresh_lower_screen_static_text();
+void microsynth_refresh_lower_screen_dynamic_text();
+void panic_dexed_current_instance();
+void printLiveModButtons(void);
+void printLiveModButton(int8_t button); // 0 - 3 ADSR
+void reset_live_modifiers();
+void reset_live_modifier(uint8_t step);
+
+void print_empty_spaces(uint8_t spaces, bool clear_background);
+void print_voice_select_default_help();
+void draw_volmeters_mixer();
+void draw_volmeters_multiband_compressor();
+void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+
+void draw_algo(bool forceDraw = false);
+uint8_t get_algo();
+void set_algo(uint8_t value);
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+void set_midi_led_pins();
 #endif
+
+const EncoderEvents getEncoderEvents(uint8_t id);
+
+#define MAX_CC_DEST 15
+PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
+  // 25,
+  26, 27, 32, 91, 200, 201, 202, 203 };
+
+PROGMEM static const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+enum {
+  ENC_R = 0,
+  ENC_L = 1
+};
+
+PROGMEM static const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
+
+#endif //_UI_H_

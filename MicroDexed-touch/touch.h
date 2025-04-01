@@ -1,55 +1,52 @@
 #ifndef _TOUCH_H
 #define _TOUCH_H
 
-#ifdef GENERIC_DISPLAY
+#include "config.h"
+
+#if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 extern XPT2046_Touchscreen touch;
 #endif
 
-#ifdef ADAFRUIT_DISPLAY
+#ifdef CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;
 #endif
 
-#include <SD.h>
+enum Dexed_ADSR {
+  DXD_ATTACK = 0,
+  DXD_DECAY,
+  DXD_SUSTAIN,
+  DXD_RELEASE
+};
 
 typedef struct dexed_live_mod_s
 {
-  uint8_t active_button = 0;
-  uint8_t orig_attack_values[2][7];
-  uint8_t orig_release_values[2][7];
-
-#if NUM_DEXED > 1
-  int attack_mod[NUM_DEXED] = {0, 0};
-  int release_mod[NUM_DEXED] = {0, 0};
-#else
-  int attack_mod[NUM_DEXED] = {0};
-  int release_mod[NUM_DEXED] = {0};
-#endif
-
+  int8_t active_button = 0;
+  int8_t orig_adsr_values[NUM_DEXED][4][6];
+  int8_t live_adsr_values[NUM_DEXED][4]; // -50 to +50 ADSR live mod
 } dexed_live_mod_t;
 
 typedef struct ts_s
 {
-  bool finished_calibration = false;
-  uint16_t temp_col_hue = 1;
-  uint8_t temp_col_sat = 240, temp_col_bright = 240;
-  int slowdown_UI_input;
   uint8_t virtual_keyboard_octave = 3;
-  uint8_t virtual_keyboard_instrument = 1; // 1 = dexed0  2=dexed1  3=microsynth0  4=microsynth1   5=epiano  6=drums 7=braids, 8- pitched samples
+  uint8_t virtual_keyboard_instrument = VK_DEXED0;
   uint8_t virtual_keyboard_midi_channel = 1;
   uint8_t virtual_keyboard_velocity = 120;
   uint8_t msp_peak[NUM_MULTISAMPLES];
+  uint8_t current_virtual_keyboard_display_mode = 0;   // 0=keys 1=pads 
+  uint8_t previous_virtual_keyboard_display_mode = 99; // 0=keys 1=pads 
 
   TS_Point p;
-  uint8_t virtual_keyboard_state_white[11];
-  uint8_t virtual_keyboard_state_black[17];
-  bool update_virtual_keyboard_octave;
-  bool block_screen_update;
+
+  uint32_t virtual_keyboard_state_white = 0;
+  uint32_t virtual_keyboard_state_black = 0;
+
   uint8_t displayed_peak[20]; // volmeter peak levels, currently displayed level
   uint8_t old_helptext_length[3];
   bool touch_ui_drawn_in_menu = false;
   bool keyb_in_menu_activated = false;
+  uint8_t fav_buttton_state = 0;
 } ts_t;
 
 // (Touch)File Manager
@@ -58,22 +55,8 @@ typedef struct fm_s
 {
   uint8_t wav_recorder_mode = 0;
 
-#ifdef COMPILE_FOR_SDCARD
-  uint8_t sample_source = 0; // 0 = SD, 1 = FLASH
-#endif
-
-#ifdef COMPILE_FOR_PROGMEM
-  uint8_t sample_source = 0; // 0 = SD, 1 = FLASH
-#endif
-
-#ifdef COMPILE_FOR_FLASH
-  uint8_t sample_source = 1; // 0 = SD, 1 = FLASH
-#endif
-
-  int sample_screen_position_x = 0;
-  bool sample_preview_playing;
-  uint8_t active_window = 0; // 0 = left window (SDCARD) , 1 = FLASH
-
+  uint8_t sample_source = 0; // 0 = SD, 1 = UNUSED, 2 = MSP1, 3 = MSP2, 4 = PSRAM
+  uint8_t active_window = 0; // 0 = left window (SDCARD) , 1 = PSRAM
   uint16_t sd_sum_files = 0;
   uint8_t sd_cap_rows;
   uint8_t sd_folder_depth = 0;
@@ -82,18 +65,50 @@ typedef struct fm_s
   uint8_t sd_mode = 0;
   bool sd_is_folder;
   bool sd_parent_folder = false;
-  char sd_new_name[52];
-  char sd_full_name[52];
-  char sd_prev_dir[52];
-  char sd_temp_name[52];
+  String sd_new_name;
+  String sd_full_name;
+  String sd_prev_dir;
+  String sd_temp_name;
 
-  uint16_t flash_sum_files = 0;
-  uint16_t flash_cap_rows;
-  uint16_t flash_selected_file = 0;
-  uint16_t flash_skip_files = 0;
-  uint8_t flash_mode = 4;
-  uint8_t flash_preview_slot;
-  char flash_temp_name[52];
+  uint16_t psram_sum_files = 0;
+  uint16_t psram_cap_rows;
+  uint16_t psram_selected_file = 0;
+  uint16_t psram_skip_files = 0;
+  bool SD_CARD_READER_EXT;
 } fm_t;
 
+static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
+typedef void (*TouchFn)();
+
+void registerTouchHandler(TouchFn touchFn);
+void unregisterTouchHandler(void);
+TouchFn getCurrentTouchHandler(void);
+void updateTouchScreen();
+uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+void helptext_r(const char* str);
+
+void update_latch_button();
+void draw_back_touchbutton();
+void draw_loop_buttons();
+void print_file_manager_buttons();
+void print_current_chord();
+void handle_page_with_touch_back_button();
+
+void handle_touchscreen_braids(void);
+void handle_touchscreen_arpeggio();
+void handle_touchscreen_midi_channel_page();
+void handle_touchscreen_mixer();
+void handle_touchscreen_microsynth();
+void handle_touchscreen_pattern_editor();
+void handle_touchscreen_voice_select();
+void handle_touchscreen_multiband();
+void handle_touchscreen_menu();
+void handle_touchscreen_test_touchscreen();
+void handle_touchscreen_sample_editor();
+void handle_touchscreen_settings_button_test();
+void handle_touchscreen_file_manager();
+void handle_touchscreen_mute_matrix();
+void handle_touchscreen_custom_mappings();
+void handle_touchscreen_drums();
+void handle_load_performance();
 #endif

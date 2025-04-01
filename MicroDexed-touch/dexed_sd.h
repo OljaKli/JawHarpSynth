@@ -30,28 +30,32 @@
 #ifndef DEXED_SYSEX_H_INCLUDED
 #define DEXED_SYSEX_H_INCLUDED
 
-extern uint8_t sd_card;
-extern AudioSynthDexed* MicroDexed[NUM_DEXED];
+extern uint8_t sd_card_internal;
+extern AudioSynthDexed *MicroDexed[NUM_DEXED];
 extern void show_patch(uint8_t instance_id);
 
-extern void send_sysex_voice(uint8_t midi_channel, uint8_t* data);
+extern void send_sysex_voice(uint8_t midi_channel, uint8_t *data);
 
 extern uint8_t bank;
 extern uint8_t voice;
 extern uint8_t ui_state;
 extern uint8_t ui_main_state;
 extern config_t configuration;
-extern uint32_t crc32(byte* calc_start, uint16_t calc_bytes);
+extern uint32_t crc32(byte *calc_start, uint16_t calc_bytes);
 extern void set_fx_params(void);
 extern void set_voiceconfig_params(uint8_t instance_id);
 extern void set_sys_params(void);
 extern void set_epiano_params(void);
 
-bool load_sd_voice(uint8_t b, uint8_t v, uint8_t instance_id);
-bool save_sd_voice(uint8_t b, uint8_t v, uint8_t instance_id);
-bool get_sd_voice(File sysex, uint8_t voice_number, uint8_t* data);
-bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data);
-bool save_sd_bank(const char* bank_filename, uint8_t* data);
+bool check_sd_performance_exists(uint8_t number);
+bool check_sd_braids_patch_exists(uint8_t number);
+void get_sd_performance_name_json(uint8_t number);
+
+bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+bool get_sd_voice(File sysex, uint8_t voice_number, uint8_t *data);
+bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t *data);
+bool save_sd_bank(const char* bank_filename, uint8_t *data);
 
 bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id);
 bool save_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id);
@@ -65,26 +69,23 @@ bool save_sd_sys_json(void);
 bool load_sd_performance_json(uint8_t p);
 bool save_sd_performance_json(uint8_t p);
 
-//bool load_sd_seq_json(uint8_t p);
-//bool save_sd_seq_json(uint8_t p);
-
 bool load_sd_multisample_presets_json(uint8_t p);
 bool save_sd_multisample_presets_json(uint8_t p);
 
 bool check_performance_directory(uint8_t seq_number);
 
 bool get_sd_data(File sysex, uint8_t format, uint8_t* conf);
-bool write_sd_data(File sysex, uint8_t format, uint8_t* data, uint16_t len);
+bool write_sd_data(File sysex, uint8_t format, uint8_t *data, uint16_t len);
 
-bool get_bank_name(uint8_t b, char* bank_name);
-bool get_voice_name(uint8_t b, uint8_t v, char* voice_name);
+bool get_bank_name(uint8_t p, uint8_t b, char* bank_name);
+bool get_voice_name(uint8_t p,uint8_t b, uint8_t v, char* voice_name);
 
-uint8_t calc_checksum(uint8_t* data, uint16_t len);
+uint8_t calc_checksum(uint8_t *data, uint16_t len);
 void strip_extension(const char* s, char* target, uint8_t len);
 
 void string_toupper(char* s);
 
 void load_sd_directory();
-int compare_files_by_name(const void* a, const void* b);
+int compare_files_by_name(storage_file_s &a, storage_file_s &b);
 
 #endif

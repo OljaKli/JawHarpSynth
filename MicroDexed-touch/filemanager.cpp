@@ -1,3 +1,4 @@
+#include <Audio.h>
 #include "filemanager.h"
 
 FLASHMEM void sd_filemanager()
@@ -9,6 +10,7 @@ FLASHMEM void sd_filemanager()
   command[read] = '\0';
 
   read = Serial.readBytesUntil('!', path, 128);
+  //delayMicroseconds(40);
   path[read] = '\0';
 
   if (Serial.read() == '%')
@@ -41,18 +43,20 @@ FLASHMEM void sd_filemanager()
   }
 }
 
-FLASHMEM void sd_sendDirectory(const char *path)
+FLASHMEM void sd_sendDirectory(const char* path)
 {
 #ifdef DEBUG
   LOG.printf("SENDDIR [%s]\n", path);
 #endif
-
   char filename[255];
+
+  AudioNoInterrupts();
   File dir = SD.open(path);
 
   Serial.write(99);
   Serial.write(FM_START);
   Serial.write(88);
+  delayMicroseconds(800);
 
   while (true)
   {
@@ -61,13 +65,19 @@ FLASHMEM void sd_sendDirectory(const char *path)
     {
       break;
     }
-    if (strcmp("System Volume Information", entry.name()) == 0)
+    if (strcmp("System Volume Information", entry.name()) == 0 || strstr(entry.name(), "._") != NULL)
     {
       continue;
     }
     Serial.write(99);
     Serial.write(FM_DIR);
 
+    // send file size in KB
+    uint16_t filesize = entry.size() / 1024;
+    Serial.write(filesize);
+    Serial.write(filesize >> 8);
+
+    // send file name and dir indicator
     strcpy(filename, entry.name());
     if (entry.isDirectory())
     {
@@ -81,28 +91,31 @@ FLASHMEM void sd_sendDirectory(const char *path)
 #endif
     Serial.write(88);
     entry.close();
+    delayMicroseconds(800);
   }
   dir.close();
 
   Serial.write(99);
   Serial.write(FM_END);
   Serial.write(88);
-
+  delayMicroseconds(40);
+  AudioInterrupts();
 #ifdef DEBUG
   LOG.println("SENDDIR done.");
 #endif
 }
 
 // send file on SD card to PC by Serial
-FLASHMEM void sd_sendFile(const char *path)
+FLASHMEM void sd_sendFile(const char* path)
 {
 #ifdef DEBUG
   LOG.printf("SENDFILE [%s]\n", path);
 #endif
-
+  AudioNoInterrupts();
   Serial.write(99);
   Serial.write(FM_START);
   Serial.write(88);
+  delayMicroseconds(800);
 
   File myFile = SD.open(path);
   if (myFile)
@@ -116,7 +129,7 @@ FLASHMEM void sd_sendFile(const char *path)
     Serial.write(filesize >> 24);
     Serial.write(88);
     Serial.flush();
-
+    delayMicroseconds(800);
     // read from the file until there's nothing else in it:
     char buf[256];
     unsigned int n;
@@ -131,6 +144,7 @@ FLASHMEM void sd_sendFile(const char *path)
       Serial.write(buf, n);
       Serial.write(88);
       Serial.flush();
+      delayMicroseconds(900);
     }
 
     // close the file:
@@ -147,7 +161,8 @@ FLASHMEM void sd_sendFile(const char *path)
   Serial.write(99);
   Serial.write(FM_END);
   Serial.write(88);
-
+  delayMicroseconds(40);
+  AudioInterrupts();
 #ifdef DEBUG
   LOG.println("SENDFILE done.");
 #endif
@@ -156,12 +171,13 @@ FLASHMEM void sd_sendFile(const char *path)
 // receive file from PC by Serial and write it to SD card
 #define RX_BUFFER_SIZE 512
 
-FLASHMEM void sd_receiveFile(const char *path)
+FLASHMEM void sd_receiveFile(const char* path)
 {
 
 #ifdef DEBUG
   LOG.printf("RECV file, dest: [%s]\n", path);
 #endif
+  AudioNoInterrupts();
   if (SD.exists(path))
   {
     SD.remove(path);
@@ -185,10 +201,11 @@ FLASHMEM void sd_receiveFile(const char *path)
     uint32_t fileSize = 0;
 
     // read file size on 4 bytes
-    Serial.readBytes((char *)&fileSize, 4);
+    Serial.readBytes((char*)&fileSize, 4);
 #ifdef DEBUG
     LOG.printf("RECV file size : %d\n", fileSize);
 #endif
+    delayMicroseconds(900);
 
     // Process with chunks
     uint32_t currentChunk = 0;
@@ -210,7 +227,7 @@ FLASHMEM void sd_receiveFile(const char *path)
 #ifdef DEBUG
           LOG.printf("last chunk #%d: %d bytes\n", currentChunk, lastChunkSize);
 #endif
-          char *lastBuffer = (char *)malloc(lastChunkSize * sizeof(char));
+          char* lastBuffer = (char*)malloc(lastChunkSize * sizeof(char));
           Serial.readBytes(lastBuffer, lastChunkSize);
 
           myFile.seek(EOF);
@@ -232,9 +249,10 @@ FLASHMEM void sd_receiveFile(const char *path)
 
           countTotal += RX_BUFFER_SIZE;
         }
+        delayMicroseconds(900);
         currentChunk++;
       }
-    }
+  }
 
     // uint16_t count = 0;
     // while (countTotal < fileSize) {
@@ -274,32 +292,35 @@ FLASHMEM void sd_receiveFile(const char *path)
 
     // close the file:
     myFile.close();
-
+    delayMicroseconds(800);
+    AudioInterrupts();
 #ifdef DEBUG
     LOG.println("RECV done.");
 #endif
+    }
   }
-}
 
-FLASHMEM void sd_deleteFile(const char *path)
+FLASHMEM void sd_deleteFile(const char* path)
 {
 #ifdef DEBUG
   LOG.printf("DELETE file: [%s]\n", path);
 #endif
+  AudioNoInterrupts();
   if (SD.exists(path))
   {
     SD.remove(path);
-
+    delayMicroseconds(40);
+    AudioInterrupts();
 #ifdef DEBUG
     LOG.println("DELETE done.");
 #endif
   }
 }
 
-FLASHMEM void sd_renameFile(char *pathToSplit)
+FLASHMEM void sd_renameFile(char* pathToSplit)
 {
   char arr[2][50];
-  char *ptr = strtok(pathToSplit, "|");
+  char* ptr = strtok(pathToSplit, "|");
   strcpy(arr[0], ptr);
   ptr = strtok(NULL, "|");
   strcpy(arr[1], ptr);
@@ -308,7 +329,7 @@ FLASHMEM void sd_renameFile(char *pathToSplit)
   LOG.printf("RENAME file: [%s]\n", arr[0]);
   LOG.printf("RENAME dest file: [%s]\n", arr[1]);
 #endif
-
+  AudioNoInterrupts();
   if (!SD.exists(arr[0]))
     return;
 
@@ -326,8 +347,9 @@ FLASHMEM void sd_renameFile(char *pathToSplit)
   myDestFile.close();
 
   sd_deleteFile(arr[0]);
-
+  delayMicroseconds(40);
 #ifdef DEBUG
   LOG.println("RENAME done.");
 #endif
+  AudioInterrupts();
 }

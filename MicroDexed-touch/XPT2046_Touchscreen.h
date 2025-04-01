@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#ifdef GENERIC_DISPLAY
+#if defined GENERIC_DISPLAY
 
 #ifndef _XPT2046_Touchscreen_h_
 #define _XPT2046_Touchscreen_h_
@@ -61,21 +61,19 @@ public:
 class XPT2046_Touchscreen
 {
 public:
-  constexpr XPT2046_Touchscreen(uint8_t cspin, uint8_t tirq = 255)
-      : csPin(cspin), tirqPin(tirq) {}
+  constexpr XPT2046_Touchscreen(uint8_t cspin)
+      : csPin(cspin) {}
   bool begin(SPIClass &wspi = SPI1);
 
   TS_Point getPoint();
   TS_Point getPixel();
-  bool tirqTouched();
   bool touched();
-  void readData(uint16_t *x, uint16_t *y, uint8_t *z);
-  bool bufferEmpty();
   uint16_t CAL_OFFSET = 20;
   uint8_t bufferSize()
   {
     return 1;
   }
+  
   void getCalibrationPoints(uint16_t &x1, uint16_t &y1, uint16_t &x2, uint16_t &y2);
   void setCalibration(TS_Calibration cal);
   TS_Calibration getCalibrationObject(uint16_t vi1, uint16_t vj1, uint16_t vi2, uint16_t vj2)
@@ -87,12 +85,10 @@ public:
   {
     rotation = n % 4;
   }
-  // protected:
-  volatile bool isrWake = true;
 
 private:
   void update();
-  uint8_t csPin, tirqPin, rotation = 1;
+  uint8_t csPin, rotation = 1;
   int16_t xraw = 0, yraw = 0, zraw = 0;
   uint32_t msraw = 0x80000000;
   int32_t _cal_dx = 0, _cal_dy = 0, _cal_dvi = 0, _cal_dvj = 0;
@@ -101,6 +97,7 @@ private:
 #if defined(_FLEXIO_SPI_H_)
   FlexIOSPI *_pflexspi = nullptr;
 #endif
+
 };
 
 #ifndef ISR_PREFIX

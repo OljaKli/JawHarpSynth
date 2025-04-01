@@ -10,143 +10,79 @@
 #include "spi_interrupt.h"
 #include "loop_type.h"
 #include "interpolation.h"
-#include "IndexableFile.h"
+#include "IndexableSDFile.h"
+#include "ResamplingReader.h"
 
 #define RESAMPLE_BUFFER_SAMPLE_SIZE 128
 
 #define B2M (uint32_t)((double)4294967296000.0 / AUDIO_SAMPLE_RATE_EXACT / 2.0) // 97352592
 
-class ResamplingSdReader {
+namespace newdigate {
+
+class ResamplingSdReader : public ResamplingReader< IndexableSDFile<128, 4>, File > {
 public:
-    ResamplingSdReader() {
-    }
-
-    void begin(void);
-    bool playRaw(const char *filename, uint16_t numChannels);
-    bool playWav(const char *filename);
-
-    bool play();
-    void stop(void);
-    bool isPlaying(void) { return _playing; }
-
-    unsigned int read(int16_t **buf);
-    bool readNextValue(int16_t *value, uint16_t channelNumber);
-
-    void setPlaybackRate(double f) {
-        _playbackRate = f;
-        if (f < 0.0 && _bufferPosition == 0) {
-            //_file.seek(_file_size);
-            _bufferPosition = _file_size / 2 - _numChannels;
-        }
-    }
-
-    double playbackRate() {
-        return _playbackRate;
-    }
-
-    void setLoopType(loop_type loopType)
+    ResamplingSdReader(SDClass &sd = SD) : 
+        ResamplingReader(),
+        _sd(sd)
     {
-        _loopType = loopType;
+    }
+    
+    virtual ~ResamplingSdReader() {
     }
 
-    loop_type getLoopType(){
-        return _loopType;    
+    int16_t getSourceBufferValue(long index) override {
+        return (*_sourceBuffer)[index];
     }
 
-    int available(void);
-    void reset(void);
-    void close(void);
-
-    void setLoopStart(uint32_t loop_start) {
-        _loop_start = _header_offset + (loop_start * _numChannels);
+    int available(void)
+    {
+        return _playing;
     }
 
-    void setLoopFinish(uint32_t loop_finish) {
-        // sample number, (NOT byte number)
-        _loop_finish = _header_offset + (loop_finish * _numChannels);
+    File open(char *filename) override {
+        return _sd.open(filename);
     }
 
-    void setInterpolationType(ResampleInterpolationType interpolationType) {        
-        if (interpolationType != _interpolationType) {            
-            _interpolationType = interpolationType;
-            initializeInterpolationPoints();
+    void close(void) override
+    {
+        if (_playing)
+            stop();
+        if (_sourceBuffer != nullptr) {
+            _sourceBuffer->close();
+            delete _sourceBuffer;
+            _sourceBuffer = nullptr;
+        }
+        if (_filename != nullptr) {
+            delete [] _filename;
+            _filename = nullptr;
         }
     }
 
-    int16_t getNumChannels() {
-        return _numChannels;
-    }
-
-    void setNumChannels(uint16_t numChannels) {
-        if (numChannels != _numChannels) {   
-            _numChannels = numChannels;
-            initializeInterpolationPoints();
-        }
-    }
-
-    void setHeaderSize(uint32_t headerSizeInBytes) {
-        _header_offset = headerSizeInBytes / 2;
-        if (_bufferPosition < _header_offset) {
-            if (_playbackRate >= 0) {
-                _bufferPosition = _header_offset;
-            }
-        }
+    IndexableSDFile<128, 4>* createSourceBuffer() override {
+        return new IndexableSDFile<128, 4>(_filename, _sd);
     }
 
     uint32_t positionMillis(void) {
-        return ((uint64_t) _file_size * B2M) >> 32;
+        if (_file_size == 0) return 0;
+        if (!_useDualPlaybackHead) {
+            return (uint32_t) (( (double)_bufferPosition1 * lengthMillis() ) / (double)(_file_size/2));
+        } else 
+        {
+            if (_crossfade < 0.5)
+                return (uint32_t) (( (double)_bufferPosition1 * lengthMillis() ) / (double)(_file_size/2));
+            else
+                return (uint32_t) (( (double)_bufferPosition2 * lengthMillis() ) / (double)(_file_size/2));
+        }
     }
 
     uint32_t lengthMillis(void) {
-        return ((uint64_t) _file_size * B2M) >> 32;
+        return ((uint64_t)_file_size * B2M) >> 32;
     }
-private:
-    volatile bool _playing = false;
-
-    uint32_t _file_size;
-    uint32_t _header_offset = 0; // == (header size in bytes ) / 2
-
-    double _playbackRate = 1.0;
-    double _remainder = 0.0;
-    loop_type _loopType = looptype_none;
-    unsigned int _bufferPosition = 0;
-    uint32_t _loop_start = 0;
-    uint32_t _loop_finish = 0;
-    int16_t _numChannels = -1;
-    uint16_t _numInterpolationPointsChannels = 0;
-    newdigate::IndexableFile<128, 2> *_sourceBuffer = nullptr;
-
-    ResampleInterpolationType _interpolationType = ResampleInterpolationType::resampleinterpolation_none;
-    unsigned int _numInterpolationPoints = 0;
-    InterpolationData **_interpolationPoints = nullptr;
-
-    static bool isUsingSPI;
-    void StartUsingSPI(){
-        if (!isUsingSPI) {
-            isUsingSPI = true;
-#if defined(HAS_KINETIS_SDHC)
-            if (!(SIM_SCGC3 & SIM_SCGC3_SDHC)) AudioStartUsingSPI();
-#else
-            AudioStartUsingSPI();
-#endif
-        }
-    }
-
-    void StopUsingSPI() {
-        if (isUsingSPI) {
-            isUsingSPI = false;
-#if defined(HAS_KINETIS_SDHC)
-            if (!(SIM_SCGC3 & SIM_SCGC3_SDHC)) AudioStopUsingSPI();
-#else
-            AudioStopUsingSPI();
-#endif
-        }
-    }
-
-    bool play(const char *filename, bool isWave, uint16_t numChannelsIfRaw = 0);
-    void initializeInterpolationPoints(void);
-    void deleteInterpolationPoints(void);
+    
+protected:    
+     SDClass &_sd;
 };
 
+}
 
 #endif //TEENSYAUDIOLIBRARY_RESAMPLINGSDREADER_H

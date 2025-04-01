@@ -1,6 +1,9 @@
 Installation Instructions
 
-Several binary, HEX Files are provided in the /release folder. For starting, we suggest to flash mdt_default_(latest version number you see).hex
+Several binary, HEX Files are provided in the /release folder. To get started, we suggest to flash:
+
+mdt_PROGMEM-CAPACITIVE_TOUCH_(latest version number you see).hex
+
 
 Upload HEX file to your Teensy 4.1:
 
@@ -21,17 +24,13 @@ https://www.pjrc.com/teensy/loader.html
 
 * Power on the Teensy and attach USB MIDI Keyboard (or use the virtual Touch Keyboard and the Encoders to navigate)
 
-* If you have a FLASH chip, go to FileManager, Touch the icon "Copy Presets" and push Encoder R. This will copy all Samples from sdcard/DRUMS to FLASH.
 
-* If you are using the prototype PCB, check out the current state at:
-https://codeberg.org/positionhigh/MicroDexed-touch/wiki/Build-Instructions
+Please check out the MDT manual for any question you might have:
+https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/MicroDexed-touch-manual.pdf
 
-* if you do not have the prototype PCB but want to get one, you can order it at:
-https://www.pcbway.com/project/shareproject/MicroDexed_Touch_current_version_with_PCM5102_d643a695.html
+or join us in Discord Chat:
+https://discord.gg/XCYk5P8GzF
 
-Otherwise, follow the pinout at:
-https://codeberg.org/positionhigh/MicroDexed-touch/wiki/Wiring
 
-FAQ:
-https://codeberg.org/positionhigh/MicroDexed-touch/wiki/Troubleshooting-Guide-and-FAQ
+
 
