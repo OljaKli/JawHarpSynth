@@ -549,7 +549,7 @@ FLASHMEM void handle_touchscreen_microsynth()
   }
 }
 
- #ifdef MUSIKANDMORE
+#ifdef MUSIKANDMORE
 extern fm_t fm;
 #endif
 
@@ -595,15 +595,15 @@ FLASHMEM void print_file_manager_buttons()
     display.setTextSize(1);
     display.setCursor(CHAR_width_small, (CHAR_height_small * 23) + 5);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE && fm.SD_CARD_READER_EXT==false) {
+    if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE && fm.SD_CARD_READER_EXT == false) {
       display.print(F("SELECT, THEN CONFIRM OPERATION > PUSH ENCODER[R]"));
     }
-    else if (fm.SD_CARD_READER_EXT==false)
+    else if (fm.SD_CARD_READER_EXT == false)
     {
       print_empty_spaces(48, 1);
     }
   }
-  
+
   menuhelper_previous_val = fm.sd_mode;
 
 
@@ -672,21 +672,21 @@ FLASHMEM void print_destination_card_info()
 }
 FLASHMEM void filemanager_toggle_window_2sdcards()
 {
- if (fm.SD_CARD_READER_EXT)
-    {
-       if( fm.active_window ==0)
-      fm.sd_mode = FM_COPY_TO_EXTERNAL;
-      else
-       if( fm.active_window ==1)
-      fm.sd_mode = FM_COPY_TO_INTERNAL;
+  if (fm.SD_CARD_READER_EXT)
+  {
+    //  if( fm.active_window ==0)
+    // fm.sd_mode = FM_COPY_TO_EXTERNAL;
+    // else
+    //  if( fm.active_window ==1)
+    // fm.sd_mode = FM_COPY_TO_INTERNAL;
 
-      menuhelper_previous_val = 99;
-      print_file_manager_buttons();
-      reset_file_manager_folder();
-      load_sd_directory();
-      sd_printDirectory(true);
-      print_destination_card_info();
-    }
+    menuhelper_previous_val = 99;
+    print_file_manager_buttons();
+    reset_file_manager_folder();
+    load_sd_directory();
+    sd_printDirectory(true);
+    print_destination_card_info();
+  }
 }
 
 FLASHMEM void filemanager_update_sdcards()
@@ -704,7 +704,7 @@ FLASHMEM void filemanager_update_sdcards()
     print_file_manager_active_border();
     _print_filemanager_sd_extern_header();
     sd_printDirectory(true);
-   filemanager_toggle_window_2sdcards();
+    filemanager_toggle_window_2sdcards();
   }
   else
   {
@@ -730,7 +730,8 @@ FLASHMEM void handle_touchscreen_file_manager()
     fm.active_window = 0;
     print_file_manager_active_border();
 #ifdef MUSIKANDMORE
-  filemanager_toggle_window_2sdcards();
+ fm.sd_mode = FM_BROWSE_FILES;
+    filemanager_toggle_window_2sdcards();
 #endif
   }
 #if defined COMPILE_FOR_PSRAM
@@ -738,7 +739,8 @@ FLASHMEM void handle_touchscreen_file_manager()
     fm.active_window = 1;
     print_file_manager_active_border();
 #ifdef MUSIKANDMORE
-   filemanager_toggle_window_2sdcards();
+ fm.sd_mode = FM_BROWSE_FILES;
+    filemanager_toggle_window_2sdcards();
 #endif
   }
 #endif
@@ -754,39 +756,55 @@ FLASHMEM void handle_touchscreen_file_manager()
 #ifdef MUSIKANDMORE  //toggle SD Card2/PSRAM
   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
     fm.SD_CARD_READER_EXT = !fm.SD_CARD_READER_EXT;
-    
+
     filemanager_update_sdcards();
   }
 #endif
 
 #if defined COMPILE_FOR_PSRAM
- else  if (TouchButton::isPressed(GRID.X[3], GRID.Y[5])  )
+  else  if (TouchButton::isPressed(GRID.X[3], GRID.Y[5]))
   {
     if (fm.SD_CARD_READER_EXT == false)
     {
       fm.sd_mode = FM_COPY_TO_PSRAM;
-    print_file_manager_buttons();
+      print_file_manager_buttons();
     }
 #ifdef MUSIKANDMORE
-else {
- fm.active_window =!fm.active_window;
+    else {
+      //fm.active_window =!fm.active_window;
 
-  print_file_manager_active_border();
-   filemanager_toggle_window_2sdcards();
-    print_file_manager_buttons();
-}
- #endif
-   
+      if (fm.active_window == 0)
+      {
+        if (fm.sd_mode != FM_COPY_TO_EXTERNAL)
+          fm.sd_mode = FM_COPY_TO_EXTERNAL;
+        else
+          fm.sd_mode = FM_BROWSE_FILES;
+      }
+
+      else  if (fm.active_window == 1)
+      {
+        if (fm.sd_mode != FM_COPY_TO_INTERNAL)
+          fm.sd_mode = FM_COPY_TO_INTERNAL;
+        else
+          fm.sd_mode = FM_BROWSE_FILES;
+      }
+
+      // print_file_manager_active_border();
+      //  filemanager_toggle_window_2sdcards();
+      print_file_manager_buttons();
+    }
+#endif
+
   }
 
- else  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
+  else  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
     if (fm.SD_CARD_READER_EXT == false)
       fm.sd_mode = FM_DELETE_FROM_PSRAM;
     print_file_manager_buttons();
   }
 #endif
 
- 
+
 
   else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
     if ((!fm.sd_is_folder && fm.active_window == 0) || (fm.active_window == 1))
