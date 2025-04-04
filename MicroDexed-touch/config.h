@@ -79,11 +79,6 @@
 #define MIDI_DEVICE_USB 1
 #define MIDI_DEVICE_USB_HOST
 
-#ifdef MIDI_ACTIVITY_LIGHTS
-#define LED_MIDI_IN 40
-#define LED_MIDI_OUT 36
-#endif
-
 //*************************************************************************************************
 //* USB HOST KEYPAD/KEYBOARD/GAMEPAD SUPPORT
 //*************************************************************************************************
@@ -797,6 +792,12 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 // Buffer-size define for load/save configuration as JSON
 #define JSON_BUFFER_SIZE 19000
 
+// LED Pin Assignments
+#ifdef MIDI_ACTIVITY_LIGHTS
+  extern uint8_t LED_MIDI_IN;
+  extern uint8_t LED_MIDI_OUT;
+#endif
+
 // Internal configuration structure
 typedef struct dexed_s
 {
@@ -1028,8 +1029,10 @@ typedef struct sys_s
   bool skip_midi_channel_warning;
   bool send_sysex_on_voice_change;
   bool send_midi_cc;
+  bool swap_midi_leds;
   uint8_t rgb_enc_color_def=4;
   uint8_t rgb_enc_color_sel=1;
+  bool modular_inputs;
 } sys_t;
 
 typedef struct storage_file_s
@@ -1118,7 +1121,9 @@ enum fm_modes
   FM_COPY_PRESETS,
   FM_PLAY_SAMPLE,
   FM_COPY_TO_PSRAM,
-  FM_DELETE_FROM_PSRAM
+  FM_DELETE_FROM_PSRAM,
+  FM_COPY_TO_INTERNAL,
+  FM_COPY_TO_EXTERNAL
 };
 
 enum fav_search_direction
