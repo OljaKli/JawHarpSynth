@@ -1801,9 +1801,9 @@ FLASHMEM void load_custom_samples_to_psram()
     } else {
       //success
       CustomSample &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
-      s.isHighHat = false; // todo dsr
       s.start = 0;
       s.end = 1000;
+      drum_config[i].drum_class = DRUM_HIHAT - 1;
     }
   }
 }
@@ -3185,7 +3185,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 int16_t *start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
                 
-                if ((d >= NUM_STATIC_PITCHED_SAMPLES) && d < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES)) {
+                if (isCustomSample()) {
                   CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];
                   const uint32_t offStart = (s.start / float(1000)) * length;
                   start += offStart;

@@ -63,7 +63,6 @@ struct CustomSample {
   int16_t start; // (length / 1000)
   int16_t end;   // (length / 1000)
   uint8_t loopType;
-  bool isHighHat; // high hat randomization
 };
 
 enum

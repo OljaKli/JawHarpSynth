@@ -6220,7 +6220,35 @@ FLASHMEM void addSampleParameterEditor(const char* name, int16_t limit_min, int1
     renderer);
 }
 
-FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr)
+FLASHMEM void addSampleParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr, void (* const renderer)(Editor* param, bool refresh))
+{
+  ui.addCustomEditor(
+    name, limit_min, limit_max, valuePtr,
+    [](Editor* editor) -> int16_t
+    {
+      // the parameter may be from either sample, which may be
+      // switched at any time. So recompute the value pointer in respect of to activesample !
+      if (isCustomSample()) {
+        uint8_t* ptr = (uint8_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
+        return *ptr;
+      }
+      else {
+        return 0;
+      }
+    },
+    [](Editor* editor, int16_t value)
+    {
+      // the parameter may be from either sample, which may be
+      // switched at any time. So recompute the value pointer in respect of to activesample !
+      if (isCustomSample()) {
+        uint8_t* ptr = (uint8_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
+        *ptr = value;
+      }
+    },
+    renderer);
+}
+
+FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr, void (* const renderer)(Editor* param, bool refresh) = NULL)
 {
   ui.addCustomEditor(
     name, limit_min, limit_max, valuePtr,
@@ -6234,7 +6262,7 @@ FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min
       uint8_t* ptr = (uint8_t*)((uint8_t*)editor->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
       *ptr = static_cast<uint8_t>(value);
     },
-    NULL);
+    renderer);
 }
 
 FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min, int16_t limit_max, int8_t* valuePtr)
@@ -6495,6 +6523,30 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.setCursor(20, 12);
     addSampleParameterEditor((const char*)F("FROM"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
     addSampleParameterEditor((const char*)F("UPTO"), 0, 1000, &customSamples[0].end, sampleStartEndRenderer);
+    addSampleParameterEditor_uint8_t((const char*)F("LOOP"), 0, 2, &customSamples[0].loopType, [](Editor *param, bool refresh) {
+      const std::string names[] = { "NONE", "REPEAT", "PINGPONG" };
+      if(isCustomSample()) {
+        setCursor_textGrid_small(param->x, param->y);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        display.printf("%s", param->name);
+
+        setModeColor(param->select_id);
+        setCursor_textGrid_small(param->x + 5, param->y);
+        display.print(names[param->get()].c_str());
+      }
+    });
+    addDrumParameterEditor_uint8_t((const char*)F("HIHAT"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
+      const std::string names[] = { "NO", "YES" };
+      if(isCustomSample()) {
+        setCursor_textGrid_small(param->x, param->y);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        display.printf("%s", param->name);
+
+        setModeColor(param->select_id);
+        setCursor_textGrid_small(param->x + 5, param->y);
+        display.print(names[param->get() - DRUM_HIHAT + 1].c_str());
+      }
+    });
 
     display.setTextColor(RED);
     setCursor_textGrid_small(20, 17);
@@ -16536,7 +16588,6 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
             sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
             if (drum_config[sampleIndex].drum_data != nullptr) {
               CustomSample &s = customSamples[sampleIndex - NUM_STATIC_PITCHED_SAMPLES];
-              s.isHighHat = false;
               s.start = 0;
               s.end = 1000;
               strcpy(s.filepath, fm.sd_new_name.c_str());
