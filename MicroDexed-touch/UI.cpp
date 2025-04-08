@@ -6534,11 +6534,9 @@ FLASHMEM void UI_func_drums(uint8_t param)
       const std::string names[] = { "NONE", "REPEAT", "PINGPONG" };
       if(isCustomSample()) {
         
-        if(refresh) {
-          setCursor_textGrid_small(param->x, param->y);
-          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-          display.printf("%s", param->name);
-        }
+        setCursor_textGrid_small(param->x, param->y);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        display.printf("%s", param->name);
 
         setModeColor(param->select_id);
         setCursor_textGrid_small(param->x + 5, param->y);
@@ -6555,11 +6553,9 @@ FLASHMEM void UI_func_drums(uint8_t param)
         
         drum_config[activeSample].drum_class = (value != DRUM_HIHAT) ? DRUM_POLY : DRUM_HIHAT;
 
-        if(refresh) {
-          setCursor_textGrid_small(param->x, param->y);
-          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-          display.printf("%s", param->name);
-        }
+        setCursor_textGrid_small(param->x, param->y);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        display.printf("%s", param->name);
 
         setModeColor(param->select_id);
         setCursor_textGrid_small(param->x + 5, param->y);
