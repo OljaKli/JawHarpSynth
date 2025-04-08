@@ -370,6 +370,7 @@ void UI_func_stereo_mono(uint8_t param);
 void UI_handle_OP(uint8_t param);
 void UI_func_set_braids_name(uint8_t param);
 void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
+void print_sample_type(bool dir);
 
 /***********************************************************************
    GLOBAL
@@ -5129,6 +5130,10 @@ FLASHMEM void drawDrumsSampleWave() {
     if (isCustomSample()) {
       drawSampleStartEnd(plotX, plotY, plotW, plotH);
     }
+
+    setCursor_textGrid_small(39, 10);
+    display.setTextColor(GREY3, COLOR_BACKGROUND);
+    print_sample_type(1);
   }
 #endif
 }
@@ -6420,12 +6425,11 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
   }
 }
 
-extern void print_sample_type(bool dir);
-
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
 FLASHMEM void UI_func_drums(uint8_t param)
 {
+  
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_drums);
@@ -6471,9 +6475,6 @@ FLASHMEM void UI_func_drums(uint8_t param)
           setCursor_textGrid_small(20, 11);
           show(0, 23, 6, "STEREO");
         }
-        setCursor_textGrid_small(39, 9);
-        display.setTextColor(COLOR_BACKGROUND, GREY3);
-        print_sample_type(1);
 
         checkDrawFilterText(true); // force redraw filter text on active sample change
       });
@@ -6532,25 +6533,46 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addSampleParameterEditor_uint8_t((const char*)F("LOOP"), 0, 2, &customSamples[0].loopType, [](Editor *param, bool refresh) {
       const std::string names[] = { "NONE", "REPEAT", "PINGPONG" };
       if(isCustomSample()) {
-        setCursor_textGrid_small(param->x, param->y);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        display.printf("%s", param->name);
+        
+        if(refresh) {
+          setCursor_textGrid_small(param->x, param->y);
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          display.printf("%s", param->name);
+        }
 
         setModeColor(param->select_id);
         setCursor_textGrid_small(param->x + 5, param->y);
-        display.print(names[param->get()].c_str());
+        const std::string s = names[param->get()];
+        display.print(s.c_str());
+        print_empty_spaces(8 - s.length(), 1);
       }
     });
-    addDrumParameterEditor_uint8_t((const char*)F("HIHAT"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
-      const std::string names[] = { "NO", "YES" };
+
+    addDrumParameterEditor_uint8_t((const char*)F("TYPE"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
+      const std::string names[] = { "POLY", "HIHAT" };
       if(isCustomSample()) {
-        setCursor_textGrid_small(param->x, param->y);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        display.printf("%s", param->name);
+        const uint8_t value = param->get();
+        
+        drum_config[activeSample].drum_class = (value != DRUM_HIHAT) ? DRUM_POLY : DRUM_HIHAT;
+
+        if(refresh) {
+          setCursor_textGrid_small(param->x, param->y);
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          display.printf("%s", param->name);
+        }
 
         setModeColor(param->select_id);
         setCursor_textGrid_small(param->x + 5, param->y);
-        display.print(names[param->get() - DRUM_HIHAT + 1].c_str());
+        const uint8_t index = value != DRUM_HIHAT ? 0 : 1;
+        const std::string s = names[index];
+        display.print(s.c_str());
+        print_empty_spaces(5 - s.length(), 1);
+
+        if(refresh) {
+          setCursor_textGrid_small(39, 10);
+          display.setTextColor(GREY3, COLOR_BACKGROUND);
+          print_sample_type(1);
+        }
       }
     });
 

@@ -2691,6 +2691,11 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
             *lastSlash = '\0';
             strcpy(customSamples[i].filepath, fullpath);
           }
+
+          customSamples[i].start = data_json[i]["start"];
+          customSamples[i].end  = data_json[i]["end"];
+          customSamples[i].loopType = data_json[i]["loop"];
+          drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = data_json[i]["class"];
         }
         load_custom_samples_to_psram();
 
@@ -2737,12 +2742,15 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
-        // if (drum_config[i].len != 0)
         data_json[i]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
         String fullpath = customSamples[i].filepath;
         fullpath += "/";
         fullpath += drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
         data_json[i]["filename"] = fullpath;
+        data_json[i]["start"] = customSamples[i].start;
+        data_json[i]["end"] = customSamples[i].end;
+        data_json[i]["loop"] = customSamples[i].loopType;
+        data_json[i]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
       }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)

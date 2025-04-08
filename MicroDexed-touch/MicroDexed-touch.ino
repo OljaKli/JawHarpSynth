@@ -1820,12 +1820,6 @@ FLASHMEM void load_custom_samples_to_psram()
       sprintf(temp_name, "CUSTOM%02d", i - NUM_STATIC_PITCHED_SAMPLES + 1);
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
-    } else {
-      //success
-      CustomSample &s = customSamples[i - NUM_STATIC_PITCHED_SAMPLES];
-      s.start = 0;
-      s.end = 1000;
-      drum_config[i].drum_class = DRUM_HIHAT - 1;
     }
   }
 }
