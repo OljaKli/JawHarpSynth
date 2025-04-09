@@ -146,7 +146,7 @@ void printLiveModButton(int8_t button); // 0 - 3 ADSR
 void reset_live_modifiers();
 void reset_live_modifier(uint8_t step);
 void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-const bool isCustomSample();
+const bool isCustomSample(const uint8_t index);
 void print_empty_spaces(uint8_t spaces, bool clear_background);
 void print_voice_select_default_help();
 void draw_volmeters_mixer();

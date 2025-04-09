@@ -385,8 +385,8 @@ boolean COND_hide() // hide a menu element
   return false;
 }
 
-const inline bool isCustomSample() {
-  return ((activeSample >= NUM_STATIC_PITCHED_SAMPLES) && (activeSample < NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES));
+const bool isCustomSample(const uint8_t index) {
+  return ((index >= NUM_STATIC_PITCHED_SAMPLES) && (index < NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES));
 }
 
 PROGMEM const char cc_names[MAX_CC_DEST][13] = {
@@ -5121,7 +5121,7 @@ FLASHMEM void drawDrumsSampleWave() {
 
   printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
 
-  if (slot.drum_data != nullptr && isCustomSample()) {
+  if (slot.drum_data != nullptr && isCustomSample(activeSample)) {
     drawSampleStartEnd(plotX, plotY, plotW, plotH);
   }    
   setCursor_textGrid_small(39, 10);
@@ -5132,7 +5132,7 @@ FLASHMEM void drawDrumsSampleWave() {
 
 FLASHMEM void sampleStartEndRenderer(Editor *param, bool refresh) {
   static bool lastWasCustom = false;
-  const bool isCustom = isCustomSample();
+  const bool isCustom = isCustomSample(activeSample);
 
   if (lastWasCustom != isCustom) {
     setCursor_textGrid_small(20, 11);
@@ -6201,7 +6201,7 @@ FLASHMEM void addSampleParameterEditor(const char* name, int16_t limit_min, int1
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      if (isCustomSample()) {
+      if (isCustomSample(activeSample)) {
         int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
         return *ptr;
       }
@@ -6213,7 +6213,7 @@ FLASHMEM void addSampleParameterEditor(const char* name, int16_t limit_min, int1
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      if (isCustomSample()) {
+      if (isCustomSample(activeSample)) {
         int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
         *ptr = value;
         sampleStartEndRenderer(editor, true);
@@ -6231,7 +6231,7 @@ FLASHMEM void addSampleParameterEditor_uint8_t(const char* name, int16_t limit_m
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      if (isCustomSample()) {
+      if (isCustomSample(activeSample)) {
         uint8_t* ptr = (uint8_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
         return *ptr;
       }
@@ -6243,7 +6243,7 @@ FLASHMEM void addSampleParameterEditor_uint8_t(const char* name, int16_t limit_m
     {
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
-      if (isCustomSample()) {
+      if (isCustomSample(activeSample)) {
         uint8_t* ptr = (uint8_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
         *ptr = value;
       }
@@ -6530,7 +6530,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addSampleParameterEditor((const char*)F("UPTO"), 0, 1000, &customSamples[0].end, sampleStartEndRenderer);
     addSampleParameterEditor_uint8_t((const char*)F("LOOP"), 0, 2, &customSamples[0].loopType, [](Editor *param, bool refresh) {
       const std::string names[] = { "NONE", "REPEAT", "PINGPONG" };
-      if(isCustomSample()) {
+      if(isCustomSample(activeSample)) {
         
         setCursor_textGrid_small(param->x, param->y);
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -6550,7 +6550,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     addDrumParameterEditor_uint8_t((const char*)F("TYPE"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
       const std::string names[] = { "POLY", "HIHAT" };
-      if(isCustomSample()) {
+      if(isCustomSample(activeSample)) {
         const uint8_t value = param->get();
         
         drum_config[activeSample].drum_class = (value != DRUM_HIHAT) ? DRUM_POLY : DRUM_HIHAT;

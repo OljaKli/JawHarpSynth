@@ -3242,8 +3242,9 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 int16_t *start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
                 
-                if (isCustomSample()) {
+                if (isCustomSample(d)) {
                   CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];
+                  
                   const uint32_t offStart = (s.start / float(1000)) * length;
                   start += offStart;
                   const uint32_t offEnd = length - (s.end / float(1000)) * length;
