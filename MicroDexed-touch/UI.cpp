@@ -5116,25 +5116,19 @@ FLASHMEM void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 FLASHMEM void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   const drum_config_t &slot = drum_config[activeSample];
+  static constexpr uint16_t plotX = 120;
+  static constexpr uint16_t plotY = 19 + 8;
+  static constexpr uint16_t plotW = 200;
+  static constexpr uint16_t plotH = 63 + 8;
 
-  if (slot.drum_data != nullptr) {
-    DBG_LOG(printf("draw sample wave()\n"));
+  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
 
-    static constexpr uint16_t plotX = 120;
-    static constexpr uint16_t plotY = 19 + 8;
-    static constexpr uint16_t plotW = 200;
-    static constexpr uint16_t plotH = 63 + 8;
-
-    printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
-
-    if (isCustomSample()) {
-      drawSampleStartEnd(plotX, plotY, plotW, plotH);
-    }
-
-    setCursor_textGrid_small(39, 10);
-    display.setTextColor(GREY3, COLOR_BACKGROUND);
-    print_sample_type(1);
-  }
+  if (slot.drum_data != nullptr && isCustomSample()) {
+    drawSampleStartEnd(plotX, plotY, plotW, plotH);
+  }    
+  setCursor_textGrid_small(39, 10);
+  display.setTextColor(GREY3, COLOR_BACKGROUND);
+  print_sample_type(1);
 #endif
 }
 
@@ -6294,6 +6288,8 @@ FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min,
 }
 
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
+  DBG_LOG(printf("printSampleWaveform()\n"));
+
   uint32_t sampleOffset = from * (length / numChannels);
   uint32_t zoomedLength = (to - from) * length;
   if (numChannels == 2) {
@@ -6343,6 +6339,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
         numBinSamples = 0;
       }
     }
+  }
+  else {
+    const uint16_t yZero = y + (h / 2);
+    display.drawLine(x, yZero, x + w, yZero, waveColor); // horizontal zero line
   }
 }
 
@@ -6544,6 +6544,10 @@ FLASHMEM void UI_func_drums(uint8_t param)
         display.print(s.c_str());
         print_empty_spaces(8 - s.length(), 1);
       }
+      else {
+        setCursor_textGrid_small(param->x, param->y);
+        print_empty_spaces(10, 1);
+      }
     });
 
     addDrumParameterEditor_uint8_t((const char*)F("TYPE"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
@@ -6569,6 +6573,10 @@ FLASHMEM void UI_func_drums(uint8_t param)
           display.setTextColor(GREY3, COLOR_BACKGROUND);
           print_sample_type(1);
         }
+      }
+      else {
+        setCursor_textGrid_small(param->x, param->y);
+        print_empty_spaces(10, 1);
       }
     });
 

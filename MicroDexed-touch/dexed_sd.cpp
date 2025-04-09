@@ -2686,15 +2686,21 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
           char fullpath[FULLPATH_MAX_LEN] = { 0 };
           strcpy(fullpath, data_json[i]["filename"]);
           char *lastSlash = strrchr(fullpath, '/');
-          if(lastSlash != nullptr) {
+          if (lastSlash != nullptr) {
             strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, lastSlash + 1);
             *lastSlash = '\0';
             strcpy(customSamples[i].filepath, fullpath);
           }
-
-          customSamples[i].start = data_json[i]["start"];
-          customSamples[i].end  = data_json[i]["end"];
-          customSamples[i].loopType = data_json[i]["loop"];
+          if (data_json[i].containsKey("start")) {
+            customSamples[i].start = data_json[i]["start"];
+            customSamples[i].end  = data_json[i]["end"];
+            customSamples[i].loopType = data_json[i]["loop"];
+          }
+          else {
+            customSamples[i].start = 0;    // 0%
+            customSamples[i].end  = 1000;  // 100%
+            customSamples[i].loopType = 0; // loop_type::looptype_none
+          }
           drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = data_json[i]["class"];
         }
         load_custom_samples_to_psram();
