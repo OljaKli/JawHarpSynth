@@ -3332,15 +3332,15 @@ class Editor
   friend class UI;
 
 private:
-  const bool fast;                                     // if the editor should accelerate. Automatically set for large min-max ranges.
-  int16_t(* const getter)(Editor* param);              // pointer to a function to read the value from somewhere
+  const float32_t changeExp;                            // if the editor should accelerate. Automatically set for large min-max ranges.
+  int16_t(* const getter)(Editor* param);               // pointer to a function to read the value from somewhere
   void (* const setter)(Editor* param, int16_t value);  // pointer to a function to save the altered value somewhere
   void (* const renderer)(Editor* param, bool refresh); // pointer to a function to draw the editor on screen.
   // if refresh is true, it should redraw value-dependent parts.
 
   // constructor for creating empty array
   Editor()
-    : fast(false), getter(NULL), setter(NULL), renderer(NULL), name(NULL), x(0), y(0), select_id(-1),
+    : changeExp(1.0F), getter(NULL), setter(NULL), renderer(NULL), name(NULL), x(0), y(0), select_id(-1),
     limit_min(0), limit_max(0), value(NULL) {
   }
 
@@ -3351,7 +3351,7 @@ private:
     int16_t(* const _getter)(Editor* param),
     void (* const _setter)(Editor* param, int16_t value),
     void (* const _renderer)(Editor* param, bool refresh))
-    : fast(_limit_max - _limit_min > 32), getter(_getter), setter(_setter), renderer(_renderer),
+    : changeExp(0.1F * sqrtf(_limit_max - _limit_min)), getter(_getter), setter(_setter), renderer(_renderer),
     name(_name), x(_x), y(_y), select_id(_select_id), limit_min(_limit_min), limit_max(_limit_max),
     value(_valuePtr) {
   }
@@ -3386,10 +3386,8 @@ private:
   // by using the getter and setter functions. And redraw afterwards.
   void handle_parameter_editor(EncoderEvents e)
   {
-    int16_t change = e.dir;
-    if (fast) {
-      change *= e.speed;
-    }
+    int16_t change = e.dir * pow(e.speed, changeExp);
+    
     const int16_t value = get();
     const int16_t newValue = constrain(value + change, limit_min, limit_max);
     if (newValue != value) {
