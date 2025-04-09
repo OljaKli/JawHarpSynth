@@ -58,7 +58,7 @@ public:
     INSTR_MAX = 12
   };
 
-  struct MidiEvent {
+  struct __attribute__((packed)) MidiEvent {
     EventSource source;
     uint16_t patternMs;
     uint8_t patternNumber;
@@ -69,9 +69,6 @@ public:
     uint8_t note_in_velocity;
   };
 
-  const int s = sizeof(MidiEvent);
-
-  
   struct Track {
     midi::Channel channel;
     char name[10];
