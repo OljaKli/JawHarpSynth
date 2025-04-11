@@ -15464,7 +15464,7 @@ if ( fm.SD_CARD_READER_EXT && fm.active_window == 1)
     {
       fm.sd_cap_rows = f - 1;
       display.console = true;
-      display.fillRect(CHAR_width_small+xoffset*CHAR_width_small, f * 11 + 5 * 11 - 1, CHAR_width_small * 26-3, (11 - f) * 11, COLOR_BACKGROUND);
+      display.fillRect(CHAR_width_small+xoffset*CHAR_width_small, f * 11 + 5 * 11 - 1, CHAR_width_small * 26-6, (11 - f) * 11, COLOR_BACKGROUND);
       break;
     }
 
@@ -15512,6 +15512,32 @@ if ( fm.SD_CARD_READER_EXT && fm.active_window == 1)
       fm.sd_temp_name = sd_entry.name;
     if (f == fm.sd_selected_file && sd_entry.isDirectory)
       fm.sd_is_folder = true;
+
+
+ #ifdef MUSIKANDMORE
+  display.setTextSize(1);
+    display.setCursor(CHAR_width_small, (CHAR_height_small * 23) + 5);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    if (fm.sd_mode == FM_COPY_TO_EXTERNAL && fm.SD_CARD_READER_EXT && f == fm.sd_selected_file) 
+    {
+      display.print(F("COPY ["));
+        display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+        display.print(fm.sd_temp_name.c_str());
+         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+       display.print(F("] TO EXTERNAL SD CARD         "));
+    }
+     else if (fm.sd_mode == FM_COPY_TO_INTERNAL && fm.SD_CARD_READER_EXT && f == fm.sd_selected_file)
+      {
+      display.print(F("COPY  [" ));
+       display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+        display.print(fm.sd_temp_name.c_str());
+         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        display.print(F("] TO INTERNAL SD CARD         " ));
+    }
+     else if ( fm.SD_CARD_READER_EXT && f == fm.sd_selected_file)
+       print_empty_spaces(33,1);
+    #endif
   }
 }
 
@@ -16265,6 +16291,8 @@ FLASHMEM void previewWavSampleEditor() {
 FLASHMEM void previewWavFilemanager() {
 #ifdef COMPILE_FOR_PSRAM
 
+if (fm.SD_CARD_READER_EXT==false)
+{
   // preview sd file
   if (fm.active_window == 0 && !fm.sd_is_folder && fm.sd_temp_name.endsWith(".wav")) {
     TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
@@ -16279,7 +16307,7 @@ FLASHMEM void previewWavFilemanager() {
 
   delay(100);
   TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
-
+}
 #endif
 }
 
@@ -16337,17 +16365,167 @@ FLASHMEM void  _print_filemanager_sd_extern_header()
 }
 #endif
 
+FLASHMEM void reset_file_manager_folder()
+{
+  //fm.active_window = 0;
+
+   fm.sd_new_name = "/";
+    fm.sd_full_name = "/";
+    fm.sd_prev_dir = "";
+    fm.sd_temp_name = "/";
+    fm.sd_skip_files = 0;
+    fm.sd_selected_file = 0;
+    fm.sd_is_folder = false;
+}
+
+#ifdef MUSIKANDMORE
+extern SDClass SD_EXTERNAL;
+
+
+FLASHMEM void file_manager_copy_int_to_ext_folder()
+{ 
+  char tmp[FILENAME_LEN+20];
+   
+        File rootdir = SD.open(fm.sd_temp_name.c_str());
+
+         if (!SD_EXTERNAL.exists( fm.sd_temp_name.c_str())) {
+        SD_EXTERNAL.mkdir( fm.sd_temp_name.c_str());
+      }
+        while (1)
+        {
+          File f = rootdir.openNextFile();
+          if (!f)
+            break;
+          
+          const char* filename = f.name();
+
+          // filter out the ._ mac files
+          if (strstr(filename, "._") != NULL)
+            continue;
+              if (f.isDirectory())
+            break;
+
+display.setCursor(CHAR_width_small * 1, 23 * CHAR_height_small+5); //+4
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          if (filename[0] != 46)
+          {
+            display.print(filename);
+            fill_up_with_spaces_left_window_filemanager();
+           
+          }
+          unsigned long length = f.size();
+
+          if (filename[0] != 46)
+          {
+             snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%s"), fm.sd_temp_name.c_str(), filename);
+
+  File ff = SD_EXTERNAL.open(tmp, FILE_WRITE);
+                // copy data loop
+                unsigned long count = 0;
+                display.console = true;
+                while (count < length)
+                {
+                  char buf[256];
+                  unsigned int n;
+                  n = f.read(buf, 256);
+                  ff.write(buf, n);
+                  count = count + n;
+                  if (count % 8192 == 0)
+                    display.fillRect(CHAR_width_small * 27, CHAR_height_small * 23+5, count / (f.size() / (27 * CHAR_width_small)), 8, RED);
+                }
+                ff.close();
+                display.fillRect(CHAR_width_small * 27 - 2, CHAR_height_small * 23+5, (27 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
+          }
+          f.close();
+        }
+        rootdir.close();
+         fm.sd_mode = 99;
+            
+}
+
+FLASHMEM void file_manager_copy_int_to_ext_file()
+{
+  
+}
+
+FLASHMEM void file_manager_copy_ext_to_int_folder()
+{
+   char tmp[FILENAME_LEN+20];
+   
+        File rootdir = SD_EXTERNAL.open(fm.sd_temp_name.c_str());
+
+         if (!SD.exists( fm.sd_temp_name.c_str())) {
+        SD.mkdir( fm.sd_temp_name.c_str());
+      }
+        // File ff = SD_EXTERNAL.open("/DRUMS");
+        while (1)
+        {
+          File f = rootdir.openNextFile();
+          if (!f)
+            break;
+           else if (f.isDirectory())
+            break;
+          const char* filename = f.name();
+
+          // filter out the ._ mac files
+          if (strstr(filename, "._") != NULL)
+            continue;
+
+display.setCursor(CHAR_width_small * 1, 23 * CHAR_height_small+5); //+4
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          if (filename[0] != 46)
+          {
+            display.print(filename);
+            fill_up_with_spaces_left_window_filemanager();
+           
+          }
+          unsigned long length = f.size();
+
+          if (filename[0] != 46)
+          {
+             snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%s"), fm.sd_temp_name.c_str(), filename);
+
+  File ff = SD.open(tmp, FILE_WRITE);
+                // copy data loop
+                unsigned long count = 0;
+                display.console = true;
+                while (count < length)
+                {
+                  char buf[256];
+                  unsigned int n;
+                  n = f.read(buf, 256);
+                  ff.write(buf, n);
+                  count = count + n;
+                  if (count % 8192 == 0)
+                    display.fillRect(CHAR_width_small * 27, CHAR_height_small * 23+5, count / (f.size() / (27 * CHAR_width_small)), 8, RED);
+                }
+                ff.close();
+                display.fillRect(CHAR_width_small * 27 - 2, CHAR_height_small * 23+5, (27 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
+          }
+          f.close();
+        }
+        rootdir.close();
+         fm.sd_mode = 99;
+}
+
+FLASHMEM void file_manager_copy_ext_to_int_file()
+{
+  
+}
+#endif
+
 FLASHMEM void UI_func_file_manager(uint8_t param)
 {
   static constexpr char CUSTOM_DIR[] = "CUSTOM";
   static constexpr char RECORDINGS_DIR[] = "RECORDINGS";
   static constexpr char MIDI_DIR[] = "MIDI";
   static constexpr char BRAIDS[] = "BRAIDS";
+   static constexpr char DRUMS[] = "DRUMS";
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_file_manager);
-    // handleStop(); //test 20/03/2023 for remote console crash when opening file manager while sequencer is playing
+    // handleStop(); 
     menuhelper_previous_val = 199;  //fake value to draw all touch buttons at start
     if (sd_card_internal > 0)
     {
@@ -16365,15 +16543,29 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         SD.mkdir(BRAIDS);
       }
     }
+    #ifdef MUSIKANDMORE
+     if (!SD_EXTERNAL.exists(CUSTOM_DIR)) {
+        SD_EXTERNAL.mkdir(CUSTOM_DIR);
+      }
+      if (!SD_EXTERNAL.exists(RECORDINGS_DIR)) {
+        SD_EXTERNAL.mkdir(RECORDINGS_DIR);
+      }
+      if (!SD_EXTERNAL.exists(MIDI_DIR)) {
+        SD_EXTERNAL.mkdir(MIDI_DIR);
+      }
+      if (!SD_EXTERNAL.exists(BRAIDS)) {
+        SD_EXTERNAL.mkdir(BRAIDS);
+      }
+        if (!SD_EXTERNAL.exists(DRUMS)) {
+        SD_EXTERNAL.mkdir(DRUMS);
+      }
+    #endif
+
+
     fm.sd_mode = FM_BROWSE_FILES;
-    fm.sd_new_name = "/";
-    fm.sd_full_name = "/";
-    fm.sd_prev_dir = "";
-    fm.sd_temp_name = "/";
     fm.active_window = 0;
-    fm.sd_skip_files = 0;
-    fm.sd_selected_file = 0;
-    fm.sd_is_folder = false;
+
+    reset_file_manager_folder();
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
    _print_filemanager_header();
@@ -16457,29 +16649,48 @@ if (fm.SD_CARD_READER_EXT){
     }
     if (e.pressed) {
       if (fm.sd_is_folder) {
+           if (fm.SD_CARD_READER_EXT==false)
         TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
-        if (fm.sd_temp_name == "..") {
+
+
+        #ifdef MUSIKANDMORE
+if (fm.SD_CARD_READER_EXT && fm.active_window == 0 && fm.sd_mode == FM_COPY_TO_EXTERNAL)
+ file_manager_copy_int_to_ext_folder();
+else if (fm.SD_CARD_READER_EXT && fm.active_window == 1 && fm.sd_mode == FM_COPY_TO_INTERNAL)
+{
+file_manager_copy_ext_to_int_folder();
+}
+#endif
+
+        if (fm.sd_temp_name == ".." &&  fm.sd_mode==FM_BROWSE_FILES) 
+        {
           if (fm.sd_folder_depth < 2) {
             fm.sd_folder_depth = 0;
             fm.sd_new_name = "/";
             fm.sd_parent_folder = false ;
           }
-          else {
+          else if (  fm.sd_mode==FM_BROWSE_FILES){
             // path has at least one parent folder
             const int lastSlash = fm.sd_new_name.lastIndexOf("/");
             fm.sd_new_name = fm.sd_new_name.substring(0, lastSlash);
             fm.sd_folder_depth--;
           }
         }
-        else {
+        else if ( fm.sd_mode==FM_BROWSE_FILES)
+        {
           if (fm.sd_folder_depth > 0) {
             fm.sd_new_name.append("/");
           }
           fm.sd_new_name.append(fm.sd_temp_name);
           fm.sd_folder_depth++;
         }
+
+        if (  fm.sd_mode==FM_BROWSE_FILES)
+        {
         fm.sd_selected_file = 0;
         fm.sd_skip_files = 0;
+        }
+
       }
       else { // is a file
         switch (fm.sd_mode) {
@@ -16506,11 +16717,18 @@ if (fm.SD_CARD_READER_EXT){
           ;
           break;
 #endif
+
         default:
         case FM_PLAY_SAMPLE:
           previewWavFilemanager();
           break;
         }
+      }
+
+      if (  fm.sd_mode == 99)
+      {
+      fm.sd_mode = FM_BROWSE_FILES;
+             print_file_manager_buttons();
       }
     }
     // show files
@@ -17176,6 +17394,8 @@ display.print(F(" [NA]"));
     case 14: display.print(configuration.sys.rgb_enc_color_sel);
       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
       break;
+      case 15: display.print(configuration.sys.modular_inputs ? F("YES") : F("NO ")); break;
+     break;
     case 16: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
     }
     };
@@ -17278,6 +17498,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
         case 13: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
         case 14: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
+        case 15: configuration.sys.modular_inputs = !configuration.sys.modular_inputs; break;
         case 16: configuration.sys.swap_midi_leds = !configuration.sys.swap_midi_leds;
         #if defined MIDI_ACTIVITY_LIGHTS
          set_midi_led_pins();

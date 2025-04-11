@@ -2221,6 +2221,7 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["skip_midi_channel_warning"] = configuration.sys.skip_midi_channel_warning;
       data_json["send_sysex_on_voice_change"] = configuration.sys.send_sysex_on_voice_change;
       data_json["send_midi_cc"] = configuration.sys.send_midi_cc;
+      data_json["modular_inputs"] = configuration.sys.modular_inputs;
       data_json["swap_midi_leds"] = configuration.sys.swap_midi_leds;
 
       if (configuration.sys.rgb_enc_color_def != 0)
@@ -4579,7 +4580,6 @@ else
       break;
 
     // skip special files
-    /////||strcmp(sd_entry.name(), ".Spotlight-V100")  == NULL
     if (strcmp(sd_entry.name(), "System Volume Information") && strstr(sd_entry.name(), "._") == NULL)
     {
       storage_file_s entry;
