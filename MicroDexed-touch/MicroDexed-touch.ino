@@ -3243,11 +3243,12 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 uint32_t length = drum_config[d].len;
                 
                 if (isCustomSample(d)) {
-                  CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];
-                  
-                  const uint32_t offStart = (s.start / float(1000)) * length;
+                  // calculate start and end points
+                  CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
+                  const float mult = length / float(1000);
+                  const uint32_t offStart = s.start * mult;
                   start += offStart;
-                  const uint32_t offEnd = length - (s.end / float(1000)) * length;
+                  const uint32_t offEnd = length - s.end * mult;
                   length -= (offStart + offEnd);
                 }
                 
@@ -3259,6 +3260,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                     length -= randomizer;
                   }
                 }
+
                 Drum[slot]->playRaw(start, length, drum_config[d].numChannels);
 #endif
 
