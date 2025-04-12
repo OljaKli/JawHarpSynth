@@ -1676,7 +1676,7 @@ FLASHMEM void setup()
   setled(LED_BUT_A, OFF);
   setled(LED_SEL, ON);
 #endif
-  
+
   setup_ui();
 
   gamepad_buttons_neutral = joysticks[0].getButtons();
@@ -2268,34 +2268,49 @@ void loop()
   // MM Test Stuff
 
 #ifdef MUSIKANDMORE
-if (configuration.sys.modular_inputs)
-{
-  cv_clock = digitalRead(CV_CLOCK_IN);
-  cv_gate = digitalRead(CV_GATE_IN);
+  if (configuration.sys.modular_inputs)
+  {
+    cv_clock = digitalRead(CV_CLOCK_IN);
+    cv_gate = digitalRead(CV_GATE_IN);
 
-  if (cv_clock != cv_clock_previous)
-  {
-    setled(LED_UP, cv_clock);
-    cv_clock_previous = cv_clock;
-  }
-  if (cv_gate != cv_gate_previous)
-  {
-    setled(LED_DOWN, cv_gate);
-    cv_gate_previous = cv_gate;
-  }
+    if (cv_clock != cv_clock_previous)
+    {
+      setled(LED_UP, cv_clock);
+      cv_clock_previous = cv_clock;
+    }
+    if (cv_gate != cv_gate_previous)
+    {
+      setled(LED_DOWN, cv_gate);
+      cv_gate_previous = cv_gate;
+    }
 
-  analog_in = analogRead(CV_IN);
-  if (analog_in != analog_in_previous && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) && generic_temp_select_menu==15)
-  {
-    display.setTextSize(1);
-     setCursor_textGrid_small(2, 18);
-    display.setTextColor(COLOR_SYSTEXT, RED);
-    display.print(F("CV-IN: "));
-    display.print(analog_in);
-    display.print(F("   "));
-    analog_in_previous = analog_in;
+    analog_in = analogRead(CV_IN);
+
+
+    if (analog_in != analog_in_previous)
+
+    {
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) && generic_temp_select_menu == 15)
+      {
+        display.setTextSize(1);
+        setCursor_textGrid_small(2, 18);
+        display.setTextColor(COLOR_SYSTEXT, RED);
+        display.print(F("VALUE-IN: "));
+        display.print(analog_in);
+        display.print(F("   "));
+      }
+
+      configuration.sys.vol = analog_in / 10;
+      if (configuration.sys.vol > 100)
+        configuration.sys.vol = 100;
+
+      volume_r.gain(VolumeToAmplification(configuration.sys.vol));
+      volume_l.gain(VolumeToAmplification(configuration.sys.vol));
+
+      analog_in_previous = analog_in;
+    }
+
   }
-}
 #endif
 
   // Serial read (commands from web remote)
@@ -2645,7 +2660,7 @@ if (configuration.sys.modular_inputs)
 #ifdef DEBUG
       LOG.println(F("Saved."));
 #endif
-      }
+    }
     else
     {
 #ifdef DEBUG
@@ -2653,7 +2668,7 @@ if (configuration.sys.modular_inputs)
 #endif
       save_sys = 0;
     }
-      }
+  }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2673,7 +2688,7 @@ if (configuration.sys.modular_inputs)
       ui_save_notification_icon = false;
       display.console = false;
     }
-    }
+  }
 
 #if defined(DEBUG) && defined(SHOW_CPU_LOAD_MSEC)
   if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
@@ -2685,7 +2700,7 @@ if (configuration.sys.modular_inputs)
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-  }
+}
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -3267,8 +3282,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 // #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                }
               }
+            }
 #endif
             // #ifdef DEBUG
             //                 LOG.print(F("Drum "));
@@ -3287,8 +3302,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             //                 LOG.println(drum_config[d].reverb_send, 2);
             // #endif
 
-            }
           }
+        }
         //
         // Sliced Samples
         //
@@ -3405,10 +3420,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             // #endif
           }
         }
-          }
-        }
       }
     }
+  }
+}
 
 void printLoadedSample(const uint8_t i, const char* name) {
   display.setTextSize(2);
@@ -3619,10 +3634,10 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         LOG.print(inChannel, DEC);
         LOG.println();
 #endif
+      }
     }
   }
 }
-  }
 
 void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
@@ -3772,7 +3787,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           {
             LCDML.OTHER_updateFunc();
             LCDML.loop_menu();
-        }
+          }
           break;
 
         case 32: // BankSelect LSB
@@ -3921,10 +3936,10 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           for (uint8_t i = 0; i < NUM_DEXED; i++)
             MicroDexed[i]->panic();
           break;
+        }
       }
     }
   }
-}
 
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
     ep.processMidiController(inCtrl, inValue);
@@ -4370,8 +4385,8 @@ void handleSystemExclusive(byte* sysex, unsigned len)
     else
       LOG.println(F("E : SysEx parameter length wrong."));
 #endif
-      }
-      }
+  }
+}
 
 void handleTimeCodeQuarterFrame(byte data)
 {
@@ -4435,7 +4450,7 @@ void handleClock(void)
     }
     midi_bpm_counter++;
   }
-    }
+}
 
 FLASHMEM void dac_mute(void)
 {
@@ -4752,7 +4767,7 @@ FLASHMEM void set_volume(uint8_t v, uint8_t m)
       dexed_mono2stereo[instance_id]->panorama(mapfloat(PANORAMA_MIN, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
     break;
   }
-  }
+}
 
 /******************************************************************************
   SD HELPER
@@ -4823,7 +4838,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
   show_configuration();
 #endif
-  }
+}
 
 FLASHMEM void check_configuration(void)
 {
@@ -5595,7 +5610,7 @@ FLASHMEM void check_and_create_directories(void)
           SD.mkdir(tmp);
         }
       }
-        }
+    }
     // Create directory for performances
     snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), PERFORMANCE_CONFIG_PATH);
     if (!SD.exists(tmp))
@@ -5606,7 +5621,7 @@ FLASHMEM void check_and_create_directories(void)
 #endif
       SD.mkdir(tmp);
     }
-      }
+  }
 #ifdef DEBUG
   LOG.println(F("SD card check end"));
 #endif
