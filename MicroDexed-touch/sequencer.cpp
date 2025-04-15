@@ -917,9 +917,6 @@ void sequencer_part2(void)
 }
 
 extern void send_midi_clock();
-#ifdef MIDI_ACTIVITY_LIGHTS
-extern void midi_activity_leds();
-#endif
 
 void sequencer(void)
 {
@@ -965,10 +962,6 @@ void sequencer(void)
       seq.ticks = 0;
       handle_pattern_end_in_song_mode();
     }
-
-#ifdef MIDI_ACTIVITY_LIGHTS
-    midi_activity_leds();
-#endif
   }
 }
 

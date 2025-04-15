@@ -959,6 +959,7 @@ uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
 PeriodicTimer sequencer_timer;
+PeriodicTimer MIDI_input_timer;
 
 multisample_s msp[NUM_MULTISAMPLES];
 multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
@@ -1018,6 +1019,15 @@ void set_custom_enc_colors()
    SETUP
  ***********************************************************************/
 
+#ifdef MUSIKANDMORE
+bool cv_clock;
+bool cv_clock_previous;
+bool trs_pedal;
+bool trs_pedal_previous;
+int analog_volume_value;
+int analog_volume_value_previous;
+#endif
+
 void updateEncoderL(void)
 {
   ENCODER[ENC_L].update();
@@ -1028,13 +1038,21 @@ void updateEncoderR(void)
   ENCODER[ENC_R].update();
 }
 
+extern bool trs_pedal;
+
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
 FLASHMEM void All_Button_LEDS(bool state)
 {
   if (state)
   {
+
     setled(LED_UP, HIGH);
-    setled(LED_DOWN, HIGH);
+
+    if (configuration.sys.sus_pedal)
+      setled(LED_DOWN, trs_pedal);
+    else
+      setled(LED_DOWN, HIGH);
+
     setled(LED_LEFT, HIGH);
     setled(LED_RIGHT, HIGH);
     setled(LED_SEL, HIGH);
@@ -1044,8 +1062,13 @@ FLASHMEM void All_Button_LEDS(bool state)
     setled(LED_BUT_A, HIGH);
   }
   else {
-    setled(LED_UP, LOW);
-    setled(LED_DOWN, LOW);
+    if (!(configuration.sys.ext_clock && cv_clock))
+      setled(LED_UP, LOW);
+    if (configuration.sys.sus_pedal)
+      setled(LED_DOWN, trs_pedal);
+    else
+      setled(LED_DOWN, LOW);
+
     setled(LED_LEFT, LOW);
     setled(LED_RIGHT, LOW);
     setled(LED_SEL, LOW);
@@ -1062,11 +1085,15 @@ FLASHMEM void All_Button_LEDS(bool state)
 
 FLASHMEM void setup()
 {
+#if  !defined CAPACITIVE_TOUCH_DISPLAY
+  delay(60);
+#endif
+
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
   Wire.begin();
-
+  Wire.setClock(400000);
   mcp.begin();
 
 #if defined MCP_23008
@@ -1113,9 +1140,10 @@ FLASHMEM void setup()
 
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
-  pinMode(CV_IN, INPUT_PULLUP);
+  pinMode(ANALOG_VOLUME_IN, INPUT_PULLUP);
+  // pinMode(ANALOG_VOLUME_IN, INPUT_PULLDOWN);   
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
-  pinMode(CV_GATE_IN, INPUT_PULLUP);
+  pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
 
 #ifdef DEBUG
@@ -1529,7 +1557,8 @@ FLASHMEM void setup()
 
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
-
+  //MIDI_input_timer.begin(check_midi_devices, 10000, true);
+  MIDI_input_timer.begin(check_midi_devices, 5000, true);
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_RIGHT, OFF);
@@ -2254,12 +2283,21 @@ void midi_activity_leds()
 #endif
 
 #ifdef MUSIKANDMORE
-bool cv_clock;
-bool cv_gate;
-bool cv_clock_previous;
-bool cv_gate_previous;
-int analog_in;
-int analog_in_previous = 99;
+void set_trs_pedal()
+{
+  MicroDexed[selected_instance_id]->setSustain(trs_pedal);
+  if (!MicroDexed[selected_instance_id]->getSustain())
+  {
+    for (uint8_t note = 0; note < MicroDexed[selected_instance_id]->getMaxNotes(); note++)
+    {
+      if (MicroDexed[selected_instance_id]->voices[note].sustained && !MicroDexed[selected_instance_id]->voices[note].keydown)
+      {
+        MicroDexed[selected_instance_id]->voices[note].dx7_note->keyup();
+        MicroDexed[selected_instance_id]->voices[note].sustained = false;
+      }
+    }
+  }
+}
 #endif
 
 void loop()
@@ -2268,49 +2306,54 @@ void loop()
   // MM Test Stuff
 
 #ifdef MUSIKANDMORE
-  if (configuration.sys.modular_inputs)
+  if (configuration.sys.sus_pedal)
   {
+    trs_pedal = digitalRead(TRS_PEDAL_IN);
+    if (trs_pedal != trs_pedal_previous)
+    {
+      set_trs_pedal();
+      setled(LED_DOWN, trs_pedal);
+
+      trs_pedal_previous = trs_pedal;
+    }
+  }
+
+#ifdef MUSIKANDMORE
+  if (configuration.sys.ext_clock)
+  {
+    seq.clock = 1;
     cv_clock = digitalRead(CV_CLOCK_IN);
-    cv_gate = digitalRead(CV_GATE_IN);
 
     if (cv_clock != cv_clock_previous)
     {
+
+      sequencer();
+      sequencer();
+      sequencer();
+      sequencer();
+
+      if (midi_bpm_counter % 4 == 0)
+      {
+        midi_bpm = (round(60000.0f / float(midi_bpm_timer * 2)));
+        if ((_midi_bpm > midi_bpm + 2 && midi_bpm > 30 && midi_bpm < 180) ||
+          (_midi_bpm < midi_bpm - 2 && midi_bpm >30 && midi_bpm < 180))
+
+        {
+          seq.bpm = midi_bpm;
+          _midi_bpm = midi_bpm;
+          update_seq_speed();
+        }
+
+        midi_bpm_timer = 0;
+        midi_bpm_counter = 0;
+      }
+      midi_bpm_counter++;
       setled(LED_UP, cv_clock);
       cv_clock_previous = cv_clock;
     }
-    if (cv_gate != cv_gate_previous)
-    {
-      setled(LED_DOWN, cv_gate);
-      cv_gate_previous = cv_gate;
-    }
-
-    analog_in = analogRead(CV_IN);
-
-
-    if (analog_in != analog_in_previous)
-
-    {
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) && generic_temp_select_menu == 15)
-      {
-        display.setTextSize(1);
-        setCursor_textGrid_small(2, 18);
-        display.setTextColor(COLOR_SYSTEXT, RED);
-        display.print(F("VALUE-IN: "));
-        display.print(analog_in);
-        display.print(F("   "));
-      }
-
-      configuration.sys.vol = analog_in / 10;
-      if (configuration.sys.vol > 100)
-        configuration.sys.vol = 100;
-
-      volume_r.gain(VolumeToAmplification(configuration.sys.vol));
-      volume_l.gain(VolumeToAmplification(configuration.sys.vol));
-
-      analog_in_previous = analog_in;
-    }
-
   }
+#endif
+
 #endif
 
   // Serial read (commands from web remote)
@@ -2326,7 +2369,7 @@ void loop()
   }
 
   // MIDI input handling
-  check_midi_devices();
+  //check_midi_devices();
 
   // check encoder (old, polling)
   //ENCODER[ENC_L].update();
@@ -2537,14 +2580,6 @@ void loop()
       ;
     update_sidechain();  //work in progress
   }
-#ifdef MIDI_ACTIVITY_LIGHTS
-  else
-  {
-    midi_activity_leds();
-  }
-#endif
-
-
 
   if (control_rate > CONTROL_RATE_MS)
   {
@@ -2668,7 +2703,7 @@ void loop()
 #endif
       save_sys = 0;
     }
-  }
+    }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2700,7 +2735,7 @@ void loop()
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-}
+  }
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -3635,9 +3670,9 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         LOG.println();
 #endif
       }
+      }
     }
   }
-}
 
 void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
@@ -4386,7 +4421,7 @@ void handleSystemExclusive(byte* sysex, unsigned len)
       LOG.println(F("E : SysEx parameter length wrong."));
 #endif
   }
-}
+    }
 
 void handleTimeCodeQuarterFrame(byte data)
 {
@@ -4415,9 +4450,7 @@ void send_midi_clock()
 
 void handleClock(void)
 {
-
-  if (seq.clock == 1)// MIDI CLOCK TIMING, MIDI SLAVE
-
+  if (seq.clock == 1 && configuration.sys.ext_clock == false)// EXTERNAL MIDI CLOCK TIMING, MIDI SLAVE
   {
     sequencer();
 
@@ -4527,7 +4560,7 @@ void handleStart(void)
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
 
-  }
+    }
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
@@ -4537,7 +4570,7 @@ void handleStart(void)
   setled(LED_START, HIGH);
 #endif
 
-}
+  }
 
 void handleContinue(void)
 {
@@ -4579,7 +4612,7 @@ void handleStop(void)
         clear_song_playhead();
         sub_song_print_tracknumbers();
       }
-    }
+      }
 
     seq.running = false;
     seq.recording = false;
@@ -4618,11 +4651,11 @@ void handleStop(void)
     }
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
-  }
+    }
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_START, LOW);
 #endif
-}
+  }
 
 void handleActiveSensing(void)
 {

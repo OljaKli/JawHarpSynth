@@ -3665,6 +3665,11 @@ public:
   };
 } ui;
 
+#ifdef MUSIKANDMORE
+extern int analog_volume_value;
+extern int analog_volume_value_previous;
+#endif
+
 /***********************************************************************
    MENU CONTROL
  ***********************************************************************/
@@ -3728,6 +3733,22 @@ FLASHMEM void lcdml_menu_control(void)
     case 10:
       button[ENC_R] = LOW;
       break;
+    }
+  }
+#endif
+
+#ifdef MUSIKANDMORE
+  if (configuration.sys.vol_control)
+  {
+    // analog_volume_value = 1024 - analogRead(ANALOG_VOLUME_IN);
+    analog_volume_value = analogRead(ANALOG_VOLUME_IN);
+    if (analog_volume_value > analog_volume_value_previous + 10 || analog_volume_value < analog_volume_value_previous - 10)
+    {
+      g_LCDML_CONTROL_Encoder_position[ENC_L] = +4;
+      configuration.sys.vol = analog_volume_value / 8 + 1;
+      if (configuration.sys.vol > 100)
+        configuration.sys.vol = 100;
+      analog_volume_value_previous = analog_volume_value;
     }
   }
 #endif
@@ -6350,7 +6371,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     // the parameter editors depend on activesample. We define them by sample index 0,
     // but they will act on current slot activesample later.
 
-    addDrumParameterEditor((const char*)F("VOLUME"), 0, 100, &drum_config[0].vol_max);
+    addDrumParameterEditor((const char*)F("VOLUME"), 0, 200, &drum_config[0].vol_max);
     addDrumParameterEditor((const char*)F("PAN"), -99, 99, &drum_config[0].pan);
     addDrumParameterEditor((const char*)F("REVERB"), 0, 100, &drum_config[0].reverb_send);
     addDrumParameterEditor((const char*)F("DELAY1"), 0, 100, &drum_config[0].delay1);
@@ -17401,7 +17422,7 @@ FLASHMEM void _system_settings_long_help_texts()
     setCursor_textGrid_small(2, 19);
     print_empty_spaces(47, 1);
   }
-  else if (generic_temp_select_menu == 13 || generic_temp_select_menu == 14) {
+  else if (generic_temp_select_menu == 14 || generic_temp_select_menu == 15) {
     setCursor_textGrid_small(2, 18);
     display.print(F("SET ENCODER RGB COLORS FOR DEFAULT AND"));
     setCursor_textGrid_small(2, 19);
@@ -17460,15 +17481,32 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 10: display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS")); break;
     case 11: display.print(F("SEND SYSEX ON VOICE CHANGE")); break;
     case 12: display.print(F("SEND MIDI CC DUMPS")); break;
-    case 13: display.print(F("RGB ENCODER DEFAULT COLOR")); break;
-    case 14: display.print(F("RGB ENCODER EDITOR COLOR")); break;
-    case 15:
-      display.print(F("INPUTS (CV-IN/CV-CLOCK/CV-GATE)"));
+    case 13: display.print(F("SWAP MIDI ACTIVITY LEDS")); break;
+    case 14: display.print(F("RGB ENCODER DEFAULT COLOR"));
+#ifndef RGB_ENCODERS
+      display.print(F(" [NA]"));
+#endif
+      break;
+    case 15: display.print(F("RGB ENCODER EDITOR COLOR"));
+#ifndef RGB_ENCODERS
+      display.print(F(" [NA]"));
+#endif
+      break;
+    case 16: display.print(F("ANALOG VOLUME CONTROL"));
 #ifndef MUSIKANDMORE
       display.print(F(" [NA]"));
 #endif
       break;
-    case 16: display.print(F("SWAP MIDI LEDS")); break;
+    case 17: display.print(F("EXT. SUSTAIN PEDAL/DAMPER"));
+#ifndef MUSIKANDMORE
+      display.print(F(" [NA]"));
+#endif
+      break;
+    case 18: display.print(F("EXTERNAL CV CLOCK INPUT"));
+#ifndef MUSIKANDMORE
+      display.print(F(" [NA]"));
+#endif
+      break;
     }
     };
 
@@ -17493,15 +17531,19 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
     case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
     case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
-    case 13: display.print(configuration.sys.rgb_enc_color_def);
+    case 13: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
+    case 14: display.print(configuration.sys.rgb_enc_color_def);
       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_def);
       break;
-    case 14: display.print(configuration.sys.rgb_enc_color_sel);
+    case 15: display.print(configuration.sys.rgb_enc_color_sel);
       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
       break;
-    case 15: display.print(configuration.sys.modular_inputs ? F("YES") : F("NO ")); break;
+    case 16: display.print(configuration.sys.vol_control ? F("YES") : F("NO ")); break;
+    case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
+    case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
+
       break;
-    case 16: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
+
     }
     };
 
@@ -17537,7 +17579,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 17; // Zero Indexed
+  static uint8_t total_menu_items = 19; // Zero Indexed
 
   if (LCDML.FUNC_setup())
   {
@@ -17600,14 +17642,20 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 10: configuration.sys.skip_midi_channel_warning = !configuration.sys.skip_midi_channel_warning; break;
         case 11: configuration.sys.send_sysex_on_voice_change = !configuration.sys.send_sysex_on_voice_change; break;
         case 12: configuration.sys.send_midi_cc = !configuration.sys.send_midi_cc; break;
-
-        case 13: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
-        case 14: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
-        case 15: configuration.sys.modular_inputs = !configuration.sys.modular_inputs; break;
-        case 16: configuration.sys.swap_midi_leds = !configuration.sys.swap_midi_leds;
+        case 13: configuration.sys.swap_midi_leds = !configuration.sys.swap_midi_leds;
 #if defined MIDI_ACTIVITY_LIGHTS
           set_midi_led_pins();
 #endif
+          break;
+        case 14: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
+        case 15: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
+        case 16: configuration.sys.vol_control = !configuration.sys.vol_control; break;
+        case 17: configuration.sys.sus_pedal = !configuration.sys.sus_pedal; break;
+        case 18: configuration.sys.ext_clock = !configuration.sys.ext_clock;
+          if (configuration.sys.ext_clock)
+            seq.clock = 1;
+          else
+            seq.clock = 0;
           break;
         }
       }
@@ -18812,7 +18860,7 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
         }
         else {
           changed = false;
-          tempValue = MAX_VOICES - 1; 
+          tempValue = MAX_VOICES - 1;
         }
       }
       configuration.dexed[selected_instance_id].voice = tempValue;
@@ -19400,6 +19448,11 @@ FLASHMEM void UI_func_volume(uint8_t param)
     encoderDir[ENC_L].reset();
     back_from_volume = 0;
 
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid(1, 1);
+    display.print(F("Master Volume"));
+
     if (multiband_active)
     {
       multiband_active = false;
@@ -19414,8 +19467,8 @@ FLASHMEM void UI_func_volume(uint8_t param)
       mb_set_mutes();
       mb_set_compressor();
     }
-
-    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+    if (LCDML.MENU_getLastActiveFunctionID() == 0xff)
+      TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -19435,8 +19488,8 @@ FLASHMEM void UI_func_volume(uint8_t param)
     // Master Volume
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    setCursor_textGrid(1, 1);
-    display.print(F("Master Volume"));
+    // setCursor_textGrid(1, 1);
+    // display.print(F("Master Volume"));
     display_bar_int("Master Vol.", configuration.sys.vol, 1.0, VOLUME_MIN, VOLUME_MAX, 3, false, false, false);
     set_volume(configuration.sys.vol, configuration.sys.mono);
   }
@@ -19581,12 +19634,12 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 
           mode = 0xff;
           break;
-        }
+      }
 
         LCDML.FUNC_goBackToMenu();
-      }
     }
   }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (mode < 0xff)
@@ -19710,9 +19763,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
             setCursor_textGrid(1, 2);
             display.print(F("Waiting...      "));
             /// Storing is done in SYSEX code
-          }
         }
       }
+    }
       else if (mode >= 1 && yesno == false)
       {
         LOG.println(mode, DEC);
@@ -19721,9 +19774,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
         _cancel_message_old_menus();
         LCDML.FUNC_goBackToMenu();
       }
-    }
-    encoderDir[ENC_R].reset();
   }
+    encoderDir[ENC_R].reset();
+}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -19946,7 +19999,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-          }
+        }
           else
           {
             uint8_t bank_data[4104];
@@ -19960,7 +20013,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
             show(2, 1, 16, "Done.");
             bank_number = 0xff;
           }
-        }
+      }
         else
         {
           show(2, 1, 16, "No bank.");
@@ -19969,9 +20022,9 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         mode = 0xff;
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
-      }
     }
   }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -20087,7 +20140,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-          }
+        }
           else
           {
             uint8_t voice_data[155];
@@ -20108,7 +20161,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-        }
+      }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -20118,9 +20171,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
-      }
     }
   }
+}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -20509,7 +20562,7 @@ FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-  }
+}
   return (0);
 }
 
@@ -20898,7 +20951,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-    }
+  }
     else
     { // it was not a favorite
 
@@ -20907,7 +20960,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-  }
+}
   else
     return false;
 }
@@ -21582,9 +21635,9 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       psram_test();
 #endif
-    }
-    // setCursor_textGrid(1, 2);
   }
+    // setCursor_textGrid(1, 2);
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -21906,7 +21959,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-    }
+  }
     else
     { // no favorites in bank stored
       return (false);
@@ -21914,7 +21967,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-  }
+}
   else
     return false;
 }
@@ -22073,7 +22126,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
 #ifdef DEBUG
     LOG.println("No match.");
 #endif
-  }
+}
 
 #ifdef DEBUG
   LOG.print(F("MSZ preset #"));
