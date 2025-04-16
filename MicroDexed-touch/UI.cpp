@@ -1596,6 +1596,7 @@ FLASHMEM void set_track_type_color_inverted(uint8_t track)
 bool song_page_full_draw_pattern_complete = false;
 bool song_page_full_draw_chain_complete = false;
 bool song_page_full_draw_transpose_complete = false;
+uint8_t temp_int_song_page;
 
 FLASHMEM void print_song_loop_arrows()
 {
@@ -1769,8 +1770,8 @@ FLASHMEM void print_chain_matrix_in_song_page()
               (y == seq.cursor_scroll && x == seq.previous_track) ||
               (y == seq.cursor_scroll_previous && x == seq.selected_track) ||
               seq.cursor_scroll == 15 || // not optimized when scrolling out of initial visible range (first 16 steps)
-              (seq.cursor_scroll == 0 && song_page_full_draw_pattern_complete == false) //not optimized when scrolling screen back
-              )
+              (seq.cursor_scroll == 0 && song_page_full_draw_pattern_complete == false) || //not optimized when scrolling screen back
+              seq.quicknav_pattern_to_song_jump) //returned from pattern editor to song view
             {
               display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
 
@@ -1787,19 +1788,21 @@ FLASHMEM void print_chain_matrix_in_song_page()
                 set_track_type_color_inverted(x);
               else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state && seq.cycle_touch_element == 5 && seq.loop_edit_step == 0)
                 display.setTextColor(COLOR_SYSTEXT, RED);
+              else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state && seq.cycle_touch_element != 5 && seq.loop_edit_step == 0)
+                display.setTextColor(RED, COLOR_BACKGROUND);
               else
                 set_track_type_color(x);
 
               if (seq.edit_state && seq.cycle_touch_element == 5 && x == seq.selected_track && y == seq.cursor_scroll) // is in song edit mode
               {
-                if (temp_int == NUM_CHAINS)
+                if (temp_int_song_page == NUM_CHAINS)
                 {
-                  temp_int = 99; // Select empty step/chain
-                  seq.song[x][y + seq.scrollpos] = temp_int;
-                  temp_int = NUM_CHAINS;
+                  temp_int_song_page = 99; // Select empty step/chain
+                  seq.song[x][y + seq.scrollpos] = temp_int_song_page;
+                  temp_int_song_page = NUM_CHAINS;
                 }
                 else
-                  seq.song[x][y + seq.scrollpos] = temp_int;
+                  seq.song[x][y + seq.scrollpos] = temp_int_song_page;
               }
 
               if (seq.song[x][y + seq.scrollpos] < 99)
@@ -1887,20 +1890,20 @@ FLASHMEM void print_transpose_in_song_page()
     y_end = 16;
     song_page_full_draw_transpose_complete = true;
   }
-  else if (seq.menu == 0)
+  else if (seq.song_menu == 0)
   {
     y_start = 0;
     y_end = 2;
   }
-  else if (seq.menu == 15)
+  else if (seq.song_menu == 15)
   {
     y_start = 14;
     y_end = 15;
   }
   else
   {
-    y_start = seq.menu - 1;
-    y_end = seq.menu + 2;
+    y_start = seq.song_menu - 1;
+    y_end = seq.song_menu + 2;
   }
   display.setTextSize(1);
   if (seq.cycle_touch_element < 10)
@@ -1908,9 +1911,9 @@ FLASHMEM void print_transpose_in_song_page()
     for (uint8_t y = y_start; y < y_end; y++) // transpose chain steps
     {
       display.setCursor(CHAR_width_small * 50, CHAR_height_small * 8 + y * 10); // chain transpose
-      if (seq.edit_state && seq.cycle_touch_element == 9 && seq.menu == y)
+      if (seq.edit_state && seq.cycle_touch_element == 9 && seq.song_menu == y)
         display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (seq.edit_state && seq.cycle_touch_element == 8 && seq.menu == y)
+      else if (seq.edit_state && seq.cycle_touch_element == 8 && seq.song_menu == y)
         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
 
       else if (seq.cycle_touch_element == 8 && seq.edit_state == false)
@@ -1990,25 +1993,25 @@ FLASHMEM void print_chain_steps_in_song_page()
     y_start = 0;
     y_end = 16;
   }
-  else if (seq.menu == 0)
+  else if (seq.song_menu == 0)
   {
     y_start = 0;
     y_end = 2;
   }
-  else if (seq.menu == 15)
+  else if (seq.song_menu == 15)
   {
     y_start = 14;
     y_end = 15;
   }
   else
   {
-    y_start = seq.menu - 1;
-    y_end = seq.menu + 2;
+    y_start = seq.song_menu - 1;
+    y_end = seq.song_menu + 2;
   }
   display.setTextSize(1);
   if (seq.edit_state && seq.cycle_touch_element == 9)
   {
-    seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] = seq.sub_menu;
+    seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = seq.sub_menu;
   }
   if (seq.cycle_touch_element < 10)
   {
@@ -2024,7 +2027,7 @@ FLASHMEM void print_chain_steps_in_song_page()
           display.print(F("END"));
           display.setTextColor(GREY1, COLOR_BACKGROUND);
         }
-        if (seq.edit_state && seq.cycle_touch_element == 6 && seq.menu == y)
+        if (seq.edit_state && seq.cycle_touch_element == 6 && seq.song_menu == y)
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         else
           display.setTextColor(GREY1, COLOR_BACKGROUND);
@@ -2048,34 +2051,34 @@ FLASHMEM void print_chain_steps_in_song_page()
   {
     display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
 
-    display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + seq.menu * 10);
-    if (chain_endline == seq.menu)
-      // if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] == 99 && chain_endline == seq.menu)
+    display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + seq.song_menu * 10);
+    if (chain_endline == seq.song_menu)
+      // if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] == 99 && chain_endline == seq.song_menu)
       display.print(F("END"));
-    else if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] == 99)
+    else if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] == 99)
       display.print(F("--"));
     else
-      print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu], 2);
+      print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu], 2);
   }
   else if (seq.edit_state && seq.cycle_touch_element == 7)
   {
     if (seq.sub_menu == NUM_CHAINS)
     {
       seq.sub_menu = 99; // Select empty step/chain
-      seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] = seq.sub_menu;
+      seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = seq.sub_menu;
       seq.sub_menu = NUM_CHAINS;
     }
     else
-      seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] = seq.sub_menu;
+      seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = seq.sub_menu;
     display.setTextColor(COLOR_SYSTEXT, RED);
-    display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + seq.menu * 10);
-    if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] == 99)
+    display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + seq.song_menu * 10);
+    if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] == 99)
       display.print(F("--"));
     else
-      print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu], 2);
+      print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu], 2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(F(" "));
-    pattern_preview_in_song(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu]);
+    pattern_preview_in_song(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu]);
   }
   // print current CHAIN Number
   display.setTextSize(1);
@@ -2996,7 +2999,7 @@ FLASHMEM void gamepad_seq_navigation_func(uint32_t buttons)
     LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
   }
 }
-
+///////////xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 FLASHMEM void gamepad_learn_func(uint32_t buttons)
 {
   if (gamepad_millis > 300)
@@ -3740,15 +3743,19 @@ FLASHMEM void lcdml_menu_control(void)
 #ifdef MUSIKANDMORE
   if (configuration.sys.vol_control)
   {
-    // analog_volume_value = 1024 - analogRead(ANALOG_VOLUME_IN);
-    analog_volume_value = analogRead(ANALOG_VOLUME_IN);
-    if (analog_volume_value > analog_volume_value_previous + 10 || analog_volume_value < analog_volume_value_previous - 10)
+    if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song) && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
+      LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker))
     {
-      g_LCDML_CONTROL_Encoder_position[ENC_L] = +4;
-      configuration.sys.vol = analog_volume_value / 8 + 1;
-      if (configuration.sys.vol > 100)
-        configuration.sys.vol = 100;
-      analog_volume_value_previous = analog_volume_value;
+      // analog_volume_value = 1024 - analogRead(ANALOG_VOLUME_IN);
+      analog_volume_value = analogRead(ANALOG_VOLUME_IN);
+      if (analog_volume_value > analog_volume_value_previous + 10 || analog_volume_value < analog_volume_value_previous - 10)
+      {
+        g_LCDML_CONTROL_Encoder_position[ENC_L] = +4;
+        configuration.sys.vol = analog_volume_value / 8 + 1;
+        if (configuration.sys.vol > 100)
+          configuration.sys.vol = 100;
+        analog_volume_value_previous = analog_volume_value;
+      }
     }
   }
 #endif
@@ -9506,6 +9513,10 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 #endif
     registerTouchHandler(handle_touchscreen_pattern_editor);
     registerScope(216, 0, button_size_x * CHAR_width_small, 50, true); // only draw when seq running
+
+    if (seq.quicknav_song_to_pattern_jump && seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] < NUM_SEQ_PATTERN)
+      seq.active_pattern = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu];
+
     seq.menu = 3;
     virtual_keyboard_smart_preselect_mode();
     if (seq.cycle_touch_element != 1)
@@ -11399,23 +11410,24 @@ FLASHMEM void UI_func_song(uint8_t param)
     song_page_full_draw_pattern_complete = false;
     seq.help_text_needs_refresh = true;
     seq.loop_edit_step = 0;
-    temp_int = 0;
-    seq.cursor_scroll = 0;
-    seq.scrollpos = 0;
     seq.cycle_touch_element = 0;
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextSize(1);
     if (seq.quicknav_pattern_to_song_jump == false)
     {
       seq.edit_state = false;
+      seq.song_menu = 0;
+      temp_int_song_page = 0;
+      seq.cursor_scroll = 0;
+      seq.scrollpos = 0;
     }
     else
     {
-      seq.quicknav_pattern_to_song_jump = false;
       print_chain_matrix_in_song_page();
+      seq.quicknav_pattern_to_song_jump = false;
       seq.cycle_touch_element = 8;
     }
-    seq.menu = 0;
+
     UI_toplineInfoText(2);
     display.setCursor(1, 1);
     display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
@@ -11526,15 +11538,15 @@ FLASHMEM void UI_func_song(uint8_t param)
       }
       else if (seq.edit_state == true && seq.cycle_touch_element == 5)
       {
-        if (temp_int == NUM_CHAINS)
-          temp_int = 0;
+        if (temp_int_song_page == NUM_CHAINS)
+          temp_int_song_page = 0;
         else
-          temp_int = constrain(temp_int + 1, 0, NUM_CHAINS); // not -1: last element is for empty step
+          temp_int_song_page = constrain(temp_int_song_page + 1, 0, NUM_CHAINS); // not -1: last element is for empty step
       }
       else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
       {
         // if ( seq.loop_edit_step == 0)
-        seq.menu = constrain(seq.menu + 1, 0, 15);
+        seq.song_menu = constrain(seq.song_menu + 1, 0, 15);
       }
       else if (seq.edit_state == true && seq.cycle_touch_element == 7)
       {
@@ -11664,14 +11676,14 @@ FLASHMEM void UI_func_song(uint8_t param)
 
       else if (seq.edit_state == true && seq.cycle_touch_element == 5)
       {
-        if (temp_int == 0)
-          temp_int = NUM_CHAINS;
+        if (temp_int_song_page == 0)
+          temp_int_song_page = NUM_CHAINS;
         else
-          temp_int = constrain(temp_int - 1, 0, NUM_CHAINS); // not -1:last element is for empty step
+          temp_int_song_page = constrain(temp_int_song_page - 1, 0, NUM_CHAINS); // not -1:last element is for empty step
       }
       else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
       {
-        seq.menu = constrain(seq.menu - 1, 0, 15);
+        seq.song_menu = constrain(seq.song_menu - 1, 0, 15);
 
       }
       else if ((seq.edit_state == true && seq.cycle_touch_element == 7))
@@ -11805,13 +11817,13 @@ FLASHMEM void UI_func_song(uint8_t param)
         {
           seq.edit_state = !seq.edit_state;
           seq.cycle_touch_element = 5;
-          temp_int = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+          temp_int_song_page = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
         }
         else if (seq.edit_state && seq.cycle_touch_element == 6)
         {
           seq.cycle_touch_element = 7; // edit chain
           seq.help_text_needs_refresh = true;
-          seq.sub_menu = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu];
+          seq.sub_menu = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu];
         }
         else if (seq.edit_state && seq.cycle_touch_element == 7)
         {
@@ -11820,8 +11832,8 @@ FLASHMEM void UI_func_song(uint8_t param)
         else if (seq.edit_state && seq.cycle_touch_element == 8)
         {
           seq.cycle_touch_element = 9; // edit transpose
-          if (seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] != 99)
-            seq.sub_menu = seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu];
+          if (seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] != 99)
+            seq.sub_menu = seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu];
           else
             seq.sub_menu = 0;
           song_page_full_draw_transpose_complete = false;
@@ -11829,7 +11841,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         else if (seq.edit_state && seq.cycle_touch_element == 9)
         {
           if (seq.sub_menu == 0)
-            seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.menu] = 99;
+            seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = 99;
           seq.cycle_touch_element = 8; // go back from transpose 
         }
         else if (seq.edit_state == false)
@@ -11875,22 +11887,10 @@ FLASHMEM void UI_func_song(uint8_t param)
       edit_song_loop();
 
     print_song_playhead();
-
     print_chain_matrix_in_song_page();
     print_chain_steps_in_song_page();
     print_transpose_in_song_page();
     empty_chain_warning_text_in_song_page();
-
-    //DEBUG
-        // display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
-        // display.setTextSize(1);
-        // display.setCursor(0, 0);
-        // display.print(seq.cursor_scroll);
-        // display.print("  ");
-        // display.setCursor(1, CHAR_height);
-        // display.print(seq.scrollpos);
-        // display.print("  ");
-
   }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -19634,12 +19634,12 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 
           mode = 0xff;
           break;
-      }
+        }
 
         LCDML.FUNC_goBackToMenu();
+      }
     }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (mode < 0xff)
@@ -19763,9 +19763,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
             setCursor_textGrid(1, 2);
             display.print(F("Waiting...      "));
             /// Storing is done in SYSEX code
+          }
         }
       }
-    }
       else if (mode >= 1 && yesno == false)
       {
         LOG.println(mode, DEC);
@@ -19774,9 +19774,9 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
         _cancel_message_old_menus();
         LCDML.FUNC_goBackToMenu();
       }
-  }
+    }
     encoderDir[ENC_R].reset();
-}
+  }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -19999,7 +19999,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t bank_data[4104];
@@ -20013,7 +20013,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
             show(2, 1, 16, "Done.");
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No bank.");
@@ -20022,9 +20022,9 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         mode = 0xff;
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
+      }
     }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -20140,7 +20140,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t voice_data[155];
@@ -20161,7 +20161,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -20171,9 +20171,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
+      }
     }
   }
-}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -20562,7 +20562,7 @@ FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-}
+  }
   return (0);
 }
 
@@ -20951,7 +20951,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-  }
+    }
     else
     { // it was not a favorite
 
@@ -20960,7 +20960,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-}
+  }
   else
     return false;
 }
@@ -21635,9 +21635,9 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       psram_test();
 #endif
-  }
+    }
     // setCursor_textGrid(1, 2);
-}
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -21959,7 +21959,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-  }
+    }
     else
     { // no favorites in bank stored
       return (false);
@@ -21967,7 +21967,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-}
+  }
   else
     return false;
 }
@@ -22126,7 +22126,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
 #ifdef DEBUG
     LOG.println("No match.");
 #endif
-}
+  }
 
 #ifdef DEBUG
   LOG.print(F("MSZ preset #"));

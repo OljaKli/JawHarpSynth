@@ -101,6 +101,7 @@ typedef struct sequencer_s
     uint8_t pianoroll_octave = 0;
     uint8_t pianoroll_last_valid_note = 254;
     uint8_t menu;
+    uint8_t song_menu;
     uint8_t sub_menu;
     uint8_t UI_last_seq_step;
     uint8_t note_editor_view = 99; // 0 = list/tracker view, 1 = pianoroll

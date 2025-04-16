@@ -2703,7 +2703,7 @@ void loop()
 #endif
       save_sys = 0;
     }
-    }
+  }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2735,7 +2735,7 @@ void loop()
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-  }
+}
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -3670,9 +3670,9 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         LOG.println();
 #endif
       }
-      }
     }
   }
+}
 
 void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
@@ -4421,7 +4421,7 @@ void handleSystemExclusive(byte* sysex, unsigned len)
       LOG.println(F("E : SysEx parameter length wrong."));
 #endif
   }
-    }
+}
 
 void handleTimeCodeQuarterFrame(byte data)
 {
@@ -4560,7 +4560,7 @@ void handleStart(void)
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
 
-    }
+  }
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
@@ -4570,7 +4570,7 @@ void handleStart(void)
   setled(LED_START, HIGH);
 #endif
 
-  }
+}
 
 void handleContinue(void)
 {
@@ -4612,7 +4612,7 @@ void handleStop(void)
         clear_song_playhead();
         sub_song_print_tracknumbers();
       }
-      }
+    }
 
     seq.running = false;
     seq.recording = false;
@@ -4651,11 +4651,11 @@ void handleStop(void)
     }
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
-    }
+  }
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_START, LOW);
 #endif
-  }
+}
 
 void handleActiveSensing(void)
 {
