@@ -413,9 +413,9 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 
 #ifdef MUSIKANDMORE
 #define MCP_INTA 8
-#define CV_IN 15
+#define ANALOG_VOLUME_IN 15
 #define CV_CLOCK_IN 22
-#define CV_GATE_IN 23
+#define TRS_PEDAL_IN 23
 #define GEN3_CS_SDCARD_EXTERNAL 35
 #endif 
 
@@ -1032,7 +1032,9 @@ typedef struct sys_s
   bool swap_midi_leds;
   uint8_t rgb_enc_color_def=4;
   uint8_t rgb_enc_color_sel=1;
-  bool modular_inputs;
+  bool vol_control;
+  bool sus_pedal;
+  bool ext_clock;
 } sys_t;
 
 typedef struct storage_file_s
