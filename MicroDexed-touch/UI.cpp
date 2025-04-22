@@ -456,6 +456,7 @@ enum {
 void selectSample(uint8_t sample);
 uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction);
 void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
+void printSampleWaveformP(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, uint16_t fromX = 0, uint16_t toX = UINT16_MAX, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 
 void lcdml_menu_display(void);
 void lcdml_menu_clear(void);
@@ -5103,14 +5104,6 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
-FLASHMEM void drawSampleStartEnd(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  const CustomSample &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
-  const uint16_t from = x + w * (s.start / float(1000));
-  const uint16_t to = x + w * (s.end / float(1000)) - 1;
-  display.drawFastVLine(from, y, h, COLOR_ARP);
-  display.drawFastVLine(to - 1, y, h, COLOR_ARP);
-}
-
 FLASHMEM void drawDrumsSampleWave() {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
   const drum_config_t &slot = drum_config[activeSample];
@@ -5119,11 +5112,35 @@ FLASHMEM void drawDrumsSampleWave() {
   static constexpr uint16_t plotW = 200;
   static constexpr uint16_t plotH = 63 + 8;
 
-  printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
 
   if (slot.drum_data != nullptr && isCustomSample(activeSample)) {
-    drawSampleStartEnd(plotX, plotY, plotW, plotH);
-  }    
+    static uint16_t lastFromX = 0;
+    static uint16_t lastToX = 0;
+
+    const CustomSample &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
+    const float from = s.start / float(1000);
+    const float to = s.end / float(1000);
+
+    const uint32_t fromX = plotX + from * (plotW - 1);
+    const uint32_t toX = plotX + to * (plotW - 1);
+
+
+    printSampleWaveformP(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX - 1, GREY2);
+    printSampleWaveformP(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX + 1, toX - 1);
+    printSampleWaveformP(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX + 1, plotX + plotW, GREY2);
+
+    if (lastFromX != fromX) {
+      //display.drawFastVLine(fromX, plotY, plotH, COLOR_ARP);
+      lastFromX = fromX;
+    }
+    if (lastToX != toX) {
+      //display.drawFastVLine(toX, plotY, plotH, COLOR_ARP);
+      lastToX = toX;
+    }
+  }
+  else {
+    printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels);
+  }
   setCursor_textGrid_small(39, 10);
   display.setTextColor(GREY3, COLOR_BACKGROUND);
   print_sample_type(1);
@@ -6285,20 +6302,9 @@ FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min,
     NULL);
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
-  DBG_LOG(printf("printSampleWaveform()\n"));
-
-  uint32_t sampleOffset = from * (length / numChannels);
-  uint32_t zoomedLength = (to - from) * length;
-  if (numChannels == 2) {
-    sampleOffset &= ~0x01; // make even
-    zoomedLength &= ~0x01; // make even
-  }
-  data += sampleOffset;
-  length = zoomedLength;
-
+FLASHMEM void printSampleWaveformP(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, uint16_t fromX, uint16_t toX, uint16_t waveColor, uint16_t bgColor) {
   display.console = true;
-  display.fillRect(x, y, w, h, bgColor);
+  display.fillRect(fromX, y, toX, h, bgColor);
 
   if (w > 0 && data != nullptr) {
     const uint32_t binSize = ceil(length / float(w * numChannels));
@@ -6327,8 +6333,10 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
 
-          display.console = true;
-          display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
+          if (x >= fromX && x <= toX) {
+            display.console = true;
+            display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
+          }
 
           binMin[ch] = INT16_MAX;
           binMax[ch] = INT16_MIN;
@@ -6342,6 +6350,14 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
     const uint16_t yZero = y + (h / 2);
     display.drawLine(x, yZero, x + w, yZero, waveColor); // horizontal zero line
   }
+}
+
+FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
+  DBG_LOG(printf("printSampleWaveform()\n"));
+
+  const uint16_t fromX = x + from * w;
+  const uint16_t toX = x + to * w;
+  printSampleWaveformP(x, y, w, h, data, length, numChannels, fromX, toX, waveColor, bgColor);
 }
 
 bool drumScreenActive = false;
