@@ -957,6 +957,7 @@ uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
 extern sequencer_t seq;
 PeriodicTimer sequencer_timer;
+PeriodicTimer MIDI_input_timer;
 
 multisample_s msp[NUM_MULTISAMPLES];
 multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
@@ -1016,6 +1017,15 @@ void set_custom_enc_colors()
    SETUP
  ***********************************************************************/
 
+#ifdef MUSIKANDMORE
+bool cv_clock;
+bool cv_clock_previous;
+bool trs_pedal;
+bool trs_pedal_previous;
+int analog_volume_value;
+int analog_volume_value_previous;
+#endif
+
 void updateEncoderL(void)
 {
   ENCODER[ENC_L].update();
@@ -1026,13 +1036,21 @@ void updateEncoderR(void)
   ENCODER[ENC_R].update();
 }
 
+extern bool trs_pedal;
+
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
 FLASHMEM void All_Button_LEDS(bool state)
 {
   if (state)
   {
+
     setled(LED_UP, HIGH);
-    setled(LED_DOWN, HIGH);
+
+    if (configuration.sys.sus_pedal)
+      setled(LED_DOWN, trs_pedal);
+    else
+      setled(LED_DOWN, HIGH);
+
     setled(LED_LEFT, HIGH);
     setled(LED_RIGHT, HIGH);
     setled(LED_SEL, HIGH);
@@ -1042,8 +1060,13 @@ FLASHMEM void All_Button_LEDS(bool state)
     setled(LED_BUT_A, HIGH);
   }
   else {
-    setled(LED_UP, LOW);
-    setled(LED_DOWN, LOW);
+    if (!(configuration.sys.ext_clock && cv_clock))
+      setled(LED_UP, LOW);
+    if (configuration.sys.sus_pedal)
+      setled(LED_DOWN, trs_pedal);
+    else
+      setled(LED_DOWN, LOW);
+
     setled(LED_LEFT, LOW);
     setled(LED_RIGHT, LOW);
     setled(LED_SEL, LOW);
@@ -1060,11 +1083,15 @@ FLASHMEM void All_Button_LEDS(bool state)
 
 FLASHMEM void setup()
 {
+#if  !defined CAPACITIVE_TOUCH_DISPLAY
+  delay(60);
+#endif
+
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
   Wire.begin();
-
+  Wire.setClock(400000);
   mcp.begin();
 
 #if defined MCP_23008
@@ -1111,9 +1138,10 @@ FLASHMEM void setup()
 
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
-  pinMode(CV_IN, INPUT_PULLUP);
+  pinMode(ANALOG_VOLUME_IN, INPUT_PULLUP);
+  // pinMode(ANALOG_VOLUME_IN, INPUT_PULLDOWN);   
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
-  pinMode(CV_GATE_IN, INPUT_PULLUP);
+  pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
 
 #ifdef DEBUG
@@ -1527,7 +1555,8 @@ FLASHMEM void setup()
 
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
-
+  //MIDI_input_timer.begin(check_midi_devices, 10000, true);
+  MIDI_input_timer.begin(check_midi_devices, 5000, true);
 
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_RIGHT, OFF);
@@ -1674,7 +1703,7 @@ FLASHMEM void setup()
   setled(LED_BUT_A, OFF);
   setled(LED_SEL, ON);
 #endif
-  
+
   setup_ui();
 
   gamepad_buttons_neutral = joysticks[0].getButtons();
@@ -2254,12 +2283,21 @@ void midi_activity_leds()
 #endif
 
 #ifdef MUSIKANDMORE
-bool cv_clock;
-bool cv_gate;
-bool cv_clock_previous;
-bool cv_gate_previous;
-int analog_in;
-int analog_in_previous = 99;
+void set_trs_pedal()
+{
+  MicroDexed[selected_instance_id]->setSustain(trs_pedal);
+  if (!MicroDexed[selected_instance_id]->getSustain())
+  {
+    for (uint8_t note = 0; note < MicroDexed[selected_instance_id]->getMaxNotes(); note++)
+    {
+      if (MicroDexed[selected_instance_id]->voices[note].sustained && !MicroDexed[selected_instance_id]->voices[note].keydown)
+      {
+        MicroDexed[selected_instance_id]->voices[note].dx7_note->keyup();
+        MicroDexed[selected_instance_id]->voices[note].sustained = false;
+      }
+    }
+  }
+}
 #endif
 
 void loop()
@@ -2268,34 +2306,54 @@ void loop()
   // MM Test Stuff
 
 #ifdef MUSIKANDMORE
-if (configuration.sys.modular_inputs)
-{
-  cv_clock = digitalRead(CV_CLOCK_IN);
-  cv_gate = digitalRead(CV_GATE_IN);
+  if (configuration.sys.sus_pedal)
+  {
+    trs_pedal = digitalRead(TRS_PEDAL_IN);
+    if (trs_pedal != trs_pedal_previous)
+    {
+      set_trs_pedal();
+      setled(LED_DOWN, trs_pedal);
 
-  if (cv_clock != cv_clock_previous)
-  {
-    setled(LED_UP, cv_clock);
-    cv_clock_previous = cv_clock;
-  }
-  if (cv_gate != cv_gate_previous)
-  {
-    setled(LED_DOWN, cv_gate);
-    cv_gate_previous = cv_gate;
+      trs_pedal_previous = trs_pedal;
+    }
   }
 
-  analog_in = analogRead(CV_IN);
-  if (analog_in != analog_in_previous && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) && generic_temp_select_menu==15)
+#ifdef MUSIKANDMORE
+  if (configuration.sys.ext_clock)
   {
-    display.setTextSize(1);
-     setCursor_textGrid_small(2, 18);
-    display.setTextColor(COLOR_SYSTEXT, RED);
-    display.print(F("CV-IN: "));
-    display.print(analog_in);
-    display.print(F("   "));
-    analog_in_previous = analog_in;
+    seq.clock = 1;
+    cv_clock = digitalRead(CV_CLOCK_IN);
+
+    if (cv_clock != cv_clock_previous)
+    {
+
+      sequencer();
+      sequencer();
+      sequencer();
+      sequencer();
+
+      if (midi_bpm_counter % 4 == 0)
+      {
+        midi_bpm = (round(60000.0f / float(midi_bpm_timer * 2)));
+        if ((_midi_bpm > midi_bpm + 2 && midi_bpm > 30 && midi_bpm < 180) ||
+          (_midi_bpm < midi_bpm - 2 && midi_bpm >30 && midi_bpm < 180))
+
+        {
+          seq.bpm = midi_bpm;
+          _midi_bpm = midi_bpm;
+          update_seq_speed();
+        }
+
+        midi_bpm_timer = 0;
+        midi_bpm_counter = 0;
+      }
+      midi_bpm_counter++;
+      setled(LED_UP, cv_clock);
+      cv_clock_previous = cv_clock;
+    }
   }
-}
+#endif
+
 #endif
 
   // Serial read (commands from web remote)
@@ -2311,7 +2369,7 @@ if (configuration.sys.modular_inputs)
   }
 
   // MIDI input handling
-  check_midi_devices();
+  //check_midi_devices();
 
   // check encoder (old, polling)
   //ENCODER[ENC_L].update();
@@ -2522,14 +2580,6 @@ if (configuration.sys.modular_inputs)
       ;
     update_sidechain();  //work in progress
   }
-#ifdef MIDI_ACTIVITY_LIGHTS
-  else
-  {
-    midi_activity_leds();
-  }
-#endif
-
-
 
   if (control_rate > CONTROL_RATE_MS)
   {
@@ -2645,7 +2695,7 @@ if (configuration.sys.modular_inputs)
 #ifdef DEBUG
       LOG.println(F("Saved."));
 #endif
-      }
+    }
     else
     {
 #ifdef DEBUG
@@ -2653,7 +2703,7 @@ if (configuration.sys.modular_inputs)
 #endif
       save_sys = 0;
     }
-      }
+  }
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
@@ -2673,7 +2723,7 @@ if (configuration.sys.modular_inputs)
       ui_save_notification_icon = false;
       display.console = false;
     }
-    }
+  }
 
 #if defined(DEBUG) && defined(SHOW_CPU_LOAD_MSEC)
   if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
@@ -2685,7 +2735,7 @@ if (configuration.sys.modular_inputs)
 
   // send all buffered draw commands to WebRemote
   display.flushSysEx();
-  }
+}
 
 /******************************************************************************
   MIDI MESSAGE HANDLER
@@ -3282,8 +3332,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 // #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                }
               }
+            }
 #endif
             // #ifdef DEBUG
             //                 LOG.print(F("Drum "));
@@ -3302,8 +3352,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             //                 LOG.println(drum_config[d].reverb_send, 2);
             // #endif
 
-            }
           }
+        }
         //
         // Sliced Samples
         //
@@ -3420,10 +3470,10 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             // #endif
           }
         }
-          }
-        }
       }
     }
+  }
+}
 
 FLASHMEM void printLoadedSample(const uint8_t i, const char* name) {
   display.setTextSize(2);
@@ -3634,10 +3684,10 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         LOG.print(inChannel, DEC);
         LOG.println();
 #endif
+      }
     }
   }
 }
-  }
 
 FLASHMEM void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
@@ -3787,7 +3837,7 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           {
             LCDML.OTHER_updateFunc();
             LCDML.loop_menu();
-        }
+          }
           break;
 
         case 32: // BankSelect LSB
@@ -3936,10 +3986,10 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
           for (uint8_t i = 0; i < NUM_DEXED; i++)
             MicroDexed[i]->panic();
           break;
+        }
       }
     }
   }
-}
 
   if (configuration.epiano.midi_channel == MIDI_CHANNEL_OMNI || configuration.epiano.midi_channel == inChannel)
     ep.processMidiController(inCtrl, inValue);
@@ -4385,8 +4435,8 @@ void handleSystemExclusive(byte* sysex, unsigned len)
     else
       LOG.println(F("E : SysEx parameter length wrong."));
 #endif
-      }
-      }
+  }
+}
 
 void handleTimeCodeQuarterFrame(byte data)
 {
@@ -4415,9 +4465,7 @@ void send_midi_clock()
 
 void handleClock(void)
 {
-
-  if (seq.clock == 1)// MIDI CLOCK TIMING, MIDI SLAVE
-
+  if (seq.clock == 1 && configuration.sys.ext_clock == false)// EXTERNAL MIDI CLOCK TIMING, MIDI SLAVE
   {
     sequencer();
 
@@ -4450,7 +4498,7 @@ void handleClock(void)
     }
     midi_bpm_counter++;
   }
-    }
+}
 
 FLASHMEM void dac_mute(void)
 {
@@ -4767,7 +4815,7 @@ FLASHMEM void set_volume(uint8_t v, uint8_t m)
       dexed_mono2stereo[instance_id]->panorama(mapfloat(PANORAMA_MIN, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
     break;
   }
-  }
+}
 
 /******************************************************************************
   SD HELPER
@@ -4838,7 +4886,7 @@ FLASHMEM void initial_values(bool init)
 #ifdef DEBUG
   show_configuration();
 #endif
-  }
+}
 
 FLASHMEM void check_configuration(void)
 {
@@ -5607,7 +5655,7 @@ FLASHMEM void check_and_create_directories(void)
           SD.mkdir(tmp);
         }
       }
-        }
+    }
     // Create directory for performances
     snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), PERFORMANCE_CONFIG_PATH);
     if (!SD.exists(tmp))
@@ -5618,7 +5666,7 @@ FLASHMEM void check_and_create_directories(void)
 #endif
       SD.mkdir(tmp);
     }
-      }
+  }
 #ifdef DEBUG
   LOG.println(F("SD card check end"));
 #endif

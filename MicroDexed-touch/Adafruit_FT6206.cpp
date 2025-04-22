@@ -62,6 +62,7 @@ boolean Adafruit_FT6206::begin(uint8_t thresh)
 ;
 #else
   Wire.begin();
+  
 #endif
 
   // change threshhold to be higher/lower

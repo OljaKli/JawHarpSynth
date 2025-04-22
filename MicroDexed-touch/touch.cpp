@@ -551,7 +551,9 @@ FLASHMEM void handle_touchscreen_microsynth()
 
 #ifdef MUSIKANDMORE
 extern fm_t fm;
+extern void _print_file_and_folder_copy_info( uint8_t selected_file);
 #endif
+extern void  fill_up_with_spaces_right_window();
 
 extern int menuhelper_previous_val;
 
@@ -600,7 +602,7 @@ FLASHMEM void print_file_manager_buttons()
     }
     else if (fm.SD_CARD_READER_EXT == false)
     {
-      print_empty_spaces(48, 1);
+      fill_up_with_spaces_right_window();
     }
   }
 
@@ -609,7 +611,9 @@ FLASHMEM void print_file_manager_buttons()
 
 #ifdef MUSIKANDMORE
   TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+_print_file_and_folder_copy_info( fm.sd_selected_file);
 #endif
+
 
 }
 
@@ -644,8 +648,8 @@ extern void _print_filemanager_sd_extern_header();
 extern void print_psram_stats_filemanager();
 extern void  psram_printCustomSamplesList();
 extern void load_sd_directory();
-extern void  reset_file_manager_folder();
 #endif
+extern void  reset_file_manager_folder();
 
 #ifdef MUSIKANDMORE
 FLASHMEM void print_destination_card_info()

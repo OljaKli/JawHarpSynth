@@ -991,3 +991,15 @@
 //     WAV_preview_PSRAM.stop();
 // #endif
 // }
+
+
+// [env:psram_resistive_touch]
+// build_flags = 
+//     ${common.build_flags}
+//     -D COMPILE_FOR_PSRAM
+//     -D PSRAM
+//     ;-D ONBOARD_BUTTON_INTERFACE
+//     ;-D MIDI_ACTIVITY_LIGHTS
+// ; lib_deps =
+// ;     ${env.lib_deps}
+// custom_firmware_name = PSRAM-RESISTIVE_TOUCH

@@ -2073,9 +2073,9 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
 FLASHMEM bool load_sd_sys_json(void)
 {
 
-      #ifdef RGB_ENCODERS
-        configuration.sys.reverse_encoder_pins=true;
-        #endif
+#ifdef RGB_ENCODERS
+  configuration.sys.reverse_encoder_pins = true;
+#endif
 
   if (sd_card_internal > 0)
   {
@@ -2120,19 +2120,21 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.skip_midi_channel_warning = data_json["skip_midi_channel_warning"];
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
-        configuration.sys.modular_inputs =  data_json["modular_inputs"];
         configuration.sys.swap_midi_leds = data_json["swap_midi_leds"];
+        configuration.sys.vol_control = data_json["vol_control"];
+        configuration.sys.sus_pedal = data_json["sus_pedal"];
+        configuration.sys.ext_clock = data_json["ext_clock"];
 
-        if (data_json["rgb_enc_color_def"] >0)
+        if (data_json["rgb_enc_color_def"] > 0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
-       
+
         if (data_json["rgb_enc_color_sel"] > 0)
           configuration.sys.rgb_enc_color_sel = data_json["rgb_enc_color_sel"];
-       
-         #ifdef RGB_ENCODERS
-        configuration.sys.reverse_encoder_pins=true;
-        #endif
-        
+
+#ifdef RGB_ENCODERS
+        configuration.sys.reverse_encoder_pins = true;
+#endif
+
         if (data_json["brightness"] == 0)
           configuration.sys.brightness = 183;
         else
@@ -2222,8 +2224,10 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["skip_midi_channel_warning"] = configuration.sys.skip_midi_channel_warning;
       data_json["send_sysex_on_voice_change"] = configuration.sys.send_sysex_on_voice_change;
       data_json["send_midi_cc"] = configuration.sys.send_midi_cc;
-      data_json["modular_inputs"] = configuration.sys.modular_inputs;
       data_json["swap_midi_leds"] = configuration.sys.swap_midi_leds;
+      data_json["vol_control"] = configuration.sys.vol_control;
+      data_json["sus_pedal"] = configuration.sys.sus_pedal;
+      data_json["ext_clock"] = configuration.sys.ext_clock;
 
       if (configuration.sys.rgb_enc_color_def != 0)
         data_json["rgb_enc_color_def"] = configuration.sys.rgb_enc_color_def;
@@ -4583,14 +4587,14 @@ FLASHMEM void load_sd_directory()
 {
   fm.sd_prev_dir = fm.sd_new_name;
 
-File sd_root;
+  File sd_root;
 
-  if (fm.SD_CARD_READER_EXT==false  || fm.active_window == 0 )
-  sd_root = SD.open(fm.sd_new_name.c_str());
-  #ifdef MUSIKANDMORE
-else
- if ( fm.SD_CARD_READER_EXT )
-  sd_root = SD_EXTERNAL.open(fm.sd_new_name.c_str());
+  if (fm.SD_CARD_READER_EXT == false || fm.active_window == 0)
+    sd_root = SD.open(fm.sd_new_name.c_str());
+#ifdef MUSIKANDMORE
+  else
+    if (fm.SD_CARD_READER_EXT)
+      sd_root = SD_EXTERNAL.open(fm.sd_new_name.c_str());
 #endif
 
   fm.sd_sum_files = 0;

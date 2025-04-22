@@ -1278,6 +1278,16 @@ FLASHMEM void setup_midi_devices(void)
 #endif
 }
 
+#ifdef MIDI_ACTIVITY_LIGHTS
+ extern void midi_activity_leds();
+ #endif
+
+// #ifdef MUSIKANDMORE
+//  bool cv_clock;
+//  bool cv_clock_previous;
+// extern void setled(uint8_t pin, bool state);
+// #endif
+
 void check_midi_devices(void)
 {
 #ifdef MIDI_DEVICE_DIN
@@ -1290,6 +1300,23 @@ void check_midi_devices(void)
   usb_host.Task();
   midi_usb.read();
 #endif
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+  midi_activity_leds();
+ #endif
+
+//  #ifdef MUSIKANDMORE
+//    if (configuration.sys.ext_clock)
+//   {
+//     cv_clock = digitalRead(CV_CLOCK_IN);
+//     if (cv_clock != cv_clock_previous)
+//     {
+//       setled(LED_UP, cv_clock);
+//       cv_clock_previous = cv_clock;
+//     }
+//   }
+// #endif
+
 }
 
 FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)
