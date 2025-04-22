@@ -1003,3 +1003,39 @@
 // ; lib_deps =
 // ;     ${env.lib_deps}
 // custom_firmware_name = PSRAM-RESISTIVE_TOUCH
+
+
+// [env:psram_capacitive_rgb_2sd]
+// ; PSRAM_CAPACITIVE
+// build_flags = 
+//     ${common.build_flags}
+//     -D COMPILE_FOR_PSRAM
+//     -D PSRAM
+//     -D CAPACITIVE_TOUCH_DISPLAY
+//     -D DRUMS_FILTERS
+//     -D MIDI_ACTIVITY_LIGHTS
+//     -D RGB_ENCODERS
+//     -D BUTTON_LEDS
+//     ;-D ONBOARD_BUTTON_INTERFACE
+//     ;-D MCP_23017
+//     -D MCP_23008
+//     -D MUSIKANDMORE
+//     ;-D APC
+//     ;-D DEBUG=1
+// ; lib_deps =
+// ;     ${env.lib_deps}
+// custom_firmware_name = PSRAM-CAPACITIVE_TOUCH-RGB-2SD
+
+// [env:progmem_capacitive_buttons]
+// build_flags = 
+//     ${common.build_flags}
+//     -D COMPILE_FOR_PROGMEM
+//     -D CAPACITIVE_TOUCH_DISPLAY
+//     -D ONBOARD_BUTTON_INTERFACE
+//     -D MIDI_ACTIVITY_LIGHTS
+//     ;-D DEBUG=1
+// ; lib_deps =
+// ;     ${env.lib_deps}
+// custom_firmware_name = PROGMEM-CAPACITIVE_TOUCH-BUTTONS_INTERFACE
+
+

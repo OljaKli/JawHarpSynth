@@ -29,10 +29,9 @@
 #include "digital_oscillator.h"
 
 #include <algorithm>
-#include <cstdio>
-
-#include <stmlib.h>
-#include <dsp.h>
+//#include <cstdio>
+//#include <stmlib.h>
+//#include <dsp.h>
 #include <random.h>
 
 #include "parameter_interpolation.h"

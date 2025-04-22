@@ -40,7 +40,7 @@
 
 
 /* ******************************************************************** */
-LCDMenuLib2_menu::LCDMenuLib2_menu(uint8_t p_id, uint8_t p_param, uint8_t p_configuration, LCDML_FuncPtr_pu8 p_callback_function, LCDML_FuncPtr_rb p_callback_condition)
+FLASHMEM LCDMenuLib2_menu::LCDMenuLib2_menu(uint8_t p_id, uint8_t p_param, uint8_t p_configuration, LCDML_FuncPtr_pu8 p_callback_function, LCDML_FuncPtr_rb p_callback_condition)
 /* ******************************************************************** */
 {
     parent  = NULL;
@@ -80,7 +80,7 @@ LCDMenuLib2_menu::LCDMenuLib2_menu(uint8_t p_id, uint8_t p_param, uint8_t p_conf
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2_menu::setParent(LCDMenuLib2_menu &p)
+FLASHMEM void LCDMenuLib2_menu::setParent(LCDMenuLib2_menu &p)
 /* ******************************************************************** */
 {
     parent = &p;
@@ -102,7 +102,7 @@ void LCDMenuLib2_menu::addSibling(LCDMenuLib2_menu &s,LCDMenuLib2_menu &p)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2_menu::addChild(LCDMenuLib2_menu &c)
+FLASHMEM void LCDMenuLib2_menu::addChild(LCDMenuLib2_menu &c)
 /* ******************************************************************** */
 {
     if (child)
@@ -117,7 +117,7 @@ void LCDMenuLib2_menu::addChild(LCDMenuLib2_menu &c)
 }
 
 /* ******************************************************************** */
-LCDMenuLib2_menu * LCDMenuLib2_menu::getChild(uint8_t which)
+FLASHMEM LCDMenuLib2_menu * LCDMenuLib2_menu::getChild(uint8_t which)
 /* ******************************************************************** */
 {
     if (child)
@@ -131,7 +131,7 @@ LCDMenuLib2_menu * LCDMenuLib2_menu::getChild(uint8_t which)
 }
 
 /* ******************************************************************** */
-LCDMenuLib2_menu * LCDMenuLib2_menu::getSibling(uint8_t howfar)
+FLASHMEM LCDMenuLib2_menu * LCDMenuLib2_menu::getSibling(uint8_t howfar)
 /* ******************************************************************** */
 {
     if (howfar == 0)
@@ -149,7 +149,7 @@ LCDMenuLib2_menu * LCDMenuLib2_menu::getSibling(uint8_t howfar)
 }
 
 /* ******************************************************************** */
-LCDMenuLib2_menu * LCDMenuLib2_menu::getParent()
+FLASHMEM LCDMenuLib2_menu * LCDMenuLib2_menu::getParent()
 /* ******************************************************************** */
 {
     if (parent)
@@ -177,7 +177,7 @@ bool LCDMenuLib2_menu::checkCondition()
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2_menu::updateCondetion()
+FLASHMEM void LCDMenuLib2_menu::updateCondetion()
 /* ******************************************************************** */
 {
     if(cb_condition() == true)

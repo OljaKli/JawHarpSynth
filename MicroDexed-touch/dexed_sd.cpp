@@ -237,9 +237,9 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     string_toupper(bank_name);
     strcpy(g_bank_name[instance_id], bank_name);
 #ifdef DEBUG
-    char filename[FILENAME_LEN];
+    char filename[FILENAME_LEN+5];
     //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.syx"), DEXED_CONFIG_PATH, b, bank_name);
-    sprintf(filename, "/%s/%d/%s.syx", DEXED_CONFIG_PATH, b, bank_name);
+    sprintf(filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, p, b, bank_name);
     LOG.print(F("Loading voice from "));
     LOG.print(filename);
     LOG.print(F(" bank:["));
@@ -322,7 +322,8 @@ FLASHMEM bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     char filename[FILENAME_LEN];
     uint8_t data[128];
 
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
+  //  snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
+     snprintf_P(filename, sizeof(filename), PSTR("/DEXED/%d/%d/%s.syx"),  p, b, g_bank_name[instance_id]);
 
     AudioNoInterrupts();
     sysex = SD.open(filename, FILE_WRITE);

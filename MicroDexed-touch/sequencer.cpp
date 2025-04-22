@@ -274,8 +274,6 @@ void arp_track(uint8_t d)
       (seq.arp_speed == 2 && seq.ticks == 2 && seq.instrument[d] == 4) ||
       (seq.arp_speed == 2 && seq.ticks == 4 && seq.instrument[d] == 4) ||
       (seq.arp_speed == 2 && seq.ticks == 6 && seq.instrument[d] == 4) || (seq.arp_speed == 3 && seq.ticks != seq.ticks_max && seq.instrument[d] == 4)
-
-
       )
     {
       if (seq.arp_style == 0)
@@ -792,20 +790,6 @@ void sequencer_part1(void)
   }
 
   //handle pattern end moved to interrupt timer
-
-// #ifdef MIDI_ACTIVITY_LIGHTS //TEST
-//   if (seq.step % 2 == 0)
-//   {
-//     digitalWrite(LED_MIDI_IN, HIGH);
-//     digitalWrite(LED_MIDI_OUT, LOW);
-//   }
-//   else
-//   {
-//     digitalWrite(LED_MIDI_IN, LOW);
-//     digitalWrite(LED_MIDI_OUT, HIGH);
-//   }
-// #endif
-
 }
 
 void sequencer_part2(void)
@@ -965,7 +949,7 @@ void sequencer(void)
   }
 }
 
-void set_pattern_content_type_color(uint8_t pattern)
+FLASHMEM void set_pattern_content_type_color(uint8_t pattern)
 {
   if (seq.content_type[pattern] == 0) // Drumpattern
     display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
@@ -979,7 +963,7 @@ void set_pattern_content_type_color(uint8_t pattern)
     display.setTextColor(GREY2, COLOR_BACKGROUND);
 }
 
-int get_pattern_content_type_color(uint8_t pattern)
+FLASHMEM int get_pattern_content_type_color(uint8_t pattern)
 {
   int col = 0;
 
@@ -992,8 +976,15 @@ int get_pattern_content_type_color(uint8_t pattern)
   return col;
 }
 
+#if defined GLOW
+extern void set_glow_print_number(uint16_t x, uint8_t y, int glow_input_value, uint8_t length, uint8_t menuitem, uint8_t textsize);
+extern void set_glow_print_number(uint16_t x, uint8_t y, int glow_input_value, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize, bool state);
+extern uint8_t generic_temp_select_menu;
+#endif
+
 FLASHMEM void print_formatted_number(uint16_t number, uint8_t length)
 {
+
   switch (length) {
   case 4:
     display.printf("%04d", number);
@@ -1007,6 +998,25 @@ FLASHMEM void print_formatted_number(uint16_t number, uint8_t length)
     display.printf("%02d", number);
     break;
   }
+}
+
+FLASHMEM void print_formatted_number(uint16_t number, uint8_t length, uint8_t menuitem, uint8_t textsize)
+{
+#if defined GLOW
+  if (seq.edit_state == 0)
+    set_glow_print_number(display.getCursorX(), display.getCursorY(), number, length, menuitem, textsize);
+#endif
+  print_formatted_number(number, length);
+}
+
+FLASHMEM void print_formatted_number(uint16_t number, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize, bool state)
+{
+  //test song page
+#if defined GLOW
+  if (seq.edit_state == 0)
+    set_glow_print_number(display.getCursorX(), display.getCursorY(), number, length, track, menuitem, textsize, state);
+#endif
+  //not printing anything here directly
 }
 
 FLASHMEM void print_formatted_number_trailing_space(uint16_t number, uint8_t length) {
@@ -1027,6 +1037,23 @@ FLASHMEM void print_formatted_number_signed(int number, uint8_t length)
     display.printf("%03d", number); // minus sign comes automatically
   }
 }
+#if defined GLOW
+extern void set_glow_print_formatted_number_signed(uint16_t x, uint8_t y, int input_value, uint8_t length, uint8_t menuitem, uint8_t textsize);
+#endif
+FLASHMEM void print_formatted_number_signed(int number, uint8_t length, uint8_t menuitem, uint8_t textsize)
+{
+#if defined GLOW
+  if (seq.edit_state == 0)
+    set_glow_print_formatted_number_signed(display.getCursorX(), display.getCursorY(), number, length, menuitem, textsize);
+#endif
+  if (number > -1) {
+    display.printf("+%02d", number);
+  }
+  else {
+    display.printf("%03d", number); // minus sign comes automatically
+  }
+}
+
 
 FLASHMEM void print_chord_name(uint8_t currentstep)
 {
@@ -1062,7 +1089,7 @@ void update_keyboard_current_step(int ypos, uint8_t octave, uint8_t current_step
   }
 }
 
-void print_keyboard(int ypos, uint8_t octave)
+FLASHMEM void print_keyboard(int ypos, uint8_t octave)
 {
   uint8_t offset[5] = { 12, 12, 14, 12, 11 }; //+ is up
   int offcount = 0;
@@ -1143,7 +1170,7 @@ void seq_print_current_note_from_step(uint8_t step)
   }
 }
 
-void print_keyboard_small(int xpos, int ypos, uint8_t octave, uint8_t actstep, bool fullredraw)
+FLASHMEM void print_keyboard_small(int xpos, int ypos, uint8_t octave, uint8_t actstep, bool fullredraw)
 {
   uint8_t offset[5] = { 12, 12, 14, 12, 11 }; //+ is up
   int offcount = 0;
@@ -1204,7 +1231,7 @@ void print_keyboard_small(int xpos, int ypos, uint8_t octave, uint8_t actstep, b
   }
 }
 
-void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw)
+FLASHMEM void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw)
 {
   uint8_t lowest_note = 128;
   int notes_display_shift = 0;

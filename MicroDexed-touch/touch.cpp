@@ -551,7 +551,7 @@ FLASHMEM void handle_touchscreen_microsynth()
 
 #ifdef MUSIKANDMORE
 extern fm_t fm;
-extern void _print_file_and_folder_copy_info( uint8_t selected_file);
+extern void _print_file_and_folder_copy_info(uint8_t selected_file);
 #endif
 extern void  fill_up_with_spaces_right_window();
 
@@ -611,7 +611,7 @@ FLASHMEM void print_file_manager_buttons()
 
 #ifdef MUSIKANDMORE
   TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
-_print_file_and_folder_copy_info( fm.sd_selected_file);
+  _print_file_and_folder_copy_info(fm.sd_selected_file);
 #endif
 
 
@@ -734,7 +734,7 @@ FLASHMEM void handle_touchscreen_file_manager()
     fm.active_window = 0;
     print_file_manager_active_border();
 #ifdef MUSIKANDMORE
- fm.sd_mode = FM_BROWSE_FILES;
+    fm.sd_mode = FM_BROWSE_FILES;
     filemanager_toggle_window_2sdcards();
 #endif
   }
@@ -743,7 +743,7 @@ FLASHMEM void handle_touchscreen_file_manager()
     fm.active_window = 1;
     print_file_manager_active_border();
 #ifdef MUSIKANDMORE
- fm.sd_mode = FM_BROWSE_FILES;
+    fm.sd_mode = FM_BROWSE_FILES;
     filemanager_toggle_window_2sdcards();
 #endif
   }
@@ -943,8 +943,8 @@ FLASHMEM void draw_menu_ui_icons()
 
   TouchButton::drawButton(GRID.X[2], GRID.Y[5], "LOAD", "PERF", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[3], GRID.Y[5], "SAVE", "PERF", TouchButton::BUTTON_NORMAL);
-
-  TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+  if (ts.keyb_in_menu_activated == false)
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", multiband_active ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[5], GRID.Y[5], "MAIN", "MIXER", TouchButton::BUTTON_NORMAL);
 
   TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);

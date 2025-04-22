@@ -111,9 +111,6 @@ uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
 
-
-
-
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
 short braids_r_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
@@ -319,7 +316,9 @@ AudioPlayArrayResmp WAV_preview_PSRAM;
 
 extern ILI9341_t3n display;
 extern MD_REncoder ENCODER[];
+#if defined SMFPLAYER
 extern MD_MIDIFile SMF;
+#endif
 extern uint8_t activeSample;
 extern uint8_t generic_temp_select_menu;
 extern uint8_t generic_active_function;
@@ -981,12 +980,12 @@ bool touch_ic_found = false;
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
-void setled(uint8_t pin, bool state)
+FLASHMEM void setled(uint8_t pin, bool state)
 {
   mcp.write1(pin, state);
 }
 
-void set_custom_enc_colors()
+FLASHMEM void set_custom_enc_colors()
 {
 
   mcp.write1(RGB_LED_L_RED, !bitRead(configuration.sys.rgb_enc_color_def, 0));
@@ -1089,7 +1088,6 @@ FLASHMEM void setup()
   delay(60);
 #endif
 
-
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
   Wire.begin();
@@ -1128,11 +1126,6 @@ FLASHMEM void setup()
  // All_Button_LEDS(true);
 #endif
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_LEFT, ON);
-  delay(100);
-#endif
-
 #ifdef MIDI_ACTIVITY_LIGHTS
   pinMode(LED_MIDI_IN, OUTPUT);
   pinMode(LED_MIDI_OUT, OUTPUT);
@@ -1165,25 +1158,31 @@ FLASHMEM void setup()
   LOG.flush();
 #endif
 
-#ifdef PSRAM
-  // zero all malloccable RAM so crashes are deterministic
-  std::vector<uint8_t*> blocks;
-  int size = 10000;
-  bool done = false;
-  while (done == false) {
-    uint8_t* b = (uint8_t*)malloc(size);
-    done = b == nullptr;
-    if (done == false) {
-      memset(b, 0x00, size);
-      blocks.emplace_back(b);
+  //Reset clock to 132 Mhz
+        // CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
+        // CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+        //     | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
+        // CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+
+  #ifdef PSRAM
+    // zero all malloccable RAM so crashes are deterministic
+    std::vector<uint8_t*> blocks;
+    int size = 10000;
+    bool done = false;
+    while (done == false) {
+      uint8_t* b = (uint8_t*)malloc(size);
+      done = b == nullptr;
+      if (done == false) {
+        memset(b, 0x00, size);
+        blocks.emplace_back(b);
+      }
     }
-  }
-  for (uint8_t* b : blocks) {
-    free(b);
-  }
-  blocks.clear();
-  // ***********
-#endif
+    for (uint8_t* b : blocks) {
+      free(b);
+    }
+    blocks.clear();
+    // ***********
+  #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   pinMode(TFT_TOUCH_IRQ, INPUT);
@@ -1225,17 +1224,6 @@ FLASHMEM void setup()
   //display.invertDisplay(configuration.sys.invert_colors);
 #endif
 
-#ifdef MIDI_ACTIVITY_LIGHTS
-  digitalWrite(LED_MIDI_IN, HIGH);
-  digitalWrite(LED_MIDI_OUT, LOW);
-#endif
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_LEFT, OFF);
-  setled(LED_UP, ON);
-  delay(100);
-#endif
-
 #if defined GENERIC_DISPLAY
   touch.begin();
   touch_ic_found = true;
@@ -1263,16 +1251,6 @@ FLASHMEM void setup()
 
 #ifdef COMPILE_FOR_PSRAM
   psram_free_bytes = external_psram_size * 1048576;
-#endif
-
-#ifdef MIDI_ACTIVITY_LIGHTS
-  digitalWrite(LED_MIDI_IN, LOW);
-  digitalWrite(LED_MIDI_OUT, HIGH);
-#endif
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_UP, OFF);
-  setled(LED_DOWN, ON);
 #endif
 
   // Setup MIDI devices
@@ -1336,6 +1314,10 @@ FLASHMEM void setup()
   LOG.println(F("Internal DAC enabled."));
 #endif
 
+#endif
+
+#ifdef MUSIKANDMORE
+  All_Button_LEDS(true);
 #endif
 
   // create dynamic Dexed instances
@@ -1402,9 +1384,10 @@ FLASHMEM void setup()
 
     //global_delay_in_mixer[0]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5);  //phtodo
     //global_delay_in_mixer[1]->gain(instance_id+ALL_STATIC_DELAY_INSTR_OUT,0.5); 
-
+#if defined SMFPLAYER
     SMF.begin(&(SdFat&)SD);
     SMF.setMidiHandler(midiCallback);
+#endif
   }
 
   // Setup EPiano
@@ -1505,16 +1488,6 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
-#ifdef MIDI_ACTIVITY_LIGHTS
-  digitalWrite(LED_MIDI_IN, HIGH);
-  digitalWrite(LED_MIDI_OUT, LOW);
-#endif
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_DOWN, OFF);
-  setled(LED_RIGHT, ON);
-#endif
-
   AudioNoInterrupts();
   // Start SD card
   sd_card_internal = check_internal_sd_card();
@@ -1557,14 +1530,7 @@ FLASHMEM void setup()
 
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
-  //MIDI_input_timer.begin(check_midi_devices, 10000, true);
   MIDI_input_timer.begin(check_midi_devices, 5000, true);
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_RIGHT, OFF);
-  setled(LED_BUT_B, ON);
-  delay(100);
-#endif
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
   if (digitalRead(BUT_R_PIN) || digitalRead(BUT_L_PIN)) // is pushed
@@ -1612,12 +1578,6 @@ FLASHMEM void setup()
 
 #if defined(DEBUG) && defined(SHOW_CPU_LOAD_MSEC)
   show_cpu_and_mem_usage();
-#endif
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_BUT_B, OFF);
-  setled(LED_BUT_A, ON);
-  delay(100);
 #endif
 
   // Init master_mixer
@@ -1682,7 +1642,6 @@ FLASHMEM void setup()
   finalized_mixer_l.gain(2, 1.0); //dc offset 
   finalized_mixer_r.gain(2, 1.0); //dc offset 
 
-
   global_delay_in_mixer[0]->gain(9, 0.0); //previously 7
   global_delay_in_mixer[1]->gain(9, 0.0); //previously 7
 
@@ -1700,17 +1659,23 @@ FLASHMEM void setup()
   // Load initial Performance or the last used one
   initial_values(false);
 
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_BUT_A, OFF);
-  setled(LED_SEL, ON);
-#endif
-
   setup_ui();
 
   gamepad_buttons_neutral = joysticks[0].getButtons();
   gamepad_0_neutral = joysticks[0].getAxis(0);
   gamepad_1_neutral = joysticks[0].getAxis(1);
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+  set_midi_led_pins();
+#endif
+
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+  All_Button_LEDS(false);
+#ifdef MIDI_ACTIVITY_LIGHTS
+  digitalWrite(LED_MIDI_IN, HIGH);
+  digitalWrite(LED_MIDI_OUT, HIGH);
+#endif
+#endif
 
 #ifdef COMPILE_FOR_PSRAM
   display.setTextSize(2);
@@ -1746,17 +1711,6 @@ FLASHMEM void setup()
   display.console = true;
   display.fillRect(0, CHAR_height, DISPLAY_WIDTH, CHAR_height * 4, COLOR_BACKGROUND);
   display.console = false;
-#endif
-
-#ifdef MIDI_ACTIVITY_LIGHTS
-  digitalWrite(LED_MIDI_IN, LOW);
-  digitalWrite(LED_MIDI_OUT, HIGH);
-#endif
-
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_SEL, OFF);
-  setled(LED_START, ON);
-  delay(100);
 #endif
 
   //SD CARD PRESET CONTENT NOT FOUND, PROVIDE POSSIBLE SOLUTIONS TO USER
@@ -1824,17 +1778,6 @@ FLASHMEM void setup()
   digitalWrite(LED_MIDI_OUT, LOW);
 #endif
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_START, OFF);
-#endif
-
-  // #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  //   All_Button_LEDS(false);
-  // #endif
-
-#ifdef MIDI_ACTIVITY_LIGHTS
-  set_midi_led_pins();
-#endif
 }
 
 #ifdef COMPILE_FOR_PSRAM
@@ -2119,63 +2062,201 @@ void update_sidechain()
   // }
 }
 
+
 // Gaussian Wave Breathing
+#if defined GLOW
+float glow_smoothness_pts = 25;//larger=slower change in brightness
+float glow_gamma = 0.25; // affects the width of peak (more or less darkness)
+float glow_beta = 0.5; // shifts the gaussian to be symmetric
+float glow_bright = 0;
+int glow_count = 0;
+uint16_t glow_x;
+uint8_t glow_y;
+uint8_t glow_len;
+uint8_t glow_track;
+int glow_value;
+int glow_input_value;
+int glow_menu_item;
+int glow_limit_min;
+int glow_limit_max;
+const char* glow_str;
+uint8_t  glow_textsize;
+const char* glow_zero_name;
+uint8_t glow_type;
 
-// float glow_smoothness_pts = 20;//larger=slower change in brightness
-// float glow_gamma = 0.25; // affects the width of peak (more or less darkness)
-// float glow_beta = 0.5; // shifts the gaussian to be symmetric
-// float glow_bright = 0;
-// int glow_count = 0;
-// int glow_x;
-// int glow_y;
-// int glow_value;
+//song page only
+FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize, bool state)
+{
+  glow_x = x;
+  glow_y = y;
+  glow_input_value = input;
+  glow_menu_item = menuitem;
+  glow_len = length;
+  glow_textsize = textsize;
+  glow_track = track;
+  if (state)
+    glow_type = 5;
+  else
+    glow_type = 6;
+}
 
-// uint8_t glow_type; // 0 = off, 1 = intbar, 2=panbar
+FLASHMEM void set_glow_print_formatted_number_signed(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize)
+{
+  if (menuitem == generic_temp_select_menu)
+  {
+    glow_x = x;
+    glow_y = y;
+    glow_input_value = input;
+    glow_menu_item = menuitem;
+    glow_len = length;
+    glow_textsize = textsize;
+    glow_type = 4;
+  }
+}
+FLASHMEM void set_glow_show_text_no_grid(uint16_t x, uint8_t y, uint8_t field_size, const char* str, uint8_t menuitem, uint8_t textsize)
+{
+  if (menuitem == generic_temp_select_menu)
+  {
+    glow_x = x;
+    glow_y = y;
+    glow_str = str;
+    glow_menu_item = menuitem;
+    glow_len = field_size;
+    glow_textsize = textsize;
+    glow_type = 3;
+  }
+}
 
-// void draw_glow()
-// {
-//   setCursor_textGrid_small(glow_x, glow_y);
-//   display.setTextSize(1);
-//   display.setTextColor(COLOR_BACKGROUND, ColorHSV(1, 0, int(glow_bright)));
-//   if (glow_type == 1) {
-//     print_formatted_number(glow_value, 3);
-//   }
-//   else
-//     if (glow_type == 2) {
-//       if (glow_value < 20)
-//       {
-//         display.print(F("L"));
-//         print_formatted_number(20 - glow_value, 2);
-//       }
-//       else if (glow_value > 20)
-//       {
-//         display.print(F("R"));
-//         print_formatted_number(glow_value - 20, 2);
-//       }
-//       else
-//       {
-//         display.print(F("C"));
-//         print_formatted_number(glow_value - 20, 2);
-//       }
-//     }
-// }
+FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize)
+{
+  if (menuitem == generic_temp_select_menu)
+  {
+    glow_x = x;
+    glow_y = y;
+    glow_input_value = input;
+    glow_menu_item = menuitem;
+    glow_len = length;
+    glow_textsize = textsize;
+    glow_type = 2;
+  }
+}
 
-// void glow()
-// {
-//   if (seq.edit_state == 0 && glow_type != 0) {
+FLASHMEM void set_glow_panbar(uint8_t x, uint8_t y, int input, int menuitem)
+{
+  if (menuitem == generic_temp_select_menu)
+  {
+    glow_x = x;
+    glow_y = y;
+    glow_input_value = input;
+    glow_menu_item = menuitem;
+    glow_type = 1;
+  }
+}
 
-//     if (glow_count < glow_smoothness_pts)
-//       glow_count++;
-//     else
-//       glow_count = 0;
-//     glow_bright = 255.0 * (exp(-(pow(((glow_count / glow_smoothness_pts) - glow_beta) / glow_gamma, 2.0)) / 2.0));
-//     draw_glow();
-//   }
-//   else
-//     glow_count = glow_smoothness_pts / 2;
-// }
+FLASHMEM void set_glow_bargraph(uint8_t x, uint8_t y, int input, int menuitem, int min, int max, const char* zero)
+{
+  if (menuitem == generic_temp_select_menu)
+  {
+    glow_x = x;
+    glow_y = y;
+    glow_input_value = input;
+    glow_menu_item = menuitem;
+    glow_limit_min = min;
+    glow_limit_max = max;
+    glow_zero_name = zero;
+    glow_type = 0;
+  }
+}
 
-void print_gate_state(uint8_t g)
+extern void _print_panbar_value(uint8_t input_value);
+
+FLASHMEM void draw_glow()
+{
+  display.setTextSize(1);
+  display.setTextColor(COLOR_BACKGROUND, ColorHSV(0, 0, int(glow_bright)));
+
+  if (glow_type == 0)
+  {
+    setCursor_textGrid_small(glow_x, glow_y);
+
+    if (glow_limit_min == 0 && glow_limit_max == 1)
+      display.print(glow_input_value ? F("ON ") : F("OFF"));
+    else if (glow_zero_name != NULL && glow_input_value == 0)
+      display.print(glow_zero_name);
+    else if (glow_zero_name != NULL && glow_input_value == 17)
+      display.print(glow_zero_name);
+    else if (glow_limit_min < 0)
+      print_formatted_number_signed(glow_input_value, 2);
+    else if (glow_limit_max <= 99)
+    {
+      setCursor_textGrid_small(glow_x + 1, glow_y);
+      print_formatted_number(glow_input_value, 2);
+    }
+    else
+      print_formatted_number(glow_input_value, 3);
+  }
+  else if (glow_type == 1)  //panbar
+  {
+    setCursor_textGrid_small(glow_x, glow_y);
+    _print_panbar_value(glow_input_value);
+  }
+  else if (glow_type == 2)  //integer
+  {
+    display.setTextSize(glow_textsize);
+    display.setCursor(glow_x, glow_y);
+    print_formatted_number(glow_input_value, glow_len);
+  }
+
+  else if (glow_type == 3)  //text
+  {
+    display.setTextSize(glow_textsize);
+    show_no_grid(glow_y, glow_x, glow_len, glow_str);
+  }
+
+  else if (glow_type == 4)  //signed integer
+  {
+    display.setTextSize(glow_textsize);
+    display.setCursor(glow_x, glow_y);
+    print_formatted_number_signed(glow_input_value, glow_len);
+  }
+  else if (glow_type == 5)  //integer song page
+  {
+    display.setTextSize(glow_textsize);
+    display.setCursor(glow_x, glow_y);
+    print_formatted_number(glow_input_value, glow_len);
+  }
+
+  else if (glow_type == 6)  //integer song page, empty "--"
+  {
+    display.setTextSize(glow_textsize);
+    display.setCursor(glow_x, glow_y);
+    display.print(F("--"));
+  }
+
+  display.setTextSize(1);
+}
+
+FLASHMEM void glow()
+{
+  if (!remote_active)
+  {
+    if ((seq.edit_state == 0 && glow_menu_item == generic_temp_select_menu && LCDML.FUNC_getID() < 63 && legacy_touch_button_back_page() == false)
+      || (seq.edit_state == 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && glow_track == seq.selected_track &&
+        seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0))
+    {
+      if (glow_count < glow_smoothness_pts)
+        glow_count++;
+      else
+        glow_count = 0;
+
+      glow_bright = 255.0 * (exp(-(pow(((glow_count / glow_smoothness_pts) - glow_beta) / glow_gamma, 2.0)) / 2.0));
+      draw_glow();
+    }
+  }
+}
+#endif
+
+FLASHMEM void print_gate_state(uint8_t g)
 {
   if (Gate[g]->get_state() == 0)
     display.print("BYPASS ");
@@ -2189,7 +2270,10 @@ void print_gate_state(uint8_t g)
 
 bool display_buffer_envelopes[NUM_DRUMS];
 bool display_buffer_samples[NUM_DRUMS];
+
+#if defined SMFPLAYER
 bool smf_playing = false;
+#endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
 uint8_t LED_MIDI_IN_counter = 0;
@@ -2283,7 +2367,7 @@ void midi_activity_leds()
 #endif
 
 #ifdef MUSIKANDMORE
-void set_trs_pedal()
+FLASHMEM void set_trs_pedal()
 {
   MicroDexed[selected_instance_id]->setSustain(trs_pedal);
   if (!MicroDexed[selected_instance_id]->getSustain())
@@ -2302,7 +2386,6 @@ void set_trs_pedal()
 
 void loop()
 {
-
   // MM Test Stuff
 
 #ifdef MUSIKANDMORE
@@ -2486,6 +2569,8 @@ void loop()
         sub_step_recording(false, 0);
       }
     }
+
+#if defined SMFPLAYER
     else if (!SMF.isEOF())
     {
       if (SMF.getNextEvent()) {
@@ -2508,6 +2593,7 @@ void loop()
       smf_playing = false;
       SMF.close();
     }
+#endif
 
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
   {
@@ -2584,7 +2670,11 @@ void loop()
   if (control_rate > CONTROL_RATE_MS)
   {
     control_rate = 0;
-    // glow();
+
+#if defined GLOW
+    glow();
+#endif
+
     // display.fillRect(10,10,30,30, ColorHSV(1, 0, int(led_bright)));
 
     if (seq.running && seq.step != seq.UI_last_seq_step)
@@ -5682,40 +5772,40 @@ FLASHMEM void show_cpu_and_mem_usage(void)
   }
   else
     LOG.print(F(" "));
-  LOG.print(F("CPU : "));
+  LOG.print(F("CPU: "));
   LOG.print(AudioProcessorUsage(), 2);
-  LOG.print(F(" % | CPUMAX : "));
+  LOG.print(F(" % | CPUMAX: "));
   LOG.print(AudioProcessorUsageMax(), 2);
-  LOG.print(F(" % | CPUMAXCNT : "));
-  LOG.print(cpumax, DEC);
+  // LOG.print(F(" % | CPUMAXCNT : "));
+  // LOG.print(cpumax, DEC);
 #ifdef TEENSY4
-  LOG.print(F(" | CPUTEMP : "));
+  LOG.print(F(" | CPUTEMP: "));
   LOG.print(tempmonGetTemp(), 2);
-  LOG.print(F("C | MEM : "));
+  LOG.print(F("C | MEM: "));
 #else
   LOG.print(F(" | MEM : "));
 #endif
   LOG.print(AudioMemoryUsage(), DEC);
-  LOG.print(F(" | MEMMAX : "));
+  LOG.print(F(" | MEMMAX: "));
   LOG.print(AudioMemoryUsageMax(), DEC);
-  LOG.print(F(" | AUDIO_MEM_MAX : "));
+  LOG.print(F(" | AUDIO_MEM_MAX: "));
   LOG.print(AUDIO_MEM, DEC);
-  LOG.print(F(" | RENDERTIMEMAX : "));
+  LOG.print(F(" | RENDERTIMEMAX: "));
   LOG.print(sum_render_time_max, DEC);
-  LOG.print(F(" | XRUN : "));
-  LOG.print(sum_xrun, DEC);
-  LOG.print(F(" | BLOCKSIZE : "));
-  LOG.print(AUDIO_BLOCK_SAMPLES, DEC);
-  LOG.print(F(" | RAM : "));
+  // LOG.print(F(" | XRUN : "));
+  // LOG.print(sum_xrun, DEC);
+  // LOG.print(F(" | BLOCKSIZE : "));
+  // LOG.print(AUDIO_BLOCK_SAMPLES, DEC);
+  LOG.print(F(" | RAM: "));
   LOG.print(FreeMem(), DEC);
 
-  LOG.print(F(" | ACTVOICES : "));
+  LOG.print(F(" | ACTVOICES: "));
   for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
   {
     LOG.print(instance_id, DEC);
-    LOG.print(F(" = "));
+    LOG.print(F("="));
     LOG.print(active_voices[instance_id], DEC);
-    LOG.print(F(" / "));
+    LOG.print(F("/"));
     LOG.print(MAX_NOTES / NUM_DEXED, DEC);
     if (instance_id != NUM_DEXED - 1)
       LOG.print(F(", "));

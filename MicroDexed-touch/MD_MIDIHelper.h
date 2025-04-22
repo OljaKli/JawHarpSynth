@@ -1,3 +1,4 @@
+#if defined SMFPLAYER
 /*
   MD_MIDIHelper.h - An Arduino library for processing Standard MIDI Files (SMF).
   Copyright (C) 2012 Marco Colli
@@ -78,4 +79,5 @@ uint32_t readVarLen(SdFile *f);
  */
 void dumpBuffer(uint8_t *p, int len);
 
+#endif
 #endif

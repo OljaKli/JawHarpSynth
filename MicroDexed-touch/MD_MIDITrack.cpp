@@ -1,3 +1,4 @@
+#if defined SMFPLAYER
 /*
   MD_MIDITrack.cpp - An Arduino library for processing Standard MIDI Files (SMF).
   Copyright (C) 2012 Marco Colli
@@ -489,3 +490,4 @@ void MD_MFTrack::dump(void)
 }
 #endif // DUMP_DATA
 
+#endif
