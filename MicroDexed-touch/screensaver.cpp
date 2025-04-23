@@ -163,7 +163,7 @@ qix_s qix;
  
  static const int boidCount = 70;
  
- class Boid {
+class Boid {
  public:
  
      PVector location;

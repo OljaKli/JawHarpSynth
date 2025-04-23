@@ -242,10 +242,6 @@
 #define COLOR_SYSTEXT 0xFFFF
 #define DX_DARKCYAN 0x030D 
 
-//#define COLOR_SYSTEXT 0x0000 //inverse
-//#define COLOR_BACKGROUND  0xFFFF  //inverse
-//#define DX_DARKCYAN 0x0698  //inverse
-
 #define COLOR_INSTR 0x7BBD
 #define COLOR_CHORDS 0xE2FA
 #define COLOR_ARP 0xFC80

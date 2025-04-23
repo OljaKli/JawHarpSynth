@@ -334,8 +334,11 @@ typedef struct sequencer_s
 void sequencer(void);
 void sequencer_part2(void);
 void print_formatted_number(uint16_t number, uint8_t length);
+void print_formatted_number(uint16_t number, uint8_t length,uint8_t menuitem, uint8_t textsize);
+void print_formatted_number(uint16_t number, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize,bool state);
 void print_formatted_number_trailing_space(uint16_t number, uint8_t length);
 void print_formatted_number_signed(int number, uint8_t length);
+void print_formatted_number_signed(int number, uint8_t length,uint8_t menuitem, uint8_t textsize);
 void seq_print_current_note_from_step(uint8_t step);
 void set_pattern_content_type_color(uint8_t pattern);
 void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw);

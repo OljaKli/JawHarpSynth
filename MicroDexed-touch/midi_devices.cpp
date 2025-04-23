@@ -33,6 +33,7 @@
 struct MicroDexedSettings : public midi::DefaultSettings
 {
   static const unsigned SysExMaxSize = 4104; // Accept SysEx messages up to 1024 bytes long.
+  static const bool Use1ByteParsing = false;  //seems to improve rapid MIDI input from ARPs etc.
 };
     
 #ifdef MIDI_DEVICE_DIN
@@ -118,9 +119,6 @@ void midiSendRealtime(midi::MidiType event) {
   usbMIDI.sendRealTime(event);
 #endif
 }
-
-
-
 
 void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
   switch(device) {
@@ -223,7 +221,6 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
          
         }
     }
-
 #endif
 
     handleNoteOnInput(inChannel, inData1, inData2, 0);
@@ -736,7 +733,7 @@ void handleAfterTouchPoly_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byt
 
 void handleSystemExclusive_MIDI_DEVICE_DIN(byte* data, uint len)
 {
-  handleSystemExclusive_generic(data, len, MIDI_BY_DIN);
+ handleSystemExclusive_generic(data, len, MIDI_BY_DIN);
 }
 
 /* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
@@ -1282,12 +1279,6 @@ FLASHMEM void setup_midi_devices(void)
  extern void midi_activity_leds();
  #endif
 
-// #ifdef MUSIKANDMORE
-//  bool cv_clock;
-//  bool cv_clock_previous;
-// extern void setled(uint8_t pin, bool state);
-// #endif
-
 void check_midi_devices(void)
 {
 #ifdef MIDI_DEVICE_DIN
@@ -1304,19 +1295,6 @@ void check_midi_devices(void)
 #ifdef MIDI_ACTIVITY_LIGHTS
   midi_activity_leds();
  #endif
-
-//  #ifdef MUSIKANDMORE
-//    if (configuration.sys.ext_clock)
-//   {
-//     cv_clock = digitalRead(CV_CLOCK_IN);
-//     if (cv_clock != cv_clock_previous)
-//     {
-//       setled(LED_UP, cv_clock);
-//       cv_clock_previous = cv_clock;
-//     }
-//   }
-// #endif
-
 }
 
 FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)

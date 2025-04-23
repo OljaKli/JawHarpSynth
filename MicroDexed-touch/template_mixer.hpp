@@ -104,40 +104,40 @@ static void applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
   }
 }
 
-#elif defined(KINETISL)
+// #elif defined(KINETISL)
 
-static void applyGain(int16_t *data, int32_t mult)
-{
-  const int16_t *end = data + AUDIO_BLOCK_SAMPLES;
+// static void applyGain(int16_t *data, int32_t mult)
+// {
+//   const int16_t *end = data + AUDIO_BLOCK_SAMPLES;
 
-  do
-  {
-    int32_t val = *data * mult;
-    *data++ = signed_saturate_rshift(val, 16, 0);
-  } while (data < end);
-}
+//   do
+//   {
+//     int32_t val = *data * mult;
+//     *data++ = signed_saturate_rshift(val, 16, 0);
+//   } while (data < end);
+// }
 
-static void applyGainThenAdd(int16_t *dst, const int16_t *src, int32_t mult)
-{
-  const int16_t *end = dst + AUDIO_BLOCK_SAMPLES;
+// static void applyGainThenAdd(int16_t *dst, const int16_t *src, int32_t mult)
+// {
+//   const int16_t *end = dst + AUDIO_BLOCK_SAMPLES;
 
-  if (mult == MULTI_UNITYGAIN)
-  {
-    do
-    {
-      int32_t val = *dst + *src++;
-      *dst++ = signed_saturate_rshift(val, 16, 0);
-    } while (dst < end);
-  }
-  else
-  {
-    do
-    {
-      int32_t val = *dst + ((*src++ * mult) >> 8); // overflow possible??
-      *dst++ = signed_saturate_rshift(val, 16, 0);
-    } while (dst < end);
-  }
-}
+//   if (mult == MULTI_UNITYGAIN)
+//   {
+//     do
+//     {
+//       int32_t val = *dst + *src++;
+//       *dst++ = signed_saturate_rshift(val, 16, 0);
+//     } while (dst < end);
+//   }
+//   else
+//   {
+//     do
+//     {
+//       int32_t val = *dst + ((*src++ * mult) >> 8); // overflow possible??
+//       *dst++ = signed_saturate_rshift(val, 16, 0);
+//     } while (dst < end);
+//   }
+// }
 #endif
 
 template <int NN>
