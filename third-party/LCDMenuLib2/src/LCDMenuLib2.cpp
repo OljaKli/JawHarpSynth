@@ -63,7 +63,7 @@ LCDMenuLib2::LCDMenuLib2(LCDMenuLib2_menu &p_r, const uint8_t p_rows, const uint
 /* ******************************************************************** */
 
 /* ******************************************************************** */
-void LCDMenuLib2::init(uint8_t p_last_element_id)
+FLASHMEM void LCDMenuLib2::init(uint8_t p_last_element_id)
 /* ******************************************************************** */
 {
     // init some variables
@@ -112,7 +112,7 @@ void LCDMenuLib2::init(uint8_t p_last_element_id)
 
 
 /* ******************************************************************** */
-void LCDMenuLib2::loop(void)
+FLASHMEM void LCDMenuLib2::loop(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -124,7 +124,7 @@ void LCDMenuLib2::loop(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::loop_control(void)
+FLASHMEM void LCDMenuLib2::loop_control(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -266,7 +266,7 @@ void LCDMenuLib2::loop_control(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::loop_menu(void)
+FLASHMEM void LCDMenuLib2::loop_menu(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -867,7 +867,7 @@ void LCDMenuLib2::loop_menu(void)
 
 
 /* ******************************************************************** */
-void        LCDMenuLib2::MENU_initFirstElement(void)
+FLASHMEM void        LCDMenuLib2::MENU_initFirstElement(void)
 /* ******************************************************************** */
 {
     // 
@@ -901,7 +901,7 @@ void        LCDMenuLib2::MENU_initFirstElement(void)
 }
 
 /* ******************************************************************** */
-void        LCDMenuLib2::MENU_goRoot(void)
+FLASHMEM void        LCDMenuLib2::MENU_goRoot(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -931,7 +931,7 @@ void        LCDMenuLib2::MENU_goRoot(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_resetActiveMenu(void)
+FLASHMEM void    LCDMenuLib2::MENU_resetActiveMenu(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -954,7 +954,7 @@ void    LCDMenuLib2::MENU_resetActiveMenu(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_goBack(void)
+FLASHMEM void    LCDMenuLib2::MENU_goBack(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1044,7 +1044,7 @@ void    LCDMenuLib2::MENU_goBack(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_goInto(void)
+FLASHMEM void    LCDMenuLib2::MENU_goInto(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1209,7 +1209,7 @@ LCDMenuLib2_menu * LCDMenuLib2::MENU_getDisplayedObj(void)
 
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_display(uint8_t update)
+FLASHMEM void    LCDMenuLib2::MENU_display(uint8_t update)
 /* ******************************************************************** */
 {
     // update is unused because of compatibility it is not removed
@@ -1235,7 +1235,7 @@ uint8_t LCDMenuLib2::MENU_getScroll(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_doScroll(uint8_t state)
+FLASHMEM void    LCDMenuLib2::MENU_doScroll(uint8_t state)
 /* ******************************************************************** */
 { 
     // debug information
@@ -1487,7 +1487,7 @@ void    LCDMenuLib2::MENU_doScroll(uint8_t state)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_enRollover(void)
+FLASHMEM void    LCDMenuLib2::MENU_enRollover(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1497,7 +1497,7 @@ void    LCDMenuLib2::MENU_enRollover(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_disRollover(void)
+FLASHMEM void    LCDMenuLib2::MENU_disRollover(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1621,7 +1621,7 @@ uint8_t LCDMenuLib2::MENU_getParentID(uint8_t p_layer)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_setDynContent(void)
+FLASHMEM void    LCDMenuLib2::MENU_setDynContent(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1648,7 +1648,7 @@ uint8_t LCDMenuLib2::MENU_checkDynContent(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_enScroll(void)
+FLASHMEM void    LCDMenuLib2::MENU_enScroll(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1658,7 +1658,7 @@ void    LCDMenuLib2::MENU_enScroll(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::MENU_disScroll(void)
+FLASHMEM void    LCDMenuLib2::MENU_disScroll(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1722,7 +1722,7 @@ uint8_t LCDMenuLib2::MENU_getElementIDFromCursorPos(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::MENU_setDynFunctionContentUpdate(void) 
+FLASHMEM void LCDMenuLib2::MENU_setDynFunctionContentUpdate(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1732,7 +1732,7 @@ void LCDMenuLib2::MENU_setDynFunctionContentUpdate(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::MENU_clearDynFunctionContentUpdate(void)
+FLASHMEM void LCDMenuLib2::MENU_clearDynFunctionContentUpdate(void)
 /* ******************************************************************** */
 {
      // debug information
@@ -1742,7 +1742,7 @@ void LCDMenuLib2::MENU_clearDynFunctionContentUpdate(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::MENU_allCondetionRefresh(void)
+FLASHMEM void LCDMenuLib2::MENU_allCondetionRefresh(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1862,7 +1862,7 @@ void LCDMenuLib2::MENU_allCondetionRefresh(void)
 
 
 /* ******************************************************************** */
-void LCDMenuLib2::DISP_menuUpdate(void)
+FLASHMEM void LCDMenuLib2::DISP_menuUpdate(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1872,7 +1872,7 @@ void LCDMenuLib2::DISP_menuUpdate(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::DISP_clear(void)
+FLASHMEM void LCDMenuLib2::DISP_clear(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1919,7 +1919,7 @@ bool LCDMenuLib2::DISP_checkMenuCursorUpdate(void)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::DISP_update(void)
+FLASHMEM void LCDMenuLib2::DISP_update(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -1971,7 +1971,7 @@ uint8_t    LCDMenuLib2::FUNC_getID(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::FUNC_setLoopInterval(unsigned long p_t)
+FLASHMEM void    LCDMenuLib2::FUNC_setLoopInterval(unsigned long p_t)
 /* ******************************************************************** */
 {
     // debug information
@@ -1981,7 +1981,7 @@ void    LCDMenuLib2::FUNC_setLoopInterval(unsigned long p_t)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::FUNC_call(void)
+FLASHMEM void LCDMenuLib2::FUNC_call(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2107,7 +2107,7 @@ bool LCDMenuLib2::FUNC_close(void)
 
 
 /* ******************************************************************** */
-void LCDMenuLib2::FUNC_goBackToMenu(uint8_t p_goBackCnt)
+FLASHMEM void LCDMenuLib2::FUNC_goBackToMenu(uint8_t p_goBackCnt)
 /* ******************************************************************** */
 {
     // debug information
@@ -2139,7 +2139,7 @@ void LCDMenuLib2::FUNC_goBackToMenu(uint8_t p_goBackCnt)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::FUNC_disableScreensaver(void)
+FLASHMEM void    LCDMenuLib2::FUNC_disableScreensaver(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2149,7 +2149,7 @@ void    LCDMenuLib2::FUNC_disableScreensaver(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::FUNC_setGBAToLastCursorPos(void)
+FLASHMEM void    LCDMenuLib2::FUNC_setGBAToLastCursorPos(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2163,7 +2163,7 @@ void    LCDMenuLib2::FUNC_setGBAToLastCursorPos(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::FUNC_setGBAToLastFunc(void)
+FLASHMEM void    LCDMenuLib2::FUNC_setGBAToLastFunc(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2177,7 +2177,7 @@ void    LCDMenuLib2::FUNC_setGBAToLastFunc(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::FUNC_setGBA(void)
+FLASHMEM void    LCDMenuLib2::FUNC_setGBA(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2195,7 +2195,7 @@ void    LCDMenuLib2::FUNC_setGBA(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::FUNC_setCEMask(unsigned long p_mask)
+FLASHMEM void    LCDMenuLib2::FUNC_setCEMask(unsigned long p_mask)
 /* ******************************************************************** */
 {
     // debug information
@@ -2258,7 +2258,7 @@ bool LCDMenuLib2::CE_setup(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::CE_setOnChangeCbFunction(uint8_t p_event, LCDML_FuncPtr_pu8 p_function)
+FLASHMEM void    LCDMenuLib2::CE_setOnChangeCbFunction(uint8_t p_event, LCDML_FuncPtr_pu8 p_function)
 /* ******************************************************************** */
 {
     // debug information 
@@ -2271,7 +2271,7 @@ void    LCDMenuLib2::CE_setOnChangeCbFunction(uint8_t p_event, LCDML_FuncPtr_pu8
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::CE_clearOnChangeCbFunction(uint8_t p_event)
+FLASHMEM void    LCDMenuLib2::CE_clearOnChangeCbFunction(uint8_t p_event)
 /* ******************************************************************** */
 {
     // debug information 
@@ -2285,7 +2285,7 @@ void    LCDMenuLib2::CE_clearOnChangeCbFunction(uint8_t p_event)
 
 
 /* ******************************************************************** */
-void LCDMenuLib2::REG_set(uint8_t p_reg, uint8_t p_val)
+FLASHMEM void LCDMenuLib2::REG_set(uint8_t p_reg, uint8_t p_val)
 /* ******************************************************************** */
 {
     // debug information 
@@ -2308,7 +2308,7 @@ void LCDMenuLib2::REG_set(uint8_t p_reg, uint8_t p_val)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::REG_reset(uint8_t p_reg, uint8_t p_val)
+FLASHMEM void LCDMenuLib2::REG_reset(uint8_t p_reg, uint8_t p_val)
 /* ******************************************************************** */
 {
     // debug information 
@@ -2331,7 +2331,7 @@ void LCDMenuLib2::REG_reset(uint8_t p_reg, uint8_t p_val)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::REG_resetAll(uint8_t p_reg)  
+FLASHMEM void LCDMenuLib2::REG_resetAll(uint8_t p_reg)
 /* ******************************************************************** */       
 { 
     // debug information 
@@ -2405,7 +2405,7 @@ bool LCDMenuLib2::REG_checkAny(uint8_t p_reg)
 
 
 /* ******************************************************************** */
-void    LCDMenuLib2::TIMER_msReset(unsigned long &p_var)
+FLASHMEM void    LCDMenuLib2::TIMER_msReset(unsigned long &p_var)
 /* ******************************************************************** */
 {
     // debug information
@@ -2433,7 +2433,7 @@ bool LCDMenuLib2::TIMER_ms(unsigned long &p_var, unsigned long p_t)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::TIMER_usReset(unsigned long &p_var)
+FLASHMEM void    LCDMenuLib2::TIMER_usReset(unsigned long &p_var)
 /* ******************************************************************** */
 {
     // debug information
@@ -2468,7 +2468,7 @@ bool LCDMenuLib2::TIMER_us(unsigned long &p_var, unsigned long p_t)
 /* ******************************************************************** */
 
 /* ******************************************************************** */
-void LCDMenuLib2::OTHER_jumpToFunc(LCDML_FuncPtr_pu8 p_search, uint8_t p_para)
+FLASHMEM void LCDMenuLib2::OTHER_jumpToFunc(LCDML_FuncPtr_pu8 p_search, uint8_t p_para)
 /* ******************************************************************** */
 {
     // debug information
@@ -2532,7 +2532,7 @@ void LCDMenuLib2::OTHER_jumpToFunc(LCDML_FuncPtr_pu8 p_search, uint8_t p_para)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::OTHER_jumpToID(uint8_t p_id, uint8_t p_para)
+FLASHMEM void LCDMenuLib2::OTHER_jumpToID(uint8_t p_id, uint8_t p_para)
 /* ******************************************************************** */
 {
     // debug information
@@ -2597,7 +2597,7 @@ void LCDMenuLib2::OTHER_jumpToID(uint8_t p_id, uint8_t p_para)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::OTHER_setCursorToFunc(LCDML_FuncPtr_pu8 p_search)
+FLASHMEM void LCDMenuLib2::OTHER_setCursorToFunc(LCDML_FuncPtr_pu8 p_search)
 /* ******************************************************************** */
 {
     // debug information
@@ -2653,7 +2653,7 @@ void LCDMenuLib2::OTHER_setCursorToFunc(LCDML_FuncPtr_pu8 p_search)
 }
 
 /* ******************************************************************** */
-void LCDMenuLib2::OTHER_setCursorToID(uint8_t p_id)
+FLASHMEM void LCDMenuLib2::OTHER_setCursorToID(uint8_t p_id)
 /* ******************************************************************** */
 {
     // debug information
@@ -2829,7 +2829,7 @@ uint8_t LCDMenuLib2::OTHER_getIDFromFunction(LCDML_FuncPtr_pu8 p_function_name)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::OTHER_updateFunc(void)                               
+FLASHMEM void    LCDMenuLib2::OTHER_updateFunc(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2854,7 +2854,7 @@ void    LCDMenuLib2::OTHER_updateFunc(void)
 
 
 /* ******************************************************************** */
-void    LCDMenuLib2::SCREEN_enable(LCDML_FuncPtr_pu8 function, unsigned long p_t)
+FLASHMEM void    LCDMenuLib2::SCREEN_enable(LCDML_FuncPtr_pu8 function, unsigned long p_t)
 /* ******************************************************************** */
 {
     // debug information
@@ -2868,7 +2868,7 @@ void    LCDMenuLib2::SCREEN_enable(LCDML_FuncPtr_pu8 function, unsigned long p_t
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::SCREEN_disable(void)
+FLASHMEM void    LCDMenuLib2::SCREEN_disable(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2878,7 +2878,7 @@ void    LCDMenuLib2::SCREEN_disable(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::SCREEN_resetTimer(void)
+FLASHMEM void    LCDMenuLib2::SCREEN_resetTimer(void)
 /* ******************************************************************** */
 {
     // debug information
@@ -2888,7 +2888,7 @@ void    LCDMenuLib2::SCREEN_resetTimer(void)
 }
 
 /* ******************************************************************** */
-void    LCDMenuLib2::SCREEN_start(void)
+FLASHMEM void    LCDMenuLib2::SCREEN_start(void)
 /* ******************************************************************** */
 {
     // debug information

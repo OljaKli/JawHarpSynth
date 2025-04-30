@@ -1,3 +1,4 @@
+#if defined SMFPLAYER
 /**
 \mainpage Arduino Standard MIDI File (SMF) Player
 
@@ -1211,3 +1212,4 @@ protected:
 };
 
 #endif /* _MDMIDIFILE_H */
+#endif

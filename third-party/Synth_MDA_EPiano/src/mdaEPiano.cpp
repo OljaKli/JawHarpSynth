@@ -114,7 +114,7 @@ mdaEPiano::mdaEPiano(uint8_t nvoices) // mdaEPiano::mdaEPiano(audioMasterCallbac
   resetVoices();
 }
 
-void mdaEPiano::fillpatch(int32_t p, char *name, float p0, float p1, float p2, float p3, float p4, float p5, float p6, float p7, float p8, float p9, float p10,float p11)
+FLASHMEM void mdaEPiano::fillpatch(int32_t p, char *name, float p0, float p1, float p2, float p3, float p4, float p5, float p6, float p7, float p8, float p9, float p10,float p11)
 {
   strcpy(programs[p].name, name);
   programs[p].param[0] = p0;  programs[p].param[1] = p1;
@@ -125,7 +125,7 @@ void mdaEPiano::fillpatch(int32_t p, char *name, float p0, float p1, float p2, f
   programs[p].param[10]= p10; programs[p].param[11] = p11;
 }
 
-void mdaEPiano::resetVoices(void)  // reset all voices
+FLASHMEM void mdaEPiano::resetVoices(void)  // reset all voices
 {
   for (int32_t v = 0; v < max_polyphony; v++)
   {
@@ -141,7 +141,7 @@ void mdaEPiano::resetVoices(void)  // reset all voices
   update();
 }
 
-void mdaEPiano::resetControllers(void)  // reset controllers
+FLASHMEM void mdaEPiano::resetControllers(void)  // reset controllers
 {
   tl = tr = lfo0 = dlfo = 0.0f;
   lfo1 = 1.0f;
@@ -149,7 +149,7 @@ void mdaEPiano::resetControllers(void)  // reset controllers
   update();
 }
 
-void mdaEPiano::stopVoices(void)  // all keys off, but no reset for sustain
+FLASHMEM void mdaEPiano::stopVoices(void)  // all keys off, but no reset for sustain
 {
   for (int32_t v = 0; v < max_polyphony; v++)
   {
@@ -199,7 +199,7 @@ mdaEPiano::~mdaEPiano ()  //destroy any buffers...
   if (programs) delete [] programs;
 }
 
-void mdaEPiano::setDecay(float value)
+FLASHMEM void mdaEPiano::setDecay(float value)
 {
   setParameter(MDA_EP_DECAY, value);
 }
@@ -209,7 +209,7 @@ float mdaEPiano::getDecay(void)
   return(getParameter(MDA_EP_DECAY));
 }
 
-void mdaEPiano::setRelease(float value)
+FLASHMEM void mdaEPiano::setRelease(float value)
 {
   setParameter(MDA_EP_RELEASE, value);
 }
@@ -219,7 +219,7 @@ float mdaEPiano::getRelease(void)
   return(getParameter(MDA_EP_RELEASE));
 }
 
-void mdaEPiano::setHardness(float value)
+FLASHMEM void mdaEPiano::setHardness(float value)
 {
   setParameter(MDA_EP_HARDNESS, value);
 }
@@ -229,7 +229,7 @@ float mdaEPiano::getHardness(void)
   return(getParameter(MDA_EP_HARDNESS));
 }
 
-void mdaEPiano::setTreble(float value)
+FLASHMEM void mdaEPiano::setTreble(float value)
 {
   setParameter(MDA_EP_TREBLE, value);
 }
@@ -239,7 +239,7 @@ float mdaEPiano::getTreble(void)
   return(getParameter(MDA_EP_TREBLE));
 }
 
-void mdaEPiano::setPanTremolo(float value)
+FLASHMEM void mdaEPiano::setPanTremolo(float value)
 {
   setParameter(MDA_EP_PAN_TREM, value);
 }
@@ -249,7 +249,7 @@ float mdaEPiano::getPanTremolo(void)
   return(getParameter(MDA_EP_PAN_TREM));
 }
 
-void mdaEPiano::setPanLFO(float value)
+FLASHMEM void mdaEPiano::setPanLFO(float value)
 {
   setParameter(MDA_EP_LFO_RATE, value);
 }
@@ -259,7 +259,7 @@ float mdaEPiano::getPanLFO(void)
   return(getParameter(MDA_EP_LFO_RATE));
 }
 
-void mdaEPiano::setVelocitySense(float value)
+FLASHMEM void mdaEPiano::setVelocitySense(float value)
 {
   setParameter(MDA_EP_VELOCITY_SENSE, value);
 }
@@ -269,7 +269,7 @@ float mdaEPiano::getVelocitySense(void)
   return(getParameter(MDA_EP_VELOCITY_SENSE));
 }
 
-void mdaEPiano::setStereo(float value)
+FLASHMEM void mdaEPiano::setStereo(float value)
 {
   setParameter(MDA_EP_STEREO, value);
 }
@@ -279,7 +279,7 @@ float mdaEPiano::getStereo(void)
   return(getParameter(MDA_EP_STEREO));
 }
 
-void mdaEPiano::setPolyphony(uint8_t value)
+FLASHMEM void mdaEPiano::setPolyphony(uint8_t value)
 {
   if (value <= 0)
     value = 1;
@@ -300,7 +300,7 @@ uint8_t mdaEPiano::getPolyphony(void)
   return(max_polyphony);
 }
 
-void mdaEPiano::setTune(float value)
+FLASHMEM void mdaEPiano::setTune(float value)
 {
   setParameter(MDA_EP_TUNE, value);
 }
@@ -310,7 +310,7 @@ float mdaEPiano::getTune(void)
   return(getParameter(MDA_EP_TUNE));
 }
 
-void mdaEPiano::setDetune(float value)
+FLASHMEM void mdaEPiano::setDetune(float value)
 {
   setParameter(MDA_EP_DETUNE, value);
 }
@@ -320,7 +320,7 @@ float mdaEPiano::getDetune(void)
   return(getParameter(MDA_EP_DETUNE));
 }
 
-void mdaEPiano::setOverdrive(float value)
+FLASHMEM void mdaEPiano::setOverdrive(float value)
 {
   setParameter(MDA_EP_OVERDRIVE, value);
 }
@@ -330,7 +330,7 @@ float mdaEPiano::getOverdrive(void)
   return(getParameter(MDA_EP_OVERDRIVE));
 }
 
-void mdaEPiano::setVolume(float value)
+FLASHMEM void mdaEPiano::setVolume(float value)
 {
   //volume = value * 0.32258; // 0.00002 * 127^2
   volume = value * 0.16f;
@@ -341,7 +341,7 @@ float mdaEPiano::getVolume(void)
   return(volume/0.16f);
 }
 
-void mdaEPiano::setParameter(int32_t index, float value)
+FLASHMEM void mdaEPiano::setParameter(int32_t index, float value)
 {
   programs[0].param[index] = value;
   update();
@@ -357,7 +357,7 @@ int32_t mdaEPiano::getActiveVoices(void)
   return (activevoices);
 }
 
-void mdaEPiano::process(int16_t* outputs_r, int16_t* outputs_l)
+FLASHMEM void mdaEPiano::process(int16_t* outputs_r, int16_t* outputs_l)
 {
   int16_t v;
   float x, l, r, od = overdrive;

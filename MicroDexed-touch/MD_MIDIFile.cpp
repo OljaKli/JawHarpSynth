@@ -1,3 +1,4 @@
+#if defined SMFPLAYER
 /*
   MD_MIDIFile.cpp - An Arduino library for processing Standard MIDI Files (SMF).
   Copyright (C) 2012 Marco Colli
@@ -402,3 +403,5 @@ FLASHMEM int MD_MIDIFile::load(const char *fname)
 //   }
 // }
 // #endif // DUMP_DATA
+
+#endif

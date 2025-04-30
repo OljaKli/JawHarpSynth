@@ -18,11 +18,8 @@ set(HEADER_FILES
         interpolation.h
         TeensyVariablePlayback.h
         IndexableFile.h
-        IndexableSerialFlashFile.h
-        IndexableLittleFSFile.h
         IndexableSDFile.h
-        ResamplingLfsReader.h
-        ResamplingSerialFlashReader.h
+       
         playlfsresmp.h
         playserialflashresmp.h
         )

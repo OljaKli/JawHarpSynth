@@ -118,7 +118,9 @@ void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
 
 void setup_ui(void);
+#if defined SMFPLAYER
 void midiCallback(midi_event* pev);
+#endif
 uint8_t count_omni();
 uint8_t count_midi_channel_duplicates(bool find_first);
 void print_smf_parameters();
