@@ -5238,29 +5238,28 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
     const uint16_t toX = plotX + to * (plotW - 1);
 
     if (fullRedraw) {
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX - 1U, GREY2);
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX - 1U);
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, uint16_t(plotX + plotW - 1U), GREY2);
+      display.console = true;
+      display.drawLine(fromX, plotY, fromX, plotY + plotH - 1, COLOR_ARP);
+      display.console = true;
+      display.drawLine(toX, plotY, toX, plotY + plotH - 1, COLOR_ARP);
 
-      display.drawFastVLine(fromX, plotY, plotH, COLOR_ARP);
-      display.drawFastVLine(toX, plotY, plotH, COLOR_ARP);
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, uint16_t(fromX - 1), GREY2);
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, uint16_t(fromX + 1), uint16_t(toX - 1));
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, uint16_t(toX + 1), uint16_t(plotX + plotW - 1), GREY2);
     }
     else {
-
       uint16_t drawFrom = lastFromX;
       uint16_t drawTo = lastToX;
 
       bool fromChanged = lastFromX != fromX;
       if (fromChanged) {
         drawFrom = std::min(lastFromX, fromX);
-        drawTo = std::max(lastFromX, fromX);
         lastFromX = fromX;
         DBG_LOG(printf("FROM: draw from %i to %i\n", drawFrom, drawTo));
       }
 
       bool toChanged = lastToX != toX;
       if (toChanged) {
-        drawFrom = std::min(lastToX, toX);
         drawTo = std::max(lastToX, toX);
         lastToX = toX;
         DBG_LOG(printf("TO: draw from %i to %i\n", drawFrom, drawTo));
@@ -5268,17 +5267,17 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
 
       if(fromChanged || toChanged) {
         DBG_LOG(printf("draw from %i to %i\n", drawFrom, drawTo));
-
-        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, plotX, uint16_t(fromX), GREY2);
-        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, uint16_t(fromX), uint16_t(toX));
-        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, uint16_t(toX), uint16_t(plotX + plotW), GREY2);
-
         if(fromChanged) {
-          display.drawFastVLine(fromX, plotY, plotH, COLOR_ARP);
+          display.console = true;
+          display.drawLine(fromX, plotY, fromX, plotY + plotH - 1, COLOR_ARP);
         }
         if(toChanged) {
-          display.drawFastVLine(toX, plotY, plotH, COLOR_ARP);
+          display.console = true;
+          display.drawLine(toX, plotY, toX, plotY + plotH - 1, COLOR_ARP);
         }
+        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, plotX, uint16_t(fromX), GREY2);
+        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, uint16_t(fromX + 1), uint16_t(toX));
+        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, uint16_t(toX + 1), uint16_t(plotX + plotW - 1), GREY2);
       }
     }
   }
