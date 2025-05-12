@@ -102,7 +102,7 @@ FLASHMEM void apc_clear_grid()
 FLASHMEM void apc_clear_right_buttons()
 {
   for (uint8_t i = 0; i < 8; i++)
-    apc(112 + i, 0, 1);
+    apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //LUC starting with 112 or 82
 }
 
 FLASHMEM void apc_print_right_buttons()
@@ -110,9 +110,9 @@ FLASHMEM void apc_print_right_buttons()
   for (uint8_t i = 0; i < 8; i++)
   {
     if (APC_BUTTONS_RIGHT[i])
-      apc(112 + i, 1, 1);
+      apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 1, 1); //LUC starting with 112 or 82
     else
-      apc(112 + i, 0, 1);
+      apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //LUC starting with 112 or 82
   }
 }
 
@@ -387,11 +387,11 @@ FLASHMEM void  check_and_clear_row3()
 
 FLASHMEM void apc_pattern_change(uint8_t inData1)
 {
-  if (inData1 == 112)
+  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_UP) //LUC 112 or 82
   {
     seq.active_pattern = constrain(seq.active_pattern + 1, 0, NUM_SEQ_PATTERN - 1);
   }
-  else if (inData1 == 113)
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_DOWN) //LUC 113 or 83
   {
     seq.active_pattern = constrain(seq.active_pattern - 1, 0, NUM_SEQ_PATTERN - 1);
   }
@@ -502,7 +502,7 @@ FLASHMEM void apc_song()
 void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 {
 
-  if (inData1 == 114 && !apc_shift_key) //start/stop
+  if (inData1 == APC_MINI_BUTTON_RIGHT_SEQ_START_STOP && !apc_shift_key) //start/stop LUC 114 or 84
   {
     if (!seq.running)
       handleStart();
@@ -510,7 +510,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       handleStop();
   }
 
-  if (inData1 == 112 && apc_shift_key) //switch to pattern editor
+  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR && apc_shift_key) //switch to pattern editor LUC 112 or 82
   {
     APC_MODE = APC_PATTERN_EDITOR;
     apc_clear_grid();
@@ -521,7 +521,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     print_apc_source_selection_pads();
   }
 
-  else if (inData1 == 113 && apc_shift_key) //switch to song editor
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_SONG_EDITOR && apc_shift_key) //switch to song editor LUC 113 or 83
   {
     APC_MODE = APC_SONG;
     // LCDML.OTHER_jumpToFunc(UI_func_song);
@@ -529,7 +529,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     apc_song();
   }
 
-  else if (inData1 == 114 && apc_shift_key) //switch to mute matrix
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_MUTE_MATRIX && apc_shift_key) //switch to mute matrix LUC 114 or 84
   {
     APC_MODE = APC_MUTE_MATRIX;
     apc_clear_grid();
@@ -561,7 +561,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   }
   else if (APC_MODE == APC_PATTERN_EDITOR)
   {
-    if (inData1 == 107) //track8 pad++
+    if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P1) //track8 pad++ , LUC 107 or 71
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -573,7 +573,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
-    else if (inData1 == 106) //track7 pad--
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M1) //track7 pad-- , LUC 106 or 70
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -587,7 +587,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
-    else if (inData1 == 105) //track8 pad -8
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M8) //track8 pad -8 , LUC 105 or 69
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -605,7 +605,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
-    else if (inData1 == 104) //track7 pad +8
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P8) //track7 pad +8 , LUC 104 or 68
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -631,29 +631,29 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       APC_TONAL_SCROLL_OFFSET = 160;
     // }
 
-    if (inData1 == 112 || inData1 == 113) //pattern change
+    if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_UP || inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_DOWN) //pattern change LUC 112 or 82 / 113 or 83
       if (!apc_shift_key)
         apc_pattern_change(inData1);
 
-    if (inData1 == 115 || inData1 == 116)
+    if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_UPPER || inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_LOWER) // LUC 115 or 85 / 116 or 86
     {
       APC_BUTTONS_RIGHT[0] = false;
       APC_BUTTONS_RIGHT[1] = false;
       APC_BUTTONS_RIGHT[6] = false;
     }
-    if (inData1 == 115) //velocity upper row
+    if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_UPPER) //velocity upper row LUC 115 or 85
     {
       APC_BUTTONS_RIGHT[3] = true;
       APC_BUTTONS_RIGHT[4] = false;
     }
-    else if (inData1 == 116) //velocity lower row
+    else if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_LOWER) //velocity lower row LUC 116 or 86
     {
       APC_BUTTONS_RIGHT[3] = false;
       APC_BUTTONS_RIGHT[4] = true;
     }
-    else  if (inData1 == 118 || inData1 == 117 || inData1 == 119) //enable/disable pad select mode
+    else  if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL || inData1 == APC_MINI_BUTTON_RIGHT_DISAB1_PADSEL || inData1 == APC_MINI_BUTTON_RIGHT_DISAB2_PADSEL) //enable/disable pad select mode LUC 118/117/119
     {
-      if ((APC_BUTTONS_RIGHT[6] && inData1 == 118) || (APC_BUTTONS_RIGHT[6] && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)))
+      if ((APC_BUTTONS_RIGHT[6] && inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL/* LUC 118*/) || (APC_BUTTONS_RIGHT[6] && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)))
       {
         APC_BUTTONS_RIGHT[5] = false;
         APC_BUTTONS_RIGHT[6] = false;
@@ -662,7 +662,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       else
         if (APC_PREVIOUS_NOTE != 254)
         {
-          if (inData1 == 118)
+          if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL) //LUC 118 or 88
             APC_BUTTONS_RIGHT[6] = true;
 
           if (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)
@@ -691,7 +691,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       apc_print_volume_pads();
 
     }
-    else if ((inData1 >= 64 - 16 && inData1 <= 64)) //step input to pattern
+    else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
     {
       apc_insert_pattern_step(inData1);
       if (APC_BUTTONS_RIGHT[0] || APC_BUTTONS_RIGHT[6] || APC_BUTTONS_RIGHT[3] || APC_BUTTONS_RIGHT[4])
@@ -706,7 +706,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 
       seq_printAllVelocitySteps();
     }
-    else if ((inData1 > 103 && inData1 < 108)) //update scrolling pad view
+    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST+3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST+8))) //update scrolling pad view LUC 103 or 67 / 108 or 72
     {
       apc_print_volume_pads();
     }

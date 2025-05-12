@@ -4,6 +4,22 @@
 
 # MicroDexed-touch
 
+<br><p> Note by lucian2599: this EXPERIMENTAL fork attempts to add support for older Akai APC Mini Mk1. One advantage over Mk2 is that Mk1 needs only one midi channel, not all, because Mk1 has only 4 colours (red, green, yellow, white).
+<br>Very helpfull was the detailed APC Mk1 picture from https://github.com/TomasHubelbauer/akai-apc-mini 
+<br>Unfortunately, it crashes at inserting/removing steps, in pattern mode. Editing velocities works, song mode is shown, screensaver works, mute matrix not tested.
+<br>I patched the original hex with the Tracks/Scenes/Shift MIDI Note numbers, so that the provided hex provides also USB BUS Power to APC Mk1: mdt_PSRAM-CAPACITIVE_TOUCH-APCMK1_1_9_8_6patchedWithHexEditor.hex
+<br>Difference summary between APC Mini Mk2 and Mk1:
+| MIDI Diffs      |   APC Mini MK2    |   APC Mini MK1      |
+|-----------------|-------------------|---------------------|
+|NoteOn Channel   | brightness,blink  | not used, always 0  |
+|NoteOn Note      | Pad number  0-63  | Pad number  0-63    |
+|NoteOn Velocity  | 128 colours       | 4 colours and blink |
+|NoteOn Tracks1-8 | notes 100-107     | notes 64-71         |
+|NoteOn Scenes1-8 | notes 112-119     | notes 82-89         |
+|Shift key        | note  122         | note  98            |
+|Faders 1-9       | CC 48-56          | CC 48-56            |
+
+<br><p> Original MDT readme:
 <br><p>
 <img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/Build_InstructionsV3_Capacitive_Touch/mdt_capacitive_touch.png" >
 <br>

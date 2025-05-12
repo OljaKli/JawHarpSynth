@@ -161,6 +161,13 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
 }
 
 #if defined APC
+
+#if (APC != 1) //LUC regular apc mini mk2
+#define APC_MINI_BUTTON_SHIFT 122
+#else
+#define APC_MINI_BUTTON_SHIFT 98
+#endif
+
 extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
@@ -173,7 +180,11 @@ extern void apc_fader_control(uint8_t in1, uint8_t in2);
 
 void apc(uint8_t a, uint8_t b, uint8_t c)
 {
+#if (APC != 1) //LUC regular apc mini mk2
   midi_usb.sendNoteOn(a, b, c);
+#else
+  midi_usb.sendNoteOn(a, b, c /*0*/); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+#endif
 }
 
 #endif
@@ -197,7 +208,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 
     if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
     {
-      if (inData1 == 122) //shift key
+      if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
         apc_shift_key = true;
       if (APC_MODE == APC_PATTERN_EDITOR)
       {
@@ -237,7 +248,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
- if (inData1 == 122) //shift key
+ if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
         apc_shift_key = false;
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
