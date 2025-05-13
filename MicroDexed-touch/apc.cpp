@@ -706,7 +706,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 
       seq_printAllVelocitySteps();
     }
-    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST+3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST+8))) //update scrolling pad view LUC 103 or 67 / 108 or 72
+    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST + 3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST + 8))) //update scrolling pad view LUC 103 or 67 / 108 or 72
     {
       apc_print_volume_pads();
     }
