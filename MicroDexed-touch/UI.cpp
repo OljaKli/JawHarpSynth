@@ -3465,7 +3465,7 @@ private:
     const int16_t newValue = constrain(value + change, limit_min, limit_max);
     if (newValue != value) {
       set(newValue);
-      DBG_LOG(printf("value changed from %i to %i, draw!\n", value, newValue));
+      //DBG_LOG(printf("value changed from %i to %i, draw!\n", value, newValue));
       draw_editor(true);
     }
   };
@@ -5209,13 +5209,6 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
-
-FLASHMEM void checkDrawWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, drum_config_s slot, uint16_t drawFrom, uint16_t drawTo, uint16_t from, uint16_t to, uint16_t color = COLOR_PITCHSMP) {
-  if(drawFrom >= from && drawTo <= to) {
-    printSampleWaveform(x, y, w, h, (int16_t*)slot.drum_data, slot.len, slot.numChannels, std::min(drawFrom, from), std::max(drawTo, to), color);
-  }
-}
-
 static uint16_t lastFromX = 0;
 static uint16_t lastToX = 0;
 
@@ -5227,9 +5220,7 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
   static constexpr uint16_t plotW = 200;
   static constexpr uint16_t plotH = 63 + 8;
 
-
   if (slot.drum_data != nullptr && isCustomSample(activeSample)) {
-
     const CustomSample &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
     const float from = s.start / float(1000);
     const float to = s.end / float(1000);
@@ -5238,46 +5229,38 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
     const uint16_t toX = plotX + to * (plotW - 1);
 
     if (fullRedraw) {
-      display.console = true;
-      display.drawLine(fromX, plotY, fromX, plotY + plotH - 1, COLOR_ARP);
-      display.console = true;
-      display.drawLine(toX, plotY, toX, plotY + plotH - 1, COLOR_ARP);
-
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, uint16_t(fromX - 1), GREY2);
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, uint16_t(fromX + 1), uint16_t(toX - 1));
-      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, uint16_t(toX + 1), uint16_t(plotX + plotW - 1), GREY2);
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX);
+      printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
+      lastFromX = fromX;
+      lastToX = toX;
     }
     else {
-      uint16_t drawFrom = lastFromX;
-      uint16_t drawTo = lastToX;
-
       bool fromChanged = lastFromX != fromX;
       if (fromChanged) {
-        drawFrom = std::min(lastFromX, fromX);
+        if (lastFromX < fromX) {
+          DBG_LOG(printf("FROM >>: draw from %i to %i\n", lastFromX, fromX));
+          printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, lastFromX, fromX, GREY2, GREY4);
+        } 
+        else {
+          DBG_LOG(printf("FROM <<: draw from %i to %i\n", fromX, lastFromX));
+          printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, lastFromX);
+        }
         lastFromX = fromX;
-        DBG_LOG(printf("FROM: draw from %i to %i\n", drawFrom, drawTo));
       }
 
       bool toChanged = lastToX != toX;
       if (toChanged) {
-        drawTo = std::max(lastToX, toX);
+        display.console = true;
+        if (lastToX < toX) {
+          DBG_LOG(printf("UPTO >>: draw from %i to %i\n", lastToX, toX));
+          printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, lastToX, toX);
+        }
+        else {
+          DBG_LOG(printf("UPTO <<: draw from %i to %i\n", toX, lastToX));
+          printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, lastToX, GREY2, GREY4);
+        }
         lastToX = toX;
-        DBG_LOG(printf("TO: draw from %i to %i\n", drawFrom, drawTo));
-      }
-
-      if(fromChanged || toChanged) {
-        DBG_LOG(printf("draw from %i to %i\n", drawFrom, drawTo));
-        if(fromChanged) {
-          display.console = true;
-          display.drawLine(fromX, plotY, fromX, plotY + plotH - 1, COLOR_ARP);
-        }
-        if(toChanged) {
-          display.console = true;
-          display.drawLine(toX, plotY, toX, plotY + plotH - 1, COLOR_ARP);
-        }
-        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, plotX, uint16_t(fromX), GREY2);
-        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, uint16_t(fromX + 1), uint16_t(toX));
-        checkDrawWaveform(plotX, plotY, plotW, plotH, slot, drawFrom, drawTo, uint16_t(toX + 1), uint16_t(plotX + plotW - 1), GREY2);
       }
     }
   }
@@ -6446,12 +6429,23 @@ FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min,
 }
 
 FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, uint16_t fromX, uint16_t toX, uint16_t waveColor, uint16_t bgColor) {
-  if (toX > fromX) {
-    display.console = true;
-    display.fillRect(fromX, y, toX - x, h, bgColor);
+  if (toX >= fromX) {
+    DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
+
+    if((toX - fromX) > 1) {
+      display.fillRect(fromX, y, toX - fromX, h, bgColor);
+    }
+    else {
+      // workaround fillRect not working correctly for width = 1
+      for(uint16_t xLine = fromX; xLine < toX; xLine++) {
+        display.console = true;
+        display.drawLine(xLine, y, xLine, y + h, bgColor);
+      }
+    }
 
     if (w > 0 && data != nullptr) {
-      const uint32_t binSize = ceil(length / float(w * numChannels));
+      const uint32_t chLength = length / numChannels;
+      const uint32_t binSize = ceil(chLength / float(w));
       const uint8_t spacing = 4; // stereo looks better with spacing for loud waves
       const float scaleY = (h - spacing) / float(UINT16_MAX * numChannels);
 
@@ -6461,12 +6455,17 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
 
       const uint16_t maxDitherIgnore = 1 / scaleY;
 
-      for (uint32_t sample = 0; sample < length; sample += numChannels) {
+      // advance to fromX
+      uint32_t sampleStart = 0;//chLength * (fromX - x) / w;
+      // limit to toX
+      uint32_t sampleEnd = length;// * toX / w;
+
+      for (uint32_t sample = sampleStart; sample < sampleEnd; sample += numChannels) {
         for (uint8_t ch = 0; ch < numChannels; ch++) {
           binMin[ch] = std::min(binMin[ch], data[sample + ch]);
           binMax[ch] = std::max(binMax[ch], data[sample + ch]);
         }
-        const bool isLastX = sample == (length - 1);
+        const bool isLastX = sample == (sampleEnd - 1);
 
         if ((++numBinSamples == binSize) || isLastX) { // draw last probably unfull bin
           for (uint8_t ch = 0; ch < numChannels; ch++) {
@@ -6636,8 +6635,8 @@ FLASHMEM void UI_func_drums(uint8_t param)
           setCursor_textGrid_small(20, 11);
           show(0, 23, 6, "STEREO");
         }
-        setCursor_textGrid_small(39, 9);
-        display.setTextColor(COLOR_BACKGROUND, GREY3);
+        setCursor_textGrid_small(39, 10);
+        display.setTextColor(GREY3, COLOR_BACKGROUND);
         print_sample_type(1);
 
         checkDrawFilterText(true); // force redraw filter text on active sample change

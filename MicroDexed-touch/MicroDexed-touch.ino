@@ -3365,8 +3365,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(d)));
             drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(d)));
 
-
-
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
             if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
               if ((d >= 0 && d < NUM_DRUMSET_CONFIG - 1) || (d >= 210 && d < 216)) {
@@ -3387,7 +3385,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 
                 if (isCustomSample(d)) {
                   // calculate start and end points
-                  CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
+                  const CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
                   const float mult = length / float(1000);
                   const uint32_t offStart = s.start * mult;
                   start += offStart;
@@ -3397,7 +3395,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
                 
                 const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
                 if (hihatRand) {
-                  uint32_t randomizer = random(seq.hihat_randomizer * 50);
+                  const uint32_t randomizer = random(seq.hihat_randomizer * 50);
                   if (drum_config[d].len - randomizer > 1000) {
                     start += randomizer;
                     length -= randomizer;
