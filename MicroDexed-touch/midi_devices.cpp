@@ -1293,19 +1293,14 @@ FLASHMEM void setup_midi_devices(void)
 extern void midi_activity_leds();
 #endif
 
-extern bool apc_busy;
-
 void check_midi_devices(void)
 {
-
-  if (!apc_busy)
-  {
 #ifdef MIDI_DEVICE_DIN
     midi_serial.read();
 #endif
-    // #ifdef MIDI_DEVICE_USB
-    //   usbMIDI.read();
-    // #endif
+     #ifdef MIDI_DEVICE_USB
+       usbMIDI.read();
+     #endif
 
 #ifdef MIDI_DEVICE_USB_HOST
     usb_host.Task();
@@ -1315,7 +1310,6 @@ void check_midi_devices(void)
 #ifdef MIDI_ACTIVITY_LIGHTS
     midi_activity_leds();
 #endif
-  }
 }
 
 FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)

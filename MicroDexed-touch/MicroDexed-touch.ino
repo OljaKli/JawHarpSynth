@@ -1799,22 +1799,6 @@ FLASHMEM void load_custom_samples_to_psram()
 }
 #endif
 
-bool apc_busy = false;
-
-void start_MIDI_input_timer()
-{
-  MIDI_input_timer.begin(check_midi_devices, 5000, true);
-  apc_busy = false;
-}
-
-void stop_MIDI_input_timer()
-{
-  // MIDI_input_timer.begin(check_midi_devices, 5000, false);
-  MIDI_input_timer.stop();
-  apc_busy = true;
-
-}
-
 FLASHMEM void print_midi_channel_activity(uint8_t x, uint8_t y, float audio_vol)
 {
   uint8_t display_val = 0;
