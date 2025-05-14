@@ -1165,25 +1165,25 @@ FLASHMEM void setup()
         //     | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
         // CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
 
-  #ifdef PSRAM
-    // zero all malloccable RAM so crashes are deterministic
-    std::vector<uint8_t*> blocks;
-    int size = 10000;
-    bool done = false;
-    while (done == false) {
-      uint8_t* b = (uint8_t*)malloc(size);
-      done = b == nullptr;
-      if (done == false) {
-        memset(b, 0x00, size);
-        blocks.emplace_back(b);
-      }
+#ifdef PSRAM
+  // zero all malloccable RAM so crashes are deterministic
+  std::vector<uint8_t*> blocks;
+  int size = 10000;
+  bool done = false;
+  while (done == false) {
+    uint8_t* b = (uint8_t*)malloc(size);
+    done = b == nullptr;
+    if (done == false) {
+      memset(b, 0x00, size);
+      blocks.emplace_back(b);
     }
-    for (uint8_t* b : blocks) {
-      free(b);
-    }
-    blocks.clear();
-    // ***********
-  #endif
+  }
+  for (uint8_t* b : blocks) {
+    free(b);
+  }
+  blocks.clear();
+  // ***********
+#endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   pinMode(TFT_TOUCH_IRQ, INPUT);
@@ -1531,7 +1531,9 @@ FLASHMEM void setup()
 
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
-  MIDI_input_timer.begin(check_midi_devices, 5000, true);
+#if !defined APC
+  MIDI_input_timer.begin(check_midi_devices, 5000, true);  //crashes when using APC with timer interrupt (USB Host MIDI out+in at the same time?)
+#endif
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
   if (digitalRead(BUT_R_PIN) || digitalRead(BUT_L_PIN)) // is pushed
@@ -2389,6 +2391,7 @@ FLASHMEM void set_trs_pedal()
 
 void loop()
 {
+
   // MM Test Stuff
 
 #ifdef MUSIKANDMORE
@@ -2454,8 +2457,10 @@ void loop()
     }
   }
 
+#if defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
   // MIDI input handling
-  //check_midi_devices();
+  check_midi_devices();
+#endif
 
   // check encoder (old, polling)
   //ENCODER[ENC_L].update();
@@ -4641,15 +4646,6 @@ FLASHMEM void handleStart(void)
 
     seq.running = true; // before calling sequencer()
 
-    // MIDI SYNC: use timer only when internal or MIDI Master
-    if (seq.clock == 0 || seq.clock == 2)
-    {
-      liveSeq.onStarted();
-      sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), true); // first callback immediately
-    }
-
-    midiSendRealtime(midi::Start);
-
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
@@ -4675,6 +4671,16 @@ FLASHMEM void handleStart(void)
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
   setled(LED_START, HIGH);
 #endif
+
+  // MIDI SYNC: use timer only when internal or MIDI Master
+  if (seq.clock == 0 || seq.clock == 2)
+  {
+    liveSeq.onStarted();
+    sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), true); // first callback immediately
+  }
+
+  midiSendRealtime(midi::Start);
+
 
 }
 
@@ -4710,6 +4716,11 @@ FLASHMEM void handleStop(void)
         apc_print_right_buttons();
       }
 #endif
+
+#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+      setled(LED_START, LOW);
+#endif
+
       if (seq.clock == 0 || seq.clock == 2)
         sequencer_timer.stop();
 
@@ -4758,9 +4769,6 @@ FLASHMEM void handleStop(void)
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
   }
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  setled(LED_START, LOW);
-#endif
 }
 
 void handleActiveSensing(void)
