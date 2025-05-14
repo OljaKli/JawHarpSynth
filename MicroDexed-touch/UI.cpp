@@ -5227,7 +5227,6 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
 
     const uint16_t fromX = plotX + from * (plotW - 1);
     const uint16_t toX = plotX + to * (plotW - 1);
-
     if (fullRedraw) {
       printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
       printSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX);
@@ -6456,16 +6455,18 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
       const uint16_t maxDitherIgnore = 1 / scaleY;
 
       // advance to fromX
-      uint32_t sampleStart = 0;//chLength * (fromX - x) / w;
+      uint32_t sampleStart = length * (fromX - x) / w;
       // limit to toX
-      uint32_t sampleEnd = length;// * toX / w;
+      uint32_t sampleEnd = length * (toX - x) / w;
 
-      for (uint32_t sample = sampleStart; sample < sampleEnd; sample += numChannels) {
+      x = fromX;
+
+      for (uint32_t sample = sampleStart; sample <= sampleEnd; sample += numChannels) {
         for (uint8_t ch = 0; ch < numChannels; ch++) {
           binMin[ch] = std::min(binMin[ch], data[sample + ch]);
           binMax[ch] = std::max(binMax[ch], data[sample + ch]);
         }
-        const bool isLastX = sample == (sampleEnd - 1);
+        const bool isLastX = sample == (sampleEnd);
 
         if ((++numBinSamples == binSize) || isLastX) { // draw last probably unfull bin
           for (uint8_t ch = 0; ch < numChannels; ch++) {
@@ -6476,10 +6477,8 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
             const uint16_t yMax = yZero + binMax[ch] * scaleY;
             const uint16_t yMin = yZero + binMin[ch] * scaleY;
 
-            if (x >= fromX && x <= toX) {
-              display.console = true;
-              display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
-            }
+            display.console = true;
+            display.drawLine(x, yMin, x, yMax, waveColor); // drawLine() is off a bit to the left
 
             binMin[ch] = INT16_MAX;
             binMax[ch] = INT16_MIN;
