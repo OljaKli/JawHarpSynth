@@ -3783,6 +3783,7 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
 
 extern void update_seq_speed();
 extern uint8_t perf_load_options;
+extern void set_seq_timing();
 
 FLASHMEM bool load_sd_performance_json(uint8_t number)
 {
@@ -3966,6 +3967,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         if (seq.euclidean_active)
           update_euclidean();
 
+        set_seq_timing();
 
         for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
         {
