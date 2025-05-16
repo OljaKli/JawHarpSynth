@@ -17114,10 +17114,16 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         case FM_COPY_TO_PSRAM:
           if (fm.sd_temp_name.endsWith(".wav")) {
             fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
-            const uint8_t sampleIndex = fm.psram_selected_file + 6 + fm.psram_skip_files;
+            const uint8_t customSampleIndex = fm.psram_selected_file + fm.psram_skip_files;
+            const uint8_t sampleIndex = customSampleIndex + NUM_STATIC_PITCHED_SAMPLES;
             sampleLoader.loadSampleToDrums(fm.sd_full_name, drum_config[sampleIndex]);
             if (drum_config[sampleIndex].drum_data != nullptr) {
-              strcpy(drum_config[sampleIndex].filename, fm.sd_full_name.c_str());
+              customSamples[customSampleIndex].start = 0;    // 0%
+              customSamples[customSampleIndex].end  = 1000;  // 100%
+              customSamples[customSampleIndex].loopType = 0; // loop_type::looptype_none
+              strcpy(customSamples[customSampleIndex].filepath, fm.sd_new_name.c_str());
+              drum_config[sampleIndex].drum_class = DRUM_POLY; // default is poly
+              strcpy(drum_config[sampleIndex].filename, fm.sd_temp_name.c_str());
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);
               print_psram_stats_filemanager();
               psram_printCustomSamplesList();

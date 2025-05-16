@@ -2703,7 +2703,7 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
           }
           else {
             customSamples[i].start = 0;    // 0%
-            customSamples[i].end  = 1000;  // 100%
+            customSamples[i].end = 1000;   // 100%
             customSamples[i].loopType = 0; // loop_type::looptype_none
           }
           drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = data_json[i]["class"];
