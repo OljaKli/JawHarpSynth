@@ -6431,7 +6431,7 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
   if (toX >= fromX) {
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
 
-    if((toX - fromX) > 1) {
+    if ((toX - fromX) > 1) {
       display.fillRect(fromX, y, toX - fromX, h, bgColor);
     }
     else {
@@ -6455,9 +6455,9 @@ FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h
       const uint16_t maxDitherIgnore = 1 / scaleY;
 
       // advance to fromX
-      uint32_t sampleStart = length * (fromX - x) / w;
+      uint32_t sampleStart = length * (fromX - x) / w; // TODO: stereo (numChannels == 2) should only have even sample indices
       // limit to toX
-      uint32_t sampleEnd = length * (toX - x) / w;
+      uint32_t sampleEnd = length * (toX - x + 1) / w;
 
       x = fromX;
 
