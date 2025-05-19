@@ -1532,7 +1532,7 @@ FLASHMEM void setup()
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
 #if !defined APC
-  MIDI_input_timer.begin(check_midi_devices, 5000, true);  //crashes when using APC with timer interrupt (USB Host MIDI out+in at the same time?)
+  //MIDI_input_timer.begin(check_midi_devices, 5000, true);  //crashes when using APC with timer interrupt (USB Host MIDI out+in at the same time?)
 #endif
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
@@ -2457,7 +2457,7 @@ void loop()
     }
   }
 
-#if defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
+#if 1//defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
   // MIDI input handling
   check_midi_devices();
 #endif
