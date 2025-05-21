@@ -6454,7 +6454,7 @@ FLASHMEM void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
       for(uint16_t xi = fromX; xi <= toX; xi++) {
 
         uint32_t dataIndex = (xi - x) * blockSize;
-        dataIndex &= ~numChannels; // round down to numCh!
+        dataIndex &= ~(numChannels - 1); // round down to numCh!
 
         int16_t binMin[numChannels] = { INT16_MAX };
         int16_t binMax[numChannels] = { INT16_MIN };
@@ -6466,9 +6466,10 @@ FLASHMEM void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
           for(uint8_t ch = 0; ch < numChannels; ch++) {
             binMin[ch] = std::min(binMin[ch], data[dataIndex + ch]);
             binMax[ch] = std::max(binMax[ch], data[dataIndex + ch]);
-            dataIndex++;
           }
+          dataIndex += numChannels;
         }
+
         for(uint8_t ch = 0; ch < numChannels; ch++) {
           const uint16_t yZero = y + (h / (2 * numChannels)) + ch * (h / numChannels); // find zero for upper and lower plot
 
