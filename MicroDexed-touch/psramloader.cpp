@@ -46,8 +46,6 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
           }
         }
 
-        AudioInterrupts();
-
         DBG_LOG(printf("read %i of %i bytes.\n", total_read, header.data_bytes));
 
         freeBytesPSRAM -= total_read;
@@ -55,6 +53,7 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
         bytesRead = total_read;
         channels = header.num_channels;
       }
+      AudioInterrupts();
     }
     f.close();
   }
