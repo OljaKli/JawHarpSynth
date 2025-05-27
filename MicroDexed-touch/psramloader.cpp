@@ -64,7 +64,6 @@ FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytes
 
 FLASHMEM void PsramLoader::unloadSample(const uint8_t *data, uint32_t length) {
   extmem_free((uint8_t*)data);
-  data = nullptr;
   freeBytesPSRAM += length;
   DBG_LOG(printf("freeing %i bytes...\n", length));
 }

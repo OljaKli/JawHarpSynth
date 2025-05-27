@@ -1691,7 +1691,7 @@ FLASHMEM void setup()
   display.print(NUM_DRUMSET_CONFIG);
 
   display.setTextSize(1);
-  for (int i = 0; i < 6; i++) {  // load pitched samples
+  for (int i = 0; i < NUM_STATIC_PITCHED_SAMPLES; i++) {  // load pitched samples
     char temp_name[36];
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
@@ -1701,7 +1701,7 @@ FLASHMEM void setup()
   }
 
   // load drums
-  for (int i = 6 + NUM_CUSTOM_SAMPLES; i < NUM_DRUMSET_CONFIG; i++) {
+  for (int i = NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES; i < NUM_DRUMSET_CONFIG; i++) {
     char temp_name[36];
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
@@ -1797,6 +1797,16 @@ FLASHMEM void load_custom_samples_to_psram()
       sprintf(temp_name, "CUSTOM%02d", i - NUM_STATIC_PITCHED_SAMPLES + 1);
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
+    }
+  }
+}
+
+FLASHMEM void unload_all_custom_samples() {
+  for (int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
+    if (drum_config[i].drum_data != nullptr && drum_config[i].len > 0) {
+      sampleLoader.unloadSample(drum_config[i].drum_data, drum_config[i].len * 2);
+      drum_config[i].drum_data = nullptr;
+      drum_config[i].len = 0;
     }
   }
 }
@@ -5313,7 +5323,7 @@ FLASHMEM float get_sample_pan(uint8_t sample)
 }
 FLASHMEM float get_sample_vol_max(uint8_t sample)
 {
-  return (drum_config[sample].vol_max / 100.0);
+  return (drum_config[sample].vol_max / 100.0F);
 }
 FLASHMEM float get_sample_reverb_send(uint8_t sample)
 {

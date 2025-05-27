@@ -47,6 +47,7 @@ extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
 
 #ifdef COMPILE_FOR_PSRAM
 extern void load_custom_samples_to_psram();
+extern void unload_all_custom_samples();
 #endif
 
 extern sdcard_t sdcard_infos;
@@ -2684,7 +2685,8 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
         // serializeJsonPretty(data_json, Serial);
         LOG.println();
 #endif
-
+        unload_all_custom_samples();
+        
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
 
