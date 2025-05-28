@@ -38,15 +38,10 @@ extern uint8_t activeSample;
 extern uint8_t get_sample_note(uint8_t sample);
 extern void handleNoteOn(byte, byte, byte, byte);
 extern void handleNoteOff(byte, byte, byte, byte);
-extern const char* seq_find_shortname(uint8_t);
 extern void set_sample_pitch(uint8_t, float); // float32_t not working
 extern float get_sample_vol_max(uint8_t);
 extern float get_sample_p_offset(uint8_t);
-extern void helptext_l(const char* str);
-extern void helptext_r(const char* str);
 extern AudioSynthDexed* MicroDexed[NUM_DEXED];
-extern uint8_t find_first_song_step_with_pattern(uint8_t pattern);
-extern uint8_t find_first_chain_step_with_pattern(uint8_t pattern);
 extern microsynth_t microsynth[2];
 extern braids_t braids_osc;
 extern multisample_s msp[NUM_MULTISAMPLES];

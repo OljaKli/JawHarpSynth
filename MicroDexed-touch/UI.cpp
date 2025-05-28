@@ -244,16 +244,9 @@ extern float midi_volume_transform(uint8_t midi_amp);
 extern float volume_transform(float amp);
 extern uint8_t selected_instance_id;
 extern char receive_bank_filename[FILENAME_LEN];
-extern void print_file_manager_active_border(void);
-extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
-extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
-extern uint8_t get_chain_length_from_current_track(uint8_t tr);
 extern uint8_t get_song_length(void);
-extern void helptext_l(const char* str);
-extern void helptext_r(const char* str);
 extern uint8_t microsynth_selected_instance;
 extern AudioMixer<2> microsynth_mixer_reverb;
-extern uint8_t find_longest_chain();
 extern void stop_all_drum_slots();
 extern void dac_mute(void);
 extern void dac_unmute(void);
@@ -265,9 +258,6 @@ extern AudioRecordQueue record_queue_r;
 extern char filename[CONFIG_FILENAME_LEN];
 extern uint8_t remote_MIDI_CC;
 extern uint8_t remote_MIDI_CC_value;
-extern void update_step_rec_buttons();
-
-void draw_euclidean_circle();
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -375,6 +365,7 @@ void UI_handle_OP(uint8_t param);
 void UI_func_set_braids_name(uint8_t param);
 void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
 void print_sample_type(bool dir);
+void draw_euclidean_circle();
 
 /***********************************************************************
    GLOBAL

@@ -8,7 +8,6 @@
 #include "virtualkeyboard.h"
 
 
-extern void helptext_l(const char* str);
 extern sequencer_t seq;
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
