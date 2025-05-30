@@ -6444,14 +6444,19 @@ FLASHMEM void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
       uint16_t binSize = length / w / numChannels;
       const float blockSize = length / float(w);
 
+      int16_t binMin[numChannels];
+      int16_t binMax[numChannels];
+
       // loop thru pixels
       for(uint16_t xi = fromX; xi <= toX; xi++) {
 
         uint32_t dataIndex = (xi - x) * blockSize;
         dataIndex &= ~(numChannels - 1); // round down to numCh!
 
-        int16_t binMin[numChannels] = { INT16_MAX };
-        int16_t binMax[numChannels] = { INT16_MIN };
+        for(uint8_t ch = 0; ch < numChannels; ch++) {
+          binMin[ch] = INT16_MAX;
+          binMax[ch] = INT16_MIN;
+        }
 
         // loop thru pixel samples
         for(uint16_t ps = 0; ps < binSize; ps++) {
