@@ -14,6 +14,14 @@ FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &s
   uint32_t bytesRead = 0;
   slot.drum_data = loadSample(path, bytesRead, slot.numChannels);
   slot.len = bytesRead / 2;
+
+  // test mute left for stereo samples (plotter / sample points)
+  /*if(slot.numChannels == 2) {
+    for(uint i = 0; i < slot.len; i += 2) {
+      int16_t *d = (int16_t*)&slot.drum_data[i*2];
+      *d = 0;
+    }
+  }*/
 }
 
 FLASHMEM uint8_t* PsramLoader::loadSample(const String filename, uint32_t &bytesRead, uint8_t &channels) {

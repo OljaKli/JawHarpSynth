@@ -3397,23 +3397,24 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
                 int16_t *start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
+                const uint32_t channelMask = ~(drum_config[d].numChannels - 1); // round down to numChannels
                 
                 if (isCustomSample(d)) {
                   // calculate start and end points
                   const CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
                   const float mult = length / float(1000);
-                  const uint32_t offStart = s.start * mult;
+                  const uint32_t offStart = uint32_t(s.start * mult) & channelMask;
                   start += offStart;
-                  const uint32_t offEnd = length - s.end * mult;
+                  const uint32_t offEnd = length - (uint32_t(s.end * mult) & channelMask);
                   length -= (offStart + offEnd);
                 }
                 
                 const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
                 if (hihatRand) {
-                  const uint32_t randomizer = random(seq.hihat_randomizer * 50);
-                  if (drum_config[d].len - randomizer > 1000) {
-                    start += randomizer;
-                    length -= randomizer;
+                  const uint32_t offStart = random(seq.hihat_randomizer * 50) & channelMask;
+                  if (drum_config[d].len - offStart > 1000) {
+                    start += offStart;
+                    length -= offStart;
                   }
                 }
 
