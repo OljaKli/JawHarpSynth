@@ -3126,13 +3126,13 @@ FLASHMEM void learn_cc(byte inChannel, byte inNumber)
 }
 
 void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device) {
+  // play note
+  handleNoteOn(inChannel, inNumber, inVelocity, device);
   //drum played from input selects current drum note if drum screen open
   if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI) {
     const uint8_t sampleNote = midiNoteToSampleNote(inNumber);
     selectSample(sampleNote);
   }
-  // play note
-  handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
