@@ -6693,7 +6693,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         }
       } else {
         setCursor_textGrid_small(param->x, param->y);
-        print_empty_spaces(10, 1);
+        print_empty_spaces(22, 1);
       }
     });
 
