@@ -2183,8 +2183,6 @@ FLASHMEM void set_glow_bargraph(uint8_t x, uint8_t y, int input, int menuitem, i
   }
 }
 
-extern void _print_panbar_value(uint8_t input_value);
-
 FLASHMEM void draw_glow()
 {
   display.setTextSize(1);

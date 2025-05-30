@@ -155,6 +155,7 @@ void draw_volmeters_multiband_compressor();
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 uint8_t find_first_song_step_with_pattern(uint8_t pattern);
 uint8_t find_first_chain_step_with_pattern(uint8_t pattern);
+void _print_panbar_value(uint8_t input_value);
 
 void draw_algo(bool forceDraw = false);
 uint8_t get_algo();
