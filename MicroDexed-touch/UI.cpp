@@ -3304,13 +3304,16 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
     display.print(zero_name);
   else if (limit_min < 0)
     print_formatted_number_signed(input_value, 2);
-  else if (limit_max <= 99)
-  {
+  else if (limit_max < 100) {
     setCursor_textGrid_small(x + 1, y);
     print_formatted_number(input_value, 2);
   }
-  else
+  else if(limit_max < 1000) {
     print_formatted_number(input_value, 3);
+  }
+  else {
+    print_formatted_number(input_value, 4);
+  }
 
   if (show_bar)
   {
@@ -5213,7 +5216,7 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
   static constexpr uint16_t plotW = 200;
   static constexpr uint16_t plotH = 63 + 8;
 
-  if (slot.drum_data != nullptr && isCustomSample(activeSample)) {
+  if (isCustomSample(activeSample)) {
     const CustomSample &s = customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
     const float from = s.start / float(1000);
     const float to = s.end / float(1000);
@@ -5265,9 +5268,9 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
 #endif
 }
 
-FLASHMEM void handleCustomSampleEditor(bool isCustom, bool refresh) {
-  if(refresh) {
-    setCursor_textGrid_small(20, 11);
+FLASHMEM void handleCustomSampleEditor(bool isCustom, bool refreshTitle) {
+  if(refreshTitle) {
+    setCursor_textGrid_small(20, 10);
 
     if (isCustom) {
       display.setTextColor(RED);
@@ -5275,15 +5278,19 @@ FLASHMEM void handleCustomSampleEditor(bool isCustom, bool refresh) {
     }
     else {
       print_empty_spaces(13, 1);
-
-      switch (generic_temp_select_menu) {
-      case 16: // FROM
-      case 17: // UPTO
-      case 18: // TYPE
-        generic_temp_select_menu = 15;
-        ui.draw_editors(false);
-        break;
-      }
+    }
+  }
+  if(isCustom == false) {
+    switch (generic_temp_select_menu) {
+    case 16: // FROM
+      generic_temp_select_menu = 19;
+      ui.draw_editors(false);
+      break;
+    case 17: // UPTO
+    case 18: // TYPE
+      generic_temp_select_menu = 15;
+      ui.draw_editors(false);
+      break;
     }
   }
 }
@@ -5296,22 +5303,15 @@ FLASHMEM void sampleStartEndRenderer(Editor *param, bool refresh) {
   handleCustomSampleEditor(isCustom, sampleTypeChanged);
 
   if (isCustom) {
-    setCursor_textGrid_small(param->x, param->y);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid_small(param->x + 10, param->y);
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
     display.printf("%s", param->name);
-
-    setModeColor(param->select_id);
-
-    setCursor_textGrid_small(param->x + 5, param->y);
-    display.printf("%04i", param->get());
+    print_small_scaled_bar(param->x, param->y, param->get(), param->limit_min, param->limit_max, param->select_id, 1, NULL);
   }
   else if(sampleTypeChanged) {
     setCursor_textGrid_small(param->x, param->y);
-    print_empty_spaces(9, 1);
-    setCursor_textGrid_small(param->x + 5, param->y);
-    print_empty_spaces(9, 1);
+    print_empty_spaces(10 + strlen(param->name), true);
   }
-
 }
 
 FLASHMEM void UI_func_stereo_mono(uint8_t param)
@@ -6554,7 +6554,7 @@ FLASHMEM void checkDrawFilterText(bool forceDraw = false) {
   if (forceDraw || isFilterSelected) {
     display.setTextSize(1);
     setCursor_textGrid_small(10, 17);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
 
     switch (drum_config[activeSample].filter_mode) {
     case 0:
@@ -6680,11 +6680,11 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
 #endif
     
-    ui.setCursor(20, 12);
-    addSampleParameterEditor((const char*)F("FROM"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
-    addSampleParameterEditor((const char*)F("UPTO"), 0, 1000, &customSamples[0].end, sampleStartEndRenderer);
+    ui.setCursor(20, 11);
+    addSampleParameterEditor((const char*)F("STARTPOINT"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
+    addSampleParameterEditor((const char*)F("ENDPOINT"), 0, 1000, &customSamples[0].end, sampleStartEndRenderer);
 
-    handleCustomSampleEditor(isCustomSample(activeSample), true); // force update custom sample header / cursor position
+    handleCustomSampleEditor(isCustomSample(activeSample), true); // force update custom sample title
     
     addDrumParameterEditor_uint8_t((const char*)F("TYPE"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
       const std::string names[] = { "POLY", "HIHAT" };
@@ -6769,6 +6769,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
+    handleCustomSampleEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********

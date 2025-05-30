@@ -2200,13 +2200,15 @@ FLASHMEM void draw_glow()
       display.print(glow_zero_name);
     else if (glow_limit_min < 0)
       print_formatted_number_signed(glow_input_value, 2);
-    else if (glow_limit_max <= 99)
-    {
+    else if (glow_limit_max < 100) {
       setCursor_textGrid_small(glow_x + 1, glow_y);
       print_formatted_number(glow_input_value, 2);
-    }
-    else
+    } else if (glow_limit_max < 1000) {
       print_formatted_number(glow_input_value, 3);
+    }
+    else {
+      print_formatted_number(glow_input_value, 4);
+    }
   }
   else if (glow_type == 1)  //panbar
   {
