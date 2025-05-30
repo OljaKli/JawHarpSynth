@@ -5262,8 +5262,8 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
   else {
     drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, plotX + plotW);
   }
-  setCursor_textGrid_small(39, 10);
-  display.setTextColor(GREY1, COLOR_BACKGROUND);
+  display.setCursor(234, 18);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   print_sample_type(1);
 #endif
 }
@@ -5305,7 +5305,7 @@ FLASHMEM void sampleStartEndRenderer(Editor *param, bool refresh) {
   if (isCustom) {
     setCursor_textGrid_small(param->x + 10, param->y);
     display.setTextColor(GREY1, COLOR_BACKGROUND);
-    display.printf("%s", param->name);
+    display.print(param->name);
     print_small_scaled_bar(param->x, param->y, param->get(), param->limit_min, param->limit_max, param->select_id, 1, NULL);
   }
   else if(sampleTypeChanged) {
@@ -6617,18 +6617,11 @@ FLASHMEM void UI_func_drums(uint8_t param)
         #endif
 
         display.setTextSize(1);
-        if (drum_config[activeSample].numChannels == 1) { // mono
-          //  setCursor_textGrid_small(22, 11);
-          show(0, 23, 6, "  MONO");
-        }
-        else { //stereo
-          setCursor_textGrid_small(20, 11);
-          show(0, 23, 6, "STEREO");
-        }
-        setCursor_textGrid_small(39, 10);
-        display.setTextColor(GREY1, COLOR_BACKGROUND);
+        display.setCursor(276, 6);
+        display.print((drum_config[activeSample].numChannels == 1) ? "  MONO" : "STEREO");
+        display.setCursor(234, 18);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         print_sample_type(1);
-
         checkDrawFilterText(true); // force redraw filter text on active sample change
       });
 
@@ -6686,31 +6679,19 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
     handleCustomSampleEditor(isCustomSample(activeSample), true); // force update custom sample title
     
-    addDrumParameterEditor_uint8_t((const char*)F("TYPE"), DRUM_HIHAT - 1, DRUM_HIHAT, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
-      const std::string names[] = { "POLY", "HIHAT" };
+    addDrumParameterEditor_uint8_t("TYPE", 1, 11, &drum_config[0].drum_class, [](Editor *param, bool refresh) {
       if(isCustomSample(activeSample)) {
-        const uint8_t value = param->get();
-        
-        drum_config[activeSample].drum_class = (value != DRUM_HIHAT) ? DRUM_POLY : DRUM_HIHAT;
-
-        setCursor_textGrid_small(param->x, param->y);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        display.printf("%s", param->name);
-
-        setModeColor(param->select_id);
-        setCursor_textGrid_small(param->x + 5, param->y);
-        const uint8_t index = value != DRUM_HIHAT ? 0 : 1;
-        const std::string s = names[index];
-        display.print(s.c_str());
-        print_empty_spaces(5 - s.length(), 1);
+        print_small_scaled_bar(param->x, param->y, param->get(), param->limit_min, param->limit_max, param->select_id, 1, NULL);
+        setCursor_textGrid_small(param->x + 10, param->y);
+        display.setTextColor(GREY1, COLOR_BACKGROUND);
+        print_sample_type(0);
 
         if(refresh) {
-          setCursor_textGrid_small(39, 10);
-          display.setTextColor(GREY1, COLOR_BACKGROUND);
+          display.setCursor(234, 18);
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
           print_sample_type(1);
         }
-      }
-      else {
+      } else {
         setCursor_textGrid_small(param->x, param->y);
         print_empty_spaces(10, 1);
       }
