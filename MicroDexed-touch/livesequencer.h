@@ -58,7 +58,7 @@ public:
     INSTR_MAX = 12
   };
 
-  struct __attribute__((packed)) MidiEvent {
+  struct MidiEvent {
     EventSource source;
     uint16_t patternMs;
     uint8_t patternNumber;
