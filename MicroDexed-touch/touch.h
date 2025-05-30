@@ -85,16 +85,14 @@ void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
 uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+void helptext_l(const char* str);
 void helptext_r(const char* str);
-void helptext_r(const char* str);
-
 void update_latch_button();
 void draw_back_touchbutton();
 void draw_loop_buttons();
 void print_file_manager_buttons();
 void print_current_chord();
 void handle_page_with_touch_back_button();
-void helptext_l(const char* str);
 void print_file_manager_active_border();
 uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 void update_step_rec_buttons();
