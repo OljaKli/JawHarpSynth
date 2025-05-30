@@ -3366,16 +3366,9 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5); //previously 8
 
             float pan = mapfloat(drum_config[d].pan, -99, 99, 0.0, 1.0);
-            if (drum_config[d].numChannels == 1) //mono
-            {
-              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
-              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
-            }
-            else //stereo
-            {
-              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
-              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
-            }
+
+            drum_mixer_r.gain(slot, (1.0F - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
+            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
 
             drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(d)));
             drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(d)));
