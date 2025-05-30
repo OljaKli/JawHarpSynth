@@ -5262,9 +5262,6 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
   else {
     drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, plotX + plotW);
   }
-  display.setCursor(234, 18);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  print_sample_type(1);
 #endif
 }
 
