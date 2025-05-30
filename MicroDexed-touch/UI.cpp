@@ -5203,11 +5203,10 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
-static uint16_t lastFromX = 0;
-static uint16_t lastToX = 0;
-
 FLASHMEM void drawDrumsSampleWave(bool fullRedraw = true) {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+  static uint16_t lastFromX = 0;
+  static uint16_t lastToX = 0;
   const drum_config_t &slot = drum_config[activeSample];
   static constexpr uint16_t plotX = 120;
   static constexpr uint16_t plotY = 19 + 8;
