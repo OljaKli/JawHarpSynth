@@ -21,6 +21,8 @@ extern void handleNoteOnInput(byte, byte, byte, byte);
 extern void handleNoteOn(byte, byte, byte, byte);
 extern void handleNoteOff(byte, byte, byte, byte);
 extern void handleAfterTouch(byte, byte);
+extern void handleControlChange(byte, byte, byte);
+extern void handlePitchBend(byte, int16_t);
 extern void handleStart();
 extern void handleStop();
 
@@ -247,6 +249,27 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
       if ((data.isRecording && data.isRunning) || data.remainingCountIns > 0) {
         const EventSource source = data.isSongMode ? EVENT_SONG : EVENT_PATTERN;
         MidiEvent newEvent = { source, uint16_t(data.patternTimer), data.currentPattern, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, event, note, velocityActive };
+
+        switch (event){
+          case midi::ControlChange:
+            // Record MIDI CC
+            newEvent.note_in = note;              // Controller number
+            newEvent.note_in_velocity = velocity; // Controller value
+            data.pendingEvents.emplace_back(newEvent);
+            break;
+
+          case midi::PitchBend:
+            // Record Pitch Bend
+            newEvent.note_in = note;              // LSB
+            newEvent.note_in_velocity = velocity; // MSB
+            data.pendingEvents.emplace_back(newEvent);
+            break;
+
+          default:
+            // Handle other events (NoteOn, NoteOff, etc.)
+            break;
+        }
+
         if (data.isSongMode) {
           if (data.songLayerCount < LIVESEQUENCER_NUM_LAYERS) {
             // in song mode, simply add event, no rounding and checking needed
@@ -319,6 +342,12 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         const midi::Channel ch = data.tracks[data.activeTrack].channel;
         const uint8_t device = data.trackSettings[data.activeTrack].device;
         switch (event) {
+        case midi::ControlChange:
+          handleControlChange(ch, note, velocityActive); // note is controller number, velocityActive is value
+          break;
+        case midi::PitchBend:
+          handlePitchBend(ch, ((note & 0x7F) | ((velocityActive & 0x7F) << 7)) - 8192); // Combine LSB and MSB
+        break;
         case midi::AfterTouchChannel:
           handleAfterTouch(ch, note);
           break;
@@ -508,7 +537,11 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
     const uint8_t device = data.trackSettings[playIterator->track].device;
 
     switch (playIterator->event) {
+    case midi::PitchBend:
+      handlePitchBend(channel, (playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192); // Combine LSB and MSB
+      break;
     case midi::ControlChange:
+      handleControlChange(channel, playIterator->note_in, playIterator->note_in_velocity); // note is controller number, velocity is value
       switch (playIterator->note_in_velocity) {
       case AutomationType::TYPE_MUTE_ON:
       case AutomationType::TYPE_MUTE_OFF:
@@ -517,7 +550,7 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
         setLayerMuted(playIterator->track, muteLayer, playIterator->note_in_velocity == AutomationType::TYPE_MUTE_ON);
         break;
       }
-      break;
+    break;
     case midi::NoteOff:
       if (isMuted == false) {
         // erase one instance of this note going off

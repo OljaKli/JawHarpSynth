@@ -303,6 +303,12 @@ seq.note_in = inData1;
     strcpy(text, "Mono AT");
 #endif
     break;
+  case midi::PitchBend:
+    handlePitchBend(inChannel, ((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192); // Combine LSB and MSB as per MIDI spec. Center the value around 0
+#ifdef DEBUG
+    strcpy(text, "PB");
+#endif
+    break;
   case midi::ProgramChange:
     handleProgramChange(inChannel, inData1);
 #ifdef DEBUG
@@ -866,7 +872,12 @@ void handleAfterTouch_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB_HOST(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  //handlePitchBend(inChannel, inPitch);// this works only for dexed
+  // Split 14-bit pitch value into LSB and MSB as per MIDI spec
+  int inPitchCentered = inPitch + 8192; // Center the value around 0
+  byte lsb = inPitchCentered & 0x7F;
+  byte msb = (inPitchCentered >> 7) & 0x7F;
+  handle_generic(inChannel, lsb, msb, MIDI_BY_USB_HOST, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPrg)

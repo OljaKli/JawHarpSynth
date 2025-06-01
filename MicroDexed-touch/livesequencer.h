@@ -65,8 +65,8 @@ public:
     uint8_t track;
     uint8_t layer;
     midi::MidiType event;
-    uint8_t note_in;
-    uint8_t note_in_velocity;
+    uint8_t note_in;          // For CC: controller number, for Pitch Bend: LSB
+    uint8_t note_in_velocity; // For CC: value, for Pitch Bend: MSB
   };
 
   struct Track {
