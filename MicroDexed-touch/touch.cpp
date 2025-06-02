@@ -549,7 +549,7 @@ FLASHMEM void handle_touchscreen_microsynth()
   }
 }
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 extern fm_t fm;
 extern void _print_file_and_folder_copy_info(uint8_t selected_file);
 #endif
@@ -574,7 +574,7 @@ FLASHMEM void print_file_manager_buttons()
     }
 #endif
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     if (fm.SD_CARD_READER_EXT && fm.active_window == 0)
     {
       TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "EXTERN", (fm.sd_mode == FM_COPY_TO_EXTERNAL) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
@@ -609,7 +609,7 @@ FLASHMEM void print_file_manager_buttons()
   menuhelper_previous_val = fm.sd_mode;
 
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
   TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
   _print_file_and_folder_copy_info(fm.sd_selected_file);
 #endif
@@ -640,7 +640,7 @@ FLASHMEM void print_file_manager_active_border()
 extern void  show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 #endif
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 extern void sd_printDirectory(bool forceReload);
 extern void sd_go_parent_folder();
 extern void   _print_filemanager_header();
@@ -651,7 +651,7 @@ extern void load_sd_directory();
 #endif
 extern void  reset_file_manager_folder();
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 FLASHMEM void print_destination_card_info()
 {
   if (fm.SD_CARD_READER_EXT)
@@ -733,7 +733,7 @@ FLASHMEM void handle_touchscreen_file_manager()
   if (TouchButton::isInArea(0, 0, DISPLAY_WIDTH / 2, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
     fm.active_window = 0;
     print_file_manager_active_border();
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     fm.sd_mode = FM_BROWSE_FILES;
     filemanager_toggle_window_2sdcards();
 #endif
@@ -742,7 +742,7 @@ FLASHMEM void handle_touchscreen_file_manager()
   else if (TouchButton::isInArea(DISPLAY_WIDTH / 2, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT - TouchButton::BUTTON_SIZE_Y)) {
     fm.active_window = 1;
     print_file_manager_active_border();
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     fm.sd_mode = FM_BROWSE_FILES;
     filemanager_toggle_window_2sdcards();
 #endif
@@ -757,7 +757,7 @@ FLASHMEM void handle_touchscreen_file_manager()
     print_file_manager_buttons();
   }
 
-#ifdef MUSIKANDMORE  //toggle SD Card2/PSRAM
+#ifdef  SECOND_SD  //toggle SD Card2/PSRAM
   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
     fm.SD_CARD_READER_EXT = !fm.SD_CARD_READER_EXT;
 
@@ -773,7 +773,7 @@ FLASHMEM void handle_touchscreen_file_manager()
       fm.sd_mode = FM_COPY_TO_PSRAM;
       print_file_manager_buttons();
     }
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     else {
       //fm.active_window =!fm.active_window;
 

@@ -6852,7 +6852,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     display.print(F("CHRD/ARP VELOCITY"));
     display.setTextColor(COLOR_SYSTEXT);
     setCursor_textGrid_small(1, 7);
-    display.print(F("OCT. FOR LIVE TRANSP."));
+    display.print(F("LIVE TRANSPOSE KEYRANGE"));
     setCursor_textGrid_small(27, 7);
     display.print("-");
 
@@ -6977,10 +6977,10 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     setCursor_textGrid_small(23, 7);
     if (seq.transpose != 0)
     {
-      getNoteName(displayname, seq.transpose);
-      display.print(displayname);
+      //getNoteName(displayname, 12);
+      display.print("C-0");
       setCursor_textGrid_small(29, 7);
-      getNoteName(displayname, seq.transpose + 12);
+      getNoteName(displayname, seq.transpose);
       display.print(displayname);
     }
     else
@@ -15739,7 +15739,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
   }
 }
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 extern void  fill_up_with_spaces_right_window();
 
 FLASHMEM void _print_file_and_folder_copy_info(uint8_t f)
@@ -15791,7 +15791,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
   }
 
   uint8_t xoffset = 0;
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
   if (fm.SD_CARD_READER_EXT && fm.active_window == 1)
   {
     xoffset = 27;
@@ -16689,7 +16689,7 @@ FLASHMEM void reset_file_manager_folder()
   fm.sd_is_folder = false;
 }
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 FLASHMEM void  _print_filemanager_sd_extern_header()
 {
   display.setTextSize(1);
@@ -16703,7 +16703,7 @@ FLASHMEM void  _print_filemanager_sd_extern_header()
 }
 #endif
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 extern SDClass SD_EXTERNAL;
 
 FLASHMEM void file_manager_clear_text_line()
@@ -16918,7 +16918,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
   static constexpr char MIDI_DIR[] = "MIDI";
   static constexpr char BRAIDS[] = "BRAIDS";
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
   static constexpr char DRUMS[] = "DRUMS";
 #endif
 
@@ -16943,7 +16943,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         SD.mkdir(BRAIDS);
       }
     }
-#ifdef MUSIKANDMORE
+#ifdef SECOND_SD
     if (!SD_EXTERNAL.exists(CUSTOM_DIR)) {
       SD_EXTERNAL.mkdir(CUSTOM_DIR);
     }
@@ -16983,7 +16983,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     }
 #endif
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     if (fm.SD_CARD_READER_EXT) {
       _print_filemanager_sd_extern_header();
       fm.active_window = 1;
@@ -17051,7 +17051,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         if (fm.SD_CARD_READER_EXT == false)
           TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
         if (fm.SD_CARD_READER_EXT && fm.active_window == 0 && fm.sd_mode == FM_COPY_TO_EXTERNAL)
           file_manager_copy_int_to_ext_folder();
         else if (fm.SD_CARD_READER_EXT && fm.active_window == 1 && fm.sd_mode == FM_COPY_TO_INTERNAL)
@@ -17122,7 +17122,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
           break;
 #endif
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
         case FM_COPY_TO_EXTERNAL:
           file_manager_copy_int_to_ext_file();
           break;
@@ -17156,7 +17156,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
       print_formatted_number(fm.sd_sum_files, 4);
       show_smallfont_noGrid(3 * CHAR_height_small, CHAR_width_small * 7, 19, fm.sd_new_name.c_str());
     }
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     if (fm.SD_CARD_READER_EXT)
     {
       fm.sd_new_name[0] = 0x2f;
@@ -17172,7 +17172,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     }
 #endif
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
     _print_file_and_folder_copy_info(fm.sd_selected_file);
 #endif
 

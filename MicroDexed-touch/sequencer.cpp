@@ -602,6 +602,12 @@ void sequencer_part1(void)
         seq.current_pattern[d] = seq.chain[seq.current_chain[d]][seq.chain_counter[d]];
       }
     }
+
+if (seq.step==0)
+{
+  seq.input_base_note_quantized=seq.input_base_note;
+}
+
     if (seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]] < NUM_CHAINS)
       tr[d] = seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]];
     else if (seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]] < NUM_CHAINS * 2)
@@ -673,7 +679,13 @@ void sequencer_part1(void)
               else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
               {
                 if (check_probability(seq.current_pattern[d]))
+                {
+                  if (seq.transpose==0)
                   handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+             else
+               handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d]+seq.input_base_note_quantized, check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+           
+                }
               }
               else if (seq.instrument[d] == 2) // track is assigned to epiano
               {
@@ -712,7 +724,14 @@ void sequencer_part1(void)
                 if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
                 {
                   if (check_probability(seq.current_pattern[d]))
+{
+  if (seq.transpose==0)
                     handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+else
+           handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d]  +seq.input_base_note_quantized+ (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+
+}
+
                 }
                 else if (seq.instrument[d] == 2) // track is assigned to epiano
                 {
@@ -749,6 +768,7 @@ void sequencer_part1(void)
                     handleNoteOn(seq.instrument[d] - 47, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 3);
                 }
               }
+
               seq.prev_note[d] = seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12);
               seq.prev_vel[d] = seq.vel[seq.current_pattern[d]][seq.step];
             }
@@ -800,7 +820,13 @@ void sequencer_part2(void)
         if (seq.note_data[seq.current_pattern[d]][seq.step] != 130)
         {
           if ((seq.instrument[d] < 2 && seq.ticks == seq.ticks_max) || (seq.instrument[d] == 70 && seq.ticks == seq.ticks_max) || (seq.instrument[d] == 71 && seq.ticks == seq.ticks_max)) // dexed
+          {
+            if (seq.transpose==0)
             handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d], 0, 0);
+else
+ handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d] +seq.input_base_note_quantized, 0, 0);
+          }
+             
           else if (seq.instrument[d] == 2 && seq.ticks == seq.ticks_max) // epiano
             handleNoteOff(configuration.epiano.midi_channel, seq.prev_note[d], 0, 0);
           else if (seq.instrument[d] > 2 && seq.instrument[d] < 5)
@@ -896,6 +922,9 @@ void sequencer_part2(void)
 }
 
 extern void send_midi_clock();
+// #ifdef MUSIKANDMORE
+// extern void setled(uint8_t pin, bool state);
+// #endif
 
 void sequencer(void)
 {
@@ -916,6 +945,11 @@ void sequencer(void)
     {
       sequencer_part1();
       seq.step++;
+
+#ifdef MUSIKANDMORE
+  digitalWrite(CV_CLOCK_OUT,HIGH);
+  //setled(LED_DOWN, true);
+#endif
     }
 
     if (seq.ticks == 0 || (seq.ticks == 0 && seq.step % 2 == 0) ||
@@ -933,7 +967,14 @@ void sequencer(void)
     }
 
     if (seq.ticks == seq.ticks_max)
+    {
       sequencer_part2();
+
+   #ifdef MUSIKANDMORE
+  digitalWrite(CV_CLOCK_OUT,LOW);
+  //setled(LED_DOWN, false);
+#endif
+    }
 
     seq.ticks++;
     if (seq.ticks > seq.ticks_max)

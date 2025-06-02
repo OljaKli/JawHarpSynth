@@ -118,6 +118,8 @@ typedef struct sequencer_s
     uint8_t note_in;
     uint8_t note_in_velocity;
     int transpose = 0;
+    uint8_t input_base_note=0;
+    uint8_t input_base_note_quantized=0;
     uint8_t chord_vel = 60;
     uint8_t chord_key_ammount = 4;
     uint8_t element_shift = 0;

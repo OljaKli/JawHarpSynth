@@ -4584,7 +4584,7 @@ FLASHMEM int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
   }
 }
 
-#ifdef  MUSIKANDMORE
+#ifdef  SECOND_SD
 extern SDClass SD_EXTERNAL;
 #endif
 
@@ -4596,7 +4596,7 @@ FLASHMEM void load_sd_directory()
 
   if (fm.SD_CARD_READER_EXT == false || fm.active_window == 0)
     sd_root = SD.open(fm.sd_new_name.c_str());
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
   else
     if (fm.SD_CARD_READER_EXT)
       sd_root = SD_EXTERNAL.open(fm.sd_new_name.c_str());

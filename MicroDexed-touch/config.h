@@ -411,9 +411,14 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define MCP_INTA 8
 #define ANALOG_VOLUME_IN 15
 #define CV_CLOCK_IN 22
+#define CV_CLOCK_OUT 39
 #define TRS_PEDAL_IN 23
-#define GEN3_CS_SDCARD_EXTERNAL 35
 #endif 
+
+#if defined(MUSIKANDMORE) || defined(SECOND_SD)
+#define GEN3_CS_SDCARD_EXTERNAL 35
+#endif
+
 
 #define CONTROL_RATE_MS 50
 #define MICROSYNTH_CONTROL_RATE_MS 30
