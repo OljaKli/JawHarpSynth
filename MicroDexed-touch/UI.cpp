@@ -6347,8 +6347,16 @@ FLASHMEM void addSampleParameterEditor(const char* name, int16_t limit_min, int1
       // the parameter may be from either sample, which may be
       // switched at any time. So recompute the value pointer in respect of to activesample !
       if (isCustomSample(activeSample)) {
-        int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)&customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES]);
-        *ptr = value;
+        const CustomSample *s = &customSamples[activeSample - NUM_STATIC_PITCHED_SAMPLES];
+        int16_t* ptr = (int16_t*)((char*)editor->value - (char*)&customSamples[0] + (char*)s);
+
+        // limit to start point must be smaller than end point 
+        if (ptr == &s->start) { // start point
+          *ptr = std::min(value, int16_t(s->end - 1));
+        }
+        else { // end point
+          *ptr = std::max(value, int16_t(s->start + 1));
+        }
         sampleStartEndRenderer(editor, true);
         drawDrumsSampleWave(false); // partial redraw
       }
