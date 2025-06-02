@@ -953,6 +953,7 @@ int16_t* ep_delayline_r;
 int16_t* ep_delayline_l;
 
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
+extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 uint8_t drum_counter;
 uint8_t drum_midi_channel = DEFAULT_DRUM_MIDI_CHANNEL;
 uint8_t slices_midi_channel = drum_midi_channel + 1;
@@ -1531,7 +1532,7 @@ FLASHMEM void setup()
   // Start timer (to avoid a crash when loading the performance data)
   sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), false);
 #if !defined APC
-  MIDI_input_timer.begin(check_midi_devices, 5000, true);  //crashes when using APC with timer interrupt (USB Host MIDI out+in at the same time?)
+  //MIDI_input_timer.begin(check_midi_devices, 5000, true);  //crashes when using APC with timer interrupt (USB Host MIDI out+in at the same time?)
 #endif
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
@@ -1690,7 +1691,7 @@ FLASHMEM void setup()
   display.print(NUM_DRUMSET_CONFIG);
 
   display.setTextSize(1);
-  for (int i = 0; i < 6; i++) {  // load pitched samples
+  for (int i = 0; i < NUM_STATIC_PITCHED_SAMPLES; i++) {  // load pitched samples
     char temp_name[36];
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
@@ -1700,7 +1701,7 @@ FLASHMEM void setup()
   }
 
   // load drums
-  for (int i = 6 + NUM_CUSTOM_SAMPLES; i < NUM_DRUMSET_CONFIG; i++) {
+  for (int i = NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES; i < NUM_DRUMSET_CONFIG; i++) {
     char temp_name[36];
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
@@ -1787,13 +1788,25 @@ FLASHMEM void load_custom_samples_to_psram()
 {
   // load CUSTOM samples
   for (int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
-    sampleLoader.loadSampleToDrums(drum_config[i].filename, drum_config[i]);
-    if (drum_config[i].len == 0 || drum_config[i].len > 10000000)
-    {
+    String fullpath = customSamples[i - NUM_STATIC_PITCHED_SAMPLES].filepath;
+    fullpath += "/";
+    fullpath += drum_config[i].filename;
+    sampleLoader.loadSampleToDrums(fullpath, drum_config[i]);
+    if (drum_config[i].len == 0 || drum_config[i].len > 10000000) {
       char temp_name[36];
-      snprintf_P(temp_name, 12, PSTR("CUSTOM%02d"), i - NUM_STATIC_PITCHED_SAMPLES + 1);
+      sprintf(temp_name, "CUSTOM%02d", i - NUM_STATIC_PITCHED_SAMPLES + 1);
       strcpy(drum_config[i].filename, temp_name);
       strcpy(drum_config[i].name, temp_name);
+    }
+  }
+}
+
+FLASHMEM void unload_all_custom_samples() {
+  for (int i = NUM_STATIC_PITCHED_SAMPLES; i < (NUM_STATIC_PITCHED_SAMPLES + NUM_CUSTOM_SAMPLES); i++) {
+    if (drum_config[i].drum_data != nullptr && drum_config[i].len > 0) {
+      sampleLoader.unloadSample(drum_config[i].drum_data, drum_config[i].len * 2);
+      drum_config[i].drum_data = nullptr;
+      drum_config[i].len = 0;
     }
   }
 }
@@ -2170,8 +2183,6 @@ FLASHMEM void set_glow_bargraph(uint8_t x, uint8_t y, int input, int menuitem, i
   }
 }
 
-extern void _print_panbar_value(uint8_t input_value);
-
 FLASHMEM void draw_glow()
 {
   display.setTextSize(1);
@@ -2189,13 +2200,15 @@ FLASHMEM void draw_glow()
       display.print(glow_zero_name);
     else if (glow_limit_min < 0)
       print_formatted_number_signed(glow_input_value, 2);
-    else if (glow_limit_max <= 99)
-    {
+    else if (glow_limit_max < 100) {
       setCursor_textGrid_small(glow_x + 1, glow_y);
       print_formatted_number(glow_input_value, 2);
-    }
-    else
+    } else if (glow_limit_max < 1000) {
       print_formatted_number(glow_input_value, 3);
+    }
+    else {
+      print_formatted_number(glow_input_value, 4);
+    }
   }
   else if (glow_type == 1)  //panbar
   {
@@ -2454,7 +2467,7 @@ void loop()
     }
   }
 
-#if defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
+#if 1//defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
   // MIDI input handling
   check_midi_devices();
 #endif
@@ -2906,8 +2919,8 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
         drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
 
-        global_delay_in_mixer[0]->gain(slot + 10, drum_config[msz[instance][y].psram_entry_number].delay1 / 5); //previously 8
-        global_delay_in_mixer[1]->gain(slot + 10, drum_config[msz[instance][y].psram_entry_number].delay2 / 5); //previously 8
+        global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(msz[instance][y].psram_entry_number) / 5); //previously 8
+        global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5); //previously 8
 
         msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
 
@@ -3113,13 +3126,13 @@ FLASHMEM void learn_cc(byte inChannel, byte inNumber)
 }
 
 void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device) {
+  // play note
+  handleNoteOn(inChannel, inNumber, inVelocity, device);
   //drum played from input selects current drum note if drum screen open
   if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI) {
     const uint8_t sampleNote = midiNoteToSampleNote(inNumber);
     selectSample(sampleNote);
   }
-  // play note
-  handleNoteOn(inChannel, inNumber, inVelocity, device);
 }
 
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
@@ -3335,46 +3348,37 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             }
             else if (drum_config[d].filter_mode == 1)
             {
-              Drum_filter[slot]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
             else if (drum_config[d].filter_mode == 2)
             {
-              Drum_filter[slot]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
             else if (drum_config[d].filter_mode == 3)
             {
-              Drum_filter[slot]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[d].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
 #endif
-            global_delay_in_mixer[0]->gain(slot + 10, drum_config[d].delay1 / 5); //previously 8
-            global_delay_in_mixer[1]->gain(slot + 10, drum_config[d].delay2 / 5); //previously 8
+            global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5); //previously 8
+            global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5); //previously 8
 
-            float pan = mapfloat(drum_config[d].pan, -1.0, 1.0, 0.0, 1.0);
-            if (drum_config[d].numChannels == 1) //mono
-            {
-              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-            }
-            else //stereo
-            {
-              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[d].vol_max)));
-            }
+            float pan = mapfloat(drum_config[d].pan, -99, 99, 0.0, 1.0);
 
-            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[d].reverb_send));
-            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[d].reverb_send));
+            drum_mixer_r.gain(slot, (1.0F - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
+            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
 
-
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(d)));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(d)));
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
             if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
               if ((d >= 0 && d < NUM_DRUMSET_CONFIG - 1) || (d >= 210 && d < 216)) {
 #endif
                 Drum[slot]->enableInterpolation(true);
-                Drum[slot]->setPlaybackRate(drum_config[d].pitch);
+                Drum[slot]->setPlaybackRate(get_sample_pitch(d));
                 Drum[slot]->setLoopType(loop_type::looptype_none);
 
 #if defined(DRUMS_FILTERS) 
@@ -3384,14 +3388,30 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                if (seq.hihat_randomizer != 0 && drum_config[d].drum_class == DRUM_HIHAT)
-                {
-                  int randomizer = random(seq.hihat_randomizer * 50);
-                  if (drum_config[d].len - randomizer > 1000)
-                    Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data + randomizer, drum_config[d].len - randomizer, drum_config[d].numChannels);
+                int16_t *start = (int16_t*)drum_config[d].drum_data;
+                uint32_t length = drum_config[d].len;
+                const uint32_t channelMask = ~(drum_config[d].numChannels - 1); // round down to numChannels
+                
+                if (isCustomSample(d)) {
+                  // calculate start and end points
+                  const CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
+                  const float mult = length / float(1000);
+                  const uint32_t offStart = uint32_t(s.start * mult) & channelMask;
+                  start += offStart;
+                  const uint32_t offEnd = length - (uint32_t(s.end * mult) & channelMask);
+                  length -= (offStart + offEnd);
                 }
-                else
-                  Drum[slot]->playRaw((int16_t*)drum_config[d].drum_data, drum_config[d].len, drum_config[d].numChannels);
+                
+                const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
+                if (hihatRand) {
+                  const uint32_t offStart = random(seq.hihat_randomizer * 50) & channelMask;
+                  if (drum_config[d].len - offStart > 1000) {
+                    start += offStart;
+                    length -= offStart;
+                  }
+                }
+
+                Drum[slot]->playRaw(start, length, drum_config[d].numChannels);
 #endif
 
 #ifdef COMPILE_FOR_SDCARD
@@ -3469,38 +3489,38 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             }
             else if (drum_config[selected_slice_sample[s]].filter_mode == 1)
             {
-              Drum_filter[slot]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
             }
             else if (drum_config[selected_slice_sample[s]].filter_mode == 2)
             {
-              Drum_filter[slot]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
             }
             else if (drum_config[selected_slice_sample[s]].filter_mode == 3)
             {
-              Drum_filter[slot]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, drum_config[selected_slice_sample[s]].filter_freq * 14000, 0.5);
+              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(selected_slice_sample[s]) * 14000, 0.5);
             }
 #endif
 
-            global_delay_in_mixer[0]->gain(slot + 10, drum_config[selected_slice_sample[s]].delay1 / 5); //previously 8
-            global_delay_in_mixer[1]->gain(slot + 10, drum_config[selected_slice_sample[s]].delay2 / 5); //previously 8
+            global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(selected_slice_sample[s]) / 5); //previously 8
+            global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(selected_slice_sample[s]) / 5); //previously 8
 
-            float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -1.0, 1.0, 0.0, 1.0);
+            float pan = mapfloat(drum_config[selected_slice_sample[s]].pan, -99, 99, 0.0, 1.0);
             if (drum_config[selected_slice_sample[s]].numChannels == 1) //mono
             {
-              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+              drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
+              drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
             }
             else //stereo
             {
-              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
-              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, drum_config[selected_slice_sample[s]].vol_max)));
+              drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
+              drum_mixer_l.gain(slot, 1 * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(selected_slice_sample[s]))));
             }
 
-            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
-            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(drum_config[selected_slice_sample[s]].reverb_send));
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(selected_slice_sample[s])));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(selected_slice_sample[s])));
 
             // if (sidechain_active && d == sidechain_sample_number)
             //   sidechain_trigger = true;
@@ -3555,7 +3575,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
   }
 }
 
-void printLoadedSample(const uint8_t i, const char* name) {
+FLASHMEM void printLoadedSample(const uint8_t i, const char* name) {
   display.setTextSize(2);
   display.setCursor(18 * CHAR_width, CHAR_height * 1);
   display.print(i);
@@ -3565,7 +3585,7 @@ void printLoadedSample(const uint8_t i, const char* name) {
   display.print(F("       "));
 }
 
-void stop_all_drum_slots()
+FLASHMEM void stop_all_drum_slots()
 {
   for (uint8_t i = 0; i < NUM_DRUMS; i++)
   {
@@ -3769,7 +3789,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
   }
 }
 
-void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
+FLASHMEM void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
   if (delay_no == 0)
   {
@@ -4606,7 +4626,7 @@ FLASHMEM void dac_unmute(void)
   seq.DAC_mute_state = false;
 }
 
-void handleStart(void)
+FLASHMEM void handleStart(void)
 {
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
@@ -4668,12 +4688,12 @@ void handleStart(void)
 
 }
 
-void handleContinue(void)
+FLASHMEM void handleContinue(void)
 {
   ;
 }
 
-void handleStop(void)
+FLASHMEM void handleStop(void)
 {
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
@@ -4760,7 +4780,7 @@ void handleActiveSensing(void)
   ;
 }
 
-void handleSystemReset(void)
+FLASHMEM void handleSystemReset(void)
 {
   for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
   {
@@ -5209,27 +5229,27 @@ FLASHMEM void set_sample_pitch(uint8_t sample, float playbackspeed)
   if (playbackspeed == 0.0) {
     playbackspeed = 1.0;
   }
-  drum_config[sample].pitch = playbackspeed;
+  drum_config[sample].pitch = static_cast<uint8_t>(playbackspeed * 100.0F);
 }
 
 FLASHMEM void set_sample_p_offset(uint8_t sample, float s_offset)
 {
-  drum_config[sample].p_offset = s_offset;
+  drum_config[sample].p_offset = static_cast<uint8_t>(s_offset * 100.0F);
 }
 
 FLASHMEM void set_sample_pan(uint8_t sample, float s_pan)
 {
-  drum_config[sample].pan = s_pan;
+  drum_config[sample].pan = static_cast<int8_t>(s_pan * 100.0F);
 }
 
 FLASHMEM void set_sample_vol_max(uint8_t sample, float s_max)
 {
-  drum_config[sample].vol_max = s_max;
+  drum_config[sample].vol_max = static_cast<int8_t>(s_max * 100.0F);
 }
 
 FLASHMEM void set_sample_reverb_send(uint8_t sample, float s_reverb)
 {
-  drum_config[sample].reverb_send = s_reverb;
+  drum_config[sample].reverb_send = static_cast<uint8_t>(s_reverb * 100.0F);
 }
 
 FLASHMEM void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
@@ -5239,23 +5259,21 @@ FLASHMEM void set_sample_filter_mode(uint8_t sample, uint8_t s_filter_mode)
 
 FLASHMEM void set_sample_filter_freq(uint8_t sample, float s_freq)
 {
-  if (s_freq > 0.999)
-    s_freq = 0.999;
-  drum_config[sample].filter_freq = s_freq;
+  drum_config[sample].filter_freq = static_cast<uint8_t>(s_freq * 100.0F);
 }
 
 FLASHMEM void set_sample_filter_q(uint8_t sample, float s_q)
 {
-  drum_config[sample].filter_q = s_q;
+  drum_config[sample].filter_q = static_cast<uint8_t>(s_q * 100.0F);
 }
 
 FLASHMEM void set_sample_delay1(uint8_t sample, float s_d1)
 {
-  drum_config[sample].delay1 = s_d1;
+  drum_config[sample].delay1 = static_cast<uint8_t>(s_d1 * 100.0F);
 }
 FLASHMEM void set_sample_delay2(uint8_t sample, float s_d2)
 {
-  drum_config[sample].delay2 = s_d2;
+  drum_config[sample].delay2 = static_cast<uint8_t>(s_d2 * 100.0F);
 }
 
 FLASHMEM void set_sample_env_attack(uint8_t sample, uint8_t value)
@@ -5287,23 +5305,23 @@ FLASHMEM uint8_t get_sample_note(uint8_t sample)
 }
 FLASHMEM float get_sample_pitch(uint8_t sample)
 {
-  return (drum_config[sample].pitch);
+  return (drum_config[sample].pitch / 100.0F);
 }
 FLASHMEM float get_sample_p_offset(uint8_t sample)
 {
-  return (drum_config[sample].p_offset);
+  return (drum_config[sample].p_offset / 100.0F);
 }
 FLASHMEM float get_sample_pan(uint8_t sample)
 {
-  return (drum_config[sample].pan);
+  return (drum_config[sample].pan / 100.0F);
 }
 FLASHMEM float get_sample_vol_max(uint8_t sample)
 {
-  return (drum_config[sample].vol_max);
+  return (drum_config[sample].vol_max / 100.0F);
 }
 FLASHMEM float get_sample_reverb_send(uint8_t sample)
 {
-  return (drum_config[sample].reverb_send);
+  return (drum_config[sample].reverb_send / 100.0F);
 }
 FLASHMEM uint8_t get_sample_filter_mode(uint8_t sample)
 {
@@ -5311,21 +5329,20 @@ FLASHMEM uint8_t get_sample_filter_mode(uint8_t sample)
 }
 FLASHMEM float get_sample_filter_freq(uint8_t sample)
 {
-  return (drum_config[sample].filter_freq);
+  return (drum_config[sample].filter_freq / 100.0F);
 }
 FLASHMEM float get_sample_filter_q(uint8_t sample)
 {
-  return (drum_config[sample].filter_q);
+  return (drum_config[sample].filter_q / 100.0F);
 }
 FLASHMEM float get_sample_delay1(uint8_t sample)
 {
-  return (drum_config[sample].delay1);
+  return (drum_config[sample].delay1 / 100.0F);
 }
 FLASHMEM float get_sample_delay2(uint8_t sample)
 {
-  return (drum_config[sample].delay2);
+  return (drum_config[sample].delay2 / 100.0F);
 }
-
 FLASHMEM uint8_t get_sample_env_attack(uint8_t sample)
 {
   return (drum_config[sample].env_attack);
