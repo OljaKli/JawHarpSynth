@@ -6579,6 +6579,15 @@ FLASHMEM void pattern_editor_play_current_step(uint8_t step)
   }
 }
 
+
+ FLASHMEM void set_seq_timing()
+ {
+  if (seq.clock == 0) // INTERNAL TIMING
+      seq.ticks_max = 7; //(0-7 = 8)
+    else // MIDI SLAVE or MIDI MASTER
+      seq.ticks_max = 5; //(0-5 = 6)
+ }
+
 FLASHMEM void UI_func_seq_settings(uint8_t param)
 {
   char displayname[4] = { 0, 0, 0, 0 };
@@ -6790,11 +6799,8 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
     else if (seq.clock == 2)
       display.print(F("MIDI MASTER (SEND CLOCK)  "));
 
-    if (seq.clock == 0) // INTERNAL TIMING
-      seq.ticks_max = 7; //(0-7 = 8)
-    else // MIDI SLAVE or MIDI MASTER
-      seq.ticks_max = 5; //(0-5 = 6)
-
+    set_seq_timing();
+    
     //warning message
     if (seq.clock == 0) {
       display.setTextSize(1);

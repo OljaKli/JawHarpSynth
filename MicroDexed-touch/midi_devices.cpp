@@ -35,7 +35,7 @@ struct MicroDexedSettings : public midi::DefaultSettings
   static const unsigned SysExMaxSize = 4104; // Accept SysEx messages up to 1024 bytes long.
   static const bool Use1ByteParsing = false;  //seems to improve rapid MIDI input from ARPs etc.
 };
-    
+
 #ifdef MIDI_DEVICE_DIN
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroDexedSettings);
 #endif
@@ -43,7 +43,7 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroD
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #define COUNT_JOYSTICKS 1
-JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
+JoystickController joysticks[COUNT_JOYSTICKS]{ usb_host };
 #endif
 
 #ifdef USB_KEYPAD
@@ -121,7 +121,7 @@ void midiSendRealtime(midi::MidiType event) {
 }
 
 void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
-  switch(device) {
+  switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
     midi_usb.sendNoteOn(note, velocity, channel);
@@ -141,7 +141,7 @@ void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device)
 }
 
 void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
-  switch(device) {
+  switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
     midi_usb.sendNoteOff(note, velocity, channel);
@@ -161,6 +161,13 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
 }
 
 #if defined APC
+
+#if (APC != 1) //LUC regular apc mini mk2
+#define APC_MINI_BUTTON_SHIFT 122
+#else
+#define APC_MINI_BUTTON_SHIFT 98
+#endif
+
 extern uint8_t apc_out_channel;
 bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
@@ -171,9 +178,16 @@ extern uint8_t APC_MODE;
 extern void print_apc_source_selection_pads();
 extern void apc_fader_control(uint8_t in1, uint8_t in2);
 
+extern void start_MIDI_input_timer();
+extern void stop_MIDI_input_timer();
+
 void apc(uint8_t a, uint8_t b, uint8_t c)
 {
+#if (APC != 1) //LUC regular apc mini mk2
   midi_usb.sendNoteOn(a, b, c);
+#else
+  midi_usb.sendNoteOn(a, b, c /*0*/); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+#endif
 }
 
 #endif
@@ -197,7 +211,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 
     if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
     {
-      if (inData1 == 122) //shift key
+      if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
         apc_shift_key = true;
       if (APC_MODE == APC_PATTERN_EDITOR)
       {
@@ -214,12 +228,12 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
         {
           apc_NoteOn(inChannel, inData1, inData2);
         }
-         else
-        if (APC_MODE == APC_SONG)
-        {
-          apc_NoteOn(inChannel, inData1, inData2);
-         
-        }
+        else
+          if (APC_MODE == APC_SONG)
+          {
+            apc_NoteOn(inChannel, inData1, inData2);
+
+          }
     }
 #endif
 
@@ -237,8 +251,8 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     seq.note_in_velocity = inData2;
 
 #if defined APC
- if (inData1 == 122) //shift key
-        apc_shift_key = false;
+    if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
+      apc_shift_key = false;
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
       if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
@@ -733,7 +747,7 @@ void handleAfterTouchPoly_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byt
 
 void handleSystemExclusive_MIDI_DEVICE_DIN(byte* data, uint len)
 {
- handleSystemExclusive_generic(data, len, MIDI_BY_DIN);
+  handleSystemExclusive_generic(data, len, MIDI_BY_DIN);
 }
 
 /* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
@@ -1276,25 +1290,26 @@ FLASHMEM void setup_midi_devices(void)
 }
 
 #ifdef MIDI_ACTIVITY_LIGHTS
- extern void midi_activity_leds();
- #endif
+extern void midi_activity_leds();
+#endif
 
 void check_midi_devices(void)
 {
 #ifdef MIDI_DEVICE_DIN
-  midi_serial.read();
+    midi_serial.read();
 #endif
-#ifdef MIDI_DEVICE_USB
-  usbMIDI.read();
-#endif
+     #ifdef MIDI_DEVICE_USB
+       usbMIDI.read();
+     #endif
+
 #ifdef MIDI_DEVICE_USB_HOST
-  usb_host.Task();
-  midi_usb.read();
+    usb_host.Task();
+    midi_usb.read();
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
-  midi_activity_leds();
- #endif
+    midi_activity_leds();
+#endif
 }
 
 FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)
