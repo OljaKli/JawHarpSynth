@@ -30,7 +30,7 @@
 #include <MIDI.h>
 #include <SD.h>
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 SDClass SD_EXTERNAL;
 #endif
 
@@ -119,7 +119,7 @@ int braids_flanger_depth = BRAIDS_FLANGE_DELAY_LENGTH / 4;
 const float braids_flanger_freq = 0.5F;
 
 uint8_t check_internal_sd_card(void);
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 void  check_external_sd_card(void);
 #endif
 void check_and_create_directories(void);
@@ -889,7 +889,7 @@ uint8_t sd_card_internal = 0;
 Sd2Card card_internal;
 SdVolume volume_internal;
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 uint8_t sd_card_external = 0;
 Sd2Card card_external;
 SdVolume volume_external;
@@ -1135,7 +1135,7 @@ FLASHMEM void setup()
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
   pinMode(ANALOG_VOLUME_IN, INPUT_PULLUP);
-  // pinMode(ANALOG_VOLUME_IN, INPUT_PULLDOWN);   
+  pinMode(CV_CLOCK_OUT, OUTPUT);   
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
   pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
@@ -1493,7 +1493,7 @@ FLASHMEM void setup()
   // Start SD card
   sd_card_internal = check_internal_sd_card();
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
   check_external_sd_card();
 #endif
 
@@ -5713,7 +5713,7 @@ FLASHMEM uint8_t check_internal_sd_card(void)
   return ret;
 }
 
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
 FLASHMEM  void check_external_sd_card(void)
 {
   SD_EXTERNAL.sdfs.begin(GEN3_CS_SDCARD_EXTERNAL);
