@@ -160,6 +160,46 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
   }
 }
 
+void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
+  switch (device) {
+#ifdef MIDI_DEVICE_USB_HOST
+  case 1:
+    midi_usb.sendPitchBend(pitch, channel);
+    break;
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  case 2:
+    midi_serial.sendPitchBend(pitch, channel);
+    break;
+#endif
+
+  case 3:
+    usbMIDI.sendPitchBend(pitch, channel);
+    break;
+  }
+}
+
+void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device) {
+  switch (device) {
+#ifdef MIDI_DEVICE_USB_HOST
+  case 1:
+    midi_usb.sendControlChange(control, value, channel);
+    break;
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  case 2:
+    midi_serial.sendControlChange(control, value, channel);
+    break;
+#endif
+
+  case 3:
+    usbMIDI.sendControlChange(control, value, channel);
+    break;
+  }
+}
+
 #if defined APC
 
 #if (APC != 1) //LUC regular apc mini mk2
@@ -388,7 +428,7 @@ seq.note_in = inData1;
         midi_serial.sendAfterTouch(inData1, inChannel);
         break;
       case midi::PitchBend:
-        midi_serial.sendPitchBend(inData1, inChannel);
+        midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel); // Combine LSB and MSB as per MIDI spec. Center the value around 0
         break;
       case midi::ProgramChange:
         midi_serial.sendProgramChange(inData1, inChannel);

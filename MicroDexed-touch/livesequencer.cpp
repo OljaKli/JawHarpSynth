@@ -23,6 +23,8 @@ extern void handleNoteOff(byte, byte, byte, byte);
 extern void handleAfterTouch(byte, byte);
 extern void handleControlChange(byte, byte, byte);
 extern void handlePitchBend(byte, int16_t);
+extern void midiPitchBend(int pitch, uint8_t channel, uint8_t device);
+extern void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device);
 extern void handleStart();
 extern void handleStop();
 
@@ -538,10 +540,16 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
 
     switch (playIterator->event) {
     case midi::PitchBend:
+      //this would handle pb in dexed instances
       handlePitchBend(channel, (playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192); // Combine LSB and MSB
+      // this would handle pb in hw midi
+      midiPitchBend((playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192, channel, device); // Combine LSB and MSB
       break;
     case midi::ControlChange:
+      //mdt default cc handling
       handleControlChange(channel, playIterator->note_in, playIterator->note_in_velocity); // note is controller number, velocity is value
+      // hw midi handling
+      midiControlChange(playIterator->note_in, playIterator->note_in_velocity, channel, device); // note is controller number, velocity is value
       switch (playIterator->note_in_velocity) {
       case AutomationType::TYPE_MUTE_ON:
       case AutomationType::TYPE_MUTE_OFF:
