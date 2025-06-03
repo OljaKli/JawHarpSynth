@@ -2700,7 +2700,7 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
           }
           if (data_json[i].containsKey("start")) {
             customSamples[i].start = data_json[i]["start"];
-            customSamples[i].end  = data_json[i]["end"];
+            customSamples[i].end = data_json[i]["end"];
             customSamples[i].loopType = data_json[i]["loop"];
           }
           else {
@@ -2708,7 +2708,12 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
             customSamples[i].end = 1000;   // 100%
             customSamples[i].loopType = 0; // loop_type::looptype_none
           }
-          drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = data_json[i]["class"];
+          
+          uint8_t drumClass = data_json[i]["class"];
+          if(drumClass == 0) {
+            drumClass = DRUM_POLY;
+          }
+          drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = drumClass;
         }
         load_custom_samples_to_psram();
 
