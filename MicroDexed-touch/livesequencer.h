@@ -240,6 +240,7 @@ private:
   void allTrackNotesOff(const uint8_t track);
   void allLayerNotesOff(const uint8_t track, const uint8_t layer);
   void allNotesOff(void);
+  void resetControllers();
   void playNextEvent(void);
   void playNextArpNote(void);
   void playArp(const midi::MidiType type, const ArpNote arp);

@@ -67,6 +67,8 @@ FLASHMEM const std::string LiveSequencer::getEventName(midi::MidiType event) {
     return "NoteOff";
   case midi::ControlChange:
     return "Automation";
+  case midi::PitchBend:
+    return "PitchBend";
   case midi::InvalidType:
     return "Invalid";
   default:
@@ -106,6 +108,7 @@ FLASHMEM void LiveSequencer::onStopped(void) {
   addPendingNotes();
   playIterator = data.eventsList.end();
   allNotesOff();
+  resetControllers();
   ui_liveSeq->onStopped();
   activeArpKeys.clear();
   data.arpSettings.arpNotes.clear();
@@ -125,8 +128,38 @@ FLASHMEM void LiveSequencer::allNotesOff(void) {
 }
 
 FLASHMEM void LiveSequencer::allTrackNotesOff(const uint8_t track) {
-  for (uint8_t layer = 0; layer < data.trackSettings[track].layerCount; layer++) {
+    for (uint8_t layer = 0; layer < data.trackSettings[track].layerCount; layer++) {
     allLayerNotesOff(track, layer);
+  }
+}
+
+FLASHMEM void LiveSequencer::resetControllers() {
+  for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
+    const uint8_t device = data.trackSettings[track].device;
+    const midi::Channel channel = data.tracks[track].channel;
+
+    //  Reset pitch bend to center
+    handlePitchBend(channel, 0); // dexed instances
+    midiPitchBend(0, channel, device); // external midi devices
+
+    // Collect unique CCs for the current track
+    std::unordered_set<uint8_t> uniqueCCs;
+    for (const auto& event : data.eventsList) {
+      if (event.track == track && event.event == midi::ControlChange) {
+        // Note: maybe we should also check if event.source == EVENT_PATTERN
+        uniqueCCs.insert(event.note_in);
+      }
+    }
+
+    // Reset collected CCs to default value. In future add default values for specific CCs like #7 in sys config.
+    for (const auto& cc : uniqueCCs) {
+      // for internal devices. WARNING: this handles internal automation. Needs more testing!
+      handleControlChange(channel, cc, 0);
+      // for external midi devices
+      midiControlChange(cc, 0, channel, device);
+    }
+
+    DBG_LOG(printf("Track %i: Reset pitch bend and control changes\n", track));
   }
 }
 
@@ -345,10 +378,16 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         const uint8_t device = data.trackSettings[data.activeTrack].device;
         switch (event) {
         case midi::ControlChange:
+          //mdt default cc handling
           handleControlChange(ch, note, velocityActive); // note is controller number, velocityActive is value
+          // hw midi handling
+          midiControlChange(note, velocityActive, ch, device); // note is controller number, velocityActive is value
           break;
         case midi::PitchBend:
+          //this would handle pb in dexed instances
           handlePitchBend(ch, ((note & 0x7F) | ((velocityActive & 0x7F) << 7)) - 8192); // Combine LSB and MSB
+          // this would handle pb in hw midi
+          midiPitchBend((note | (velocityActive << 7)) - 8192, ch, device); // Combine LSB and MSB
         break;
         case midi::AfterTouchChannel:
           handleAfterTouch(ch, note);
