@@ -1683,8 +1683,8 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
         configuration.epiano.hardness = data_json["hardness"];
         configuration.epiano.treble = data_json["treble"];
         configuration.epiano.pan_tremolo = data_json["pan_tremolo"];
-        configuration.epiano.pan_lfo = data_json["pan_lf"];
-        configuration.epiano.velocity_sense = data_json["velocity"];
+        configuration.epiano.pan_lfo = data_json["pan_lfo"];
+        configuration.epiano.velocity_sense = data_json["velocity_sense"];
         configuration.epiano.stereo = data_json["stereo"];
         configuration.epiano.polyphony = data_json["polyphony"];
         configuration.epiano.tune = data_json["tune"];
