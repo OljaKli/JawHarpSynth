@@ -599,13 +599,17 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
       handleControlChange(channel, playIterator->note_in, playIterator->note_in_velocity); // note is controller number, velocity is value
       // hw midi handling
       midiControlChange(playIterator->note_in, playIterator->note_in_velocity, channel, device); // note is controller number, velocity is value
-      switch (playIterator->note_in_velocity) {
-      case AutomationType::TYPE_MUTE_ON:
-      case AutomationType::TYPE_MUTE_OFF:
-        const uint8_t muteLayer = playIterator->note_in;
-        //DBG_LOG(printf("mute %s\n", playIterator->note_in_velocity ? "MUTE" : "UNMUTE"));
-        setLayerMuted(playIterator->track, muteLayer, playIterator->note_in_velocity == AutomationType::TYPE_MUTE_ON);
-        break;
+      switch (playIterator->note_in) {
+        case AutomationType::TYPE_MUTE_ON:
+        case AutomationType::TYPE_MUTE_OFF:
+          const uint8_t muteLayer = playIterator->note_in_velocity; // WARNING: Beaking change with old performances!
+                                                                    // Before playIterator->note_in (CC number) was used to select the layer.
+                                                                    // This unfortunately conflicts with generic CCs (#0 and #1).
+                                                                    // To resolve this we should use TYPE_MUTE_ON / TYPE_MUTE_OFF (now with high range CC numbers) for mute state
+                                                                    // and note_in_velocity (CC's value) to select the layer.
+          // DBG_LOG(printf("mute %s\n", playIterator->note_in ? "MUTE" : "UNMUTE"));
+          setLayerMuted(playIterator->track, muteLayer, playIterator->note_in == AutomationType::TYPE_MUTE_ON);
+          break;
       }
     break;
     case midi::NoteOff:
@@ -1073,7 +1077,7 @@ FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool is
     if (data.songLayerCount < LIVESEQUENCER_NUM_LAYERS) {
       data.recordedToSong = true;
       const AutomationType type = isMuted ? AutomationType::TYPE_MUTE_ON : AutomationType::TYPE_MUTE_OFF;
-      MidiEvent e = { EVENT_SONG, uint16_t(data.patternTimer), data.currentPattern, track, data.songLayerCount, midi::MidiType::ControlChange, layer, type };
+      MidiEvent e = { EVENT_SONG, uint16_t(data.patternTimer), data.currentPattern, track, data.songLayerCount, midi::MidiType::ControlChange, type, layer };
       uint8_t patternCount = data.songPatternCount;
       if (timeQuantization(e, data.songMuteQuantizeDenom)) {
         patternCount++; // event rounded up to start of next song pattern

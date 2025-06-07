@@ -89,9 +89,15 @@ public:
     uint8_t songStartLayerMutes;
   };
 
-  enum AutomationType {
-    TYPE_MUTE_ON,
-    TYPE_MUTE_OFF
+  /**
+   * Automation types for Live Sequencer
+   * General-purpose high CC number from 102..119 range should be safe.
+   * WARNING: Breaking change with old performances that had
+   * 0 and 1 as mute on/off.
+   */
+  enum AutomationType : uint8_t {
+    TYPE_MUTE_ON = 102, 
+    TYPE_MUTE_OFF = 103
   };
 
   struct FillNotes {
