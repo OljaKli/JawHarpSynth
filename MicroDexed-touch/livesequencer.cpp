@@ -589,12 +589,18 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
 
     switch (playIterator->event) {
     case midi::PitchBend:
-      //this would handle pb in dexed instances
+      if (isMuted) {
+        break; // skip muted events
+      }
+      // this would handle pb in dexed instances
       handlePitchBend(channel, (playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192); // Combine LSB and MSB
       // this would handle pb in hw midi
       midiPitchBend((playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192, channel, device); // Combine LSB and MSB
       break;
     case midi::ControlChange:
+      if (isMuted) {
+        break; // skip muted events
+      }
       //mdt default cc handling
       handleControlChange(channel, playIterator->note_in, playIterator->note_in_velocity); // note is controller number, velocity is value
       // hw midi handling
