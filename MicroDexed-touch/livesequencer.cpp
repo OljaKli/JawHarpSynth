@@ -513,6 +513,16 @@ FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, Laye
     return false; // avoid merge up top layer
   }
 
+  if (action == LayerMode::LAYER_CLEAR_CC || action == LayerMode::LAYER_CLEAR_PB) {
+    const midi::MidiType targetEvent = (action == LayerMode::LAYER_CLEAR_CC) ? midi::ControlChange : midi::PitchBend;
+    for (auto& e : data.eventsList) {
+      if (e.track == track && e.layer == layer && e.event == targetEvent) {
+        e.event = midi::InvalidType; // mark as invalid
+      }
+    }
+    return true;
+  }
+
   // play noteOff for active layer notes
   allLayerNotesOff(track, layer);
 

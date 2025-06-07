@@ -30,6 +30,8 @@ public:
     LAYER_MUTE = 0,
     LAYER_MERGE,
     LAYER_DELETE,
+    LAYER_CLEAR_CC,
+    LAYER_CLEAR_PB,
     LAYER_MODE_NUM
   };
 
