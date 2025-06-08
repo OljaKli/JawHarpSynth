@@ -21051,7 +21051,6 @@ FLASHMEM void string_trim(char* s)
 FLASHMEM void locate_previous_non_favorite()
 {
   // find prev. non fav in current bank
-  print_fav_search_text(LEFT);
   do
   {
     if (configuration.dexed[selected_instance_id].voice == 0)
@@ -21060,13 +21059,10 @@ FLASHMEM void locate_previous_non_favorite()
       if (configuration.dexed[selected_instance_id].bank < 1)
         configuration.dexed[selected_instance_id].bank = MAX_BANKS - 1;
 
-      do
-      { // seek for previous bank
         configuration.dexed[selected_instance_id].bank--;
         if (configuration.dexed[selected_instance_id].bank < 1)
           configuration.dexed[selected_instance_id].bank = MAX_BANKS - 1;
         favsearcher++;
-      } while (quick_check_favorites_in_bank(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, selected_instance_id) == true && favsearcher < 132);
     }
     configuration.dexed[selected_instance_id].voice--;
     favsearcher++;
@@ -21220,23 +21216,19 @@ FLASHMEM void locate_next_favorite()
 FLASHMEM void locate_next_non_favorite()
 {
   // find next non-fav in current bank
-  print_fav_search_text(RIGHT);
   do
   {
     configuration.dexed[selected_instance_id].voice++;
     if (configuration.dexed[selected_instance_id].voice > 31)
     {
       configuration.dexed[selected_instance_id].voice = 0;
-      // configuration.dexed[selected_instance_id].bank++;
       if (configuration.dexed[selected_instance_id].bank > MAX_BANKS - 1)
         configuration.dexed[selected_instance_id].bank = 0;
-      do
-      { // seek for next bank
+     
         configuration.dexed[selected_instance_id].bank++;
         if (configuration.dexed[selected_instance_id].bank > MAX_BANKS - 1)
           configuration.dexed[selected_instance_id].bank = 0;
         favsearcher++;
-      } while (quick_check_favorites_in_bank(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, selected_instance_id) == true && favsearcher < 132);
     }
     favsearcher++;
   } while (check_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice,
