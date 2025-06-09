@@ -94,6 +94,12 @@ If you register and pay as a new user at PCBWAY with this Invite link, you shoul
 
 <a href="https://www.pcbway.com/project/shareproject/MicroDexed_Capacitive_Touch_64970fee.html"><img src="https://www.pcbway.com/project/img/images/frompcbway-1220.png" alt="PCB from PCBWay" /></a>
 
+[MDT Product Page on PCBWAY](https://www.pcbway.com/project/shareproject/MicroDexed_Capacitive_Touch_64970fee.html)
+<br>
+
+[MDTX Product Page on PCBWAY](https://www.pcbway.com/project/shareproject/[MDTX]_MicroDexed_Extended_Edition_2810710b.html)
+<br>
+
 <br>
 <p>
 
