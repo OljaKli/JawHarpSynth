@@ -185,10 +185,9 @@ public:
   struct LiveSeqData {
     // non - volatile
     TrackSettings trackSettings[LIVESEQUENCER_NUM_TRACKS];
-    std::list<int, SimpleAllocator<int>> foo;
 
-    std::list<MidiEvent, SimpleAllocator<MidiEvent>> eventsList;
-    std::unordered_map<uint8_t, std::list<MidiEvent, SimpleAllocator<MidiEvent>>> songEvents; // should use std::map but name clashes with map()..
+    std::vector<MidiEvent, SimpleAllocator<MidiEvent>> eventsList;
+    std::unordered_map<uint8_t, std::vector<MidiEvent, SimpleAllocator<MidiEvent>>> songEvents; // should use std::map but name clashes with map()..
     uint8_t numberOfBars = 4;
 
     // volatile
@@ -271,7 +270,7 @@ private:
   std::set<uint8_t> activeArpKeys;
   std::set<uint8_t> pressedKeys;
   std::vector<ArpNote> activeArps;
-  std::list<MidiEvent>::iterator playIterator;
+  std::vector<MidiEvent, SimpleAllocator<MidiEvent>>::iterator playIterator;
   bool sortRequested = false;
 
   void checkLoadNewArpNotes(void);

@@ -111,7 +111,7 @@ FLASHMEM void LiveSequencer::onStarted(void) {
   DBG_LOG(printf("onStarted\n"));
   data.isStarting = true;
   data.recordedToSong = false;
-  data.eventsList.remove_if([](MidiEvent& e) { return e.source == EventSource::EVENT_SONG; });
+  data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.source == EventSource::EVENT_SONG; }), data.eventsList.end());
 }
 
 FLASHMEM void LiveSequencer::allNotesOff(void) {
@@ -186,7 +186,8 @@ FLASHMEM void LiveSequencer::refreshSongLength(void) {
   uint8_t lastSongPattern = 0;
   for (auto& e : data.songEvents) {
     // remove all invalidated song events and repopulate song length
-    e.second.remove_if([](MidiEvent& e) { return (e.event == midi::InvalidType); });
+    data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+
     if (e.second.size()) {
       if (e.first > lastSongPattern) {
         lastSongPattern = e.first;
@@ -828,7 +829,7 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
       data.eventsList.emplace_back(e);
     }
     data.pendingEvents.clear();
-    data.eventsList.sort(sortMidiEvent);
+    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
     const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
 
     if (canIncrementLayer && incrementLayer) {
@@ -844,7 +845,7 @@ FLASHMEM void LiveSequencer::requestSortEvents(void) {
     sortRequested = true;
   }
   else {
-    data.eventsList.sort(sortMidiEvent);
+    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
   }
 }
 
@@ -895,13 +896,13 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       // sort events was requested externally (on editing noteOn time)
       if (sortRequested) {
         sortRequested = false;
-        data.eventsList.sort(sortMidiEvent);
+        std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
       }
     }
 
     if (data.eventsList.size() > 0) {
       // remove all invalidated notes
-      data.eventsList.remove_if([](MidiEvent& e) { return e.event == midi::InvalidType; });
+      data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
 
       // finish possibly not played events at end
       while (playIterator != data.eventsList.end()) {
@@ -915,7 +916,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
         for (auto& e : data.songEvents[data.songPatternCount]) {
           data.eventsList.emplace_back(e);
         }
-        data.eventsList.sort(sortMidiEvent);
+        std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
         if (data.songPatternCount == 0) {
           // load previously saved song start layer mutes
           applySongStartLayerMutes();
@@ -1301,8 +1302,8 @@ FLASHMEM void LiveSequencer::updateInstrumentChannels(void) {
 FLASHMEM void LiveSequencer::cleanEvents(void) {
   if (data.eventsList.size() > 0) {
     // remove all invalidated notes
-    data.eventsList.remove_if([](MidiEvent& e) { return e.event == midi::InvalidType; });
-    data.eventsList.sort(sortMidiEvent);
+    data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
   }
 }
 
@@ -1322,9 +1323,9 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
 
-  for (std::list<MidiEvent>::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
+  for (std::vector<MidiEvent, SimpleAllocator<MidiEvent>>::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
     if (itOn->track == track && itOn->event == midi::NoteOn) {
-      for (std::list<MidiEvent>::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
+      for (std::vector<MidiEvent, SimpleAllocator<MidiEvent>>::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
         const bool isWithinY = (itOn->note_in >= lowestNote) && (itOn->note_in <= highestNote);
         if (isWithinY) {
           const bool sameNote = itOff->note_in == itOn->note_in;
