@@ -91,6 +91,13 @@ by fellpower (german language)
 If you register and pay as a new user at PCBWAY with this Invite link, you should get $5 "New User Free Credit" - so you can order 5 PCB pieces for "free", except shipping and customs cost etc.
     
 [https://www.pcbway.com/setinvite.aspx?inviteid=565384](https://www.pcbway.com/setinvite.aspx?inviteid=565384)
+<br>
+
+[MDT Product Page on PCBWAY](https://www.pcbway.com/project/shareproject/MicroDexed_Capacitive_Touch_64970fee.html)
+<br>
+
+[MDTX Product Page on PCBWAY](https://www.pcbway.com/project/shareproject/[MDTX]_MicroDexed_Extended_Edition_2810710b.html)
+<br>
 
 <a href="https://www.pcbway.com/project/shareproject/MicroDexed_Capacitive_Touch_64970fee.html"><img src="https://www.pcbway.com/project/img/images/frompcbway-1220.png" alt="PCB from PCBWay" /></a>
 
