@@ -1829,7 +1829,7 @@ FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_E
   }
 }
 
-FLASHMEM void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) {
+FLASHMEM void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent, LiveSequencer::SimpleAllocator<LiveSequencer::MidiEvent>>&list) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
     StaticJsonDocument<JSON_BUFFER_SIZE> doc;
@@ -1930,7 +1930,7 @@ FLASHMEM bool save_sd_livesequencer_json(uint8_t number)
 
     // loop through song patterns
     for (uint8_t songPattern = 0; songPattern <= lastSongPattern; songPattern++) {
-      std::list<LiveSequencer::MidiEvent> songPatternEvents = data->songEvents[songPattern];
+      std::list<LiveSequencer::MidiEvent, LiveSequencer::SimpleAllocator<LiveSequencer::MidiEvent>> songPatternEvents = data->songEvents[songPattern];
       const uint16_t numSongPatternEvents = songPatternEvents.size();
       const uint16_t numSongPatternChunks = ceil(numSongPatternEvents / float(NUM_EVENTS_PER_FILE)); // 50 events per file
       //Serial.printf("song pattern %i has %i chunks:\n", songPattern, numSongPatternChunks);

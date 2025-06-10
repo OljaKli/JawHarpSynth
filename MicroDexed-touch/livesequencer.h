@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include <set>
 #include "UI.h"
+#include <memory>
+//#include <iostream>
 
 typedef void (*SetupFn)(void*);
 class UI_LiveSequencer;
@@ -138,11 +140,55 @@ public:
     std::vector<uint8_t>::iterator arpIt;
   };
 
+template<typename T>
+class SimpleAllocator {
+public:
+    using value_type = T;
+
+    SimpleAllocator() = default;
+
+    template<typename U>
+    constexpr SimpleAllocator(const SimpleAllocator<U>&) noexcept {}
+
+    T* allocate(std::size_t n) {
+        //std::cout << "Allocating " << n * sizeof(T) << " bytes" << std::endl;
+        /*if (n > std::allocator_traits<SimpleAllocator>::max_size(*this)) {
+            throw std::bad_alloc();
+        }*/
+       DBG_LOG(printf("alloc %i!\n", n));
+       return static_cast<T*>(extmem_malloc(n * sizeof(T)));
+        //return static_cast<T*>(::operator new(n * sizeof(T)));
+    }
+
+    void deallocate(T* p, std::size_t) noexcept {
+        //std::cout << "Deallocating memory" << std::endl;
+        extmem_free((uint8_t*)p);
+        //::operator delete(p);
+    }
+
+    template<typename U, typename... Args>
+    void construct(U* p, Args&&... args) {
+        //std::cout << "Constructing element" << std::endl;
+        new(p) U(std::forward<Args>(args)...);
+    }
+
+    template<typename U>
+    void destroy(U* p) noexcept {
+        //std::cout << "Destroying element" << std::endl;
+        p->~U();
+    }
+
+    friend bool operator==(const SimpleAllocator&, const SimpleAllocator&) { return true; }
+    friend bool operator!=(const SimpleAllocator&, const SimpleAllocator&) { return false; }
+};
+
   struct LiveSeqData {
     // non - volatile
     TrackSettings trackSettings[LIVESEQUENCER_NUM_TRACKS];
-    std::list<MidiEvent> eventsList;
-    std::unordered_map<uint8_t, std::list<MidiEvent>> songEvents; // should use std::map but name clashes with map()..
+    std::list<int, SimpleAllocator<int>> foo;
+
+    std::list<MidiEvent, SimpleAllocator<MidiEvent>> eventsList;
+    std::unordered_map<uint8_t, std::list<MidiEvent, SimpleAllocator<MidiEvent>>> songEvents; // should use std::map but name clashes with map()..
     uint8_t numberOfBars = 4;
 
     // volatile
@@ -158,7 +204,7 @@ public:
     uint8_t activeTrack = 0;
     elapsedMillis patternTimer;
     std::unordered_map<uint8_t, MidiEvent> notesOn;
-    std::vector<MidiEvent> pendingEvents;
+    std::vector<MidiEvent, SimpleAllocator<MidiEvent>> pendingEvents;
     uint8_t songPatternCount = 0;
     uint8_t songLayerCount = 0;
     uint8_t lastPlayedNote = 0;
