@@ -453,7 +453,6 @@ enum {
 
 void selectSample(uint8_t sample);
 uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction);
-void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, uint16_t fromX, uint16_t toX, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 
 void lcdml_menu_display(void);
@@ -6496,14 +6495,6 @@ FLASHMEM void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   }
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
-  DBG_LOG(printf("printSampleWaveform()\n"));
-
-  const uint16_t fromX = x + from * w;
-  const uint16_t toX = x + to * w;
-  drawSampleWaveform(x, y, w, h, data, length, numChannels, fromX, toX, waveColor, bgColor);
-}
-
 FLASHMEM void selectSample(uint8_t sample) {
   const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
   if (newSample != activeSample) {
@@ -7423,11 +7414,16 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
   print_slices_static_text();
   print_updated_slices_text();
   if (temp_int != selected_slice_sample[get_current_sliced_sample_in_ui()])
-    printSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0.0f, 1.0f, COLOR_SYSTEXT, GREY4);
+    drawSampleWaveform(0, 72, DISPLAY_WIDTH, 100, (int16_t*)sample->drum_data, sample->len, sample->numChannels, 0, DISPLAY_WIDTH, COLOR_SYSTEXT, GREY4);
   else
   {
     if (sample->len != 0)
     {
+      const uint16_t xCoord = 0;
+      const uint16_t yCoord = 72;
+      const uint16_t w = DISPLAY_WIDTH;
+      const uint16_t h = 100;
+      
       for (uint8_t y = from; y < to; y++)
       {
         int slice_col;
@@ -7435,15 +7431,11 @@ FLASHMEM void draw_waveform_sample_editor(uint8_t slice)
           slice_col = ColorHSV(y * 22, 180, 254);
         else
           slice_col = ColorHSV(y * 22, 250, 180);
+        
+        const uint16_t from = w * slice_start[get_current_sliced_sample_in_ui()][y] / sample->len;
+        const uint16_t to = w * slice_end[get_current_sliced_sample_in_ui()][y] / sample->len;
 
-        const uint16_t xCoord = round((DISPLAY_WIDTH * slice_start[get_current_sliced_sample_in_ui()][y]) / float(sample->len));
-        const uint16_t yCoord = 72;
-        const uint16_t w = round(DISPLAY_WIDTH * (slice_end[get_current_sliced_sample_in_ui()][y] - slice_start[get_current_sliced_sample_in_ui()][y]) / float(sample->len));
-        const uint16_t h = 100;
-        const float from = slice_start[get_current_sliced_sample_in_ui()][y] / float(sample->len);
-        const float to = slice_end[get_current_sliced_sample_in_ui()][y] / float(sample->len);
-
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
 
         display.console = true;
         display.fillRect(xCoord - 2, 164, 2, 7, GREY3);
@@ -7496,29 +7488,20 @@ FLASHMEM void draw_waveform_loop_editor()
     {
       if (drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len != 0 && strlen(msz[fm.sample_source - 2][temp_int].filename) > 2)
       {
+        const uint16_t xCoord = 0;
+        const uint16_t yCoord = 72;
+        const uint16_t w = DISPLAY_WIDTH;
+        const uint16_t h = 100;
+        const uint16_t sampleStartX = w * msz[fm.sample_source - 2][temp_int].loop_start / sample->len;
+        const uint16_t sampleEndX = w * msz[fm.sample_source - 2][temp_int].loop_end / sample->len;
         //START
-        uint16_t xCoord = 0;
-        uint16_t yCoord = 72;
-        uint16_t w = round(DISPLAY_WIDTH * (msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
-        uint16_t h = 100;
-        float from = 0;
-        float to = msz[fm.sample_source - 2][temp_int].loop_start / float(sample->len);
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY2);
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, xCoord, sampleStartX, slice_col, GREY2);
 
         //LOOP
-        xCoord = round((DISPLAY_WIDTH * msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
-        w = round(DISPLAY_WIDTH * (msz[fm.sample_source - 2][temp_int].loop_end - msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
-        from = msz[fm.sample_source - 2][temp_int].loop_start / float(sample->len);
-        to = msz[fm.sample_source - 2][temp_int].loop_end / float(sample->len);
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, COLOR_SYSTEXT, RED);
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, sampleStartX, sampleEndX, COLOR_SYSTEXT, RED);
 
         //END
-        xCoord = round((DISPLAY_WIDTH * msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len));
-        w = round(DISPLAY_WIDTH * (float(sample->len) - msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len));
-        from = (msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len);
-        to = 1.0;
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY2);
-
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, sampleEndX, w, slice_col, GREY2);
       }
     }
   }
@@ -7833,26 +7816,20 @@ FLASHMEM void UI_func_sample_editor(uint8_t param)
 
     if (fm.sample_source == 2 || fm.sample_source == 3)
     {
-
       if (strlen(msz[fm.sample_source - 2][temp_int].filename) < 2)
       {
         show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, "EMPTY  ");
         display.console = true;
         display.fillRect(0, 72, DISPLAY_WIDTH, 100, GREY3);
         display.console = false;
+      } else {
+        show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, msz[fm.sample_source - 2][temp_int].filename);
       }
-      else
-        if (strlen(msz[fm.sample_source - 2][temp_int].filename) > 1)
-          show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, msz[fm.sample_source - 2][temp_int].filename);
-
-      //  if (drum_config[ msz[fm.sample_source - 2][temp_int].psram_entry_number ].len==0 )
-      // {
-      //   }
-
     }
 
-    else //psram
+    else {//psram
       show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, drum_config[temp_int].name);
+    }
 
     print_sliced_status();
 
@@ -21056,13 +21033,12 @@ FLASHMEM void locate_previous_non_favorite()
     if (configuration.dexed[selected_instance_id].voice == 0)
     {
       configuration.dexed[selected_instance_id].voice = 32; //+1
-      if (configuration.dexed[selected_instance_id].bank < 1)
-        configuration.dexed[selected_instance_id].bank = MAX_BANKS - 1;
+      configuration.dexed[selected_instance_id].bank--;
 
-        configuration.dexed[selected_instance_id].bank--;
-        if (configuration.dexed[selected_instance_id].bank < 1)
-          configuration.dexed[selected_instance_id].bank = MAX_BANKS - 1;
-        favsearcher++;
+      if (configuration.dexed[selected_instance_id].bank < 1) {
+        configuration.dexed[selected_instance_id].bank = MAX_BANKS - 1;
+      }
+      favsearcher++;
     }
     configuration.dexed[selected_instance_id].voice--;
     favsearcher++;
@@ -21222,13 +21198,11 @@ FLASHMEM void locate_next_non_favorite()
     if (configuration.dexed[selected_instance_id].voice > 31)
     {
       configuration.dexed[selected_instance_id].voice = 0;
-      if (configuration.dexed[selected_instance_id].bank > MAX_BANKS - 1)
+      configuration.dexed[selected_instance_id].bank++;
+      if (configuration.dexed[selected_instance_id].bank > MAX_BANKS - 1) {
         configuration.dexed[selected_instance_id].bank = 0;
-     
-        configuration.dexed[selected_instance_id].bank++;
-        if (configuration.dexed[selected_instance_id].bank > MAX_BANKS - 1)
-          configuration.dexed[selected_instance_id].bank = 0;
-        favsearcher++;
+      }
+      favsearcher++;
     }
     favsearcher++;
   } while (check_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice,
