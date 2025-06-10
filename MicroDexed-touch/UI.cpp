@@ -453,7 +453,6 @@ enum {
 
 void selectSample(uint8_t sample);
 uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction);
-void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from = 0.0f, float to = 1.0f, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, uint16_t fromX, uint16_t toX, uint16_t waveColor = COLOR_PITCHSMP, uint16_t bgColor = GREY3);
 
 void lcdml_menu_display(void);
@@ -6496,14 +6495,6 @@ FLASHMEM void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   }
 }
 
-FLASHMEM void printSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h, int16_t* data, uint32_t length, uint8_t numChannels, float from, float to, uint16_t waveColor, uint16_t bgColor) {
-  DBG_LOG(printf("printSampleWaveform()\n"));
-
-  const uint16_t fromX = x + from * w;
-  const uint16_t toX = x + to * w;
-  drawSampleWaveform(x, y, w, h, data, length, numChannels, fromX, toX, waveColor, bgColor);
-}
-
 FLASHMEM void selectSample(uint8_t sample) {
   const uint8_t newSample = constrain(sample, 0, NUM_DRUMSET_CONFIG - 2);
   if (newSample != activeSample) {
@@ -7497,28 +7488,20 @@ FLASHMEM void draw_waveform_loop_editor()
     {
       if (drum_config[msz[fm.sample_source - 2][temp_int].psram_entry_number].len != 0 && strlen(msz[fm.sample_source - 2][temp_int].filename) > 2)
       {
+        const uint16_t xCoord = 0;
+        const uint16_t yCoord = 72;
+        const uint16_t w = DISPLAY_WIDTH;
+        const uint16_t h = 100;
+        const uint16_t sampleStartX = w * msz[fm.sample_source - 2][temp_int].loop_start / sample->len;
+        const uint16_t sampleEndX = w * msz[fm.sample_source - 2][temp_int].loop_end / sample->len;
         //START
-        uint16_t xCoord = 0;
-        uint16_t yCoord = 72;
-        uint16_t w = round(DISPLAY_WIDTH * (msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
-        uint16_t h = 100;
-        float from = 0;
-        float to = msz[fm.sample_source - 2][temp_int].loop_start / float(sample->len);
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY2);
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, xCoord, sampleStartX, slice_col, GREY2);
 
         //LOOP
-        xCoord = round((DISPLAY_WIDTH * msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
-        w = round(DISPLAY_WIDTH * (msz[fm.sample_source - 2][temp_int].loop_end - msz[fm.sample_source - 2][temp_int].loop_start) / float(sample->len));
-        from = msz[fm.sample_source - 2][temp_int].loop_start / float(sample->len);
-        to = msz[fm.sample_source - 2][temp_int].loop_end / float(sample->len);
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, COLOR_SYSTEXT, RED);
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, sampleStartX, sampleEndX, COLOR_SYSTEXT, RED);
 
         //END
-        xCoord = round((DISPLAY_WIDTH * msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len));
-        w = round(DISPLAY_WIDTH * (float(sample->len) - msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len));
-        from = (msz[fm.sample_source - 2][temp_int].loop_end) / float(sample->len);
-        to = 1.0;
-        printSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY2);
+        drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, sampleEndX, w, slice_col, GREY2);
       }
     }
   }
