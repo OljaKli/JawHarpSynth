@@ -40,7 +40,7 @@ FLASHMEM LiveSequencer::LiveSequencer() {
 
   updateTrackChannels(true);
   data.processMidiIn = false;
-  playIterator = data.eventsList.end();
+  
 }
 
 FLASHMEM void UI_func_livesequencer(uint8_t param) {
@@ -112,6 +112,7 @@ FLASHMEM void LiveSequencer::onStarted(void) {
   data.isStarting = true;
   data.recordedToSong = false;
   data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.source == EventSource::EVENT_SONG; }), data.eventsList.end());
+  playIterator = data.eventsList.end();
 }
 
 FLASHMEM void LiveSequencer::allNotesOff(void) {
@@ -778,6 +779,7 @@ FLASHMEM void LiveSequencer::init(void) {
   DBG_LOG(printf("init has %i events\n", data.eventsList.size()));
   //printEvents();
   data.pendingEvents.reserve(200);
+  data.eventsList.reserve(10000);
   data.performanceName = seq.name;
   refreshSongLength();
 }
@@ -902,7 +904,6 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
 
     if (data.eventsList.size() > 0) {
       // remove all invalidated notes
-      data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
 
       // finish possibly not played events at end
       while (playIterator != data.eventsList.end()) {
@@ -910,6 +911,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
         printEvent(0, *playIterator);
         playNextEvent();
       }
+      data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
 
       // for song mode, add song events for this pattern
       if (data.isSongMode) {
@@ -1297,14 +1299,6 @@ FLASHMEM void LiveSequencer::updateInstrumentChannels(void) {
     data.instrumentChannels.insert(msp[i].midi_channel);
   }
   data.instrumentChannels.insert(braids_osc.midi_channel);
-}
-
-FLASHMEM void LiveSequencer::cleanEvents(void) {
-  if (data.eventsList.size() > 0) {
-    // remove all invalidated notes
-    data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
-    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
-  }
 }
 
 FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
