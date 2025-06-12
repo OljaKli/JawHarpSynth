@@ -40,7 +40,6 @@ FLASHMEM LiveSequencer::LiveSequencer() {
 
   updateTrackChannels(true);
   data.processMidiIn = false;
-  
 }
 
 FLASHMEM void UI_func_livesequencer(uint8_t param) {
@@ -1317,9 +1316,9 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
 
-  for (std::vector<MidiEvent, SimpleAllocator<MidiEvent>>::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
+  for (EventVector::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
     if (itOn->track == track && itOn->event == midi::NoteOn) {
-      for (std::vector<MidiEvent, SimpleAllocator<MidiEvent>>::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
+      for (EventVector::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
         const bool isWithinY = (itOn->note_in >= lowestNote) && (itOn->note_in <= highestNote);
         if (isWithinY) {
           const bool sameNote = itOff->note_in == itOn->note_in;
