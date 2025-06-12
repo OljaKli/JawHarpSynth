@@ -10,8 +10,6 @@
 #include <unordered_set>
 #include <set>
 #include "UI.h"
-#include <memory>
-//#include <iostream>
 
 typedef void (*SetupFn)(void*);
 class UI_LiveSequencer;
@@ -184,7 +182,7 @@ public:
     TrackSettings trackSettings[LIVESEQUENCER_NUM_TRACKS];
 
     EventVector eventsList;
-    std::unordered_map<uint8_t, EventVector> songEvents; // should use std::map but name clashes with map()..
+    std::unordered_map<uint8_t, EventVector> songEvents;
     uint8_t numberOfBars = 4;
 
     // volatile
@@ -285,7 +283,6 @@ private:
   void playNextArpNote(void);
   void playArp(const midi::MidiType type, const ArpNote arp);
   bool timeQuantization(MidiEvent& e, uint8_t denom);
-
   void checkAddMetronome(void);
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
 

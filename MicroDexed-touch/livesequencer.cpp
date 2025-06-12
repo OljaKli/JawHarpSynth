@@ -186,7 +186,7 @@ FLASHMEM void LiveSequencer::refreshSongLength(void) {
   uint8_t lastSongPattern = 0;
   for (auto& e : data.songEvents) {
     // remove all invalidated song events and repopulate song length
-    data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+    e.second.erase(std::remove_if(e.second.begin(), e.second.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), e.second.end());
 
     if (e.second.size()) {
       if (e.first > lastSongPattern) {
@@ -777,8 +777,13 @@ FLASHMEM void LiveSequencer::init(void) {
   updateTrackChannels();
   DBG_LOG(printf("init has %i events\n", data.eventsList.size()));
   //printEvents();
+  // reserve memory to avoid re-allocation until reserved is used
   data.pendingEvents.reserve(200);
+#ifdef PSRAM
   data.eventsList.reserve(10000);
+#else
+  data.eventsList.reserve(1000);
+#endif
   data.performanceName = seq.name;
   refreshSongLength();
 }
@@ -890,8 +895,29 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
   }
 
   if (data.currentPattern == 0) {
-    if (data.isSongMode == false) {
-      // first insert pending EVENT_PATT events to events and sort
+    // first finish possibly not played events at end of previous pattern
+    while (playIterator != data.eventsList.end()) {
+      DBG_LOG(printf("about to finish event: "));
+      printEvent(0, *playIterator);
+      playNextEvent();
+    }
+
+    // then remove all invalidated notes
+    data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+
+    // for song mode, add song events for this pattern
+    if (data.isSongMode) {
+      for (auto& e : data.songEvents[data.songPatternCount]) {
+        data.eventsList.emplace_back(e);
+      }
+      std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+      if (data.songPatternCount == 0) {
+        // load previously saved song start layer mutes
+        applySongStartLayerMutes();
+      }
+    }
+    else {
+      // insert pending events and sort
       addPendingNotes();
 
       // sort events was requested externally (on editing noteOn time)
@@ -901,28 +927,8 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       }
     }
 
+    // finally load for first event
     if (data.eventsList.size() > 0) {
-      // remove all invalidated notes
-
-      // finish possibly not played events at end
-      while (playIterator != data.eventsList.end()) {
-        DBG_LOG(printf("about to finish event: "));
-        printEvent(0, *playIterator);
-        playNextEvent();
-      }
-      data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
-
-      // for song mode, add song events for this pattern
-      if (data.isSongMode) {
-        for (auto& e : data.songEvents[data.songPatternCount]) {
-          data.eventsList.emplace_back(e);
-        }
-        std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
-        if (data.songPatternCount == 0) {
-          // load previously saved song start layer mutes
-          applySongStartLayerMutes();
-        }
-      }
       //printEvents();
       playIterator = data.eventsList.begin();
       loadNextEvent(timeToMs(playIterator->patternNumber, playIterator->patternMs));
