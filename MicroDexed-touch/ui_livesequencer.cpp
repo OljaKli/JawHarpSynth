@@ -15,6 +15,8 @@ extern ts_t ts;
 
 bool openingScreen = false;
 
+static constexpr int DRAW_INTERVAL = 25; //ms
+
 #define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
 
 FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d) : instance(this), liveSeq(sequencer), data(d) {
@@ -522,15 +524,14 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     resetProgressBars();
     redrawScreen();
     // setup function
-    LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
-    msCount = 1000;
+    LCDML.FUNC_setLoopInterval(DRAW_INTERVAL); // 40Hz gui refresh
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
 
-    msCount += 25;
+    msCount += DRAW_INTERVAL;
     if(msCount >= 200 ) {
       drawUpdates(drawCpuLoad);
       msCount = 0;

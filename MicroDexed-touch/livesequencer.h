@@ -146,11 +146,51 @@ public:
     std::vector<uint8_t>::iterator arpIt;
   };
 
+#ifdef PSRAM
+  template<typename T>
+  class Alloc {
+  public:
+    using value_type = T;
+
+    Alloc() = default;
+
+    template<typename U>
+    constexpr Alloc(const Alloc<U>&) noexcept {}
+
+    T* allocate(std::size_t n) {
+        DBG_LOG(printf("alloc %i!\n", n));
+        return static_cast<T*>(extmem_malloc(n * sizeof(T)));
+    }
+
+    void deallocate(T* p, std::size_t) noexcept {
+        extmem_free((uint8_t*)p);
+    }
+
+    template<typename U, typename... Args>
+    void construct(U* p, Args&&... args) {
+        new(p) U(std::forward<Args>(args)...);
+    }
+
+    template<typename U>
+    void destroy(U* p) noexcept {
+        p->~U();
+    }
+
+    friend bool operator==(const Alloc&, const Alloc&) { return true; }
+    friend bool operator!=(const Alloc&, const Alloc&) { return false; }
+  };
+
+  typedef std::vector<MidiEvent, Alloc<MidiEvent>> EventVector;
+#else
+  typedef std::vector<MidiEvent> EventVector;
+#endif
+
   struct LiveSeqData {
     // non - volatile
     TrackSettings trackSettings[LIVESEQUENCER_NUM_TRACKS];
-    std::list<MidiEvent> eventsList;
-    std::unordered_map<uint8_t, std::list<MidiEvent>> songEvents; // should use std::map but name clashes with map()..
+
+    EventVector eventsList;
+    std::unordered_map<uint8_t, EventVector> songEvents;
     uint8_t numberOfBars = 4;
 
     // volatile
@@ -166,7 +206,7 @@ public:
     uint8_t activeTrack = 0;
     elapsedMillis patternTimer;
     std::unordered_map<uint8_t, MidiEvent> notesOn;
-    std::vector<MidiEvent> pendingEvents;
+    EventVector pendingEvents;
     uint8_t songPatternCount = 0;
     uint8_t songLayerCount = 0;
     uint8_t lastPlayedNote = 0;
@@ -203,7 +243,6 @@ public:
   void fillTrackLayer();
   void deleteLiveSequencerData(void);
   void setArpEnabled(bool enabled);
-  void cleanEvents(void);
   uint32_t timeToMs(uint8_t patternNumber, uint16_t patternMs) const;
   void startCountIn(void);
   void getDeviceName(uint8_t device, char* name, char* sub) const;
@@ -233,7 +272,7 @@ private:
   std::set<uint8_t> activeArpKeys;
   std::set<uint8_t> pressedKeys;
   std::vector<ArpNote> activeArps;
-  std::list<MidiEvent>::iterator playIterator;
+  EventVector::iterator playIterator;
   bool sortRequested = false;
 
   void checkLoadNewArpNotes(void);
@@ -253,7 +292,6 @@ private:
   void playNextArpNote(void);
   void playArp(const midi::MidiType type, const ArpNote arp);
   bool timeQuantization(MidiEvent& e, uint8_t denom);
-
   void checkAddMetronome(void);
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
 
