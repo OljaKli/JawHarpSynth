@@ -41,11 +41,13 @@ using namespace TeensyTimerTool;
 #include "drums.h"
 extern void set_drums_volume(float vol);
 extern drum_config_t drum_config[];
+extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
 extern void load_custom_samples_to_psram();
+extern void unload_all_custom_samples();
 #endif
 
 extern sdcard_t sdcard_infos;
@@ -933,7 +935,7 @@ FLASHMEM bool load_sd_drumsettings_json(uint8_t number)
         }
 
         if (oldformat) {
-          for (uint8_t i = 6; i < NUM_CUSTOM_SAMPLES + 6; i++)
+          for (uint8_t i = NUM_STATIC_PITCHED_SAMPLES; i < NUM_CUSTOM_SAMPLES + NUM_STATIC_PITCHED_SAMPLES; i++)
           {
             set_sample_filter_freq(i, 0);
           }
@@ -1681,8 +1683,8 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
         configuration.epiano.hardness = data_json["hardness"];
         configuration.epiano.treble = data_json["treble"];
         configuration.epiano.pan_tremolo = data_json["pan_tremolo"];
-        configuration.epiano.pan_lfo = data_json["pan_lf"];
-        configuration.epiano.velocity_sense = data_json["velocity"];
+        configuration.epiano.pan_lfo = data_json["pan_lfo"];
+        configuration.epiano.velocity_sense = data_json["velocity_sense"];
         configuration.epiano.stereo = data_json["stereo"];
         configuration.epiano.polyphony = data_json["polyphony"];
         configuration.epiano.tune = data_json["tune"];
@@ -1807,7 +1809,7 @@ FLASHMEM void deserializeJSONToEvent(JsonObject& o, LiveSequencer::MidiEvent& e)
   e.note_in_velocity = o["note_in_velocity"];
 }
 
-void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER_FILE, uint16_t numEvents, std::list<LiveSequencer::MidiEvent>::iterator& it) {
+FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER_FILE, uint16_t numEvents, std::list<LiveSequencer::MidiEvent>::iterator& it) {
   SD.remove(filename);
   json = SD.open(filename, FILE_WRITE);
   if (json) {
@@ -1827,7 +1829,7 @@ void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER
   }
 }
 
-void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) {
+FLASHMEM void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
     StaticJsonDocument<JSON_BUFFER_SIZE> doc;
@@ -2683,10 +2685,35 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
         // serializeJsonPretty(data_json, Serial);
         LOG.println();
 #endif
-
+        unload_all_custom_samples();
+        
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
-          strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, data_json[i]["filename"]);
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
+
+          char fullpath[FULLPATH_MAX_LEN] = { 0 };
+          strcpy(fullpath, data_json[i]["filename"]);
+          char *lastSlash = strrchr(fullpath, '/');
+          if (lastSlash != nullptr) {
+            strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, lastSlash + 1);
+            *lastSlash = '\0';
+            strcpy(customSamples[i].filepath, fullpath);
+          }
+          if (data_json[i].containsKey("start")) {
+            customSamples[i].start = data_json[i]["start"];
+            customSamples[i].end = data_json[i]["end"];
+            customSamples[i].loopType = data_json[i]["loop"];
+          }
+          else {
+            customSamples[i].start = 0;    // 0%
+            customSamples[i].end = 1000;   // 100%
+            customSamples[i].loopType = 0; // loop_type::looptype_none
+          }
+          
+          uint8_t drumClass = data_json[i]["class"];
+          if(drumClass == 0) {
+            drumClass = DRUM_POLY;
+          }
+          drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = drumClass;
         }
         load_custom_samples_to_psram();
 
@@ -2733,9 +2760,15 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
-        // if (drum_config[i].len != 0)
         data_json[i]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
-        data_json[i]["filename"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
+        String fullpath = customSamples[i].filepath;
+        fullpath += "/";
+        fullpath += drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
+        data_json[i]["filename"] = fullpath;
+        data_json[i]["start"] = customSamples[i].start;
+        data_json[i]["end"] = customSamples[i].end;
+        data_json[i]["loop"] = customSamples[i].loopType;
+        data_json[i]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
       }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
@@ -4534,13 +4567,10 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   return (false);
 }
 
-int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
+FLASHMEM int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
 {
-  // String strA = fileA.name.toLowerCase();
-  // String strB = fileB.name.toLowerCase();
-
-  String strA = fileA.name;
-  String strB = fileB.name;
+  String strA = fileA.name.toLowerCase();
+  String strB = fileB.name.toLowerCase();
 
   if (strA.length() == 1)
   {
@@ -4559,7 +4589,7 @@ int compare_files_by_name(storage_file_s& fileA, storage_file_s& fileB)
   }
 }
 
-#ifdef  MUSIKANDMORE
+#ifdef  SECOND_SD
 extern SDClass SD_EXTERNAL;
 #endif
 
@@ -4571,7 +4601,7 @@ FLASHMEM void load_sd_directory()
 
   if (fm.SD_CARD_READER_EXT == false || fm.active_window == 0)
     sd_root = SD.open(fm.sd_new_name.c_str());
-#ifdef MUSIKANDMORE
+#ifdef  SECOND_SD
   else
     if (fm.SD_CARD_READER_EXT)
       sd_root = SD_EXTERNAL.open(fm.sd_new_name.c_str());

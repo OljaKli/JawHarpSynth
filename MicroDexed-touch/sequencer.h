@@ -118,6 +118,8 @@ typedef struct sequencer_s
     uint8_t note_in;
     uint8_t note_in_velocity;
     int transpose = 0;
+    uint8_t input_base_note=0;
+    uint8_t input_base_note_quantized=0;
     uint8_t chord_vel = 60;
     uint8_t chord_key_ammount = 4;
     uint8_t element_shift = 0;
@@ -343,5 +345,7 @@ void seq_print_current_note_from_step(uint8_t step);
 void set_pattern_content_type_color(uint8_t pattern);
 void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypos, uint8_t pattern, uint8_t actstep, bool fullredraw);
 void print_chord_name(uint8_t currentstep);
+uint8_t find_longest_chain();
+uint8_t get_chain_length_from_current_track(uint8_t tr);
 
 #endif

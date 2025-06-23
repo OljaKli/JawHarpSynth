@@ -147,12 +147,15 @@ void printLiveModButtons(void);
 void printLiveModButton(int8_t button); // 0 - 3 ADSR
 void reset_live_modifiers();
 void reset_live_modifier(uint8_t step);
-
+const bool isCustomSample(const uint8_t index);
 void print_empty_spaces(uint8_t spaces, bool clear_background);
 void print_voice_select_default_help();
 void draw_volmeters_mixer();
 void draw_volmeters_multiband_compressor();
 void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+uint8_t find_first_song_step_with_pattern(uint8_t pattern);
+uint8_t find_first_chain_step_with_pattern(uint8_t pattern);
+void _print_panbar_value(uint8_t input_value);
 
 void draw_algo(bool forceDraw = false);
 uint8_t get_algo();

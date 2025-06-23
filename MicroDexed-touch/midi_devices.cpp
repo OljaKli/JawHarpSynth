@@ -204,8 +204,17 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
   switch (event)
   {
   case midi::NoteOn:
+  if (seq.transpose ==0 || inData1 > seq.transpose)
+  {
     seq.note_in = inData1;
     seq.note_in_velocity = inData2;
+  }
+  else   //live transpose only
+  {
+     seq.note_in = 0;
+      seq.input_base_note = inData1 % 12;
+      seq.note_in_velocity = 0;
+  }
 
 #if defined APC
 
@@ -237,7 +246,9 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     }
 #endif
 
+ if (seq.transpose ==0 || inData1 > seq.transpose)
     handleNoteOnInput(inChannel, inData1, inData2, 0);
+
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
       print_apc_source_selection_pads();
@@ -247,9 +258,10 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
     break;
   case midi::NoteOff:
-    seq.note_in = inData1;
+ 
+seq.note_in = inData1;
     seq.note_in_velocity = inData2;
-
+  
 #if defined APC
     if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
       apc_shift_key = false;
@@ -262,6 +274,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
 
     handleNoteOff(inChannel, inData1, inData2, 0);
+   
 #ifdef DEBUG
     strcpy(text, "NoteOff");
 #endif
@@ -1296,19 +1309,19 @@ extern void midi_activity_leds();
 void check_midi_devices(void)
 {
 #ifdef MIDI_DEVICE_DIN
-    midi_serial.read();
+  midi_serial.read();
 #endif
-     #ifdef MIDI_DEVICE_USB
-       usbMIDI.read();
-     #endif
+#ifdef MIDI_DEVICE_USB
+  usbMIDI.read();
+#endif
 
 #ifdef MIDI_DEVICE_USB_HOST
-    usb_host.Task();
-    midi_usb.read();
+  usb_host.Task();
+  midi_usb.read();
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
-    midi_activity_leds();
+  midi_activity_leds();
 #endif
 }
 

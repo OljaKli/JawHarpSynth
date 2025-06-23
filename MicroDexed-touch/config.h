@@ -354,7 +354,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define VOICE_NAME_LEN 12 // 11 (plus '\0')
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50
-#define FILENAME_MAX_LEN 16
+#define FILENAME_MAX_LEN 17
 #define FULLPATH_MAX_LEN 64
 
 #define PERFORMANCE_CONFIG_PATH "PERFORMANCE"
@@ -411,9 +411,14 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define MCP_INTA 8
 #define ANALOG_VOLUME_IN 15
 #define CV_CLOCK_IN 22
+#define CV_CLOCK_OUT 39
 #define TRS_PEDAL_IN 23
-#define GEN3_CS_SDCARD_EXTERNAL 35
 #endif 
+
+#if defined(MUSIKANDMORE) || defined(SECOND_SD)
+#define GEN3_CS_SDCARD_EXTERNAL 35
+#endif
+
 
 #define CONTROL_RATE_MS 50
 #define MICROSYNTH_CONTROL_RATE_MS 30
