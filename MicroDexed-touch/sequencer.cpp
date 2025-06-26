@@ -947,7 +947,7 @@ void sequencer(void)
       seq.step++;
 
 #ifdef MUSIKANDMORE
-  digitalWrite(CV_CLOCK_OUT,HIGH);
+  digitalWrite(CV_CLOCK_OUT,LOW); //tested ok 24/06/2025
   //setled(LED_DOWN, true);
 #endif
     }
@@ -971,7 +971,7 @@ void sequencer(void)
       sequencer_part2();
 
    #ifdef MUSIKANDMORE
-  digitalWrite(CV_CLOCK_OUT,LOW);
+  digitalWrite(CV_CLOCK_OUT,HIGH);  //tested ok 24/06/2025
   //setled(LED_DOWN, false);
 #endif
     }
