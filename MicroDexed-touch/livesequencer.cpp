@@ -21,9 +21,8 @@ extern void handleNoteOnInput(byte, byte, byte, byte);
 extern void handleNoteOn(byte, byte, byte, byte);
 extern void handleNoteOff(byte, byte, byte, byte);
 extern void handleAfterTouch(byte, byte);
-extern void handleControlChange(byte, byte, byte);
-extern void handlePitchBend(byte, int16_t);
 extern void midiPitchBend(int pitch, uint8_t channel, uint8_t device);
+extern int toPitchBend(uint8_t lsb, uint8_t msb);
 extern void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device);
 extern void handleStart();
 extern void handleStop();
@@ -139,8 +138,7 @@ FLASHMEM void LiveSequencer::resetControllers() {
     const midi::Channel channel = data.tracks[track].channel;
 
     //  Reset pitch bend to center
-    handlePitchBend(channel, 0); // dexed instances
-    midiPitchBend(0, channel, device); // external midi devices
+    midiPitchBend(0, channel, device); 
 
     // Collect unique CCs for the current track
     std::unordered_set<uint8_t> uniqueCCs;
@@ -153,9 +151,7 @@ FLASHMEM void LiveSequencer::resetControllers() {
 
     // Reset collected CCs to default value. In future add default values for specific CCs like #7 in sys config.
     for (const auto& cc : uniqueCCs) {
-      // for internal devices. WARNING: this handles internal automation. Needs more testing!
-      handleControlChange(channel, cc, 0);
-      // for external midi devices
+      // WARNING: this may affect internal automation. Needs more testing!
       midiControlChange(cc, 0, channel, device);
     }
 
@@ -286,26 +282,6 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         const EventSource source = data.isSongMode ? EVENT_SONG : EVENT_PATTERN;
         MidiEvent newEvent = { source, uint16_t(data.patternTimer), data.currentPattern, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, event, note, velocityActive };
 
-        switch (event){
-          case midi::ControlChange:
-            // Record MIDI CC
-            newEvent.note_in = note;              // Controller number
-            newEvent.note_in_velocity = velocity; // Controller value
-            data.pendingEvents.emplace_back(newEvent);
-            break;
-
-          case midi::PitchBend:
-            // Record Pitch Bend
-            newEvent.note_in = note;              // LSB
-            newEvent.note_in_velocity = velocity; // MSB
-            data.pendingEvents.emplace_back(newEvent);
-            break;
-
-          default:
-            // Handle other events (NoteOn, NoteOff, etc.)
-            break;
-        }
-
         if (data.isSongMode) {
           if (data.songLayerCount < LIVESEQUENCER_NUM_LAYERS) {
             // in song mode, simply add event, no rounding and checking needed
@@ -328,6 +304,20 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
               break;
 
               // TODO: record aftertouch
+
+            case midi::ControlChange:
+              // Record MIDI CC
+              newEvent.note_in = note;              // Controller number
+              newEvent.note_in_velocity = velocity; // Controller value
+              data.pendingEvents.emplace_back(newEvent);
+            break;
+
+            case midi::PitchBend:
+              // Record Pitch Bend
+              newEvent.note_in = note;              // LSB
+              newEvent.note_in_velocity = velocity; // MSB
+              data.pendingEvents.emplace_back(newEvent);
+            break;
 
             case midi::NoteOn:
               static constexpr int ROUND_UP_MS = 100;
@@ -379,16 +369,10 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         const uint8_t device = data.trackSettings[data.activeTrack].device;
         switch (event) {
         case midi::ControlChange:
-          //mdt default cc handling
-          handleControlChange(ch, note, velocityActive); // note is controller number, velocityActive is value
-          // hw midi handling
-          midiControlChange(note, velocityActive, ch, device); // note is controller number, velocityActive is value
+          midiControlChange(note, velocity, ch, device); // note is controller number, velocity is value
           break;
         case midi::PitchBend:
-          //this would handle pb in dexed instances
-          handlePitchBend(ch, ((note & 0x7F) | ((velocityActive & 0x7F) << 7)) - 8192); // Combine LSB and MSB
-          // this would handle pb in hw midi
-          midiPitchBend((note | (velocityActive << 7)) - 8192, ch, device); // Combine LSB and MSB
+          midiPitchBend(toPitchBend(note, velocity), ch, device); // note is LSB, velocity is MSB
         break;
         case midi::AfterTouchChannel:
           handleAfterTouch(ch, note);
@@ -593,18 +577,12 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
       if (isMuted) {
         break; // skip muted events
       }
-      // this would handle pb in dexed instances
-      handlePitchBend(channel, (playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192); // Combine LSB and MSB
-      // this would handle pb in hw midi
-      midiPitchBend((playIterator->note_in | (playIterator->note_in_velocity << 7)) - 8192, channel, device); // Combine LSB and MSB
+      midiPitchBend(toPitchBend(playIterator->note_in, playIterator->note_in_velocity), channel, device); // note_in is LSB, note_in_velocity is MSB
       break;
     case midi::ControlChange:
       if (isMuted) {
         break; // skip muted events
       }
-      //mdt default cc handling
-      handleControlChange(channel, playIterator->note_in, playIterator->note_in_velocity); // note is controller number, velocity is value
-      // hw midi handling
       midiControlChange(playIterator->note_in, playIterator->note_in_velocity, channel, device); // note is controller number, velocity is value
       switch (playIterator->note_in) {
         case AutomationType::TYPE_MUTE_ON:

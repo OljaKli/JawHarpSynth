@@ -177,6 +177,17 @@ void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
   case 3:
     usbMIDI.sendPitchBend(pitch, channel);
     break;
+
+  case 0:
+    // Handle MDT devices
+    handlePitchBend(channel, pitch);
+    break;
+
+  default:
+#ifdef DEBUG
+    LOG.printf_P(PSTR("Unknown device for PB: %d"), device);
+#endif
+    break;
   }
 }
 
@@ -196,6 +207,17 @@ void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t 
 
   case 3:
     usbMIDI.sendControlChange(control, value, channel);
+    break;
+
+  case 0:
+    // Handle MDT devices
+    handleControlChange(channel, control, value);
+    break;
+
+  default:
+#ifdef DEBUG
+    LOG.printf_P(PSTR("Unknown device for CC: %d"), device);
+#endif
     break;
   }
 }
@@ -295,6 +317,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
 
 #ifdef DEBUG
+    strcpy(text, "NoteOn");
 #endif
     break;
   case midi::NoteOff:
@@ -484,6 +507,19 @@ seq.note_in = inData1;
 #ifdef DEBUG
   LOG.println();
 #endif
+}
+
+int toPitchBend(uint8_t lsb, uint8_t msb) {
+  return ((int16_t)((msb << 7) | lsb) - 8192);
+}
+
+void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_device, midi::MidiType event)
+{
+  // Split 14-bit pitch value into LSB and MSB as per MIDI spec
+  int inPitchCentered = inPitch + 8192; // Center the value around 0
+  byte lsb = inPitchCentered & 0x7F;
+  byte msb = (inPitchCentered >> 7) & 0x7F;
+  handle_generic(inChannel, lsb, msb, midi_device, event);
 }
 
 void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
@@ -791,7 +827,7 @@ void handleAfterTouch_MIDI_DEVICE_DIN(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_DIN(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_DIN, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_DIN(byte inChannel, byte inProgram)
@@ -912,12 +948,7 @@ void handleAfterTouch_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB_HOST(byte inChannel, int inPitch)
 {
-  //handlePitchBend(inChannel, inPitch);// this works only for dexed
-  // Split 14-bit pitch value into LSB and MSB as per MIDI spec
-  int inPitchCentered = inPitch + 8192; // Center the value around 0
-  byte lsb = inPitchCentered & 0x7F;
-  byte msb = (inPitchCentered >> 7) & 0x7F;
-  handle_generic(inChannel, lsb, msb, MIDI_BY_USB_HOST, midi::PitchBend);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_USB_HOST, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPrg)
@@ -1038,7 +1069,7 @@ void handleAfterTouch_MIDI_DEVICE_USB(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_USB, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB(byte inChannel, byte inProgram)
