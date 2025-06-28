@@ -201,7 +201,9 @@ ILI9341_t3n::ILI9341_t3n(uint8_t cs, uint8_t dc, uint8_t rst, uint8_t mosi,
   _rst = rst;
   _mosi = mosi;
   _sclk = sclk;
+#if defined GENERIC_DISPLAY
   _miso = miso;
+#endif
   _width = TFT_WIDTH;
   _height = TFT_HEIGHT;
 
@@ -634,40 +636,46 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
   // LOG.printf_P(PSTR("_t3n::begin mosi:%d miso:%d SCLK:%d CS:%d DC:%d SPI clocks: %lu %lu\n"), _mosi, _miso, _sclk, _cs, _dc, _SPI_CLOCK, _SPI_CLOCK_READ);
   // LOG.flush();
 
-  if (SPI.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI.pinIsMISO(_miso)) && SPI.pinIsSCK(_sclk))
-  {
-    _pspi = &SPI;
-    _spi_num = 0; // Which buss is this spi on?
+//   if (SPI.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI.pinIsMISO(_miso)) && SPI.pinIsSCK(_sclk))
+//   {
+//     _pspi = &SPI;
+//     _spi_num = 0; // Which buss is this spi on?
+//     _pimxrt_spi = &IMXRT_LPSPI4_S; // Could hack our way to grab this from SPI
+// #if defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__IMXRT1062__) || defined(__MKL26Z64__)
+//   }
+//   else if (SPI1.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI1.pinIsMISO(_miso)) && SPI1.pinIsSCK(_sclk))
+//   {
+//     _pspi = &SPI1;
+//     _spi_num = 1; // Which buss is this spi on?
+//     _pimxrt_spi = &IMXRT_LPSPI3_S; // Could hack our way to grab this from SPI
+// #if !defined(__MKL26Z64__)
+//   }
+//   else if (SPI2.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI2.pinIsMISO(_miso)) && SPI2.pinIsSCK(_sclk))
+//   {
+//     _pspi = &SPI2;
+//     _spi_num = 2; // Which buss is this spi on?
+//     _pimxrt_spi = &IMXRT_LPSPI1_S; // Could hack our way to grab this from SPI
+// #endif
+// #endif
+//   }
+//   else
+//   {
+//     return; // most likely will go bomb
+//   }
 
-    _pimxrt_spi = &IMXRT_LPSPI4_S; // Could hack our way to grab this from SPI
+  _pspi = &SPI1;
+  _spi_num = 1; // Which buss is this spi on?
+  _pimxrt_spi = &IMXRT_LPSPI3_S; // Could hack our way to grab this from SPI
 
-#if defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__IMXRT1062__) || defined(__MKL26Z64__)
-  }
-  else if (SPI1.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI1.pinIsMISO(_miso)) && SPI1.pinIsSCK(_sclk))
-  {
-    _pspi = &SPI1;
-    _spi_num = 1; // Which buss is this spi on?
-    _pimxrt_spi = &IMXRT_LPSPI3_S; // Could hack our way to grab this from SPI
-#if !defined(__MKL26Z64__)
-  }
-  else if (SPI2.pinIsMOSI(_mosi) && ((_miso == 0xff) || SPI2.pinIsMISO(_miso)) && SPI2.pinIsSCK(_sclk))
-  {
-    _pspi = &SPI2;
-    _spi_num = 2; // Which buss is this spi on?
-    _pimxrt_spi = &IMXRT_LPSPI1_S; // Could hack our way to grab this from SPI
-#endif
-#endif
-  }
-  else
-  {
 
-    return; // most likely will go bomb
-  }
   // Make sure we have all of the proper SPI pins selected.
   _pspi->setMOSI(_mosi);
   _pspi->setSCK(_sclk);
+
+#if defined GENERIC_DISPLAY
   if (_miso != 0xff)
     _pspi->setMISO(_miso);
+#endif
 
   // Hack to get hold of the SPI Hardware information...
   uint32_t* pa = (uint32_t*)((void*)_pspi);

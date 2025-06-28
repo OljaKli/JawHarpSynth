@@ -134,7 +134,12 @@ extern uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
 PsramLoader sampleLoader(psram_free_bytes);
 
+#if defined GENERIC_DISPLAY
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
+#else
+ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK);
+#endif
+
 MD_REncoder ENCODER[NUM_ENCODER]{ MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };
 
 #if defined SMFPLAYER

@@ -5,11 +5,11 @@
 # MicroDexed-touch
 
 <br><p>
-<img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/Build_InstructionsV3_Capacitive_Touch/mdt_capacitive_touch.png" >
+<img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/Capacitive_Touch/mdt_capacitive_touch.png" >
 <br>
 (SLA PRINTED ENCLOSURE, DISPLAY SIZE LEFT: 2.8", MIDDLE: 2,8" and RIGHT: 3.2")
 <br><p>
-<img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/Build_InstructionsV3_Capacitive_Touch/pcb28-32.jpg" >
+<img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/Capacitive_Touch/pcb28-32.jpg" >
 <br>
 (PCB BASED FRONT/BACK PANEL, DISPLAY SIZE LEFT 2.8" and RIGHT 3.2")
 <br><p>
