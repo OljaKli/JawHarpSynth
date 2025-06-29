@@ -715,7 +715,7 @@ if (seq.step==0)
               seq.prev_vel[d] = seq.vel[seq.current_pattern[d]][seq.step];
             }
           }
-          else if (seq.track_type[d] == 2 && seq.ticks == 0) // Chords
+          else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) // Chords
           {
             if (seq.vel[seq.current_pattern[d]][seq.step] > 199)
             {
@@ -853,8 +853,8 @@ else
           }
           seq.noteoffsent[d] = true;
         }
-        if (seq.track_type[d] == 2) // Chords
-        { //&& seq.note_data[seq.current_pattern[d]][seq.step] != 130
+        if (seq.track_type[d] == 2 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) // Chords
+        {
           if (seq.prev_vel[d] > 199)
           {
             for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
