@@ -6924,7 +6924,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
           break;
 
         case 7:
-          seq.bpm = constrain(seq.bpm + (e.dir * 1), 60, 180);
+          seq.bpm = constrain(seq.bpm + (e.dir * 1), 50, 240);
           update_seq_speed();
           break;
 
