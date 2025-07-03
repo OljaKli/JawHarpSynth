@@ -1135,7 +1135,7 @@ FLASHMEM void setup()
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
   pinMode(ANALOG_VOLUME_IN, INPUT_PULLUP);
-  pinMode(CV_CLOCK_OUT, OUTPUT);   
+  pinMode(CV_CLOCK_OUT, OUTPUT);
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
   pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
@@ -2203,7 +2203,8 @@ FLASHMEM void draw_glow()
     else if (glow_limit_max < 100) {
       setCursor_textGrid_small(glow_x + 1, glow_y);
       print_formatted_number(glow_input_value, 2);
-    } else if (glow_limit_max < 1000) {
+    }
+    else if (glow_limit_max < 1000) {
       print_formatted_number(glow_input_value, 3);
     }
     else {
@@ -3388,20 +3389,20 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                int16_t *start = (int16_t*)drum_config[d].drum_data;
+                int16_t* start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
                 const uint32_t channelMask = ~(drum_config[d].numChannels - 1); // round down to numChannels
-                
+
                 if (isCustomSample(d)) {
                   // calculate start and end points
-                  const CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
+                  const CustomSample& s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];
                   const float mult = length / float(1000);
                   const uint32_t offStart = uint32_t(s.start * mult) & channelMask;
                   start += offStart;
                   const uint32_t offEnd = length - (uint32_t(s.end * mult) & channelMask);
                   length -= (offStart + offEnd);
                 }
-                
+
                 const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
                 if (hihatRand) {
                   const uint32_t offStart = random(seq.hihat_randomizer * 50) & channelMask;
@@ -4773,6 +4774,11 @@ FLASHMEM void handleStop(void)
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
   }
+
+#ifdef MUSIKANDMORE
+  digitalWrite(CV_CLOCK_OUT, LOW);
+#endif
+
 }
 
 void handleActiveSensing(void)
