@@ -587,12 +587,10 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
       switch (playIterator->note_in) {
         case AutomationType::TYPE_MUTE_ON:
         case AutomationType::TYPE_MUTE_OFF:
-          const uint8_t muteLayer = playIterator->note_in_velocity; // WARNING: Beaking change with old performances!
-                                                                    // Before playIterator->note_in (CC number) was used to select the layer.
-                                                                    // This unfortunately conflicts with generic CCs (#0 and #1).
-                                                                    // To resolve this we should use TYPE_MUTE_ON / TYPE_MUTE_OFF (now with high range CC numbers) for mute state
-                                                                    // and note_in_velocity (CC's value) to select the layer.
-          // DBG_LOG(printf("mute %s\n", playIterator->note_in ? "MUTE" : "UNMUTE"));
+          const uint8_t muteLayer = playIterator->note_in_velocity;
+#ifdef DEBUG
+          DBG_LOG(printf("track %i layer %i %s\n", muteLayer, playIterator->track, playIterator->note_in == AutomationType::TYPE_MUTE_ON ? "MUTE" : "UNMUTE"));
+#endif
           setLayerMuted(playIterator->track, muteLayer, playIterator->note_in == AutomationType::TYPE_MUTE_ON);
           break;
       }
