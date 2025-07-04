@@ -89,7 +89,7 @@ FLASHMEM void apc_print_volume_pads()
   {
     for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
-        sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max * 100, i, 5);
+        sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max, i, 5);
   }
 }
 
@@ -196,7 +196,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
       if (APC_BUTTONS_RIGHT[6])  //sample select mode
       {
         activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
-        drum_config[activeSample].vol_max = (float)in2 / 100;
+        drum_config[activeSample].vol_max = (float)in2;
       }
       if (APC_BUTTONS_RIGHT[3])
       {
@@ -706,7 +706,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 
       seq_printAllVelocitySteps();
     }
-    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST+3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST+8))) //update scrolling pad view LUC 103 or 67 / 108 or 72
+    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST + 3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST + 8))) //update scrolling pad view LUC 103 or 67 / 108 or 72
     {
       apc_print_volume_pads();
     }

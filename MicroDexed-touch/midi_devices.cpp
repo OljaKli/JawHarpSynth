@@ -35,7 +35,7 @@ struct MicroDexedSettings : public midi::DefaultSettings
   static const unsigned SysExMaxSize = 4104; // Accept SysEx messages up to 1024 bytes long.
   static const bool Use1ByteParsing = false;  //seems to improve rapid MIDI input from ARPs etc.
 };
-    
+
 #ifdef MIDI_DEVICE_DIN
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroDexedSettings);
 #endif
@@ -43,7 +43,7 @@ MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroD
 USBHost usb_host;
 MIDIDevice midi_usb(usb_host);
 #define COUNT_JOYSTICKS 1
-JoystickController joysticks[COUNT_JOYSTICKS]{usb_host};
+JoystickController joysticks[COUNT_JOYSTICKS]{ usb_host };
 #endif
 
 #ifdef USB_KEYPAD
@@ -121,7 +121,7 @@ void midiSendRealtime(midi::MidiType event) {
 }
 
 void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
-  switch(device) {
+  switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
     midi_usb.sendNoteOn(note, velocity, channel);
@@ -141,7 +141,7 @@ void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device)
 }
 
 void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device) {
-  switch(device) {
+  switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
     midi_usb.sendNoteOff(note, velocity, channel);
@@ -156,6 +156,68 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
 
   case 3:
     usbMIDI.sendNoteOff(note, velocity, channel);
+    break;
+  }
+}
+
+void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
+  switch (device) {
+#ifdef MIDI_DEVICE_USB_HOST
+  case 1:
+    midi_usb.sendPitchBend(pitch, channel);
+    break;
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  case 2:
+    midi_serial.sendPitchBend(pitch, channel);
+    break;
+#endif
+
+  case 3:
+    usbMIDI.sendPitchBend(pitch, channel);
+    break;
+
+  case 0:
+    // Handle MDT devices
+    handlePitchBend(channel, pitch);
+    break;
+
+  default:
+#ifdef DEBUG
+    LOG.printf_P(PSTR("Unknown device for PB: %d"), device);
+#endif
+    break;
+  }
+}
+
+void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device) {
+  switch (device) {
+#ifdef MIDI_DEVICE_USB_HOST
+  case 1:
+    midi_usb.sendControlChange(control, value, channel);
+    break;
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  case 2:
+    midi_serial.sendControlChange(control, value, channel);
+    break;
+#endif
+
+  case 3:
+    usbMIDI.sendControlChange(control, value, channel);
+    break;
+
+  case 0:
+    // Handle MDT devices
+    handleControlChange(channel, control, value);
+    break;
+
+  default:
+#ifdef DEBUG
+    LOG.printf_P(PSTR("Unknown device for CC: %d"), device);
+#endif
     break;
   }
 }
@@ -177,6 +239,9 @@ extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_MODE;
 extern void print_apc_source_selection_pads();
 extern void apc_fader_control(uint8_t in1, uint8_t in2);
+
+extern void start_MIDI_input_timer();
+extern void stop_MIDI_input_timer();
 
 void apc(uint8_t a, uint8_t b, uint8_t c)
 {
@@ -201,8 +266,17 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
   switch (event)
   {
   case midi::NoteOn:
+  if (seq.transpose ==0 || inData1 > seq.transpose)
+  {
     seq.note_in = inData1;
     seq.note_in_velocity = inData2;
+  }
+  else   //live transpose only
+  {
+     seq.note_in = 0;
+      seq.input_base_note = inData1 % 12;
+      seq.note_in_velocity = 0;
+  }
 
 #if defined APC
 
@@ -225,31 +299,35 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
         {
           apc_NoteOn(inChannel, inData1, inData2);
         }
-         else
-        if (APC_MODE == APC_SONG)
-        {
-          apc_NoteOn(inChannel, inData1, inData2);
-         
-        }
+        else
+          if (APC_MODE == APC_SONG)
+          {
+            apc_NoteOn(inChannel, inData1, inData2);
+
+          }
     }
 #endif
 
+ if (seq.transpose ==0 || inData1 > seq.transpose)
     handleNoteOnInput(inChannel, inData1, inData2, 0);
+
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
       print_apc_source_selection_pads();
 #endif
 
 #ifdef DEBUG
+    strcpy(text, "NoteOn");
 #endif
     break;
   case midi::NoteOff:
-    seq.note_in = inData1;
+ 
+seq.note_in = inData1;
     seq.note_in_velocity = inData2;
-
+  
 #if defined APC
- if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
-        apc_shift_key = false;
+    if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
+      apc_shift_key = false;
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
       if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
@@ -259,6 +337,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
 
     handleNoteOff(inChannel, inData1, inData2, 0);
+   
 #ifdef DEBUG
     strcpy(text, "NoteOff");
 #endif
@@ -285,6 +364,12 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     handleAfterTouch(inChannel, inData1);
 #ifdef DEBUG
     strcpy(text, "Mono AT");
+#endif
+    break;
+  case midi::PitchBend:
+    handlePitchBend(inChannel, ((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192); // Combine LSB and MSB as per MIDI spec. Center the value around 0
+#ifdef DEBUG
+    strcpy(text, "PB");
 #endif
     break;
   case midi::ProgramChange:
@@ -366,7 +451,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
         midi_serial.sendAfterTouch(inData1, inChannel);
         break;
       case midi::PitchBend:
-        midi_serial.sendPitchBend(inData1, inChannel);
+        midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel); // Combine LSB and MSB as per MIDI spec. Center the value around 0
         break;
       case midi::ProgramChange:
         midi_serial.sendProgramChange(inData1, inChannel);
@@ -422,6 +507,19 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #ifdef DEBUG
   LOG.println();
 #endif
+}
+
+int toPitchBend(uint8_t lsb, uint8_t msb) {
+  return ((int16_t)((msb << 7) | lsb) - 8192);
+}
+
+void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_device, midi::MidiType event)
+{
+  // Split 14-bit pitch value into LSB and MSB as per MIDI spec
+  int inPitchCentered = inPitch + 8192; // Center the value around 0
+  byte lsb = inPitchCentered & 0x7F;
+  byte msb = (inPitchCentered >> 7) & 0x7F;
+  handle_generic(inChannel, lsb, msb, midi_device, event);
 }
 
 void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
@@ -729,7 +827,7 @@ void handleAfterTouch_MIDI_DEVICE_DIN(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_DIN(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_DIN, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_DIN(byte inChannel, byte inProgram)
@@ -744,7 +842,7 @@ void handleAfterTouchPoly_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byt
 
 void handleSystemExclusive_MIDI_DEVICE_DIN(byte* data, uint len)
 {
- handleSystemExclusive_generic(data, len, MIDI_BY_DIN);
+  handleSystemExclusive_generic(data, len, MIDI_BY_DIN);
 }
 
 /* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
@@ -850,7 +948,7 @@ void handleAfterTouch_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB_HOST(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_USB_HOST, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPrg)
@@ -971,7 +1069,7 @@ void handleAfterTouch_MIDI_DEVICE_USB(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_USB, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB(byte inChannel, byte inProgram)
@@ -1287,8 +1385,8 @@ FLASHMEM void setup_midi_devices(void)
 }
 
 #ifdef MIDI_ACTIVITY_LIGHTS
- extern void midi_activity_leds();
- #endif
+extern void midi_activity_leds();
+#endif
 
 void check_midi_devices(void)
 {
@@ -1298,6 +1396,7 @@ void check_midi_devices(void)
 #ifdef MIDI_DEVICE_USB
   usbMIDI.read();
 #endif
+
 #ifdef MIDI_DEVICE_USB_HOST
   usb_host.Task();
   midi_usb.read();
@@ -1305,7 +1404,7 @@ void check_midi_devices(void)
 
 #ifdef MIDI_ACTIVITY_LIGHTS
   midi_activity_leds();
- #endif
+#endif
 }
 
 FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)

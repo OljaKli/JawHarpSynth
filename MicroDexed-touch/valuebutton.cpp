@@ -12,10 +12,10 @@ FLASHMEM ValueButton<T>::ValueButton(ActiveValue *active, uint16_t x_coord, uint
       v->cycle();
     } else {
       if(active->valueBase != nullptr) {
-        (*active).button->setSelected(false);        
+        active->button->setSelected(false);        
       }
-      (*active).valueBase = v;
-      (*active).button = b;
+      active->valueBase = v;
+      active->button = b;
       b->setSelected(true);
     }
   })

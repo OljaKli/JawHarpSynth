@@ -11,7 +11,9 @@ static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { COLOR_SYSTEXT, DX_DARKCYAN }, // COLOR_ACTIVE
   { COLOR_SYSTEXT, RED },         // COLOR_RED
   { COLOR_SYSTEXT, MIDDLEGREEN }, // COLOR_HIGHLIGHTED
-  { COLOR_SYSTEXT, COLOR_BACKGROUND } // COLOR_LABEL
+  { COLOR_SYSTEXT, COLOR_BACKGROUND }, // COLOR_LABEL
+  { COLOR_SYSTEXT, DARKGREEN },       // COLOR_DARKGREEN
+  { COLOR_SYSTEXT, PINK }       // COLOR_PINK
 };
 
 FLASHMEM TouchButton::TouchButton(uint16_t x_coord, uint16_t y_coord, std::function<void(TouchButton*)> draw, std::function<void(TouchButton*)> clicked, std::function<void(TouchButton*)> longPressed)
