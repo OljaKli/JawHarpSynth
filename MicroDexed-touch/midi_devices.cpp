@@ -251,6 +251,7 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
   static uint8_t a_old=255, b_old=255;
   //a=inNoteNumber, b=inVelocity (128 colour), c=inChannel (brightness,blink)
   if(a_old!=a  || b_old!=b) { //avoid repeating same command without meaning, to avoid freeze, but it still freezes
+    a_old=a; b_old=b;
     switch(b) { //wrapper for colour from APC Mini Mk2 to Mk1
       case 0: break; //OFF colour is the same
       case 5: //red Mk2
@@ -272,7 +273,6 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
     }
     b += ((c==11) && b)?1:0; //increment colour for blink mode (1,3,5 to 2,4,6), 11 is blink for Mk2
     midi_usb.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
-    a_old=a; b_old=b;
   }
 #endif
 }
