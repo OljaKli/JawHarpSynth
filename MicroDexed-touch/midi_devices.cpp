@@ -250,29 +250,34 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
 #else
   static uint8_t a_old=255, b_old=255;
   //a=inNoteNumber, b=inVelocity (128 colour), c=inChannel (brightness,blink)
-  if(a_old!=a  || b_old!=b) { //avoid repeating same command without meaning, to avoid freeze, but it still freezes
+  if((a_old!=a)  || (b_old!=b)) { //avoid repeating same command without meaning, to avoid freeze, but it still freezes
     a_old=a; b_old=b;
     switch(b) { //wrapper for colour from APC Mini Mk2 to Mk1
-      case 0: break; //OFF colour is the same
-      case 5: //red Mk2
-        b=3;break;
-      case 1:  //#1E1E1E Mk2 for mute matrix
-        b=5;break;//yellow
-      case 78: //#00A9FF Mk2 for mute matrix
-        b=1;break; //green
-      case 2:  //#7F7F7F Mk2 for mute matrix for instr pattern
-        b=5;break;//yellow
-      case 40: //#4C88FF Mk2 for mute matrix for instr pattern
-        b=1;break; //green
-      case 124: //#B9B000 Mk2 for mute matrix for drum pattern
-        b=1+1;break; //green blink
-      case 36: //#4CC3FF Mk2 for mute matrix for pitched sample
-        b=5+1;break; //yellow blink
-      default: //for sample pads colours put 3 mk1 colors in round robin order
-        b=(b%3)*2+1;break;//get 1,3 or 5 from any number
+      case 0: break; //OFF colour is the same for Mk2 and Mk1
+      case 5:        //red Mk2
+        b=3;break;   //red for Mk1
+      case 1:        //colour #1E1E1E Mk2 for mute matrix
+        b=5;break;   //yellow for Mk1
+      case 78:       //colour #00A9FF Mk2 for mute matrix
+        b=1;break;   //green for Mk1
+      case 2:        //colour #7F7F7F Mk2 for mute matrix for instr pattern
+        b=5+1;break; //yellow blink for Mk1
+      case 40:       //colour #4C88FF Mk2 for mute matrix for instr pattern
+        b=1+1;break; //green blink for Mk1
+      case 124:      //colour #B9B000 Mk2 for mute matrix for drum pattern
+        b=3+1;break; //red blink for Mk1
+      case 36:       //colour #4CC3FF Mk2 for mute matrix for pitched sample
+        b=3;break;   //red for Mk1
+      default:       //for several sample pads colours put all 3 mk1 colors in round robin order
+        b=(b%3)*2+1;break;//get 1,3 or 5 (green,red,yellow) from any colour number for Mk1
     }
-    b += ((c==11) && b)?1:0; //increment colour for blink mode (1,3,5 to 2,4,6), 11 is blink for Mk2
+    //increment colour for blink mode request (1,3,5 to 2,4,6), 11 is blink for Mk2
+    //avoid blink if colour is 0 (OFF) or if colour is already blinking (even number)
+    b += ((c==11) && b && (b&1u))?1:0;
     midi_usb.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+  }
+  else {
+    a_old=a; b_old=b;
   }
 #endif
 }
