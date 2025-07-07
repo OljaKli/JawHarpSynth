@@ -227,7 +227,7 @@ public:
   void initOnce(void);
   LiveSequencer::LiveSeqData* getData(void);
   void songLayerAction(uint8_t layer, LayerMode action);
-  bool trackLayerAction(uint8_t track, uint8_t layer, LayerMode action);
+  bool trackLayerAction(uint8_t track, uint8_t layer, LayerMode action, bool &clearLayer);
   void handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity);
   void handlePatternBegin(void);
   void start(void);
@@ -287,6 +287,7 @@ private:
   void allTrackNotesOff(const uint8_t track);
   void allLayerNotesOff(const uint8_t track, const uint8_t layer);
   void allNotesOff(void);
+  void resetTrackControllers(uint8_t track);
   void resetControllers();
   void playNextEvent(void);
   void playNextArpNote(void);

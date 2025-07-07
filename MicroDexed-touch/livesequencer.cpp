@@ -132,30 +132,34 @@ FLASHMEM void LiveSequencer::allTrackNotesOff(const uint8_t track) {
   }
 }
 
+FLASHMEM void LiveSequencer::resetTrackControllers(uint8_t track) {
+  const uint8_t device = data.trackSettings[track].device;
+  const midi::Channel channel = data.tracks[track].channel;
+
+  //  Reset pitch bend to center
+  midiPitchBend(0, channel, device); 
+
+  // Collect unique CCs for the current track
+  std::unordered_set<uint8_t> uniqueCCs;
+  for (const auto& event : data.eventsList) {
+    if (event.track == track && event.event == midi::ControlChange) {
+      // Note: maybe we should also check if event.source == EVENT_PATTERN
+      uniqueCCs.insert(event.note_in);
+    }
+  }
+
+  // Reset collected CCs to default value. In future add default values for specific CCs like #7 in sys config.
+  for (const auto& cc : uniqueCCs) {
+    // WARNING: this may affect internal automation. Needs more testing!
+    midiControlChange(cc, 0, channel, device);
+  }
+
+  DBG_LOG(printf("Track %i: Reset pitch bend and control changes\n", track));
+}
+
 FLASHMEM void LiveSequencer::resetControllers() {
   for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
-    const uint8_t device = data.trackSettings[track].device;
-    const midi::Channel channel = data.tracks[track].channel;
-
-    //  Reset pitch bend to center
-    midiPitchBend(0, channel, device); 
-
-    // Collect unique CCs for the current track
-    std::unordered_set<uint8_t> uniqueCCs;
-    for (const auto& event : data.eventsList) {
-      if (event.track == track && event.event == midi::ControlChange) {
-        // Note: maybe we should also check if event.source == EVENT_PATTERN
-        uniqueCCs.insert(event.note_in);
-      }
-    }
-
-    // Reset collected CCs to default value. In future add default values for specific CCs like #7 in sys config.
-    for (const auto& cc : uniqueCCs) {
-      // WARNING: this may affect internal automation. Needs more testing!
-      midiControlChange(cc, 0, channel, device);
-    }
-
-    DBG_LOG(printf("Track %i: Reset pitch bend and control changes\n", track));
+    resetTrackControllers(track);
   }
 }
 
@@ -493,38 +497,42 @@ FLASHMEM void LiveSequencer::songLayerAction(uint8_t layer, LayerMode action) {
   ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawSongLayers);
 }
 
-FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, LayerMode action) {
+FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, LayerMode action, bool &clearLayer) {
   if ((layer == 0) && (action == LayerMode::LAYER_MERGE)) {
     return false; // avoid merge up top layer
   }
 
-  if (action == LayerMode::LAYER_CLEAR_CC || action == LayerMode::LAYER_CLEAR_PB) {
+  clearLayer = (action == LayerMode::LAYER_MERGE) || (action == LayerMode::LAYER_DELETE);
+
+  if (clearLayer == false) {
+    // TODO: reset CC / PB for track?
+    //resetTrackControllers(track);
     const midi::MidiType targetEvent = (action == LayerMode::LAYER_CLEAR_CC) ? midi::ControlChange : midi::PitchBend;
     for (auto& e : data.eventsList) {
-      if (e.track == track && e.layer == layer && e.event == targetEvent) {
+      if ((e.track == track) && (e.layer == layer) && (e.event == targetEvent)) {
         e.event = midi::InvalidType; // mark as invalid
       }
     }
-    return true;
   }
+  else {
+    // play noteOff for active layer notes
+    allLayerNotesOff(track, layer);
 
-  // play noteOff for active layer notes
-  allLayerNotesOff(track, layer);
-
-  for (auto& e : data.eventsList) {
-    if (e.track == track) {
-      performLayerAction(action, e, layer);
+    for (auto& e : data.eventsList) {
+      if (e.track == track) {
+        performLayerAction(action, e, layer);
+      }
     }
-  }
 
-  // handle layer mutes. example with layer 2 deleted
-  // old: 0010 1101
-  // new: 0001 0101 -> lower layers stay same, higher layers shifted down by one
-  const uint8_t bitmask = pow(2, layer) - 1;
-  const uint8_t layerMutesLo = data.tracks[track].layerMutes & bitmask;         // 0010 1101 &  0000 0011 = 0000 0001
-  const uint8_t layerMutesHi = (data.tracks[track].layerMutes >> 1) & ~bitmask; // 0001 0110 & ~0000 0011 = 0001 0100
-  data.tracks[track].layerMutes = (layerMutesLo | layerMutesHi);                // 0000 0001 |  0001 0100 = 0001 0101
-  data.trackSettings[track].layerCount--;
+    // handle layer mutes. example with layer 2 deleted
+    // old: 0010 1101
+    // new: 0001 0101 -> lower layers stay same, higher layers shifted down by one
+    const uint8_t bitmask = pow(2, layer) - 1;
+    const uint8_t layerMutesLo = data.tracks[track].layerMutes & bitmask;         // 0010 1101 &  0000 0011 = 0000 0001
+    const uint8_t layerMutesHi = (data.tracks[track].layerMutes >> 1) & ~bitmask; // 0001 0110 & ~0000 0011 = 0001 0100
+    data.tracks[track].layerMutes = (layerMutesLo | layerMutesHi);                // 0000 0001 |  0001 0100 = 0001 0101
+    data.trackSettings[track].layerCount--;
+  }
   ui_liveSeq->drawTrackLayers(track);
   return true;
 }
@@ -1108,7 +1116,8 @@ FLASHMEM void LiveSequencer::checkAddMetronome(void) {
         fillTrackLayer();
         if (data.isRunning == false) {
           // only merge if not added to pending in fillTrackLayer above
-          trackLayerAction(i, 1, LayerMode::LAYER_MERGE);
+          bool clearLayer = false;
+          trackLayerAction(i, 1, LayerMode::LAYER_MERGE, clearLayer);
         }
         // reset fillNotes to user values
         data.fillNotes.number = fillNumOld;
