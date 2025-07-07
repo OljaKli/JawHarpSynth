@@ -782,28 +782,15 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
       for (uint8_t layer = 0; layer < data.trackSettings[track].layerCount; layer++) {
         const bool pressed = TouchButton::isPressed(GRID.X[trackIndex], GRID.Y[2 + layer]);
         if (pressed) {
-          if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE){
-            if (data.isRecording && (track == data.activeTrack)){
-              switch (trackLayerMode)
-              {
-                case LiveSequencer::LayerMode::LAYER_CLEAR_CC:
-                case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
-                  const bool success = liveSeq.trackLayerAction(track, layer, LiveSequencer::LayerMode(trackLayerMode));
-                  // if (success){
-                  //   //do nothing ?? reset controllers on track?
-                  // }
-                  return; // do not toggle mute if clear pressed
-                  break;
-              }
-            }
-          }
-
           if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
             if (data.isRecording && (track == data.activeTrack)) {
-              const bool success = liveSeq.trackLayerAction(track, layer, LiveSequencer::LayerMode(trackLayerMode));
+              bool clearLayer = false;
+              const bool success = liveSeq.trackLayerAction(track, layer, LiveSequencer::LayerMode(trackLayerMode), clearLayer);
               if (success) {
-                // one less layer now, clear last layer button
-                TouchButton::clearButton(GRID.X[SCREEN_TRACK_INDEX(trackIndex)], GRID.Y[2 + data.trackSettings[track].layerCount], COLOR_BACKGROUND);
+                if (clearLayer) {
+                  // one less layer now, clear last layer button
+                  TouchButton::clearButton(GRID.X[SCREEN_TRACK_INDEX(trackIndex)], GRID.Y[2 + data.trackSettings[track].layerCount], COLOR_BACKGROUND);
+                }
                 trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
               }
             }
