@@ -1444,18 +1444,15 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
   return result;
 }
 
-FLASHMEM void LiveSequencer::printNotePairs(std::vector<std::vector<NotePair>> notePairs) {
-  int pattern = 0;
-  for (std::vector<LiveSequencer::NotePair> patternPairs : notePairs) {
-    DBG_LOG(printf("\n***********************\nPAIRS OF PATTERN #%i\n***********************", pattern));
-    int pair = 0;
+FLASHMEM void LiveSequencer::printNotePairs(std::vector<NotePair> notePairs) {
+    int pairNum = 0;
+    DBG_LOG(printf("\nON-OFF Pair:\n"));
 
-    for (LiveSequencer::NotePair p : patternPairs) {
-      DBG_LOG(printf("\nON-OFF Pair:\n"));
-      LiveSequencer::printEvent(pair, p.noteOn);
-      LiveSequencer::printEvent(pair, p.noteOff);
-      pair++;
+    for (LiveSequencer::NotePair p : notePairs) {
+      LiveSequencer::printEvent(pairNum, p.noteOn);
+      LiveSequencer::printEvent(pairNum, p.noteOff);
+      pairNum++;
     }
-    pattern++;
-  }
+
+  
 }
