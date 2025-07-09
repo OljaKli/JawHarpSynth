@@ -25,7 +25,7 @@ public:
     BUTTON_RED = 2,
     BUTTON_HIGHLIGHTED = 3,
     BUTTON_LABEL = 4,
-    BUTTON_DARKGREEN = 5,
+    BUTTON_BLUE = 5,
     BUTTON_PINK = 6,
     BUTTONCOLOR_NUM = 7
   };

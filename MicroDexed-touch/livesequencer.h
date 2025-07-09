@@ -78,6 +78,7 @@ public:
     LCDML_FuncPtr_pu8 screen;
     SetupFn screenSetupFn;
     std::unordered_multiset<uint8_t> activeNotes[LIVESEQUENCER_NUM_LAYERS];
+    std::pair<bool, uint8_t> pitchBend[LIVESEQUENCER_NUM_LAYERS];
   };
 
   struct TrackSettings {

@@ -375,9 +375,11 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         case midi::ControlChange:
           midiControlChange(note, velocity, ch, device); // note is controller number, velocity is value
           break;
+
         case midi::PitchBend:
           midiPitchBend(toPitchBend(note, velocity), ch, device); // note is LSB, velocity is MSB
-        break;
+          break;
+
         case midi::AfterTouchChannel:
           handleAfterTouch(ch, note);
           break;
@@ -586,7 +588,9 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
         break; // skip muted events
       }
       midiPitchBend(toPitchBend(playIterator->note_in, playIterator->note_in_velocity), channel, device); // note_in is LSB, note_in_velocity is MSB
+      data.tracks[playIterator->track].pitchBend[playIterator->layer] = { true, playIterator->note_in_velocity };
       break;
+
     case midi::ControlChange:
       if (isMuted) {
         break; // skip muted events
