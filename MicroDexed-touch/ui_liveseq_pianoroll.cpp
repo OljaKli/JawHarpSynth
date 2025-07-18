@@ -441,22 +441,24 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           //DBG_LOG(printf("v: %i, change: %i\n", time, e.dir * e.speed * e.speed));
           if (hasConstrainedChanged(time, e.dir * e.speed * e.speed, min, max)) {
             if (isNoteOn) {
+              
               setEventTime(on, time);
-              headerFlags |= (1 << EDIT_NOTEON);
+              LiveSequencer::MidiEvent newOn;
+              memcpy(&newOn, &on, sizeof(on));
 
-              // FIXME: editing noteOn time and re-sorting may change index of active element!
-              if (selectedNote > 0) {
-                if (getEventTime(on) < getEventTime(notePairs.at(selectedNote - 1).noteOn)) {
-                  selectedNote--;
-                  drawHeader(1 << EDIT_SELECT_NOTE);
+              liveSeq.requestSortEvents(); // re-sort events as note time changed
+              reloadNotes();
+
+              for(int16_t i = 0; i < int16_t(notePairs.size()); i++) {
+                if(memcmp(&notePairs.at(i).noteOn, &newOn, sizeof(on)) == 0) {
+                  if(selectedNote != i) {
+                    selectedNote = i;
+                    // FIXME: draw correct range
+                  }
+                  break;
                 }
               }
-              if (selectedNote < int(notePairs.size() - 1)) {
-                if (getEventTime(on) > getEventTime(notePairs.at(selectedNote + 1).noteOn)) {
-                  selectedNote++;
-                  drawHeader(1 << EDIT_SELECT_NOTE);
-                }
-              }
+              headerFlags |= (1 << EDIT_NOTEON);              
             }
             else {
               setEventTime(off, time);
@@ -470,9 +472,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
               .notes = { on.note_in }
             };
             queueDrawNote(range);
-
-            liveSeq.requestSortEvents(); // re-sort events as note time changed
-            reloadNotes();
           }
         }
         break;
