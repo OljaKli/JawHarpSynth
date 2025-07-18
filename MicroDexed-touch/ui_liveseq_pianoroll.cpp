@@ -310,7 +310,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 
 template<class T>
 FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(T &value, int16_t diff, int min, int max) {
-  const int16_t newValue = constrain(value + diff, min, max);
+  const T newValue = constrain(value + diff, min, max);
   const bool changed = newValue != value;
   value = newValue;
   return changed;
@@ -436,10 +436,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           const uint32_t noteOnTime = getEventTime(on);
           const uint32_t noteOffTime = getEventTime(off);
           uint16_t time = isNoteOn ? noteOnTime : noteOffTime;
+          const uint16_t timeBefore = time;
           const uint16_t min = isNoteOn ? 0 : noteOnTime;
           const uint16_t max = isNoteOn ? noteOffTime : data.numberOfBars * data.patternLengthMs;
-          //DBG_LOG(printf("v: %i, change: %i\n", time, e.dir * e.speed * e.speed));
-          if (hasConstrainedChanged(time, e.dir * e.speed * e.speed, min, max)) {
+          //DBG_LOG(printf("v: %i, change: %i\n", time, e.dir * e.speed));
+          if (hasConstrainedChanged(time, e.dir * e.speed, min, max)) {
             if (isNoteOn) {
               
               setEventTime(on, time);
@@ -453,6 +454,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
                 if(memcmp(&notePairs.at(i).noteOn, &newOn, sizeof(on)) == 0) {
                   if(selectedNote != i) {
                     selectedNote = i;
+
                     // FIXME: draw correct range
                   }
                   break;
@@ -464,11 +466,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
               setEventTime(off, time);
               headerFlags |= (1 << EDIT_NOTEOFF);
             }
-            const uint16_t minTime = std::min(noteOnTime, getEventTime(on));
-            const uint16_t maxTime = std::max(noteOffTime, getEventTime(off));
+            const uint16_t minTime = std::min(timeBefore, time);
+            const uint16_t maxTime = std::max(timeBefore, time);
             const UpdateRange range = {
-              .fromX = getNoteCoord(minTime),
-              .toX = getNoteCoord(maxTime),
+              .fromX = getNoteCoord(minTime) - 1,
+              .toX = getNoteCoord(maxTime) + 1,
               .notes = { on.note_in }
             };
             queueDrawNote(range);

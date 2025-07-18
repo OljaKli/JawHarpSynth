@@ -857,6 +857,14 @@ FLASHMEM void LiveSequencer::initOnce(void) {
   liveTimer.begin([this] { playNextEvent(); });
   arpTimer.begin([this] { playNextArpNote(); });
   ui_liveSeq->init();
+
+  // reserve memory to avoid re-allocation until reserved is used
+  data.pendingEvents.reserve(200);
+#ifdef PSRAM
+  data.eventsList.reserve(10000);
+#else
+  data.eventsList.reserve(1000);
+#endif
 }
 
 FLASHMEM void LiveSequencer::init(void) {
@@ -865,13 +873,7 @@ FLASHMEM void LiveSequencer::init(void) {
   updateTrackChannels();
   DBG_LOG(printf("init has %i events\n", data.eventsList.size()));
   //printEvents();
-  // reserve memory to avoid re-allocation until reserved is used
-  data.pendingEvents.reserve(200);
-#ifdef PSRAM
-  data.eventsList.reserve(10000);
-#else
-  data.eventsList.reserve(1000);
-#endif
+
   data.performanceName = seq.name;
   refreshSongLength();
 }
