@@ -94,7 +94,7 @@ private:
   void initGUI(void);
   void drawPianoRoll(void);
   void handleEncoderRight(EncoderEvents e);
-  template <class T> bool hasConstrainedChanged(T &value, int16_t diff, int min, int max); 
+  template <class T> bool hasConstrainedChanged(T &value, int16_t diff, T min, T max); 
 
   void queueDrawNote(LiveSequencer::NotePair note);
   void queueDrawNote(UpdateRange coords);
