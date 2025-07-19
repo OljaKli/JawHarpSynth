@@ -308,7 +308,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
   }
 }
 
-template<class T>
+template<typename T>
 FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(T &value, int16_t diff, int min, int max) {
   const T newValue = constrain(value + diff, min, max);
   const bool changed = newValue != value;
@@ -445,18 +445,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
               
               setEventTime(on, time);
               LiveSequencer::MidiEvent newOn;
-              memcpy(&newOn, &on, sizeof(on));
+              memcpy(&newOn, &on, sizeof(newOn));
 
-              liveSeq.requestSortEvents(); // re-sort events as note time changed
+              liveSeq.requestSortEvents(); // re-sort events as noteOn time changed
               reloadNotes();
 
-              for(int16_t i = 0; i < int16_t(notePairs.size()); i++) {
-                if(memcmp(&notePairs.at(i).noteOn, &newOn, sizeof(on)) == 0) {
-                  if(selectedNote != i) {
-                    selectedNote = i;
-
-                    // FIXME: draw correct range
-                  }
+              // re-locate selected note as it may have changed order (index)
+              for (int16_t i = 0; i < int16_t(notePairs.size()); i++) {
+                if (memcmp(&notePairs.at(i).noteOn, &newOn, sizeof(newOn)) == 0) {
+                  selectedNote = i;
                   break;
                 }
               }
@@ -469,8 +466,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
             const uint16_t minTime = std::min(timeBefore, time);
             const uint16_t maxTime = std::max(timeBefore, time);
             const UpdateRange range = {
-              .fromX = getNoteCoord(minTime) - 1,
-              .toX = getNoteCoord(maxTime) + 1,
+              .fromX = uint16_t(getNoteCoord(minTime) - 1),
+              .toX = uint16_t(getNoteCoord(maxTime) + 1),
               .notes = { on.note_in }
             };
             queueDrawNote(range);
