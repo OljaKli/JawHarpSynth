@@ -826,7 +826,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     const std::string text = "SELECTION HAS NO NOTES";
     const uint16_t stringWidth = text.length() * CHAR_width_small;
     display.console = true;
-    display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);
+    display.setCursor((CONTENT_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
     display.print(text.c_str());
