@@ -925,7 +925,7 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
       data.eventsList.emplace_back(e);
     }
     data.pendingEvents.clear();
-    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+    sortEvents();
     const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
 
     if (canIncrementLayer && incrementLayer) {
@@ -936,12 +936,17 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
   }
 }
 
+FLASHMEM void LiveSequencer::sortEvents(void) {
+  std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+  ui_pianoRoll->onEventsChanged();
+}
+
 FLASHMEM void LiveSequencer::requestSortEvents(void) {
   if (data.isRunning) {
     sortRequested = true;
   }
   else {
-    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+    sortEvents();
   }
 }
 
@@ -994,13 +999,14 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
 
     // then remove all invalidated notes
     data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+    ui_pianoRoll->onEventsChanged();
 
     // for song mode, add song events for this pattern
     if (data.isSongMode) {
       for (auto& e : data.songEvents[data.songPatternCount]) {
         data.eventsList.emplace_back(e);
       }
-      std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+      sortEvents();
       if (data.songPatternCount == 0) {
         // load previously saved song start layer mutes
         applySongStartLayerMutes();
@@ -1013,7 +1019,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       // sort events was requested externally (on editing noteOn time)
       if (sortRequested) {
         sortRequested = false;
-        std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+        sortEvents();
       }
     }
 

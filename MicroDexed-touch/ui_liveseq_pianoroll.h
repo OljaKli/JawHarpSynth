@@ -18,6 +18,7 @@ public:
   void processLCDM(uint8_t param);
   void handleTouchScreen(void);
   void handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity);
+  FLASHMEM void onEventsChanged(void);
 
 private:
   std::set<uint8_t> keysPressed;
@@ -90,6 +91,8 @@ private:
     std::set<uint8_t> notes; // empty = all
   };
   std::vector<UpdateRange> drawRegionsX;
+
+  LiveSequencer::MidiEvent currentNote;
 
   void initGUI(void);
   void drawPianoRoll(void);

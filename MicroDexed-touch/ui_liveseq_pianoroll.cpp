@@ -358,6 +358,20 @@ FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
   drawHeader(HEADER_DRAW_ALL);
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::onEventsChanged(void) {
+  if (isVisible) {
+    reloadNotes();
+
+    // re-locate selected note as it may have changed order (index)
+    for (int16_t i = 0; i < int16_t(notePairs.size()); i++) {
+      if (memcmp(&notePairs.at(i).noteOn, &currentNote, sizeof(currentNote)) == 0) {
+        selectedNote = i;
+        break;
+      }
+    }
+  }
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
   if (isSettingActivated) {
     uint16_t headerFlags = 0;
@@ -444,19 +458,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
             if (isNoteOn) {
               
               setEventTime(on, time);
-              LiveSequencer::MidiEvent newOn;
-              memcpy(&newOn, &on, sizeof(newOn));
+              memcpy(&currentNote, &on, sizeof(on));
 
               liveSeq.requestSortEvents(); // re-sort events as noteOn time changed
-              reloadNotes();
-
-              // re-locate selected note as it may have changed order (index)
-              for (int16_t i = 0; i < int16_t(notePairs.size()); i++) {
-                if (memcmp(&notePairs.at(i).noteOn, &newOn, sizeof(newOn)) == 0) {
-                  selectedNote = i;
-                  break;
-                }
-              }
               headerFlags |= (1 << EDIT_NOTEON);              
             }
             else {

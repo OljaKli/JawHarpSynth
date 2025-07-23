@@ -296,6 +296,7 @@ private:
   bool timeQuantization(MidiEvent& e, uint8_t denom);
   void checkAddMetronome(void);
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
+  void sortEvents(void);
 
   static bool sortMidiEvent(MidiEvent& a, MidiEvent& b) {
     // + a.source is a hack to sort song events before pattern events if the have same time
