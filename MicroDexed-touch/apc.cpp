@@ -20,6 +20,7 @@ extern uint8_t APC_TONAL_SCROLL_OFFSET;
 extern uint8_t APC_PREVIOUS_NOTE;
 extern uint8_t APC_MODE;
 extern bool APC_BUTTONS_RIGHT[8];
+extern void print_current_sample_and_pitch_buffer();
 extern void seq_printAllVelocitySteps();
 extern void  seq_printAllVelocitySteps_single_step(uint8_t step, int color);
 extern void seq_printAllSeqSteps();
@@ -81,7 +82,7 @@ FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
   else
     apc(pos, col, 6);
 #else
-  //no brightness for APC Mini Mk1, send only on or off, to avoid crash
+  //no brightness for APC Mini Mk1, send only on or off, to avoid freeze at slider move (sometimes still freezes when abusing slider)
   if (in < 10)
     apc(pos, 0, 6);
   else if (in > 40)
@@ -155,17 +156,26 @@ FLASHMEM void print_apc_source_selection_pads()
 
 FLASHMEM void set_apc_pad_selection(uint8_t pad)
 {
+  static int trigger_print_sample = 0;
   APC_BUTTONS_RIGHT[0] = false;
   APC_BUTTONS_RIGHT[1] = false;
   APC_BUTTONS_RIGHT[3] = false;
   APC_BUTTONS_RIGHT[4] = false;
 
+  if(trigger_print_sample) {
+    trigger_print_sample=0;
+            if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) ||
+            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
+          print_current_sample_and_pitch_buffer();
+  }
   if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
   {
     for (uint8_t i = 0; i < 8; i++)
     {
-      if (pad - 8 == i)
+      if (pad - 8 == i) {
         activeSample = APC_SAMPLE_SCROLL_OFFSET + i;
+        trigger_print_sample = 1;
+      }
     }
   }
   else //tonal instrument
@@ -377,7 +387,7 @@ void apc_drawString_Background()
 
 FLASHMEM void  apc_print_pattern_number()
 {
-  snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("P%02d"), seq.active_pattern);
+  snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("%d"), seq.active_pattern);
   apc_scroll_counter = 0;
   apc_scroll_message = true;
 }
