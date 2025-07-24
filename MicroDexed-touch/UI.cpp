@@ -216,9 +216,11 @@ AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
 AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
 #endif
 
+#ifndef MCP_CV
 AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
 AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
 AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
+#endif
 
 extern AudioAnalyzePeak mb_before_l;
 extern AudioAnalyzePeak mb_before_r;
@@ -582,10 +584,11 @@ LCDML_add(57, LCDML_0_16, 9, "Map Gamepad", UI_func_map_gamepad);
 LCDML_add(58, LCDML_0_16, 10, "TEST Touchscreen", UI_func_test_touchscreen);
 LCDML_add(59, LCDML_0_16, 11, "TEST Audio Mute", UI_func_test_mute);
 LCDML_add(60, LCDML_0_16, 12, "TEST PSRAM", UI_func_test_psram);
-LCDML_add(61, LCDML_0, 17, "Info", UI_func_information);
-LCDML_addAdvanced(62, LCDML_0, 18, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(63, LCDML_0, 19, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(64, LCDML_0, 20, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(61, LCDML_0, 17, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(62, LCDML_0, 18, "Info", UI_func_information);
+LCDML_addAdvanced(63, LCDML_0, 19, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(64, LCDML_0, 20, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(65, LCDML_0, 21, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -930,7 +933,7 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
   for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
   {
     if (seq.tracktype_or_instrument_assign == 2 && seq.selected_track == x && seq.track_type[x] != 0 && seq.track_type[x] != 4)
-      display.setTextColor(COLOR_SYSTEXT, MIDDLEGREEN);
+      display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
     else if (seq.tracktype_or_instrument_assign == 1 && seq.selected_track == x && seq.track_type[x] != 0 && seq.track_type[x] != 4)
       display.setTextColor(COLOR_BACKGROUND, GREEN);
     else if (seq.tracktype_or_instrument_assign == 1 && seq.selected_track != x && seq.track_type[x] != 0 && seq.track_type[x] != 4)
@@ -992,6 +995,13 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
         display.setCursor(6 * CHAR_width_small + (4 * CHAR_width_small) * x, CHAR_height_small * 6);
         display.print(F("#"));
         print_formatted_number(seq.instrument[x] - 47, 2);
+      }
+       else if (seq.instrument[x] == 64)
+      {
+        display.setCursor(6 * CHAR_width_small + (4 * CHAR_width_small) * x, CHAR_height_small * 5);
+        display.print(F("EXT"));
+        display.setCursor(6 * CHAR_width_small + (4 * CHAR_width_small) * x, CHAR_height_small * 6);
+        display.print(F("CV1"));
       }
       else
         display.print(F("???"));
@@ -11776,7 +11786,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         }
         else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
         {  // 26/01/2025 new dexed instance will start at 70
-          if (seq.instrument[seq.selected_track] < 63 && seq.instrument[seq.selected_track] != 1)
+          if (seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track] != 1)
             seq.instrument[seq.selected_track]++;
           else  if (seq.instrument[seq.selected_track] == 1) //second dexed instance
             seq.instrument[seq.selected_track] = 70;
@@ -11876,7 +11886,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         }
         else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
         {//26/01/2025 new dexed instance will start at 70
-          if (seq.instrument[seq.selected_track] > 0 && seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track] != 2)
+          if (seq.instrument[seq.selected_track] > 0 && seq.instrument[seq.selected_track] < 65 && seq.instrument[seq.selected_track] != 2)
           {
             seq.instrument[seq.selected_track]--;
             if (seq.instrument[seq.selected_track] == 5)
@@ -15718,6 +15728,102 @@ FLASHMEM void UI_func_braids(uint8_t param)
     encoderDir[ENC_R].reset();
     if (generic_temp_select_menu != 2)
       display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+
+FLASHMEM void UI_func_cv_page(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    // setup function
+    registerTouchHandler(handle_touchscreen_cv_screen);
+    registerScope(250, 0, 62, 50);
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+    virtual_keyboard_smart_preselect_mode();
+    seq.cycle_touch_element = 1;
+    drawVirtualKeyboard();
+
+  display.setTextSize(1);
+  seq.edit_state = 0;
+
+  setCursor_textGrid_small(1, 1);
+  display.setTextColor(RED);
+  display.print(F("MIDI/CV TRANSLATE PAGE"));
+
+  setCursor_textGrid_small(30, 1);
+
+  display.setTextColor(GREY1);
+  setCursor_textGrid_small(1, 3);
+  display.print(F("MIDI INPUT VALUE"));
+  setCursor_textGrid_small(1, 4);
+  display.print(F("MIDI INPUT NOTE"));
+  setCursor_textGrid_small(1, 5);
+  display.print(F("CV OUTPUT VALUE"));
+
+    setCursor_textGrid_small(1, 7);
+  display.print(F("VELOCITY"));
+    setCursor_textGrid_small(1, 8);
+  display.print(F("OUTPUT VELOCITY"));
+
+
+    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && 
+    LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
+      generic_temp_select_menu = 0;
+    }
+  }
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+   // const EncoderEvents e = getEncoderEvents(ENC_R);
+    // if (e.turned) {
+    //   if (seq.edit_state == 0) {  
+    //     ;
+    //   }
+    //   else {
+    //     ;
+    //   }
+    // }
+
+    // if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    // {
+    //     // if (seq.running == false )
+    //     // {
+    //     //   handleStart();
+    //     // }
+      
+    //     // else if (seq.running == true )
+    //     // {
+    //     //   handleStop();
+    //     // }
+
+    //     seq.edit_state = !seq.edit_state;
+    // }
+
+    // if ( e.longPressed) // handle long button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+    // {
+    //     if (seq.running == false )
+    //     {
+    //       handleStart();
+    //     }
+      
+    //     else if (seq.running == true )
+    //     {
+    //       handleStop();
+    //     }
+    // }
+
+    // long button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   
+  }
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+     display.fillScreen(COLOR_BACKGROUND);
+    unregisterTouchHandler();
+    unregisterScope();
+    encoderDir[ENC_R].reset();
+     
   }
 }
 

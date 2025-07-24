@@ -98,6 +98,7 @@ uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 void update_step_rec_buttons();
 
 void handle_touchscreen_braids(void);
+void handle_touchscreen_cv_screen(void);
 void handle_touchscreen_arpeggio();
 void handle_touchscreen_midi_channel_page();
 void handle_touchscreen_mixer();

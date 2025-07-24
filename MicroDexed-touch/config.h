@@ -1087,7 +1087,8 @@ enum virtual_keyboard_instruments
  VK_BRAIDS,
  VK_PS_1,
  VK_PS_2,
- VK_PS_3
+ VK_PS_3,
+ VK_CV1,
 };
 
 enum master_mixer_ports
