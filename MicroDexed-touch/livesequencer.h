@@ -78,6 +78,7 @@ public:
     LCDML_FuncPtr_pu8 screen;
     SetupFn screenSetupFn;
     std::unordered_multiset<uint8_t> activeNotes[LIVESEQUENCER_NUM_LAYERS];
+    std::pair<bool, uint8_t> pitchBend[LIVESEQUENCER_NUM_LAYERS];
   };
 
   struct TrackSettings {
@@ -261,7 +262,7 @@ public:
   void addNotePair(MidiEvent noteOn, MidiEvent noteOff);
   std::vector<NotePair> getNotePairsFromTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom = 0, uint8_t patternTo = 0xFF);
 
-  static void printNotePairs(std::vector<std::vector<NotePair>> notePairs);
+  static void printNotePairs(std::vector<NotePair> notePairs);
   static void printEvent(int i, MidiEvent e);
   static const std::string getEventName(midi::MidiType event);
   static const std::string getEventSource(EventSource source);
@@ -295,6 +296,7 @@ private:
   bool timeQuantization(MidiEvent& e, uint8_t denom);
   void checkAddMetronome(void);
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
+  void sortEvents(void);
 
   static bool sortMidiEvent(MidiEvent& a, MidiEvent& b) {
     // + a.source is a hack to sort song events before pattern events if the have same time

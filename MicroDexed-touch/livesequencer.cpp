@@ -375,9 +375,11 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         case midi::ControlChange:
           midiControlChange(note, velocity, ch, device); // note is controller number, velocity is value
           break;
+
         case midi::PitchBend:
           midiPitchBend(toPitchBend(note, velocity), ch, device); // note is LSB, velocity is MSB
-        break;
+          break;
+
         case midi::AfterTouchChannel:
           handleAfterTouch(ch, note);
           break;
@@ -586,7 +588,9 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
         break; // skip muted events
       }
       midiPitchBend(toPitchBend(playIterator->note_in, playIterator->note_in_velocity), channel, device); // note_in is LSB, note_in_velocity is MSB
+      data.tracks[playIterator->track].pitchBend[playIterator->layer] = { true, playIterator->note_in_velocity };
       break;
+
     case midi::ControlChange:
       if (isMuted) {
         break; // skip muted events
@@ -853,6 +857,14 @@ FLASHMEM void LiveSequencer::initOnce(void) {
   liveTimer.begin([this] { playNextEvent(); });
   arpTimer.begin([this] { playNextArpNote(); });
   ui_liveSeq->init();
+
+  // reserve memory to avoid re-allocation until reserved is used
+  data.pendingEvents.reserve(200);
+#ifdef PSRAM
+  data.eventsList.reserve(10000);
+#else
+  data.eventsList.reserve(1000);
+#endif
 }
 
 FLASHMEM void LiveSequencer::init(void) {
@@ -861,13 +873,7 @@ FLASHMEM void LiveSequencer::init(void) {
   updateTrackChannels();
   DBG_LOG(printf("init has %i events\n", data.eventsList.size()));
   //printEvents();
-  // reserve memory to avoid re-allocation until reserved is used
-  data.pendingEvents.reserve(200);
-#ifdef PSRAM
-  data.eventsList.reserve(10000);
-#else
-  data.eventsList.reserve(1000);
-#endif
+
   data.performanceName = seq.name;
   refreshSongLength();
 }
@@ -919,7 +925,7 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
       data.eventsList.emplace_back(e);
     }
     data.pendingEvents.clear();
-    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+    sortEvents();
     const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
 
     if (canIncrementLayer && incrementLayer) {
@@ -930,12 +936,17 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
   }
 }
 
+FLASHMEM void LiveSequencer::sortEvents(void) {
+  std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+  ui_pianoRoll->onEventsChanged();
+}
+
 FLASHMEM void LiveSequencer::requestSortEvents(void) {
   if (data.isRunning) {
     sortRequested = true;
   }
   else {
-    std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+    sortEvents();
   }
 }
 
@@ -988,13 +999,14 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
 
     // then remove all invalidated notes
     data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+    ui_pianoRoll->onEventsChanged();
 
     // for song mode, add song events for this pattern
     if (data.isSongMode) {
       for (auto& e : data.songEvents[data.songPatternCount]) {
         data.eventsList.emplace_back(e);
       }
-      std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+      sortEvents();
       if (data.songPatternCount == 0) {
         // load previously saved song start layer mutes
         applySongStartLayerMutes();
@@ -1007,7 +1019,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       // sort events was requested externally (on editing noteOn time)
       if (sortRequested) {
         sortRequested = false;
-        std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
+        sortEvents();
       }
     }
 
@@ -1440,18 +1452,15 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
   return result;
 }
 
-FLASHMEM void LiveSequencer::printNotePairs(std::vector<std::vector<NotePair>> notePairs) {
-  int pattern = 0;
-  for (std::vector<LiveSequencer::NotePair> patternPairs : notePairs) {
-    DBG_LOG(printf("\n***********************\nPAIRS OF PATTERN #%i\n***********************", pattern));
-    int pair = 0;
+FLASHMEM void LiveSequencer::printNotePairs(std::vector<NotePair> notePairs) {
+    int pairNum = 0;
+    DBG_LOG(printf("\nON-OFF Pair:\n"));
 
-    for (LiveSequencer::NotePair p : patternPairs) {
-      DBG_LOG(printf("\nON-OFF Pair:\n"));
-      LiveSequencer::printEvent(pair, p.noteOn);
-      LiveSequencer::printEvent(pair, p.noteOff);
-      pair++;
+    for (LiveSequencer::NotePair p : notePairs) {
+      LiveSequencer::printEvent(pairNum, p.noteOn);
+      LiveSequencer::printEvent(pairNum, p.noteOff);
+      pairNum++;
     }
-    pattern++;
-  }
+
+  
 }
