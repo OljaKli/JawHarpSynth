@@ -21,6 +21,7 @@ extern uint8_t APC_PREVIOUS_NOTE;
 extern uint8_t APC_MODE;
 extern bool APC_BUTTONS_RIGHT[8];
 extern void print_current_sample_and_pitch_buffer();
+extern void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps);
 extern void seq_printAllVelocitySteps();
 extern void  seq_printAllVelocitySteps_single_step(uint8_t step, int color);
 extern void seq_printAllSeqSteps();
@@ -43,6 +44,7 @@ extern bool apc_shift_key;
 extern int temp_int;
 uint8_t apc_out_channel;
 extern void  print_chain_matrix_in_song_page();
+static int trigger_print_sample_or_step;
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -154,30 +156,51 @@ FLASHMEM void print_apc_source_selection_pads()
   }
 }
 
+FLASHMEM void apc_trigger_print_in_lcd(void)
+{
+  if(trigger_print_sample_or_step)
+  {
+    if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) ||
+        (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
+    {
+      if(trigger_print_sample_or_step == -1) //for new drum sample selected
+      {
+        print_current_sample_and_pitch_buffer(); //refresh on the right side, on the SAMPLE BUFFER
+      }
+      else if((trigger_print_sample_or_step >= 1000) && (trigger_print_sample_or_step < 1016)) // for step modified
+      {
+        if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
+          print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, false, true); //refresh all drum steps, unable to refresh the new step only
+        else  // tonal instrument
+        { // Inst Track or Chord or Arp
+	          /* Disabled because not working, APC-entered-steps are visible only in velocity row, not in piano roll.
+	             Also since 1.9.9.0, it doesn't display entered steps in pattern piano roll, with encoder; it works with step record mode with virtual keyboard.
+            print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, trigger_print_sample_or_step-1000, true); 
+	           */
+        }
+      }
+      else
+      {/* Not implemented. This is to refresh the lcd-top-left note, with new note selected in APC, for piano roll. */}
+    }
+    trigger_print_sample_or_step = 0;
+  }
+}
+
 FLASHMEM void set_apc_pad_selection(uint8_t pad)
 {
-  static int trigger_print_sample = 0;
   APC_BUTTONS_RIGHT[0] = false;
   APC_BUTTONS_RIGHT[1] = false;
   APC_BUTTONS_RIGHT[3] = false;
   APC_BUTTONS_RIGHT[4] = false;
 
-  if(trigger_print_sample) {
-    trigger_print_sample=0;
-            if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor)) ||
-            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor)))
-          print_current_sample_and_pitch_buffer();
-  }
   if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
   {
     for (uint8_t i = 0; i < 8; i++)
     {
-      if (pad - 8 == i) {
+      if (pad - 8 == i)
         activeSample = APC_SAMPLE_SCROLL_OFFSET + i;
-        trigger_print_sample = 1;
       }
     }
-  }
   else //tonal instrument
   {
     for (uint8_t i = 0; i < 24; i++)
@@ -387,7 +410,7 @@ void apc_drawString_Background()
 
 FLASHMEM void  apc_print_pattern_number()
 {
-  snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("%d"), seq.active_pattern);
+  snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("P%02d"), seq.active_pattern);
   apc_scroll_counter = 0;
   apc_scroll_message = true;
 }
@@ -701,19 +724,21 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
+      trigger_print_sample_or_step = -1; //new sample selected for pattern drum mode, to be refreshed on lcd
     }
     else if (inData1 < 24 && seq.content_type[seq.active_pattern] == 1) // tonal instrument type
     {
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
-
+      trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, to be refreshed on lcd
     }
     else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
     {
       apc_insert_pattern_step(inData1);
       if (APC_BUTTONS_RIGHT[0] || APC_BUTTONS_RIGHT[6] || APC_BUTTONS_RIGHT[3] || APC_BUTTONS_RIGHT[4])
         inChannel = 99;
+      trigger_print_sample_or_step = 1000 + inData1 - (64 - 16); //new step entered/deleted, 1st step=1000, 2nd=1001 ..., to be refreshed on lcd
     }
     else if (inData1 > 23 && inData1 < 40) // velocity steps
     {

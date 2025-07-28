@@ -235,6 +235,7 @@ bool apc_shift_key = false;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
 extern void apc_print_right_buttons();
 extern void apc_NoteOn(byte inChannel, byte inData1, byte inData2);
+extern void apc_trigger_print_in_lcd(void);
 extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_MODE;
 extern void print_apc_source_selection_pads();
@@ -363,6 +364,8 @@ seq.note_in = inData1;
       if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
         inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
       apc_print_right_buttons();
+      //This is the best place to trigger the refresh of the sample name. If done before (in apc_NoteOn), it displays wrong name.
+      apc_trigger_print_in_lcd();
     }
 #endif
 
