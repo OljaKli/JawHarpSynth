@@ -160,6 +160,68 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
   }
 }
 
+void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
+  switch (device) {
+#ifdef MIDI_DEVICE_USB_HOST
+  case 1:
+    midi_usb.sendPitchBend(pitch, channel);
+    break;
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  case 2:
+    midi_serial.sendPitchBend(pitch, channel);
+    break;
+#endif
+
+  case 3:
+    usbMIDI.sendPitchBend(pitch, channel);
+    break;
+
+  case 0:
+    // Handle MDT devices
+    handlePitchBend(channel, pitch);
+    break;
+
+  default:
+#ifdef DEBUG
+    LOG.printf_P(PSTR("Unknown device for PB: %d"), device);
+#endif
+    break;
+  }
+}
+
+void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device) {
+  switch (device) {
+#ifdef MIDI_DEVICE_USB_HOST
+  case 1:
+    midi_usb.sendControlChange(control, value, channel);
+    break;
+#endif
+
+#ifdef MIDI_DEVICE_DIN
+  case 2:
+    midi_serial.sendControlChange(control, value, channel);
+    break;
+#endif
+
+  case 3:
+    usbMIDI.sendControlChange(control, value, channel);
+    break;
+
+  case 0:
+    // Handle MDT devices
+    handleControlChange(channel, control, value);
+    break;
+
+  default:
+#ifdef DEBUG
+    LOG.printf_P(PSTR("Unknown device for CC: %d"), device);
+#endif
+    break;
+  }
+}
+
 #if defined APC
 
 #if (APC != 1) //LUC regular apc mini mk2
@@ -186,7 +248,37 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
 #if (APC != 1) //LUC regular apc mini mk2
   midi_usb.sendNoteOn(a, b, c);
 #else
-  midi_usb.sendNoteOn(a, b, c /*0*/); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+  static uint8_t a_old=255, b_old=255;
+  //a=inNoteNumber, b=inVelocity (128 colour), c=inChannel (brightness,blink)
+  if((a_old!=a)  || (b_old!=b)) { //avoid repeating same command without meaning, to avoid freeze, but it still freezes
+    a_old=a; b_old=b;
+    switch(b) { //wrapper for colour from APC Mini Mk2 to Mk1
+      case 0: break; //OFF colour is the same for Mk2 and Mk1
+      case 5:        //red Mk2
+        b=3;break;   //red for Mk1
+      case 1:        //colour #1E1E1E Mk2 for mute matrix
+        b=5;break;   //yellow for Mk1
+      case 78:       //colour #00A9FF Mk2 for mute matrix
+        b=1;break;   //green for Mk1
+      case 2:        //colour #7F7F7F Mk2 for mute matrix for instr pattern
+        b=5+1;break; //yellow blink for Mk1
+      case 40:       //colour #4C88FF Mk2 for mute matrix for instr pattern
+        b=1+1;break; //green blink for Mk1
+      case 124:      //colour #B9B000 Mk2 for mute matrix for drum pattern
+        b=3+1;break; //red blink for Mk1
+      case 36:       //colour #4CC3FF Mk2 for mute matrix for pitched sample
+        b=3;break;   //red for Mk1
+      default:       //for several sample pads colours put all 3 mk1 colors in round robin order
+        b=(b%3)*2+1;break;//get 1,3 or 5 (green,red,yellow) from any colour number for Mk1
+    }
+    //increment colour for blink mode request (1,3,5 to 2,4,6), 11 is blink for Mk2
+    //avoid blink if colour is 0 (OFF) or if colour is already blinking (even number)
+    b += ((c==11) && b && (b&1u))?1:0;
+    midi_usb.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+  }
+  else {
+    a_old=a; b_old=b;
+  }
 #endif
 }
 
@@ -255,6 +347,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
 
 #ifdef DEBUG
+    strcpy(text, "NoteOn");
 #endif
     break;
   case midi::NoteOff:
@@ -301,6 +394,12 @@ seq.note_in = inData1;
     handleAfterTouch(inChannel, inData1);
 #ifdef DEBUG
     strcpy(text, "Mono AT");
+#endif
+    break;
+  case midi::PitchBend:
+    handlePitchBend(inChannel, ((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192); // Combine LSB and MSB as per MIDI spec. Center the value around 0
+#ifdef DEBUG
+    strcpy(text, "PB");
 #endif
     break;
   case midi::ProgramChange:
@@ -382,7 +481,7 @@ seq.note_in = inData1;
         midi_serial.sendAfterTouch(inData1, inChannel);
         break;
       case midi::PitchBend:
-        midi_serial.sendPitchBend(inData1, inChannel);
+        midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel); // Combine LSB and MSB as per MIDI spec. Center the value around 0
         break;
       case midi::ProgramChange:
         midi_serial.sendProgramChange(inData1, inChannel);
@@ -438,6 +537,19 @@ seq.note_in = inData1;
 #ifdef DEBUG
   LOG.println();
 #endif
+}
+
+int toPitchBend(uint8_t lsb, uint8_t msb) {
+  return ((int16_t)((msb << 7) | lsb) - 8192);
+}
+
+void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_device, midi::MidiType event)
+{
+  // Split 14-bit pitch value into LSB and MSB as per MIDI spec
+  int inPitchCentered = inPitch + 8192; // Center the value around 0
+  byte lsb = inPitchCentered & 0x7F;
+  byte msb = (inPitchCentered >> 7) & 0x7F;
+  handle_generic(inChannel, lsb, msb, midi_device, event);
 }
 
 void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
@@ -745,7 +857,7 @@ void handleAfterTouch_MIDI_DEVICE_DIN(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_DIN(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_DIN, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_DIN(byte inChannel, byte inProgram)
@@ -866,7 +978,7 @@ void handleAfterTouch_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB_HOST(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_USB_HOST, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB_HOST(byte inChannel, byte inPrg)
@@ -987,7 +1099,7 @@ void handleAfterTouch_MIDI_DEVICE_USB(byte inChannel, byte inPressure)
 
 void handlePitchBend_MIDI_DEVICE_USB(byte inChannel, int inPitch)
 {
-  handlePitchBend(inChannel, inPitch);
+  handle_generic_by_pitch(inChannel, inPitch, MIDI_BY_USB, midi::PitchBend);
 }
 
 void handleProgramChange_MIDI_DEVICE_USB(byte inChannel, byte inProgram)

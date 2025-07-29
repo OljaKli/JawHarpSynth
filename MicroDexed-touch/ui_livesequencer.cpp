@@ -15,6 +15,8 @@ extern ts_t ts;
 
 bool openingScreen = false;
 
+static constexpr int DRAW_INTERVAL = 25; //ms
+
 #define SCREEN_TRACK_INDEX(t) (t % LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN)
 
 FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d) : instance(this), liveSeq(sequencer), data(d) {
@@ -522,15 +524,14 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     resetProgressBars();
     redrawScreen();
     // setup function
-    LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
-    msCount = 1000;
+    LCDML.FUNC_setLoopInterval(DRAW_INTERVAL); // 40Hz gui refresh
   }
   // ****** LOOP *********
   if (LCDML.FUNC_loop()) {
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
 
-    msCount += 25;
+    msCount += DRAW_INTERVAL;
     if(msCount >= 200 ) {
       drawUpdates(drawCpuLoad);
       msCount = 0;
@@ -783,10 +784,13 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
         if (pressed) {
           if (trackLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) {
             if (data.isRecording && (track == data.activeTrack)) {
-              const bool success = liveSeq.trackLayerAction(track, layer, LiveSequencer::LayerMode(trackLayerMode));
+              bool layerCleared = false;
+              const bool success = liveSeq.trackLayerAction(track, layer, LiveSequencer::LayerMode(trackLayerMode), layerCleared);
               if (success) {
-                // one less layer now, clear last layer button
-                TouchButton::clearButton(GRID.X[SCREEN_TRACK_INDEX(trackIndex)], GRID.Y[2 + data.trackSettings[track].layerCount], COLOR_BACKGROUND);
+                if (layerCleared) {
+                  // one less layer now, clear last layer button
+                  TouchButton::clearButton(GRID.X[SCREEN_TRACK_INDEX(trackIndex)], GRID.Y[2 + data.trackSettings[track].layerCount], COLOR_BACKGROUND);
+                }
                 trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
               }
             }
@@ -959,7 +963,18 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
           drawLayerButton(data.isSongMode, trackLayerMode, layer, layerEditActive, color, GRID.X[trackIndex], GRID.Y[2 + layer]);
         }
         if (guiFlags & drawActiveNotes) {
-          // always draw notes when layers visible
+          // always draw pb / notes when layers visible and running
+          if (data.tracks[track].pitchBend[layer].first) { // changed flag
+            data.tracks[track].pitchBend[layer].first = false;
+            const uint8_t pbValue = data.tracks[track].pitchBend[layer].second;
+            const uint16_t xStart = GRID.X[trackIndex];
+            const uint16_t yStart = GRID.Y[2 + layer] + TouchButton::BUTTON_SIZE_Y / 2;
+            const int8_t thisYFill = -int8_t((pbValue - 64) / 4);
+            display.console = true;
+            display.fillRect(xStart, GRID.Y[2 + layer], 3, TouchButton::BUTTON_SIZE_Y, TouchButton::getColors(color).bg); // clear whole bar
+            display.fillRect(xStart, std::min(yStart, uint16_t(yStart + thisYFill)), 3, std::abs(thisYFill), COLOR_PITCHSMP);
+          }
+
           const uint16_t barHeight = 6 * data.tracks[track].activeNotes[layer].size();
           const uint16_t xStart = GRID.X[trackIndex] + TouchButton::BUTTON_SIZE_X - 3;
           const uint16_t yStart = GRID.Y[2 + layer];
@@ -1060,6 +1075,16 @@ FLASHMEM void UI_LiveSequencer::drawLayerButton(const bool horizontal, uint8_t l
       label = "DELETE";
       labelSub = "x";
       break;
+
+    case LiveSequencer::LayerMode::LAYER_CLEAR_CC:
+      label = "CLEAR";
+      labelSub = "CC";
+      break;
+    
+    case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
+      label = "CLEAR";
+      labelSub = "PB";
+      break;
     }
   }
   TouchButton::drawButton(x, y, label.c_str(), labelSub.c_str(), color);
@@ -1073,6 +1098,14 @@ FLASHMEM void UI_LiveSequencer::handleLayerEditButtonColor(uint8_t layerMode, To
 
   case LiveSequencer::LayerMode::LAYER_DELETE:
     color = TouchButton::BUTTON_RED;
+    break;
+
+  case LiveSequencer::LayerMode::LAYER_CLEAR_CC:
+    color = TouchButton::BUTTON_PINK;
+    break;
+
+  case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
+    color = TouchButton::BUTTON_BLUE;
     break;
   }
 }

@@ -30,6 +30,13 @@
 #include <MIDI.h>
 #include <SD.h>
 
+
+#ifdef  MCP_CV
+#include "MCP4728.h"  // 4-Channel DAC 12Bit mcp4728
+#endif
+
+#define NOTESTEP_CV  46.5340909f
+
 #ifdef  SECOND_SD
 SDClass SD_EXTERNAL;
 #endif
@@ -46,6 +53,10 @@ MCP23008 mcp(0x20);
 #include "MCP23017.h"
 MCP23017 mcp(0x20);
 #endif
+#endif
+
+#ifdef  MCP_CV
+MCP4728 dac;
 #endif
 
 #include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
@@ -1028,6 +1039,8 @@ int analog_volume_value;
 int analog_volume_value_previous;
 #endif
 
+
+
 void updateEncoderL(void)
 {
   ENCODER[ENC_L].update();
@@ -1083,16 +1096,39 @@ FLASHMEM void All_Button_LEDS(bool state)
 }
 #endif
 
+#ifdef  MCP_CV
+void initMCP4728() {
+  dac.attach(Wire, 14);
+  //dac.readRegisters();
+  dac.selectVref(MCP4728::VREF::VDD, MCP4728::VREF::VDD, MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V);
+  dac.selectPowerDown(MCP4728::PWR_DOWN::GND_100KOHM, MCP4728::PWR_DOWN::GND_100KOHM, MCP4728::PWR_DOWN::GND_500KOHM, MCP4728::PWR_DOWN::GND_500KOHM);
+  dac.selectGain(MCP4728::GAIN::X1, MCP4728::GAIN::X1, MCP4728::GAIN::X2, MCP4728::GAIN::X2);
+  // dac.analogWrite(MCP4728::DAC_CH::A, 111);
+  // dac.analogWrite(MCP4728::DAC_CH::B, 222);
+  // dac.analogWrite(MCP4728::DAC_CH::C, 333);
+  // dac.analogWrite(MCP4728::DAC_CH::D, 444);
+
+  //dac.enable(true);
+  //dac.readRegisters();
+  delay(500);
+}
+#endif
+
 FLASHMEM void setup()
 {
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
   delay(60);
 #endif
 
+#ifdef  MCP_CV
+  initMCP4728();  // 4x 12Bit DAC MCP4728 Init
+#endif
+
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
   Wire.begin();
   Wire.setClock(400000);
+  // Wire.setClock(100000);
   mcp.begin();
 
 #if defined MCP_23008
@@ -1105,7 +1141,6 @@ FLASHMEM void setup()
 #endif
 
   //mcp.write8(0xFF);
- //Wire.setClock(100000);
 
   setled(RGB_LED_R_RED, HIGH);
   setled(RGB_LED_R_GREEN, HIGH);
@@ -1135,7 +1170,7 @@ FLASHMEM void setup()
 #ifdef MUSIKANDMORE // MUSIKANDMORE Hardware Pins
   pinMode(MCP_INTA, INPUT_PULLUP);
   pinMode(ANALOG_VOLUME_IN, INPUT_PULLUP);
-  pinMode(CV_CLOCK_OUT, OUTPUT);   
+  pinMode(CV_CLOCK_OUT, OUTPUT);
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
   pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
@@ -2203,7 +2238,8 @@ FLASHMEM void draw_glow()
     else if (glow_limit_max < 100) {
       setCursor_textGrid_small(glow_x + 1, glow_y);
       print_formatted_number(glow_input_value, 2);
-    } else if (glow_limit_max < 1000) {
+    }
+    else if (glow_limit_max < 1000) {
       print_formatted_number(glow_input_value, 3);
     }
     else {
@@ -2398,6 +2434,16 @@ FLASHMEM void set_trs_pedal()
   }
 }
 #endif
+
+uint8_t dac_state = 0;
+uint8_t dac_midi_note;
+uint8_t dac_midi_vel;
+uint16_t dac_cv_1;
+//uint16_t dac_cv_2;
+uint16_t dac_cv_3;
+//uint16_t dac_cv_4;
+
+extern void print_note_name_and_octave(uint8_t inNumber);
 
 void loop()
 {
@@ -2616,6 +2662,34 @@ void loop()
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
   {
 
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && dac_state != 0)
+    {
+      display.setTextSize(1);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+      if (dac_state == 1) //dac on
+      {
+        setCursor_textGrid_small(19, 3);
+        print_formatted_number(dac_midi_note, 3);
+        setCursor_textGrid_small(19, 4);
+        print_note_name_and_octave(dac_midi_note);
+        display.print("  ");
+        setCursor_textGrid_small(19, 5);
+        print_formatted_number(dac_cv_1, 4);
+        setCursor_textGrid_small(19, 7);
+        print_formatted_number(dac_midi_vel, 3);
+        setCursor_textGrid_small(19, 8);
+        print_formatted_number(dac_cv_3, 4);
+        setCursor_textGrid_small(30, 1);
+        display.print("ON");
+      }
+      else  //dac off
+      {
+        setCursor_textGrid_small(30, 1);
+        display.print("  ");
+      }
+      dac_state = 0;
+    }
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
     setRGBencoderColor();
@@ -3135,11 +3209,17 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   }
 }
 
+
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
   if (inChannel != MIDI_CHANNEL_OFF)
   {
+
+#ifdef MIDI_ACTIVITY_LIGHTS
+    LED_MIDI_OUT_counter = 1;
+#endif
+
     if ((device == 4 || braids_osc.midi_channel == MIDI_CHANNEL_OMNI || braids_osc.midi_channel == inChannel) && inNumber < 119)
     {
       braids_slot++;
@@ -3163,11 +3243,9 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
       braids_osc.note_buffer[braids_slot] = inNumber;
     }
 
-    midiNoteOn(inNumber, inVelocity, inChannel, device);
 
-#ifdef MIDI_ACTIVITY_LIGHTS
-    LED_MIDI_OUT_counter = 1;
-#endif
+    //all "external" MIDI Devices
+      midiNoteOn(inNumber, inVelocity, inChannel, device);
 
     if (device == 0) {
       // check custom midi UI KEY mapping
@@ -3388,20 +3466,20 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-                int16_t *start = (int16_t*)drum_config[d].drum_data;
+                int16_t* start = (int16_t*)drum_config[d].drum_data;
                 uint32_t length = drum_config[d].len;
                 const uint32_t channelMask = ~(drum_config[d].numChannels - 1); // round down to numChannels
-                
+
                 if (isCustomSample(d)) {
                   // calculate start and end points
-                  const CustomSample &s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];                  
+                  const CustomSample& s = customSamples[d - NUM_STATIC_PITCHED_SAMPLES];
                   const float mult = length / float(1000);
                   const uint32_t offStart = uint32_t(s.start * mult) & channelMask;
                   start += offStart;
                   const uint32_t offEnd = length - (uint32_t(s.end * mult) & channelMask);
                   length -= (offStart + offEnd);
                 }
-                
+
                 const bool hihatRand = (drum_config[d].drum_class == DRUM_HIHAT) && (seq.hihat_randomizer != 0);
                 if (hihatRand) {
                   const uint32_t offStart = random(seq.hihat_randomizer * 50) & channelMask;
@@ -3569,6 +3647,20 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             //               LOG.println();
             // #endif
           }
+        }
+
+        if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running==false)) ///CV Output
+        {
+          dac_cv_1 = (inNumber - 8) * NOTESTEP_CV;
+          dac_cv_3 = inVelocity * 32;
+#ifdef MCP_CV 
+          dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
+          dac.enable(true);
+
+          dac_midi_note = inNumber;
+          dac_midi_vel = inVelocity;
+          dac_state = 1;
+#endif
         }
       }
     }
@@ -3785,6 +3877,19 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
         LOG.println();
 #endif
       }
+    }
+
+    
+    if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running==false))
+    {
+#ifdef MCP_CV ///CV Output
+      // dac.analogWrite((inNumber - 8) * NOTESTEP_CV, inVelocity * 31, 0, 0);
+      dac.enable(false);
+      dac_midi_note = 0;
+      dac_midi_vel = 0;
+      dac_state = 2;
+#endif
+
     }
   }
 }
@@ -4773,6 +4878,11 @@ FLASHMEM void handleStop(void)
     else if (LCDML.FUNC_getID() == 255 && ts.keyb_in_menu_activated == false) // when in main menu
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "START", TouchButton::BUTTON_ACTIVE);
   }
+
+#ifdef MUSIKANDMORE
+  digitalWrite(CV_CLOCK_OUT, LOW);
+#endif
+
 }
 
 void handleActiveSensing(void)

@@ -287,7 +287,11 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define TFT_CS 41
 #define TFT_RST 24
 #define TFT_SCK 27
+
+#if defined GENERIC_DISPLAY
 #define TFT_MISO 39
+#endif
+
 #define TFT_MOSI 26
 
 // IRQ valid for both display types:
@@ -1083,7 +1087,8 @@ enum virtual_keyboard_instruments
  VK_BRAIDS,
  VK_PS_1,
  VK_PS_2,
- VK_PS_3
+ VK_PS_3,
+ VK_CV1,
 };
 
 enum master_mixer_ports

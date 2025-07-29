@@ -1787,7 +1787,7 @@ FLASHMEM bool save_sd_epiano_json(uint8_t number)
   return (false);
 }
 
-FLASHMEM void serializeEventToJSON(JsonObject& o, std::list<LiveSequencer::MidiEvent>::iterator it) {
+FLASHMEM void serializeEventToJSON(JsonObject& o, LiveSequencer::EventVector::iterator it) {
   o["source"] = it->source;
   o["patternMs"] = it->patternMs;
   o["patternNumber"] = it->patternNumber;
@@ -1809,7 +1809,7 @@ FLASHMEM void deserializeJSONToEvent(JsonObject& o, LiveSequencer::MidiEvent& e)
   e.note_in_velocity = o["note_in_velocity"];
 }
 
-FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER_FILE, uint16_t numEvents, std::list<LiveSequencer::MidiEvent>::iterator& it) {
+FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_EVENTS_PER_FILE, uint16_t numEvents, LiveSequencer::EventVector::iterator& it) {
   SD.remove(filename);
   json = SD.open(filename, FILE_WRITE);
   if (json) {
@@ -1829,7 +1829,52 @@ FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_E
   }
 }
 
-FLASHMEM void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent>& list) {
+/**
+ * Converts old layer mute events to the new format.
+ * 
+ * In old automation:
+ * note_in is the layer
+ * note_in_velocity is the mute state: 0 - mute,  1 - unmute
+ * 
+ * In new automation (note_in and note_in_velocity are swapped and mute states have new values):
+ * note_in is the mute state: TYPE_MUTE_ON or TYPE_MUTE_OFF
+ * note_in_velocity is the layer number
+ * 
+ * This should be used when loading legacy song chunks to ensure compatibility.
+ */
+static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
+  // Only process if note_in_velocity is 0 or 1 and layer is valid
+  if (e.note_in_velocity > 1 || e.note_in >= LiveSequencer::LIVESEQUENCER_NUM_LAYERS)
+    return;
+
+#ifdef DEBUG
+  LOG.print("Converting layer mute event ");
+  LOG.print(F("[old : note_in="));
+  LOG.print(e.note_in);
+  LOG.print(F(", note_in_velocity="));
+  LOG.print(e.note_in_velocity);
+  LOG.print(F("] "));
+#endif
+
+  // from old automation:
+  uint8_t layer = e.note_in;
+  bool isMuted = e.note_in_velocity == 0; // old automation: 0 - muted, 1 - unmuted
+
+  // to new automation:
+  e.note_in = isMuted ? LiveSequencer::AutomationType::TYPE_MUTE_ON
+                      : LiveSequencer::AutomationType::TYPE_MUTE_OFF;
+  e.note_in_velocity = layer;
+
+#ifdef DEBUG
+  LOG.print(F("[new: note_in="));
+  LOG.print(e.note_in);
+  LOG.print(F(", note_in_velocity="));
+  LOG.print(e.note_in_velocity);
+  LOG.println(F("]"));
+#endif
+}
+
+FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector &list, bool isSongChunk = false) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
     StaticJsonDocument<JSON_BUFFER_SIZE> doc;
@@ -1845,6 +1890,10 @@ FLASHMEM void readChunk(const char* filename, std::list<LiveSequencer::MidiEvent
       LiveSequencer::MidiEvent e;
       JsonObject o = doc[String(i)];
       deserializeJSONToEvent(o, e);
+      if( e.event == midi::MidiType::ControlChange && isSongChunk ) {
+        // If this is a song chunk, convert old layer mute events to the current format
+        convert_old_layer_mute_event(e);
+      }
       list.emplace_back(e);
     }
   }
@@ -1922,7 +1971,7 @@ FLASHMEM bool save_sd_livesequencer_json(uint8_t number)
 
     // save pattern event chunks
     //Serial.printf("pattern chunks: %i:\n", numPatternChunks);
-    std::list<LiveSequencer::MidiEvent>::iterator it = data->eventsList.begin();
+    LiveSequencer::EventVector::iterator it = data->eventsList.begin();
     for (int chunkNumber = 0; chunkNumber < numPatternChunks; chunkNumber++) {
       snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s_pattern%03i.json"), PERFORMANCE_CONFIG_PATH, number, LIVESEQUENCER_CONFIG_NAME, chunkNumber);
       writeChunk(filename, chunkNumber, NUM_EVENTS_PER_FILE, numPatternEvents, it);
@@ -1930,12 +1979,12 @@ FLASHMEM bool save_sd_livesequencer_json(uint8_t number)
 
     // loop through song patterns
     for (uint8_t songPattern = 0; songPattern <= lastSongPattern; songPattern++) {
-      std::list<LiveSequencer::MidiEvent> songPatternEvents = data->songEvents[songPattern];
+      LiveSequencer::EventVector songPatternEvents = data->songEvents[songPattern];
       const uint16_t numSongPatternEvents = songPatternEvents.size();
       const uint16_t numSongPatternChunks = ceil(numSongPatternEvents / float(NUM_EVENTS_PER_FILE)); // 50 events per file
       //Serial.printf("song pattern %i has %i chunks:\n", songPattern, numSongPatternChunks);
       // save song pattern event chunks
-      std::list<LiveSequencer::MidiEvent>::iterator it = songPatternEvents.begin();
+      LiveSequencer::EventVector::iterator it = songPatternEvents.begin();
       for (int chunkNumber = 0; chunkNumber < numSongPatternChunks; chunkNumber++) {
         snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s_song%03i_%03i.json"), PERFORMANCE_CONFIG_PATH, number, LIVESEQUENCER_CONFIG_NAME, songPattern, chunkNumber);
         writeChunk(filename, chunkNumber, NUM_EVENTS_PER_FILE, numSongPatternEvents, it);
@@ -2038,7 +2087,7 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
 
           for (int chunkNumber = 0; chunkNumber < numSongPatternChunks; chunkNumber++) {
             snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s_song%03i_%03i.json"), PERFORMANCE_CONFIG_PATH, number, LIVESEQUENCER_CONFIG_NAME, songPattern, chunkNumber);
-            readChunk(filename, data->songEvents[songPattern]);
+            readChunk(filename, data->songEvents[songPattern], true);
           }
         }
         data->currentBpm = seq.bpm;

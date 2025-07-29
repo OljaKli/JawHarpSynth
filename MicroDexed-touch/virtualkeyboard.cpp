@@ -206,8 +206,8 @@ FLASHMEM void touch_button_inst_up()
   if (ts.virtual_keyboard_instrument == VK_DRUMS && ts.virtual_keyboard_octave > 6) {
     ts.virtual_keyboard_octave = 6;
   }
-  if (ts.virtual_keyboard_instrument > 12) {
-    ts.virtual_keyboard_instrument = 12;
+  if (ts.virtual_keyboard_instrument > 13) {
+    ts.virtual_keyboard_instrument = 13;
   }
 
   drawVirtualKeyboard(VK_DRAW_INSTRUMENT_NAME);
@@ -251,13 +251,13 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   display.setTextColor(GREY2, COLOR_BACKGROUND);
   display.setTextSize(2);
   display.setCursor(18 * CHAR_width_small, 16 * CHAR_height_small);
-  if (ts.virtual_keyboard_instrument < 10) {
+  if (ts.virtual_keyboard_instrument < 10 || ts.virtual_keyboard_instrument == 13) {
     display.print(F("PLAYING"));
     display.console = 1;
     display.fillRect(33 * CHAR_width_small, 16 * CHAR_height_small, 3 * CHAR_width_small, CHAR_height_small, COLOR_BACKGROUND);
     display.console = 0;
   }
-  else {
+  else if (ts.virtual_keyboard_instrument < 13) {
     display.setTextSize(1);
     display.print(F("PITCHED SAMPLE #"));
     display.print(ts.virtual_keyboard_instrument - 9);
@@ -267,6 +267,7 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
     display.fillRect(18 * CHAR_width_small, 17 * CHAR_height_small, 14 * CHAR_width_small, CHAR_height_small, COLOR_BACKGROUND);
     display.console = 0;
   }
+
   display.setTextSize(2);
   display.setCursor(18 * CHAR_width_small, 18 * CHAR_height_small + 3);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -275,6 +276,10 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
   case VK_LIVESEQUENCER:
     display.print(F("LIVESEQ"));
     ts.virtual_keyboard_midi_channel = 20;  //fake channel for livesequencer
+    break;
+  case VK_CV1:
+    display.print(F("CV1    "));
+    ts.virtual_keyboard_midi_channel = 21; // fake channel for CV-Input
     break;
   case VK_DEXED0:
     display.print(F("DEXED1 "));
@@ -286,13 +291,13 @@ FLASHMEM void virtual_keyboard_print_current_instrument()
     break;
   case VK_DEXED2:
     display.print(F("DEXED3 "));
-    if (NUM_DEXED>2)
-    ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
+    if (NUM_DEXED > 2)
+      ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
     break;
   case VK_DEXED3:
     display.print(F("DEXED4 "));
-    if (NUM_DEXED>2)
-    ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
+    if (NUM_DEXED > 2)
+      ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
     break;
   case VK_MICROSYNTH0:
     display.print(F("MSYNTH1"));
@@ -368,17 +373,24 @@ FLASHMEM void handleTouchVirtualKeyboard()
           }
         }
         // pitched samples
-        if (ts.virtual_keyboard_instrument > VK_BRAIDS) {
+        if (ts.virtual_keyboard_instrument > VK_BRAIDS && ts.virtual_keyboard_instrument != VK_CV1) {
           set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x + halftones - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
-          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
+          {
             handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
           }
           else {
             handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
           }
         }
-        else {
-          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
+        else if (ts.virtual_keyboard_instrument == VK_CV1)
+        {
+          handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones + 12, 120);
+        }
+        else
+        {
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1))
+          {
             handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, ts.virtual_keyboard_velocity);
           }
           else {
@@ -408,7 +420,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
           ts.virtual_keyboard_state_black |= (1 << x);
 
           // pitched samples
-          if (ts.virtual_keyboard_instrument > VK_BRAIDS) {
+          if (ts.virtual_keyboard_instrument > VK_BRAIDS && ts.virtual_keyboard_instrument != VK_CV1) {
             set_sample_pitch(ts.virtual_keyboard_instrument - 8, (float)pow(2, (ts.virtual_keyboard_octave * 12 + x - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 7));
             if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
               handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
@@ -416,6 +428,10 @@ FLASHMEM void handleTouchVirtualKeyboard()
             else {
               handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
             }
+          }
+          else if (ts.virtual_keyboard_instrument == VK_CV1)
+          {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + 12, 120);
           }
           else {
             if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
@@ -514,7 +530,7 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
     }
     else
     {
-        if (seq.content_type[seq.active_pattern] != 0)
+      if (seq.content_type[seq.active_pattern] != 0)
       {
         ts.current_virtual_keyboard_display_mode = 0;
         ts.virtual_keyboard_instrument = 1;
@@ -536,5 +552,10 @@ FLASHMEM void virtual_keyboard_smart_preselect_mode()
   {
     ts.current_virtual_keyboard_display_mode = 0;
     ts.virtual_keyboard_instrument = microsynth_selected_instance + 5;
+  }
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page))
+  {
+    ts.current_virtual_keyboard_display_mode = 0;
+    ts.virtual_keyboard_instrument = 13;
   }
 }

@@ -147,7 +147,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_loop()) {
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
-      handleEncoderRight(e.dir);
+      handleEncoderRight(e);
     }
     if (e.pressed) {
       toggleSettingActivated();
@@ -308,15 +308,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
   }
 }
 
-FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(int8_t &value, int8_t diff, int8_t min, int8_t max) {
-  const int16_t newValue = constrain(value + diff, min, max);
-  const bool changed = newValue != value;
-  value = newValue;
-  return changed;
-}
-
-FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(uint16_t &value, int16_t diff, uint16_t min, uint16_t max) {
-  const uint16_t newValue = constrain(value + diff, min, max);
+template<typename T>
+FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(T &value, int16_t diff, T min, T max) {
+  const T newValue = constrain(value + diff, min, max);
   const bool changed = newValue != value;
   value = newValue;
   return changed;
@@ -364,36 +358,50 @@ FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
   drawHeader(HEADER_DRAW_ALL);
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
+FLASHMEM void UI_LiveSeq_PianoRoll::onEventsChanged(void) {
+  if (isVisible) {
+    reloadNotes();
+
+    // re-locate selected note as it may have changed order (index)
+    for (int16_t i = 0; i < int16_t(notePairs.size()); i++) {
+      if (memcmp(&notePairs.at(i).noteOn, &currentNote, sizeof(currentNote)) == 0) {
+        selectedNote = i;
+        break;
+      }
+    }
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
   if (isSettingActivated) {
     uint16_t headerFlags = 0;
     switch (mode) {
     case MODE_VIEW:
       switch (viewMode) {
       case VIEW_ZOOM_Y:
-        if (hasConstrainedChanged(view.numOctaves, -2 * diff, 1, 5)) { // only change between 1, 3, 5 octaves
-          view.startOctave += diff; // zoom octave-centered
+        if (hasConstrainedChanged(view.numOctaves, -2 * e.dir, int8_t(1), int8_t(5))) { // only change between 1, 3, 5 octaves
+          view.startOctave += e.dir; // zoom octave-centered
           setNumOctaves(view.numOctaves);
           drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
         }
         break;
 
       case VIEW_SCROLL_Y:
-        if (hasConstrainedChanged(view.startOctave, -diff, 0, TOTAL_OCTAVES - view.numOctaves)) { // octaves 0 (note 24) upto 7 (note 119)
+        if (hasConstrainedChanged(view.startOctave, -e.dir, int8_t(0), int8_t(TOTAL_OCTAVES - view.numOctaves))) { // octaves 0 (note 24) upto 7 (note 119)
           setStartOctave(view.startOctave);
           drawFlags |= DRAW_CONTENT_FULL;
         }
         break;
 
       case VIEW_ZOOM_X:
-        if (hasConstrainedChanged(view.numBars, -diff, 1, data.numberOfBars)) {
+        if (hasConstrainedChanged(view.numBars, -e.dir, int8_t(1), int8_t(data.numberOfBars))) {
           setNumBars(view.numBars);
           drawFlags |= DRAW_CONTENT_FULL;
         }
         break;
 
       case VIEW_SCROLL_X:
-        if (hasConstrainedChanged(view.startBar, diff, 0, data.numberOfBars - view.numBars)) {
+        if (hasConstrainedChanged(view.startBar, e.dir, int8_t(0), int8_t(data.numberOfBars - view.numBars))) {
           setBarStart(view.startBar);
           drawFlags |= DRAW_CONTENT_FULL;
         }
@@ -410,7 +418,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       case EDIT_SELECT_NOTE:
         if (selectedNote > -1) {
           uint16_t note = selectedNote;
-          if (hasConstrainedChanged(note, diff, 0, notePairs.size() - 1)) {
+          if (hasConstrainedChanged(note, e.dir, uint16_t(0), uint16_t(notePairs.size() - 1))) {
             queueDrawNote(notePairs.at(note));
             queueDrawNote(notePairs.at(selectedNote));
             selectedNote = note;
@@ -422,7 +430,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       case EDIT_LAYER:
         if (selectedNote > -1) {
           int8_t layer = notePairs.at(selectedNote).noteOn.layer;
-          if (hasConstrainedChanged(layer, diff, 0, data.trackSettings[data.activeTrack].layerCount -1)) {
+          if (hasConstrainedChanged(layer, e.dir, int8_t(0), int8_t(data.trackSettings[data.activeTrack].layerCount - 1))) {
             notePairs.at(selectedNote).noteOn.layer = layer;
             notePairs.at(selectedNote).noteOff.layer = layer;
             headerFlags |= (1 << EDIT_LAYER);
@@ -436,29 +444,34 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
         if (selectedNote > -1) {
           LiveSequencer::MidiEvent &on = notePairs.at(selectedNote).noteOn;
           LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
+          //liveSeq.printNotePairs(notePairs);
+          //DBG_LOG(printf("selected note: %i: %i\n", selectedNote, on.note_in));
           const bool isNoteOn = editMode == EDIT_NOTEON;
           const uint32_t noteOnTime = getEventTime(on);
           const uint32_t noteOffTime = getEventTime(off);
           uint16_t time = isNoteOn ? noteOnTime : noteOffTime;
+          const uint16_t timeBefore = time;
           const uint16_t min = isNoteOn ? 0 : noteOnTime;
           const uint16_t max = isNoteOn ? noteOffTime : data.numberOfBars * data.patternLengthMs;
-          if (hasConstrainedChanged(time, ENCODER[ENC_R].speed() * diff, min, max)) {
+          //DBG_LOG(printf("v: %i, change: %i\n", time, e.dir * e.speed));
+          if (hasConstrainedChanged(time, e.dir * e.speed, min, max)) {
             if (isNoteOn) {
+              
               setEventTime(on, time);
-              headerFlags |= (1 << EDIT_NOTEON); // also update off time
+              memcpy(&currentNote, &on, sizeof(on));
+
+              liveSeq.requestSortEvents(); // re-sort events as noteOn time changed
+              headerFlags |= (1 << EDIT_NOTEON);              
             }
             else {
               setEventTime(off, time);
-              headerFlags |= (1 << EDIT_NOTEOFF); // draw noteOff in both cases
+              headerFlags |= (1 << EDIT_NOTEOFF);
             }
-            
-            liveSeq.requestSortEvents(); // re-sort events as note time changed
-
-            const uint16_t minTime = std::min(noteOnTime, getEventTime(on));
-            const uint16_t maxTime = std::max(noteOffTime, getEventTime(off));
+            const uint16_t minTime = std::min(timeBefore, time);
+            const uint16_t maxTime = std::max(timeBefore, time);
             const UpdateRange range = {
-              .fromX = getNoteCoord(minTime),
-              .toX = getNoteCoord(maxTime),
+              .fromX = uint16_t(getNoteCoord(minTime) - 1),
+              .toX = uint16_t(getNoteCoord(maxTime) + 1),
               .notes = { on.note_in }
             };
             queueDrawNote(range);
@@ -468,10 +481,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
 
       case EDIT_VELOCITY:
         if (selectedNote > -1) {
-          LiveSequencer::MidiEvent &e = notePairs.at(selectedNote).noteOn;
+          LiveSequencer::MidiEvent &event = notePairs.at(selectedNote).noteOn;
           int8_t velo = notePairs.at(selectedNote).noteOn.note_in_velocity;
-          if (hasConstrainedChanged(velo, ENCODER[ENC_R].speed() * diff, 0, 127)) {
-            e.note_in_velocity = velo;
+          if (hasConstrainedChanged(velo, e.dir * e.speed, int8_t(0), int8_t(127))) {
+            event.note_in_velocity = velo;
           }
         }
         break;
@@ -481,7 +494,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
           LiveSequencer::NotePair &thisNote = notePairs.at(selectedNote);
           int8_t prevNote = thisNote.noteOn.note_in;
           int8_t note = thisNote.noteOn.note_in;
-          if (hasConstrainedChanged(note, diff, view.lowestNote, view.highestNote)) {
+          if (hasConstrainedChanged(note, e.dir, int8_t(view.lowestNote), int8_t(view.highestNote))) {
             thisNote.noteOn.note_in = note;
             thisNote.noteOff.note_in = note;
 
@@ -501,17 +514,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
       switch (stepMode) {
       case STEP_RECORD:
         if (data.isRunning == false) {
-          step(diff);
+          step(e.dir);
         }
         break;
 
       case STEP_SIZE: {
           bool changed = false;
           const uint8_t oldSteps = stepRecordSteps;
-          if (diff > 0) {
+          if (e.down) {
             changed = recordSteps->next();
           }
-          if (diff < 0) {
+          if (e.up) {
             changed = recordSteps->previous();
           }
           if (changed) {
@@ -525,7 +538,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
 
       case STEP_LAYER: {
           const uint8_t maxLayer = std::min(data.trackSettings[data.activeTrack].layerCount, uint8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1));
-          if (hasConstrainedChanged(stepRecordLayer, diff, 0, maxLayer)) {
+          if (hasConstrainedChanged(stepRecordLayer, e.dir, int8_t(0), int8_t(maxLayer))) {
             DBG_LOG(printf("step record layer: %i\n", stepRecordLayer));
             headerFlags |= (1 << STEP_LAYER);
           }
@@ -541,21 +554,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(int8_t diff) {
     switch (mode) {
     case MODE_VIEW:
       oldMode = viewMode;
-      newMode = constrain(viewMode + diff, 0, VIEW_NUM - 1);
+      newMode = constrain(viewMode + e.dir, 0, VIEW_NUM - 1);
       viewMode = newMode;
       buttonView->drawNow();
       break;
 
     case MODE_EDIT:
       oldMode = editMode;
-      newMode = constrain(editMode + diff, 0, EDIT_NUM - 1);
+      newMode = constrain(editMode + e.dir, 0, EDIT_NUM - 1);
       editMode = newMode;
       buttonEdit->drawNow();
       break;
 
     case MODE_STEP:
       oldMode = stepMode;
-      newMode = constrain(stepMode + diff, 0, STEP_NUM - 1);
+      newMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
       stepMode = newMode;
       if ((data.isRunning == false) && (newMode == STEP_RECORD)) {
         drawFlags |= DRAW_STEP_CURSOR;
@@ -817,7 +830,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     const std::string text = "SELECTION HAS NO NOTES";
     const uint16_t stringWidth = text.length() * CHAR_width_small;
     display.console = true;
-    display.setCursor((DISPLAY_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);
+    display.setCursor((CONTENT_WIDTH - stringWidth) / 2, CONTENT_HEIGHT / 2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
     display.print(text.c_str());
@@ -1050,7 +1063,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
-  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, 0, view.numBars * stepRecordSteps);
+  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps));
   if (stepCursorChanged) {
     if (stepCursorPositionIndex == view.numBars * stepRecordSteps) {
       stepCursorPositionIndex = 0;

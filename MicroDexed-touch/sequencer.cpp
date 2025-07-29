@@ -603,10 +603,10 @@ void sequencer_part1(void)
       }
     }
 
-if (seq.step==0)
-{
-  seq.input_base_note_quantized=seq.input_base_note;
-}
+    if (seq.step == 0)
+    {
+      seq.input_base_note_quantized = seq.input_base_note;
+    }
 
     if (seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]] < NUM_CHAINS)
       tr[d] = seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]];
@@ -669,7 +669,11 @@ if (seq.step==0)
                   handleNoteOn(seq.instrument[d] - 31, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 2);
 #endif
               }
-
+              else if (seq.instrument[d] == 64) // track is for external CV OUT
+              {
+                if (check_probability(seq.current_pattern[d]))
+                  handleNoteOn(21, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+              }
               else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) // track is for internal Micro MIDI
               {
                 if (check_probability(seq.current_pattern[d]))
@@ -680,11 +684,11 @@ if (seq.step==0)
               {
                 if (check_probability(seq.current_pattern[d]))
                 {
-                  if (seq.transpose==0)
-                  handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
-             else
-               handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d]+seq.input_base_note_quantized, check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
-           
+                  if (seq.transpose == 0)
+                    handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+                  else
+                    handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + seq.input_base_note_quantized, check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+
                 }
               }
               else if (seq.instrument[d] == 2) // track is assigned to epiano
@@ -715,7 +719,7 @@ if (seq.step==0)
               seq.prev_vel[d] = seq.vel[seq.current_pattern[d]][seq.step];
             }
           }
-          else if (seq.track_type[d] == 2 && seq.ticks == 0) // Chords
+          else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) // Chords
           {
             if (seq.vel[seq.current_pattern[d]][seq.step] > 199)
             {
@@ -724,13 +728,13 @@ if (seq.step==0)
                 if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // track is assigned to dexed
                 {
                   if (check_probability(seq.current_pattern[d]))
-{
-  if (seq.transpose==0)
-                    handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
-else
-           handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d]  +seq.input_base_note_quantized+ (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+                  {
+                    if (seq.transpose == 0)
+                      handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
+                    else
+                      handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + seq.input_base_note_quantized + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
 
-}
+                  }
 
                 }
                 else if (seq.instrument[d] == 2) // track is assigned to epiano
@@ -821,12 +825,12 @@ void sequencer_part2(void)
         {
           if ((seq.instrument[d] < 2 && seq.ticks == seq.ticks_max) || (seq.instrument[d] == 70 && seq.ticks == seq.ticks_max) || (seq.instrument[d] == 71 && seq.ticks == seq.ticks_max)) // dexed
           {
-            if (seq.transpose==0)
-            handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d], 0, 0);
-else
- handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d] +seq.input_base_note_quantized, 0, 0);
+            if (seq.transpose == 0)
+              handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d], 0, 0);
+            else
+              handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, seq.prev_note[d] + seq.input_base_note_quantized, 0, 0);
           }
-             
+
           else if (seq.instrument[d] == 2 && seq.ticks == seq.ticks_max) // epiano
             handleNoteOff(configuration.epiano.midi_channel, seq.prev_note[d], 0, 0);
           else if (seq.instrument[d] > 2 && seq.instrument[d] < 5)
@@ -851,10 +855,15 @@ else
           {
             handleNoteOff(seq.instrument[d] - 47, seq.prev_note[d], 0, 3);
           }
+          else if (seq.instrument[d] == 64 && seq.ticks == seq.ticks_max) // // track is for external CV OUT
+          {
+            handleNoteOff(21, seq.prev_note[d], 0, 0);
+          }
+
           seq.noteoffsent[d] = true;
         }
-        if (seq.track_type[d] == 2) // Chords
-        { //&& seq.note_data[seq.current_pattern[d]][seq.step] != 130
+        if (seq.track_type[d] == 2 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) // Chords
+        {
           if (seq.prev_vel[d] > 199)
           {
             for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
@@ -947,8 +956,8 @@ void sequencer(void)
       seq.step++;
 
 #ifdef MUSIKANDMORE
-  digitalWrite(CV_CLOCK_OUT,HIGH);
-  //setled(LED_DOWN, true);
+      digitalWrite(CV_CLOCK_OUT, LOW); //tested ok 24/06/2025
+      //setled(LED_DOWN, true);
 #endif
     }
 
@@ -970,9 +979,9 @@ void sequencer(void)
     {
       sequencer_part2();
 
-   #ifdef MUSIKANDMORE
-  digitalWrite(CV_CLOCK_OUT,LOW);
-  //setled(LED_DOWN, false);
+#ifdef MUSIKANDMORE
+      digitalWrite(CV_CLOCK_OUT, HIGH);  //tested ok 24/06/2025
+      //setled(LED_DOWN, false);
 #endif
     }
 

@@ -65,6 +65,7 @@ FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 
 FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
 {
+#if (APC != 1) //LUC regular apc mini mk2
   if (in < 10)
     apc(pos, 0, 6);
   else if (in < 40)
@@ -79,6 +80,13 @@ FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
     apc(pos, col, 5);
   else
     apc(pos, col, 6);
+#else
+  //no brightness for APC Mini Mk1, send only on or off, to avoid crash
+  if (in < 10)
+    apc(pos, 0, 6);
+  else if (in > 40)
+    apc(pos, col, 6);
+#endif
 }
 
 extern void apc_drawChar(int x, unsigned char c);
@@ -89,7 +97,7 @@ FLASHMEM void apc_print_volume_pads()
   {
     for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
-        sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max, i, 5);
+        sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max, i, 5); //5=colour red for Mk2
   }
 }
 
@@ -126,10 +134,10 @@ FLASHMEM void print_apc_source_selection_pads()
       {
         if (i == activeSample - APC_SAMPLE_SCROLL_OFFSET + 10 && APC_BUTTONS_RIGHT[6])
         {
-          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 11);
+          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 11); //11 means blinking 1/24 for Mini Mk2
         }
         else
-          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 6);
+          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 6); //6 means full brightness for Mini Mk2
       }
     }
     else  // tonal instrument
