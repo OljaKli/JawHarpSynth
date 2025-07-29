@@ -236,8 +236,11 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
     {
       if (APC_BUTTONS_RIGHT[6])  //sample select mode
       {
-        activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
-        drum_config[activeSample].vol_max = (float)in2;
+        // don't change activeSample, if other fader is moved, to reduce chance of freeze
+        //activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
+        if((activeSample == in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10)
+          && (activeSample < sizeof(drum_config)/sizeof(drum_config[0])))
+          drum_config[activeSample].vol_max = (float)in2;
       }
       if (APC_BUTTONS_RIGHT[3])
       {

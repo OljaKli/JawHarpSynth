@@ -65,7 +65,7 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
-
+int counter_ignore_fader_apc;
 
 
 /* #ifdef MIDI_DEVICE_USB
@@ -383,8 +383,13 @@ seq.note_in = inData1;
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
-      if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 <= 56 && inChannel == 1)
-        apc_fader_control(inData1, inData2);
+      if(counter_ignore_fader_apc>30)
+      {
+        counter_ignore_fader_apc = 0;
+        if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used    
+          apc_fader_control(inData1, inData2);
+      }
+      else counter_ignore_fader_apc++; //dirty fix to ignore 30 received fader messages, to avoid spam, to reduce chance of freeze
     }
 #endif
 
