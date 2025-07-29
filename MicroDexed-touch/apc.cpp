@@ -236,13 +236,11 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
     {
       if (APC_BUTTONS_RIGHT[6])  //sample select mode
       {
-        // don't change activeSample, if other fader is moved, to reduce chance of freeze
-        //activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
-        if((activeSample == in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10)
-          && (activeSample < sizeof(drum_config)/sizeof(drum_config[0])))
-          drum_config[activeSample].vol_max = (float)in2;
+        activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
+        if(activeSample < sizeof(drum_config)/sizeof(drum_config[0])) //better check array out of bound, it may cause crash otherwise
+          drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
       }
-      if (APC_BUTTONS_RIGHT[3])
+      if (APC_BUTTONS_RIGHT[3]) //edit velocity 1st row (1-8)
       {
         if (seq.vel[seq.active_pattern][in1 - 48] < 210) //normal sample
         {
@@ -250,7 +248,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
           seq_printAllVelocitySteps_single_step(in1 - 48, GREY1);
         }
       }
-      if (APC_BUTTONS_RIGHT[4])
+      if (APC_BUTTONS_RIGHT[4]) //edit velocity 2nd row (9-16)
       {
         if (seq.vel[seq.active_pattern][in1 - 48 + 8] < 210) //normal sample
         {
@@ -260,7 +258,8 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
       }
     }
   }
-  if (APC_BUTTONS_RIGHT[6])
+  if ((APC_BUTTONS_RIGHT[6])  //sample select mode
+      && (activeSample < sizeof(drum_config)/sizeof(drum_config[0]))) //better check array out of bound, it may cause crash otherwise
   {
     apc_print_volume_pads();
     print_apc_source_selection_pads();

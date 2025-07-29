@@ -66,6 +66,7 @@ bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
 int counter_ignore_fader_apc;
+uint8_t fader_previous_apc;
 
 
 /* #ifdef MIDI_DEVICE_USB
@@ -364,8 +365,6 @@ seq.note_in = inData1;
       if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
         inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
       apc_print_right_buttons();
-      //This is the best place to trigger the refresh of the sample name. If done before (in apc_NoteOn), it displays wrong name.
-      apc_trigger_print_in_lcd();
     }
 #endif
 
@@ -383,13 +382,26 @@ seq.note_in = inData1;
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
-      if(counter_ignore_fader_apc>30)
+      if(counter_ignore_fader_apc<= 0)
       {
-        counter_ignore_fader_apc = 0;
-        if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used    
+        if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used
+        {
           apc_fader_control(inData1, inData2);
+          if(fader_previous_apc != inData1) //put delay if other fader is moved
+#if (APC != 1) //LUC regular apc mini mk2
+            counter_ignore_fader_apc = 0; //Before compared with 30, put to 0 to avoid delay.
+#else
+            /* Test conditions: seq stop, sample pad blinking. Test: move all APC faders.
+              With counter 1 it freezes after some attempts, with 10 freeze after more attempts, with 30 it's harder to freeze.
+              Only the UI freezes.
+              If seq stopped and I move all faders crazily, it freezes and I'm unable to change screen, start sequencer.
+              If seq started and I move all faders crazily, it freezes and I'm unable to change screen, stop sequencer. It keeps playing infinitely! */
+            counter_ignore_fader_apc = 30;
+#endif
+          fader_previous_apc = inData1;
+        }
       }
-      else counter_ignore_fader_apc++; //dirty fix to ignore 30 received fader messages, to avoid spam, to reduce chance of freeze
+      else counter_ignore_fader_apc--; //dirty fix delay to ignore some received fader messages, to avoid spam, to reduce chance of freeze
     }
 #endif
 
