@@ -34,6 +34,7 @@ extern void _velocity_editor_change_pattern();
 extern void update_latch_button();
 extern void handleStart();
 extern void handleStop();
+extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL);
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
 extern sequencer_t seq;
@@ -45,6 +46,7 @@ extern int temp_int;
 uint8_t apc_out_channel;
 extern void  print_chain_matrix_in_song_page();
 static int trigger_print_sample_or_step;
+static uint8_t last_activeSample_selected_by_sample_pad;
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -230,15 +232,29 @@ FLASHMEM void set_apc_pad_selection(uint8_t pad)
 
 FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
 {
+  uint8_t old_activeSample;
   for (uint8_t i = 0; i < 8; i++)  //8 fader
   {
     if (in1 - 48 == i)  // fader start with cc 48
     {
       if (APC_BUTTONS_RIGHT[6])  //sample select mode
       {
+        old_activeSample = activeSample;
         activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
         if(activeSample < sizeof(drum_config)/sizeof(drum_config[0])) //better check array out of bound, it may cause crash otherwise
+        {
           drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums)) &&
+               (last_activeSample_selected_by_sample_pad == in1-48 /*activeSample*/))
+            //TODO refresh entire screen if other fader is moved (new activeSample).
+            //For now just avoid to display volume for other sample, but even this doesn't work if sample bank is changed.
+          {
+            //refresh sample volume on the Drums page, for the selected sample, it's 1st param
+            print_small_scaled_bar(0, 3 /*y discovered by trial and error*/, drum_config[activeSample].vol_max, 0, 200, 1/*I put 1 for select_id, don't know what else to put. */, 1, NULL);
+          }
+        }
+        else
+          activeSample = old_activeSample; //restore previous valid value
       }
       if (APC_BUTTONS_RIGHT[3]) //edit velocity 1st row (1-8)
       {
@@ -727,6 +743,7 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
       trigger_print_sample_or_step = -1; //new sample selected for pattern drum mode, to be refreshed on lcd
+      last_activeSample_selected_by_sample_pad = inData1-8; //activeSample
     }
     else if (inData1 < 24 && seq.content_type[seq.active_pattern] == 1) // tonal instrument type
     {
