@@ -65,7 +65,7 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
-int counter_ignore_fader_apc;
+int8_t counter_ignore_fader_apc;
 uint8_t fader_previous_apc;
 
 
@@ -397,6 +397,8 @@ seq.note_in = inData1;
               If seq stopped and I move all faders crazily, it freezes and I'm unable to change screen, start sequencer.
               If seq started and I move all faders crazily, it freezes and I'm unable to change screen, stop sequencer. It keeps playing infinitely! */
             counter_ignore_fader_apc = 30;
+          else
+            counter_ignore_fader_apc = 1; //needed because MDT got frozen when moving 4 faders
 #endif
           fader_previous_apc = inData1;
         }

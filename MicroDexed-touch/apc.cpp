@@ -245,7 +245,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         {
           drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums)) &&
-               (last_activeSample_selected_by_sample_pad == in1-48 /*activeSample*/))
+               (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
             //TODO refresh entire screen if other fader is moved (new activeSample).
             //For now just avoid to display volume for other sample, but even this doesn't work if sample bank is changed.
           {
@@ -743,14 +743,14 @@ void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
       trigger_print_sample_or_step = -1; //new sample selected for pattern drum mode, to be refreshed on lcd
-      last_activeSample_selected_by_sample_pad = inData1-8; //activeSample
+      last_activeSample_selected_by_sample_pad = activeSample; //needed to avoid update of volume gauge, when other fader is moved, in Drums screen
     }
     else if (inData1 < 24 && seq.content_type[seq.active_pattern] == 1) // tonal instrument type
     {
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
-      trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, to be refreshed on lcd
+      trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
     }
     else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
     {
