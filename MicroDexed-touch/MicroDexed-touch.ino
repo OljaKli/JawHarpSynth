@@ -2532,6 +2532,9 @@ void loop()
     }
     apc_drawString_Background();
   }
+  //This is the best place to trigger the refresh of the sample name or new step. If done too soon (in apc_NoteOn), it displays wrong name.
+  //Before was at case midi::NoteOff:, but better is to not overload the midi interrupt with prints.
+  apc_trigger_print_in_lcd();
 #endif
 
   LCDML.loop();
