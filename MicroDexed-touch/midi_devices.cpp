@@ -67,7 +67,7 @@ bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
 int8_t counter_ignore_fader_apc;
 uint8_t fader_previous_apc;
-
+extern uint8_t chord_input[];
 
 /* #ifdef MIDI_DEVICE_USB
   static const unsigned sUsbTransportBufferSize = 16;
@@ -298,17 +298,23 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
   switch (event)
   {
   case midi::NoteOn:
-  if (seq.transpose ==0 || inData1 > seq.transpose)
-  {
-    seq.note_in = inData1;
-    seq.note_in_velocity = inData2;
-  }
-  else   //live transpose only
-  {
-     seq.note_in = 0;
-      seq.input_base_note = inData1 % 12;
-      seq.note_in_velocity = 0;
-  }
+    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
+    {
+      seq.note_in = inData1;
+      seq.note_in_velocity = inData2;
+    }
+    else   //live chord arranger
+    {
+      // seq.note_in = 0;
+     
+     // seq.note_in_velocity = 0;
+      chord_input[0] = chord_input[1];
+      chord_input[1] = chord_input[2];
+      chord_input[2] = inData1;
+      seq.note_in = inData1;
+      seq.note_in_velocity = inData2;
+
+    }
 
 #if defined APC
 
@@ -340,8 +346,8 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     }
 #endif
 
- if (seq.transpose ==0 || inData1 > seq.transpose)
-    handleNoteOnInput(inChannel, inData1, inData2, 0);
+    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
+      handleNoteOnInput(inChannel, inData1, inData2, 0);
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
@@ -353,10 +359,9 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
     break;
   case midi::NoteOff:
- 
-seq.note_in = inData1;
+    seq.note_in = inData1;
     seq.note_in_velocity = inData2;
-  
+
 #if defined APC
     if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
       apc_shift_key = false;
@@ -369,7 +374,7 @@ seq.note_in = inData1;
 #endif
 
     handleNoteOff(inChannel, inData1, inData2, 0);
-   
+
 #ifdef DEBUG
     strcpy(text, "NoteOff");
 #endif

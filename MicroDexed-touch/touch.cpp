@@ -940,6 +940,19 @@ FLASHMEM void handle_touchscreen_cv_screen()
   }
 }
 
+ FLASHMEM void handle_touchscreen_chord_arranger()
+ {
+  //  if (numTouchPoints > 0)
+  //  {
+  //    seq.cycle_touch_element = 1;
+  //  }
+  //  if (seq.cycle_touch_element == 1) {
+  //    handleTouchVirtualKeyboard();
+  //  }
+   
+ }
+
+
 FLASHMEM void draw_menu_ui_icons()
 {
   TouchButton::drawButton(GRID.X[0], GRID.Y[3], "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);

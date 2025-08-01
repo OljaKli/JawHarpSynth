@@ -239,7 +239,7 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     string_toupper(bank_name);
     strcpy(g_bank_name[instance_id], bank_name);
 #ifdef DEBUG
-    char filename[FILENAME_LEN+5];
+    char filename[FILENAME_LEN + 5];
     //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.syx"), DEXED_CONFIG_PATH, b, bank_name);
     sprintf(filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, p, b, bank_name);
     LOG.print(F("Loading voice from "));
@@ -324,8 +324,8 @@ FLASHMEM bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     char filename[FILENAME_LEN];
     uint8_t data[128];
 
-  //  snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
-     snprintf_P(filename, sizeof(filename), PSTR("/DEXED/%d/%d/%s.syx"),  p, b, g_bank_name[instance_id]);
+    //  snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
+    snprintf_P(filename, sizeof(filename), PSTR("/DEXED/%d/%d/%s.syx"), p, b, g_bank_name[instance_id]);
 
     AudioNoInterrupts();
     sysex = SD.open(filename, FILE_WRITE);
@@ -1831,18 +1831,18 @@ FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_E
 
 /**
  * Converts old layer mute events to the new format.
- * 
+ *
  * In old automation:
  * note_in is the layer
  * note_in_velocity is the mute state: 0 - mute,  1 - unmute
- * 
+ *
  * In new automation (note_in and note_in_velocity are swapped and mute states have new values):
  * note_in is the mute state: TYPE_MUTE_ON or TYPE_MUTE_OFF
  * note_in_velocity is the layer number
- * 
+ *
  * This should be used when loading legacy song chunks to ensure compatibility.
  */
-static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
+static void convert_old_layer_mute_event(LiveSequencer::MidiEvent& e) {
   // Only process if note_in_velocity is 0 or 1 and layer is valid
   if (e.note_in_velocity > 1 || e.note_in >= LiveSequencer::LIVESEQUENCER_NUM_LAYERS)
     return;
@@ -1862,7 +1862,7 @@ static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
 
   // to new automation:
   e.note_in = isMuted ? LiveSequencer::AutomationType::TYPE_MUTE_ON
-                      : LiveSequencer::AutomationType::TYPE_MUTE_OFF;
+    : LiveSequencer::AutomationType::TYPE_MUTE_OFF;
   e.note_in_velocity = layer;
 
 #ifdef DEBUG
@@ -1874,7 +1874,7 @@ static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
 #endif
 }
 
-FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector &list, bool isSongChunk = false) {
+FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector& list, bool isSongChunk = false) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
     StaticJsonDocument<JSON_BUFFER_SIZE> doc;
@@ -1890,7 +1890,7 @@ FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector &list, 
       LiveSequencer::MidiEvent e;
       JsonObject o = doc[String(i)];
       deserializeJSONToEvent(o, e);
-      if( e.event == midi::MidiType::ControlChange && isSongChunk ) {
+      if (e.event == midi::MidiType::ControlChange && isSongChunk) {
         // If this is a song chunk, convert old layer mute events to the current format
         convert_old_layer_mute_event(e);
       }
@@ -2735,13 +2735,13 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
         LOG.println();
 #endif
         unload_all_custom_samples();
-        
+
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
 
           char fullpath[FULLPATH_MAX_LEN] = { 0 };
           strcpy(fullpath, data_json[i]["filename"]);
-          char *lastSlash = strrchr(fullpath, '/');
+          char* lastSlash = strrchr(fullpath, '/');
           if (lastSlash != nullptr) {
             strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, lastSlash + 1);
             *lastSlash = '\0';
@@ -2757,9 +2757,9 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
             customSamples[i].end = 1000;   // 100%
             customSamples[i].loopType = 0; // loop_type::looptype_none
           }
-          
+
           uint8_t drumClass = data_json[i]["class"];
-          if(drumClass == 0) {
+          if (drumClass == 0) {
             drumClass = DRUM_POLY;
           }
           drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = drumClass;
@@ -3552,13 +3552,18 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["arp_style"] = seq.arp_style;
       data_json["arp_num_notes_max"] = seq.arp_num_notes_max;
       data_json["seq_chord_vel"] = seq.chord_vel;
-      data_json["seq_transpose"] = seq.transpose;
+      data_json["arr_split_note"] = seq.arr_split_note;
       data_json["chord_key_ammount"] = seq.chord_key_ammount;
       data_json["seq_oct_shift"] = seq.oct_shift;
       data_json["seq_element_shift"] = seq.element_shift;
       data_json["euclidean_active"] = seq.euclidean_active;
       data_json["euclidean_offset"] = seq.euclidean_offset;
       data_json["hihat_randomizer"] = seq.hihat_randomizer;
+
+      for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
+      {
+        data_json["arr_type"][track] = seq.arr_type[track];
+      }
 
       for (uint8_t i = 0; i < sizeof(seq.track_type); i++)
       {
@@ -3954,6 +3959,12 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
             }
           }
 
+
+          for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
+          {
+            seq.arr_type[track] = data_json["arr_type"][track];
+          }
+
           seq.tempo_ms = data_json["seq_tempo_ms"];
           seq.bpm = data_json["seq_bpm"];
           seq.pattern_len_dec = data_json["pattern_len_dec"];
@@ -3967,7 +3978,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           else
             seq.arp_num_notes_max = 16;
           seq.chord_vel = data_json["seq_chord_vel"];
-          seq.transpose = data_json["seq_transpose"];
+          seq.arr_split_note = data_json["arr_split_note"];
           seq.chord_key_ammount = data_json["chord_key_ammount"];
           seq.oct_shift = data_json["seq_oct_shift"];
           seq.element_shift = data_json["seq_element_shift"];

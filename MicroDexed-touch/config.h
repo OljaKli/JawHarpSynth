@@ -1190,3 +1190,28 @@ enum perf_load_opt
  perf_seq,
  perf_liveseq
 };
+
+typedef struct {
+    uint8_t root;
+    uint8_t third;
+    uint8_t fifth;
+    const char* type;
+    bool active;
+} ChordInfo;
+
+// typedef enum {
+//     SCALE_IONIAN,      // Major
+//     SCALE_AEOLIAN,     // Minor
+//     SCALE_HARMONIC_MINOR,
+//     SCALE_MELODIC_MINOR
+// } ScaleType;
+
+// typedef struct {
+//     uint8_t root;
+//     uint8_t third;
+//     uint8_t fifth;
+//     bool active;
+//     const char* type;
+// } ChordState;
+
+

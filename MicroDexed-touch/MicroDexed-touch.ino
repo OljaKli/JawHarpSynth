@@ -1802,6 +1802,9 @@ FLASHMEM void setup()
         case 10:
           LCDML.FUNC_goBackToMenu();
           break;
+        case 11:
+          LCDML.OTHER_jumpToFunc(UI_func_chord_arranger);
+          break;
         case 50:
           LCDML.OTHER_jumpToFunc(UI_func_information);
           break;
@@ -2445,8 +2448,53 @@ uint16_t dac_cv_3;
 
 extern void print_note_name_and_octave(uint8_t inNumber);
 
+
+extern uint8_t chord_input[3];
+//extern void getChordName(const uint8_t midiNotes[], uint8_t size, char* output);
+extern void updateCurrentChord(const uint8_t midiNotes[], uint8_t size);
+extern  void show(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, const char* str);
+extern bool getChordName(const uint8_t midiNotes[], uint8_t size, char* output);
+extern const char* midiToNote(uint8_t midiNote);
+
+
 void loop()
 {
+
+  // Test Chords Detection
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  {
+    display.setTextSize(1);
+display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+ for (uint8_t d = 0; d < 3; d++)
+ {
+ setCursor_textGrid_small(28 + d*4, 1);
+display.print(midiToNote(chord_input[d]));
+     display.print(chord_input[d]/12);
+       display.print(" ");
+
+
+ //display.fillRect(CHAR_width_small + chord_input[d]*3.55, 110, 4,4, RED);
+ }
+ if (seq.note_in!=0)
+ {display.console = true;
+  display.fillRect(CHAR_width_small + seq.note_in*3.55, 110, 4,4, RED);
+ }
+
+
+    if (chord_input[0] != 0 && chord_input[1] != 0 && chord_input[2] != 0)
+    {
+      char result1[30];
+      display.setTextSize(0);
+
+      updateCurrentChord(chord_input, 3);
+      getChordName(chord_input, 3, result1);
+      display.setTextSize(2);
+      show_no_grid( CHAR_height*2,CHAR_width_small, 26, result1);
+    }
+  }
+
 
   // MM Test Stuff
 
@@ -3248,7 +3296,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
 
     //all "external" MIDI Devices
-      midiNoteOn(inNumber, inVelocity, inChannel, device);
+    midiNoteOn(inNumber, inVelocity, inChannel, device);
 
     if (device == 0) {
       // check custom midi UI KEY mapping
@@ -3652,7 +3700,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           }
         }
 
-        if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running==false)) ///CV Output
+        if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running == false)) ///CV Output
         {
           dac_cv_1 = (inNumber - 8) * NOTESTEP_CV;
           dac_cv_3 = inVelocity * 32;
@@ -3882,8 +3930,8 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
       }
     }
 
-    
-    if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running==false))
+
+    if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running == false))
     {
 #ifdef MCP_CV ///CV Output
       // dac.analogWrite((inNumber - 8) * NOTESTEP_CV, inVelocity * 31, 0, 0);

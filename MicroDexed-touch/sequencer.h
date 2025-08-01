@@ -112,14 +112,12 @@ typedef struct sequencer_s
     bool running = false;
     bool recording = false;
     bool smartfilter = false;
-    uint8_t state_last_loadsave = 200;
     char name[FILENAME_LEN];
     char name_temp[FILENAME_LEN];
     uint8_t note_in;
     uint8_t note_in_velocity;
-    int transpose = 0;
-    uint8_t input_base_note=0;
-    uint8_t input_base_note_quantized=0;
+    uint8_t arr_split_note = 0;
+    uint8_t arr_type[NUM_SEQ_TRACKS] = { 0, 0, 0, 0, 0, 0, 0, 0 }; // 0 = off, 1 = transform, 2 = root note only
     uint8_t chord_vel = 60;
     uint8_t chord_key_ammount = 4;
     uint8_t element_shift = 0;
