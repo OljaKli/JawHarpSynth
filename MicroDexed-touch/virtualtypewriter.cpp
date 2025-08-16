@@ -64,10 +64,11 @@ void virtual_typewriter_init(int8_t pos) {
 }
 
 void draw_key(uint16_t px, uint8_t py, const char *label, bool pressed, uint8_t key_w = VK_KEY_W) {
+      display.console = true;
     display.fillRect(px, py, key_w, VK_KEY_H, pressed ? RED : DX_DARKCYAN);
     uint16_t textX = px + (key_w - strlen(label)*CHAR_width)/2;
     display.setCursor(textX > px ? textX : px+2, py + 8);
-    display.setTextColor(COLOR_SYSTEXT);
+    display.setTextColor(COLOR_SYSTEXT,DX_DARKCYAN);
     display.print(label);
 }
 
@@ -288,6 +289,7 @@ void virtual_typewriter_update_display() {
         int8_t pos = edit_pos_global + offset;
         
         if (pos >= 0 && pos < edit_len_global) {
+             display.console = true;
             display.fillRect(
                 vtw_x * CHAR_width + (pos * CHAR_width),
                 3 * CHAR_height + 1,
@@ -299,6 +301,7 @@ void virtual_typewriter_update_display() {
     // Draw cursor at current position
     if (edit_pos_global >= 0 && edit_pos_global < edit_len_global) {
         uint16_t cursor_color = edit_mode_global ? RED : COLOR_PITCHSMP;
+         display.console = true;
         display.fillRect(
             vtw_x * CHAR_width + (edit_pos_global * CHAR_width),
             3 * CHAR_height + 1,
