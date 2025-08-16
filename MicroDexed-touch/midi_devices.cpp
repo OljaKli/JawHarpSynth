@@ -67,7 +67,7 @@ bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
 int8_t counter_ignore_fader_apc;
 uint8_t fader_previous_apc;
-extern uint8_t chord_input[];
+extern uint8_t chord_input[4];
 
 /* #ifdef MIDI_DEVICE_USB
   static const unsigned sUsbTransportBufferSize = 16;
@@ -250,41 +250,60 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
 #if (APC != 1) //LUC regular apc mini mk2
   midi_usb.sendNoteOn(a, b, c);
 #else
-  static uint8_t a_old=255, b_old=255;
+  static uint8_t a_old = 255, b_old = 255;
   //a=inNoteNumber, b=inVelocity (128 colour), c=inChannel (brightness,blink)
-  if((a_old!=a)  || (b_old!=b)) { //avoid repeating same command without meaning, to avoid freeze, but it still freezes
-    a_old=a; b_old=b;
-    switch(b) { //wrapper for colour from APC Mini Mk2 to Mk1
-      case 0: break; //OFF colour is the same for Mk2 and Mk1
-      case 5:        //red Mk2
-        b=3;break;   //red for Mk1
-      case 1:        //colour #1E1E1E Mk2 for mute matrix
-        b=5;break;   //yellow for Mk1
-      case 78:       //colour #00A9FF Mk2 for mute matrix
-        b=1;break;   //green for Mk1
-      case 2:        //colour #7F7F7F Mk2 for mute matrix for instr pattern
-        b=5+1;break; //yellow blink for Mk1
-      case 40:       //colour #4C88FF Mk2 for mute matrix for instr pattern
-        b=1+1;break; //green blink for Mk1
-      case 124:      //colour #B9B000 Mk2 for mute matrix for drum pattern
-        b=3+1;break; //red blink for Mk1
-      case 36:       //colour #4CC3FF Mk2 for mute matrix for pitched sample
-        b=3;break;   //red for Mk1
-      default:       //for several sample pads colours put all 3 mk1 colors in round robin order
-        b=(b%3)*2+1;break;//get 1,3 or 5 (green,red,yellow) from any colour number for Mk1
+  if ((a_old != a) || (b_old != b)) { //avoid repeating same command without meaning, to avoid freeze, but it still freezes
+    a_old = a; b_old = b;
+    switch (b) { //wrapper for colour from APC Mini Mk2 to Mk1
+    case 0: break; //OFF colour is the same for Mk2 and Mk1
+    case 5:        //red Mk2
+      b = 3;break;   //red for Mk1
+    case 1:        //colour #1E1E1E Mk2 for mute matrix
+      b = 5;break;   //yellow for Mk1
+    case 78:       //colour #00A9FF Mk2 for mute matrix
+      b = 1;break;   //green for Mk1
+    case 2:        //colour #7F7F7F Mk2 for mute matrix for instr pattern
+      b = 5 + 1;break; //yellow blink for Mk1
+    case 40:       //colour #4C88FF Mk2 for mute matrix for instr pattern
+      b = 1 + 1;break; //green blink for Mk1
+    case 124:      //colour #B9B000 Mk2 for mute matrix for drum pattern
+      b = 3 + 1;break; //red blink for Mk1
+    case 36:       //colour #4CC3FF Mk2 for mute matrix for pitched sample
+      b = 3;break;   //red for Mk1
+    default:       //for several sample pads colours put all 3 mk1 colors in round robin order
+      b = (b % 3) * 2 + 1;break;//get 1,3 or 5 (green,red,yellow) from any colour number for Mk1
     }
     //increment colour for blink mode request (1,3,5 to 2,4,6), 11 is blink for Mk2
     //avoid blink if colour is 0 (OFF) or if colour is already blinking (even number)
-    b += ((c==11) && b && (b&1u))?1:0;
+    b += ((c == 11) && b && (b & 1u)) ? 1 : 0;
     midi_usb.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
   }
   else {
-    a_old=a; b_old=b;
+    a_old = a; b_old = b;
   }
 #endif
 }
 
 #endif
+
+
+
+uint8_t chord_input[MAX_CHORD_NOTES] = { 0 };
+uint8_t chord_note_count = 0;
+elapsedMillis since_last_note;
+extern void printSuggestions();
+extern void  show_chord();
+
+void resetChordBuffer() {
+  memset(chord_input, 0, sizeof(chord_input));
+  chord_note_count = 0;
+}
+
+extern void resetCurrentChord();
+extern void resetChordTransformation();
+extern ChordInfo currentChord;
+extern void updateCurrentChord(const uint8_t midiNotes[], uint8_t size);
+extern bool chord_autostart;
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
@@ -305,15 +324,57 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     }
     else   //live chord arranger
     {
-      // seq.note_in = 0;
-     
-     // seq.note_in_velocity = 0;
-      chord_input[0] = chord_input[1];
-      chord_input[1] = chord_input[2];
-      chord_input[2] = inData1;
-      seq.note_in = inData1;
-      seq.note_in_velocity = inData2;
+      // Shift all notes down one position (making room for new note)
+        // chord_input[0] = chord_input[1];
+        // chord_input[1] = chord_input[2];
+        // chord_input[2] = chord_input[3];  // This will be 0 for 3-note chords
+        // chord_input[3] = inData1;
 
+ // Shift all notes down (making room for new note)
+    // memmove(chord_input, chord_input+1, 3);  // Moves elements 1,2,3 to 0,1,2
+    // chord_input[3] = inData1;  // Add new note at end
+
+
+      if (!seq.running)
+      {
+        seq.note_in = inData1;
+        seq.note_in_velocity = inData2;
+      }
+
+      // Chord note handling
+      if (since_last_note > CHORD_CAPTURE_WINDOW || chord_note_count >= MAX_CHORD_NOTES) {
+        resetChordBuffer();
+        resetCurrentChord();
+      }
+
+      // Store the note (sorted insertion)
+      for (int i = 0; i < MAX_CHORD_NOTES; i++) {
+        if (chord_input[i] == 0) { // Empty slot
+          chord_input[i] = inData1;
+          break;
+        }
+        if (inData1 < chord_input[i]) { // Insert in order
+          memmove(&chord_input[i + 1], &chord_input[i], MAX_CHORD_NOTES - i - 1);
+          chord_input[i] = inData1;
+          break;
+        }
+      }
+
+      chord_note_count++;
+      since_last_note = 0;
+
+      // Process chord if we have enough notes
+      if (chord_note_count >= 3) {
+        updateCurrentChord(chord_input, min(chord_note_count, MAX_CHORD_NOTES));
+        printSuggestions();
+        show_chord();
+        if (chord_autostart && !seq.running)
+        {
+          handleStart();
+        }
+
+        resetChordTransformation();
+      }
     }
 
 #if defined APC
@@ -348,6 +409,10 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 
     if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
       handleNoteOnInput(inChannel, inData1, inData2, 0);
+    else if (!seq.running)
+    {
+      handleNoteOnInput(inChannel, inData1, inData2, 0);
+    }
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
@@ -359,8 +424,34 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #endif
     break;
   case midi::NoteOff:
-    seq.note_in = inData1;
-    seq.note_in_velocity = inData2;
+    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
+    {
+      seq.note_in = inData1;
+      seq.note_in_velocity = inData2;
+    }
+    else
+    {
+      if (!seq.running)
+      {
+        seq.note_in = inData1;
+        seq.note_in_velocity = inData2;
+      }
+
+      // Only remove the released note from the buffer
+      for (int i = 0; i < MAX_CHORD_NOTES; i++) {
+        if (chord_input[i] == inData1) {
+          memmove(&chord_input[i], &chord_input[i + 1], MAX_CHORD_NOTES - i - 1);
+          chord_input[MAX_CHORD_NOTES - 1] = 0;
+          chord_note_count--;
+          break;
+        }
+      }
+
+      // // If we dropped below 3 notes, reset chord state
+      // if (chord_note_count < 3) {
+      //     resetCurrentChord();
+      // }
+    }
 
 #if defined APC
     if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
@@ -373,7 +464,10 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     }
 #endif
 
-    handleNoteOff(inChannel, inData1, inData2, 0);
+    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
+      handleNoteOff(inChannel, inData1, inData2, 0);
+    else if (!seq.running)
+      handleNoteOff(inChannel, inData1, inData2, 0);
 
 #ifdef DEBUG
     strcpy(text, "NoteOff");
@@ -387,12 +481,12 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
-      if(counter_ignore_fader_apc<= 0)
+      if (counter_ignore_fader_apc <= 0)
       {
         if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used
         {
           apc_fader_control(inData1, inData2);
-          if(fader_previous_apc != inData1) //put delay if other fader is moved
+          if (fader_previous_apc != inData1) //put delay if other fader is moved
 #if (APC != 1) //LUC regular apc mini mk2
             counter_ignore_fader_apc = 0; //Before compared with 30, put to 0 to avoid delay.
 #else

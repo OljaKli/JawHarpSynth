@@ -872,6 +872,7 @@ public:
 
 Terrain  terrain;
 int yTerrainOffset = 0;
+
 FLASHMEM void terrain_init()
 {
   terrain.setup();
@@ -1038,4 +1039,286 @@ FLASHMEM void boot_animation()
     match_count_2 = 0;
         delay(30);
   }
+}
+
+ class GameOfLife {
+private:
+  uint16_t col =COLOR_SYSTEXT;
+    uint8_t CELL_SIZE = 4; // Adjustable cell size
+    uint16_t GRID_WIDTH;
+    uint16_t GRID_HEIGHT;
+    uint8_t** grid;
+    uint8_t** newGrid;
+    
+public:
+ GameOfLife(uint8_t cellSize = 4) : CELL_SIZE(cellSize) {
+        GRID_WIDTH = DISPLAY_WIDTH / CELL_SIZE;
+        GRID_HEIGHT = DISPLAY_HEIGHT / CELL_SIZE;
+        
+        // Allocate grid memory
+        grid = new uint8_t*[GRID_WIDTH];
+        newGrid = new uint8_t*[GRID_WIDTH];
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            grid[x] = new uint8_t[GRID_HEIGHT];
+            newGrid[x] = new uint8_t[GRID_HEIGHT];
+        }
+    }
+    
+    ~GameOfLife() {
+        // Free memory
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            delete[] grid[x];
+            delete[] newGrid[x];
+        }
+        delete[] grid;
+        delete[] newGrid;
+    }
+    
+    FLASHMEM void initialize() {
+        randomSeed(analogRead(0));
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            for (uint16_t y = 0; y < GRID_HEIGHT; y++) {
+                // Random initialization - about 15% of cells alive
+                grid[x][y] = (random(100) < 15) ? 1 : 0;
+                drawCell(x, y, grid[x][y]);
+            }
+        }
+    }
+    
+    FLASHMEM void update() {
+      col = ColorHSV(screensaver_counthue, 254, 254);
+        computeNextGeneration();
+    }
+    
+    FLASHMEM void setCellSize(uint8_t size) {
+        if (size < 2) size = 2;
+        if (size > 20) size = 20;
+        if (size != CELL_SIZE) {
+            CELL_SIZE = size;
+            resetGridDimensions();
+            initialize();
+        }
+    }
+
+private:
+    FLASHMEM void resetGridDimensions() {
+        // Free old memory
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            delete[] grid[x];
+            delete[] newGrid[x];
+        }
+        delete[] grid;
+        delete[] newGrid;
+        
+        // Calculate new dimensions
+        GRID_WIDTH = DISPLAY_WIDTH / CELL_SIZE;
+        GRID_HEIGHT = DISPLAY_HEIGHT / CELL_SIZE;
+        
+        // Allocate new memory
+        grid = new uint8_t*[GRID_WIDTH];
+        newGrid = new uint8_t*[GRID_WIDTH];
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            grid[x] = new uint8_t[GRID_HEIGHT];
+            newGrid[x] = new uint8_t[GRID_HEIGHT];
+        }
+    }
+    
+   void computeNextGeneration() {
+        // Compute next generation
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            for (uint16_t y = 0; y < GRID_HEIGHT; y++) {
+                uint8_t neighbors = countNeighbors(x, y);
+                
+                // Apply Conway's rules
+                if (grid[x][y] == 1) {
+                    newGrid[x][y] = (neighbors == 2 || neighbors == 3) ? 1 : 0;
+                } else {
+                    newGrid[x][y] = (neighbors == 3) ? 1 : 0;
+                }
+            }
+        }
+        
+        // Copy new generation to current and update display
+        for (uint16_t x = 0; x < GRID_WIDTH; x++) {
+            for (uint16_t y = 0; y < GRID_HEIGHT; y++) {
+                if (grid[x][y] != newGrid[x][y]) {
+                    grid[x][y] = newGrid[x][y];
+                    drawCell(x, y, grid[x][y]);
+                }
+            }
+        }
+    }
+    
+   FLASHMEM  uint8_t countNeighbors(uint16_t x, uint16_t y) {
+        uint8_t count = 0;
+        for (int8_t i = -1; i <= 1; i++) {
+            for (int8_t j = -1; j <= 1; j++) {
+                if (i == 0 && j == 0) continue;
+                
+                int16_t nx = x + i;
+                int16_t ny = y + j;
+                
+                // Wrap around the edges
+                if (nx < 0) nx = GRID_WIDTH - 1;
+                if (nx >= GRID_WIDTH) nx = 0;
+                if (ny < 0) ny = GRID_HEIGHT - 1;
+                if (ny >= GRID_HEIGHT) ny = 0;
+                
+                count += grid[nx][ny];
+            }
+        }
+        return count;
+    }
+    
+    FLASHMEM void drawCell(uint16_t x, uint16_t y, uint8_t state) {
+        display.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE, state ? col : COLOR_BACKGROUND);
+    }
+};
+
+// Global instance
+GameOfLife life;
+
+FLASHMEM void gol_setup() {
+    // Initialize your display here
+  
+    life.initialize();
+}
+
+FLASHMEM void gol_loop() {
+    life.update();
+    delay(120); // Adjust speed as needed
+}
+
+// CM5 Connection Machine ScreenSaver
+
+uint8_t ar[18][34];
+uint8_t pixel;
+uint8_t  w = 16;
+ uint8_t spacer;
+#define RNUM_SEED 0xBAD
+static uint16_t rnum = RNUM_SEED;
+
+static uint16_t get_random_bit(void)
+{
+#define X rnum
+  uint16_t lfsr_bit = ((X >> 0) ^ (X >> 1) ^ (X >> 3) ^ (X >> 12)) & 1;
+  uint16_t rand_bit = (X | (X >> 2)) & 1;
+#undef X
+  rnum = (lfsr_bit << 15) | (rnum >> 1);
+  return rand_bit;
+}
+
+FLASHMEM void paintCM5_I(int x,int y) {
+   uint8_t i, j;bool pixel;
+  spacer = 4;
+  uint8_t ledsize = 3;
+  for (i = 0; i < w; i++)
+  {
+    for (j = 0; j < 32; j++)
+    {
+      pixel = ar[i][j];
+      if (j % 2 == 0)
+      {
+        if (pixel == 1)
+          display.fillRect(((w - i) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, RED);
+        else
+          display.fillRect(((w - i) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
+      }
+      else  if (pixel == 1)
+        display.fillRect(((i + 1) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, RED);
+      else
+        display.fillRect(((i + 1) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
+    }
+  }
+}
+
+FLASHMEM void CM5_init()
+{
+  display.fillScreen(COLOR_BACKGROUND);
+}
+
+FLASHMEM void CM5_frame_I()
+{
+  byte pixel; int i, j;
+  uint16_t bit;
+  for (j = 32; j >= 0; j--)
+  {
+    bit = get_random_bit();
+    if (bit == 0)
+    {
+      ar[w][j] = 1;
+    }
+  }
+  for (j = 0; j < 32; j++)
+  {
+    for (i = 0; i < w + 1;i++)
+    {
+      pixel = ar[i + 1][j];
+      if (pixel == 1)
+        ar[i][j] = 1;
+      else
+        ar[i][j] = 0;
+    }
+  }
+ 
+  for (int xx = 0; xx < 3; xx++) {
+    paintCM5_I((xx*32)*(spacer),spacer);
+    paintCM5_I((xx*32)*(spacer),spacer*32);
+  }
+
+    check_midi_devices();
+  delay(100);
+}
+
+FLASHMEM void paintCM5_II(int x,int y) {
+  uint8_t offset= DISPLAY_WIDTH/2-((spacer*2)*9);
+   uint8_t i, j;bool pixel;
+ spacer = 4;
+  uint8_t ledsize = 6;
+  for (i = 0; i < w+1; i++)
+  {
+    for (j = 0; j < 32; j++)
+    {
+      pixel = ar[i][j];
+      if (j % 2 == 0)
+      {
+        if (pixel == 1)
+          display.fillRect(offset+((w - i) * spacer*2)  +x , (j*3) * spacer +y, ledsize, ledsize, RED);
+        else
+          display.fillRect(offset+((w - i) * spacer*2)  +x,(j*3) * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
+      }
+      else  if (pixel == 1)
+        display.fillRect(offset+((i + 1) * spacer*2)  +x, (j*3) * spacer +y, ledsize, ledsize, RED);
+      else
+        display.fillRect(offset+((i + 1) * spacer*2)  +x, (j*3) * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
+    }
+  }
+}
+
+FLASHMEM void CM5_frame_II()
+{
+  byte pixel; int i, j;
+  uint16_t bit;
+  for (j = 32; j >= 0; j--)
+  {
+    bit = get_random_bit();
+    if (bit == 0)
+    {
+      ar[w][j] = 1;
+    }
+  }
+  for (j = 0; j < 32; j++)
+  {
+    for (i = 0; i < w + 1;i++)
+    {
+      pixel = ar[i + 1][j];
+      if (pixel == 1)
+        ar[i][j] = 1;
+      else
+        ar[i][j] = 0;
+    }
+  }
+    paintCM5_II(0,2);
+      check_midi_devices();
+  delay(150);
 }

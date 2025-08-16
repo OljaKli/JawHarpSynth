@@ -7,14 +7,16 @@ enum ScreenSaver {
   CUBE              = 2,
   SWARM             = 3,
   TERRAIN           = 4,
-  DISABLED          = 5,
-  NUM_SCREENSAVERS  = 6
+  GAMEOFLIFE        = 5,
+  CM5_I             = 6,
+  CM5_II            = 7,
+  DISABLED          = 8,
+  NUM_SCREENSAVERS  = 9
 };
 
 void boot_animation();
 void InitializeCube();
 void cube_screensaver();
 void qix_screensaver();
-
 #endif
 

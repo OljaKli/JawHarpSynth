@@ -690,7 +690,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SCREEN_SAVER_START_DEFAULT 4
 #define SCREEN_SAVER_MODE_DEFAULT 0 //random mode
 #define SCREEN_SAVER_MODE_MIN 0
-#define SCREEN_SAVER_MODE_MAX 5
+#define SCREEN_SAVER_MODE_MAX 8
 
 
 #define GAMEPAD_SPEED_MIN 60
@@ -985,6 +985,7 @@ typedef struct braids_s
   char name[FILENAME_MAX_LEN];
   char temp_name[FILENAME_MAX_LEN];
 } braids_t;
+#define BRAIDS_NAME_LEN 15 //For the preset system
 
 typedef struct multisample_s
 {
@@ -1125,7 +1126,7 @@ enum reverb_mixer_ports
 enum fm_modes
 {
   FM_BROWSE_FILES,
-  FM_DELETE_FILE,
+  FM_DELETE_FILE_OR_FOLDER,
   FM_COPY_PRESETS,
   FM_PLAY_SAMPLE,
   FM_COPY_TO_PSRAM,
@@ -1191,27 +1192,25 @@ enum perf_load_opt
  perf_liveseq
 };
 
+
+
 typedef struct {
-    uint8_t root;
+    bool active;
+    const char* type;
+    uint8_t root;      // 0–11
     uint8_t third;
     uint8_t fifth;
-    const char* type;
-    bool active;
-} ChordInfo;
-
-// typedef enum {
-//     SCALE_IONIAN,      // Major
-//     SCALE_AEOLIAN,     // Minor
-//     SCALE_HARMONIC_MINOR,
-//     SCALE_MELODIC_MINOR
-// } ScaleType;
-
-// typedef struct {
-//     uint8_t root;
-//     uint8_t third;
-//     uint8_t fifth;
-//     bool active;
-//     const char* type;
-// } ChordState;
+    uint8_t seventh;   // pitch class
+    bool hasSeventh;
+    uint8_t inversion; // 0=root, 1=first, etc.
+} ChordInfo; 
 
 
+#define MAX_CHORD_NOTES 4
+#define CHORD_CAPTURE_WINDOW 290  // milliseconds to wait for chord notes
+
+typedef struct {
+    char name[8];         // Chord name (e.g. "Cm7")
+     char notenames[12];         // Chord name (e.g. "Cm7")
+    uint8_t notes[4];      // MIDI note numbers (0 means unused)
+} SuggestedChord;

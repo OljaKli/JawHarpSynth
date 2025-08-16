@@ -34,7 +34,7 @@ public:
 	AudioEffectGate(void)
 	  : AudioStream(2, inputQueueArray) {
 		  currentGain = 0.0;
-		 thresholdLevelInt = 2000;	
+		 thresholdLevelInt = 500;	
 		 
 		  attackTimeDelta = 1.0f / (50.0f / (1000.0f / (AUDIO_SAMPLE_RATE / AUDIO_BLOCK_SAMPLES)));
 		  holdTimeDelta = 1.0f / (200.0f / (1000.0f / (AUDIO_SAMPLE_RATE / AUDIO_BLOCK_SAMPLES)));

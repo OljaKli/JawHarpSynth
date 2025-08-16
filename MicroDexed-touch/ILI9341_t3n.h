@@ -216,9 +216,7 @@ public:
   {
     setTextSize(s, s);
   }
-  uint8_t getTextSizeX();
-  uint8_t getTextSizeY();
-  uint8_t getTextSize();
+
 
   bool console;
 

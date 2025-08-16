@@ -557,65 +557,123 @@ extern void  fill_up_with_spaces_right_window();
 
 extern int menuhelper_previous_val;
 
-FLASHMEM void print_file_manager_buttons()
-{
-  if (menuhelper_previous_val != fm.sd_mode)
-  {
-    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BROWSE", "FILES", (fm.sd_mode == FM_BROWSE_FILES) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-    if (fm.SD_CARD_READER_EXT)
-      TouchButton::drawButton(GRID.X[1], GRID.Y[5], "", "", TouchButton::BUTTON_NORMAL);
-    else
-      TouchButton::drawButton(GRID.X[1], GRID.Y[5], "DELETE", "FILE", (fm.sd_mode == FM_DELETE_FILE) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-#ifdef COMPILE_FOR_PSRAM
-    if (fm.SD_CARD_READER_EXT == false)
-    {
-      TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "PSRAM", (fm.sd_mode == FM_COPY_TO_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-      TouchButton::drawButton(GRID.X[4], GRID.Y[5], "DELETE", "PSRAM", (fm.sd_mode == FM_DELETE_FROM_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-    }
-#endif
-
 #ifdef  SECOND_SD
-    if (fm.SD_CARD_READER_EXT && fm.active_window == 0)
-    {
-      TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "EXTERN", (fm.sd_mode == FM_COPY_TO_EXTERNAL) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-      TouchButton::drawButton(GRID.X[4], GRID.Y[5], "", "", TouchButton::BUTTON_NORMAL);
-
-    }
-    if (fm.SD_CARD_READER_EXT && fm.active_window == 1)
-    {
-      TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY <", "INTERN", (fm.sd_mode == FM_COPY_TO_INTERNAL) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-      TouchButton::drawButton(GRID.X[4], GRID.Y[5], "", "", TouchButton::BUTTON_NORMAL);
-
-    }
+extern SDClass SD_EXTERNAL;
 #endif
 
-    if (fm.SD_CARD_READER_EXT)
-      TouchButton::drawButton(GRID.X[5], GRID.Y[5], "", "", TouchButton::BUTTON_NORMAL);
-    else
-      TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+uint8_t previous_delete_item_type = 99;
 
-    display.setTextSize(1);
-    display.setCursor(CHAR_width_small, (CHAR_height_small * 23) + 5);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    if (fm.sd_mode != FM_BROWSE_FILES && fm.sd_mode != FM_PLAY_SAMPLE && fm.SD_CARD_READER_EXT == false) {
-      display.print(F("SELECT, THEN CONFIRM OPERATION > PUSH ENCODER[R]"));
-    }
-    else if (fm.SD_CARD_READER_EXT == false)
-    {
-      fill_up_with_spaces_right_window();
+bool isSelectedItemFolder() {
+
+  String fullPath = fm.sd_new_name + "/" + fm.sd_temp_name;
+
+  if (fm.active_window == 0) { // Internal SD
+    File f = SD.open(fullPath.c_str());
+    if (f) {
+      bool isDir = f.isDirectory();
+      f.close();
+      return isDir;
     }
   }
+#ifdef SECOND_SD
+  else if (fm.active_window == 1) { // External SD
+    File f = SD_EXTERNAL.open(fullPath.c_str());
+    if (f) {
+      bool isDir = f.isDirectory();
+      f.close();
+      return isDir;
+    }
+  }
+#endif
+  return false;
+}
 
-  menuhelper_previous_val = fm.sd_mode;
+void print_file_manager_delete_button() {
+ bool isFolder = isSelectedItemFolder();
+    
+    // Only update if necessary using existing state tracking
+    if (previous_delete_item_type != isFolder || menuhelper_previous_val != fm.sd_mode) {
+        TouchButton::drawButton(GRID.X[1], GRID.Y[5],
+            "DELETE",
+            isFolder ? "FOLDER" : "FILE",
+            (fm.sd_mode == FM_DELETE_FILE_OR_FOLDER) ? 
+                TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+        
+        // Update existing state trackers
+        previous_delete_item_type = isFolder;
+        menuhelper_previous_val = fm.sd_mode;
+    }
+}
 
+extern void file_manager_clear_text_line();
 
-#ifdef  SECOND_SD
-  TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
-  _print_file_and_folder_copy_info(fm.sd_selected_file);
+FLASHMEM void print_file_manager_buttons()
+{
+
+    // Update only when mode changes
+    if (menuhelper_previous_val != fm.sd_mode) {
+        // Browse button
+        TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BROWSE", "FILES", 
+            (fm.sd_mode == FM_BROWSE_FILES) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+        
+        // Other buttons...
+#ifdef COMPILE_FOR_PSRAM
+        if (fm.SD_CARD_READER_EXT == false) {
+            // Copy to PSRAM button
+            TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "PSRAM", 
+                (fm.sd_mode == FM_COPY_TO_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+            
+            // Delete from PSRAM button
+            TouchButton::drawButton(GRID.X[4], GRID.Y[5], "DELETE", "PSRAM", 
+                (fm.sd_mode == FM_DELETE_FROM_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+        }
+#endif
+
+#ifdef SECOND_SD
+        if (fm.SD_CARD_READER_EXT) {
+            if (fm.active_window == 0) {
+                // Copy to external SD button
+                TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY >", "EXTERN", 
+                    (fm.sd_mode == FM_COPY_TO_EXTERNAL) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+            } else if (fm.active_window == 1) {
+                // Copy to internal SD button
+                TouchButton::drawButton(GRID.X[3], GRID.Y[5], "COPY <", "INTERN", 
+                    (fm.sd_mode == FM_COPY_TO_INTERNAL) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+            }
+            // // Empty button
+            // TouchButton::drawButton(GRID.X[4], GRID.Y[5], "", "", TouchButton::BUTTON_NORMAL);
+        }
 #endif
 
 
+  
+#ifdef COMPILE_FOR_PSRAM
+     if (fm.SD_CARD_READER_EXT == false && fm.active_window == 1) {
+        // Show DELETE PSRAM only for PSRAM window
+        TouchButton::drawButton(GRID.X[4], GRID.Y[5], "DELETE", "PSRAM", 
+            (fm.sd_mode == FM_DELETE_FROM_PSRAM) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+    }
+#endif
+
+
+        // Play button
+            TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+        
+        // SD/PSRAM toggle button
+#ifdef SECOND_SD
+        TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PSRAM/", "EXT.SD.", 
+            (fm.SD_CARD_READER_EXT) ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+#endif
+        
+        // Update existing state tracker
+        menuhelper_previous_val = fm.sd_mode;
+    }
+    
+    // Always update delete button (it handles its own optimization)
+    print_file_manager_delete_button();
+
 }
+
 
 FLASHMEM void print_file_manager_active_border()
 {
@@ -634,6 +692,8 @@ FLASHMEM void print_file_manager_active_border()
     display.console = true;
     display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
+  fm.sd_mode = 0;
+  print_file_manager_buttons();
 }
 
 #ifdef COMPILE_FOR_PSRAM
@@ -678,20 +738,22 @@ FLASHMEM void filemanager_toggle_window_2sdcards()
 {
   if (fm.SD_CARD_READER_EXT)
   {
-    //  if( fm.active_window ==0)
-    // fm.sd_mode = FM_COPY_TO_EXTERNAL;
-    // else
-    //  if( fm.active_window ==1)
-    // fm.sd_mode = FM_COPY_TO_INTERNAL;
+     if( fm.active_window ==0)
+    fm.sd_mode = FM_COPY_TO_EXTERNAL;
+    else
+     if( fm.active_window ==1)
+    fm.sd_mode = FM_COPY_TO_INTERNAL;
 
     menuhelper_previous_val = 99;
     print_file_manager_buttons();
     reset_file_manager_folder();
     load_sd_directory();
-    sd_printDirectory(true);
+   sd_printDirectory(true);
+   
     print_destination_card_info();
   }
 }
+extern void draw_directory_after_load();
 
 FLASHMEM void filemanager_update_sdcards()
 {
@@ -702,31 +764,33 @@ FLASHMEM void filemanager_update_sdcards()
   display.console = true;
   display.fillRect(27 * CHAR_width_small, 7, CHAR_width_small * 26, 170, COLOR_BACKGROUND);
 
-  if (fm.SD_CARD_READER_EXT)
-  {
+  if (fm.SD_CARD_READER_EXT) {
     fm.active_window = 1;
     print_file_manager_active_border();
     _print_filemanager_sd_extern_header();
-    sd_printDirectory(true);
+    load_sd_directory();
+ sd_printDirectory(true);
     filemanager_toggle_window_2sdcards();
-  }
-  else
-  {
+} else {
     print_psram_stats_filemanager();
     fm.active_window = 1;
     psram_printCustomSamplesList();
     fm.active_window = 0;
     load_sd_directory();
-    sd_printDirectory(true);
+   sd_printDirectory(true);
+
 
     print_file_manager_active_border();
-  }
+}
+
   menuhelper_previous_val = 99;
   print_file_manager_buttons();
   print_destination_card_info();
 }
 
 #endif
+
+ extern void showError(const char* message);
 
 FLASHMEM void handle_touchscreen_file_manager()
 {
@@ -750,17 +814,32 @@ FLASHMEM void handle_touchscreen_file_manager()
 #endif
   else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
     fm.sd_mode = FM_BROWSE_FILES;
+    file_manager_clear_text_line();
     print_file_manager_buttons();
-  }
+    print_file_manager_delete_button();
+}
   else if (TouchButton::isPressed(GRID.X[1], GRID.Y[5])) {
-    fm.sd_mode = FM_DELETE_FILE;
+   // Toggle delete mode
+    if (fm.sd_mode == FM_DELETE_FILE_OR_FOLDER) {
+        fm.sd_mode = FM_BROWSE_FILES;
+        file_manager_clear_text_line();
+    } else {
+        fm.sd_mode = FM_DELETE_FILE_OR_FOLDER;
+        
+        // Immediately show the current item
+        String confirmMsg = "DELETE: ";
+        confirmMsg += fm.sd_temp_name;
+        confirmMsg += "? PUSH ENC[R]";
+        showError(confirmMsg.c_str());
+    }
     print_file_manager_buttons();
-  }
+    print_file_manager_delete_button();
+}
 
 #ifdef  SECOND_SD  //toggle SD Card2/PSRAM
   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
     fm.SD_CARD_READER_EXT = !fm.SD_CARD_READER_EXT;
-
+     
     filemanager_update_sdcards();
   }
 #endif
@@ -768,57 +847,60 @@ FLASHMEM void handle_touchscreen_file_manager()
 #if defined COMPILE_FOR_PSRAM
   else  if (TouchButton::isPressed(GRID.X[3], GRID.Y[5]))
   {
-    if (fm.SD_CARD_READER_EXT == false)
-    {
-      fm.sd_mode = FM_COPY_TO_PSRAM;
-      print_file_manager_buttons();
+ if (fm.SD_CARD_READER_EXT == false) {
+        // Toggle copy to PSRAM mode
+        if (fm.sd_mode == FM_COPY_TO_PSRAM) {
+            fm.sd_mode = FM_BROWSE_FILES;
+        } else {
+            fm.sd_mode = FM_COPY_TO_PSRAM;
+            file_manager_clear_text_line();
+        }
+        print_file_manager_buttons();
     }
-#ifdef  SECOND_SD
+#ifdef SECOND_SD
     else {
-      //fm.active_window =!fm.active_window;
-
-      if (fm.active_window == 0)
-      {
-        if (fm.sd_mode != FM_COPY_TO_EXTERNAL)
-          fm.sd_mode = FM_COPY_TO_EXTERNAL;
-        else
-          fm.sd_mode = FM_BROWSE_FILES;
-      }
-
-      else  if (fm.active_window == 1)
-      {
-        if (fm.sd_mode != FM_COPY_TO_INTERNAL)
-          fm.sd_mode = FM_COPY_TO_INTERNAL;
-        else
-          fm.sd_mode = FM_BROWSE_FILES;
-      }
-
-      // print_file_manager_active_border();
-      //  filemanager_toggle_window_2sdcards();
-      print_file_manager_buttons();
+        // Toggle copy to external SD mode
+        if (fm.active_window == 0) {
+            if (fm.sd_mode == FM_COPY_TO_EXTERNAL) {
+                fm.sd_mode = FM_BROWSE_FILES;
+            } else {
+                fm.sd_mode = FM_COPY_TO_EXTERNAL;
+                file_manager_clear_text_line();
+            }
+        } 
+        // Toggle copy to internal SD mode
+        else if (fm.active_window == 1) {
+            if (fm.sd_mode == FM_COPY_TO_INTERNAL) {
+                fm.sd_mode = FM_BROWSE_FILES;
+            } else {
+                fm.sd_mode = FM_COPY_TO_INTERNAL;
+                file_manager_clear_text_line();
+            }
+        }
+        print_file_manager_buttons();
     }
 #endif
 
   }
 
-  else  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
-    if (fm.SD_CARD_READER_EXT == false)
-      fm.sd_mode = FM_DELETE_FROM_PSRAM;
-    print_file_manager_buttons();
-  }
+  
+#ifdef COMPILE_FOR_PSRAM
+        else if (fm.SD_CARD_READER_EXT == false && fm.active_window == 1) {
+            // Handle DELETE PSRAM for PSRAM window
+            fm.sd_mode = FM_DELETE_FROM_PSRAM;
+            print_file_manager_buttons();
+        }
 #endif
-
-
+    
+    
+#endif
 
   else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
-    if ((!fm.sd_is_folder && fm.active_window == 0) || (fm.active_window == 1))
+    if (!fm.sd_is_folder )
     {
-      if (fm.SD_CARD_READER_EXT == false)
-      {
         fm.sd_mode = FM_PLAY_SAMPLE;
         previewWavFilemanager();
         print_file_manager_buttons();
-      }
     }
   }
 }
@@ -841,6 +923,11 @@ FLASHMEM void handle_touchscreen_custom_mappings()
 }
 
 extern void play_sample(uint8_t note);
+extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL);
+#include "drums.h"
+extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
+extern uint8_t current_played_pitched_sample;
+
 FLASHMEM void handle_touchscreen_drums()
 {
   if (TouchButton::isPressed(GRID.X[1], GRID.Y[5]))
@@ -850,6 +937,10 @@ FLASHMEM void handle_touchscreen_drums()
     delay(60);
     TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
   }
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums) && activeSample == current_played_pitched_sample)
+    print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1, 1, NULL); // update pitched sample info when in drums page and played sample is on screen
+
 }
 
 FLASHMEM void handle_touchscreen_mute_matrix()
@@ -929,6 +1020,86 @@ FLASHMEM void handle_touchscreen_braids()
   }
 }
 
+#include "virtualtypewriter.h"
+ extern char edit_string_global[16];  // same as UI_select_name uses
+ extern uint8_t edit_pos_global;
+ extern bool edit_mode_global;
+ extern uint8_t edit_len_global;
+extern  void   save_braids_preset();
+extern void update_multisample_name();
+extern void update_performance_name();
+
+bool virtual_typewriter_active = false;
+
+FLASHMEM void handle_generic_virtual_typewriter_touch() {
+  if (virtual_typewriter_active)
+  {
+    static bool touch_processed = false;
+
+    updateTouchScreen();
+
+    if (numTouchPoints == 0) {
+        touch_processed = false;
+        return;
+    }
+
+    if (touch_processed) {
+        return;
+    }
+
+    char vt_key = 0;
+    if (virtual_typewriter_touchloop(&vt_key)) {
+        touch_processed = true;
+
+        if (vt_key == VK_ENTER) {
+
+
+if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_braids_name) )
+{ 
+  edit_mode_global = false;
+            save_braids_preset();
+} else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_multisample_name) )
+{ 
+  edit_mode_global = false;
+            update_multisample_name();
+}  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_performance_name) )
+{
+ edit_mode_global = false;
+update_performance_name();
+}
+
+            return;
+        }
+        else if (vt_key == VK_LEFT) {
+            // Move cursor left
+            if (edit_pos_global > 0) {
+                edit_pos_global--;
+            }
+        }
+        else if (vt_key == VK_RIGHT) {
+            // Move cursor right
+            if (edit_pos_global < edit_len_global - 1) {
+                edit_pos_global++;
+            }
+        }
+        else {
+            // Handle regular character input
+            if (edit_pos_global < edit_len_global) {
+                edit_string_global[edit_pos_global] = vt_key;
+                
+                // Auto-advance cursor
+                if (edit_pos_global < edit_len_global - 1) {
+                    edit_pos_global++;
+                }
+            }
+        }
+
+        // Update display
+        virtual_typewriter_update_display();
+    }
+}
+}
+
 FLASHMEM void handle_touchscreen_cv_screen()
 {
   if (numTouchPoints > 0)
@@ -940,18 +1111,33 @@ FLASHMEM void handle_touchscreen_cv_screen()
   }
 }
 
- FLASHMEM void handle_touchscreen_chord_arranger()
- {
-  //  if (numTouchPoints > 0)
-  //  {
-  //    seq.cycle_touch_element = 1;
-  //  }
-  //  if (seq.cycle_touch_element == 1) {
-  //    handleTouchVirtualKeyboard();
-  //  }
-   
- }
+bool chord_autostart = false;
+extern void preview_chord_suggestion(uint8_t s);
+extern SuggestedChord suggestions[6];
 
+FLASHMEM void handle_touchscreen_chord_arranger()
+{
+  if (numTouchPoints > 0)
+  {
+    for (int i = 0; i < 6; i++)
+    {
+      if (TouchButton::isPressed(GRID.X[i], GRID.Y[4]))
+      {
+        TouchButton::drawButton(GRID.X[i], GRID.Y[4], suggestions[i].name, suggestions[i].notenames, TouchButton::BUTTON_RED);
+        display.flushSysEx();
+        preview_chord_suggestion(i);
+
+        TouchButton::drawButton(GRID.X[i], GRID.Y[4], suggestions[i].name, suggestions[i].notenames, TouchButton::BUTTON_NORMAL);
+        display.flushSysEx();
+      }
+    }
+
+    if (TouchButton::isPressed(GRID.X[5], GRID.Y[1] + 16))
+      chord_autostart = !chord_autostart;
+
+    TouchButton::drawButton(GRID.X[5], GRID.Y[1] + 16, "AUTO", "START", chord_autostart ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+  }
+}
 
 FLASHMEM void draw_menu_ui_icons()
 {

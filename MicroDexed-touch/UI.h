@@ -85,6 +85,8 @@ void UI_func_cv_page(uint8_t param);
 void UI_func_chord_arranger(uint8_t param);
 void UI_func_master_effects(uint8_t param);
 void UI_func_braids(uint8_t param);
+void UI_func_set_multisample_name(uint8_t param);
+void UI_func_set_braids_name(uint8_t param);
 void UI_func_multiband_dynamics(uint8_t param);
 void UI_func_recorder(uint8_t param);
 void UI_func_file_manager(uint8_t param);

@@ -1731,7 +1731,7 @@ FLASHMEM void setup()
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
     strcat(temp_name, ".wav");
-    sampleLoader.loadSampleToDrums(temp_name, drum_config[i]);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i],SD);
     printLoadedSample(i, temp_name);
   }
 
@@ -1741,7 +1741,7 @@ FLASHMEM void setup()
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
     strcat(temp_name, ".wav");
-    sampleLoader.loadSampleToDrums(temp_name, drum_config[i]);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i],SD);
     printLoadedSample(i, temp_name);
   }
   display.setTextSize(2);
@@ -1829,7 +1829,7 @@ FLASHMEM void load_custom_samples_to_psram()
     String fullpath = customSamples[i - NUM_STATIC_PITCHED_SAMPLES].filepath;
     fullpath += "/";
     fullpath += drum_config[i].filename;
-    sampleLoader.loadSampleToDrums(fullpath, drum_config[i]);
+    sampleLoader.loadSampleToDrums(fullpath, drum_config[i],SD);
     if (drum_config[i].len == 0 || drum_config[i].len > 10000000) {
       char temp_name[36];
       sprintf(temp_name, "CUSTOM%02d", i - NUM_STATIC_PITCHED_SAMPLES + 1);
@@ -2447,54 +2447,146 @@ uint16_t dac_cv_3;
 //uint16_t dac_cv_4;
 
 extern void print_note_name_and_octave(uint8_t inNumber);
+extern ChordInfo currentChord;
 
-
-extern uint8_t chord_input[3];
+extern uint8_t chord_input[4];
 //extern void getChordName(const uint8_t midiNotes[], uint8_t size, char* output);
 extern void updateCurrentChord(const uint8_t midiNotes[], uint8_t size);
 extern  void show(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, const char* str);
 extern bool getChordName(const uint8_t midiNotes[], uint8_t size, char* output);
 extern const char* midiToNote(uint8_t midiNote);
 
+uint8_t count_chord_notes() {
+  uint8_t  count = 0;
+  for (uint8_t i = 0; i < 4; i++) {
+    if (chord_input[i] != 0) {
+      count++;
+    }
+  }
+  return count;
+}
 
-void loop()
+SuggestedChord suggestions[6];
+
+void resetCurrentChord() {
+  memset(&currentChord, 0, sizeof(ChordInfo));
+}
+
+extern void resetChordBuffer();
+extern uint8_t chord_note_count;
+extern uint8_t since_last_note;
+extern void suggestNextChords(ChordInfo current, SuggestedChord suggestions[6]);
+extern bool chord_autostart;
+
+void preview_chord_suggestion(uint8_t input)
 {
-
-  // Test Chords Detection
-
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  for (int i = 0; i < 4; i++)
   {
-    display.setTextSize(1);
-display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
- for (uint8_t d = 0; d < 3; d++)
- {
- setCursor_textGrid_small(28 + d*4, 1);
-display.print(midiToNote(chord_input[d]));
-     display.print(chord_input[d]/12);
-       display.print(" ");
-
-
- //display.fillRect(CHAR_width_small + chord_input[d]*3.55, 110, 4,4, RED);
- }
- if (seq.note_in!=0)
- {display.console = true;
-  display.fillRect(CHAR_width_small + seq.note_in*3.55, 110, 4,4, RED);
- }
-
-
-    if (chord_input[0] != 0 && chord_input[1] != 0 && chord_input[2] != 0)
+    if (suggestions[input].notes[i] != 0)
     {
-      char result1[30];
-      display.setTextSize(0);
-
-      updateCurrentChord(chord_input, 3);
-      getChordName(chord_input, 3, result1);
-      display.setTextSize(2);
-      show_no_grid( CHAR_height*2,CHAR_width_small, 26, result1);
+      handleNoteOnInput(1, suggestions[input].notes[i], 60, 0);
     }
   }
 
+  delay(50);
+
+  for (int i = 0; i < 4; i++)
+  {
+    if (suggestions[input].notes[i] != 0)
+    {
+      handleNoteOff(1, suggestions[input].notes[i], 0, 0);
+    }
+  }
+}
+
+void printSuggestions() {
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  {
+    if (!currentChord.active) return;
+
+    suggestNextChords(currentChord, suggestions);
+
+    //char output[6];
+    //char output2[8];
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    for (int i = 0; i < 6; i++) {
+      //setCursor_textGrid_small(5, i+16);
+       // snprintf_P(output, sizeof(output), PSTR("Suggestion %d: %s - Notes: "), i+1, suggestions[i].name);
+        // display.print(output );
+      snprintf_P(suggestions[i].notenames, sizeof(suggestions[i].notenames), PSTR("%s%s%s%s"), midiToNote(suggestions[i].notes[0]), midiToNote(suggestions[i].notes[1]), midiToNote(suggestions[i].notes[2]), midiToNote(suggestions[i].notes[03]));
+      // display.print(output);
+      TouchButton::drawButton(GRID.X[i], GRID.Y[4], suggestions[i].name, suggestions[i].notenames, TouchButton::BUTTON_NORMAL);
+
+    }
+  }
+}
+
+FLASHMEM void show_chord()
+{
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  {
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    setCursor_textGrid_small(20, 1);
+    display.print(chord_note_count);
+    for (uint8_t d = 0; d < 4; d++)
+    {
+      setCursor_textGrid_small(24 + d * 4, 1);
+      display.print(midiToNote(chord_input[d]));
+      display.print(chord_input[d] / 12);
+      display.print(" ");
+    }
+
+    if (seq.arr_split_note == 0 || seq.note_in > seq.arr_split_note)
+    {
+      display.console = true;
+      display.fillRect(CHAR_width_small + seq.note_in * 3.55, 110, 4, 4, RED);
+    }
+    else if (chord_input[3] != 0)
+    {
+      display.console = true;
+      display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
+    }
+
+
+    // if (chord_input[0] != 0 && chord_input[1] != 0 && chord_input[2] != 0)
+     //{
+    char result1[30];
+    display.setTextSize(0);
+
+    // if (!seq.running)
+    //       updateCurrentChord(chord_input, 3);
+
+    getChordName(chord_input, chord_note_count, result1);
+
+    //       if (!seq.running && chord_arranger_autostart==false)
+    //       {
+    //         chord_arranger_autostart=true;
+    //  handleStart();
+    //       }
+
+    display.setTextSize(1);
+    show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
+    // }
+  }
+
+}
+void loop()
+{
+
+  // Chords Detection
+
+// Handle chord timeout
+  if (chord_note_count > 0 && since_last_note > CHORD_CAPTURE_WINDOW) {
+    if (chord_note_count >= 3) {
+      // Finalize the chord
+      updateCurrentChord(chord_input, min(chord_note_count, MAX_CHORD_NOTES));
+      show_chord();
+    }
+    resetChordBuffer();
+  }
 
   // MM Test Stuff
 
@@ -4851,6 +4943,14 @@ FLASHMEM void handleContinue(void)
 
 FLASHMEM void handleStop(void)
 {
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  {
+    chord_input[0] = 0;
+    chord_input[1] = 0;
+    chord_input[2] = 0;
+  }
+
+
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
     if (seq.running)
@@ -4999,7 +5099,7 @@ FLASHMEM void init_MIDI_send_CC(void)
 }
 
 /******************************************************************************
-  VOLUME HELPER
+VOLUME HELPER
 ******************************************************************************/
 
 FLASHMEM void set_drums_volume(float vol)
@@ -5384,6 +5484,7 @@ FLASHMEM void init_configuration(void)
 /******************************************************************************
   PARAMETER-HELPERS
 ******************************************************************************/
+
 
 FLASHMEM void set_sample_pitch(uint8_t sample, float playbackspeed)
 {
