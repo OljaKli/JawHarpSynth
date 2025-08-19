@@ -394,7 +394,7 @@ void print_sample_type(bool dir);
 void draw_euclidean_circle();
 
 
- #ifdef SECOND_SD
+#ifdef SECOND_SD
 extern SDClass SD_EXTERNAL;
 #endif
 
@@ -494,7 +494,7 @@ void master_effects_set_delay_panorama(uint8_t instance, int8_t change);
 void master_effects_set_reverb_send(uint8_t instance, int8_t change);
 
 void UI_update_instance_icons();
-bool UI_select_name(uint8_t y, uint8_t x, char* edit_string, uint8_t len, bool init);
+bool UI_select_name(uint8_t y, uint8_t x, uint8_t len, bool init);
 uint8_t search_accepted_char(uint8_t c);
 void display_int(int16_t var, uint8_t size, bool zeros, bool brackets, bool sign);
 void display_float(float var, uint8_t size_number, uint8_t size_fraction, bool zeros, bool brackets, bool sign);
@@ -2825,6 +2825,28 @@ FLASHMEM void resetScreenTimer() {
   }
 }
 
+void asteroids()
+{
+ extern int numTouchPoints;
+// Create instance inside the function
+  AsteroidsScreensaver asteroidsSaver;
+  // Initialize
+  asteroidsSaver.begin();
+ 
+  while(true) { 
+    asteroidsSaver.update();
+      delay(20);
+           check_midi_devices();
+             updateTouchScreen() ;
+ lcdml_menu_control();
+   if ( LCDML.BT_checkAny() || numTouchPoints!=0)
+   {
+    LCDML.FUNC_goBackToMenu();
+    break;
+   }
+  }
+}
+
 // *********************************************************************
 FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 // *********************************************************************
@@ -2838,7 +2860,6 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
     screensaver_counthue = random(SCREENSAVER_MAX_COUNTHUE);
     InitializeCube();
-
 
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
     {
@@ -2860,6 +2881,10 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
     if (screensaver_mode_active == ScreenSaver::CM5_I || screensaver_mode_active == ScreenSaver::CM5_II) {
       CM5_init();
+    }
+      if (screensaver_mode_active == ScreenSaver::ASTERO ) {
+    asteroids();
+  
     }
 
     // setup function
@@ -2914,6 +2939,10 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
     else if (screensaver_mode_active == ScreenSaver::CM5_II)
     {
       CM5_frame_II();
+    }
+      else if (screensaver_mode_active == ScreenSaver::ASTERO)
+    {
+     ;
     }
 
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
@@ -2987,7 +3016,7 @@ FLASHMEM void setup_screensaver(void)
   {
     // Enable Screensaver (screensaver menu function, time to activate in ms)
     LCDML.SCREEN_enable(mFunc_screensaver, configuration.sys.screen_saver_start * 60000); // from parameter in minutes
-    //LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
+   // LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
   }
 }
 
@@ -15608,38 +15637,59 @@ extern void handle_generic_virtual_typewriter_touch();
 
 FLASHMEM void print_OK()
 {
- display.setTextSize(2);
+  display.setTextSize(2);
   setCursor_textGrid(1, 2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.print(F("OK."));
-  print_empty_spaces(24,true);
-    display.console = true;
-   display.fillRect(0, CHAR_height * 3, 310, 4, COLOR_BACKGROUND);
+  print_empty_spaces(24, true);
+  display.console = true;
+  display.fillRect(0, CHAR_height * 3, 310, 4, COLOR_BACKGROUND);
 }
 
 FLASHMEM void save_braids_preset()
 {
   strcpy(braids_osc.name, edit_string_global);
-print_OK();
+  print_OK();
   save_sd_braids_json(braids_presetno, 1);
   delay(MESSAGE_WAIT_TIME);
   LCDML.FUNC_goBackToMenu();
 }
 
+
+uint8_t sysex_pool_number;
+uint8_t sysex_bank_number;
+
+FLASHMEM void virtual_typewriter_waitforsysex()
+{
+  display.setTextSize(2);
+  setCursor_textGrid(1, 2);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  char tmp[18];
+  strcpy(tmp, edit_string_global);
+  //sprintf(receive_bank_filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number, tmp);
+ // snprintf(receive_bank_filename, "%s.syx", tmp);
+  snprintf(receive_bank_filename, sizeof(receive_bank_filename), "%s.syx", tmp);
+  virtual_typewriter_active = false;
+  setCursor_textGrid(1, 2);
+  display.print(F("Waiting...         "));
+  virtual_typewriter_active = false;
+  /// Storing is done in SYSEX code
+}
+
 FLASHMEM void update_performance_name()
 {
   strcpy(seq.name, edit_string_global);
-    print_OK();
-          delay(MESSAGE_WAIT_TIME);
-          LCDML.FUNC_goBackToMenu();
+  print_OK();
+  delay(MESSAGE_WAIT_TIME);
+  LCDML.FUNC_goBackToMenu();
 }
 
 
 FLASHMEM void update_multisample_name()
 {
   strcpy(msp[seq.active_multisample].name, edit_string_global);
- print_OK();
- 
+  print_OK();
+
   delay(MESSAGE_WAIT_TIME);
   LCDML.FUNC_goBackToMenu();
 }
@@ -15672,13 +15722,13 @@ FLASHMEM void UI_func_set_braids_name(uint8_t param)
         braids_presetno = constrain(braids_presetno + e.dir, 0, 99);
       }
       else if (mode == 2) {
-        ui_select_name_state = UI_select_name(2, 4, edit_string_global, BRAIDS_NAME_LEN , false);
+        ui_select_name_state = UI_select_name(2, 4, BRAIDS_NAME_LEN, false);
       }
     }
     else if (e.pressed) {
       if (mode == 2)
       {
-        ui_select_name_state = UI_select_name(2, 4, edit_string_global, BRAIDS_NAME_LEN , false);
+        ui_select_name_state = UI_select_name(2, 4, BRAIDS_NAME_LEN, false);
         if (ui_select_name_state)
         {
           mode = 0xff;
@@ -15720,7 +15770,7 @@ FLASHMEM void UI_func_set_braids_name(uint8_t param)
 
       setCursor_textGrid(3, 2);
       helptext_r("USE ENC[R] OR TOUCH TO EDIT");
-      ui_select_name_state = UI_select_name(2, 4, edit_string_global, BRAIDS_NAME_LEN , true); //changed it to global input with combined touch
+      ui_select_name_state = UI_select_name(2, 4, BRAIDS_NAME_LEN, true); //changed it to global input with combined touch
       virtual_typewriter_init(0);
       virtual_typewriter_active = true;
     }
@@ -17399,8 +17449,8 @@ FLASHMEM bool copyFileWithProgress(File& source, File& dest, const char* path) {
   return true;
 }
 
- #ifdef COMPILE_FOR_PSRAM
- #ifdef SECOND_SD
+#ifdef COMPILE_FOR_PSRAM
+#ifdef SECOND_SD
 FLASHMEM bool copyFolderRecursive(const char* sourcePath, const char* destPath, bool internalToExternal) {
   // Open source directory (correct SD card)
   File sourceDir = internalToExternal ? SD.open(sourcePath) : SD_EXTERNAL.open(sourcePath);
@@ -17505,8 +17555,8 @@ FLASHMEM bool copyFolderRecursive(const char* sourcePath, const char* destPath, 
 #endif
 
 
- #ifdef COMPILE_FOR_PSRAM
- #ifdef SECOND_SD
+#ifdef COMPILE_FOR_PSRAM
+#ifdef SECOND_SD
 // Helper functions for explicit SD card access
 FLASHMEM File openSourceFile(const char* path, bool internalToExternal) {
   return internalToExternal ? SD.open(path) : SD_EXTERNAL.open(path);
@@ -17531,8 +17581,8 @@ FLASHMEM bool mkdirDest(const char* path, bool internalToExternal) {
 #endif
 #endif
 
- #ifdef COMPILE_FOR_PSRAM
- #ifdef SECOND_SD
+#ifdef COMPILE_FOR_PSRAM
+#ifdef SECOND_SD
 // Unified copy function using explicit SD card accessors
 FLASHMEM bool copyItem(const char* sourcePath, const char* destPath, bool internalToExternal) {
   File sourceItem = openSourceFile(sourcePath, internalToExternal);
@@ -18311,7 +18361,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     snprintf_P(buf, sizeof(buf), PSTR("%s"), F("DRUM SLICES"));
     _show_midi_channel(buf, 19, slices_midi_channel);
 
-    }
+  }
   if (LCDML.FUNC_loop())
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
@@ -18573,7 +18623,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       if (remote_active)
         display.console = false;
     }
-    }
+  }
   // ****** STABLE END *********
   if (LCDML.FUNC_close())
   {
@@ -18584,7 +18634,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
-    }
+}
 
 FLASHMEM void print_screensaver_mode()
 {
@@ -18604,6 +18654,8 @@ FLASHMEM void print_screensaver_mode()
     display.print(F("CM5 I "));
   else if (configuration.sys.screen_saver_mode == ScreenSaver::CM5_II)
     display.print(F("CM5 II"));
+  else if (configuration.sys.screen_saver_mode == ScreenSaver::ASTERO)
+    display.print(F("ASTERO"));
   else if (configuration.sys.screen_saver_mode == ScreenSaver::DISABLED)
     display.print(F("OFF    "));
 
@@ -20914,8 +20966,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
 {
   static bool yesno;
   static uint8_t mode;
-  static uint8_t pool_number;
-  static uint8_t bank_number;
+
   static uint8_t ui_select_name_state;
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -20924,9 +20975,10 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     yesno = false;
     mode = 0;
-    pool_number = configuration.dexed[selected_instance_id].pool;
-    bank_number = configuration.dexed[selected_instance_id].bank;
+    sysex_pool_number = configuration.dexed[selected_instance_id].pool;
+    sysex_bank_number = configuration.dexed[selected_instance_id].bank;
     memset(receive_bank_filename, 0, sizeof(receive_bank_filename));
+    registerTouchHandler(handle_generic_virtual_typewriter_touch);
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     setCursor_textGrid(1, 1);
@@ -20935,10 +20987,10 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
     display.print(F("["));
     setCursor_textGrid(15, 2);
     display.print(F("]"));
-    get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
+    get_bank_name(configuration.dexed[selected_instance_id].pool, sysex_bank_number, tmp_bank_name);
     strcpy(receive_bank_filename, tmp_bank_name);
 
-    show(2, 1, 2, bank_number);
+    show(2, 1, 2, sysex_bank_number);
     show(2, 4, 10, receive_bank_filename);
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -20950,10 +21002,11 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
     if (e.turned) {
       switch (mode) {
       case 0:
-        bank_number = constrain(bank_number + e.dir * e.speed, 0, MAX_BANKS - 1);
-        get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
+        sysex_pool_number = configuration.dexed[selected_instance_id].pool;
+        sysex_bank_number = constrain(sysex_bank_number + e.dir * e.speed, 0, MAX_BANKS - 1);
+        get_bank_name(configuration.dexed[selected_instance_id].pool, sysex_bank_number, tmp_bank_name);
         strcpy(receive_bank_filename, tmp_bank_name);
-        show(2, 1, 2, bank_number);
+        show(2, 1, 2, sysex_bank_number);
         show(2, 4, 10, receive_bank_filename);
         break;
 
@@ -20963,7 +21016,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
         break;
 
       case 2:
-        ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
+        ui_select_name_state = UI_select_name(2, 2, BANK_NAME_LEN - 1, false);
         break;
       }
     }
@@ -20979,7 +21032,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
           setCursor_textGrid(1, 2);
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
           display.print(F("[          ]    "));
-          ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, true);
+          ui_select_name_state = UI_select_name(2, 2, BANK_NAME_LEN - 1, true);
         }
         else
         {
@@ -20992,12 +21045,13 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
       {
         mode = 2;
         setCursor_textGrid(1, 2);
-        display.print(F("[          ]    "));
-        ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, true);
+        // display.print(F("[          ]    "));
+        ui_select_name_state = UI_select_name(2, 2, BANK_NAME_LEN - 1, true);
       }
       else if (mode == 2)
       {
-        ui_select_name_state = UI_select_name(2, 2, receive_bank_filename, BANK_NAME_LEN - 1, false);
+        ui_select_name_state = UI_select_name(2, 2, BANK_NAME_LEN - 1, false);
+
         if (ui_select_name_state == true)
         {
           if (yesno == true)
@@ -21007,9 +21061,11 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
             LOG.print(receive_bank_filename);
             LOG.println(F("]"));
 #endif
-            char tmp[FILENAME_LEN];
-            strcpy(tmp, receive_bank_filename);
-            sprintf(receive_bank_filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, pool_number, bank_number, tmp);
+            char tmp[18];
+            strcpy(tmp, edit_string_global);
+            // sprintf(receive_bank_filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number, tmp);
+            sprintf(receive_bank_filename, "%s.syx", tmp);
+            virtual_typewriter_active = false;
 #ifdef DEBUG
             LOG.print(F("Receiving into bank "));
             LOG.print(bank_number);
@@ -21019,7 +21075,7 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
 #endif
             mode = 0xff;
             setCursor_textGrid(1, 2);
-            display.print(F("Waiting...      "));
+            display.print(F("Waiting...         "));
             /// Storing is done in SYSEX code
           }
         }
@@ -21033,15 +21089,28 @@ FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
         LCDML.FUNC_goBackToMenu();
       }
     }
+
+    if (mode == 0)
+    {
+      strcpy(edit_string_global, receive_bank_filename);
+    }
+
+    if (mode == 2 && virtual_typewriter_active == false)
+    {
+      virtual_typewriter_init(0);
+      virtual_typewriter_active = true;
+    }
+
     encoderDir[ENC_R].reset();
   }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
-
     memset(receive_bank_filename, 0, sizeof(receive_bank_filename));
-
+    unregisterTouchHandler();
+    virtual_typewriter_active = false;
+    display.fillScreen(COLOR_BACKGROUND);
     if (mode < 0xff)
     {
       _cancel_message_old_menus();
@@ -21070,12 +21139,12 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
       if (mode == 1) {
-        ui_select_name_state = UI_select_name(2, 2, edit_string_global, 10, false);
+        ui_select_name_state = UI_select_name(2, 2, 10, false);
       }
     }
     else if (e.pressed) {
       if (mode == 1) {
-        ui_select_name_state = UI_select_name(2, 2, edit_string_global, 10, false);
+        ui_select_name_state = UI_select_name(2, 2, 10, false);
         if (ui_select_name_state == true)
         {
           mode = 0xff;
@@ -21090,7 +21159,7 @@ FLASHMEM void UI_func_set_performance_name(uint8_t param)
       strcpy(edit_string_global, seq.name);
       setCursor_textGrid(1, 2);
       display.print(F("[          ]    "));
-      ui_select_name_state = UI_select_name(2, 2, edit_string_global, 10, true);
+      ui_select_name_state = UI_select_name(2, 2, 10, true);
       virtual_typewriter_init(0);
       virtual_typewriter_active = true;
     }
@@ -21131,14 +21200,14 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
         seq.active_multisample = constrain(seq.active_multisample + e.dir * e.speed, 0, NUM_MULTISAMPLES - 1);
       }
       else if (mode == 2) {
-        ui_select_name_state = UI_select_name(2, 4, edit_string_global, BANK_NAME_LEN, false);
+        ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN, false);
       }
     }
 
     else if (e.pressed) {
       if (mode == 2)
       {
-        ui_select_name_state = UI_select_name(2, 4, edit_string_global, BANK_NAME_LEN, false);
+        ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN, false);
         if (ui_select_name_state == true)
         {
           mode = 0xff;
@@ -21168,7 +21237,8 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
       strcpy(edit_string_global, msp[seq.active_multisample].name);
       setCursor_textGrid(3, 2);
       //display.print(F("[           ]      "));
-      ui_select_name_state = UI_select_name(2, 4, edit_string_global, BANK_NAME_LEN, true);
+      ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN, true);
+
       virtual_typewriter_init(0);
       virtual_typewriter_active = true;
 
@@ -21267,7 +21337,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t bank_data[4104];
@@ -21281,7 +21351,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
             show(2, 1, 16, "Done.");
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No bank.");
@@ -21290,9 +21360,9 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         mode = 0xff;
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
+      }
     }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -21302,7 +21372,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
       _cancel_message_old_menus();
     }
   }
-  }
+}
 
 FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 {
@@ -21408,7 +21478,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t voice_data[155];
@@ -21429,7 +21499,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -21439,9 +21509,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
+      }
     }
   }
-}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -21453,7 +21523,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 FLASHMEM void UI_func_startup_performance(uint8_t param)
 {
@@ -21625,7 +21695,7 @@ FLASHMEM void UI_func_startup_page(uint8_t param)
 
 extern uint8_t vtw_x;
 
-FLASHMEM bool UI_select_name(uint8_t y, uint8_t x, char* edit_str412xxyy313ing, uint8_t len, bool init)
+FLASHMEM bool UI_select_name(uint8_t y, uint8_t x, uint8_t len, bool init)
 {
   static uint8_t edit_value;
   static uint8_t last_char_pos;
@@ -21648,7 +21718,7 @@ FLASHMEM bool UI_select_name(uint8_t y, uint8_t x, char* edit_str412xxyy313ing, 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     setCursor_textGrid(x, y);
     edit_len_global = len;
-    virtual_typewriter_update_display();
+    //virtual_typewriter_update_display();
     return false;
   }
 
@@ -21752,7 +21822,7 @@ FLASHMEM bool UI_select_name(uint8_t y, uint8_t x, char* edit_str412xxyy313ing, 
     }
     else {
       edit_mode_global = !edit_mode_global;
-      virtual_typewriter_update_display();
+      // virtual_typewriter_update_display();
       return false;
     }
   }
@@ -21783,7 +21853,7 @@ extern FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-}
+  }
   return (0);
 }
 
@@ -22161,7 +22231,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-  }
+    }
     else
     { // it was not a favorite
 
@@ -22170,7 +22240,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-}
+  }
   else
     return false;
 }
@@ -22874,9 +22944,9 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       psram_test();
 #endif
-  }
+    }
     // setCursor_textGrid(1, 2);
-}
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -23198,7 +23268,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-  }
+    }
     else
     { // no favorites in bank stored
       return (false);
@@ -23206,7 +23276,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-}
+  }
   else
     return false;
 }
@@ -23365,7 +23435,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
 #ifdef DEBUG
     LOG.println("No match.");
 #endif
-}
+  }
 
 #ifdef DEBUG
   LOG.print(F("MSZ preset #"));

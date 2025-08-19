@@ -1028,6 +1028,7 @@ FLASHMEM void handle_touchscreen_braids()
 extern  void   save_braids_preset();
 extern void update_multisample_name();
 extern void update_performance_name();
+extern void virtual_typewriter_waitforsysex();
 
 bool virtual_typewriter_active = false;
 
@@ -1067,6 +1068,11 @@ if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_braids_name)
  edit_mode_global = false;
 update_performance_name();
 }
+else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_receive_bank) )
+{
+virtual_typewriter_waitforsysex();
+virtual_typewriter_active=false;
+}
 
             return;
         }
@@ -1095,6 +1101,7 @@ update_performance_name();
         }
 
         // Update display
+        if (virtual_typewriter_active)
         virtual_typewriter_update_display();
     }
 }

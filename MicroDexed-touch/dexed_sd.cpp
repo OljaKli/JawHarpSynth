@@ -520,11 +520,14 @@ FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
   return (true);
 }
 
+ extern uint8_t sysex_pool_number;
+ extern uint8_t sysex_bank_number;
+
 FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
 {
-  char tmp[FILENAME_LEN];
-  char tmp2[FILENAME_LEN];
-  int bank_number;
+  char tmp[30];
+  char tmp2[35];
+  //int bank_number;
   File root, entry;
 
   if (sd_card_internal > 0)
@@ -536,8 +539,10 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
 #endif
 
     // first remove old bank => find the bank number
-    sscanf(bank_filename, "/%s/%d/%s", tmp, &bank_number, tmp2);
-    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d"), DEXED_CONFIG_PATH, bank_number);
+    //sscanf(bank_filename, "/%s/%d/%s", tmp, &bank_number, tmp2);
+    //snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d"), DEXED_CONFIG_PATH, bank_number);
+
+    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number);
     AudioNoInterrupts();
     root = SD.open(tmp);
     while (42 == 42)
@@ -554,7 +559,7 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
           LOG.println(entry.name());
 #endif
           //snprintf_P(tmp2, sizeof(tmp2), PSTR("/%s/%s/%s"), DEXED_CONFIG_PATH, tmp, entry.name());
-          sprintf(tmp2, "/%s/%s/%s", DEXED_CONFIG_PATH, tmp, entry.name());
+         snprintf(tmp2, sizeof(tmp2), "%s/%s", tmp, entry.name());
           entry.close();
 #ifdef DEBUG
           LOG.printf("Remove file %s\n", tmp2);
@@ -577,13 +582,17 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
     }
     root.close();
 
-    // store new bank at /DEXED/<b>/<bank_name>.syx
+    // store new bank at /DEXED/pool/bank/bank_name.syx
 #ifdef DEBUG
     LOG.print(F("Storing bank as "));
     LOG.print(bank_filename);
     LOG.print(F("..."));
 #endif
-    root = SD.open(bank_filename, FILE_WRITE);
+   
+    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%d/%s"), DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number,bank_filename);
+    root = SD.open(tmp, FILE_WRITE);
+    // root = SD.open(bank_filename, FILE_WRITE);
+
     root.write(data, 4104);
     root.close();
     AudioInterrupts();

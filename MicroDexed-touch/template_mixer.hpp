@@ -72,6 +72,13 @@ static void applyGain(int16_t *data, int32_t mult)
   } while (p < end);
 }
 
+
+// #if defined(__GNUC__) || defined(__clang__)
+//     static void __attribute__((unused)) applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
+// #else
+//     static void applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
+// #endif
+
 static void applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
 {
   uint32_t *dst = (uint32_t *)data;

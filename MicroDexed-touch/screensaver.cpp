@@ -6,6 +6,7 @@
 
 extern ILI9341_t3n display;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern bool remote_active;
 
 uint8_t screensaver_brightness = 255;
 uint16_t screensaver_counthue = 0;
@@ -1321,4 +1322,976 @@ FLASHMEM void CM5_frame_II()
     paintCM5_II(0,2);
       check_midi_devices();
   delay(150);
+}
+
+
+
+#include <math.h>
+
+// External declarations for global variables
+extern bool remote_active;
+// Assuming display is defined elsewhere with appropriate methods
+
+AsteroidsScreensaver::AsteroidsScreensaver() : activeAsteroids(0), score(0) {}
+
+void AsteroidsScreensaver::begin() {
+  randomSeed(analogRead(0));
+
+  // Initialize spaceship at center
+  ship.x = DISPLAY_WIDTH / 2;
+  ship.y = DISPLAY_HEIGHT / 2;
+  ship.angle = 0;
+  ship.size = 8;
+  ship.cooldown = 0;
+  activeAsteroids = 0;
+  ship.vx = 0;
+  ship.vy = 0;
+  ship.thrusterFuel = 100.0f;
+  ship.shield = 100.0f;
+  ship.thrusting = false;
+  ship.prevThrusting = false;
+  ship.wasHit = false;
+  score = 0;
+
+  // Initialize all shots as inactive
+  for (int i = 0; i < MAX_SHOTS; i++) {
+    ship.shots[i].active = false;
+  }
+  
+  // Initialize all asteroids as inactive
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    asteroids[i].active = false;
+  }
+  
+  // Spawn starting asteroids off-screen
+  for (int i = 0; i < STARTING_ASTEROIDS; i++) {
+    spawnAsteroidFromBorder();
+  }
+}
+
+void AsteroidsScreensaver::update() {
+  // Reset asteroid flash states
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (asteroids[i].active) {
+      asteroids[i].flash = false;
+    }
+  }
+  
+  savePreviousState();
+  erasePreviousState();
+  
+    if (remote_active) {
+    display.flushSysEx();
+  }
+
+  // Update asteroids
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (asteroids[i].active) {
+      updateAsteroid(asteroids[i]);
+    }
+  }
+  
+  updateSpaceship();
+  
+  // Draw asteroids with flash effect
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (asteroids[i].active) {
+      uint16_t color = asteroids[i].flash ? RED : COLOR_SYSTEXT;
+      drawAsteroid(asteroids[i], color);
+    }
+  }
+  
+  // Draw ship and shots
+  drawSpaceship(0xFFFF);
+  
+  for (int i = 0; i < MAX_SHOTS; i++) {
+    if (ship.shots[i].active) {
+      drawShot(ship.shots[i]); 
+    }
+  }
+  
+  // Spawn new asteroids if less than 2 on screen
+  if (activeAsteroids < MIN_ASTEROIDS) {
+    spawnAsteroidFromBorder();
+  }
+  
+  // Reset hit flag
+  ship.wasHit = false;
+
+// Draw score at top middle
+  drawScore();
+// Draw gauges
+  drawFuelGauge();
+  drawShieldGauge();
+
+  if (remote_active) {
+    display.flushSysEx();
+  }
+}
+
+void AsteroidsScreensaver::initAsteroidShape(Asteroid &a) {
+  int basePoints;
+  float baseSize;
+  switch(a.size) {
+    case LARGE:
+      basePoints = random(8, MAX_POINTS);
+      baseSize = 20;
+      a.radius = 20;
+      break;
+    case MEDIUM:
+      basePoints = random(6, 9);
+      baseSize = 12;
+      a.radius = 12;
+      break;
+    case SMALL:
+      basePoints = random(5, 7);
+      baseSize = 6;
+      a.radius = 6;
+      break;
+  }
+  
+  a.numPoints = basePoints;
+  
+  for (int i = 0; i < a.numPoints; i++) {
+    float radius = baseSize * (0.7 + random(30) / 100.0);
+    float angle = 2 * PI * i / a.numPoints;
+    a.relX[i] = cos(angle) * radius;
+    a.relY[i] = sin(angle) * radius;
+  }
+  
+  a.rotation = random(360) * PI / 180.0;
+  a.rotationSpeed = random(-5, 5) / 100.0;
+}
+
+void AsteroidsScreensaver::initAsteroid(Asteroid &a, AsteroidSize size) {
+  a.size = size;
+  a.active = true;
+  
+  // Updated hit points based on size
+  switch(size) {
+    case LARGE: a.hitPoints = 3; break;
+    case MEDIUM: a.hitPoints = 2; break;
+    case SMALL: a.hitPoints = 1; break;
+  }
+  a.flash = false;
+  
+  float speed;
+  switch(size) {
+    case LARGE:
+      speed = random(MIN_SPEED * 10, MAX_SPEED * 10) / 20.0;
+      break;
+    case MEDIUM:
+      speed = random(MIN_SPEED * 15, MAX_SPEED * 15) / 20.0;
+      break;
+    case SMALL:
+      speed = random(MIN_SPEED * 20, MAX_SPEED * 20) / 20.0;
+      break;
+  }
+  
+  a.centerX = random(DISPLAY_WIDTH);
+  a.centerY = random(DISPLAY_HEIGHT);
+  
+  float angle = random(360) * PI / 180.0;
+  a.vx = cos(angle) * speed;
+  a.vy = sin(angle) * speed;
+  
+  initAsteroidShape(a);
+}
+
+void AsteroidsScreensaver::updateAsteroid(Asteroid &a) {
+  if (!a.active) return;
+  
+  a.prevCenterX = a.centerX;
+  a.prevCenterY = a.centerY;
+  
+  // Update position with speed limits
+  a.centerX += a.vx;
+  a.centerY += a.vy;
+  
+  // Constrain speed to halved MAX_SPEED
+  float speed = sqrt(a.vx*a.vx + a.vy*a.vy);
+  if (speed > MAX_SPEED) {
+    a.vx = (a.vx / speed) * MAX_SPEED;
+    a.vy = (a.vy / speed) * MAX_SPEED;
+  }
+  
+  // Screen wrapping
+  if (a.centerX < -50) a.centerX = DISPLAY_WIDTH + 50;
+  if (a.centerX > DISPLAY_WIDTH + 50) a.centerX = -50;
+  if (a.centerY < -50) a.centerY = DISPLAY_HEIGHT + 50;
+  if (a.centerY > DISPLAY_HEIGHT + 50) a.centerY = -50;
+  
+  // Update rotation with speed limit
+  a.rotation += constrain(a.rotationSpeed, -0.1f, 0.1f);
+}
+
+void AsteroidsScreensaver::drawAsteroid(Asteroid &a, uint16_t color) {
+  if (!a.active) return;
+  
+  for (int i = 0; i < a.numPoints; i++) {
+    int next = (i + 1) % a.numPoints;
+    
+    float cosRot = cos(a.rotation);
+    float sinRot = sin(a.rotation);
+    
+    int x0 = a.centerX + (a.relX[i] * cosRot - a.relY[i] * sinRot);
+    int y0 = a.centerY + (a.relX[i] * sinRot + a.relY[i] * cosRot);
+    int x1 = a.centerX + (a.relX[next] * cosRot - a.relY[next] * sinRot);
+    int y1 = a.centerY + (a.relX[next] * sinRot + a.relY[next] * cosRot);
+    
+    if (remote_active) {
+      display.console = true;
+    }
+    
+    display.drawLine(x0, y0, x1, y1, color);
+  }
+}
+
+void AsteroidsScreensaver::spawnAsteroidFromBorder() {
+  int slot = -1;
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (!asteroids[i].active) {
+      slot = i;
+      break;
+    }
+  }
+  if (slot == -1) return;
+  
+  // Choose a random border (0=top, 1=right, 2=bottom, 3=left)
+  int border = random(4);
+  float startX, startY;
+  
+  // Set starting position just outside the screen
+  switch(border) {
+    case 0: // Top
+      startX = random(DISPLAY_WIDTH);
+      startY = -20;
+      break;
+    case 1: // Right
+      startX = DISPLAY_WIDTH + 20;
+      startY = random(DISPLAY_HEIGHT);
+      break;
+    case 2: // Bottom
+      startX = random(DISPLAY_WIDTH);
+      startY = DISPLAY_HEIGHT + 20;
+      break;
+    case 3: // Left
+      startX = -20;
+      startY = random(DISPLAY_HEIGHT);
+      break;
+  }
+  
+  // 50% chance to target near ship, 50% chance to target center
+  float targetX, targetY;
+  if (random(100) < 50) {
+    // Target near ship (within 50 pixels)
+    targetX = ship.x + random(-50, 50);
+    targetY = ship.y + random(-50, 50);
+  } else {
+    // Target center
+    targetX = DISPLAY_WIDTH / 2;
+    targetY = DISPLAY_HEIGHT / 2;
+  }
+  
+  // Calculate direction to target
+  float dx = targetX - startX;
+  float dy = targetY - startY;
+  float distance = sqrt(dx*dx + dy*dy);
+  float speed = random(5, 10) / 10.0f; // Slower speed for smooth entry
+  
+  // Random size: LARGE or MEDIUM
+  AsteroidSize size;
+  int sizeRand = random(2);
+  switch(sizeRand) {
+    case 0: size = LARGE; break;
+    case 1: size = MEDIUM; break;
+  }
+  
+  asteroids[slot].centerX = startX;
+  asteroids[slot].centerY = startY;
+  asteroids[slot].vx = (dx / distance) * speed;
+  asteroids[slot].vy = (dy / distance) * speed;
+  asteroids[slot].size = size;
+  asteroids[slot].active = true;
+  
+  // Set hit points based on size
+  switch(size) {
+    case LARGE: asteroids[slot].hitPoints = 3; break;
+    case MEDIUM: asteroids[slot].hitPoints = 2; break;
+    case SMALL: asteroids[slot].hitPoints = 1; break;
+  }
+  
+  asteroids[slot].flash = false;
+  
+  initAsteroidShape(asteroids[slot]);
+  activeAsteroids++;
+}
+
+void AsteroidsScreensaver::updateSpaceship() {
+  const float ROTATION_SPEED = 0.03f;  // Half rotation speed
+  const float SHOT_SPEED = 12.0f;     // Laser speed
+  
+  // Danger detection - avoid nearby asteroids
+  bool dangerMode = false;
+  int dangerIndex = -1;
+  float minDistance = 1000.0f;
+  const float DANGER_RADIUS = 80.0f;
+  
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (!asteroids[i].active) continue;
+    
+    float dx = asteroids[i].centerX - ship.x;
+    float dy = asteroids[i].centerY - ship.y;
+    float distance = sqrt(dx*dx + dy*dy);
+    
+    if (distance < DANGER_RADIUS && distance < minDistance) {
+      dangerMode = true;
+      dangerIndex = i;
+      minDistance = distance;
+    }
+  }
+  
+  int bestTarget = -1;
+  float bestScore = -1000000;  // Start with very low score
+  
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (!asteroids[i].active) continue;
+    
+    // Calculate vector to asteroid
+    float dx = asteroids[i].centerX - ship.x;
+    float dy = asteroids[i].centerY - ship.y;
+    float distance = sqrt(dx*dx + dy*dy);
+    
+    // Calculate time for laser to reach asteroid
+    float timeToHit = distance / SHOT_SPEED;
+    
+    // Predict asteroid position at time of hit
+    float predictedX = asteroids[i].centerX + asteroids[i].vx * timeToHit;
+    float predictedY = asteroids[i].centerY + asteroids[i].vy * timeToHit;
+    
+    // Calculate vector to predicted position
+    float pdx = predictedX - ship.x;
+    float pdy = predictedY - ship.y;
+    float predictedDistance = sqrt(pdx*pdx + pdy*pdy);
+    
+    // Calculate angle to predicted position
+    float targetAngle = atan2(pdy, pdx);
+    float angleDiff = fabs(targetAngle - ship.angle);
+    
+    // Normalize angle difference
+    while (angleDiff > PI) angleDiff = 2*PI - angleDiff;
+    
+    // Calculate alignment score (higher is better)
+    float alignment = cos(angleDiff);
+    float sizeFactor = 0.0f;
+    switch(asteroids[i].size) {
+      case LARGE: sizeFactor = 1.0f; break;
+      case MEDIUM: sizeFactor = 0.7f; break;
+      case SMALL: sizeFactor = 0.4f; break;
+    }
+    
+    // Prioritize proximity more heavily
+    float proximityFactor = 1.0f + (1.0f - (distance / 300.0f));
+    
+    // Score based on alignment, size, and proximity
+    float score = (alignment * sizeFactor) * proximityFactor;
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestTarget = i;
+    }
+  }
+  
+  // Handle danger avoidance
+  if (dangerMode) {
+    Asteroid& dangerAsteroid = asteroids[dangerIndex];
+    float dx = ship.x - dangerAsteroid.centerX;
+    float dy = ship.y - dangerAsteroid.centerY;
+    float escapeAngle = atan2(dy, dx);
+    
+    float angleDiff = escapeAngle - ship.angle;
+    if (angleDiff < -PI) angleDiff += 2*PI;
+    if (angleDiff > PI) angleDiff -= 2*PI;
+    
+    // Rotate toward escape vector
+    if (angleDiff > ROTATION_SPEED) {
+      ship.angle += ROTATION_SPEED;
+    } else if (angleDiff < -ROTATION_SPEED) {
+      ship.angle -= ROTATION_SPEED;
+    } else {
+      ship.angle = escapeAngle;
+    }
+    
+    // Use thrusters to escape if fuel available and somewhat aligned
+    if (fabs(angleDiff) < PI/2 && ship.thrusterFuel > 20.0f) {
+      ship.thrusting = true;
+    }
+  } 
+  // Rotate toward best target if found
+  else if (bestTarget != -1) {
+    // Get asteroid reference
+    Asteroid& target = asteroids[bestTarget];
+    
+    // Calculate vector to asteroid
+    float dx = target.centerX - ship.x;
+    float dy = target.centerY - ship.y;
+    float distance = sqrt(dx*dx + dy*dy);
+    
+    // Calculate time for laser to reach asteroid
+    float timeToHit = distance / SHOT_SPEED;
+    
+    // Predict asteroid position at time of hit
+    float predictedX = target.centerX + target.vx * timeToHit;
+    float predictedY = target.centerY + target.vy * timeToHit;
+    
+    // Calculate vector to predicted position
+    dx = predictedX - ship.x;
+    dy = predictedY - ship.y;
+    float targetAngle = atan2(dy, dx);
+    
+    float angleDiff = targetAngle - ship.angle;
+    if (angleDiff < -PI) angleDiff += 2*PI;
+    if (angleDiff > PI) angleDiff -= 2*PI;
+    
+    // Rotate toward target with half speed
+    if (angleDiff > ROTATION_SPEED) {
+      ship.angle += ROTATION_SPEED;
+    } else if (angleDiff < -ROTATION_SPEED) {
+      ship.angle -= ROTATION_SPEED;
+    } else {
+      ship.angle = targetAngle;
+    }
+  }
+  
+  // Shooting logic
+  if (ship.cooldown > 0) ship.cooldown--;
+  
+  // Only shoot if we have a target and are properly aligned
+  if (!ship.shotActive && ship.cooldown == 0 && bestTarget != -1 && !dangerMode) {
+    // Get asteroid reference
+    Asteroid& target = asteroids[bestTarget];
+    
+    // Calculate vector to asteroid
+    float dx = target.centerX - ship.x;
+    float dy = target.centerY - ship.y;
+    float distance = sqrt(dx*dx + dy*dy);
+    
+    // Calculate time for laser to reach asteroid
+    float timeToHit = distance / SHOT_SPEED;
+    
+    // Predict asteroid position at time of hit
+    float predictedX = target.centerX + target.vx * timeToHit;
+    float predictedY = target.centerY + target.vy * timeToHit;
+    
+    // Calculate vector to predicted position
+    dx = predictedX - ship.x;
+    dy = predictedY - ship.y;
+    float targetAngle = atan2(dy, dx);
+    float angleDiff = fabs(targetAngle - ship.angle);
+    
+    // Normalize angle difference
+    while (angleDiff > PI) angleDiff = 2*PI - angleDiff;
+    
+    // Only shoot if aligned within 5 degrees AND asteroid is at least half on-screen
+    if (angleDiff < (5.0 * PI / 180.0) && 
+        target.centerX >= target.radius && 
+        target.centerX <= DISPLAY_WIDTH - target.radius &&
+        target.centerY >= target.radius && 
+        target.centerY <= DISPLAY_HEIGHT - target.radius) {
+      
+      fireShot();
+    }
+  }
+  
+  // Thruster physics
+  if (ship.thrusting && ship.thrusterFuel > 0) {
+    // Apply thrust in facing direction
+    ship.vx += cos(ship.angle) * THRUST_POWER;
+    ship.vy += sin(ship.angle) * THRUST_POWER;
+    
+    // Consume fuel
+    ship.thrusterFuel -= FUEL_CONSUMPTION;
+    if (ship.thrusterFuel < 0) ship.thrusterFuel = 0;
+  } else {
+    ship.thrusting = false;
+  }
+  
+  // Apply friction (natural deceleration)
+  ship.vx *= 0.98f;
+  ship.vy *= 0.98f;
+  
+  // Maintain minimum drift speed when no danger
+  float speed = sqrt(ship.vx*ship.vx + ship.vy*ship.vy);
+  const float MIN_DRIFT = 0.2f;  // Very slow base drift speed
+  
+  if (!dangerMode && speed < MIN_DRIFT && speed > 0) {
+    // Maintain vector direction but at minimum drift speed
+    ship.vx = (ship.vx / speed) * MIN_DRIFT;
+    ship.vy = (ship.vy / speed) * MIN_DRIFT;
+    speed = MIN_DRIFT;
+  }
+  
+  // Constrain maximum speed
+  if (speed > MAX_SHIP_SPEED) {
+    ship.vx = (ship.vx / speed) * MAX_SHIP_SPEED;
+    ship.vy = (ship.vy / speed) * MAX_SHIP_SPEED;
+  }
+  
+  // Update ship position
+  ship.x += ship.vx;
+  ship.y += ship.vy;
+  
+  // Screen wrapping for ship
+  if (ship.x < 0) ship.x = DISPLAY_WIDTH;
+  if (ship.x > DISPLAY_WIDTH) ship.x = 0;
+  if (ship.y < 0) ship.y = DISPLAY_HEIGHT;
+  if (ship.y > DISPLAY_HEIGHT) ship.y = 0;
+  
+  // Recharge thrusters when not in use
+  if (!ship.thrusting && ship.thrusterFuel < 100.0f) {
+    ship.thrusterFuel += FUEL_CONSUMPTION / 2.0f;
+    if (ship.thrusterFuel > 100.0f) ship.thrusterFuel = 100.0f;
+  }
+  
+  // Recharge shield when not hit
+  if (!ship.wasHit && ship.shield < 100.0f) {
+    ship.shield += SHIELD_RECHARGE_RATE;
+    if (ship.shield > 100.0f) ship.shield = 100.0f;
+  }
+  
+  // Update laser shot
+  for (int s = 0; s < MAX_SHOTS; s++) {
+    if (ship.shots[s].active) {
+      // Save previous position for drawing
+      int prevX = ship.shots[s].x;
+      int prevY = ship.shots[s].y;
+      
+      // Update position
+      ship.shots[s].x += ship.shots[s].vx;
+      ship.shots[s].y += ship.shots[s].vy;
+      
+      // Deactivate if out of bounds
+      if (ship.shots[s].x < 0 || ship.shots[s].x >= DISPLAY_WIDTH || 
+          ship.shots[s].y < 0 || ship.shots[s].y >= DISPLAY_HEIGHT) {
+        ship.shots[s].active = false;
+      } else {
+        // Check collision with asteroids
+        for (int i = 0; i < MAX_ASTEROIDS; i++) {
+          if (asteroids[i].active) {
+            float dx = ship.shots[s].x - asteroids[i].centerX;
+            float dy = ship.shots[s].y - asteroids[i].centerY;
+            float distance = sqrt(dx*dx + dy*dy);
+            
+            if (distance < asteroids[i].radius + 2) {
+              asteroids[i].hitPoints--;
+              asteroids[i].flash = true;
+              
+              if (asteroids[i].hitPoints <= 0) {
+                splitAsteroid(i);
+              }
+              
+              ship.shots[s].active = false;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  // Check ship collision with asteroids
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (asteroids[i].active) {
+      float dx = ship.x - asteroids[i].centerX;
+      float dy = ship.y - asteroids[i].centerY;
+      float distance = sqrt(dx*dx + dy*dy);
+      
+      if (distance < asteroids[i].radius + ship.size) {
+        if (ship.shield > 0) {
+          // Shield absorbs damage
+          ship.shield -= SHIELD_DAMAGE;
+          if (ship.shield < 0) ship.shield = 0;
+          ship.wasHit = true;
+          
+          // Flash ship to indicate hit
+          drawSpaceship(0xF800); // Red flash
+        } else {
+          // Reset ship to center
+          ship.x = DISPLAY_WIDTH / 2;
+          ship.y = DISPLAY_HEIGHT / 2;
+          ship.vx = 0;
+          ship.vy = 0;
+          ship.thrusting = false;
+          ship.prevX = ship.x;
+          ship.prevY = ship.y;
+          ship.shield = 100.0f; // Reset shield
+        }
+        
+        // Split the asteroid that hit
+        splitAsteroid(i);
+        break;
+      }
+    }
+  }
+}
+
+void AsteroidsScreensaver::splitAsteroid(int index) {
+  Asteroid &parent = asteroids[index];
+  AsteroidSize newSize;
+  int numFragments;
+  int pointsEarned = 0;
+  
+  switch(parent.size) {
+    case LARGE:
+      newSize = MEDIUM;
+      numFragments = 2;
+      pointsEarned = LARGE_ASTEROID_SCORE;
+      break;
+    case MEDIUM:
+      newSize = SMALL;
+      numFragments = 2 + random(1); // 2 or 3
+      pointsEarned = MEDIUM_ASTEROID_SCORE;
+      break;
+    case SMALL:
+      // Small asteroids just disappear
+      parent.active = false;
+      activeAsteroids--;
+      pointsEarned = SMALL_ASTEROID_SCORE;
+      // Add score for destroying small asteroid
+      score += pointsEarned;
+      return;
+  }
+  
+  // Add score for destroying asteroid
+  score += pointsEarned;
+  
+  // Find inactive asteroids for fragments
+  int fragmentSlots[3];
+  int foundFragments = 0;
+  
+  for (int i = 0; i < MAX_ASTEROIDS && foundFragments < numFragments; i++) {
+    if (!asteroids[i].active) {
+      fragmentSlots[foundFragments] = i;
+      foundFragments++;
+    }
+  }
+  
+  // Create fragments
+  if (foundFragments > 0) {
+    for (int f = 0; f < foundFragments; f++) {
+      int slot = fragmentSlots[f];
+      Asteroid &fragment = asteroids[slot];
+      
+      // Calculate direction (evenly spaced around circle)
+      float angle = f * 2.0f * PI / numFragments;
+      
+      // Position offset to prevent overlap
+      float offsetDist = parent.radius + 5;
+      float offsetX = cos(angle) * offsetDist;
+      float offsetY = sin(angle) * offsetDist;
+      
+      // Velocity = parent velocity + perpendicular direction
+      float speedVariation = random(5, 15) / 10.0f;
+      float perpAngle = angle + PI/2;
+      float perpX = cos(perpAngle) * speedVariation;
+      float perpY = sin(perpAngle) * speedVariation;
+      
+      // Initialize fragment
+      fragment.centerX = parent.centerX + offsetX;
+      fragment.centerY = parent.centerY + offsetY;
+      fragment.vx = parent.vx * 0.7f + perpX;
+      fragment.vy = parent.vy * 0.7f + perpY;
+      fragment.size = newSize;
+      fragment.active = true;
+      
+      // Set hit points
+      switch(newSize) {
+        case MEDIUM: fragment.hitPoints = 3; break;
+        case SMALL: fragment.hitPoints = 1; break;
+      }
+      
+      // Constrain fragment speed to halved MAX_SPEED
+      float speed = sqrt(fragment.vx*fragment.vx + fragment.vy*fragment.vy);
+      if (speed > MAX_SPEED) {
+        fragment.vx = (fragment.vx / speed) * MAX_SPEED;
+        fragment.vy = (fragment.vy / speed) * MAX_SPEED;
+      }
+      
+      // Initialize shape
+      initAsteroidShape(fragment);
+    }
+    
+    activeAsteroids += foundFragments;
+  }
+  
+  // Deactivate parent asteroid
+  parent.active = false;
+  activeAsteroids--;
+  ship.shotActive = false;
+}
+
+void AsteroidsScreensaver::fireShot() {
+  // Find an inactive shot slot
+  int slot = -1;
+  for (int i = 0; i < MAX_SHOTS; i++) {
+    if (!ship.shots[i].active) {
+      slot = i;
+      break;
+    }
+  }
+  
+  // If no slot available, don't fire
+  if (slot == -1) return;
+  
+  // Calculate shot offset to spread shots
+  float offsetAngle = 0;
+  if (slot == 1) offsetAngle = 0.1f;  // 5.7 degrees
+  if (slot == 2) offsetAngle = -0.1f; // 5.7 degrees
+  
+  // Activate shot
+  ship.shots[slot].x = ship.x + cos(ship.angle + offsetAngle) * ship.size * 1.5;
+  ship.shots[slot].y = ship.y + sin(ship.angle + offsetAngle) * ship.size * 1.5;
+  ship.shots[slot].vx = cos(ship.angle + offsetAngle) * 12;
+  ship.shots[slot].vy = sin(ship.angle + offsetAngle) * 12;
+  ship.shots[slot].active = true;
+  
+  // Set cooldown for burst control
+  ship.cooldown = 10;  // Short cooldown between shots in burst
+}
+
+void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
+  // Calculate ship points
+  float noseX = ship.x + cos(ship.angle) * ship.size;
+  float noseY = ship.y + sin(ship.angle) * ship.size;
+  
+  float leftX = ship.x + cos(ship.angle + 2.5 * PI / 3) * ship.size;
+  float leftY = ship.y + sin(ship.angle + 2.5 * PI / 3) * ship.size;
+  
+  float rightX = ship.x + cos(ship.angle - 2.5 * PI / 3) * ship.size;
+  float rightY = ship.y + sin(ship.angle - 2.5 * PI / 3) * ship.size;
+  
+  // Draw ship
+  if (remote_active) {
+    display.console = true;
+  }
+  display.drawLine(noseX, noseY, leftX, leftY, color);
+  
+  if (remote_active) {
+    display.console = true;
+  }
+  display.drawLine(noseX, noseY, rightX, rightY, color);
+  
+  if (remote_active) {
+    display.console = true;
+  }
+  display.drawLine(leftX, leftY, ship.x, ship.y, color);
+  
+  if (remote_active) {
+    display.console = true;
+  }
+  display.drawLine(rightX, rightY, ship.x, ship.y, color);
+  
+  // Draw thrusters if active
+  if (ship.thrusting) {
+    // Calculate rear center point
+    float rearX = (leftX + rightX) / 2;
+    float rearY = (leftY + rightY) / 2;
+    
+    // Calculate flame end point
+    float flameLength = 7.5f; // Fixed length for consistent erasure
+    float flameX = rearX - cos(ship.angle) * flameLength;
+    float flameY = rearY - sin(ship.angle) * flameLength;
+    
+    // Draw flame with appropriate color
+    uint16_t flameColor = (color == 0x0000) ? COLOR_BACKGROUND : RED;
+    
+    if (remote_active) {
+      display.console = true;
+    }
+    display.drawLine(rearX, rearY, flameX, flameY, flameColor);
+  }
+}
+
+void AsteroidsScreensaver::drawShot(LaserShot &shot) {
+  // Draw a line segment (double length)
+  float backX = shot.x - shot.vx * 0.6f;
+  float backY = shot.y - shot.vy * 0.6f;
+  
+  if (remote_active) {
+    display.console = true;
+  }
+  display.drawLine(backX, backY, shot.x, shot.y, RED);
+}
+
+void AsteroidsScreensaver::drawFuelGauge() {
+  // Double the gauge size
+  const uint8_t gaugeWidth = 60;
+  const uint8_t gaugeHeight = 10;
+  const uint8_t gaugeX = 5;
+  const uint8_t gaugeY = 5;
+  
+  
+  // Calculate fill width based on fuel
+  int fillWidth = (ship.thrusterFuel / 100.0f) * (gaugeWidth - 2);
+  
+  if (fillWidth > 0) {
+    // Choose color based on fuel level
+    uint16_t gaugeColor;
+    if (ship.thrusterFuel > 70) gaugeColor = GREEN; 
+    else if (ship.thrusterFuel > 30) gaugeColor = YELLOW; 
+    else gaugeColor = RED; 
+    
+    // Draw filled portion
+    if (remote_active) {
+      display.console = true;
+    }
+    display.fillRect(gaugeX + 1, gaugeY + 1, fillWidth, gaugeHeight - 2, gaugeColor);
+
+    if (remote_active) {
+    display.console = true;
+  }
+   display.fillRect(gaugeX+1+fillWidth, gaugeY+1, gaugeWidth-fillWidth-1, gaugeHeight-2, COLOR_BACKGROUND);
+    
+  }
+
+if (remote_active) {
+    display.console = true;
+  }
+
+// Draw gauge outline
+  display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
+
+}
+
+void AsteroidsScreensaver::drawShieldGauge() {
+  // Shield gauge - same size as fuel gauge
+  const uint8_t gaugeWidth = 60;
+  const uint8_t gaugeHeight = 10;
+  const uint8_t gaugeX = DISPLAY_WIDTH - gaugeWidth - 5; // Top right
+  const uint8_t gaugeY = 5;
+  
+  
+  // Calculate fill width based on shield
+  int fillWidth = (ship.shield / 100.0f) * (gaugeWidth - 2);
+  
+  if (fillWidth > 0) {
+    // Choose color based on shield level
+    uint16_t gaugeColor;
+    if (ship.shield > 70) gaugeColor = GREEN ;
+    else if (ship.shield > 30) gaugeColor = YELLOW; 
+    else gaugeColor = RED; 
+    
+    // Draw filled portion
+    if (remote_active) {
+      display.console = true;
+    }
+    display.fillRect(gaugeX + 1, gaugeY + 1, fillWidth, gaugeHeight - 2, gaugeColor);
+
+     if (remote_active) {
+      display.console = true;
+    }
+    display.fillRect(gaugeX + 1+fillWidth , gaugeY + 1, gaugeWidth-fillWidth-1, gaugeHeight - 2, COLOR_BACKGROUND);
+
+  }
+
+  // Draw gauge outline
+  if (remote_active) {
+    display.console = true;
+  }
+  display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
+
+}
+
+void AsteroidsScreensaver::drawScore() {
+  // Display score at top middle (y=5, x=center)
+  const int x = 7*CHAR_width; // Center the score display
+  
+  char scoreStr[16];
+  display.setTextColor(COLOR_SYSTEXT,COLOR_BACKGROUND);
+  display.setTextSize(2);
+  snprintf(scoreStr, sizeof(scoreStr), "SCORE: %06d", score);
+  // Display with white color
+  display.setCursor(x, 0);
+  display.print(scoreStr);
+}
+
+void AsteroidsScreensaver::savePreviousState() {
+  ship.prevX = ship.x;
+  ship.prevY = ship.y;
+  ship.prevAngle = ship.angle;
+  ship.prevThrusting = ship.thrusting; // Save thruster state
+  
+  // Save shot states
+  for (int i = 0; i < MAX_SHOTS; i++) {
+    if (ship.shots[i].active) {
+      ship.shots[i].prevX = ship.shots[i].x;
+      ship.shots[i].prevY = ship.shots[i].y;
+    }
+  }
+  
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (asteroids[i].active) {
+      asteroids[i].prevCenterX = asteroids[i].centerX;
+      asteroids[i].prevCenterY = asteroids[i].centerY;
+      asteroids[i].prevRotation = asteroids[i].rotation;
+    }
+  }
+}
+
+void AsteroidsScreensaver::erasePreviousState() {
+  // Erase asteroids at previous positions
+  for (int i = 0; i < MAX_ASTEROIDS; i++) {
+    if (asteroids[i].active) {
+      // Save current state
+      float tempX = asteroids[i].centerX;
+      float tempY = asteroids[i].centerY;
+      float tempRot = asteroids[i].rotation;
+      
+      // Use previous state for erasure
+      asteroids[i].centerX = asteroids[i].prevCenterX;
+      asteroids[i].centerY = asteroids[i].prevCenterY;
+      asteroids[i].rotation = asteroids[i].prevRotation;
+      
+      drawAsteroid(asteroids[i], COLOR_BACKGROUND);
+      
+      // Restore current state
+      asteroids[i].centerX = tempX;
+      asteroids[i].centerY = tempY;
+      asteroids[i].rotation = tempRot;
+    }
+  }
+  
+  // Erase ship at previous state
+  float tempX = ship.x;
+  float tempY = ship.y;
+  float tempAngle = ship.angle;
+  bool tempThrusting = ship.thrusting;
+  
+  ship.x = ship.prevX;
+  ship.y = ship.prevY;
+  ship.angle = ship.prevAngle;
+  ship.thrusting = ship.prevThrusting; // Use previous thruster state
+  
+  drawSpaceship(COLOR_BACKGROUND); // Erase entire ship including thruster
+  
+  // Restore current state
+  ship.x = tempX;
+  ship.y = tempY;
+  ship.angle = tempAngle;
+  ship.thrusting = tempThrusting;
+  
+  // Erase shots using previous state
+  for (int i = 0; i < MAX_SHOTS; i++) {
+    if (ship.shots[i].active) {
+      // Calculate the previous start position for double length
+      float prevBackX = ship.shots[i].prevX - ship.shots[i].vx * 0.6f;
+      float prevBackY = ship.shots[i].prevY - ship.shots[i].vy * 0.6f;
+      
+      // Erase the previous shot segment
+      if (remote_active) {
+        display.console = true;
+      }
+      display.drawLine(prevBackX, prevBackY, ship.shots[i].prevX, ship.shots[i].prevY, 0x0000);
+    }
+  }
 }

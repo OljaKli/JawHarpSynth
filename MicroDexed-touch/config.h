@@ -690,7 +690,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SCREEN_SAVER_START_DEFAULT 4
 #define SCREEN_SAVER_MODE_DEFAULT 0 //random mode
 #define SCREEN_SAVER_MODE_MIN 0
-#define SCREEN_SAVER_MODE_MAX 8
+#define SCREEN_SAVER_MODE_MAX 9
 
 
 #define GAMEPAD_SPEED_MIN 60

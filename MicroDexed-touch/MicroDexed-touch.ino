@@ -1114,11 +1114,13 @@ void initMCP4728() {
 }
 #endif
 
+
 FLASHMEM void setup()
 {
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
   delay(60);
 #endif
+
 
 #ifdef  MCP_CV
   initMCP4728();  // 4x 12Bit DAC MCP4728 Init
@@ -1818,7 +1820,6 @@ FLASHMEM void setup()
   digitalWrite(LED_MIDI_IN, LOW);
   digitalWrite(LED_MIDI_OUT, LOW);
 #endif
-
 }
 
 #ifdef COMPILE_FOR_PSRAM
@@ -2575,7 +2576,6 @@ FLASHMEM void show_chord()
 }
 void loop()
 {
-
   // Chords Detection
 
 // Handle chord timeout
