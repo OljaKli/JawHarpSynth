@@ -54,7 +54,7 @@ void draw_logo2(uint8_t yoffset, uint8_t progress = 10);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 
-void previewWavSampleEditor();
+void previewWavSliceEditor();
 void previewWavFilemanager();
 
 void getNoteName(char* noteName, uint8_t noteNumber);
@@ -83,6 +83,7 @@ void UI_func_dexed_setup(uint8_t param);
 void UI_func_information(uint8_t param);
 void UI_func_cv_page(uint8_t param);
 void UI_func_chord_arranger(uint8_t param);
+void UI_func_noisemaker(uint8_t param);
 void UI_func_master_effects(uint8_t param);
 void UI_func_braids(uint8_t param);
 void UI_func_set_multisample_name(uint8_t param);
@@ -114,7 +115,7 @@ void UI_func_voice_select(uint8_t param);
 void UI_func_voice_editor(uint8_t param);
 void UI_func_sysex_receive_bank(uint8_t param);
 void UI_func_epiano(uint8_t param);
-void UI_func_sample_editor(uint8_t param);
+void UI_func_slice_editor(uint8_t param);
 void UI_func_midiplayer(uint8_t param);
 void UI_func_test_touchscreen(uint8_t param);
 void UI_func_sound_intensity(uint8_t param);

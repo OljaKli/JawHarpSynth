@@ -1332,7 +1332,7 @@ FLASHMEM void CM5_frame_II()
 extern bool remote_active;
 // Assuming display is defined elsewhere with appropriate methods
 
-AsteroidsScreensaver::AsteroidsScreensaver() : activeAsteroids(0), score(0) {}
+AsteroidsScreensaver::AsteroidsScreensaver() : score(0), activeAsteroids(0) {}
 
 void AsteroidsScreensaver::begin() {
   randomSeed(analogRead(0));
@@ -1430,8 +1430,8 @@ void AsteroidsScreensaver::update() {
 }
 
 void AsteroidsScreensaver::initAsteroidShape(Asteroid &a) {
-  int basePoints;
-  float baseSize;
+  int basePoints=0;
+  float baseSize=0;
   switch(a.size) {
     case LARGE:
       basePoints = random(8, MAX_POINTS);
@@ -1475,7 +1475,7 @@ void AsteroidsScreensaver::initAsteroid(Asteroid &a, AsteroidSize size) {
   }
   a.flash = false;
   
-  float speed;
+  float speed=0;
   switch(size) {
     case LARGE:
       speed = random(MIN_SPEED * 10, MAX_SPEED * 10) / 20.0;
@@ -1559,7 +1559,7 @@ void AsteroidsScreensaver::spawnAsteroidFromBorder() {
   
   // Choose a random border (0=top, 1=right, 2=bottom, 3=left)
   int border = random(4);
-  float startX, startY;
+  float startX=0, startY=0;
   
   // Set starting position just outside the screen
   switch(border) {
@@ -1600,7 +1600,7 @@ void AsteroidsScreensaver::spawnAsteroidFromBorder() {
   float speed = random(5, 10) / 10.0f; // Slower speed for smooth entry
   
   // Random size: LARGE or MEDIUM
-  AsteroidSize size;
+  AsteroidSize size= LARGE;
   int sizeRand = random(2);
   switch(sizeRand) {
     case 0: size = LARGE; break;
@@ -1672,7 +1672,7 @@ void AsteroidsScreensaver::updateSpaceship() {
     // Calculate vector to predicted position
     float pdx = predictedX - ship.x;
     float pdy = predictedY - ship.y;
-    float predictedDistance = sqrt(pdx*pdx + pdy*pdy);
+    //float predictedDistance = sqrt(pdx*pdx + pdy*pdy);
     
     // Calculate angle to predicted position
     float targetAngle = atan2(pdy, pdx);
@@ -1863,8 +1863,8 @@ void AsteroidsScreensaver::updateSpaceship() {
   for (int s = 0; s < MAX_SHOTS; s++) {
     if (ship.shots[s].active) {
       // Save previous position for drawing
-      int prevX = ship.shots[s].x;
-      int prevY = ship.shots[s].y;
+      // int prevX = ship.shots[s].x;
+      // int prevY = ship.shots[s].y;
       
       // Update position
       ship.shots[s].x += ship.shots[s].vx;
@@ -1937,8 +1937,8 @@ void AsteroidsScreensaver::updateSpaceship() {
 
 void AsteroidsScreensaver::splitAsteroid(int index) {
   Asteroid &parent = asteroids[index];
-  AsteroidSize newSize;
-  int numFragments;
+  AsteroidSize newSize = MEDIUM; 
+  int numFragments=0;
   int pointsEarned = 0;
   
   switch(parent.size) {
@@ -2006,8 +2006,9 @@ void AsteroidsScreensaver::splitAsteroid(int index) {
       
       // Set hit points
       switch(newSize) {
+         case SMALL: fragment.hitPoints = 1; break;
         case MEDIUM: fragment.hitPoints = 3; break;
-        case SMALL: fragment.hitPoints = 1; break;
+        case LARGE:  fragment.hitPoints = 4;  break;
       }
       
       // Constrain fragment speed to halved MAX_SPEED
@@ -2016,7 +2017,6 @@ void AsteroidsScreensaver::splitAsteroid(int index) {
         fragment.vx = (fragment.vx / speed) * MAX_SPEED;
         fragment.vy = (fragment.vy / speed) * MAX_SPEED;
       }
-      
       // Initialize shape
       initAsteroidShape(fragment);
     }
@@ -2039,7 +2039,6 @@ void AsteroidsScreensaver::fireShot() {
       break;
     }
   }
-  
   // If no slot available, don't fire
   if (slot == -1) return;
   
@@ -2157,10 +2156,8 @@ void AsteroidsScreensaver::drawFuelGauge() {
 if (remote_active) {
     display.console = true;
   }
-
 // Draw gauge outline
   display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
-
 }
 
 void AsteroidsScreensaver::drawShieldGauge() {
@@ -2169,7 +2166,6 @@ void AsteroidsScreensaver::drawShieldGauge() {
   const uint8_t gaugeHeight = 10;
   const uint8_t gaugeX = DISPLAY_WIDTH - gaugeWidth - 5; // Top right
   const uint8_t gaugeY = 5;
-  
   
   // Calculate fill width based on shield
   int fillWidth = (ship.shield / 100.0f) * (gaugeWidth - 2);

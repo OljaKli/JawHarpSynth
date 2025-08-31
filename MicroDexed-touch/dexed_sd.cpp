@@ -4711,3 +4711,133 @@ FLASHMEM void load_sd_directory()
   std::sort(sdcard_infos.files.begin(), sdcard_infos.files.end(), compare_files_by_name);
 }
 
+
+#ifdef COMPILE_FOR_PSRAM
+#include <noisemaker.h>
+extern NoiseMakerParams nm_params;
+extern FLASHMEM void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCount);
+extern FLASHMEM void encodeUint32(File& file, uint32_t value);
+// Function to save the generated noise sample to the SD card
+// It creates the necessary directory structure if it doesn't exist
+FLASHMEM void saveNoiseToSdCard()
+{
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    Serial.println("SD Card initialization failed!");
+    return;
+  }
+  
+  uint8_t targetSlot = NUM_STATIC_PITCHED_SAMPLES + noisemaker_custom_slot;
+
+  // Construct the full path
+  char path[FULLPATH_MAX_LEN];
+  snprintf(path, sizeof(path), "/CUSTOM/%s/%s", noisemaker_short_category_names[nm_params.category] , drum_config[targetSlot].filename);
+  
+  // Create directories if they don't exist
+  char dir_path[FULLPATH_MAX_LEN];
+  snprintf(dir_path, sizeof(dir_path), "/CUSTOM/%s",  noisemaker_short_category_names[nm_params.category] );
+   AudioNoInterrupts();
+  if (!SD.exists(dir_path)) {
+    if (!SD.mkdir(dir_path)) {
+      return;
+    }
+  }
+
+  if (SD.exists(path))
+    SD.remove(path);
+
+  File file;
+ 
+  file = SD.open(path, FILE_WRITE);
+    writeWavHeader(file, 44100, drum_config[targetSlot].numChannels);
+
+uint32_t totalToWrite = drum_config[targetSlot].len * sizeof(int16_t);
+//uint32_t totalToWrite = drum_config[targetSlot].len * drum_config[targetSlot].numChannels * sizeof(int16_t);
+uint8_t *dataPtr = (uint8_t*)drum_config[targetSlot].drum_data;
+uint32_t totalWritten = 0;
+
+while (totalWritten < totalToWrite) {
+    int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
+    if (n <= 0) {
+        break;
+    }
+    totalWritten += n;
+}
+
+uint32_t dataChunkSize = totalWritten;
+uint32_t mainChunkSize = 36 + dataChunkSize;
+
+file.seek(4);
+encodeUint32(file, mainChunkSize);
+file.seek(40);
+encodeUint32(file, dataChunkSize);
+
+file.flush();
+file.close();
+
+  AudioInterrupts();
+}
+
+FLASHMEM void saveCustomSampleToSdCard(uint8_t sample_id)
+{
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    ;
+    return;
+  }
+  
+  if (sample_id >= NUM_DRUMSET_CONFIG) return;
+
+  // Get the directory path and filename
+  const char* directoryPath = customSamples[sample_id - NUM_STATIC_PITCHED_SAMPLES].filepath;
+  const char* fileName = drum_config[sample_id].filename;
+
+  if (!directoryPath || strlen(directoryPath) == 0 || !fileName || strlen(fileName) == 0) {
+    return;
+  }
+
+  // Construct the full file path
+  char fullPath[FULLPATH_MAX_LEN]; // Use a buffer large enough for the full path
+  snprintf(fullPath, sizeof(fullPath), "%s/%s", directoryPath, fileName);
+
+  // Check if SD card is initialized
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    return;
+  }
+
+  // Remove existing file to prevent corruption
+  if (SD.exists(fullPath)) {
+    SD.remove(fullPath);
+  }
+
+  File file = SD.open(fullPath, FILE_WRITE);
+  if (!file) {
+    return;
+  }
+
+  writeWavHeader(file, 44100, drum_config[sample_id].numChannels);
+
+  uint32_t totalToWrite = drum_config[sample_id].len * sizeof(int16_t);
+  uint8_t *dataPtr = (uint8_t*)drum_config[sample_id].drum_data;
+  uint32_t totalWritten = 0;
+
+  while (totalWritten < totalToWrite) {
+      int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
+      if (n <= 0) {
+          break;
+      }
+      totalWritten += n;
+  }
+
+  uint32_t dataChunkSize = totalWritten;
+  uint32_t mainChunkSize = 36 + dataChunkSize;
+
+  file.seek(4);
+  encodeUint32(file, mainChunkSize);
+  file.seek(40);
+  encodeUint32(file, dataChunkSize);
+
+  file.flush();
+  file.close();
+
+  AudioInterrupts();
+}
+#endif

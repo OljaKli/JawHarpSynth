@@ -1806,6 +1806,8 @@ FLASHMEM void setup()
           break;
         case 11:
           LCDML.OTHER_jumpToFunc(UI_func_chord_arranger);
+           case 12:
+          LCDML.OTHER_jumpToFunc(UI_func_noisemaker);
           break;
         case 50:
           LCDML.OTHER_jumpToFunc(UI_func_information);
@@ -2523,6 +2525,11 @@ void printSuggestions() {
   }
 }
 
+#ifdef COMPILE_FOR_PSRAM
+extern void  refreshNoisemakerParameterEditors();
+extern bool noisemaker_update_params_flag;
+#endif
+
 FLASHMEM void show_chord()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
@@ -2734,8 +2741,8 @@ void loop()
       {
         if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
-          setCursor_textGrid_small(26 + d * 2, 22);
-
+        //  setCursor_textGrid_small(24 + d * 2, 2);
+display.setCursor(122+(d*2*CHAR_width_small), 18);
           if (Drum[d]->isPlaying())
           {
             display.setTextColor(GREEN, COLOR_BACKGROUND);
@@ -2804,6 +2811,13 @@ void loop()
 
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
   {
+
+#ifdef COMPILE_FOR_PSRAM
+if (noisemaker_update_params_flag)
+{
+  refreshNoisemakerParameterEditors();
+}
+#endif
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && dac_state != 0)
     {

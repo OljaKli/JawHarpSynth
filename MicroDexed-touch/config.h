@@ -799,8 +799,8 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 
 // LED Pin Assignments
 #ifdef MIDI_ACTIVITY_LIGHTS
-  extern uint8_t LED_MIDI_IN;
-  extern uint8_t LED_MIDI_OUT;
+extern uint8_t LED_MIDI_IN;
+extern uint8_t LED_MIDI_OUT;
 #endif
 
 // Internal configuration structure
@@ -1036,8 +1036,8 @@ typedef struct sys_s
   bool send_sysex_on_voice_change;
   bool send_midi_cc;
   bool swap_midi_leds;
-  uint8_t rgb_enc_color_def=4;
-  uint8_t rgb_enc_color_sel=1;
+  uint8_t rgb_enc_color_def = 4;
+  uint8_t rgb_enc_color_sel = 1;
   bool vol_control;
   bool sus_pedal;
   bool ext_clock;
@@ -1076,20 +1076,20 @@ typedef struct custom_midi_map_s
 
 enum virtual_keyboard_instruments
 {
- VK_LIVESEQUENCER = 0,
- VK_DEXED0,
- VK_DEXED1,
- VK_DEXED2,
- VK_DEXED3,
- VK_MICROSYNTH0,
- VK_MICROSYNTH1,
- VK_EPIANO,
- VK_DRUMS,
- VK_BRAIDS,
- VK_PS_1,
- VK_PS_2,
- VK_PS_3,
- VK_CV1,
+  VK_LIVESEQUENCER = 0,
+  VK_DEXED0,
+  VK_DEXED1,
+  VK_DEXED2,
+  VK_DEXED3,
+  VK_MICROSYNTH0,
+  VK_MICROSYNTH1,
+  VK_EPIANO,
+  VK_DRUMS,
+  VK_BRAIDS,
+  VK_PS_1,
+  VK_PS_2,
+  VK_PS_3,
+  VK_CV1,
 };
 
 enum master_mixer_ports
@@ -1182,35 +1182,33 @@ struct EncoderEvents {
 
 enum perf_load_opt
 {
- perf_dexed,
- perf_msynth,
- perf_epiano,
- perf_braids,
- perf_samples,
- perf_effects,
- perf_seq,
- perf_liveseq
+  perf_dexed,
+  perf_msynth,
+  perf_epiano,
+  perf_braids,
+  perf_samples,
+  perf_effects,
+  perf_seq,
+  perf_liveseq
 };
 
-
-
 typedef struct {
-    bool active;
-    const char* type;
-    uint8_t root;      // 0–11
-    uint8_t third;
-    uint8_t fifth;
-    uint8_t seventh;   // pitch class
-    bool hasSeventh;
-    uint8_t inversion; // 0=root, 1=first, etc.
-} ChordInfo; 
+  bool active;
+  const char* type;
+  uint8_t root;      // 0–11
+  uint8_t third;
+  uint8_t fifth;
+  uint8_t seventh;   // pitch class
+  bool hasSeventh;
+  uint8_t inversion; // 0=root, 1=first, etc.
+} ChordInfo;
 
 
 #define MAX_CHORD_NOTES 4
 #define CHORD_CAPTURE_WINDOW 290  // milliseconds to wait for chord notes
 
 typedef struct {
-    char name[8];         // Chord name (e.g. "Cm7")
-     char notenames[12];         // Chord name (e.g. "Cm7")
-    uint8_t notes[4];      // MIDI note numbers (0 means unused)
+  char name[8];         // Chord name (e.g. "Cm7")
+  char notenames[12];         // Chord name (e.g. "Cm7")
+  uint8_t notes[4];      // MIDI note numbers (0 means unused)
 } SuggestedChord;

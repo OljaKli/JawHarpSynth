@@ -35,8 +35,8 @@ private:
   static const int MAX_ASTEROIDS = 20;
   static const int MAX_SHOTS = 3;
   static const int MAX_POINTS = 12;
-  static const float MIN_SPEED = 0.2;
-  static const float MAX_SPEED = 1.0f;
+  static constexpr float MIN_SPEED = 0.2f;
+static constexpr float MAX_SPEED = 1.0f;
   static const int STARTING_ASTEROIDS = 4;
   static const int MIN_ASTEROIDS = 4;
   const float THRUST_POWER = 0.15f;

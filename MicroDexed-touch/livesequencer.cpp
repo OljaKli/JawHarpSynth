@@ -1262,7 +1262,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
 
       case INSTR_SLC:
         data.tracks[i].channel = slices_midi_channel;
-        data.tracks[i].screen = UI_func_sample_editor;
+        data.tracks[i].screen = UI_func_slice_editor;
         break;
 
       case INSTR_MSP1:
