@@ -23,6 +23,7 @@ enum {
   NM_CLAVES,
   NM_MARACAS,
   NM_ZAP,
+  NM_SNAP,
   NM_CATEGORY_COUNT
 };
 
@@ -55,6 +56,7 @@ struct NoiseMakerParams {
   uint8_t  bd_noise;         // % tail noise
   uint8_t  bd_drive;         // %
   uint8_t  bd_comp;          // %
+  uint8_t  bd_spread;        // % stereo spread
 
   // -------- Snare --------
   uint16_t sn_tone1;         // Hz (body osc 1)
@@ -67,6 +69,7 @@ struct NoiseMakerParams {
   uint8_t  sn_bp_q;          // Q (0..100)
   uint8_t  sn_snap;          // % short click burst
   uint8_t  sn_drive;         // %
+  uint8_t  sn_spread;        // % stereo spread
 
   // -------- Toms (808) / Toms (909) --------
   uint16_t tom_pitch;     // Hz
@@ -74,18 +77,24 @@ struct NoiseMakerParams {
   uint8_t  tom_pitch_env;    // % slight drop
   uint8_t  tom_tone;         // % sine<->softclip
   uint8_t  tom_noise;        // % attack noise
+  uint8_t tom_spread;        // % stereo spread
 
   uint16_t conga_pitch;  // base pitch (~Low conga)
   uint8_t conga_decay;   // envelope length
   uint8_t conga_tone;   // sine ↔ woody balance
   uint8_t conga_pitch_env;   // pitch drop at onset
   uint8_t conga_noise;   // noise contribution
+  uint8_t conga_spread;      // % stereo spread
 
-  uint8_t  rim_decay;      // 20–80%
-  uint8_t  rim_tone;     // 20–100% (sine ↔ noise)
-  uint16_t rim_pitch;  // 1200–2800 Hz (woody ↔ metallic)
-  uint8_t  rim_drive;       // 0–20%
-
+  uint8_t  rim_decay;
+  uint8_t  rim_tone;
+  uint16_t rim_pitch;  // Base tone frequency in Hz
+  uint16_t rim_mod_freq; // Ring modulation frequency in Hz
+  uint16_t rim_noise_bp_freq; // New: Bandpass filter freq for noise in Hz
+  uint8_t  rim_drive;
+  uint8_t rim_click_level; // 0–100, controls sine burst amplitude
+  uint8_t rim_noise_level; // 0–100, controls noise layer amplitude
+  uint8_t  rim_spread;
 
   // -------- Clap --------
   uint8_t  clap_repeats;     // 2..4 typical
@@ -105,17 +114,19 @@ struct NoiseMakerParams {
   uint8_t  hh_decay;       // Base decay % (mapped to ms inside generator)
   uint8_t  hh_drive;       // Softclip / drive %
   uint8_t  hh_detune;      // Detune between oscillators
-
+  uint8_t hh_spread;       // % stereo spread
 
   // -------- Cymbals --------
   uint8_t  crash_tone;       // % metallic vs noise
   uint16_t crash_bp_hz;      // Hz
   uint8_t  crash_bp_q;       // Q
   uint8_t  crash_decay;      // % -> ms
+  uint8_t  crash_spread;      // % stereo spread
   uint8_t  ride_tone;        // %
   uint16_t ride_bp_hz;       // Hz
   uint8_t  ride_bp_q;        // Q
   uint8_t  ride_decay;       // % -> ms
+  uint8_t ride_spread;       // % stereo spread
 
   // -------- Cowbell (808) --------
   uint16_t cb_freq1;        // First frequency component (Hz)
@@ -125,21 +136,31 @@ struct NoiseMakerParams {
   uint8_t  cb_tone_balance; // Balance between the two frequencies
   uint8_t  cb_noise;        // Noise component (%)
   uint8_t  cb_drive;        // Saturation amount (%)
+  uint8_t cb_spread;        // % stereo spread
 
   // -------- Claves (808) --------
   uint16_t claves_hz;        // Hz
   uint8_t  claves_decay;     // % -> ms
   uint8_t  claves_drive;     // %
+  uint8_t claves_spread;     // % stereo spread
 
   // -------- Maracas (808) --------
   uint16_t mar_bp_hz;   // Hz
   uint8_t  mar_bp_q;    // Q
   uint8_t  mar_decay;   // % -> ms
+  uint8_t  mar_spread;   // % stereo spread
 
   // -------- Zap --------
   uint16_t zap_pitch_start; // Starting pitch of the sweep (Hz)
   uint16_t zap_pitch_end;   // Ending pitch of the sweep (Hz)
   uint8_t  zap_decay;       // Decay time (%)
+  uint8_t zap_spread;        // % stereo spread
+
+    uint8_t  snap_decay;      // 20–80%
+  uint8_t  snap_tone;     // 20–100% (sine ↔ noise)
+  uint16_t snap_pitch;  // 1200–2800 Hz (woody ↔ metallic)
+  uint8_t  snap_drive;       // 0–20%
+  uint8_t  snap_spread;       // % stereo spread
 
 };
 

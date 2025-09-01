@@ -3731,6 +3731,14 @@ public:
     generic_temp_select_menu = 0;
   };
 
+  void clear_noisemaker()  //only reset the editors in noisemaker
+  {
+    num_editors = 0;
+    instance_select_flag = false;
+    buttonLongHandler = NULL;
+    encoderLeftHandler = NULL;
+  };
+
   // set the cursor before drawing the next UI element.
   // if omitted, the next element is drawn just below the last one.
   void setCursor(uint8_t _x, uint8_t _y)
@@ -7366,6 +7374,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint8_t("NOISE", 0, 100, &p.bd_noise);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.bd_drive);
     addAutoUpdateParameterEditor_uint8_t("COMP", 0, 100, &p.bd_comp);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.bd_spread);
 
   } break;
 
@@ -7388,6 +7397,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint8_t("BP Q", 0, 25, &p.sn_bp_q);
     addAutoUpdateParameterEditor_uint8_t("SNAP", 0, 100, &p.sn_snap);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.sn_drive);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.sn_spread);
   } break;
 
     // -------------------- Toms --------------------
@@ -7399,6 +7409,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint8_t("P.ENV", 0, 100, &p.tom_pitch_env);
     addAutoUpdateParameterEditor_uint8_t("TONE", 0, 100, &p.tom_tone);
     addAutoUpdateParameterEditor_uint8_t("NOISE", 0, 100, &p.tom_noise);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.tom_spread);
 
   } break;
 
@@ -7410,29 +7421,36 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint8_t("TONE", 1, 100, &p.conga_tone);
     addAutoUpdateParameterEditor_uint8_t("P.ENV", 1, 100, &p.conga_pitch_env);
     addAutoUpdateParameterEditor_uint8_t("NOISE", 0, 100, &p.conga_noise);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.conga_spread);
   } break;
 
-    // -------------------- Rimshot --------------------
-  case NM_RIM: {
-    header(23, 8, "RIMSHOT");
-    ui.setCursor(23, 9);
-    addAutoUpdateParameterEditor_uint16_t("PITCH", 300, 4000, &p.rim_pitch);
-    addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.rim_decay);
-    addAutoUpdateParameterEditor_uint8_t("TONE", 0, 100, &p.rim_tone);
-    addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.rim_drive);
-  } break;
+   
+case NM_RIM: {
+  header(23, 8, "RIMSHOT");
+  ui.setCursor(23, 9);
+  addAutoUpdateParameterEditor_uint16_t("PITCH",       800, 2500, &p.rim_pitch);
+    addAutoUpdateParameterEditor_uint16_t("MOD FREQ",    800, 5000, &p.rim_mod_freq);
+    addAutoUpdateParameterEditor_uint16_t("NOISE BP",   2000, 8000, &p.rim_noise_bp_freq);
+    addAutoUpdateParameterEditor_uint8_t("DECAY",        0, 100, &p.rim_decay);
+    addAutoUpdateParameterEditor_uint8_t("TONE",         0, 100, &p.rim_tone);
+        addAutoUpdateParameterEditor_uint8_t("CLICK LVL",    0, 100, &p.rim_click_level);
+    addAutoUpdateParameterEditor_uint8_t("NOISE LVL",    0, 100, &p.rim_noise_level);
+    addAutoUpdateParameterEditor_uint8_t("DRIVE",        0, 100, &p.rim_drive);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD",       0, 100, &p.rim_spread);
+
+} break;
 
     // -------------------- Clap --------------------
   case NM_CLAP: {
     header(23, 8, "CLAP OSC");
     ui.setCursor(23, 9);
     addAutoUpdateParameterEditor_uint8_t("REPEATS", 2, 10, &p.clap_repeats);
-    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.clap_spread);
     addAutoUpdateParameterEditor_uint8_t("TAIL", 0, 100, &p.clap_tail);
-    addAutoUpdateParameterEditor_uint16_t("BP FREQ", 0, 2000, &p.clap_bp_hz);
+    addAutoUpdateParameterEditor_uint16_t("BP FREQ", 0, 1000, &p.clap_bp_hz);
     addAutoUpdateParameterEditor_uint8_t("BP Q", 0, 80, &p.clap_bp_q);
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.clap_decay);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.clap_drive);
+        addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.clap_spread);
   } break;
 
     // -------------------- Hi-Hats --------------------
@@ -7447,6 +7465,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.hh_decay);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.hh_drive);
     addAutoUpdateParameterEditor_uint8_t("DETUNE", 0, 10, &p.hh_detune);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.hh_spread);
   } break;
 
     // -------------------- Cymbals --------------------
@@ -7458,6 +7477,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint16_t("BP FREQ", 2000, 12000, &p.crash_bp_hz);
     addAutoUpdateParameterEditor_uint8_t("BP Q", 0, 100, &p.crash_bp_q);
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.crash_decay);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.crash_spread);
   } break;
 
   case NM_RIDE: {
@@ -7467,6 +7487,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint16_t("BP FREQ", 2000, 12000, &p.ride_bp_hz);
     addAutoUpdateParameterEditor_uint8_t("BP Q", 0, 100, &p.ride_bp_q);
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.ride_decay);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.ride_spread);
   } break;
 
     // -------------------- Cowbell --------------------
@@ -7485,6 +7506,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint8_t("DECAY", 5, 250, &p.cb_amp_decay);
     addAutoUpdateParameterEditor_uint8_t("NOISE", 0, 20, &p.cb_noise);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 60, &p.cb_drive);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.cb_spread);
 
   } break;
 
@@ -7495,6 +7517,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint16_t("HZ", 50, 2000, &p.claves_hz);
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.claves_decay);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.claves_drive);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.claves_spread);
   } break;
 
     // -------------------- Maracas --------------------
@@ -7504,6 +7527,7 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint16_t("BP FREQ", 1000, 6000, &p.mar_bp_hz); // center freq
     addAutoUpdateParameterEditor_uint8_t("RESO", 50, 100, &p.mar_bp_q);        // resonance
     addAutoUpdateParameterEditor_uint8_t("DECAY", 1, 100, &p.mar_decay);       // AR envelope
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.mar_spread);
   } break;
 
     // -------------------- Tambourine --------------------
@@ -7513,7 +7537,20 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
     addAutoUpdateParameterEditor_uint16_t("START PITCH", 1000, 10000, &p.zap_pitch_start);
     addAutoUpdateParameterEditor_uint16_t("END PITCH", 100, 1000, &p.zap_pitch_end);
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.zap_decay);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.zap_spread);
   } break;
+
+   // -------------------- Rimshot --------------------
+  case NM_SNAP: {
+    header(23, 8, "SNAP/WOODBLOCK");
+    ui.setCursor(23, 9);
+    addAutoUpdateParameterEditor_uint16_t("PITCH", 300, 4000, &p.snap_pitch);
+    addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.snap_decay);
+    addAutoUpdateParameterEditor_uint8_t("TONE", 0, 100, &p.snap_tone);
+    addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.snap_drive);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.snap_spread);
+  } break;
+
 
   default: break;
   }
@@ -7633,7 +7670,9 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     if (noisemaker_needs_refresh) {
 
       //ui.reset();
-      ui.clear();
+      //ui.clear();
+      ui.clear_noisemaker();
+
       // seq.edit_state = 1;  // active state, so encoder cycles categories
       // --- PAGE HEADER ---
       display.setTextSize(1);

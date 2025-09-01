@@ -21,11 +21,11 @@ extern uint8_t activeSample;
 extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 
 const char* noisemaker_category_names[] = {
-   "BASSDRUM" , "SNARE", "TOM", "CONGA", "RIMSHOT", "CLAP", "HIHAT", "CRASH", "RIDE", "COWBELL", "CLAVES", "MARACAS", "ZAP"
+   "BASSDRUM" , "SNARE", "TOM", "CONGA", "RIMSHOT", "CLAP", "HIHAT", "CRASH", "RIDE", "COWBELL", "CLAVES", "MARACAS", "ZAP", "SNAP"
 };
 
 const char* noisemaker_short_category_names[] = {
-   "BD" , "SNARE", "TOM", "CONGA", "RIM", "CLAP", "HH", "CRASH", "RIDE", "COW", "CLAV", "MARA", "ZAP"
+   "BD" , "SNARE", "TOM", "CONGA", "RIM", "CLAP", "HH", "CRASH", "RIDE", "COW", "CLAV", "MARA", "ZAP", "SNAP"
 };
 
 FLASHMEM void addAutoUpdateParameterEditor_uint8_t(const char* name, uint8_t minv, uint8_t maxv, uint8_t* value);
@@ -38,15 +38,15 @@ uint32_t nm_preview_len = 0;
 //void generateDrum(NoiseMakerParams &p, int16_t* buf, uint32_t n, uint8_t channels);
 
 // Add stereo helper functions
-inline float stereoPanLeft(float sample, float pan) {
+FLASHMEM inline float stereoPanLeft(float sample, float pan) {
   return sample * sqrtf(1.0f - pan);
 }
 
-inline float stereoPanRight(float sample, float pan) {
+FLASHMEM inline float stereoPanRight(float sample, float pan) {
   return sample * sqrtf(pan);
 }
 
-inline float stereoSpread(float sample, float width, int channel) {
+FLASHMEM inline float stereoSpread(float sample, float width, int channel) {
   if (channel == 0) { // left
     return sample * (1.0f - width * 0.5f);
   }
@@ -68,7 +68,7 @@ void nm_psram_free(void* ptr) {
 static int16_t* noisemaker_preview_buffer = nullptr;
 static size_t noisemaker_preview_length = 0;
 
-void allocateNoisePreview(size_t length) {
+FLASHMEM void allocateNoisePreview(size_t length) {
   if (noisemaker_preview_buffer) {
     extmem_free(noisemaker_preview_buffer);
     noisemaker_preview_buffer = nullptr;
@@ -78,7 +78,7 @@ void allocateNoisePreview(size_t length) {
 }
 
 
-FLASHMEM void nm_preview_free() {
+FLASHMEM FLASHMEM void nm_preview_free() {
   if (nm_preview_data) {
     nm_psram_free(nm_preview_data);
     nm_preview_data = nullptr;
@@ -139,34 +139,34 @@ extern AudioPlayArrayResmp WAV_preview_PSRAM;
 OfflineReverb noiseReverb;
 
 // helper function to convert a uint8_t value (0-100) to a float (0.0-1.0)
-float convertUint8ToFloat(uint8_t value) {  
-    return static_cast<float>(value) / 100.0f;
+float convertUint8ToFloat(uint8_t value) {
+  return static_cast<float>(value) / 100.0f;
 }
 
 // ------------------------------- Sample Analysis ---------------------------------
 // A function to check if the generated sample itself has high-pitched noise.
 FLASHMEM bool isSampleDangerous() {
 
-  if (nm_params.category!=NM_ZAP) //ZAP is supposed to have high frequencies like this
+  if (nm_params.category != NM_ZAP) //ZAP is supposed to have high frequencies like this
   {
     const float DANGER_THRESHOLD = 0.05f; // Empirical value for detecting harsh high-freq content
     const uint8_t channels = nm_params.stereo_mode ? 2 : 1;
-    
+
     float high_pass_energy = 0.0f;
     float prev_sample = 0.0f;
     uint32_t samples_analyzed = 0;
 
     for (uint32_t i = 0; i < nm_preview_len; i += channels) {
-        if (nm_preview_data[i] != 0) {
-            float sample = nm_preview_data[i] / 32768.0f; // Normalize to -1.0 to 1.0
-            
-            // Simple 1st-order high-pass filter to isolate high frequencies
-            float high_passed_sample = sample - prev_sample;
-            prev_sample = sample;
+      if (nm_preview_data[i] != 0) {
+        float sample = nm_preview_data[i] / 32768.0f; // Normalize to -1.0 to 1.0
 
-            high_pass_energy += fabsf(high_passed_sample);
-            samples_analyzed++;
-        }
+        // Simple 1st-order high-pass filter to isolate high frequencies
+        float high_passed_sample = sample - prev_sample;
+        prev_sample = sample;
+
+        high_pass_energy += fabsf(high_passed_sample);
+        samples_analyzed++;
+      }
     }
 
     if (samples_analyzed == 0) return false; // Avoid division by zero
@@ -176,52 +176,52 @@ FLASHMEM bool isSampleDangerous() {
     return average_energy > DANGER_THRESHOLD;
   }
   else
-  return false;
+    return false;
 }
 
 FLASHMEM void setupNoiseReverb() {
-    noiseReverb.init(44100.0f); // Assuming 44.1kHz sample rate
-    // Set default reverb parameters
-    noiseReverb.setRoomSize(convertUint8ToFloat(nm_params.reverb_room_size));
-    noiseReverb.setDamping(convertUint8ToFloat(nm_params.reverb_damping));
-    noiseReverb.setWetLevel( float(convertUint8ToFloat(nm_params.reverb_wet))/102);
-    noiseReverb.setDryLevel(convertUint8ToFloat(nm_params.reverb_dry));
-noiseReverb.setWidth(convertUint8ToFloat(nm_params.reverb_width));
+  noiseReverb.init(44100.0f); // Assuming 44.1kHz sample rate
+  // Set default reverb parameters
+  noiseReverb.setRoomSize(convertUint8ToFloat(nm_params.reverb_room_size));
+  noiseReverb.setDamping(convertUint8ToFloat(nm_params.reverb_damping));
+  noiseReverb.setWetLevel(float(convertUint8ToFloat(nm_params.reverb_wet)) / 102);
+  noiseReverb.setDryLevel(convertUint8ToFloat(nm_params.reverb_dry));
+  noiseReverb.setWidth(convertUint8ToFloat(nm_params.reverb_width));
 }
 
 FLASHMEM void generateAndPlayNoise() {
   setupNoiseReverb();
-   // if (!nm_preview_data || nm_preview_len == 0) {
-        generateNoisePreview();
-   // }
-    if (!nm_preview_data || nm_preview_len == 0) return;
+  // if (!nm_preview_data || nm_preview_len == 0) {
+  generateNoisePreview();
+  // }
+  if (!nm_preview_data || nm_preview_len == 0) return;
 
-if (nm_params.reverb_enable)
- noiseReverb.applyReverb(nm_preview_data, nm_preview_len,nm_params.stereo_mode);
+  if (nm_params.reverb_enable)
+    noiseReverb.applyReverb(nm_preview_data, nm_preview_len, nm_params.stereo_mode);
 
-    uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
-    if ((const uint8_t*)nm_preview_data != NULL && nm_preview_len > 0)
-     {
-      if (isSampleDangerous()==false)
-        WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data, 
-                                 nm_preview_len, channels);
-    }
+  uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
+  if ((const uint8_t*)nm_preview_data != NULL && nm_preview_len > 0)
+  {
+    if (isSampleDangerous() == false)
+      WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data,
+        nm_preview_len, channels);
+  }
 
-    // Give the audio engine a moment to start reading
-    delay(40);
+  // Give the audio engine a moment to start reading
+  delay(40);
 }
 
 FLASHMEM void PlayOnly() {
-    if (!nm_preview_data || nm_preview_len == 0) return;
-    uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
-    if ((const uint8_t*)nm_preview_data != NULL && nm_preview_len > 0)
-     {
-      if (isSampleDangerous()==false)
-        WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data, 
-                                 nm_preview_len, channels);
-    }
-    // Give the audio engine a moment to start reading
-    delay(40);
+  if (!nm_preview_data || nm_preview_len == 0) return;
+  uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
+  if ((const uint8_t*)nm_preview_data != NULL && nm_preview_len > 0)
+  {
+    if (isSampleDangerous() == false)
+      WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data,
+        nm_preview_len, channels);
+  }
+  // Give the audio engine a moment to start reading
+  delay(40);
 }
 
 
@@ -233,34 +233,34 @@ FLASHMEM void PlaySlot() {
 extern FLASHMEM void saveNoiseToSdCard();
 
 FLASHMEM void saveNoiseToCustomSlot() {
-    if (!nm_preview_data || nm_preview_len == 0) {
-        generateNoisePreview();
-        if (!nm_preview_data || nm_preview_len == 0) return;
-    }
-    
-    uint8_t targetSlot = NUM_STATIC_PITCHED_SAMPLES + noisemaker_custom_slot;
-    uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
-    // Free existing data if any
-    if (drum_config[targetSlot].drum_data != nullptr) {
-        extmem_free(const_cast<uint8_t*>(drum_config[targetSlot].drum_data));
-        drum_config[targetSlot].drum_data = nullptr;
-    }
-    
-    // Corrected size calculation. nm_preview_len is the total number of samples.
-    // It's already the number of samples * channels.
-    size_t bytes = nm_preview_len * sizeof(int16_t);
-    uint8_t* newData = (uint8_t*)extmem_malloc(bytes);
-    
-    if (newData) {
-        // Correctly copy the data
-        memcpy(newData, nm_preview_data, bytes);
-        
-        // Update drum config
-        drum_config[targetSlot].drum_data = newData;
-        drum_config[targetSlot].len = nm_preview_len;
-        drum_config[targetSlot].numChannels = channels;
-        drum_config[targetSlot].vol_max = 100;
-        drum_config[targetSlot].pan = 0;
+  if (!nm_preview_data || nm_preview_len == 0) {
+    generateNoisePreview();
+    if (!nm_preview_data || nm_preview_len == 0) return;
+  }
+
+  uint8_t targetSlot = NUM_STATIC_PITCHED_SAMPLES + noisemaker_custom_slot;
+  uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
+  // Free existing data if any
+  if (drum_config[targetSlot].drum_data != nullptr) {
+    extmem_free(const_cast<uint8_t*>(drum_config[targetSlot].drum_data));
+    drum_config[targetSlot].drum_data = nullptr;
+  }
+
+  // Corrected size calculation. nm_preview_len is the total number of samples.
+  // It's already the number of samples * channels.
+  size_t bytes = nm_preview_len * sizeof(int16_t);
+  uint8_t* newData = (uint8_t*)extmem_malloc(bytes);
+
+  if (newData) {
+    // Correctly copy the data
+    memcpy(newData, nm_preview_data, bytes);
+
+    // Update drum config
+    drum_config[targetSlot].drum_data = newData;
+    drum_config[targetSlot].len = nm_preview_len;
+    drum_config[targetSlot].numChannels = channels;
+    drum_config[targetSlot].vol_max = 100;
+    drum_config[targetSlot].pan = 0;
 
     // Update name
     char name[20];
@@ -292,6 +292,9 @@ FLASHMEM void saveNoiseToCustomSlot() {
       drum_config[targetSlot].drum_class = DRUM_PERCUSSION;
       break;
     case NM_RIM:
+      drum_config[targetSlot].drum_class = DRUM_PERCUSSION;
+      break;
+    case NM_SNAP:
       drum_config[targetSlot].drum_class = DRUM_PERCUSSION;
       break;
     case NM_COWBELL:
@@ -330,13 +333,13 @@ FLASHMEM void saveNoiseToCustomSlot() {
 // Helpers
 // ==================================================
 
-inline uint32_t msToSamples(float ms) {
+FLASHMEM inline uint32_t msToSamples(float ms) {
   // convert milliseconds -> samples, rounding to nearest sample
   const float samplesF = (ms / 1000.0f) * SAMPLE_RATE;
   return (uint32_t)lrintf(samplesF);
 }
 
-inline float clamp1(float x) {
+FLASHMEM inline float clamp1(float x) {
   if (x < -1.f) return -1.f;
   if (x > 1.f) return  1.f;
   return x;
@@ -349,7 +352,7 @@ inline float nm_rand_white() {
 // ==================================================
 // Envelopes
 // ==================================================
-inline float amplitudeEnvelopeADSR(uint32_t i, uint32_t n,
+FLASHMEM inline float amplitudeEnvelopeADSR(uint32_t i, uint32_t n,
   uint16_t a_ms, uint16_t d_ms,
   uint16_t s_pct, uint16_t r_ms) {
   uint32_t a = msToSamples(a_ms);
@@ -369,12 +372,12 @@ inline float amplitudeEnvelopeADSR(uint32_t i, uint32_t n,
   }
 }
 
-inline float expPitchEnv(uint32_t i, uint32_t n, float startRatio, float endRatio = 1.f) {
+FLASHMEM inline float expPitchEnv(uint32_t i, uint32_t n, float startRatio, float endRatio = 1.f) {
   float t = (float)i / (float)n;
   return startRatio * powf(endRatio / startRatio, t);
 }
 
-inline float softclip(float x) {
+FLASHMEM inline float softclip(float x) {
   return x / (1.f + fabsf(x));
 }
 
@@ -392,7 +395,7 @@ static inline float map01_100(uint8_t v, float minV, float maxV) {
 
 // ----------------------------- Envelopes ------------------------------------
 // Simple AR (attack, release) in milliseconds
-static inline float envAR(uint32_t i, uint32_t n, float attackMs, float releaseMs) {
+FLASHMEM static inline float envAR(uint32_t i, uint32_t n, float attackMs, float releaseMs) {
   const float aS = attackMs * 0.001f * SAMPLE_RATE + 1.f;
   const float rS = releaseMs * 0.001f * SAMPLE_RATE + 1.f;
   if (i < (uint32_t)aS) return (float)i / aS;
@@ -403,14 +406,14 @@ static inline float envAR(uint32_t i, uint32_t n, float attackMs, float releaseM
 }
 
 // Exponential percussion envelope (fast attack ~0ms, mono-decay in ms)
-static inline float envPercExp(uint32_t i, float decayMs) {
+FLASHMEM static inline float envPercExp(uint32_t i, float decayMs) {
   const float lambda = 1.0f / (decayMs * 0.001f * SAMPLE_RATE + 1.f);
   // ~-60 dB by 'decayMs'
   const float c = 6.9f;
   return expf(-(float)i * lambda * c);
 }
 
-static inline float envPercExpMsCymbal(float tMs, float decayMs) {
+FLASHMEM static inline float envPercExpMsCymbal(float tMs, float decayMs) {
   float x = tMs / decayMs;
   if (x > 1.f) x = 1.f;
   return expf(-5.0f * x); // adjust 5.0f for sharper or softer decay
@@ -418,7 +421,7 @@ static inline float envPercExpMsCymbal(float tMs, float decayMs) {
 
 
 // ADSR with times in ms and sustain 0..1
-static inline float envADSR_ms(uint32_t i, uint32_t n, float aMs, float dMs, float sLvl, float rMs) {
+FLASHMEM static inline float envADSR_ms(uint32_t i, uint32_t n, float aMs, float dMs, float sLvl, float rMs) {
   const float aS = aMs * 0.001f * SAMPLE_RATE + 1.f;
   const float dS = dMs * 0.001f * SAMPLE_RATE + 1.f;
   const float rS = rMs * 0.001f * SAMPLE_RATE + 1.f;
@@ -436,7 +439,7 @@ static inline float envADSR_ms(uint32_t i, uint32_t n, float aMs, float dMs, flo
 }
 
 // Exponential pitch envelope from startRatio -> 1.0 over N samples
-static inline float pitchEnvExp(uint32_t i, uint32_t n, float startRatio) {
+FLASHMEM static inline float pitchEnvExp(uint32_t i, uint32_t n, float startRatio) {
   const float t = (float)i / (float)std::max<uint32_t>(1, n - 1);
   return powf(startRatio, 1.0f - t);
 }
@@ -471,6 +474,18 @@ struct SVF {
     R = 1.f / Q;
   }
 
+  void setLP(float cutHz, float Q) {
+    set(cutHz, Q);
+  }
+
+  void setBP(float cutHz, float Q) {
+    set(cutHz, Q);
+  }
+
+  void setHP(float cutHz, float Q) {
+    set(cutHz, Q);
+  }
+
   inline void process(float x, float& lp, float& bp, float& hp) {
     const float v1 = (x - ic2eq - R * ic1eq) / (1.f + R * g + g * g);
     const float v2 = ic1eq + g * v1;
@@ -481,6 +496,11 @@ struct SVF {
     bp = v2;
     hp = x - R * bp - lp;
   }
+  inline float process(float x) {
+    float l, b, h;
+    process(x, l, b, h);
+    return h;
+  }
 
   inline float lpOut(float x) { float l, b, h; process(x, l, b, h); return l; }
   inline float bpOut(float x) { float l, b, h; process(x, l, b, h); return b; }
@@ -490,11 +510,11 @@ struct SVF {
 // ------------------------ Defaults ------------------------------------------
 FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
 
-    p.reverb_room_size=100;  
-     p.reverb_damping=30;   
-     p.reverb_wet=100;       
-     p.reverb_dry=95;     
-       p.reverb_width=100; 
+  p.reverb_room_size = 100;
+  p.reverb_damping = 30;
+  p.reverb_wet = 100;
+  p.reverb_dry = 95;
+  p.reverb_width = 100;
 
   setupNoiseReverb();
   //p.mode = NM_MODE_TR808;
@@ -502,8 +522,6 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
  // p.category = NM_BD;
   p.accent = 90;
 
-
-       
   // BD
   p.bd_pitch = 20;
   p.bd_pitch_env = 10;
@@ -543,13 +561,17 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
   p.conga_pitch_env = 20;   // pitch drop at onset
   p.conga_noise = 30;   // noise contribution
 
+  p.rim_decay = 50;   // medium decay
+  p.rim_tone = 60;   // tone vs noise balance
+  p.rim_pitch = 1600; // base resonator frequency (Hz)
+  p.rim_mod_freq = 1200; // second modal frequency (Hz)
+  p.rim_noise_bp_freq = 3500; // noise filter center freq (Hz)
+  p.rim_drive = 8;    // moderate drive
+  p.rim_spread = 15;   // slight stereo detune
 
-  // Rim
-  p.rim_decay = 35;      // short woody hit
-  p.rim_tone = 40;      // mostly resonant tone
-  p.rim_pitch = 1800;    // ~1.8 kHz center
-  p.rim_drive = 10;      // light saturation
-
+  // New user-controlled levels
+  p.rim_click_level = 60;   // sine burst amplitude (0–100)
+  p.rim_noise_level = 40;   // noise layer amplitude (0–100)
 
   // Clap
   p.clap_repeats = 3;
@@ -567,8 +589,6 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
   p.hh_decay = 60;   // Base decay time
   p.hh_drive = 10;
   p.hh_detune = 4;
-
-
 
   // Cymbals
   p.crash_tone = 60;
@@ -599,18 +619,16 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
   p.mar_bp_q = 70;   // resonance
   p.mar_decay = 50;   // ~70 ms total AR
 
-p.zap_pitch_start = 6000;
-p.zap_pitch_end = 200;
-p.zap_decay = 50;
-
-
+  p.zap_pitch_start = 6000;
+  p.zap_pitch_end = 200;
+  p.zap_decay = 50;
 }
 
 // --------------------------- Time helpers (ms) -------------------------------
-static inline float u8_to_ms_fast(uint8_t v, float minMs, float maxMs) {
+FLASHMEM static inline float u8_to_ms_fast(uint8_t v, float minMs, float maxMs) {
   return map01_100(v, minMs, maxMs);
 }
-static inline float u8_to_q(uint8_t v, float minQ = 0.4f, float maxQ = 12.f) {
+FLASHMEM static inline float u8_to_q(uint8_t v, float minQ = 0.4f, float maxQ = 12.f) {
   return map01_100(v, minQ, maxQ);
 }
 
@@ -618,23 +636,18 @@ static inline float u8_to_q(uint8_t v, float minQ = 0.4f, float maxQ = 12.f) {
 //                            SOUND GENERATORS
 // ============================================================================
 
-// ------------------------------- Bass Drum ----------------------------------
-static inline void generateBassdrum(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+FLASHMEM static inline void generateBassdrum(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
   float phase = 0.f;
 
-  // CORRECTED: Lowered the base frequency range for 808 mode to prevent the perceived pitch from being too high.
   const float f0 = mode909 ? 20.0f + ((float)p.bd_pitch / 100.0f) * 50.0f : 5.0f + ((float)p.bd_pitch / 100.0f) * 25.0f;
-
-  //const float attackMs = mode909 ? 0.0f : u8_to_ms_fast(p.bd_attack, 0.0f, 2.0f);
   const float decayMs = u8_to_ms_fast(p.bd_decay, 60.f, 800.f);
   const float releaseMs = mode909 ? 0.0f : u8_to_ms_fast(p.bd_release, 20.f, 600.f);
-
   const float pitchEnvFactor = mode909 ? (1.f + 0.05f * (p.bd_pitch_env)) : (1.f + 0.02f * (p.bd_pitch_env));
   const float startRatio = (mode909 ? 4.0f : 14.0f) * pitchEnvFactor;
-
-  OnePole clickHP;
-  clickHP.setHP(mode909 ? 0.35f : 0.2f);
+  OnePole clickHP_L, clickHP_R;
+  clickHP_L.setHP(mode909 ? 0.35f : 0.2f);
+  clickHP_R.setHP(mode909 ? 0.35f : 0.2f);
 
   const float pitchEnvDurationMs = mode909 ? 10.0f + (p.bd_pitch_decay / 100.0f) * 90.0f : 50.0f + (p.bd_pitch_decay / 100.0f) * 450.0f;
   const uint32_t pitchEnvN = (uint32_t)(SAMPLE_RATE * (pitchEnvDurationMs / 1000.0f));
@@ -646,12 +659,12 @@ static inline void generateBassdrum(NoiseMakerParams& p, int16_t* psram_buf, uin
   const float driveAmt = p.bd_drive * 0.01f;
   const float compAmt = p.bd_comp * 0.01f;
   const float accent = p.accent * 0.01f;
+  const float spreadAmt = p.bd_spread * 0.01f; // New spread parameter
 
   const uint32_t fade_start_idx = (2 * n) / 3;
 
   for (uint32_t i = 0; i < n; ++i) {
     const float a = envPercExp(i, decayMs + releaseMs);
-
     const float pitch = pitchEnvExp(std::min(i, pitchEnvN), pitchEnvN, startRatio);
     const float freq = f0 * pitch;
 
@@ -660,630 +673,690 @@ static inline void generateBassdrum(NoiseMakerParams& p, int16_t* psram_buf, uin
     float s = sinf(phase);
     float body = nm_mix(s, nm_softclip(1.8f * s), toneAmt);
 
-    float click = 0.f;
+    // Stereo processing for click and noise
+    float click_L = 0.f, click_R = 0.f;
     if (i < clickSamples) {
-      click = clickHP.process(nm_rand_white()) * (1.f - (float)i / (float)clickSamples);
+      click_L = clickHP_L.process(nm_rand_white()) * (1.f - (float)i / (float)clickSamples);
+      click_R = clickHP_R.process(nm_rand_white()) * (1.f - (float)i / (float)clickSamples);
+    }
+    float tailNoise_L = noiseAmt * nm_rand_white() * (1.0f - (float)i / (float)n);
+    float tailNoise_R = noiseAmt * nm_rand_white() * (1.0f - (float)i / (float)n);
+    if (mode909) {
+      tailNoise_L *= 1.2f;
+      tailNoise_R *= 1.2f;
     }
 
-    float tailNoise = noiseAmt * nm_rand_white() * (1.0f - (float)i / (float)n);
-    if (mode909) tailNoise *= 1.2f;
+    // Combine mono body with stereo click/noise
+    float y_L = body + nm_mix(clickAmt * click_L, clickAmt * click_R, 1.0f - spreadAmt) + nm_mix(tailNoise_L, tailNoise_R, 1.0f - spreadAmt);
+    float y_R = body + nm_mix(clickAmt * click_R, clickAmt * click_L, 1.0f - spreadAmt) + nm_mix(tailNoise_R, tailNoise_L, 1.0f - spreadAmt);
 
-    float y = body + clickAmt * click + tailNoise;
-    y = nm_mix(y, nm_softclip(3.0f * y), driveAmt);
+    y_L = nm_mix(y_L, nm_softclip(3.0f * y_L), driveAmt);
+    y_R = nm_mix(y_R, nm_softclip(3.0f * y_R), driveAmt);
 
     if (!mode909 && compAmt > 0.001f) {
-      const float c = tanhf(y * (1.0f + compAmt * 2.2f));
-      y = nm_mix(y, c, compAmt);
+      const float c_L = tanhf(y_L * (1.0f + compAmt * 2.2f));
+      const float c_R = tanhf(y_R * (1.0f + compAmt * 2.2f));
+      y_L = nm_mix(y_L, c_L, compAmt);
+      y_R = nm_mix(y_R, c_R, compAmt);
     }
 
-    if (mode909) y *= 1.15f;
+    if (mode909) {
+      y_L *= 1.15f;
+      y_R *= 1.15f;
+    }
 
-    y *= a * accent;
+    y_L *= a * accent;
+    y_R *= a * accent;
 
     if (i >= fade_start_idx) {
       float fade_factor = 1.0f - ((float)(i - fade_start_idx) / (float)(n - fade_start_idx));
-      y *= fade_factor;
+      y_L *= fade_factor;
+      y_R *= fade_factor;
     }
 
     if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
     }
-    else
-      psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
-static inline float nm_rand_pink() {
-    static float b0, b1, b2;
-    float white = nm_rand_white();
-    b0 = 0.99886f * b0 + white * 0.0555179f;
-    b1 = 0.99476f * b1 + white * 0.0325429f;
-    b2 = 0.96600f * b2 + white * 0.14329f;
-    return b0 + b1 + b2;
+// -------- Snare --------
+// Add to params: uint8_t sn_spread; // % stereo spread for noise
+
+FLASHMEM float nm_rand_pink() {
+  // A simple approximation of pink noise
+  static float white_noise_history[32] = { 0 };
+  static int index = 0;
+
+  // Generate a new white noise sample
+  float white = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+
+  // Apply a simple low-pass filter to approximate pink noise
+  float pink = (white + white_noise_history[index]) * 0.5f;
+
+  white_noise_history[index] = white;
+  index = (index + 1) % 32;
+
+  return pink;
 }
 
-// ------------------------------- Snare --------------------------------------
-static inline void generateSnare(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-    const bool stereo = (channels == 2);
-
-    float ph1 = 0.f, ph2 = 0.f, ph3 = 0.f;
-
-    // Tonal Body Frequencies based on mode
-    const float f1 = mode909 ? p.sn_tone1 : 170.f;
-    const float f2 = mode909 ? p.sn_tone2 : 250.f;
-    const float f3 = mode909 ? p.sn_tone1 * 0.5f : 170.f * 0.5f;
-
-    const float decayMs = u8_to_ms_fast(p.sn_decay, 60.f, 900.f);
-    const float snapAmt = p.sn_snap * 0.01f;
-    const float noiseAmt = p.sn_noise * 0.001f;
-    const float toneMix = p.sn_tone_mix * 0.01f;
-    const float driveAmt = p.sn_drive * 0.01f;
-    const float accent = p.accent * 0.01f;
-
-    // Noise Generator and Filter based on mode
-    SVF noiseFilter;
-    float noiseFreq = (float)p.sn_bp_freq;
-    float filterQ = 1.0f + ((float)p.sn_bp_q / 100.0f) * 9.0f;
-    noiseFilter.set(noiseFreq, filterQ);
-
-    // Pitch Envelope and Snap Transient based on mode
-    const float startRatio = mode909 ? 1.0f + 0.01f * p.sn_pitch_env : 1.0f + 0.05f * p.sn_pitch_env;
-    const uint32_t pitchEnvN = (uint32_t)(SAMPLE_RATE * (mode909 ? 0.005f : 0.008f));
-    const uint32_t snapN = (uint32_t)(SAMPLE_RATE * (mode909 ? 0.004f : 0.002f));
-
-    // Dynamic gain compensation for high Q values to prevent overdriving the filter
-    float gainCompensation = 1.0f / (1.0f + (filterQ - 1.0f) * 0.75f);
-    
-    for (uint32_t i = 0; i < n; ++i) {
-        const float a = envPercExp(i, decayMs);
-
-        // Apply pitch envelope to the tonal frequencies.
-        const float envPitch = pitchEnvExp(std::min(i, pitchEnvN), pitchEnvN, startRatio);
-        const float ft1 = f1 * envPitch;
-        const float ft2 = f2 * envPitch;
-        const float ft3 = f3 * envPitch;
-
-        ph1 += 2.f * (float)M_PI * ft1 / SAMPLE_RATE; if (ph1 > 2.f * (float)M_PI) ph1 -= 2.f * (float)M_PI;
-        ph2 += 2.f * (float)M_PI * ft2 / SAMPLE_RATE; if (ph2 > 2.f * (float)M_PI) ph2 -= 2.f * (float)M_PI;
-        ph3 += 2.f * (float)M_PI * ft3 / SAMPLE_RATE; if (ph3 > 2.f * (float)M_PI) ph3 -= 2.f * (float)M_PI;
-        
-        float tone = nm_mix(nm_mix(sinf(ph1), sinf(ph2), toneMix), sinf(ph3), 0.5f);
-        
-        // Generate and filter the noise.
-        float lp, bpOut, hpOut;
-        if (mode909) {
-            // 909 uses pink noise and high-pass filtering
-            noiseFilter.process(nm_rand_pink(), lp, bpOut, hpOut);
-            bpOut = hpOut;
-        } else {
-            // 808 uses white noise and band-pass filtering
-            noiseFilter.process(nm_rand_white(), lp, bpOut, hpOut);
-        }
-
-        // Apply gain compensation to the bandpass output for 808
-        float nShape = bpOut * gainCompensation;
-
-        // Generate the snap transient.
-        float snap = 0.f;
-        if (i < snapN) {
-            float t = 1.f - (float)i / (float)snapN;
-            snap = nm_rand_white() * t;
-        }
-
-        // Combine all three components: tone, noise, and snap.
-        float y = (1.f - noiseAmt) * tone + noiseAmt * nShape + snapAmt * snap;
-        
-        // Apply clipping and drive.
-        y = nm_mix(y, nm_softclip(3.0f * y), driveAmt);
-
-        // Final gain and accent.
-        y *= a * accent;
-        if (stereo) {
-            psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-            psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-        } else {
-            psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-        }
-    }
-}
-
-// ------------------------------- Toms ---------------------------------------
-static inline void generateTom(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-  // 909 toms have a very low, almost inaudible pitch. Let's make it more configurable.
+FLASHMEM static inline void generateSnare(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
+  float ph1_L = 0.f, ph1_R = 0.f, ph2_L = 0.f, ph2_R = 0.f, ph3_L = 0.f, ph3_R = 0.f;
 
+  const float f1 = mode909 ? p.sn_tone1 : 170.f;
+  const float f2 = mode909 ? p.sn_tone2 : 250.f;
+  const float f3 = mode909 ? p.sn_tone1 * 0.5f : 170.f * 0.5f;
+
+  const float decayMs = u8_to_ms_fast(p.sn_decay, 60.f, 900.f);
+  const float snapAmt = p.sn_snap * 0.01f;
+  const float noiseAmt = p.sn_noise * 0.001f;
+  const float toneMix = p.sn_tone_mix * 0.01f;
+  const float driveAmt = p.sn_drive * 0.01f;
+  const float accent = p.accent * 0.01f;
+  const float spreadAmt = p.sn_spread * 0.01f; // New spread parameter
+
+  SVF noiseFilter_L, noiseFilter_R;
+  float noiseFreq = (float)p.sn_bp_freq;
+  float filterQ = 1.0f + ((float)p.sn_bp_q / 100.0f) * 9.0f;
+  float freqOffset = 0.05f * spreadAmt * noiseFreq; // Up to 5% freq difference
+  noiseFilter_L.set(noiseFreq - freqOffset, filterQ);
+  noiseFilter_R.set(noiseFreq + freqOffset, filterQ);
+
+  const float startRatio = mode909 ? 1.0f + 0.01f * p.sn_pitch_env : 1.0f + 0.05f * p.sn_pitch_env;
+  const uint32_t pitchEnvN = (uint32_t)(SAMPLE_RATE * (mode909 ? 0.005f : 0.008f));
+  const uint32_t snapN = (uint32_t)(SAMPLE_RATE * (mode909 ? 0.004f : 0.002f));
+  float gainCompensation_L = 1.0f / (1.0f + (filterQ - 1.0f) * 0.75f);
+  float gainCompensation_R = 1.0f / (1.0f + (filterQ - 1.0f) * 0.75f);
+
+  for (uint32_t i = 0; i < n; ++i) {
+    const float a = envPercExp(i, decayMs);
+    const float envPitch = pitchEnvExp(std::min(i, pitchEnvN), pitchEnvN, startRatio);
+    const float ft1 = f1 * envPitch;
+    const float ft2 = f2 * envPitch;
+    const float ft3 = f3 * envPitch;
+
+    ph1_L += 2.f * (float)M_PI * ft1 / SAMPLE_RATE; if (ph1_L > 2.f * (float)M_PI) ph1_L -= 2.f * (float)M_PI;
+    ph1_R += 2.f * (float)M_PI * ft1 / SAMPLE_RATE; if (ph1_R > 2.f * (float)M_PI) ph1_R -= 2.f * (float)M_PI;
+    ph2_L += 2.f * (float)M_PI * ft2 / SAMPLE_RATE; if (ph2_L > 2.f * (float)M_PI) ph2_L -= 2.f * (float)M_PI;
+    ph2_R += 2.f * (float)M_PI * ft2 / SAMPLE_RATE; if (ph2_R > 2.f * (float)M_PI) ph2_R -= 2.f * (float)M_PI;
+    ph3_L += 2.f * (float)M_PI * ft3 / SAMPLE_RATE; if (ph3_L > 2.f * (float)M_PI) ph3_L -= 2.f * (float)M_PI;
+    ph3_R += 2.f * (float)M_PI * ft3 / SAMPLE_RATE; if (ph3_R > 2.f * (float)M_PI) ph3_R -= 2.f * (float)M_PI;
+
+    float tone_L = nm_mix(nm_mix(sinf(ph1_L), sinf(ph2_L), toneMix), sinf(ph3_L), 0.5f);
+    float tone_R = nm_mix(nm_mix(sinf(ph1_R), sinf(ph2_R), toneMix), sinf(ph3_R), 0.5f);
+
+    float lp_L, bpOut_L, hpOut_L;
+    float lp_R, bpOut_R, hpOut_R;
+    if (mode909) {
+      noiseFilter_L.process(nm_rand_pink(), lp_L, bpOut_L, hpOut_L);
+      noiseFilter_R.process(nm_rand_pink(), lp_R, bpOut_R, hpOut_R);
+      bpOut_L = hpOut_L;
+      bpOut_R = hpOut_R;
+    }
+    else {
+      noiseFilter_L.process(nm_rand_white(), lp_L, bpOut_L, hpOut_L);
+      noiseFilter_R.process(nm_rand_white(), lp_R, bpOut_R, hpOut_R);
+    }
+    float nShape_L = bpOut_L * gainCompensation_L;
+    float nShape_R = bpOut_R * gainCompensation_R;
+
+    float snap_L = 0.f, snap_R = 0.f;
+    if (i < snapN) {
+      float t = 1.f - (float)i / (float)snapN;
+      snap_L = nm_rand_white() * t;
+      snap_R = nm_rand_white() * t;
+    }
+
+    float y_L = (1.f - noiseAmt) * tone_L + noiseAmt * nShape_L + snapAmt * snap_L;
+    float y_R = (1.f - noiseAmt) * tone_R + noiseAmt * nShape_R + snapAmt * snap_R;
+
+    y_L = nm_mix(y_L, nm_softclip(3.0f * y_L), driveAmt);
+    y_R = nm_mix(y_R, nm_softclip(3.0f * y_R), driveAmt);
+
+    y_L *= a * accent;
+    y_R *= a * accent;
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
+    }
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
+  }
+}
+
+// -------- Toms (808) / Toms (909) --------
+// Add to params: uint8_t tom_spread; // % stereo spread for attack noise and tone
+
+FLASHMEM static inline void generateTom(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
   const float f0 = mode909 ? (float)p.tom_pitch * 0.5f : (float)p.tom_pitch;
-  float ph = 0.f;
+  float ph_L = 0.f, ph_R = 0.f;
 
   const float decayMs = u8_to_ms_fast(p.tom_decay, 80.f, 1200.f);
   const float toneAmt = p.tom_tone * 0.01f;
   const float noiseAmt = p.tom_noise * 0.01f;
   const float accent = p.accent * 0.01f;
-
   const float startRatio = 1.f + (mode909 ? 0.015f : 0.02f) * p.tom_pitch_env;
+  const float spreadAmt = p.tom_spread * 0.01f;
 
-  // 909 has a different type of transient. Let's use a very short burst of noise.
-  OnePole hp; hp.setHP(0.2f);
+  OnePole hp_L, hp_R; hp_L.setHP(0.2f); hp_R.setHP(0.2f);
   const uint32_t tickSamples = (uint32_t)(SAMPLE_RATE * (mode909 ? 0.0015f : 0.002f));
 
   for (uint32_t i = 0; i < n; ++i) {
     const float a = envPercExp(i, decayMs);
     const float freq = f0 * pitchEnvExp(std::min(i, (uint32_t)(0.3f * n)), (uint32_t)(0.3f * n), startRatio);
+    float freq_L = freq * (1.0f - spreadAmt * 0.01f);
+    float freq_R = freq * (1.0f + spreadAmt * 0.01f);
 
-    ph += 2.f * (float)M_PI * freq / SAMPLE_RATE;
-    if (ph > 2.f * (float)M_PI) ph -= 2.f * (float)M_PI;
+    ph_L += 2.f * (float)M_PI * freq_L / SAMPLE_RATE;
+    if (ph_L > 2.f * (float)M_PI) ph_L -= 2.f * (float)M_PI;
+    ph_R += 2.f * (float)M_PI * freq_R / SAMPLE_RATE;
+    if (ph_R > 2.f * (float)M_PI) ph_R -= 2.f * (float)M_PI;
 
-    float s = nm_mix(sinf(ph), nm_softclip(1.7f * sinf(ph)), toneAmt);
-    float tick = 0.0f;
+    float s_L = nm_mix(sinf(ph_L), nm_softclip(1.7f * sinf(ph_L)), toneAmt);
+    float s_R = nm_mix(sinf(ph_R), nm_softclip(1.7f * sinf(ph_R)), toneAmt);
+
+    float tick_L = 0.0f, tick_R = 0.0f;
     if (i < tickSamples) {
-      tick = noiseAmt * hp.process(nm_rand_white()) * (1.0f - (float)i / (float)tickSamples);
+      tick_L = noiseAmt * hp_L.process(nm_rand_white()) * (1.0f - (float)i / (float)tickSamples);
+      tick_R = noiseAmt * hp_R.process(nm_rand_white()) * (1.0f - (float)i / (float)tickSamples);
     }
-    s += tick;
+    s_L += tick_L;
+    s_R += tick_R;
 
-    if (mode909) s = nm_softclip(1.6f * s);
-
-    s *= a * accent;
-     if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
+    if (mode909) {
+      s_L = nm_softclip(1.6f * s_L);
+      s_R = nm_softclip(1.6f * s_R);
     }
-    else
 
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
+    s_L *= a * accent;
+    s_R *= a * accent;
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s_R) * 32767.f);
+    }
+    else {
+      float mono_mix = (s_L + s_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
+// -------- Congas (808/909 improved v3) --------
+// Add to params: uint8_t conga_spread; // % stereo spread
 
-// ------------------------------- Congas (808/909 improved v3) --------------------------------
-static inline void generateConga(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-  // Conga is an 808 sound. 909 doesn't have it. So, mode909 should probably be ignored here.
+FLASHMEM static inline void generateConga(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
-
   float basePitch = (float)p.conga_pitch;
   float f0 = basePitch;
-  f0 *= 1.3f;   // Mid conga (≈ +30%)
+  f0 *= 1.3f;
+  float ph1_L = 0.f, ph1_R = 0.f, ph2_L = 0.f, ph2_R = 0.f;
 
-  float ph1 = 0.f, ph2 = 0.f;
-
-  // Envelope
   const float decayMs = u8_to_ms_fast(p.conga_decay, 80.f, 1000.f);
   const float toneAmt = p.conga_tone * 0.01f;
   const float accent = p.accent * 0.01f;
   const float noiseAmt = p.conga_noise * 0.01f;
-  const float pitchEnvAmt = p.conga_pitch_env * 0.001f; // scaled for subtle use
-
+  const float pitchEnvAmt = p.conga_pitch_env * 0.001f;
+  const float spreadAmt = p.conga_spread * 0.01f;
   const float detune = 1.012f;
 
-  // Bandpass filter for noise
-  float x1 = 0.f, x2 = 0.f, y1 = 0.f, y2 = 0.f;
+
+  float x1_L = 0.f, x2_L = 0.f, x1_R = 0.f, x2_R = 0.f, y1_L = 0.f, y2_L = 0.f, y1_R = 0.f, y2_R = 0.f;
   float b0, b1, b2, a1, a2;
   {
     float w0 = 2.f * (float)M_PI * f0 / SAMPLE_RATE;
     float cosw0 = cosf(w0);
-    float alpha = sinf(w0) / (2.f * 4.0f); // Q ≈ 4
+    float alpha = sinf(w0) / (2.f * 4.0f);
     b0 = alpha; b1 = 0.f; b2 = -alpha;
-    float a0 = 1.f + alpha;
-    a1 = -2.f * cosw0;
-    a2 = 1.f - alpha;
+    float a0 = 1.f + alpha; a1 = -2.f * cosw0; a2 = 1.f - alpha;
     b0 /= a0; b1 /= a0; b2 /= a0; a1 /= a0; a2 /= a0;
   }
 
   for (uint32_t i = 0;i < n;++i) {
     float a = envPercExp(i, decayMs);
-
-    // Pitch envelope: slight downward bend
     float pitchMod = 1.0f + pitchEnvAmt * expf(-0.0008f * (float)i * (1000.f / SAMPLE_RATE));
+    float f0_L = f0 * pitchMod * (1.0f - spreadAmt * 0.01f);
+    float f0_R = f0 * pitchMod * (1.0f + spreadAmt * 0.01f);
 
-    // Oscillators
-    ph1 += 2.f * (float)M_PI * f0 * pitchMod / SAMPLE_RATE;
-    if (ph1 > 2.f * (float)M_PI) ph1 -= 2.f * (float)M_PI;
-    ph2 += 2.f * (float)M_PI * f0 * detune * pitchMod / SAMPLE_RATE;
-    if (ph2 > 2.f * (float)M_PI) ph2 -= 2.f * (float)M_PI;
+    ph1_L += 2.f * (float)M_PI * f0_L / SAMPLE_RATE; if (ph1_L > 2.f * (float)M_PI) ph1_L -= 2.f * (float)M_PI;
+    ph1_R += 2.f * (float)M_PI * f0_R / SAMPLE_RATE; if (ph1_R > 2.f * (float)M_PI) ph1_R -= 2.f * (float)M_PI;
+    ph2_L += 2.f * (float)M_PI * f0_L * detune / SAMPLE_RATE; if (ph2_L > 2.f * (float)M_PI) ph2_L -= 2.f * (float)M_PI;
+    ph2_R += 2.f * (float)M_PI * f0_R * detune / SAMPLE_RATE; if (ph2_R > 2.f * (float)M_PI) ph2_R -= 2.f * (float)M_PI;
 
-    float osc = 0.65f * sinf(ph1) + 0.35f * sinf(ph2);
+    float osc_L = 0.65f * sinf(ph1_L) + 0.35f * sinf(ph2_L);
+    float osc_R = 0.65f * sinf(ph1_R) + 0.35f * sinf(ph2_R);
 
-    // Noise -> bandpass filter
-    float x0 = ((rand() & 0x7fff) / 16384.f - 1.f);
-    float yn = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
-    x2 = x1; x1 = x0; y2 = y1; y1 = yn;
+    float x0_L = ((rand() & 0x7fff) / 16384.f - 1.f);
+    float x0_R = ((rand() & 0x7fff) / 16384.f - 1.f);
+    float yn_L = b0 * x0_L + b1 * x1_L + b2 * x2_L - a1 * y1_L - a2 * y2_L;
+    float yn_R = b0 * x0_R + b1 * x1_R + b2 * x2_R - a1 * y1_R - a2 * y2_R;
+    x2_L = x1_L; x1_L = x0_L; y2_L = y1_L; y1_L = yn_L;
+    x2_R = x1_R; x1_R = x0_R; y2_R = y1_R; y1_R = yn_R;
 
-    // Mix
-    float s = nm_mix(osc, osc * (1.0f - noiseAmt) + yn * noiseAmt, toneAmt);
+    float s_L = nm_mix(osc_L, osc_L * (1.0f - noiseAmt) + yn_L * noiseAmt, toneAmt);
+    float s_R = nm_mix(osc_R, osc_R * (1.0f - noiseAmt) + yn_R * noiseAmt, toneAmt);
 
-    // Envelope + accent
-    s *= a * accent;
- if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
+    s_L *= a * accent; s_R *= a * accent;
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s_R) * 32767.f);
     }
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
+    else {
+      float mono_mix = (s_L + s_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
-// ------------------------------- Universal TR-808/TR-909 Rimshot Generator -------------------------------
-static inline void generateRimshot(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+FLASHMEM static inline void generateRimshot(const NoiseMakerParams& p,
+  int16_t* psram_buf,
+  uint32_t n,
+  bool mode909,
+  uint8_t channels)
+{
   const bool stereo = (channels == 2);
-
   const float accent = p.accent * 0.01f;
-  const float driveAmt = p.rim_drive * 0.01f;
   const float toneBal = p.rim_tone * 0.01f;
-  const float baseFreq = (float)p.rim_pitch;  // center frequency of resonant ping
+  const float baseFreq = (float)p.rim_pitch;
 
-  // Decay envelope: longer for 808, shorter for 909
-  const float decayMs = u8_to_ms_fast(p.rim_decay, 40.f, mode909 ? 150.f : 250.f);
+  // Envelope (shorter for 909, longer for 808)
+  const float decayMs = u8_to_ms_fast(p.rim_decay,
+    mode909 ? 200.f : 300.f,
+    mode909 ? 800.f : 1500.f);
 
-  // High-Q resonant bandpass filter for tonal body
-  float x1 = 0.f, x2 = 0.f, y1 = 0.f, y2 = 0.f;
-  float b0, b1, b2, a1, a2;
-  {
-    float w0 = 2.f * (float)M_PI * baseFreq / SAMPLE_RATE;
-    float cosw0 = cosf(w0);
-    float Q = mode909 ? 2.5f : 6.0f;   // 808 more resonant, 909 slightly looser
-    float alpha = sinf(w0) / (2.f * Q);
-    b0 = alpha; b1 = 0.f; b2 = -alpha;
-    float a0 = 1.f + alpha;
-    a1 = -2.f * cosw0;
-    a2 = 1.f - alpha;
-    b0 /= a0; b1 /= a0; b2 /= a0; a1 /= a0; a2 /= a0;
-  }
+  // Resonators (two slightly detuned band-pass filters)
+  SVF toneResonator_L, toneResonator_R;
+  // Adjusted Q values for a more authentic resonance
+  float toneQ = mode909 ? 4.5f : 2.5f;
+  float spread = baseFreq * (p.rim_spread * 0.0005f); // +/- detune
+  toneResonator_L.setBP(baseFreq - spread, toneQ);
+  toneResonator_R.setBP(baseFreq + spread, toneQ);
 
-  for (uint32_t i = 0;i < n;++i) {
-    float a = envPercExp(i, decayMs);
+  // Noise bandpass (clicky attack, adds realism)
+  SVF noiseFilter_L, noiseFilter_R;
+  // Adjusted Q and center frequency for a less harsh, more classic noise sound
+  float noiseQ = mode909 ? 2.0f : 2.5f;
+  float noiseFreq = (float)p.rim_noise_bp_freq;
+  // Lowered the center frequency and narrowed the spread
+  noiseFilter_L.setBP(noiseFreq * 0.98f, noiseQ);
+  noiseFilter_R.setBP(noiseFreq * 1.02f, noiseQ);
 
-    // Excitation: short pulse (~1 ms) dominates tonal ping
-    float exc = (i < (uint32_t)(SAMPLE_RATE * 0.001f)) ? 1.f : 0.f;
+  for (uint32_t i = 0; i < n; ++i) {
+    float env = envPercExp(i, decayMs);
 
-    // Noise burst: only for 909, very short (~3 ms)
-    float noise = 0.f;
-    if (mode909 && i < (uint32_t)(SAMPLE_RATE * 0.003f))
-      noise = ((rand() & 0x7fff) / 16384.f - 1.f) * 0.2f;
-
-    // Bandpass filter the excitation to create resonant ping
-    float in = exc + noise;
-    float yn = b0 * in + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
-    x2 = x1; x1 = in; y2 = y1; y1 = yn;
-
-    // Mix tonal ping vs noise with weakened tone parameter
-    float y = nm_mix(yn, noise, powf(toneBal, 2.0f) * 0.3f);
-
-    // Apply softclip drive
-    y = nm_mix(y, nm_softclip(3.0f * y), driveAmt);
-
-    // Apply decay envelope and accent
-    y *= a * accent;
- if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    // -----------------------------
+    // Noise burst exciter
+    // Made the burst shorter and more balanced
+    float excNoise = 0.f;
+    if (i < 500) {
+      float burstEnv = 1.0f - (float)i / 500.f;
+      // Adjusted noise gain for better balance
+      excNoise = nm_rand_white() * burstEnv * 0.02f * p.rim_noise_level;
     }
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+
+    // Sine burst exciter (click)
+    // Made the burst much shorter and punchier
+    float excSine = 0.f;
+    if (i < SAMPLE_RATE / 200) { // ~5ms burst
+      float ph = 2.f * (float)M_PI * (baseFreq * 0.5f) * (float)i / SAMPLE_RATE;
+      float sineEnv = expf(-0.01f * (float)i);
+      excSine = sinf(ph) * sineEnv * 0.02f * p.rim_click_level; // scaled by 0–1
+    }
+
+    // Combine exciters
+    float exc = excNoise + excSine;
+
+    // -----------------------------
+    // Resonant tone
+    float toneL = toneResonator_L.bpOut(exc);
+    float toneR = toneResonator_R.bpOut(exc);
+
+    // -----------------------------
+    // Noise layer (user-scaled)
+    // Reduced the noise level to 1/4 by scaling the multiplier
+    float noiseL = noiseFilter_L.bpOut(nm_rand_white()) * 0.00025f * p.rim_noise_level;
+    float noiseR = noiseFilter_R.bpOut(nm_rand_white()) * 0.00025f * p.rim_noise_level;
+
+    // -----------------------------
+    // Mix tone vs noise
+    float sigL = nm_mix(toneL, noiseL, 1.f - toneBal);
+    float sigR = nm_mix(toneR, noiseR, 1.f - toneBal);
+
+    // -----------------------------
+    // Drive + softclip
+    float driveAmt = p.rim_drive * 0.01f;
+    float driveGain = 1.0f + driveAmt * 2.0f;
+    float yL = nm_softclip(driveGain * sigL) * env * accent;
+    float yR = nm_softclip(driveGain * sigR) * env * accent;
+
+    // -----------------------------
+    // Output
+    if (stereo) {
+      psram_buf[i * 2] = (int16_t)lrintf(nm_clip1(yL) * 32767.f);
+      psram_buf[i * 2 + 1] = (int16_t)lrintf(nm_clip1(yR) * 32767.f);
+    }
+    else {
+      float mono = 0.5f * (yL + yR);
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono) * 32767.f);
+    }
   }
 }
+
+
 // ------------------------------- Clap ---------------------------------------
-static inline void generateClap(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+
+FLASHMEM static inline void generateClap(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
 
-  // 808 has a specific burst count, 909 uses the Clap parameter for variations.
   const int bursts = mode909 ? p.clap_repeats : 3;
-  const float spread = map01_100(p.clap_spread, 8.f, 24.f) * 0.001f; // seconds total spread
+  const float spread = map01_100(p.clap_spread, 8.f, 24.f) * 0.001f;
   const int burstGap = (int)((spread / (float)bursts) * SAMPLE_RATE);
 
   const float tailAmt = p.clap_tail * 0.01f;
   const float decayMs = u8_to_ms_fast(p.clap_decay, 120.f, 900.f);
   const float driveAmt = p.clap_drive * 0.01f;
 
-  // 909 clap uses a different filter
-  float bp_q = mode909 ? u8_to_q(p.clap_bp_q) * 0.6f : u8_to_q(p.clap_bp_q);
-  SVF bp; bp.set((float)p.clap_bp_hz, bp_q);
+  // The base frequency for the bandpass filter
+  float base_bp_hz = (float)p.clap_bp_hz;
 
-  for (uint32_t i = 0;i < n;++i) {
-    float y = 0.f;
+  // The amount of frequency variation based on the spread parameter
+  float freq_var = map01_100(p.clap_spread, 0.0f, 50.0f); // Vary by up to 1000 Hz
+
+  // Create two separate filter objects with slightly different frequencies
+  float bp_q = mode909 ? u8_to_q(p.clap_bp_q) * 0.6f : u8_to_q(p.clap_bp_q);
+  SVF bp_L; bp_L.set(base_bp_hz - freq_var, bp_q);
+  SVF bp_R; bp_R.set(base_bp_hz + freq_var, bp_q);
+
+  for (uint32_t i = 0; i < n; ++i) {
+    float y_L = 0.f;
+    float y_R = 0.f;
+
     // burst cluster
     for (int b = 0; b < bursts; ++b) {
       int idx = (int)i - b * burstGap;
       if (idx >= 0) {
         float w = 1.f - (float)b * (1.f / std::max(1, bursts));
-        float lp, bpOut, hp; bp.process(nm_rand_white(), lp, bpOut, hp);
+
+        // Process unique noise streams through their respective filters
+        float lp_L, bpOut_L, hp_L; bp_L.process(nm_rand_white(), lp_L, bpOut_L, hp_L);
+        float lp_R, bpOut_R, hp_R; bp_R.process(nm_rand_white(), lp_R, bpOut_R, hp_R);
+
         float envB = 1.f - (float)idx / (float)std::max(1, (int)(0.006f * SAMPLE_RATE));
         if (envB < 0.f) envB = 0.f;
-        y += w * bpOut * envB;
+
+        y_L += w * bpOut_L * envB;
+        y_R += w * bpOut_R * envB;
       }
     }
-    // tail (smoother, longer filtered noise)
-    float lp, bpOut, hp; bp.process(nm_rand_white(), lp, bpOut, hp);
-    float tail = bpOut * envPercExp(i, decayMs);
 
-    y = nm_mix(y, tail, tailAmt);
-    if (mode909) y = nm_softclip(1.8f * y);
-    y = nm_mix(y, nm_softclip(2.5f * y), driveAmt);
-    y *= (p.accent * 0.01f);
- if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    // tail (smoother, longer filtered noise)
+    float lp_L_tail, bpOut_L_tail, hp_L_tail; bp_L.process(nm_rand_white(), lp_L_tail, bpOut_L_tail, hp_L_tail);
+    float lp_R_tail, bpOut_R_tail, hp_R_tail; bp_R.process(nm_rand_white(), lp_R_tail, bpOut_R_tail, hp_R_tail);
+    float tail_L = bpOut_L_tail * envPercExp(i, decayMs);
+    float tail_R = bpOut_R_tail * envPercExp(i, decayMs);
+
+    y_L = nm_mix(y_L, tail_L, tailAmt);
+    y_R = nm_mix(y_R, tail_R, tailAmt);
+
+    if (mode909) {
+      y_L = nm_softclip(1.8f * y_L);
+      y_R = nm_softclip(1.8f * y_R);
     }
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+
+    y_L = nm_mix(y_L, nm_softclip(2.5f * y_L), driveAmt);
+    y_R = nm_mix(y_R, nm_softclip(2.5f * y_R), driveAmt);
+
+    y_L *= (p.accent * 0.01f);
+    y_R *= (p.accent * 0.01f);
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
+    }
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
-// ------------------------------- Hi-Hats ------------------------------------
-static inline void generateHiHat(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-  const bool stereo = (channels == 2);
 
+// -------- Hi-Hats --------
+// Add to params: uint8_t hh_spread; // % stereo spread
+
+FLASHMEM static inline void generateHiHat(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
   const float freqs808[6] = { 4000, 4800, 5600, 6400, 7200, 8000 };
   const float freqs909[6] = { 5000, 6000, 7000, 8000, 9000, 10000 };
   const float* ff = mode909 ? freqs909 : freqs808;
-
-  float ph[6] = { 0,0,0,0,0,0 };
+  float ph_L[6] = { 0 }, ph_R[6] = { 0 };
 
   float decayMetal = (p.hh_mode == 1) ? u8_to_ms_fast(p.hh_decay, 500.f, 1000.f)
     : u8_to_ms_fast(p.hh_decay, 80.f, 250.f);
   float decayNoise = (p.hh_mode == 1) ? u8_to_ms_fast(p.hh_decay, 600.f, 1200.f)
     : u8_to_ms_fast(p.hh_decay, 80.f, 250.f);
 
-  SVF bp;
+  SVF bp_L, bp_R;
   float scaled_q_hh = p.hh_bp_q * (mode909 ? 0.7f : 1.0f);
-  bp.set((float)p.hh_bp_hz, u8_to_q((uint8_t)scaled_q_hh));
-  OnePole hp; hp.setHP(0.12f);
+  float spreadFreq = p.hh_spread * 0.01f * 500.0f; // up to 500 Hz spread
+  bp_L.set((float)p.hh_bp_hz - spreadFreq, u8_to_q((uint8_t)scaled_q_hh));
+  bp_R.set((float)p.hh_bp_hz + spreadFreq, u8_to_q((uint8_t)scaled_q_hh));
+  OnePole hp_L, hp_R; hp_L.setHP(0.12f); hp_R.setHP(0.12f);
 
   for (uint32_t i = 0;i < n;++i) {
     float aMetal = envPercExp(i, decayMetal);
     float aNoise = envPercExp(i, decayNoise);
+    float metallic_L = 0.f, metallic_R = 0.f;
 
-    float metallic = 0.f;
     for (int k = 0;k < 6;++k) {
-      // random phase per note
-      if (i == 0) ph[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
-
-      // small detune scaled by base frequency
-      float freqDetune = ff[k] * 0.005f * (((rand() & 0x3fff) / 16384.f) - 0.5f); // ±0.25% of freq
+      if (i == 0) {
+        ph_L[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
+        ph_R[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
+      }
+      float freqDetune = ff[k] * 0.005f * (((rand() & 0x3fff) / 16384.f) - 0.5f);
       float freq = ff[k] + freqDetune;
+      float freq_L = freq * (1.0f - p.hh_detune * 0.001f);
+      float freq_R = freq * (1.0f + p.hh_detune * 0.001f);
 
-      ph[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
-      if (ph[k] > 2.f * (float)M_PI) ph[k] -= 2.f * (float)M_PI;
+      ph_L[k] += 2.f * (float)M_PI * freq_L / SAMPLE_RATE;
+      if (ph_L[k] > 2.f * (float)M_PI) ph_L[k] -= 2.f * (float)M_PI;
+      ph_R[k] += 2.f * (float)M_PI * freq_R / SAMPLE_RATE;
+      if (ph_R[k] > 2.f * (float)M_PI) ph_R[k] -= 2.f * (float)M_PI;
+
       float amp = (p.hh_mode == 1) ? 0.6f : 0.55f;
-      metallic += amp * (sinf(ph[k]) >= 0.f ? 1.f : -1.f);
+      metallic_L += amp * (sinf(ph_L[k]) >= 0.f ? 1.f : -1.f);
+      metallic_R += amp * (sinf(ph_R[k]) >= 0.f ? 1.f : -1.f);
     }
-    metallic /= 6.f;
+    metallic_L /= 6.f; metallic_R /= 6.f;
+    float mlp_L, mbp_L, mhp_L; bp_L.process(metallic_L, mlp_L, mbp_L, mhp_L);
+    float mlp_R, mbp_R, mhp_R; bp_R.process(metallic_R, mlp_R, mbp_R, mhp_R);
+    metallic_L = nm_mix(metallic_L, mbp_L, 0.5f) * aMetal;
+    metallic_R = nm_mix(metallic_R, mbp_R, 0.5f) * aMetal;
 
-    float mlp, mbp, mhp; bp.process(metallic, mlp, mbp, mhp);
-    metallic = nm_mix(metallic, mbp, 0.5f) * aMetal;
-
-    float noise = hp.process(nm_rand_white()) * aNoise * ((p.hh_mode == 1) ? 0.25f : 0.4f);
+    float noise_L = hp_L.process(nm_rand_white()) * aNoise * ((p.hh_mode == 1) ? 0.25f : 0.4f);
+    float noise_R = hp_R.process(nm_rand_white()) * aNoise * ((p.hh_mode == 1) ? 0.25f : 0.4f);
     float mixFactor = (p.hh_mode == 1) ? 0.25f : 0.35f;
-    float y = nm_mix(metallic, noise, mixFactor);
+    float y_L = nm_mix(metallic_L, noise_L, mixFactor);
+    float y_R = nm_mix(metallic_R, noise_R, mixFactor);
 
-    y = nm_mix(y, nm_softclip(2.0f * y), p.hh_drive * 0.01f);
-    y *= p.accent * 0.01f;
- if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    y_L = nm_mix(y_L, nm_softclip(2.0f * y_L), p.hh_drive * 0.01f);
+    y_R = nm_mix(y_R, nm_softclip(2.0f * y_R), p.hh_drive * 0.01f);
+    y_L *= p.accent * 0.01f;
+    y_R *= p.accent * 0.01f;
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
     }
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
-// ------------------------------- Crash --------------------------------------
-// ------------------------------- Crash --------------------------------------
-static inline void generateCrash(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-  const bool stereo = (channels == 2);
+// -------- Crash --------
+// Add to params: uint8_t crash_spread; // % stereo spread
 
+FLASHMEM static inline void generateCrash(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
   const float freqs808[6] = { 450, 630, 810, 1200, 1800, 2700 };
-  const float freqs909[7] = { 450, 630, 810, 1200, 1800, 2700, 4100 };
+  const float freqs909[7] = { 550, 770, 990, 1470, 2205, 3307, 4960 };
   const float* ff = mode909 ? freqs909 : freqs808;
   const int nPartials = mode909 ? 7 : 6;
+  float ph_L[7] = { 0 }, ph_R[7] = { 0 };
 
-  float ph[7] = { 0 };
+  float decayMetal = mode909 ? u8_to_ms_fast(p.crash_decay, 1800.f, 5000.f) : u8_to_ms_fast(p.crash_decay, 1200.f, 4000.f);
+  float decayNoise = mode909 ? u8_to_ms_fast(p.crash_decay, 2200.f, 5500.f) : u8_to_ms_fast(p.crash_decay, 1500.f, 4500.f);
 
-  float decayMetal = mode909
-    ? u8_to_ms_fast(p.crash_decay, 1800.f, 5000.f)
-    : u8_to_ms_fast(p.crash_decay, 1200.f, 4000.f);
-
-  float decayNoise = mode909
-    ? u8_to_ms_fast(p.crash_decay, 2200.f, 5500.f)
-    : u8_to_ms_fast(p.crash_decay, 1500.f, 4500.f);
-
-  SVF bp;
-
+  SVF bp_L, bp_R;
   float crashQ = 1.0f + ((float)p.crash_bp_q / 100.0f) * 0.9f;
-  bp.set((float)p.crash_bp_hz, crashQ);
-  OnePole hp; hp.setHP(0.1f);
-
-  // Gain compensation to prevent filter overloading
+  float spreadFreq = p.crash_spread * 0.01f * 50.0f;
+  bp_L.set((float)p.crash_bp_hz - spreadFreq, crashQ);
+  bp_R.set((float)p.crash_bp_hz + spreadFreq, crashQ);
+  OnePole hp_L, hp_R; hp_L.setHP(0.1f); hp_R.setHP(0.1f);
   float gainComp = 1.0f / crashQ;
 
   for (uint32_t i = 0; i < n; ++i) {
     float aMetal = envPercExp(i, decayMetal);
     float aNoise = envPercExp(i, decayNoise);
+    float metallic_L = 0.f, metallic_R = 0.f;
 
-    float metallic = 0.f;
     for (int k = 0; k < nPartials; ++k) {
-      if (i == 0) ph[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
-
+      if (i == 0) {
+        ph_L[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
+        ph_R[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
+      }
       float det = ff[k] * 0.003f * (((rand() & 0x3fff) / 16384.f) - 0.5f);
       float freq = ff[k] + det;
 
-      ph[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
-      if (ph[k] > 2.f * (float)M_PI) ph[k] -= 2.f * (float)M_PI;
+      ph_L[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
+      if (ph_L[k] > 2.f * (float)M_PI) ph_L[k] -= 2.f * (float)M_PI;
+      ph_R[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
+      if (ph_R[k] > 2.f * (float)M_PI) ph_R[k] -= 2.f * (float)M_PI;
 
-      metallic += (sinf(ph[k]) >= 0.f ? 1.f : -1.f);
+      metallic_L += (sinf(ph_L[k]) >= 0.f ? 1.f : -1.f);
+      metallic_R += (sinf(ph_R[k]) >= 0.f ? 1.f : -1.f);
     }
-    metallic /= (float)nPartials;
-    metallic *= aMetal;
+    metallic_L /= (float)nPartials; metallic_R /= (float)nPartials;
+    metallic_L *= aMetal; metallic_R *= aMetal;
 
-    float mlp, mbp, mhp;
-    bp.process(nm_rand_white(), mlp, mbp, mhp);
-    // Apply gain compensation to filtered noise
-    float noise = hp.process(mbp) * aNoise * (mode909 ? 0.35f : 0.4f) * gainComp;
+    float mlp_L, mbp_L, mhp_L; bp_L.process(nm_rand_white(), mlp_L, mbp_L, mhp_L);
+    float mlp_R, mbp_R, mhp_R; bp_R.process(nm_rand_white(), mlp_R, mbp_R, mhp_R);
+    float noise_L = hp_L.process(mbp_L) * aNoise * (mode909 ? 0.35f : 0.4f) * gainComp;
+    float noise_R = hp_R.process(mbp_R) * aNoise * (mode909 ? 0.35f : 0.4f) * gainComp;
 
-    float y = nm_mix(metallic, noise, p.crash_tone * 0.01f);
+    float y_L = nm_mix(metallic_L, noise_L, p.crash_tone * 0.01f);
+    float y_R = nm_mix(metallic_R, noise_R, p.crash_tone * 0.01f);
 
     if (mode909) {
-      y = nm_softclip(1.5f * y);
+      y_L = nm_softclip(1.5f * y_L);
+      y_R = nm_softclip(1.5f * y_R);
     }
+    y_L *= p.accent * 0.01f;
+    y_R *= p.accent * 0.01f;
 
-    y *= p.accent * 0.01f;
-     if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
     }
-    else
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
+// -------- Ride --------
+// Add to params: uint8_t ride_spread; // % stereo spread
 
-// ------------------------------- Ride ---------------------------------------
-static inline void generateRide(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+FLASHMEM static inline void generateRide(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
-
   const float freqs808[6] = { 300, 450, 900, 1350, 2025, 4050 };
   const float freqs909[7] = { 320, 480, 960, 1440, 2160, 4320, 6400 };
   const float* ff = mode909 ? freqs909 : freqs808;
   const int nPartials = mode909 ? 7 : 6;
+  float ph_L[7] = { 0 }, ph_R[7] = { 0 };
 
-  float ph[7] = { 0 };
+  float decayMetal = mode909 ? u8_to_ms_fast(p.ride_decay, 2500.f, 6000.f) : u8_to_ms_fast(p.ride_decay, 2000.f, 5000.f);
+  float decayNoise = mode909 ? u8_to_ms_fast(p.ride_decay, 2800.f, 6500.f) : u8_to_ms_fast(p.ride_decay, 2200.f, 5500.f);
 
-  float decayMetal = mode909
-    ? u8_to_ms_fast(p.ride_decay, 2500.f, 6000.f)
-    : u8_to_ms_fast(p.ride_decay, 2000.f, 5000.f);
-
-  float decayNoise = mode909
-    ? u8_to_ms_fast(p.ride_decay, 2800.f, 6500.f)
-    : u8_to_ms_fast(p.ride_decay, 2200.f, 5500.f);
-
-  SVF bp;
+  SVF bp_L, bp_R;
   float rideQ = 1.0f + ((float)p.ride_bp_q / 100.0f) * 0.10f;
-  bp.set((float)p.ride_bp_hz, rideQ);
-  OnePole hp; hp.setHP(0.1f);
-
-  // Gain compensation to prevent filter overloading
+  float spreadFreq = p.ride_spread * 0.01f * 20.0f;
+  bp_L.set((float)p.ride_bp_hz - spreadFreq, rideQ);
+  bp_R.set((float)p.ride_bp_hz + spreadFreq, rideQ);
+  OnePole hp_L, hp_R; hp_L.setHP(0.1f); hp_R.setHP(0.1f);
   float gainComp = 1.0f / rideQ;
 
   for (uint32_t i = 0; i < n; ++i) {
     float aMetal = envPercExp(i, decayMetal);
     float aNoise = envPercExp(i, decayNoise);
+    float metallic_L = 0.f, metallic_R = 0.f;
 
-    float metallic = 0.f;
     for (int k = 0; k < nPartials; ++k) {
-      if (i == 0) ph[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
-
+      if (i == 0) {
+        ph_L[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
+        ph_R[k] = ((rand() & 0xffff) / 65535.f) * 2.f * (float)M_PI;
+      }
       float det = ff[k] * 0.002f * (((rand() & 0x3fff) / 16384.f) - 0.5f);
       float freq = ff[k] + det;
+      ph_L[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
+      if (ph_L[k] > 2.f * (float)M_PI) ph_L[k] -= 2.f * (float)M_PI;
+      ph_R[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
+      if (ph_R[k] > 2.f * (float)M_PI) ph_R[k] -= 2.f * (float)M_PI;
 
-      ph[k] += 2.f * (float)M_PI * freq / SAMPLE_RATE;
-      if (ph[k] > 2.f * (float)M_PI) ph[k] -= 2.f * (float)M_PI;
-
-      metallic += (sinf(ph[k]) >= 0.f ? 1.f : -1.f);
+      metallic_L += (sinf(ph_L[k]) >= 0.f ? 1.f : -1.f);
+      metallic_R += (sinf(ph_R[k]) >= 0.f ? 1.f : -1.f);
     }
-    metallic /= (float)nPartials;
-    metallic *= aMetal;
+    metallic_L /= (float)nPartials; metallic_R /= (float)nPartials;
+    metallic_L *= aMetal; metallic_R *= aMetal;
 
-    float mlp, mbp, mhp;
-    bp.process(nm_rand_white(), mlp, mbp, mhp);
-    // Apply gain compensation to filtered noise
-    float noise = hp.process(mbp) * aNoise * (mode909 ? 0.3f : 0.35f) * gainComp;
+    float mlp_L, mbp_L, mhp_L; bp_L.process(nm_rand_white(), mlp_L, mbp_L, mhp_L);
+    float mlp_R, mbp_R, mhp_R; bp_R.process(nm_rand_white(), mlp_R, mbp_R, mhp_R);
+    float noise_L = hp_L.process(mbp_L) * aNoise * (mode909 ? 0.3f : 0.35f) * gainComp;
+    float noise_R = hp_R.process(mbp_R) * aNoise * (mode909 ? 0.3f : 0.35f) * gainComp;
 
-    float y = nm_mix(metallic, noise, p.ride_tone * 0.01f);
+    float y_L = nm_mix(metallic_L, noise_L, p.ride_tone * 0.01f);
+    float y_R = nm_mix(metallic_R, noise_R, p.ride_tone * 0.01f);
 
     if (mode909) {
-      y = nm_softclip(1.4f * y);
+      y_L = nm_softclip(1.4f * y_L);
+      y_R = nm_softclip(1.4f * y_R);
     }
-
-    y *= p.accent * 0.01f;
-     if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-    }
-    else
-    psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-  }
-}
-
-FLASHMEM void generateCowbell(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909,uint8_t channels) {
-  const bool stereo = (channels == 2);
-
-  float phase1 = 0.f, phase2 = 0.f;
-  const float f1 = (float)p.cb_freq1;
-  const float f2 = (float)p.cb_freq2;
-  const float balance = p.cb_tone_balance * 0.01f;
-  const float noiseAmt = p.cb_noise * 0.01f;
-  const float driveAmt = p.cb_drive * 0.01f;
-
-  // Very short envelope for the characteristic 808 cowbell punch
-  for (uint32_t i = 0; i < n; ++i) {
-    // Simple decay envelope (no attack, sustain, or release)
-    float env = expf(-15.0f * (float)i / (float)n); // Fast exponential decay
-
-    // Generate the two tone components
-    phase1 += 2.f * PI * f1 / SAMPLE_RATE;
-    if (phase1 >= 2.f * PI) phase1 -= 2.f * PI;
-
-    phase2 += 2.f * PI * f2 / SAMPLE_RATE;
-    if (phase2 >= 2.f * PI) phase2 -= 2.f * PI;
-
-    float tone1 = sinf(phase1);
-    float tone2 = sinf(phase2);
-
-    // Mix the two tones according to balance
-    float tone = (1.0f - balance) * tone1 + balance * tone2;
-
-    // Add a small amount of noise
-    float noise = nm_rand_white() * noiseAmt;
-
-    // Combine and apply envelope
-    float s = (tone + noise) * env;
-
-    // Apply gentle saturation
-    s = (1.f - driveAmt) * s + driveAmt * tanhf(2.0f * s);
-
- if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(clamp1(s) * 32767.f);
-      psram_buf[i * channels + 1] =(int16_t)lrintf(clamp1(s) * 32767.f);
-    }
-    else
-    psram_buf[i] = (int16_t)lrintf(clamp1(s) * 32767.f);
-  }
-}
-
-// ------------------------------- Claves (808) --------------------------------
-static inline void generateClaves(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-  const bool stereo = (channels == 2);
-
-  float ph = 0.f;
-  const float decayMs = u8_to_ms_fast(p.claves_decay, 20.f, 300.f);
-  const float drive = p.claves_drive * 0.01f;
-  for (uint32_t i = 0;i < n;++i) {
-    float a = envPercExp(i, decayMs);
-    ph += 2.f * (float)M_PI * p.claves_hz / SAMPLE_RATE; if (ph > 2.f * (float)M_PI) ph -= 2.f * (float)M_PI;
-    float s = sinf(ph);
-    s = nm_mix(s, nm_softclip(2.0f * s), drive);
-    s *= a * (p.accent * 0.01f);
+    y_L *= p.accent * 0.01f;
+    y_R *= p.accent * 0.01f;
 
     if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
     }
-    else
-      psram_buf[i] = (int16_t)lrintf(nm_clip1(s) * 32767.f);
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
-// Simple random float helper: uniform range [min, max]
-auto randf_range = [](float minVal, float maxVal) {
-  return minVal + (maxVal - minVal) * (random(0, 10001) / 10000.0f);
-  };
+// -------- Maracas (808-style, Multi-Grain) --------
+// Add to params: uint8_t mar_spread; // % stereo spread
 
-
-// ------------------------------- Maracas (Authentic 808) -------------------------------
-// ------------------------------- Maracas (808-style, Multi-Grain) -------------------------------
-static inline void generateMaracas(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+FLASHMEM static inline void generateMaracas(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
-
   const float sr = SAMPLE_RATE;
   const float accentGain = (p.accent * 0.01f);
 
-  // --- Envelope settings ---
-  const float totalMs = u8_to_ms_fast(p.mar_decay, 25.f, 120.f); // total AR
+  const float totalMs = u8_to_ms_fast(p.mar_decay, 25.f, 120.f);
   const float attackMs = totalMs * 0.7f;
   const float releaseMs = totalMs * 0.3f;
   const uint32_t atkSamples = (uint32_t)(attackMs * sr / 1000.f);
@@ -1291,90 +1364,230 @@ static inline void generateMaracas(NoiseMakerParams& p, int16_t* psram_buf, uint
   const float attackSlope = 1.0f / max(1u, atkSamples);
   const float releaseSlope = 1.0f / max(1u, relSamples);
 
-  // --- Band-pass settings ---
-  float cutoffHz = float(p.mar_bp_hz);                  // 1–6 kHz
-  float q = 0.7f + (float(p.mar_bp_q) / 100.0f) * 0.5f; // maps 50–100% → 0.95–1.2
+  float cutoffHz = float(p.mar_bp_hz);
+  float q = 0.7f + (float(p.mar_bp_q) / 100.0f) * 0.5f;
+  float spreadFreq = p.mar_spread * 0.01f * 1000.0f; // Up to 1000 Hz spread
 
-  SVF bp;
-  bp.set(cutoffHz, q); // set once per buffer
+  SVF bp_L; bp_L.set(cutoffHz - spreadFreq, q);
+  SVF bp_R; bp_R.set(cutoffHz + spreadFreq, q);
 
-  // --- Multi-grain offsets (simulates multiple shakers) ---
   const int numGrains = 3;
   int grainOffsets[numGrains] = { 0, 3, 7 };
 
   for (uint32_t i = 0; i < n; ++i) {
     float env = 0.0f;
-    // Sum multiple grains
     for (int g = 0; g < numGrains; ++g) {
-     // uint32_t idx = (i >= grainOffsets[g]) ? i - grainOffsets[g] : 0;
-       uint32_t offset = static_cast<uint32_t>(grainOffsets[g]);
-        uint32_t idx = (i >= offset) ? i - offset : 0;
+      uint32_t offset = static_cast<uint32_t>(grainOffsets[g]);
+      uint32_t idx = (i >= offset) ? i - offset : 0;
       float e = 0.0f;
       if (idx < atkSamples) e = float(idx) * attackSlope;
       else if (idx < atkSamples + relSamples) e = 1.0f - (float(idx - atkSamples) * releaseSlope);
       env += e;
     }
-    env = env / numGrains; // normalize
+    env = env / numGrains;
+    float noise_L = nm_rand_white();
+    float noise_R = nm_rand_white();
+    float shaped_L = noise_L * env * accentGain;
+    float shaped_R = noise_R * env * accentGain;
 
-    // --- Noise source ---
-    float noise = nm_rand_white();
-    float shaped = noise * env * accentGain;
-
-    // --- Band-pass filter ---
-    float lp, bpOut, hp;
-    bp.process(shaped, lp, bpOut, hp);
+    float lp_L, bpOut_L, hp_L; bp_L.process(shaped_L, lp_L, bpOut_L, hp_L);
+    float lp_R, bpOut_R, hp_R; bp_R.process(shaped_R, lp_R, bpOut_R, hp_R);
 
     if (stereo) {
-      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(bpOut) * 32767.f);
-      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(bpOut) * 32767.f);
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(bpOut_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(bpOut_R) * 32767.f);
     }
-    else
-      psram_buf[i] = (int16_t)lrintf(nm_clip1(bpOut) * 32767.f);
-
+    else {
+      float mono_mix = (bpOut_L + bpOut_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
   }
 }
 
-static inline void generateZap(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
-    const bool stereo = (channels == 2);
+// -------- Cowbell (808) --------
+// Add to params: uint8_t cb_spread; // % stereo spread
 
-    // Assuming these parameters exist in your NoiseMakerParams struct
-    const float startHz = (float)p.zap_pitch_start;
-    const float endHz = (float)p.zap_pitch_end;
-    const float decayMs = u8_to_ms_fast(p.zap_decay, 10.0f, 100.0f);
-    const float accent = p.accent * 0.01f;
+FLASHMEM void generateCowbell(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
+  float phase1_L = 0.f, phase1_R = 0.f, phase2_L = 0.f, phase2_R = 0.f;
+  const float f1 = (float)p.cb_freq1;
+  const float f2 = (float)p.cb_freq2;
+  const float balance = p.cb_tone_balance * 0.01f;
+  const float noiseAmt = p.cb_noise * 0.01f;
+  const float driveAmt = p.cb_drive * 0.01f;
+  const float spreadAmt = p.cb_spread * 0.01f;
+  float detune_factor = 1.0f + spreadAmt * 0.05f;
 
-    float phase = 0.0f;
-    const float totalSamples = SAMPLE_RATE * decayMs / 1000.0f;
+  for (uint32_t i = 0; i < n; ++i) {
+    float env = expf(-15.0f * (float)i / (float)n);
+    phase1_L += 2.f * PI * f1 / SAMPLE_RATE; if (phase1_L >= 2.f * PI) phase1_L -= 2.f * PI;
+    phase1_R += 2.f * PI * f1 * detune_factor / SAMPLE_RATE; if (phase1_R >= 2.f * PI) phase1_R -= 2.f * PI;
+    phase2_L += 2.f * PI * f2 / SAMPLE_RATE; if (phase2_L >= 2.f * PI) phase2_L -= 2.f * PI;
+    phase2_R += 2.f * PI * f2 * detune_factor / SAMPLE_RATE; if (phase2_R >= 2.f * PI) phase2_R -= 2.f * PI;
 
-    for (uint32_t i = 0; i < n; ++i) {
-        // Linear interpolation for pitch sweep
-        const float pitch_t = (float)i / totalSamples;
-        const float currentHz = startHz + (endHz - startHz) * pitch_t;
-        
-        // Update phase based on the current frequency
-        phase += 2.0f * (float)M_PI * currentHz / SAMPLE_RATE;
-        if (phase >= 2.0f * (float)M_PI) phase -= 2.0f * (float)M_PI;
-        
-        // Generate sine wave
-        float sine_wave = sinf(phase);
+    float tone1_L = sinf(phase1_L); float tone1_R = sinf(phase1_R);
+    float tone2_L = sinf(phase2_L); float tone2_R = sinf(phase2_R);
+    float tone_L = (1.0f - balance) * tone1_L + balance * tone2_L;
+    float tone_R = (1.0f - balance) * tone1_R + balance * tone2_R;
+    float noise_L = nm_rand_white() * noiseAmt; float noise_R = nm_rand_white() * noiseAmt;
 
-        // Apply a short decay envelope
-        const float env = envPercExp(i, decayMs);
-        
-        float y = sine_wave * env * accent;
+    float s_L = (tone_L + noise_L) * env;
+    float s_R = (tone_R + noise_R) * env;
+    s_L = (1.f - driveAmt) * s_L + driveAmt * tanhf(2.0f * s_L);
+    s_R = (1.f - driveAmt) * s_R + driveAmt * tanhf(2.0f * s_R);
 
-        // Clip and convert to 16-bit
-        if (stereo) {
-            psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-            psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-        } else {
-            psram_buf[i] = (int16_t)lrintf(nm_clip1(y) * 32767.f);
-        }
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s_R) * 32767.f);
     }
+    else {
+      float mono_mix = (s_L + s_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
+  }
 }
 
+// -------- Claves (808) --------
+// Add to params: uint8_t claves_spread; // % stereo spread
 
-static inline uint32_t getSampleLength(const NoiseMakerParams& p) {
+FLASHMEM static inline void generateClaves(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
+  float ph_L = 0.f, ph_R = 0.f;
+  const float decayMs = u8_to_ms_fast(p.claves_decay, 20.f, 300.f);
+  const float drive = p.claves_drive * 0.01f;
+  const float spreadAmt = p.claves_spread * 0.01f;
+  float freq_L = (float)p.claves_hz * (1.0f - spreadAmt * 0.005f);
+  float freq_R = (float)p.claves_hz * (1.0f + spreadAmt * 0.005f);
+
+  for (uint32_t i = 0;i < n;++i) {
+    float a = envPercExp(i, decayMs);
+    ph_L += 2.f * (float)M_PI * freq_L / SAMPLE_RATE; if (ph_L > 2.f * (float)M_PI) ph_L -= 2.f * (float)M_PI;
+    ph_R += 2.f * (float)M_PI * freq_R / SAMPLE_RATE; if (ph_R > 2.f * (float)M_PI) ph_R -= 2.f * (float)M_PI;
+    float s_L = sinf(ph_L); float s_R = sinf(ph_R);
+    s_L = nm_mix(s_L, nm_softclip(2.0f * s_L), drive);
+    s_R = nm_mix(s_R, nm_softclip(2.0f * s_R), drive);
+    s_L *= a * (p.accent * 0.01f);
+    s_R *= a * (p.accent * 0.01f);
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(s_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(s_R) * 32767.f);
+    }
+    else {
+      float mono_mix = (s_L + s_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
+  }
+}
+
+// -------- Zap --------
+// Add to params: uint8_t zap_spread; // % stereo spread
+
+FLASHMEM static inline void generateZap(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
+  const float startHz = (float)p.zap_pitch_start;
+  const float endHz = (float)p.zap_pitch_end;
+  const float decayMs = u8_to_ms_fast(p.zap_decay, 10.0f, 100.0f);
+  const float accent = p.accent * 0.01f;
+  const float spreadAmt = p.zap_spread * 0.01f;
+
+  float phase_L = 0.0f, phase_R = 0.0f;
+  const float totalSamples = SAMPLE_RATE * decayMs / 1000.0f;
+
+  for (uint32_t i = 0; i < n; ++i) {
+    const float pitch_t = (float)i / totalSamples;
+    const float currentHz_L = startHz + (endHz - startHz) * pitch_t * (1.0f - spreadAmt * 0.05f);
+    const float currentHz_R = startHz + (endHz - startHz) * pitch_t * (1.0f + spreadAmt * 0.05f);
+
+    phase_L += 2.0f * (float)M_PI * currentHz_L / SAMPLE_RATE;
+    if (phase_L >= 2.0f * (float)M_PI) phase_L -= 2.0f * (float)M_PI;
+    phase_R += 2.0f * (float)M_PI * currentHz_R / SAMPLE_RATE;
+    if (phase_R >= 2.0f * (float)M_PI) phase_R -= 2.0f * (float)M_PI;
+
+    float sine_wave_L = sinf(phase_L);
+    float sine_wave_R = sinf(phase_R);
+    const float env = envPercExp(i, decayMs);
+
+    float y_L = sine_wave_L * env * accent;
+    float y_R = sine_wave_R * env * accent;
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
+    }
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
+  }
+}
+
+FLASHMEM static inline void generateSnap(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
+  const float accent = p.accent * 0.01f;
+  const float driveAmt = p.snap_drive * 0.01f;
+  const float toneBal = p.snap_tone * 0.01f;
+  const float baseFreq = (float)p.snap_pitch;
+  const float decayMs = u8_to_ms_fast(p.snap_decay, 40.f, mode909 ? 150.f : 250.f);
+  const float spreadAmt = p.snap_spread * 0.01f;
+  float freqOffset = baseFreq * spreadAmt * 0.05f;
+
+  float x1_L = 0.f, x2_L = 0.f, y1_L = 0.f, y2_L = 0.f;
+  float x1_R = 0.f, x2_R = 0.f, y1_R = 0.f, y2_R = 0.f;
+  float b0_L, b1_L, b2_L, a1_L, a2_L;
+  float b0_R, b1_R, b2_R, a1_R, a2_R;
+  {
+    float Q = mode909 ? 2.5f : 6.0f;
+    float w0_L = 2.f * (float)M_PI * (baseFreq - freqOffset) / SAMPLE_RATE;
+    float w0_R = 2.f * (float)M_PI * (baseFreq + freqOffset) / SAMPLE_RATE;
+
+    float cosw0_L = cosf(w0_L); float alpha_L = sinf(w0_L) / (2.f * Q);
+    b0_L = alpha_L; b1_L = 0.f; b2_L = -alpha_L;
+    float a0_L = 1.f + alpha_L; a1_L = -2.f * cosw0_L; a2_L = 1.f - alpha_L;
+    b0_L /= a0_L; b1_L /= a0_L; b2_L /= a0_L; a1_L /= a0_L; a2_L /= a0_L;
+
+    float cosw0_R = cosf(w0_R); float alpha_R = sinf(w0_R) / (2.f * Q);
+    b0_R = alpha_R; b1_R = 0.f; b2_R = -alpha_R;
+    float a0_R = 1.f + alpha_R; a1_R = -2.f * cosw0_R; a2_R = 1.f - alpha_R;
+    b0_R /= a0_R; b1_R /= a0_R; b2_R /= a0_R; a1_R /= a0_R; a2_R /= a0_R;
+  }
+
+  for (uint32_t i = 0;i < n;++i) {
+    float a = envPercExp(i, decayMs);
+    float exc_L = (i < (uint32_t)(SAMPLE_RATE * 0.001f)) ? 1.f : 0.f;
+    float exc_R = (i < (uint32_t)(SAMPLE_RATE * 0.001f)) ? 1.f : 0.f;
+
+    float noise_L = 0.f, noise_R = 0.f;
+    if (mode909 && i < (uint32_t)(SAMPLE_RATE * 0.003f)) {
+      noise_L = ((rand() & 0x7fff) / 16384.f - 1.f) * 0.2f;
+      noise_R = ((rand() & 0x7fff) / 16384.f - 1.f) * 0.2f;
+    }
+
+    float in_L = exc_L + noise_L;
+    float in_R = exc_R + noise_R;
+    float yn_L = b0_L * in_L + b1_L * x1_L + b2_L * x2_L - a1_L * y1_L - a2_L * y2_L;
+    float yn_R = b0_R * in_R + b1_R * x1_R + b2_R * x2_R - a1_R * y1_R - a2_R * y2_R;
+    x2_L = x1_L; x1_L = in_L; y2_L = y1_L; y1_L = yn_L;
+    x2_R = x1_R; x1_R = in_R; y2_R = y1_R; y1_R = yn_R;
+
+    float y_L = nm_mix(yn_L, noise_L, powf(toneBal, 2.0f) * 0.3f);
+    float y_R = nm_mix(yn_R, noise_R, powf(toneBal, 2.0f) * 0.3f);
+    y_L = nm_mix(y_L, nm_softclip(3.0f * y_L), driveAmt);
+    y_R = nm_mix(y_R, nm_softclip(3.0f * y_R), driveAmt);
+    y_L *= a * accent; y_R *= a * accent;
+
+    if (stereo) {
+      psram_buf[i * channels] = (int16_t)lrintf(nm_clip1(y_L) * 32767.f);
+      psram_buf[i * channels + 1] = (int16_t)lrintf(nm_clip1(y_R) * 32767.f);
+    }
+    else {
+      float mono_mix = (y_L + y_R) * 0.5f;
+      psram_buf[i] = (int16_t)lrintf(nm_clip1(mono_mix) * 32767.f);
+    }
+  }
+}
+
+FLASHMEM static inline uint32_t getSampleLength(const NoiseMakerParams& p) {
   float lenMs = 0.0f;
   switch (p.category) {
   case NM_BD: {
@@ -1400,8 +1613,8 @@ static inline uint32_t getSampleLength(const NoiseMakerParams& p) {
     lenMs = d + 20.0f;
   } break;
 
-  case NM_RIM: {
-    float d = u8_to_ms_fast(p.rim_decay, 10.f, 200.f);
+  case NM_SNAP: {
+    float d = u8_to_ms_fast(p.snap_decay, 10.f, 200.f);
     lenMs = d + 10.0f;
   } break;
 
@@ -1461,12 +1674,10 @@ static inline uint32_t getSampleLength(const NoiseMakerParams& p) {
   return msToSamples(lenMs);
 }
 
-
-
 // ============================================================================
 // DISPATCHER (call with precomputed n)
 // ============================================================================
-static inline void generateDrum(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n,uint8_t channels) {
+FLASHMEM static inline void generateDrum(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, uint8_t channels) {
   switch (p.category) {
   case NM_BD:      generateBassdrum(p, psram_buf, n, p.mode, channels); break;
   case NM_SD:      generateSnare(p, psram_buf, n, p.mode, channels); break;
@@ -1481,6 +1692,7 @@ static inline void generateDrum(NoiseMakerParams& p, int16_t* psram_buf, uint32_
   case NM_CLAVES:  generateClaves(p, psram_buf, n, p.mode, channels); break;
   case NM_MARACAS: generateMaracas(p, psram_buf, n, p.mode, channels); break;
   case NM_ZAP: generateZap(p, psram_buf, n, p.mode, channels); break;
+  case NM_SNAP:     generateSnap(p, psram_buf, n, p.mode, channels); break;
   default: // silence
     for (uint32_t i = 0;i < n;++i) psram_buf[i] = 0;
     break;
@@ -1490,23 +1702,62 @@ static inline void generateDrum(NoiseMakerParams& p, int16_t* psram_buf, uint32_
 // Update generateNoisePreview to handle stereo
 FLASHMEM void generateNoisePreview() {
 
-    // Compute how many samples we need for the current instrument
-    uint32_t length = getSampleLength(nm_params);
-    if (length == 0) return;
+  // Compute how many samples we need for the current instrument
+  uint32_t length = getSampleLength(nm_params);
+  if (length == 0) return;
 
-    // Determine channel count
-    uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
-    // Allocate or reallocate the PSRAM preview buffer
-    if (!nm_preview_alloc(length, channels)) return;
+  // Determine channel count
+  uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
+  // Allocate or reallocate the PSRAM preview buffer
+  if (!nm_preview_alloc(length, channels)) return;
 
-    // Generate the waveform directly into the PSRAM buffer
-    generateDrum(nm_params, nm_preview_data, length, channels);
+  // Generate the waveform directly into the PSRAM buffer
+  generateDrum(nm_params, nm_preview_data, length, channels);
 }
 
-extern  void print_nm_style();
+extern void print_nm_style();
 
-void randomizeNoiseMakerParams() {
 
+// Curated rimshot randomization (usable 808/909-ish settings)
+FLASHMEM void randomizeRimshotParams() {
+  // Decay
+  nm_params.rim_decay = nm_params.mode ? random(25, 65) : random(40, 80);
+
+  // Tone balance (mid-heavy, occasional extremes)
+  int t = random(0, 100);
+  if (t < 15) nm_params.rim_tone = random(20, 40);
+  else if (t < 80) nm_params.rim_tone = random(45, 80);
+  else nm_params.rim_tone = random(81, 100);
+
+  // Base pitch
+  nm_params.rim_pitch = nm_params.mode ? random(1800, 2600) : random(1200, 2000);
+
+  // Modal frequency (slightly inharmonic)
+  int ratio = random(135, 170);
+  nm_params.rim_mod_freq = (nm_params.rim_pitch * ratio) / 100;
+
+  // Noise filter center
+  nm_params.rim_noise_bp_freq = random(2800, 4200);
+
+  // Drive
+  int d = random(0, 100);
+  if (d < 60) nm_params.rim_drive = random(2, 10);
+  else if (d < 90) nm_params.rim_drive = random(11, 18);
+  else nm_params.rim_drive = random(19, 21);
+
+  // Stereo spread
+  int s = random(0, 100);
+  if (s < 70) nm_params.rim_spread = random(0, 25);
+  else if (s < 95) nm_params.rim_spread = random(26, 60);
+  else nm_params.rim_spread = random(61, 100);
+
+  // -------------------------
+  // New click + noise level parameters
+  nm_params.rim_click_level = random(40, 80); // sine burst amplitude
+  nm_params.rim_noise_level = random(20, 60); // filtered noise amplitude
+}
+
+FLASHMEM void randomizeNoiseMakerParams() {
 
   if (nm_params.randomizer)
   {
@@ -1516,6 +1767,8 @@ void randomizeNoiseMakerParams() {
   print_nm_style();
   // Randomize accent level
   //nm_params.accent = 40;
+
+  randomizeRimshotParams();
 
   // Bass Drum parameters
   if (nm_params.mode == NM_MODE_TR909)
@@ -1533,6 +1786,7 @@ void randomizeNoiseMakerParams() {
   nm_params.bd_noise = random(0, 31);         // 0-20%
   nm_params.bd_drive = random(0, 31);         // 0-30%
   nm_params.bd_comp = random(0, 21);          // 0-20%
+  nm_params.bd_spread = random(0, 101);       // 0-100%
 
   // Snare parameters
   // The first tone is the fundamental body, with a focused range for more musical sounds.
@@ -1564,6 +1818,7 @@ void randomizeNoiseMakerParams() {
 
   // Drive adds subtle soft clipping for grit.
   nm_params.sn_drive = random(0, 21);
+  nm_params.sn_spread = random(0, 101);       // 0-100%
 
   // Tom parameters
   nm_params.tom_pitch = random(60, 301);      // 80-300 Hz
@@ -1571,6 +1826,7 @@ void randomizeNoiseMakerParams() {
   nm_params.tom_pitch_env = random(0, 80);   // 0-100%
   nm_params.tom_tone = random(50, 101);       // 50-100%
   nm_params.tom_noise = random(0, 21);        // 0-20%
+  nm_params.tom_spread = random(0, 101);      // 0-100%
 
   // Conga parameters
   nm_params.conga_pitch = random(180, 501);  // 180–300 Hz base
@@ -1578,19 +1834,22 @@ void randomizeNoiseMakerParams() {
   nm_params.conga_tone = random(30, 100);   // 30–100%
   nm_params.conga_pitch_env = random(0, 51);     // 0–40% (subtle bend)
   nm_params.conga_noise = random(0, 81);    // 10–60% (woodiness)
+  nm_params.conga_spread = random(0, 101);     // 0-100%
 
-  nm_params.rim_decay = random(20, 81);      // 20–80% decay
-  nm_params.rim_tone = random(20, 101);     // 20–100% (tone vs noise)
-  nm_params.rim_pitch = random(200, 2801);  // 1.2–2.8 kHz
-  nm_params.rim_drive = random(0, 21);       // 0–20% drive
+  // nm_params.rim_decay = random(20, 81);
+  //   nm_params.rim_tone = random(20, 101);
+  //   nm_params.rim_pitch = random(1000, 2501); // Adjusted pitch range for resonator
+  //   nm_params.rim_mod_freq = random(800, 1501); 
+  //   nm_params.rim_noise_bp_freq = random(3000, 6001); // Randomize new parameter
+  //   nm_params.rim_drive = random(0, 21);
+  //   nm_params.rim_spread = random(0, 101);
 
-
-  // Clap parameters
+    // Clap parameters
   nm_params.clap_repeats = random(2, 8);      // 2-5 repeats
   nm_params.clap_spread = random(20, 101);    // 20-100%
-  nm_params.clap_tail = random(40, 101);      // 40-100%
-  nm_params.clap_bp_hz = random(0, 800);   // 200-2000 Hz
-  nm_params.clap_bp_q = random(0, 40);      // 50-100%
+  nm_params.clap_tail = random(40, 100);      // 40-100%
+  nm_params.clap_bp_hz = random(90, 370);   // 200-2000 Hz
+  nm_params.clap_bp_q = random(15, 50);      // 50-100%
   nm_params.clap_decay = random(50, 101);     // 50-100%
   nm_params.clap_drive = random(0, 21);       // 0-20%
 
@@ -1602,18 +1861,21 @@ void randomizeNoiseMakerParams() {
   nm_params.hh_decay = random(50, 80);      // decay %
   nm_params.hh_drive = random(0, 20);       // drive %
   nm_params.hh_detune = random(2, 5);        // oscillator detune
+  nm_params.hh_spread = random(0, 101);       // 0-100%
 
   // Crash parameters
   nm_params.crash_tone = random(40, 101);     // 40-100%
   nm_params.crash_bp_hz = random(5000, 8001); // 5000-8000 Hz
   nm_params.crash_bp_q = random(0, 50);     // 40-100%
   nm_params.crash_decay = random(70, 101);    // 70-100%
+  nm_params.crash_spread = random(0, 101);    // 0-100%
 
   // Ride parameters
   nm_params.ride_tone = random(40, 101);      // 40-100%
   nm_params.ride_bp_hz = random(6000, 9001);  // 6000-9000 Hz
   nm_params.ride_bp_q = random(0, 50);      // 50-100%
   nm_params.ride_decay = random(80, 101);     // 80-100%
+  nm_params.ride_spread = random(0, 101);     // 0-100%
 
   // Cowbell parameters
   nm_params.cb_freq1 = random(440, 680);
@@ -1623,21 +1885,31 @@ void randomizeNoiseMakerParams() {
   nm_params.cb_tone_balance = random(20, 80);
   nm_params.cb_noise = random(0, 10);
   nm_params.cb_drive = random(0, 60);
-
-nm_params.zap_pitch_start = random(4000, 10000); // Varies the starting pitch of the sweep
-nm_params.zap_pitch_end = random(100, 800);      // Changes the ending pitch, from a sharp zap to a bassy thud
-nm_params.zap_decay = random(10, 100);       // Randomizes the length of the sound
-
+  nm_params.cb_spread = random(0, 101);      // 0-100%
 
   // Claves parameters
   nm_params.claves_hz = random(1500, 2001);   // 1500-2000 Hz
   nm_params.claves_decay = random(20, 101);   // 20-100%
   nm_params.claves_drive = random(0, 11);     // 0-10%
+  nm_params.claves_spread = random(0, 101);    // 0-100%
 
   // Maracas parameters
   nm_params.mar_bp_hz = random(2000, 6001);  // 1–6 kHz
   nm_params.mar_bp_q = random(50, 95);     // 50–100%
   nm_params.mar_decay = random(20, 71);      // 30–80%
+  nm_params.mar_spread = random(0, 101);      // 0-100%
+
+  nm_params.zap_pitch_start = random(4000, 10000); // Varies the starting pitch of the sweep
+  nm_params.zap_pitch_end = random(100, 800);      // Changes the ending pitch, from a sharp zap to a bassy thud
+  nm_params.zap_decay = random(10, 100);       // Randomizes the length of the sound
+  nm_params.zap_spread = random(0, 101);      // 0-100%
+
+  nm_params.snap_decay = random(20, 81);      // 20–80% decay
+  nm_params.snap_tone = random(20, 101);     // 20–100% (tone vs noise)
+  nm_params.snap_pitch = random(200, 2801);  // 1.2–2.8 kHz
+  nm_params.snap_drive = random(0, 21);       // 0–20% drive
+  nm_params.snap_spread = random(0, 101);       // 0-100%
+
 }
 
 #endif
