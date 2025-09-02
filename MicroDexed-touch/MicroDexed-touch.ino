@@ -35,7 +35,7 @@
 #include "MCP4728.h"  // 4-Channel DAC 12Bit mcp4728
 #endif
 
-#define NOTESTEP_CV  46.5340909f
+#define NOTESTEP_CV  34.38f
 
 #ifdef  SECOND_SD
 SDClass SD_EXTERNAL;
@@ -1100,9 +1100,9 @@ FLASHMEM void All_Button_LEDS(bool state)
 void initMCP4728() {
   dac.attach(Wire, 14);
   //dac.readRegisters();
-  dac.selectVref(MCP4728::VREF::VDD, MCP4728::VREF::VDD, MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V);
-  dac.selectPowerDown(MCP4728::PWR_DOWN::GND_100KOHM, MCP4728::PWR_DOWN::GND_100KOHM, MCP4728::PWR_DOWN::GND_500KOHM, MCP4728::PWR_DOWN::GND_500KOHM);
-  dac.selectGain(MCP4728::GAIN::X1, MCP4728::GAIN::X1, MCP4728::GAIN::X2, MCP4728::GAIN::X2);
+  dac.selectVref(MCP4728::VREF::INTERNAL_2_8V,MCP4728::VREF::INTERNAL_2_8V,MCP4728::VREF::INTERNAL_2_8V,MCP4728::VREF::INTERNAL_2_8V);
+  dac.selectPowerDown(MCP4728::PWR_DOWN::NORMAL, MCP4728::PWR_DOWN::NORMAL, MCP4728::PWR_DOWN::NORMAL, MCP4728::PWR_DOWN::NORMAL);
+  dac.selectGain(MCP4728::GAIN::X2, MCP4728::GAIN::X2, MCP4728::GAIN::X2, MCP4728::GAIN::X2);
   // dac.analogWrite(MCP4728::DAC_CH::A, 111);
   // dac.analogWrite(MCP4728::DAC_CH::B, 222);
   // dac.analogWrite(MCP4728::DAC_CH::C, 333);
@@ -3808,8 +3808,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running == false)) ///CV Output
         {
-          dac_cv_1 = (inNumber - 8) * NOTESTEP_CV;
-          dac_cv_3 = inVelocity * 32;
+          dac_cv_1 = (inNumber-24)  * NOTESTEP_CV;
+          dac_cv_3 = inVelocity * 25.98f;
 #ifdef MCP_CV 
           dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
           dac.enable(true);

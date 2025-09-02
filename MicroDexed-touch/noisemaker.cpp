@@ -65,17 +65,17 @@ void nm_psram_free(void* ptr) {
 }
 
 // --- Noise preview buffer (PSRAM) ---
-static int16_t* noisemaker_preview_buffer = nullptr;
-static size_t noisemaker_preview_length = 0;
+// static int16_t* noisemaker_preview_buffer = nullptr;
+// static size_t noisemaker_preview_length = 0;
 
-FLASHMEM void allocateNoisePreview(size_t length) {
-  if (noisemaker_preview_buffer) {
-    extmem_free(noisemaker_preview_buffer);
-    noisemaker_preview_buffer = nullptr;
-  }
-  noisemaker_preview_buffer = (int16_t*)extmem_malloc(length * sizeof(int16_t));
-  noisemaker_preview_length = length;
-}
+// FLASHMEM void allocateNoisePreview(size_t length) {
+//   if (noisemaker_preview_buffer) {
+//     extmem_free(noisemaker_preview_buffer);
+//     noisemaker_preview_buffer = nullptr;
+//   }
+//   noisemaker_preview_buffer = (int16_t*)extmem_malloc(length * sizeof(int16_t));
+//   noisemaker_preview_length = length;
+// }
 
 
 FLASHMEM FLASHMEM void nm_preview_free() {
@@ -87,45 +87,28 @@ FLASHMEM FLASHMEM void nm_preview_free() {
 
 }
 
-// Modified allocation function for stereo
-// FLASHMEM bool nm_preview_alloc(uint32_t frames, uint8_t channels) {
-//   const uint32_t bytes = frames * channels * sizeof(int16_t);
-
-//   // Free existing data
-//   nm_preview_free();
-
-//   // Allocate new memory with error checking
-//   nm_preview_data = (int16_t*)nm_psram_malloc(bytes);
-//   if (!nm_preview_data) {
-//     nm_preview_len = 0;
-//     return false;
-//   }
-
-//   // Initialize the memory to zero
-//   memset(nm_preview_data, 0, bytes);
-
-//   nm_preview_len = frames;
-//   return true;
-// }
-
-// Modified allocation function to always allocate a 5-second buffer.
 FLASHMEM bool nm_preview_alloc(uint32_t frames, uint8_t channels) {
-  // Hardcode buffer size to 5 seconds to ensure enough length for reverb tail.
-  const uint32_t REVERB_BUFFER_SECONDS = 5;
-  const uint32_t targetFrames = (uint32_t)(SAMPLE_RATE * REVERB_BUFFER_SECONDS);
-  const uint32_t bytes = targetFrames * channels * sizeof(int16_t);
-
-  // Free existing data
   nm_preview_free();
 
-  // Allocate new memory with error checking
+  uint32_t targetFrames = frames;
+
+  if (nm_params.reverb_enable) {
+    const uint32_t REVERB_BUFFER_SECONDS = 5;
+    targetFrames = (uint32_t)(SAMPLE_RATE * REVERB_BUFFER_SECONDS);
+  } else if (channels == 2) {
+    const uint32_t STEREO_EXTRA_MS = 60;
+    const uint32_t extraFrames = (uint32_t)(SAMPLE_RATE * (STEREO_EXTRA_MS / 1000.0f));
+    targetFrames += extraFrames;
+  }
+
+  const uint32_t bytes = targetFrames * channels * sizeof(int16_t);
+
   nm_preview_data = (int16_t*)nm_psram_malloc(bytes);
   if (!nm_preview_data) {
     nm_preview_len = 0;
     return false;
   }
 
-  // Initialize the memory to zero
   memset(nm_preview_data, 0, bytes);
 
   nm_preview_len = targetFrames;
@@ -147,7 +130,7 @@ float convertUint8ToFloat(uint8_t value) {
 // A function to check if the generated sample itself has high-pitched noise.
 FLASHMEM bool isSampleDangerous() {
 
-  if (nm_params.category != NM_ZAP) //ZAP is supposed to have high frequencies like this
+  if (nm_params.category != NM_ZAP && nm_params.category !=NM_MARACAS) //ZAP is supposed to have high frequencies like this
   {
     const float DANGER_THRESHOLD = 0.05f; // Empirical value for detecting harsh high-freq content
     const uint8_t channels = nm_params.stereo_mode ? 2 : 1;
@@ -1708,6 +1691,8 @@ FLASHMEM void generateNoisePreview() {
 
   // Determine channel count
   uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
+  if (channels ==2)
+  length=length+((length/100)*110);
   // Allocate or reallocate the PSRAM preview buffer
   if (!nm_preview_alloc(length, channels)) return;
 
