@@ -1334,7 +1334,7 @@ extern bool remote_active;
 
 AsteroidsScreensaver::AsteroidsScreensaver() : score(0), activeAsteroids(0) {}
 
-void AsteroidsScreensaver::begin() {
+FLASHMEM void AsteroidsScreensaver::begin() {
   randomSeed(analogRead(0));
 
   // Initialize spaceship at center
@@ -1369,7 +1369,7 @@ void AsteroidsScreensaver::begin() {
   }
 }
 
-void AsteroidsScreensaver::update() {
+FLASHMEM void AsteroidsScreensaver::update() {
   // Reset asteroid flash states
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
     if (asteroids[i].active) {
@@ -1429,7 +1429,7 @@ void AsteroidsScreensaver::update() {
   }
 }
 
-void AsteroidsScreensaver::initAsteroidShape(Asteroid &a) {
+FLASHMEM void AsteroidsScreensaver::initAsteroidShape(Asteroid &a) {
   int basePoints=0;
   float baseSize=0;
   switch(a.size) {
@@ -1463,7 +1463,7 @@ void AsteroidsScreensaver::initAsteroidShape(Asteroid &a) {
   a.rotationSpeed = random(-5, 5) / 100.0;
 }
 
-void AsteroidsScreensaver::initAsteroid(Asteroid &a, AsteroidSize size) {
+FLASHMEM void AsteroidsScreensaver::initAsteroid(Asteroid &a, AsteroidSize size) {
   a.size = size;
   a.active = true;
   
@@ -1498,7 +1498,7 @@ void AsteroidsScreensaver::initAsteroid(Asteroid &a, AsteroidSize size) {
   initAsteroidShape(a);
 }
 
-void AsteroidsScreensaver::updateAsteroid(Asteroid &a) {
+FLASHMEM void AsteroidsScreensaver::updateAsteroid(Asteroid &a) {
   if (!a.active) return;
   
   a.prevCenterX = a.centerX;
@@ -1525,7 +1525,7 @@ void AsteroidsScreensaver::updateAsteroid(Asteroid &a) {
   a.rotation += constrain(a.rotationSpeed, -0.1f, 0.1f);
 }
 
-void AsteroidsScreensaver::drawAsteroid(Asteroid &a, uint16_t color) {
+FLASHMEM void AsteroidsScreensaver::drawAsteroid(Asteroid &a, uint16_t color) {
   if (!a.active) return;
   
   for (int i = 0; i < a.numPoints; i++) {
@@ -1547,7 +1547,7 @@ void AsteroidsScreensaver::drawAsteroid(Asteroid &a, uint16_t color) {
   }
 }
 
-void AsteroidsScreensaver::spawnAsteroidFromBorder() {
+FLASHMEM void AsteroidsScreensaver::spawnAsteroidFromBorder() {
   int slot = -1;
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
     if (!asteroids[i].active) {
@@ -1627,7 +1627,7 @@ void AsteroidsScreensaver::spawnAsteroidFromBorder() {
   activeAsteroids++;
 }
 
-void AsteroidsScreensaver::updateSpaceship() {
+FLASHMEM void AsteroidsScreensaver::updateSpaceship() {
   const float ROTATION_SPEED = 0.03f;  // Half rotation speed
   const float SHOT_SPEED = 12.0f;     // Laser speed
   
@@ -1935,7 +1935,7 @@ void AsteroidsScreensaver::updateSpaceship() {
   }
 }
 
-void AsteroidsScreensaver::splitAsteroid(int index) {
+FLASHMEM void AsteroidsScreensaver::splitAsteroid(int index) {
   Asteroid &parent = asteroids[index];
   AsteroidSize newSize = MEDIUM; 
   int numFragments=0;
@@ -2030,7 +2030,7 @@ void AsteroidsScreensaver::splitAsteroid(int index) {
   ship.shotActive = false;
 }
 
-void AsteroidsScreensaver::fireShot() {
+FLASHMEM void AsteroidsScreensaver::fireShot() {
   // Find an inactive shot slot
   int slot = -1;
   for (int i = 0; i < MAX_SHOTS; i++) {
@@ -2111,7 +2111,7 @@ void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
   }
 }
 
-void AsteroidsScreensaver::drawShot(LaserShot &shot) {
+FLASHMEM void AsteroidsScreensaver::drawShot(LaserShot &shot) {
   // Draw a line segment (double length)
   float backX = shot.x - shot.vx * 0.6f;
   float backY = shot.y - shot.vy * 0.6f;
@@ -2122,7 +2122,7 @@ void AsteroidsScreensaver::drawShot(LaserShot &shot) {
   display.drawLine(backX, backY, shot.x, shot.y, RED);
 }
 
-void AsteroidsScreensaver::drawFuelGauge() {
+FLASHMEM void AsteroidsScreensaver::drawFuelGauge() {
   // Double the gauge size
   const uint8_t gaugeWidth = 60;
   const uint8_t gaugeHeight = 10;
@@ -2160,7 +2160,7 @@ if (remote_active) {
   display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
 }
 
-void AsteroidsScreensaver::drawShieldGauge() {
+FLASHMEM void AsteroidsScreensaver::drawShieldGauge() {
   // Shield gauge - same size as fuel gauge
   const uint8_t gaugeWidth = 60;
   const uint8_t gaugeHeight = 10;
@@ -2198,7 +2198,7 @@ void AsteroidsScreensaver::drawShieldGauge() {
 
 }
 
-void AsteroidsScreensaver::drawScore() {
+FLASHMEM void AsteroidsScreensaver::drawScore() {
   // Display score at top middle (y=5, x=center)
   const int x = 7*CHAR_width; // Center the score display
   
@@ -2211,7 +2211,7 @@ void AsteroidsScreensaver::drawScore() {
   display.print(scoreStr);
 }
 
-void AsteroidsScreensaver::savePreviousState() {
+FLASHMEM void AsteroidsScreensaver::savePreviousState() {
   ship.prevX = ship.x;
   ship.prevY = ship.y;
   ship.prevAngle = ship.angle;
@@ -2234,7 +2234,7 @@ void AsteroidsScreensaver::savePreviousState() {
   }
 }
 
-void AsteroidsScreensaver::erasePreviousState() {
+FLASHMEM void AsteroidsScreensaver::erasePreviousState() {
   // Erase asteroids at previous positions
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
     if (asteroids[i].active) {

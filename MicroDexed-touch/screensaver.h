@@ -32,13 +32,13 @@ public:
 
 private:
   // Constants
-  static const int MAX_ASTEROIDS = 20;
-  static const int MAX_SHOTS = 3;
+  static const int MAX_ASTEROIDS = 30;
+  static const int MAX_SHOTS = 6;
   static const int MAX_POINTS = 12;
   static constexpr float MIN_SPEED = 0.2f;
 static constexpr float MAX_SPEED = 1.0f;
-  static const int STARTING_ASTEROIDS = 4;
-  static const int MIN_ASTEROIDS = 4;
+  static const int STARTING_ASTEROIDS = 6;
+  static const int MIN_ASTEROIDS = 6;
   const float THRUST_POWER = 0.15f;
   const float MAX_SHIP_SPEED = 1.7f;
   const float FUEL_CONSUMPTION = 100.0f / (2.0f * 30.0f);
