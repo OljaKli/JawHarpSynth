@@ -43,19 +43,19 @@ public:
     //     return analogWrite((uint8_t)ch, data, b_eep);
     // }
 
-    // uint8_t analogWrite(uint8_t ch, uint16_t data, bool b_eep = false)
-    // {
-    //     if (b_eep)
-    //     {
-    //         eep_[ch].data = data;
-    //         return singleWrite(ch);
-    //     }
-    //     else
-    //     {
-    //         reg_[ch].data = data;
-    //         return fastWrite();
-    //     }
-    // }
+    uint8_t analogWrite(uint8_t ch, uint16_t data, bool b_eep = false)
+    {
+        if (b_eep)
+        {
+            eep_[ch].data = data;
+            return singleWrite(ch);
+        }
+        else
+        {
+            reg_[ch].data = data;
+            return fastWrite();
+        }
+    }
 
     uint8_t analogWrite(uint16_t a, uint16_t b, uint16_t c, uint16_t d, bool b_eep = false)
     {
@@ -198,14 +198,14 @@ private:
         return wire_->endTransmission();
     }
 
-    // uint8_t singleWrite(uint8_t ch)
-    // {
-    //     wire_->beginTransmission(addr_);
-    //     wire_->write((uint8_t)CMD::SINGLE_WRITE | (ch << 1));
-    //     wire_->write(((uint8_t)eep_[ch].vref << 7) | ((uint8_t)eep_[ch].pd << 5) | ((uint8_t)eep_[ch].gain << 4) | highByte(eep_[ch].data));
-    //     wire_->write(lowByte(eep_[ch].data));
-    //     return wire_->endTransmission();
-    // }
+    uint8_t singleWrite(uint8_t ch)
+    {
+        wire_->beginTransmission(addr_);
+        wire_->write((uint8_t)CMD::SINGLE_WRITE | (ch << 1));
+        wire_->write(((uint8_t)eep_[ch].vref << 7) | ((uint8_t)eep_[ch].pd << 5) | ((uint8_t)eep_[ch].gain << 4) | highByte(eep_[ch].data));
+        wire_->write(lowByte(eep_[ch].data));
+        return wire_->endTransmission();
+    }
 
 private:
 

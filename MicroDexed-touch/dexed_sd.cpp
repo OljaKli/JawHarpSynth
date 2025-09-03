@@ -520,8 +520,8 @@ FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
   return (true);
 }
 
- extern uint8_t sysex_pool_number;
- extern uint8_t sysex_bank_number;
+extern uint8_t sysex_pool_number;
+extern uint8_t sysex_bank_number;
 
 FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
 {
@@ -559,7 +559,7 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
           LOG.println(entry.name());
 #endif
           //snprintf_P(tmp2, sizeof(tmp2), PSTR("/%s/%s/%s"), DEXED_CONFIG_PATH, tmp, entry.name());
-         snprintf(tmp2, sizeof(tmp2), "%s/%s", tmp, entry.name());
+          snprintf(tmp2, sizeof(tmp2), "%s/%s", tmp, entry.name());
           entry.close();
 #ifdef DEBUG
           LOG.printf("Remove file %s\n", tmp2);
@@ -588,8 +588,8 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
     LOG.print(bank_filename);
     LOG.print(F("..."));
 #endif
-   
-    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%d/%s"), DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number,bank_filename);
+
+    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%d/%s"), DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number, bank_filename);
     root = SD.open(tmp, FILE_WRITE);
     // root = SD.open(bank_filename, FILE_WRITE);
 
@@ -2130,6 +2130,12 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
 /******************************************************************************
    SD SYS
  ******************************************************************************/
+
+extern uint8_t dac_cv_2;
+extern uint8_t dac_cv_4;
+extern uint8_t dac_cv_transpose;
+
+
 FLASHMEM bool load_sd_sys_json(void)
 {
 
@@ -2181,9 +2187,13 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
         configuration.sys.swap_midi_leds = data_json["swap_midi_leds"];
+
         configuration.sys.vol_control = data_json["vol_control"];
         configuration.sys.sus_pedal = data_json["sus_pedal"];
         configuration.sys.ext_clock = data_json["ext_clock"];
+        dac_cv_transpose = data_json["cvtranspose"];
+        dac_cv_2 = data_json["cv2cc"];
+        dac_cv_4 = data_json["cv4cc"];
 
         if (data_json["rgb_enc_color_def"] > 0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
@@ -2288,6 +2298,10 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["vol_control"] = configuration.sys.vol_control;
       data_json["sus_pedal"] = configuration.sys.sus_pedal;
       data_json["ext_clock"] = configuration.sys.ext_clock;
+
+      data_json["cvtranspose"] = dac_cv_transpose;
+      data_json["cv2cc"] = dac_cv_2;
+      data_json["cv4cc"] = dac_cv_4;
 
       if (configuration.sys.rgb_enc_color_def != 0)
         data_json["rgb_enc_color_def"] = configuration.sys.rgb_enc_color_def;
@@ -4725,17 +4739,17 @@ FLASHMEM void saveNoiseToSdCard()
     Serial.println("SD Card initialization failed!");
     return;
   }
-  
+
   uint8_t targetSlot = NUM_STATIC_PITCHED_SAMPLES + noisemaker_custom_slot;
 
   // Construct the full path
   char path[FULLPATH_MAX_LEN];
-  snprintf(path, sizeof(path), "/CUSTOM/%s/%s", noisemaker_short_category_names[nm_params.category] , drum_config[targetSlot].filename);
-  
+  snprintf(path, sizeof(path), "/CUSTOM/%s/%s", noisemaker_short_category_names[nm_params.category], drum_config[targetSlot].filename);
+
   // Create directories if they don't exist
   char dir_path[FULLPATH_MAX_LEN];
-  snprintf(dir_path, sizeof(dir_path), "/CUSTOM/%s",  noisemaker_short_category_names[nm_params.category] );
-   AudioNoInterrupts();
+  snprintf(dir_path, sizeof(dir_path), "/CUSTOM/%s", noisemaker_short_category_names[nm_params.category]);
+  AudioNoInterrupts();
   if (!SD.exists(dir_path)) {
     if (!SD.mkdir(dir_path)) {
       return;
@@ -4746,33 +4760,33 @@ FLASHMEM void saveNoiseToSdCard()
     SD.remove(path);
 
   File file;
- 
+
   file = SD.open(path, FILE_WRITE);
-    writeWavHeader(file, 44100, drum_config[targetSlot].numChannels);
+  writeWavHeader(file, 44100, drum_config[targetSlot].numChannels);
 
-uint32_t totalToWrite = drum_config[targetSlot].len * sizeof(int16_t);
-//uint32_t totalToWrite = drum_config[targetSlot].len * drum_config[targetSlot].numChannels * sizeof(int16_t);
-uint8_t *dataPtr = (uint8_t*)drum_config[targetSlot].drum_data;
-uint32_t totalWritten = 0;
+  uint32_t totalToWrite = drum_config[targetSlot].len * sizeof(int16_t);
+  //uint32_t totalToWrite = drum_config[targetSlot].len * drum_config[targetSlot].numChannels * sizeof(int16_t);
+  uint8_t* dataPtr = (uint8_t*)drum_config[targetSlot].drum_data;
+  uint32_t totalWritten = 0;
 
-while (totalWritten < totalToWrite) {
+  while (totalWritten < totalToWrite) {
     int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
     if (n <= 0) {
-        break;
+      break;
     }
     totalWritten += n;
-}
+  }
 
-uint32_t dataChunkSize = totalWritten;
-uint32_t mainChunkSize = 36 + dataChunkSize;
+  uint32_t dataChunkSize = totalWritten;
+  uint32_t mainChunkSize = 36 + dataChunkSize;
 
-file.seek(4);
-encodeUint32(file, mainChunkSize);
-file.seek(40);
-encodeUint32(file, dataChunkSize);
+  file.seek(4);
+  encodeUint32(file, mainChunkSize);
+  file.seek(40);
+  encodeUint32(file, dataChunkSize);
 
-file.flush();
-file.close();
+  file.flush();
+  file.close();
 
   AudioInterrupts();
 }
@@ -4783,7 +4797,7 @@ FLASHMEM void saveCustomSampleToSdCard(uint8_t sample_id)
     ;
     return;
   }
-  
+
   if (sample_id >= NUM_DRUMSET_CONFIG) return;
 
   // Get the directory path and filename
@@ -4816,15 +4830,15 @@ FLASHMEM void saveCustomSampleToSdCard(uint8_t sample_id)
   writeWavHeader(file, 44100, drum_config[sample_id].numChannels);
 
   uint32_t totalToWrite = drum_config[sample_id].len * sizeof(int16_t);
-  uint8_t *dataPtr = (uint8_t*)drum_config[sample_id].drum_data;
+  uint8_t* dataPtr = (uint8_t*)drum_config[sample_id].drum_data;
   uint32_t totalWritten = 0;
 
   while (totalWritten < totalToWrite) {
-      int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
-      if (n <= 0) {
-          break;
-      }
-      totalWritten += n;
+    int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
+    if (n <= 0) {
+      break;
+    }
+    totalWritten += n;
   }
 
   uint32_t dataChunkSize = totalWritten;

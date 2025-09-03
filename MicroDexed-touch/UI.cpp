@@ -16789,6 +16789,10 @@ FLASHMEM void UI_func_braids(uint8_t param)
   }
 }
 
+extern uint8_t dac_cv_2;
+extern uint8_t dac_cv_4;
+extern uint8_t dac_cv_transpose;
+
 FLASHMEM void UI_func_cv_page(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -16823,6 +16827,26 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     display.print(F("VELOCITY"));
     setCursor_textGrid_small(1, 8);
     display.print(F("OUTPUT VELOCITY"));
+
+     setCursor_textGrid_small(1, 9);
+    display.print(F("MIDI CC > CV2"));
+     setCursor_textGrid_small(1, 10);
+    display.print(F("MIDI CC > CV4"));
+     setCursor_textGrid_small(1, 11);
+    display.print(F("NOTE TRANSP.>CV1"));
+ display.setTextColor(GREY2);
+     setCursor_textGrid_small(28, 10);
+    display.print(F("EDIT PARAMETERS IN"));
+    setCursor_textGrid_small(28, 11);
+    display.print(F("SYSTEM > SYSTEM SETTINGS"));
+    display.setTextColor(GREY1);
+
+ setCursor_textGrid_small(19, 9);
+        print_formatted_number(dac_cv_2, 2);
+        setCursor_textGrid_small(19, 10);
+        print_formatted_number(dac_cv_4, 2);
+         setCursor_textGrid_small(19, 11);
+        print_formatted_number(dac_cv_transpose, 2);
 
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
@@ -19602,6 +19626,8 @@ FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t valu
 
 }
 
+
+
 FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
 {
   const uint8_t max_visible_settings = 10;
@@ -19644,17 +19670,33 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 #endif
       break;
     case 16: display.print(F("ANALOG VOLUME CONTROL"));
-#ifndef MUSIKANDMORE
+#ifndef MCP_CV
       display.print(F(" [NA]"));
 #endif
       break;
     case 17: display.print(F("EXT. SUSTAIN PEDAL/DAMPER"));
-#ifndef MUSIKANDMORE
+#ifndef MCP_CV
       display.print(F(" [NA]"));
 #endif
       break;
     case 18: display.print(F("EXTERNAL CV CLOCK INPUT"));
-#ifndef MUSIKANDMORE
+#ifndef MCP_CV
+      display.print(F(" [NA]"));
+#endif
+      break;
+
+       case 19: display.print(F("MIDI INPUT CC -> CV2"));
+#ifndef MCP_CV
+      display.print(F(" [NA]"));
+#endif
+      break;
+       case 20: display.print(F("MIDI INPUT CC -> CV4"));
+#ifndef MCP_CV
+      display.print(F(" [NA]"));
+#endif
+      break;
+       case 21: display.print(F("NOTE TRANSPOSE -> CV1"));
+#ifndef MCP_CV
       display.print(F(" [NA]"));
 #endif
       break;
@@ -19693,6 +19735,11 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
     case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
 
+case 19: print_formatted_number(dac_cv_2, 2);  break;
+case 20: print_formatted_number(dac_cv_4, 2);  break;
+case 21: print_formatted_number(dac_cv_transpose, 2);  break;
+
+
       break;
 
     }
@@ -19730,7 +19777,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 19; // Zero Indexed
+  static uint8_t total_menu_items = 22; // Zero Indexed
 
   if (LCDML.FUNC_setup())
   {
@@ -19808,6 +19855,11 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           else
             seq.clock = 0;
           break;
+
+          case 19: dac_cv_2 = constrain(dac_cv_2 + (e.dir * 1), 0, 99); break;
+          case 20: dac_cv_4 = constrain(dac_cv_4 + (e.dir * 1), 0, 99); break;
+          case 21: dac_cv_transpose = constrain(dac_cv_transpose + (e.dir * 1), 0, 36); break;
+
         }
       }
       _render_misc_settings(scroll_position, total_menu_items);

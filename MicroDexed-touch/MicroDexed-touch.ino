@@ -1107,8 +1107,7 @@ void initMCP4728() {
   // dac.analogWrite(MCP4728::DAC_CH::B, 222);
   // dac.analogWrite(MCP4728::DAC_CH::C, 333);
   // dac.analogWrite(MCP4728::DAC_CH::D, 444);
-
-  //dac.enable(true);
+  dac.enable(true);
   //dac.readRegisters();
   delay(500);
 }
@@ -2445,9 +2444,11 @@ uint8_t dac_state = 0;
 uint8_t dac_midi_note;
 uint8_t dac_midi_vel;
 uint16_t dac_cv_1;
-//uint16_t dac_cv_2;
 uint16_t dac_cv_3;
-//uint16_t dac_cv_4;
+uint8_t dac_cv_transpose;
+
+uint8_t dac_cv_2=1;
+uint8_t dac_cv_4=11;
 
 extern void print_note_name_and_octave(uint8_t inNumber);
 extern ChordInfo currentChord;
@@ -2837,6 +2838,7 @@ if (noisemaker_update_params_flag)
         print_formatted_number(dac_midi_vel, 3);
         setCursor_textGrid_small(19, 8);
         print_formatted_number(dac_cv_3, 4);
+
         setCursor_textGrid_small(30, 1);
         display.print("ON");
       }
@@ -3808,16 +3810,19 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running == false)) ///CV Output
         {
-          dac_cv_1 = (inNumber-24)  * NOTESTEP_CV;
+          dac_cv_1 = (inNumber-24+dac_cv_transpose)  * NOTESTEP_CV;
           dac_cv_3 = inVelocity * 25.98f;
 #ifdef MCP_CV 
-          dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
-          dac.enable(true);
+         // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
 
+          dac.analogWrite(0, dac_cv_1);
+          dac.analogWrite(2, dac_cv_3);
+          //dac.enable(true);
+#endif
           dac_midi_note = inNumber;
           dac_midi_vel = inVelocity;
           dac_state = 1;
-#endif
+
         }
       }
     }
@@ -4041,7 +4046,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     {
 #ifdef MCP_CV ///CV Output
       // dac.analogWrite((inNumber - 8) * NOTESTEP_CV, inVelocity * 31, 0, 0);
-      dac.enable(false);
+     // dac.enable(false);
       dac_midi_note = 0;
       dac_midi_vel = 0;
       dac_state = 2;
@@ -4125,6 +4130,14 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
       return;
     }
     // end MDT internal CC
+
+#ifdef  MCP_CV
+if (inCtrl==dac_cv_2)
+ dac.analogWrite(1, inValue* 25.98f);
+ else
+ if (inCtrl==dac_cv_4)
+ dac.analogWrite(3, inValue* 25.98f);
+#endif
 
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
     {
