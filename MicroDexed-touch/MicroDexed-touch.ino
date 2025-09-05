@@ -422,6 +422,10 @@ AudioAnalyzePeak mb_after_r;
 AudioRecordQueue record_queue_l;
 AudioRecordQueue record_queue_r;
 
+#ifdef COMPILE_FOR_PSRAM
+extern void load_sd_noisemaker_json(void);
+#endif
+
 //
 // Static patching of audio objects
 //
@@ -1039,8 +1043,6 @@ int analog_volume_value;
 int analog_volume_value_previous;
 #endif
 
-
-
 void updateEncoderL(void)
 {
   ENCODER[ENC_L].update();
@@ -1073,6 +1075,12 @@ FLASHMEM void All_Button_LEDS(bool state)
 
     setled(LED_BUT_B, HIGH);
     setled(LED_BUT_A, HIGH);
+
+#ifdef MCP_CV       
+           digitalWrite(GATE_OUT, HIGH); 
+            digitalWrite(CV_CLOCK_OUT, HIGH); 
+#endif
+
   }
   else {
     if (!(configuration.sys.ext_clock && cv_clock))
@@ -1092,6 +1100,12 @@ FLASHMEM void All_Button_LEDS(bool state)
 
     //if (seq.edit_state==0)
     setled(LED_BUT_A, LOW);
+
+    #ifdef MCP_CV       
+           digitalWrite(GATE_OUT, LOW); 
+            digitalWrite(CV_CLOCK_OUT, LOW); 
+#endif
+
   }
 }
 #endif
@@ -1123,6 +1137,8 @@ FLASHMEM void setup()
 
 #ifdef  MCP_CV
   initMCP4728();  // 4x 12Bit DAC MCP4728 Init
+  pinMode(GATE_OUT, OUTPUT);
+  // digitalWrite(GATE_OUT, LOW); //gate off
 #endif
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
@@ -1175,6 +1191,8 @@ FLASHMEM void setup()
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
   pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
+
+
 
 #ifdef DEBUG
   LOG.println(CrashReport);
@@ -1750,6 +1768,10 @@ FLASHMEM void setup()
   display.console = true;
   display.fillRect(0, CHAR_height, DISPLAY_WIDTH, CHAR_height * 4, COLOR_BACKGROUND);
   display.console = false;
+#endif
+
+#ifdef COMPILE_FOR_PSRAM
+load_sd_noisemaker_json();
 #endif
 
   //SD CARD PRESET CONTENT NOT FOUND, PROVIDE POSSIBLE SOLUTIONS TO USER
@@ -3817,8 +3839,18 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
           dac.analogWrite(0, dac_cv_1);
           dac.analogWrite(2, dac_cv_3);
+
+           digitalWrite(GATE_OUT, HIGH); //gate on
+
           //dac.enable(true);
 #endif
+
+
+#ifdef MUSIKANDMORE
+      //setled(LED_DOWN, true);
+#endif
+
+
           dac_midi_note = inNumber;
           dac_midi_vel = inVelocity;
           dac_state = 1;
@@ -4050,7 +4082,16 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
       dac_midi_note = 0;
       dac_midi_vel = 0;
       dac_state = 2;
+        digitalWrite(GATE_OUT, LOW); //gate off
 #endif
+
+
+#ifdef MUSIKANDMORE
+    
+      //setled(LED_DOWN, false);
+#endif
+
+
 
     }
   }

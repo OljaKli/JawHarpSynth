@@ -36,6 +36,7 @@ using namespace TeensyTimerTool;
 #include "microsynth.h"
 #include "braids.h"
 #include "touch.h"
+#include "noisemaker.h"
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -2351,6 +2352,309 @@ FLASHMEM bool save_sd_sys_json(void)
 }
 
 /******************************************************************************
+   SD NOISEMAKER
+ ******************************************************************************/
+
+#ifdef COMPILE_FOR_PSRAM
+
+FLASHMEM void load_sd_noisemaker_json(void)
+{
+  if (sd_card_internal > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
+
+    AudioNoInterrupts();
+    if (SD.exists(filename))
+    {
+      json = SD.open(filename);
+      if (json)
+      {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        deserializeJson(data_json, json);
+
+        json.close();
+
+        nm_params.category = data_json["category"];
+        nm_params.mode = data_json["mode"];
+        nm_params.randomizer = data_json["randomizer"];
+        nm_params.stereo_mode = data_json["stereo_mode"];
+        nm_params.stereo_width = data_json["stereo_width"];
+        nm_params.reverb_enable = data_json["reverb_enable"];
+        nm_params.reverb_room_size = data_json["reverb_room_size"];
+        nm_params.reverb_damping = data_json["reverb_damping"];
+        nm_params.reverb_wet = data_json["reverb_wet"];
+        nm_params.reverb_dry = data_json["reverb_dry"];
+        nm_params.reverb_width = data_json["reverb_width"];
+        nm_params.accent = data_json["accent"];
+        nm_params.bd_pitch = data_json["bd_pitch"];
+        nm_params.bd_pitch_env = data_json["bd_pitch_env"];
+        nm_params.bd_pitch_decay = data_json["bd_pitch_decay"];
+        nm_params.bd_attack = data_json["bd_attack"];
+        nm_params.bd_decay = data_json["bd_decay"];
+        nm_params.bd_release = data_json["bd_release"];
+        nm_params.bd_tone = data_json["bd_tone"];
+        nm_params.bd_click = data_json["bd_click"];
+        nm_params.bd_noise = data_json["bd_noise"];
+        nm_params.bd_drive = data_json["bd_drive"];
+        nm_params.bd_comp = data_json["bd_comp"];
+        nm_params.bd_spread = data_json["bd_spread"];
+        nm_params.sn_tone1 = data_json["sn_tone1"];
+        nm_params.sn_tone2 = data_json["sn_tone2"];
+        nm_params.sn_tone_mix = data_json["sn_tone_mix"];
+        nm_params.sn_pitch_env = data_json["sn_pitch_env"];
+        nm_params.sn_decay = data_json["sn_decay"];
+        nm_params.sn_noise = data_json["sn_noise"];
+        nm_params.sn_bp_freq = data_json["sn_bp_freq"];
+        nm_params.sn_bp_q = data_json["sn_bp_q"];
+        nm_params.sn_snap = data_json["sn_snap"];
+        nm_params.sn_drive = data_json["sn_drive"];
+        nm_params.sn_spread = data_json["sn_spread"];
+        nm_params.tom_pitch = data_json["tom_pitch"];
+        nm_params.tom_decay = data_json["tom_decay"];
+        nm_params.tom_pitch_env = data_json["tom_pitch_env"];
+        nm_params.tom_tone = data_json["tom_tone"];
+        nm_params.tom_noise = data_json["tom_noise"];
+        nm_params.tom_spread = data_json["tom_spread"];
+        nm_params.conga_pitch = data_json["conga_pitch"];
+        nm_params.conga_decay = data_json["conga_decay"];
+        nm_params.conga_tone = data_json["conga_tone"];
+        nm_params.conga_pitch_env = data_json["conga_pitch_env"];
+        nm_params.conga_noise = data_json["conga_noise"];
+        nm_params.conga_spread = data_json["conga_spread"];
+        nm_params.rim_decay = data_json["rim_decay"];
+        nm_params.rim_tone = data_json["rim_tone"];
+        nm_params.rim_pitch = data_json["rim_pitch"];
+        nm_params.rim_mod_freq = data_json["rim_mod_freq"];
+        nm_params.rim_noise_bp_freq = data_json["rim_noise_bp_freq"];
+        nm_params.rim_drive = data_json["rim_drive"];
+        nm_params.rim_click_level = data_json["rim_click_level"];
+        nm_params.rim_noise_level = data_json["rim_noise_level"];
+        nm_params.rim_spread = data_json["rim_spread"];
+        nm_params.clap_repeats = data_json["clap_repeats"];
+        nm_params.clap_spread = data_json["clap_spread"];
+        nm_params.clap_tail = data_json["clap_tail"];
+        nm_params.clap_bp_hz = data_json["clap_bp_hz"];
+        nm_params.clap_bp_q = data_json["clap_bp_q"];
+        nm_params.clap_decay = data_json["clap_decay"];
+        nm_params.clap_drive = data_json["clap_drive"];
+        nm_params.hh_mode = data_json["hh_mode"];
+        nm_params.hh_tone = data_json["hh_tone"];
+        nm_params.hh_noise = data_json["hh_noise"];
+        nm_params.hh_bp_hz = data_json["hh_bp_hz"];
+        nm_params.hh_bp_q = data_json["hh_bp_q"];
+        nm_params.hh_decay = data_json["hh_decay"];
+        nm_params.hh_drive = data_json["hh_drive"];
+        nm_params.hh_detune = data_json["hh_detune"];
+        nm_params.hh_spread = data_json["hh_spread"];
+        nm_params.crash_tone = data_json["crash_tone"];
+        nm_params.crash_bp_hz = data_json["crash_bp_hz"];
+        nm_params.crash_bp_q = data_json["crash_bp_q"];
+        nm_params.crash_decay = data_json["crash_decay"];
+        nm_params.crash_spread = data_json["crash_spread"];
+        nm_params.ride_tone = data_json["ride_tone"];
+        nm_params.ride_bp_hz = data_json["ride_bp_hz"];
+        nm_params.ride_bp_q = data_json["ride_bp_q"];
+        nm_params.ride_decay = data_json["ride_decay"];
+        nm_params.ride_spread = data_json["ride_spread"];
+        nm_params.cb_freq1 = data_json["cb_freq1"];
+        nm_params.cb_freq2 = data_json["cb_freq2"];
+        nm_params.cb_amp_attack = data_json["cb_amp_attack"];
+        nm_params.cb_amp_decay = data_json["cb_amp_decay"];
+        nm_params.cb_tone_balance = data_json["cb_tone_balance"];
+        nm_params.cb_noise = data_json["cb_noise"];
+        nm_params.cb_drive = data_json["cb_drive"];
+        nm_params.cb_spread = data_json["cb_spread"];
+        nm_params.claves_hz = data_json["claves_hz"];
+        nm_params.claves_decay = data_json["claves_decay"];
+        nm_params.claves_drive = data_json["claves_drive"];
+        nm_params.claves_spread = data_json["claves_spread"];
+        nm_params.mar_bp_hz = data_json["mar_bp_hz"];
+        nm_params.mar_bp_q = data_json["mar_bp_q"];
+        nm_params.mar_decay = data_json["mar_decay"];
+        nm_params.mar_spread = data_json["mar_spread"];
+        nm_params.zap_pitch_start = data_json["zap_pitch_start"];
+        nm_params.zap_pitch_end = data_json["zap_pitch_end"];
+        nm_params.zap_decay = data_json["zap_decay"];
+        nm_params.zap_spread = data_json["zap_spread"];
+        nm_params.snap_decay = data_json["snap_decay"];
+        nm_params.snap_tone = data_json["snap_tone"];
+        nm_params.snap_pitch = data_json["snap_pitch"];
+        nm_params.snap_drive = data_json["snap_drive"];
+        nm_params.snap_spread = data_json["snap_spread"];
+        nm_params.synth_midi_note = data_json["synth_midi_note"];
+        nm_params.synth_attack = data_json["synth_attack"];
+        nm_params.synth_decay = data_json["synth_decay"];
+        nm_params.synth_sustain_level = data_json["synth_sustain_level"];
+        nm_params.synth_release = data_json["synth_release"];
+        nm_params.synth_filter_cutoff = data_json["synth_filter_cutoff"];
+        nm_params.synth_filter_resonance = data_json["synth_filter_resonance"];
+        nm_params.synth_filter_env_amount = data_json["synth_filter_env_amount"];
+        nm_params.synth_filter_env_attack = data_json["synth_filter_env_attack"];
+        nm_params.synth_filter_env_decay = data_json["synth_filter_env_decay"];
+        nm_params.synth_filter_env_release = data_json["synth_filter_env_release"];
+        nm_params.synth_waveform_mix = data_json["synth_waveform_mix"];
+        nm_params.synth_octave_mix = data_json["synth_octave_mix"];
+        nm_params.synth_spread = data_json["synth_spread"];
+        nm_params.synth_bass_mix = data_json["synth_bass_mix"];
+        nm_params.synth_detune = data_json["synth_detune"];
+        }
+      }
+    }
+  AudioInterrupts();
+}
+
+FLASHMEM void save_sd_noisemaker_json(void)
+{
+  if (sd_card_internal > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
+
+#ifdef DEBUG
+    LOG.print(F("Saving sys config to "));
+    LOG.println(filename);
+#endif
+
+    SD.remove(filename);
+    json = SD.open(filename, FILE_WRITE);
+    if (json)
+    {
+      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+     
+      data_json["category"] = nm_params.category;
+      data_json["mode"] = nm_params.mode;
+      data_json["randomizer"] = nm_params.randomizer;
+      data_json["stereo_mode"] = nm_params.stereo_mode;
+      data_json["stereo_width"] = nm_params.stereo_width;
+      data_json["reverb_enable"] = nm_params.reverb_enable;
+      data_json["reverb_room_size"] = nm_params.reverb_room_size;
+      data_json["reverb_damping"] = nm_params.reverb_damping;
+      data_json["reverb_wet"] = nm_params.reverb_wet;
+      data_json["reverb_dry"] = nm_params.reverb_dry;
+      data_json["reverb_width"] = nm_params.reverb_width;
+      data_json["accent"] = nm_params.accent;
+      data_json["bd_pitch"] = nm_params.bd_pitch;
+      data_json["bd_pitch_env"] = nm_params.bd_pitch_env;
+      data_json["bd_pitch_decay"] = nm_params.bd_pitch_decay;
+      data_json["bd_attack"] = nm_params.bd_attack;
+      data_json["bd_decay"] = nm_params.bd_decay;
+      data_json["bd_release"] = nm_params.bd_release;
+      data_json["bd_tone"] = nm_params.bd_tone;
+      data_json["bd_click"] = nm_params.bd_click;
+      data_json["bd_noise"] = nm_params.bd_noise;
+      data_json["bd_drive"] = nm_params.bd_drive;
+      data_json["bd_comp"] = nm_params.bd_comp;
+      data_json["bd_spread"] = nm_params.bd_spread;
+      data_json["sn_tone1"] = nm_params.sn_tone1;
+      data_json["sn_tone2"] = nm_params.sn_tone2;
+      data_json["sn_tone_mix"] = nm_params.sn_tone_mix;
+      data_json["sn_pitch_env"] = nm_params.sn_pitch_env;
+      data_json["sn_decay"] = nm_params.sn_decay;
+      data_json["sn_noise"] = nm_params.sn_noise;
+      data_json["sn_bp_freq"] = nm_params.sn_bp_freq;
+      data_json["sn_bp_q"] = nm_params.sn_bp_q;
+      data_json["sn_snap"] = nm_params.sn_snap;
+      data_json["sn_drive"] = nm_params.sn_drive;
+      data_json["sn_spread"] = nm_params.sn_spread;
+      data_json["tom_pitch"] = nm_params.tom_pitch;
+      data_json["tom_decay"] = nm_params.tom_decay;
+      data_json["tom_pitch_env"] = nm_params.tom_pitch_env;
+      data_json["tom_tone"] = nm_params.tom_tone;
+      data_json["tom_noise"] = nm_params.tom_noise;
+      data_json["tom_spread"] = nm_params.tom_spread;
+      data_json["conga_pitch"] = nm_params.conga_pitch;
+      data_json["conga_decay"] = nm_params.conga_decay;
+      data_json["conga_tone"] = nm_params.conga_tone;
+      data_json["conga_pitch_env"] = nm_params.conga_pitch_env;
+      data_json["conga_noise"] = nm_params.conga_noise;
+      data_json["conga_spread"] = nm_params.conga_spread;
+      data_json["rim_decay"] = nm_params.rim_decay;
+      data_json["rim_tone"] = nm_params.rim_tone;
+      data_json["rim_pitch"] = nm_params.rim_pitch;
+      data_json["rim_mod_freq"] = nm_params.rim_mod_freq;
+      data_json["rim_noise_bp_freq"] = nm_params.rim_noise_bp_freq;
+      data_json["rim_drive"] = nm_params.rim_drive;
+      data_json["rim_click_level"] = nm_params.rim_click_level;
+      data_json["rim_noise_level"] = nm_params.rim_noise_level;
+      data_json["rim_spread"] = nm_params.rim_spread;
+      data_json["clap_repeats"] = nm_params.clap_repeats;
+      data_json["clap_spread"] = nm_params.clap_spread;
+      data_json["clap_tail"] = nm_params.clap_tail;
+      data_json["clap_bp_hz"] = nm_params.clap_bp_hz;
+      data_json["clap_bp_q"] = nm_params.clap_bp_q;
+      data_json["clap_decay"] = nm_params.clap_decay;
+      data_json["clap_drive"] = nm_params.clap_drive;
+      data_json["hh_mode"] = nm_params.hh_mode;
+      data_json["hh_tone"] = nm_params.hh_tone;
+      data_json["hh_noise"] = nm_params.hh_noise;
+      data_json["hh_bp_hz"] = nm_params.hh_bp_hz;
+      data_json["hh_bp_q"] = nm_params.hh_bp_q;
+      data_json["hh_decay"] = nm_params.hh_decay;
+      data_json["hh_drive"] = nm_params.hh_drive;
+      data_json["hh_detune"] = nm_params.hh_detune;
+      data_json["hh_spread"] = nm_params.hh_spread;
+      data_json["crash_tone"] = nm_params.crash_tone;
+      data_json["crash_bp_hz"] = nm_params.crash_bp_hz;
+      data_json["crash_bp_q"] = nm_params.crash_bp_q;
+      data_json["crash_decay"] = nm_params.crash_decay;
+      data_json["crash_spread"] = nm_params.crash_spread;
+      data_json["ride_tone"] = nm_params.ride_tone;
+      data_json["ride_bp_hz"] = nm_params.ride_bp_hz;
+      data_json["ride_bp_q"] = nm_params.ride_bp_q;
+      data_json["ride_decay"] = nm_params.ride_decay;
+      data_json["ride_spread"] = nm_params.ride_spread;
+      data_json["cb_freq1"] = nm_params.cb_freq1;
+      data_json["cb_freq2"] = nm_params.cb_freq2;
+      data_json["cb_amp_attack"] = nm_params.cb_amp_attack;
+      data_json["cb_amp_decay"] = nm_params.cb_amp_decay;
+      data_json["cb_tone_balance"] = nm_params.cb_tone_balance;
+      data_json["cb_noise"] = nm_params.cb_noise;
+      data_json["cb_drive"] = nm_params.cb_drive;
+      data_json["cb_spread"] = nm_params.cb_spread;
+      data_json["claves_hz"] = nm_params.claves_hz;
+      data_json["claves_decay"] = nm_params.claves_decay;
+      data_json["claves_drive"] = nm_params.claves_drive;
+      data_json["claves_spread"] = nm_params.claves_spread;
+      data_json["mar_bp_hz"] = nm_params.mar_bp_hz;
+      data_json["mar_bp_q"] = nm_params.mar_bp_q;
+      data_json["mar_decay"] = nm_params.mar_decay;
+      data_json["mar_spread"] = nm_params.mar_spread;
+      data_json["zap_pitch_start"] = nm_params.zap_pitch_start;
+      data_json["zap_pitch_end"] = nm_params.zap_pitch_end;
+      data_json["zap_decay"] = nm_params.zap_decay;
+      data_json["zap_spread"] = nm_params.zap_spread;
+      data_json["snap_decay"] = nm_params.snap_decay;
+      data_json["snap_tone"] = nm_params.snap_tone;
+      data_json["snap_pitch"] = nm_params.snap_pitch;
+      data_json["snap_drive"] = nm_params.snap_drive;
+      data_json["snap_spread"] = nm_params.snap_spread;
+      data_json["synth_midi_note"] = nm_params.synth_midi_note;
+      data_json["synth_attack"] = nm_params.synth_attack;
+      data_json["synth_decay"] = nm_params.synth_decay;
+      data_json["synth_sustain_level"] = nm_params.synth_sustain_level;
+      data_json["synth_release"] = nm_params.synth_release;
+      data_json["synth_filter_cutoff"] = nm_params.synth_filter_cutoff;
+      data_json["synth_filter_resonance"] = nm_params.synth_filter_resonance;
+      data_json["synth_filter_env_amount"] = nm_params.synth_filter_env_amount;
+      data_json["synth_filter_env_attack"] = nm_params.synth_filter_env_attack;
+      data_json["synth_filter_env_decay"] = nm_params.synth_filter_env_decay;
+      data_json["synth_filter_env_release"] = nm_params.synth_filter_env_release;
+      data_json["synth_waveform_mix"] = nm_params.synth_waveform_mix;
+      data_json["synth_octave_mix"] = nm_params.synth_octave_mix;
+      data_json["synth_spread"] = nm_params.synth_spread;
+       data_json["synth_bass_mix"] = nm_params.synth_bass_mix;
+       data_json["synth_detune"] = nm_params.synth_detune;
+      
+      serializeJsonPretty(data_json, json);
+      json.close();
+    }
+    json.close();
+  }
+  AudioInterrupts();
+}
+
+#endif
+
+/******************************************************************************
    SD BRAIDS
  ******************************************************************************/
 extern uint8_t braids_presetno;
@@ -4143,6 +4447,36 @@ FLASHMEM bool check_sd_braids_patch_exists(uint8_t number)
     char filename[CONFIG_FILENAME_LEN];
 
     snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
+
+    // check if file exists...
+    if (SD.exists(filename))
+    {
+      AudioInterrupts();
+      return (true);
+    }
+    else
+    {
+      AudioInterrupts();
+      return (false);
+    }
+  }
+  else
+  {
+    AudioInterrupts();
+    return (false);
+  }
+}
+
+
+
+FLASHMEM bool check_sd_noisemaker_config_exists()
+{
+  
+  AudioNoInterrupts();
+  if (sd_card_internal > 0)
+  {
+    char filename[CONFIG_FILENAME_LEN];
+ snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
 
     // check if file exists...
     if (SD.exists(filename))

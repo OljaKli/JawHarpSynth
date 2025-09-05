@@ -629,6 +629,8 @@ FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65,
   };
 }
 
+extern const char* midiToNote(uint8_t midiNote);
+
 FLASHMEM ScopeSettings& getCurrentScopeSettings(void) {
   return currentScopeSettings;
 }
@@ -7195,6 +7197,7 @@ FLASHMEM void pattern_editor_play_current_step(uint8_t step)
 
 FLASHMEM void print_filter_ringing_warning()
 {
+   display.setTextSize(1);
   display.setTextColor(COLOR_SYSTEXT, GREY3);
   setCursor_textGrid_small(25, 2);
   display.print(F("WARNING!"));
@@ -7288,8 +7291,37 @@ FLASHMEM void addAutoUpdateParameterEditor_uint8_t(const char* name, uint8_t min
     nullptr, // Use default getter
     [](Editor* editor, int16_t value) {
       *((uint8_t*)editor->value) = value;
-      //  generateNoisePreview(); // Auto-update preview
-       // drawNoiseMakerWaveform(true);
+    }
+  );
+}
+
+FLASHMEM void print_noisemaker_synth_note()
+{
+   if (nm_params.category==NM_SYNTH)
+  {
+  setCursor_textGrid_small(10, 15);
+    char note_name[4];
+     getNoteName(note_name, nm_params.synth_midi_note);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.print(note_name);
+  }
+}
+
+FLASHMEM void nm_print_note_text(){
+  if (nm_params.category==NM_SYNTH)
+  {
+     setCursor_textGrid_small(13, 15);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.print(" NOTE");
+  }
+}
+
+FLASHMEM void addAutoUpdateParameterEditor_uint8_t_note(const char* name, uint8_t minv, uint8_t maxv, uint8_t* value) {
+  ui.addEditor(name, minv, maxv, value,
+    nullptr, // Use default getter
+    [](Editor* editor, int16_t value) {
+      *((uint8_t*)editor->value) = value;
+print_noisemaker_synth_note();
     }
   );
 }
@@ -7343,9 +7375,12 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
   header(0, 5, "GLOBAL");
   ui.setCursor(0, 6);
   addAutoUpdateParameterEditor_uint8_t("LEVEL", 1, 100, &p.accent);
+  
   header(0, 8, "GLOBAL REVERB");
   ui.setCursor(0, 9);
-  addAutoUpdateParameterEditor_uint8_t("ROOM SIZE", 0, 100, &p.reverb_room_size);
+  
+
+addAutoUpdateParameterEditor_uint8_t("ROOM SIZE", 0, 100, &p.reverb_room_size);
   addAutoUpdateParameterEditor_uint8_t("DAMPING", 0, 100, &p.reverb_damping);
   addAutoUpdateParameterEditor_uint8_t("DRY", 0, 100, &p.reverb_dry);
   addAutoUpdateParameterEditor_uint8_t("WET", 0, 100, &p.reverb_wet);
@@ -7551,12 +7586,36 @@ case NM_RIM: {
     addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.snap_spread);
   } break;
 
+case NM_SYNTH: {
+
+   header(0, 14, "SYNTH");
+    ui.setCursor(0, 15);
+ addAutoUpdateParameterEditor_uint8_t_note("",      12, 126, &p.synth_midi_note);
+   addAutoUpdateParameterEditor_uint8_t("ATTACK",       0, 100, &p.synth_attack);
+            addAutoUpdateParameterEditor_uint8_t("DECAY",        0, 100, &p.synth_decay);
+            addAutoUpdateParameterEditor_uint8_t("SUST.LVL",  0, 100, &p.synth_sustain_level);
+            addAutoUpdateParameterEditor_uint8_t("RELEASE",      0, 100, &p.synth_release);
+  header(20, 8, "SYNTH");
+  ui.setCursor(20, 9);
+   
+            addAutoUpdateParameterEditor_uint8_t("FILT CUTOFF",  0, 100, &p.synth_filter_cutoff);
+            addAutoUpdateParameterEditor_uint8_t("FILT RESO",    0, 100, &p.synth_filter_resonance);
+            addAutoUpdateParameterEditor_uint8_t("FILT ENV AMT", 0, 100, &p.synth_filter_env_amount);
+            addAutoUpdateParameterEditor_uint8_t("FILT ENV ATTK",0, 100, &p.synth_filter_env_attack);
+            addAutoUpdateParameterEditor_uint8_t("FILT ENV DECAY",0, 100, &p.synth_filter_env_decay);
+            addAutoUpdateParameterEditor_uint8_t("FILT ENV REL",0, 100, &p.synth_filter_env_release);
+            addAutoUpdateParameterEditor_uint8_t("WAVE MIX",     0, 100, &p.synth_waveform_mix);
+            addAutoUpdateParameterEditor_uint8_t("OCTAVE MIX", 0, 100, &p.synth_octave_mix);
+             addAutoUpdateParameterEditor_uint8_t("SUB BASS",    0, 100, &p.synth_bass_mix);
+               addAutoUpdateParameterEditor_uint8_t("DETUNE",       0, 100, &p.synth_detune);
+             addAutoUpdateParameterEditor_uint8_t("SPREAD",       0, 100, &p.synth_spread);
+            
+} break;
+
 
   default: break;
   }
 }
-
-
 #endif
 
 // ===================== UI page ===========================================
@@ -7564,11 +7623,12 @@ case NM_RIM: {
 #ifdef COMPILE_FOR_PSRAM
 bool noisemaker_update_params_flag = false;
 bool noisemaker_needs_refresh = false;
-
+extern bool check_sd_noisemaker_config_exists();
 bool nm_firstSetup = true;
 extern void draw_nm_emulation_mode_button();
 extern void draw_nm_monostereo();
 extern void draw_nm_reverb_OffOn();
+extern void save_sd_noisemaker_json(void);
 
 FLASHMEM void UI_func_noisemaker(uint8_t param)
 {
@@ -7580,13 +7640,12 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     // Initialize only once
     if (nm_firstSetup) {
       ui.reset();
+      if (!check_sd_noisemaker_config_exists())
       initNoiseMakerParams(nm_params);
-      generateNoisePreview();          // <-- regenerate preview first
-      //  drawNoiseMakerWaveform(true);
-
+     // generateNoisePreview();
       nm_firstSetup = false;
     }
-
+ drawNoiseMakerWaveform(true);
     // --- PAGE HEADER ---
     display.setTextSize(1);
     display.setTextColor(RED, COLOR_BACKGROUND);
@@ -7654,12 +7713,9 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     draw_nm_monostereo();
     draw_nm_reverb_OffOn();
 
-    // --- Waveform preview ---
-  //  drawNoiseMakerWaveform(true);
-
-    // Generate initial preview
-  //  generateNoisePreview();
     addNoiseMakerParameterEditors(nm_params);
+    print_noisemaker_synth_note();
+   nm_print_note_text();
   }
 
   if (LCDML.FUNC_loop())
@@ -7688,9 +7744,7 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
         },
         [](Editor* editor, int16_t value) {
           nm_params.category = value;
-          //  initNoiseMakerParams(nm_params);
-         //  generateNoisePreview();          // <-- regenerate preview first
-      //drawNoiseMakerWaveform(true);    // <-- then draw it
+    
           noisemaker_needs_refresh = true;
         },
         [](Editor* editor, bool refresh) {
@@ -7728,6 +7782,8 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
 
       // --- Parameter editors for current category ---
       addNoiseMakerParameterEditors(nm_params);
+    print_noisemaker_synth_note();
+nm_print_note_text();
 
       // --- Touch buttons ---
       TouchButton::drawButton(GRID.X[1], GRID.Y[5], "RENDER", "SOUND", TouchButton::BUTTON_ACTIVE);
@@ -7745,10 +7801,17 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
   }
   if (LCDML.FUNC_close())
   {
+ display.setTextSize(1);
+    display.setTextColor(GREEN, COLOR_BACKGROUND);
+    setCursor_textGrid_small(0, 0);
+    display.print("SETTINGS SAVED");
+    
+    save_sd_noisemaker_json();
+delay(200);
     unregisterTouchHandler();
-    nm_firstSetup = true;
+   // nm_firstSetup = true;
     ui.clear();
-    nm_preview_free();
+    //nm_preview_free();
   }
 }
 
@@ -7798,7 +7861,7 @@ FLASHMEM void set_seq_timing()
     seq.ticks_max = 5; //(0-5 = 6)
 }
 
-extern const char* midiToNote(uint8_t midiNote);
+
 
 FLASHMEM void print_arr_split_range(uint8_t x, uint8_t y)
 {  //23, 7 on seq. settings page

@@ -21,12 +21,14 @@ extern uint8_t activeSample;
 extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 
 const char* noisemaker_category_names[] = {
-   "BASSDRUM" , "SNARE", "TOM", "CONGA", "RIMSHOT", "CLAP", "HIHAT", "CRASH", "RIDE", "COWBELL", "CLAVES", "MARACAS", "ZAP", "SNAP"
+   "BASSDRUM" , "SNARE", "TOM", "CONGA", "RIMSHOT", "CLAP", "HIHAT", "CRASH", "RIDE", "COWBELL", "CLAVES", "MARACAS", "ZAP", "SNAP", "SYNTH"
 };
 
 const char* noisemaker_short_category_names[] = {
-   "BD" , "SNARE", "TOM", "CONGA", "RIM", "CLAP", "HH", "CRASH", "RIDE", "COW", "CLAV", "MARA", "ZAP", "SNAP"
+   "BD" , "SNARE", "TOM", "CONGA", "RIM", "CLAP", "HH", "CRASH", "RIDE", "COW", "CLAV", "MARA", "ZAP", "SNAP", "SYNTH"
 };
+
+enum SynthWaveform { SINE, SAW, SQUARE, SQ80_BASS };
 
 FLASHMEM void addAutoUpdateParameterEditor_uint8_t(const char* name, uint8_t minv, uint8_t maxv, uint8_t* value);
 FLASHMEM void addAutoUpdateParameterEditor_uint16_t(const char* name, uint16_t minv, uint16_t maxv, uint16_t* value);
@@ -95,7 +97,8 @@ FLASHMEM bool nm_preview_alloc(uint32_t frames, uint8_t channels) {
   if (nm_params.reverb_enable) {
     const uint32_t REVERB_BUFFER_SECONDS = 5;
     targetFrames = (uint32_t)(SAMPLE_RATE * REVERB_BUFFER_SECONDS);
-  } else if (channels == 2) {
+  }
+  else if (channels == 2) {
     const uint32_t STEREO_EXTRA_MS = 60;
     const uint32_t extraFrames = (uint32_t)(SAMPLE_RATE * (STEREO_EXTRA_MS / 1000.0f));
     targetFrames += extraFrames;
@@ -130,7 +133,7 @@ float convertUint8ToFloat(uint8_t value) {
 // A function to check if the generated sample itself has high-pitched noise.
 FLASHMEM bool isSampleDangerous() {
 
-  if (nm_params.category != NM_ZAP && nm_params.category !=NM_MARACAS) //ZAP is supposed to have high frequencies like this
+  if (nm_params.category != NM_ZAP && nm_params.category != NM_MARACAS) //ZAP is supposed to have high frequencies like this
   {
     const float DANGER_THRESHOLD = 0.05f; // Empirical value for detecting harsh high-freq content
     const uint8_t channels = nm_params.stereo_mode ? 2 : 1;
@@ -519,7 +522,8 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
   p.bd_comp = 12;
 
   // SN
-  p.sn_tone1 = 180; p.sn_tone2 = 330;
+  p.sn_tone1 = 180; 
+  p.sn_tone2 = 330;
   p.sn_tone_mix = 50;
   p.sn_pitch_env = 20;
   p.sn_decay = 65;
@@ -605,6 +609,28 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
   p.zap_pitch_start = 6000;
   p.zap_pitch_end = 200;
   p.zap_decay = 50;
+
+  p.snap_decay=80;      // 20–80%
+  p.snap_tone=50;     // 20–100% (sine ↔ noise)
+ p.snap_pitch=1500;  // 1200–2800 Hz (woody ↔ metallic)
+ p.snap_drive=10;       // 0–20%
+ p.snap_spread=50;       // % stereo spread
+
+  p.synth_midi_note = 36;
+  p.synth_attack = 0;
+  p.synth_decay = 40;
+  p.synth_sustain_level = 1;
+  p.synth_release = 20;
+  p.synth_filter_cutoff = 100;
+  p.synth_filter_resonance = 90;
+  p.synth_filter_env_amount = 40;
+  p.synth_filter_env_attack = 0;
+  p.synth_filter_env_decay = 10;
+  p.synth_filter_env_release = 10;
+  p.synth_waveform_mix = 60;
+   p.synth_bass_mix = 1;
+  p.synth_spread = 20;
+  p.synth_octave_mix = 50;
 }
 
 // --------------------------- Time helpers (ms) -------------------------------
@@ -1570,6 +1596,298 @@ FLASHMEM static inline void generateSnap(const NoiseMakerParams& p, int16_t* psr
   }
 }
 
+//Synth
+// Custom implementation of linear interpolation
+float lerp(float a, float b, float t) {
+    return a + t * (b - a);
+}
+
+// Helper function to convert 0-100 values to a logarithmic scale for snappy envelopes
+float u8_to_ms(uint8_t value, float min_ms, float max_ms) {
+    float normalized_value = value / 100.0f;
+    return min_ms + powf(normalized_value, 2.0f) * (max_ms - min_ms);
+}
+
+// Helper function to convert MIDI note number to frequency in Hz
+float midi_to_hz(uint8_t midi_note) {
+    return 440.0f * powf(2.0f, (midi_note - 69.0f) / 12.0f);
+}
+
+// ADSR Envelope Generator with a fixed sustain duration
+float adsr_env(uint32_t current_sample, float attack_ms, float decay_ms, float sustain_level, float release_ms, float sustain_duration_ms) {
+    float current_time_ms = (float)current_sample / SAMPLE_RATE * 1000.0f;
+    
+    float attack_end_time_ms = attack_ms;
+    float decay_end_time_ms = attack_end_time_ms + decay_ms;
+    float sustain_end_time_ms = decay_end_time_ms + sustain_duration_ms;
+    
+    if (current_time_ms < attack_end_time_ms) {
+        // Attack stage: sweeps from 0 to 1
+        return current_time_ms / attack_end_time_ms;
+    } else if (current_time_ms < decay_end_time_ms) {
+        // Decay stage: sweeps from 1 down to sustain_level
+        float decay_pos_ms = current_time_ms - attack_end_time_ms;
+        float decay_slope = (1.0f - sustain_level) / decay_ms;
+        return 1.0f - (decay_pos_ms * decay_slope);
+    } else if (current_time_ms < sustain_end_time_ms) {
+        // Sustain stage: holds at sustain_level for the duration
+        return sustain_level;
+    } else {
+        // Release stage: sweeps from sustain_level to 0
+        float release_pos_ms = current_time_ms - sustain_end_time_ms;
+        float release_slope = sustain_level / release_ms;
+        float env_value = sustain_level - (release_pos_ms * release_slope);
+        return std::max(0.0f, env_value); // Ensure it doesn't go below zero
+    }
+}
+
+// Biquad filter implementation
+class Biquad {
+private:
+    float z1_l, z2_l, z1_r, z2_r;
+    float a1, a2, b0, b1, b2;
+
+public:
+    Biquad() {
+        z1_l = z2_l = z1_r = z2_r = 0.0f;
+    }
+
+    void setLowpass(float cutoff, float resonance) {
+        float q = 0.707f + resonance * 10.0f;
+        float w0 = 2.0f * PI * cutoff / SAMPLE_RATE;
+        float alpha = sinf(w0) / (2.0f * q);
+        float cos_w0 = cosf(w0);
+
+        float a0 = 1.0f + alpha;
+
+        b0 = (1.0f - cos_w0) / 2.0f;
+        b1 = 1.0f - cos_w0;
+        b2 = (1.0f - cos_w0) / 2.0f;
+        a1 = -2.0f * cos_w0;
+        a2 = 1.0f - alpha;
+
+        b0 /= a0;
+        b1 /= a0;
+        b2 /= a0;
+        a1 /= a0;
+        a2 /= a0;
+    }
+
+    float process(float input) {
+        float output = b0 * input + b1 * z1_l + b2 * z2_l - a1 * z1_l - a2 * z2_l;
+        z2_l = z1_l;
+        z1_l = output;
+        return output;
+    }
+
+    float process_l(float input) {
+        float output = b0 * input + b1 * z1_l + b2 * z2_l - a1 * z1_l - a2 * z2_l;
+        z2_l = z1_l;
+        z1_l = output;
+        return output;
+    }
+
+    float process_r(float input) {
+        float output = b0 * input + b1 * z1_r + b2 * z2_r - a1 * z1_r - a2 * z2_r;
+        z2_r = z1_r;
+        z1_r = output;
+        return output;
+    }
+};
+
+// -----------------------------
+// Bass Synth Generator (SQ-80 Style)
+// -----------------------------
+void generateSynth(const NoiseMakerParams& p, int16_t* psram_buffer, uint32_t n, bool mode909, uint8_t channels) {
+  const bool stereo = (channels == 2);
+  const float detune = (p.synth_detune / 100.0f) * 0.015f; 
+  const float spread_detune = (p.synth_spread / 100.0f) * 0.001f;
+
+  // Oscillator state variables
+  float phase1 = 0.0f, phase2 = 0.0f, phase3 = 0.0f, phase4 = 0.0f;
+  float base_freq = midi_to_hz(p.synth_midi_note);
+  float phase_octave_l = 0.0f, phase_octave_r = 0.0f;
+  float freq_octave_hz = base_freq * 2.0f;
+  float sub_phase_l = 0.0f;
+
+  // ADSR and Filter state variables
+  float attack_ms   = u8_to_ms(p.synth_attack, 1.0f, 1000.0f);
+  float decay_ms    = u8_to_ms(p.synth_decay, 10.0f, 3000.0f) / 4.0f;
+  float sustain_lvl = p.synth_sustain_level / 100.0f;
+  float release_ms  = u8_to_ms(p.synth_release, 10.0f, 3000.0f) / 10.0f;
+  float sustain_duration_ms = 1000.0f;
+  float filter_attack_ms   = u8_to_ms(p.synth_filter_env_attack, 1.0f, 1000.0f);
+  float filter_decay_ms = u8_to_ms(p.synth_filter_env_decay, 10.0f, 1000.0f);
+  float filter_sustain_lvl = p.synth_sustain_level / 100.0f;
+  float filter_release_ms  = u8_to_ms(p.synth_filter_env_release, 10.0f, 1000.0f);
+  float filter_env_amount = p.synth_filter_env_amount / 100.0f;
+
+  Biquad filter_l, filter_r;
+
+  // Oscillator mixes
+  float octave_mix   = p.synth_octave_mix / 100.0f;
+  float waveform_mix = p.synth_waveform_mix / 100.0f;
+  float bass_mix     = p.synth_bass_mix / 100.0f;
+
+  // Helper for saw wave
+  auto phase_to_saw = [](float ph) {
+    return 2.0f * (ph / (2.0f * PI)) - 1.0f;
+  };
+  
+  // --- PASS 1: Find the max peak value ---
+  float max_peak = 0.0f;
+  for (uint32_t i = 0; i < n; ++i) {
+    // Frequencies
+    float freq1 = base_freq;
+    float freq2 = base_freq * (1.0f + detune);
+    float freq3 = base_freq * (1.0f - detune);
+    float freq4 = base_freq * (1.0f * 2.0f);
+
+    // Phases
+    phase1       += 2.0f * PI * freq1 / SAMPLE_RATE;
+    phase2       += 2.0f * PI * freq2 / SAMPLE_RATE;
+    phase3       += 2.0f * PI * freq3 / SAMPLE_RATE;
+    phase4       += 2.0f * PI * freq4 / SAMPLE_RATE;
+    phase_octave_l += 2.0f * PI * freq_octave_hz / SAMPLE_RATE;
+    phase_octave_r += 2.0f * PI * (freq_octave_hz * (1.0f + spread_detune)) / SAMPLE_RATE;
+    sub_phase_l    += 2.0f * PI * (base_freq / 2.0f) / SAMPLE_RATE;
+
+    // Wrap phases
+    if (phase1 >= 2.0f * PI) phase1 -= 2.0f * PI;
+    if (phase2 >= 2.0f * PI) phase2 -= 2.0f * PI;
+    if (phase3 >= 2.0f * PI) phase3 -= 2.0f * PI;
+    if (phase4 >= 2.0f * PI) phase4 -= 2.0f * PI;
+    if (phase_octave_l >= 2.0f * PI) phase_octave_l -= 2.0f * PI;
+    if (phase_octave_r >= 2.0f * PI) phase_octave_r -= 2.0f * PI;
+    if (sub_phase_l >= 2.0f * PI) sub_phase_l -= 2.0f * PI;
+
+    // Signal generation
+    float combined_saw_l = (phase_to_saw(phase1) + phase_to_saw(phase3)) / 2.0f;
+    float combined_saw_r = (phase_to_saw(phase2) + phase_to_saw(phase4)) / 2.0f;
+    float sample_l = (1.0f - waveform_mix) * sinf(phase1) + waveform_mix * combined_saw_l;
+    float sample_r = (1.0f - waveform_mix) * sinf(phase2) + waveform_mix * combined_saw_r;
+    float octave_saw_l = phase_to_saw(phase_octave_l);
+    float octave_saw_r = phase_to_saw(phase_octave_r);
+    float octave_wave_l = (1.0f - waveform_mix) * sinf(phase_octave_l) + waveform_mix * octave_saw_l;
+    float octave_wave_r = (1.0f - waveform_mix) * sinf(phase_octave_r) + waveform_mix * octave_saw_r;
+    float sub_wave = sinf(sub_phase_l);
+
+    // Mixing
+    float final_signal_l = (1.0f - octave_mix) * sample_l + (octave_mix * octave_wave_l);
+    final_signal_l = (1.0f - bass_mix) * final_signal_l + bass_mix * sub_wave;
+    float final_signal_r = (1.0f - octave_mix) * sample_r + (octave_mix * octave_wave_r);
+    final_signal_r = (1.0f - bass_mix) * final_signal_r + bass_mix * sub_wave;
+    
+    // Envelopes and filter
+    float env_value = adsr_env(i, attack_ms, decay_ms, sustain_lvl, release_ms, sustain_duration_ms);
+    final_signal_l *= env_value;
+    final_signal_r *= env_value;
+    float filter_env_value = adsr_env(i, filter_attack_ms, filter_decay_ms, filter_sustain_lvl, filter_release_ms, sustain_duration_ms);
+    float user_cutoff_freq = 20.0f * powf(20.0f, p.synth_filter_cutoff / 100.0f);
+    const float max_cutoff_freq = 18000.0f;
+    float envelope_sweep_range = max_cutoff_freq - user_cutoff_freq;
+    float envelope_effect = filter_env_amount * envelope_sweep_range * filter_env_value;
+    float cutoff = user_cutoff_freq + envelope_effect;
+    cutoff = std::clamp(cutoff, 10.0f, 18000.0f);
+    float mapped_resonance = 0.8f + (p.synth_filter_resonance / 100.0f) * 10.0f;
+
+    // Apply filter
+    filter_l.setLowpass(cutoff, mapped_resonance);
+    filter_r.setLowpass(cutoff, mapped_resonance);
+    float final_sample_l = filter_l.process_l(final_signal_l);
+    float final_sample_r = filter_r.process_r(final_signal_r);
+    
+    // Find the absolute max peak
+    max_peak = std::max({max_peak, std::abs(final_sample_l), std::abs(final_sample_r)});
+  }
+  
+  // Recalculate all state variables for the second pass
+  phase1 = phase2 = phase3 = phase4 = 0.0f;
+  phase_octave_l = phase_octave_r = 0.0f;
+  sub_phase_l = 0.0f;
+  filter_l = Biquad(); // Reset filter state
+  filter_r = Biquad(); // Reset filter state
+  
+  // Determine the rescale factor, handle division by zero
+  float rescale_factor = 1.0f;
+  if (max_peak > 0.0f) {
+      rescale_factor = 1.0f / max_peak;
+  }
+  
+  // --- PASS 2: Scale and write to PSRAM ---
+  for (uint32_t i = 0; i < n; ++i) {
+    // Frequencies
+    float freq1 = base_freq;
+    float freq2 = base_freq * (1.0f + detune);
+    float freq3 = base_freq * (1.0f - detune);
+    float freq4 = base_freq * (1.0f + detune * 2.0f);
+    
+    // Phases
+    phase1       += 2.0f * PI * freq1 / SAMPLE_RATE;
+    phase2       += 2.0f * PI * freq2 / SAMPLE_RATE;
+    phase3       += 2.0f * PI * freq3 / SAMPLE_RATE;
+    phase4       += 2.0f * PI * freq4 / SAMPLE_RATE;
+    phase_octave_l += 2.0f * PI * freq_octave_hz / SAMPLE_RATE;
+    phase_octave_r += 2.0f * PI * (freq_octave_hz * (1.0f + spread_detune)) / SAMPLE_RATE;
+    sub_phase_l    += 2.0f * PI * (base_freq / 2.0f) / SAMPLE_RATE;
+
+    // Wrap phases
+    if (phase1 >= 2.0f * PI) phase1 -= 2.0f * PI;
+    if (phase2 >= 2.0f * PI) phase2 -= 2.0f * PI;
+    if (phase3 >= 2.0f * PI) phase3 -= 2.0f * PI;
+    if (phase4 >= 2.0f * PI) phase4 -= 2.0f * PI;
+    if (phase_octave_l >= 2.0f * PI) phase_octave_l -= 2.0f * PI;
+    if (phase_octave_r >= 2.0f * PI) phase_octave_r -= 2.0f * PI;
+    if (sub_phase_l >= 2.0f * PI) sub_phase_l -= 2.0f * PI;
+    
+    // Signal generation (same as Pass 1)
+    float combined_saw_l = (phase_to_saw(phase1) + phase_to_saw(phase3)) / 2.0f;
+    float combined_saw_r = (phase_to_saw(phase2) + phase_to_saw(phase4)) / 2.0f;
+    float sample_l = (1.0f - waveform_mix) * sinf(phase1) + waveform_mix * combined_saw_l;
+    float sample_r = (1.0f - waveform_mix) * sinf(phase2) + waveform_mix * combined_saw_r;
+    float octave_saw_l = phase_to_saw(phase_octave_l);
+    float octave_saw_r = phase_to_saw(phase_octave_r);
+    float octave_wave_l = (1.0f - waveform_mix) * sinf(phase_octave_l) + waveform_mix * octave_saw_l;
+    float octave_wave_r = (1.0f - waveform_mix) * sinf(phase_octave_r) + waveform_mix * octave_saw_r;
+    float sub_wave = sinf(sub_phase_l);
+    
+    // Mixing (same as Pass 1)
+    float final_signal_l = (1.0f - octave_mix) * sample_l + (octave_mix * octave_wave_l);
+    final_signal_l = (1.0f - bass_mix) * final_signal_l + bass_mix * sub_wave;
+    float final_signal_r = (1.0f - octave_mix) * sample_r + (octave_mix * octave_wave_r);
+    final_signal_r = (1.0f - bass_mix) * final_signal_r + bass_mix * sub_wave;
+    
+    // Envelopes and filter (same as Pass 1)
+    float env_value = adsr_env(i, attack_ms, decay_ms, sustain_lvl, release_ms, sustain_duration_ms);
+    final_signal_l *= env_value;
+    final_signal_r *= env_value;
+    float filter_env_value = adsr_env(i, filter_attack_ms, filter_decay_ms, filter_sustain_lvl, filter_release_ms, sustain_duration_ms);
+    float user_cutoff_freq = 20.0f * powf(20.0f, p.synth_filter_cutoff / 100.0f);
+    const float max_cutoff_freq = 18000.0f;
+    float envelope_sweep_range = max_cutoff_freq - user_cutoff_freq;
+    float envelope_effect = filter_env_amount * envelope_sweep_range * filter_env_value;
+    float cutoff = user_cutoff_freq + envelope_effect;
+    cutoff = std::clamp(cutoff, 10.0f, 18000.0f);
+    float mapped_resonance = 0.8f + (p.synth_filter_resonance / 100.0f) * 10.0f;
+    filter_l.setLowpass(cutoff, mapped_resonance);
+    filter_r.setLowpass(cutoff, mapped_resonance);
+    float final_sample_l = filter_l.process_l(final_signal_l);
+    float final_sample_r = filter_r.process_r(final_signal_r);
+
+    // Apply the scaling factor from Pass 1
+    final_sample_l *= rescale_factor;
+    final_sample_r *= rescale_factor;
+
+    // Write output to 16-bit format
+    if (stereo) {
+      psram_buffer[i * channels]     = static_cast<int16_t>(final_sample_l * 32767.0f);
+      psram_buffer[i * channels + 1] = static_cast<int16_t>(final_sample_r * 32767.0f);
+    } else {
+      psram_buffer[i] = static_cast<int16_t>((final_sample_l + final_sample_r) * 0.5f * 32767.0f);
+    }
+  }
+}
+
 FLASHMEM static inline uint32_t getSampleLength(const NoiseMakerParams& p) {
   float lenMs = 0.0f;
   switch (p.category) {
@@ -1646,6 +1964,19 @@ FLASHMEM static inline uint32_t getSampleLength(const NoiseMakerParams& p) {
     lenMs = d + 10.0f;
   } break;
 
+case NM_SYNTH: {
+    float attack_ms = u8_to_ms(p.synth_attack, 10.0f, 1000.0f);
+    float decay_ms = u8_to_ms(p.synth_decay, 10.0f, 3000.0f) ;
+    float release_ms = u8_to_ms(p.synth_release, 10.0f, 3000.0f) ;
+    
+    // The sustain stage is a level, not a time. We add a fixed duration
+    // to ensure the note plays long enough to reach the release stage.
+    float sustain_duration_ms = 1000.0f; 
+    
+    lenMs = attack_ms + decay_ms + sustain_duration_ms + release_ms;
+} break;
+
+
   default: lenMs = 500.0f; break;
   }
 
@@ -1676,6 +2007,7 @@ FLASHMEM static inline void generateDrum(NoiseMakerParams& p, int16_t* psram_buf
   case NM_MARACAS: generateMaracas(p, psram_buf, n, p.mode, channels); break;
   case NM_ZAP: generateZap(p, psram_buf, n, p.mode, channels); break;
   case NM_SNAP:     generateSnap(p, psram_buf, n, p.mode, channels); break;
+  case NM_SYNTH:     generateSynth(p, psram_buf, n, p.mode, channels); break;
   default: // silence
     for (uint32_t i = 0;i < n;++i) psram_buf[i] = 0;
     break;
@@ -1691,8 +2023,8 @@ FLASHMEM void generateNoisePreview() {
 
   // Determine channel count
   uint8_t channels = (nm_params.stereo_mode == 0) ? 1 : 2;
-  if (channels ==2)
-  length=length+((length/100)*110);
+  if (channels == 2)
+    length = length + ((length / 100) * 110);
   // Allocate or reallocate the PSRAM preview buffer
   if (!nm_preview_alloc(length, channels)) return;
 
@@ -1895,6 +2227,22 @@ FLASHMEM void randomizeNoiseMakerParams() {
   nm_params.snap_drive = random(0, 21);       // 0–20% drive
   nm_params.snap_spread = random(0, 101);       // 0-100%
 
+// Synth Randomization
+//nm_params.synth_midi_note = random(36, 49);        // C2 to C3
+nm_params.synth_attack = 0;           // 0-15%
+nm_params.synth_decay = random(35, 95);            // 5-30%
+nm_params.synth_sustain_level = 0;   // 10-80%
+nm_params.synth_release = 0;        // 10-50%
+nm_params.synth_filter_cutoff = random(0, 99);   // 10-40%
+nm_params.synth_filter_resonance = random(0, 99);  // 10-60%
+nm_params.synth_filter_env_amount = random(0, 91); // 30-80%
+nm_params.synth_filter_env_attack = 0; // 0-10%
+nm_params.synth_filter_env_decay = random(5, 51);  // 5-40%
+nm_params.synth_filter_env_release = random(0, 5); // 0-20%
+nm_params.synth_waveform_mix = random(20, 101);   // 80-100%
+nm_params.synth_bass_mix = random(0, 20);        // 0-20%
+nm_params.synth_octave_mix = random(0, 81);       // 0-20%
+nm_params.synth_spread = random(0, 51);           // 0-20%
+nm_params.synth_detune = random(0, 99);  
 }
-
 #endif

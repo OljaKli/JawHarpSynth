@@ -373,6 +373,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define FX_CONFIG_NAME "fx"
 #define VOICE_CONFIG_NAME "voice"
 #define SYS_CONFIG_NAME "sys"
+#define CONFIG_NOISEMAKER "nm_config"
 #define EPIANO_CONFIG_NAME "epiano"
 #define MICROSYNTH_CONFIG_NAME "msynth"
 #define MULTISAMPLE_PRESETS_CONFIG_NAME "msp_presets"
@@ -417,6 +418,9 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define CV_CLOCK_IN 22
 #define CV_CLOCK_OUT 39
 #define TRS_PEDAL_IN 23
+
+#define GATE_OUT 14
+
 #endif 
 
 #if defined(MUSIKANDMORE) || defined(SECOND_SD)
