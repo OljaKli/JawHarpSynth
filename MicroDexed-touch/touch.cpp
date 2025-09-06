@@ -984,10 +984,13 @@ FLASHMEM void handle_touchscreen_drums()
 #ifdef COMPILE_FOR_PSRAM
 extern bool noisemaker_update_params_flag;
 extern void  print_nm_style();
+extern bool remote_active;
 
 FLASHMEM void draw_nm_emulation_mode_button()
 {
-  if (nm_params.randomizer == false)
+  if (nm_params.category!=NM_SYNTH)
+  {
+ if (nm_params.randomizer == false)
   {
     if (nm_params.mode == NM_MODE_TR808)
       TouchButton::drawButton(GRID.X[5], GRID.Y[2], "MODE", "808", TouchButton::BUTTON_ACTIVE);
@@ -999,8 +1002,11 @@ FLASHMEM void draw_nm_emulation_mode_button()
     TouchButton::drawButton(GRID.X[5], GRID.Y[2], "MODE", "RND", TouchButton::BUTTON_ACTIVE);
   }
 
-  print_nm_style();
+  }
+else
+TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
 
+  print_nm_style();
 }
 
 
@@ -1027,6 +1033,8 @@ FLASHMEM void handle_touchscreen_noisemaker() {
   // Generate button
   if (TouchButton::isPressed(GRID.X[1], GRID.Y[5])) {
     TouchButton::drawButton(GRID.X[1], GRID.Y[5], "RENDER", "SOUND", TouchButton::BUTTON_RED);
+     if (remote_active){
+    display.flushSysEx();}
      generateNoisePreview();
      generateAndPlayNoise();
     drawNoiseMakerWaveform(true);
@@ -1036,6 +1044,8 @@ FLASHMEM void handle_touchscreen_noisemaker() {
   // Play button
   if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
     TouchButton::drawButton(GRID.X[2], GRID.Y[5], "PLAY", "SOUND", TouchButton::BUTTON_RED);
+     if (remote_active){
+    display.flushSysEx();}
     // generateNoisePreview();
     // generateAndPlayNoise();
     drawNoiseMakerWaveform(true);
@@ -1047,7 +1057,8 @@ FLASHMEM void handle_touchscreen_noisemaker() {
   // Randomizer - Generate new sound and play it immediately
   if (TouchButton::isPressed(GRID.X[3], GRID.Y[5])) {
     TouchButton::drawButton(GRID.X[3], GRID.Y[5], "RAND", "", TouchButton::BUTTON_RED);
-
+ if (remote_active){
+    display.flushSysEx();}
     // Generate new randomized parameters and preview
     randomizeNoiseMakerParams();
     generateNoisePreview();
@@ -1061,6 +1072,8 @@ FLASHMEM void handle_touchscreen_noisemaker() {
   // Play slot button
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
     TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SLOT", TouchButton::BUTTON_RED);
+     if (remote_active){
+    display.flushSysEx();}
     drawNoiseMakerWaveform(false);
     PlaySlot();
     delay(60);
@@ -1096,6 +1109,8 @@ FLASHMEM void handle_touchscreen_noisemaker() {
 // Save button
   if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
     TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SAVE", "SLOT", TouchButton::BUTTON_RED);
+     if (remote_active){
+    display.flushSysEx();}
     saveNoiseToCustomSlot();
     delay(60);
     TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SAVE", "SLOT", TouchButton::BUTTON_ACTIVE);

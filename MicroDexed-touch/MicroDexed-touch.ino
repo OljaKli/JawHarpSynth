@@ -2606,6 +2606,7 @@ FLASHMEM void show_chord()
 }
 void loop()
 {
+ 
   // Chords Detection
 
 // Handle chord timeout

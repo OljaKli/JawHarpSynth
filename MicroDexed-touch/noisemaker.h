@@ -164,6 +164,8 @@ struct NoiseMakerParams {
   uint8_t  snap_spread;       // % stereo spread
 
   uint8_t synth_midi_note;
+   uint8_t synth_pulse_width;
+   uint8_t synth_waveform;
   uint8_t synth_attack;
   uint8_t synth_decay;
   uint8_t synth_sustain_level;
@@ -174,11 +176,12 @@ struct NoiseMakerParams {
   uint8_t synth_filter_env_attack; 
   uint8_t synth_filter_env_decay;  
   uint8_t synth_filter_env_release; 
-  uint8_t synth_waveform_mix; // New: mix between waveforms for SQ80_BASS sound
-  uint8_t synth_octave_mix; // New: mix level for second oscillator
+  uint8_t synth_waveform_mix; 
+  uint8_t synth_octave_mix; 
   uint8_t synth_spread;
-  uint8_t synth_bass_mix;
   uint8_t synth_detune;
+  uint8_t synth_noise_level;
+  uint8_t synth_noise_decay;
 };
 
 void generateAndPlayNoise();

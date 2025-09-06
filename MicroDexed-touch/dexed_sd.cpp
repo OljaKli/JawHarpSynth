@@ -2494,9 +2494,13 @@ FLASHMEM void load_sd_noisemaker_json(void)
         nm_params.synth_filter_env_release = data_json["synth_filter_env_release"];
         nm_params.synth_waveform_mix = data_json["synth_waveform_mix"];
         nm_params.synth_octave_mix = data_json["synth_octave_mix"];
-        nm_params.synth_spread = data_json["synth_spread"];
-        nm_params.synth_bass_mix = data_json["synth_bass_mix"];
         nm_params.synth_detune = data_json["synth_detune"];
+        nm_params.synth_noise_level = data_json["synth_noise_level"];
+        nm_params.synth_noise_decay =data_json["synth_noise_decay"];
+
+ nm_params.synth_pulse_width = data_json["synth_pulse_width"];
+        nm_params.synth_waveform =data_json["synth_waveform"];
+
         }
       }
     }
@@ -2640,10 +2644,12 @@ FLASHMEM void save_sd_noisemaker_json(void)
       data_json["synth_filter_env_release"] = nm_params.synth_filter_env_release;
       data_json["synth_waveform_mix"] = nm_params.synth_waveform_mix;
       data_json["synth_octave_mix"] = nm_params.synth_octave_mix;
-      data_json["synth_spread"] = nm_params.synth_spread;
-       data_json["synth_bass_mix"] = nm_params.synth_bass_mix;
        data_json["synth_detune"] = nm_params.synth_detune;
-      
+        data_json["synth_noise_level"]=  nm_params.synth_noise_level ;
+  data_json["synth_noise_decay"]=  nm_params.synth_noise_decay ;
+   data_json["synth_pulse_width"]= nm_params.synth_pulse_width ;
+      data_json["synth_waveform"]=  nm_params.synth_waveform;
+ 
       serializeJsonPretty(data_json, json);
       json.close();
     }

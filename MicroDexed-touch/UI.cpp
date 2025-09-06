@@ -3571,7 +3571,7 @@ private:
     if (value_range > 500) {
       return 2; // Fast (for large ranges)
     }
-    if (value_range > 100) {
+    if (value_range > 260) {
       return 1; // Normal fast (for medium ranges)
     }
     return 0; // Default step of 1 (for small ranges)
@@ -3884,6 +3884,9 @@ public:
     {
       seq.edit_state = 1 - seq.edit_state;
       editors[generic_temp_select_menu].draw_editor(true);
+      if (remote_active) {
+        display.flushSysEx();
+      }
     }
 
     EncoderEvents e = getEncoderEvents(ENC_R);
@@ -6726,6 +6729,8 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
       display.drawLine(x, yZero, x + w, yZero, waveColor); // horizontal zero line
     }
   }
+  if (remote_active)
+    display.flushSysEx();
 }
 
 FLASHMEM void selectSample(uint8_t sample) {
@@ -6986,9 +6991,9 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.setCursor(0, 0);
     drawDrumsSampleWave(true); //otherwise it does not draw a custom sample when entering the page
     TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
-    #ifdef COMPILE_FOR_PSRAM
+#ifdef COMPILE_FOR_PSRAM
     _draw_drum_page_dynamic_touch_buttons(); //only force draw on init
-    #endif
+#endif
     drum_page_show_sample_size();
 
     // the drum sample slot selector.
@@ -7018,10 +7023,12 @@ FLASHMEM void UI_func_drums(uint8_t param)
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         print_sample_type(1);
         checkDrawFilterText(true); // force redraw filter text on active sample change
-        #ifdef COMPILE_FOR_PSRAM
+#ifdef COMPILE_FOR_PSRAM
         drum_page_drawButtonsOnStateChange();
-        #endif
+#endif
         drum_page_show_sample_size();
+        if (remote_active)
+          display.flushSysEx();
       });
 
     ui.setCursor(0, 3);
@@ -7036,6 +7043,10 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("DELAY2"), 0, 100, &drum_config[0].delay2);
     addDrumParameterEditor_uint8_t((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
     addDrumParameterEditor_uint8_t((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
+
+    if (remote_active) {
+      display.flushSysEx();
+    }
 
     setCursor_textGrid_small(0, 10);
     display.setTextColor(RED);
@@ -7056,6 +7067,10 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 0, &drum_config[0].env_release);
 #endif
 
+    if (remote_active) {
+      display.flushSysEx();
+    }
+
     setCursor_textGrid_small(0, 16);
     display.setTextColor(RED);
     display.print("FILTER");
@@ -7071,6 +7086,10 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.setCursor(0, 19);
     addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
 #endif
+
+    if (remote_active) {
+      display.flushSysEx();
+    }
 
     ui.setCursor(20, 11);
     addSampleParameterEditor((const char*)F("STARTPOINT"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
@@ -7096,6 +7115,10 @@ FLASHMEM void UI_func_drums(uint8_t param)
         print_empty_spaces(22, 1);
       }
       });
+
+    if (remote_active) {
+      display.flushSysEx();
+    }
 
     // TODO: add support for loop types. sample should loop until noteOff event
     /*addSampleParameterEditor_uint8_t((const char*)F("LOOP"), 0, 2, &customSamples[0].loopType, [](Editor *param, bool refresh) {
@@ -7146,12 +7169,21 @@ FLASHMEM void UI_func_drums(uint8_t param)
       {
         seq.smartfilter = !seq.smartfilter;
       });
+
+    if (remote_active) {
+      display.flushSysEx();
+    }
+
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
     handleCustomSliceEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
+    if (remote_active) {
+      display.flushSysEx();
+    }
+
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
@@ -7197,7 +7229,7 @@ FLASHMEM void pattern_editor_play_current_step(uint8_t step)
 
 FLASHMEM void print_filter_ringing_warning()
 {
-   display.setTextSize(1);
+  display.setTextSize(1);
   display.setTextColor(COLOR_SYSTEXT, GREY3);
   setCursor_textGrid_small(25, 2);
   display.print(F("WARNING!"));
@@ -7297,22 +7329,41 @@ FLASHMEM void addAutoUpdateParameterEditor_uint8_t(const char* name, uint8_t min
 
 FLASHMEM void print_noisemaker_synth_note()
 {
-   if (nm_params.category==NM_SYNTH)
+  if (nm_params.category == NM_SYNTH)
   {
-  setCursor_textGrid_small(10, 15);
+    setCursor_textGrid_small(10, 15);
     char note_name[4];
-     getNoteName(note_name, nm_params.synth_midi_note);
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      display.print(note_name);
+    getNoteName(note_name, nm_params.synth_midi_note);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.print(note_name);
   }
 }
 
-FLASHMEM void nm_print_note_text(){
-  if (nm_params.category==NM_SYNTH)
+FLASHMEM void print_noisemaker_synth_wave()
+{
+  if (nm_params.category == NM_SYNTH)
   {
-     setCursor_textGrid_small(13, 15);
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      display.print(" NOTE");
+    setCursor_textGrid_small(36, 9);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    if (nm_params.synth_waveform == 0)
+      display.print("MDT  ");
+    else  if (nm_params.synth_waveform == 1)
+      display.print("SINE ");
+    else  if (nm_params.synth_waveform == 2)
+      display.print("SAW  ");
+    else  if (nm_params.synth_waveform == 3)
+      display.print("PULSE");
+
+  }
+}
+
+
+FLASHMEM void nm_print_note_text() {
+  if (nm_params.category == NM_SYNTH)
+  {
+    setCursor_textGrid_small(13, 15);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.print(" NOTE");
   }
 }
 
@@ -7321,10 +7372,21 @@ FLASHMEM void addAutoUpdateParameterEditor_uint8_t_note(const char* name, uint8_
     nullptr, // Use default getter
     [](Editor* editor, int16_t value) {
       *((uint8_t*)editor->value) = value;
-print_noisemaker_synth_note();
+      print_noisemaker_synth_note();
     }
   );
 }
+
+FLASHMEM void addAutoUpdateParameterEditor_uint8_t_wave(const char* name, uint8_t minv, uint8_t maxv, uint8_t* value) {
+  ui.addEditor(name, minv, maxv, value,
+    nullptr, // Use default getter
+    [](Editor* editor, int16_t value) {
+      *((uint8_t*)editor->value) = value;
+      print_noisemaker_synth_wave();
+    }
+  );
+}
+
 
 FLASHMEM void addAutoUpdateParameterEditor_uint16_t(const char* name, uint16_t minv, uint16_t maxv, uint16_t* value) {
   ui.addCustomEditor(
@@ -7344,19 +7406,27 @@ FLASHMEM void addAutoUpdateParameterEditor_uint16_t(const char* name, uint16_t m
   );
 }
 
-void print_nm_style()
+FLASHMEM void print_nm_style()
 {
+
   display.setTextSize(1);
   setCursor_textGrid_small(9, 3);
   display.setTextColor(GREY1, COLOR_BACKGROUND);
   display.printf(" (");
 
+if (nm_params.category!=NM_SYNTH)
+{
   if (nm_params.mode == NM_MODE_TR808)
     display.printf("808");
   else
     if (nm_params.mode == NM_MODE_TR909)
       display.printf("909");
+}
+else
+ display.printf("SYN");
+
   display.printf(")");
+
 }
 
 // ===================== UI parameter builders =============================
@@ -7375,12 +7445,12 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
   header(0, 5, "GLOBAL");
   ui.setCursor(0, 6);
   addAutoUpdateParameterEditor_uint8_t("LEVEL", 1, 100, &p.accent);
-  
+
   header(0, 8, "GLOBAL REVERB");
   ui.setCursor(0, 9);
-  
 
-addAutoUpdateParameterEditor_uint8_t("ROOM SIZE", 0, 100, &p.reverb_room_size);
+
+  addAutoUpdateParameterEditor_uint8_t("ROOM SIZE", 0, 100, &p.reverb_room_size);
   addAutoUpdateParameterEditor_uint8_t("DAMPING", 0, 100, &p.reverb_damping);
   addAutoUpdateParameterEditor_uint8_t("DRY", 0, 100, &p.reverb_dry);
   addAutoUpdateParameterEditor_uint8_t("WET", 0, 100, &p.reverb_wet);
@@ -7459,21 +7529,21 @@ addAutoUpdateParameterEditor_uint8_t("ROOM SIZE", 0, 100, &p.reverb_room_size);
     addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.conga_spread);
   } break;
 
-   
-case NM_RIM: {
-  header(23, 8, "RIMSHOT");
-  ui.setCursor(23, 9);
-  addAutoUpdateParameterEditor_uint16_t("PITCH",       800, 2500, &p.rim_pitch);
-    addAutoUpdateParameterEditor_uint16_t("MOD FREQ",    800, 5000, &p.rim_mod_freq);
-    addAutoUpdateParameterEditor_uint16_t("NOISE BP",   2000, 8000, &p.rim_noise_bp_freq);
-    addAutoUpdateParameterEditor_uint8_t("DECAY",        0, 100, &p.rim_decay);
-    addAutoUpdateParameterEditor_uint8_t("TONE",         0, 100, &p.rim_tone);
-        addAutoUpdateParameterEditor_uint8_t("CLICK LVL",    0, 100, &p.rim_click_level);
-    addAutoUpdateParameterEditor_uint8_t("NOISE LVL",    0, 100, &p.rim_noise_level);
-    addAutoUpdateParameterEditor_uint8_t("DRIVE",        0, 100, &p.rim_drive);
-    addAutoUpdateParameterEditor_uint8_t("SPREAD",       0, 100, &p.rim_spread);
 
-} break;
+  case NM_RIM: {
+    header(23, 8, "RIMSHOT");
+    ui.setCursor(23, 9);
+    addAutoUpdateParameterEditor_uint16_t("PITCH", 800, 2500, &p.rim_pitch);
+    addAutoUpdateParameterEditor_uint16_t("MOD FREQ", 800, 5000, &p.rim_mod_freq);
+    addAutoUpdateParameterEditor_uint16_t("NOISE BP", 2000, 8000, &p.rim_noise_bp_freq);
+    addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.rim_decay);
+    addAutoUpdateParameterEditor_uint8_t("TONE", 0, 100, &p.rim_tone);
+    addAutoUpdateParameterEditor_uint8_t("CLICK LVL", 0, 100, &p.rim_click_level);
+    addAutoUpdateParameterEditor_uint8_t("NOISE LVL", 0, 100, &p.rim_noise_level);
+    addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.rim_drive);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.rim_spread);
+
+  } break;
 
     // -------------------- Clap --------------------
   case NM_CLAP: {
@@ -7485,7 +7555,7 @@ case NM_RIM: {
     addAutoUpdateParameterEditor_uint8_t("BP Q", 0, 80, &p.clap_bp_q);
     addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.clap_decay);
     addAutoUpdateParameterEditor_uint8_t("DRIVE", 0, 100, &p.clap_drive);
-        addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.clap_spread);
+    addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.clap_spread);
   } break;
 
     // -------------------- Hi-Hats --------------------
@@ -7575,7 +7645,7 @@ case NM_RIM: {
     addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.zap_spread);
   } break;
 
-   // -------------------- Rimshot --------------------
+    // -------------------- Rimshot --------------------
   case NM_SNAP: {
     header(23, 8, "SNAP/WOODBLOCK");
     ui.setCursor(23, 9);
@@ -7586,32 +7656,33 @@ case NM_RIM: {
     addAutoUpdateParameterEditor_uint8_t("SPREAD", 0, 100, &p.snap_spread);
   } break;
 
-case NM_SYNTH: {
+  case NM_SYNTH: {
 
-   header(0, 14, "SYNTH");
+    header(0, 14, "SYNTH");
     ui.setCursor(0, 15);
- addAutoUpdateParameterEditor_uint8_t_note("",      12, 126, &p.synth_midi_note);
-   addAutoUpdateParameterEditor_uint8_t("ATTACK",       0, 100, &p.synth_attack);
-            addAutoUpdateParameterEditor_uint8_t("DECAY",        0, 100, &p.synth_decay);
-            addAutoUpdateParameterEditor_uint8_t("SUST.LVL",  0, 100, &p.synth_sustain_level);
-            addAutoUpdateParameterEditor_uint8_t("RELEASE",      0, 100, &p.synth_release);
-  header(20, 8, "SYNTH");
-  ui.setCursor(20, 9);
-   
-            addAutoUpdateParameterEditor_uint8_t("FILT CUTOFF",  0, 100, &p.synth_filter_cutoff);
-            addAutoUpdateParameterEditor_uint8_t("FILT RESO",    0, 100, &p.synth_filter_resonance);
-            addAutoUpdateParameterEditor_uint8_t("FILT ENV AMT", 0, 100, &p.synth_filter_env_amount);
-            addAutoUpdateParameterEditor_uint8_t("FILT ENV ATTK",0, 100, &p.synth_filter_env_attack);
-            addAutoUpdateParameterEditor_uint8_t("FILT ENV DECAY",0, 100, &p.synth_filter_env_decay);
-            addAutoUpdateParameterEditor_uint8_t("FILT ENV REL",0, 100, &p.synth_filter_env_release);
-            addAutoUpdateParameterEditor_uint8_t("WAVE MIX",     0, 100, &p.synth_waveform_mix);
-            addAutoUpdateParameterEditor_uint8_t("OCTAVE MIX", 0, 100, &p.synth_octave_mix);
-             addAutoUpdateParameterEditor_uint8_t("SUB BASS",    0, 100, &p.synth_bass_mix);
-               addAutoUpdateParameterEditor_uint8_t("DETUNE",       0, 100, &p.synth_detune);
-             addAutoUpdateParameterEditor_uint8_t("SPREAD",       0, 100, &p.synth_spread);
-            
-} break;
+    addAutoUpdateParameterEditor_uint8_t_note("", 12, 126, &p.synth_midi_note);
+    addAutoUpdateParameterEditor_uint8_t("ATTACK", 0, 100, &p.synth_attack);
+    addAutoUpdateParameterEditor_uint8_t("DECAY", 0, 100, &p.synth_decay);
+    addAutoUpdateParameterEditor_uint8_t("SUST.LVL", 0, 100, &p.synth_sustain_level);
+    addAutoUpdateParameterEditor_uint8_t("RELEASE", 0, 100, &p.synth_release);
+    header(20, 8, "SYNTH");
+    ui.setCursor(20, 9);
 
+    addAutoUpdateParameterEditor_uint8_t_wave("WAVE:", 0, 3, &p.synth_waveform);
+    addAutoUpdateParameterEditor_uint8_t("PULSE WIDTH", 0, 100, &p.synth_pulse_width);
+    addAutoUpdateParameterEditor_uint8_t("FILT CUTOFF", 0, 100, &p.synth_filter_cutoff);
+    addAutoUpdateParameterEditor_uint8_t("FILT RESO", 0, 100, &p.synth_filter_resonance);
+    addAutoUpdateParameterEditor_uint8_t("FILT ENV AMT", 0, 100, &p.synth_filter_env_amount);
+    addAutoUpdateParameterEditor_uint8_t("FILT ENV ATTK", 0, 100, &p.synth_filter_env_attack);
+    addAutoUpdateParameterEditor_uint8_t("FILT ENV DECAY", 0, 100, &p.synth_filter_env_decay);
+    //  addAutoUpdateParameterEditor_uint8_t("FILT ENV REL",0, 100, &p.synth_filter_env_release);
+    addAutoUpdateParameterEditor_uint8_t("WAVE MIX", 0, 100, &p.synth_waveform_mix);
+    addAutoUpdateParameterEditor_uint8_t("OCTAVE MIX", 0, 100, &p.synth_octave_mix);
+    // addAutoUpdateParameterEditor_uint8_t("DETUNE",       0, 100, &p.synth_detune);
+    addAutoUpdateParameterEditor_uint8_t("NOISE LEVEL", 0, 100, &p.synth_noise_level);
+    addAutoUpdateParameterEditor_uint8_t("NOISE DECAY", 0, 100, &p.synth_noise_decay);
+
+  } break;
 
   default: break;
   }
@@ -7641,11 +7712,11 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     if (nm_firstSetup) {
       ui.reset();
       if (!check_sd_noisemaker_config_exists())
-      initNoiseMakerParams(nm_params);
-     // generateNoisePreview();
+        initNoiseMakerParams(nm_params);
+      // generateNoisePreview();
       nm_firstSetup = false;
     }
- drawNoiseMakerWaveform(true);
+    drawNoiseMakerWaveform(true);
     // --- PAGE HEADER ---
     display.setTextSize(1);
     display.setTextColor(RED, COLOR_BACKGROUND);
@@ -7715,7 +7786,10 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
 
     addNoiseMakerParameterEditors(nm_params);
     print_noisemaker_synth_note();
-   nm_print_note_text();
+    nm_print_note_text();
+
+    if (nm_params.category == NM_SYNTH)
+      print_noisemaker_synth_wave();
   }
 
   if (LCDML.FUNC_loop())
@@ -7725,11 +7799,7 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     // If category changed → refresh UI
     if (noisemaker_needs_refresh) {
 
-      //ui.reset();
-      //ui.clear();
       ui.clear_noisemaker();
-
-      // seq.edit_state = 1;  // active state, so encoder cycles categories
       // --- PAGE HEADER ---
       display.setTextSize(1);
       display.setTextColor(RED, COLOR_BACKGROUND);
@@ -7744,7 +7814,7 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
         },
         [](Editor* editor, int16_t value) {
           nm_params.category = value;
-    
+
           noisemaker_needs_refresh = true;
         },
         [](Editor* editor, bool refresh) {
@@ -7782,8 +7852,8 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
 
       // --- Parameter editors for current category ---
       addNoiseMakerParameterEditors(nm_params);
-    print_noisemaker_synth_note();
-nm_print_note_text();
+      print_noisemaker_synth_note();
+      nm_print_note_text();
 
       // --- Touch buttons ---
       TouchButton::drawButton(GRID.X[1], GRID.Y[5], "RENDER", "SOUND", TouchButton::BUTTON_ACTIVE);
@@ -7801,15 +7871,15 @@ nm_print_note_text();
   }
   if (LCDML.FUNC_close())
   {
- display.setTextSize(1);
+    display.setTextSize(1);
     display.setTextColor(GREEN, COLOR_BACKGROUND);
     setCursor_textGrid_small(0, 0);
     display.print("SETTINGS SAVED");
-    
+
     save_sd_noisemaker_json();
-delay(200);
+    delay(200);
     unregisterTouchHandler();
-   // nm_firstSetup = true;
+    // nm_firstSetup = true;
     ui.clear();
     //nm_preview_free();
   }
@@ -16891,25 +16961,25 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     setCursor_textGrid_small(1, 8);
     display.print(F("OUTPUT VELOCITY"));
 
-     setCursor_textGrid_small(1, 9);
+    setCursor_textGrid_small(1, 9);
     display.print(F("MIDI CC > CV2"));
-     setCursor_textGrid_small(1, 10);
+    setCursor_textGrid_small(1, 10);
     display.print(F("MIDI CC > CV4"));
-     setCursor_textGrid_small(1, 11);
+    setCursor_textGrid_small(1, 11);
     display.print(F("NOTE TRANSP.>CV1"));
- display.setTextColor(GREY2);
-     setCursor_textGrid_small(28, 10);
+    display.setTextColor(GREY2);
+    setCursor_textGrid_small(28, 10);
     display.print(F("EDIT PARAMETERS IN"));
     setCursor_textGrid_small(28, 11);
     display.print(F("SYSTEM > SYSTEM SETTINGS"));
     display.setTextColor(GREY1);
 
- setCursor_textGrid_small(19, 9);
-        print_formatted_number(dac_cv_2, 2);
-        setCursor_textGrid_small(19, 10);
-        print_formatted_number(dac_cv_4, 2);
-         setCursor_textGrid_small(19, 11);
-        print_formatted_number(dac_cv_transpose, 2);
+    setCursor_textGrid_small(19, 9);
+    print_formatted_number(dac_cv_2, 2);
+    setCursor_textGrid_small(19, 10);
+    print_formatted_number(dac_cv_4, 2);
+    setCursor_textGrid_small(19, 11);
+    print_formatted_number(dac_cv_transpose, 2);
 
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
@@ -19748,17 +19818,17 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 #endif
       break;
 
-       case 19: display.print(F("MIDI INPUT CC -> CV2"));
+    case 19: display.print(F("MIDI INPUT CC -> CV2"));
 #ifndef MCP_CV
       display.print(F(" [NA]"));
 #endif
       break;
-       case 20: display.print(F("MIDI INPUT CC -> CV4"));
+    case 20: display.print(F("MIDI INPUT CC -> CV4"));
 #ifndef MCP_CV
       display.print(F(" [NA]"));
 #endif
       break;
-       case 21: display.print(F("NOTE TRANSPOSE -> CV1"));
+    case 21: display.print(F("NOTE TRANSPOSE -> CV1"));
 #ifndef MCP_CV
       display.print(F(" [NA]"));
 #endif
@@ -19798,9 +19868,9 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
     case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
 
-case 19: print_formatted_number(dac_cv_2, 2);  break;
-case 20: print_formatted_number(dac_cv_4, 2);  break;
-case 21: print_formatted_number(dac_cv_transpose, 2);  break;
+    case 19: print_formatted_number(dac_cv_2, 2);  break;
+    case 20: print_formatted_number(dac_cv_4, 2);  break;
+    case 21: print_formatted_number(dac_cv_transpose, 2);  break;
 
 
       break;
@@ -19919,9 +19989,9 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
             seq.clock = 0;
           break;
 
-          case 19: dac_cv_2 = constrain(dac_cv_2 + (e.dir * 1), 0, 99); break;
-          case 20: dac_cv_4 = constrain(dac_cv_4 + (e.dir * 1), 0, 99); break;
-          case 21: dac_cv_transpose = constrain(dac_cv_transpose + (e.dir * 1), 0, 36); break;
+        case 19: dac_cv_2 = constrain(dac_cv_2 + (e.dir * 1), 0, 99); break;
+        case 20: dac_cv_4 = constrain(dac_cv_4 + (e.dir * 1), 0, 99); break;
+        case 21: dac_cv_transpose = constrain(dac_cv_transpose + (e.dir * 1), 0, 36); break;
 
         }
       }
