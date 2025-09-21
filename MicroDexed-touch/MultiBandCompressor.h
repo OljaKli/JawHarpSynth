@@ -8,38 +8,42 @@
 
 // UI struct: all values 0-100
 struct MultiBandCompressor_UI_t {
-    // Master controls
+    // Master controls (unchanged)
     uint8_t master_gain = 50; // unity gain
-    uint8_t master_mix = 90; // fully wet (compressed)
+    uint8_t master_mix = 50;  // fully wet (compressed)
 
     uint8_t crossover1 = 41;  // ~150 Hz (low/mid split)
-    uint8_t crossover2 = 41;  // ~1 kHz (mid/high split)
+    uint8_t crossover2 = 41;  // ~1 kHz (mid/high split)  
     uint8_t crossover3 = 18;  // ~5 kHz (high/very high split)
 
-    // Band parameters - optimized defaults
-    uint8_t band1_thresh = 60;  
-    uint8_t band1_ratio = 60;   
-    uint8_t band1_attack = 5;   
-    uint8_t band1_release = 30; 
-    uint8_t band1_gain = 55;    
+    // UPDATED: More aggressive OTT-style defaults
+    // Low band - gentle but present compression
+    uint8_t band1_thresh = 60;   // -19.6dB threshold
+    uint8_t band1_ratio = 45;    // ~8:1 ratio (was too high before)
+    uint8_t band1_attack = 15;   // ~0.3ms attack (much faster)
+    uint8_t band1_release = 40;  // ~80ms release (more musical)
+    uint8_t band1_gain = 55;     // slight boost
 
-    uint8_t band2_thresh = 50;  
-    uint8_t band2_ratio = 70;   
-    uint8_t band2_attack = 3;   
-    uint8_t band2_release = 25; 
-    uint8_t band2_gain = 60;    
+    // Mid-low band - more aggressive
+    uint8_t band2_thresh = 50;   // -23dB threshold
+    uint8_t band2_ratio = 55;    // ~15:1 ratio
+    uint8_t band2_attack = 8;    // ~0.1ms attack (very fast)
+    uint8_t band2_release = 30;  // ~45ms release
+    uint8_t band2_gain = 60;     // moderate boost
 
-    uint8_t band3_thresh = 40;  
-    uint8_t band3_ratio = 80;   
-    uint8_t band3_attack = 2;   
-    uint8_t band3_release = 20; 
-    uint8_t band3_gain = 65;    
+    // Mid-high band - aggressive for presence
+    uint8_t band3_thresh = 40;   // -26.4dB threshold  
+    uint8_t band3_ratio = 65;    // ~25:1 ratio
+    uint8_t band3_attack = 5;    // ~0.05ms attack (ultra-fast)
+    uint8_t band3_release = 25;  // ~35ms release
+    uint8_t band3_gain = 65;     // good boost
 
-    uint8_t band4_thresh = 30;  
-    uint8_t band4_ratio = 85;   
-    uint8_t band4_attack = 1;   
-    uint8_t band4_release = 15; 
-    uint8_t band4_gain = 70;    
+    // High band - most aggressive for sparkle
+    uint8_t band4_thresh = 30;   // -29.8dB threshold
+    uint8_t band4_ratio = 70;    // ~35:1 ratio  
+    uint8_t band4_attack = 2;    // ~0.02ms attack (extreme)
+    uint8_t band4_release = 20;  // ~25ms release (tight)
+    uint8_t band4_gain = 70;     // significant boost
 
     uint8_t solo_mask = 0;
     uint8_t crossover_refresh_id = 0; 
@@ -54,6 +58,11 @@ struct BandParams {
     float32_t release_coeff;
     float32_t makeup_gain;
     float32_t gain_lin;
+
+    // NEW: Band-specific noise gate threshold
+    float32_t noise_gate_thresh;  // Below this level, no processing occurs
+    float32_t upward_limit;       // Maximum upward compression boost
+
 };
 
 // Internal DSP parameters

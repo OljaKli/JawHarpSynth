@@ -194,14 +194,14 @@ extern AudioMixer<3> finalized_mixer_l;
 
 #ifdef AUDIO_DEVICE_USB
 AudioOutputUSB usb1;
-AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
-AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
+AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 1);
+AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 0);
 #endif
 
 #ifndef MCP_CV
 AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
-AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
-AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
+AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 1); //enable S/PDIF OUTPUT BY DEFAULT
+AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 0);
 #endif
 
 extern AudioAnalyzePeak mb_before_l;
@@ -577,11 +577,11 @@ LCDML_add(61, LCDML_0_17, 3, "Map Gamepad", UI_func_map_gamepad);
 LCDML_add(62, LCDML_0_17, 4, "Test Touchscreen", UI_func_test_touchscreen);
 LCDML_add(63, LCDML_0_17, 5, "Test Audio Mute", UI_func_test_mute);
 LCDML_add(64, LCDML_0_17, 6, "Test PSRAM", UI_func_test_psram);
-LCDML_add(65, LCDML_0, 18, "Chain Editor", UI_func_chain_editor);
-LCDML_add(66, LCDML_0, 19, "Info", UI_func_information);
-LCDML_addAdvanced(67, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(68, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(69, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+//LCDML_add(65, LCDML_0, 18, "Chain Editor", UI_func_chain_editor);
+LCDML_add(65, LCDML_0, 19, "Info", UI_func_information);
+LCDML_addAdvanced(66, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(67, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(68, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
@@ -24960,277 +24960,277 @@ FLASHMEM void clear_volmeter(int x, int y)
 }
 
 
-// Instantiate the new struct (definition)
-chain_editor_t chain_editor_state;
+// // Instantiate the new struct (definition)
+// chain_editor_t chain_editor_state;
 
-// Chain structure presets (definitions)
-const uint8_t chain_preset_abab[] = { 0, 1, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-const uint8_t chain_preset_aaab[] = { 0, 0, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-const uint8_t chain_preset_abcd[] = { 0, 1, 2, 3, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-void print_note_name(uint8_t note) {
-  const char* note_names[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-  uint8_t octave = (note / 12) - 1; // MIDI note 0 is C-1
-  uint8_t note_index = note % 12;
+// // Chain structure presets (definitions)
+// const uint8_t chain_preset_abab[] = { 0, 1, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+// const uint8_t chain_preset_aaab[] = { 0, 0, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+// const uint8_t chain_preset_abcd[] = { 0, 1, 2, 3, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+// void print_note_name(uint8_t note) {
+//   const char* note_names[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+//   uint8_t octave = (note / 12) - 1; // MIDI note 0 is C-1
+//   uint8_t note_index = note % 12;
 
-  display.print(note_names[note_index]);
-  display.print(octave);
-}
+//   display.print(note_names[note_index]);
+//   display.print(octave);
+// }
 
-void chain_editor_handle_encoder(const EncoderEvents& e) {
-  if (e.turned) {
-    if (chain_editor_state.current_ui_state == 0) {
-      chain_editor_state.chain_cursor = constrain(chain_editor_state.chain_cursor + e.dir, 0, 15);
-    }
-    else if (chain_editor_state.current_ui_state == 1) {
-      // Edit pattern steps
-      chain_editor_state.pattern_cursor = constrain(chain_editor_state.pattern_cursor + e.dir, 0, 15);
-    }
-    else if (chain_editor_state.current_ui_state == 2) {
-      seq.temp_active_menu = constrain(seq.temp_active_menu + e.dir, 0, 2);
-      show(0, 0, 16, seq.temp_active_menu == 0 ? "ABAB" : (seq.temp_active_menu == 1 ? "AAAB" : "ABCD"));
-    }
-    redrawNeededChainEditor = true;
-  }
-  if (e.pressed) {
-    if (chain_editor_state.current_ui_state == 0) {
-      chain_editor_state.current_ui_state = 1;
-    }
-    else if (chain_editor_state.current_ui_state == 1) {
-      chain_editor_state.current_ui_state = 0;
-    }
-    else if (chain_editor_state.current_ui_state == 2) {
-      chain_editor_create_new_chain(seq.temp_active_menu);
-      chain_editor_state.current_ui_state = 0;
-    }
-    redrawNeededChainEditor = true;
-  }
-}
+// void chain_editor_handle_encoder(const EncoderEvents& e) {
+//   if (e.turned) {
+//     if (chain_editor_state.current_ui_state == 0) {
+//       chain_editor_state.chain_cursor = constrain(chain_editor_state.chain_cursor + e.dir, 0, 15);
+//     }
+//     else if (chain_editor_state.current_ui_state == 1) {
+//       // Edit pattern steps
+//       chain_editor_state.pattern_cursor = constrain(chain_editor_state.pattern_cursor + e.dir, 0, 15);
+//     }
+//     else if (chain_editor_state.current_ui_state == 2) {
+//       seq.temp_active_menu = constrain(seq.temp_active_menu + e.dir, 0, 2);
+//       show(0, 0, 16, seq.temp_active_menu == 0 ? "ABAB" : (seq.temp_active_menu == 1 ? "AAAB" : "ABCD"));
+//     }
+//     redrawNeededChainEditor = true;
+//   }
+//   if (e.pressed) {
+//     if (chain_editor_state.current_ui_state == 0) {
+//       chain_editor_state.current_ui_state = 1;
+//     }
+//     else if (chain_editor_state.current_ui_state == 1) {
+//       chain_editor_state.current_ui_state = 0;
+//     }
+//     else if (chain_editor_state.current_ui_state == 2) {
+//       chain_editor_create_new_chain(seq.temp_active_menu);
+//       chain_editor_state.current_ui_state = 0;
+//     }
+//     redrawNeededChainEditor = true;
+//   }
+// }
 
-FLASHMEM void UI_func_chain_editor(uint8_t param) {
-  if (LCDML.FUNC_setup()) {
-    seq.active_function = 99;
-    registerTouchHandler(handle_touchscreen_chain_editor);
+// FLASHMEM void UI_func_chain_editor(uint8_t param) {
+//   if (LCDML.FUNC_setup()) {
+//     seq.active_function = 99;
+//     registerTouchHandler(handle_touchscreen_chain_editor);
 
-    // Initial full screen setup
-    display.fillScreen(COLOR_BACKGROUND);
+//     // Initial full screen setup
+//     display.fillScreen(COLOR_BACKGROUND);
 
-    // Draw static header and info
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(2);
-    setCursor_textGrid(0, 0);
-    display.print("CHAIN EDITOR");
+//     // Draw static header and info
+//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//     display.setTextSize(2);
+//     setCursor_textGrid(0, 0);
+//     display.print("CHAIN EDITOR");
 
-    // Draw static buttons
-    TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
+//     // Draw static buttons
+//     TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
 
-    chain_editor_state.active_chain = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
-    if (chain_editor_state.active_chain == 99) {
-      for (int i = 0; i < NUM_CHAINS; i++) {
-        bool is_chain_empty = true;
-        for (int j = 0; j < 16; j++) {
-          if (seq.chain[i][j] != 99) {
-            is_chain_empty = false;
-            break;
-          }
-        }
-        if (is_chain_empty) {
-          chain_editor_state.active_chain = i;
-          break;
-        }
-      }
-      if (chain_editor_state.active_chain == 99) {
-        chain_editor_state.active_chain = 0;
-      }
-    }
-    chain_editor_state.chain_cursor = 0;
-    encoderDir[ENC_R].reset();
+//     chain_editor_state.active_chain = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+//     if (chain_editor_state.active_chain == 99) {
+//       for (int i = 0; i < NUM_CHAINS; i++) {
+//         bool is_chain_empty = true;
+//         for (int j = 0; j < 16; j++) {
+//           if (seq.chain[i][j] != 99) {
+//             is_chain_empty = false;
+//             break;
+//           }
+//         }
+//         if (is_chain_empty) {
+//           chain_editor_state.active_chain = i;
+//           break;
+//         }
+//       }
+//       if (chain_editor_state.active_chain == 99) {
+//         chain_editor_state.active_chain = 0;
+//       }
+//     }
+//     chain_editor_state.chain_cursor = 0;
+//     encoderDir[ENC_R].reset();
 
-    // Set redraw flag to trigger the first draw of dynamic content
-    redrawNeededChainEditor = true;
-    seq.help_text_needs_refresh = true;
-    chain_editor_state.recording_active = false;
-  }
+//     // Set redraw flag to trigger the first draw of dynamic content
+//     redrawNeededChainEditor = true;
+//     seq.help_text_needs_refresh = true;
+//     chain_editor_state.recording_active = false;
+//   }
 
-  if (LCDML.FUNC_loop()) {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    chain_editor_handle_encoder(e);
+//   if (LCDML.FUNC_loop()) {
+//     const EncoderEvents e = getEncoderEvents(ENC_R);
+//     chain_editor_handle_encoder(e);
 
-    if (redrawNeededChainEditor) {
-      chain_editor_draw_ui();
-      redrawNeededChainEditor = false;
-    }
-  }
-  if (LCDML.FUNC_close()) {
-    unregisterTouchHandler();
-    display.fillScreen(COLOR_BACKGROUND);
-    encoderDir[ENC_R].reset();
-  }
-}
+//     if (redrawNeededChainEditor) {
+//       chain_editor_draw_ui();
+//       redrawNeededChainEditor = false;
+//     }
+//   }
+//   if (LCDML.FUNC_close()) {
+//     unregisterTouchHandler();
+//     display.fillScreen(COLOR_BACKGROUND);
+//     encoderDir[ENC_R].reset();
+//   }
+// }
 
-void chain_editor_draw_ui() {
-  display.fillScreen(COLOR_BACKGROUND);
+// void chain_editor_draw_ui() {
+//   display.fillScreen(COLOR_BACKGROUND);
 
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.setTextSize(2);
-  setCursor_textGrid(0, 0);
-  display.print("CHAIN EDITOR");
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//   display.setTextSize(2);
+//   setCursor_textGrid(0, 0);
+//   display.print("CHAIN EDITOR");
 
-  display.setTextSize(1);
-  setCursor_textGrid(0, 2);
-  display.print("CHAIN:");
-  display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  print_formatted_number(chain_editor_state.active_chain, 2);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(" CURSOR:");
-  display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  print_formatted_number(chain_editor_state.chain_cursor, 2);
+//   display.setTextSize(1);
+//   setCursor_textGrid(0, 2);
+//   display.print("CHAIN:");
+//   display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
+//   print_formatted_number(chain_editor_state.active_chain, 2);
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//   display.print(" CURSOR:");
+//   display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
+//   print_formatted_number(chain_editor_state.chain_cursor, 2);
 
-  // Draw the patterns and their steps in a single, compact view
-  display.setTextSize(1);
-  for (int i = 0; i < 16; i++) {
-    setCursor_textGrid_small(0, 5 + i);
+//   // Draw the patterns and their steps in a single, compact view
+//   display.setTextSize(1);
+//   for (int i = 0; i < 16; i++) {
+//     setCursor_textGrid_small(0, 5 + i);
 
-    // Draw cursor
-    display.setTextColor(i == chain_editor_state.chain_cursor ? RED : GREY1, COLOR_BACKGROUND);
-    display.print(i == chain_editor_state.chain_cursor ? ">" : " ");
+//     // Draw cursor
+//     display.setTextColor(i == chain_editor_state.chain_cursor ? RED : GREY1, COLOR_BACKGROUND);
+//     display.print(i == chain_editor_state.chain_cursor ? ">" : " ");
 
-    print_formatted_number(i, 2);
-    display.print(":");
+//     print_formatted_number(i, 2);
+//     display.print(":");
 
-    // Get the current pattern ID from the chain
-    uint8_t current_pattern_id = seq.chain[chain_editor_state.active_chain][i];
+//     // Get the current pattern ID from the chain
+//     uint8_t current_pattern_id = seq.chain[chain_editor_state.active_chain][i];
 
-    // Now, print all 16 steps for this pattern
-    if (current_pattern_id == 99) {
-      setCursor_textGrid_small(5, 5 + i);
-      display.setTextColor(GREY1, COLOR_BACKGROUND);
-      display.print("--- EMPTY ---");
-    }
-    else {
-      for (int j = 0; j < 16; j++) {
+//     // Now, print all 16 steps for this pattern
+//     if (current_pattern_id == 99) {
+//       setCursor_textGrid_small(5, 5 + i);
+//       display.setTextColor(GREY1, COLOR_BACKGROUND);
+//       display.print("--- EMPTY ---");
+//     }
+//     else {
+//       for (int j = 0; j < 16; j++) {
 
-        setCursor_textGrid_small(5 + j * 3, 5 + i);
+//         setCursor_textGrid_small(5 + j * 3, 5 + i);
 
-        // Display the step's note data
-        if (seq.note_data[current_pattern_id][j] == 0) {
-          display.setTextColor(GREY1, COLOR_BACKGROUND);
-          display.print("--");
-        }
-        else {
-          display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-          print_note_name(seq.note_data[current_pattern_id][j]);
-        }
-      }
-    }
-  }
+//         // Display the step's note data
+//         if (seq.note_data[current_pattern_id][j] == 0) {
+//           display.setTextColor(GREY1, COLOR_BACKGROUND);
+//           display.print("--");
+//         }
+//         else {
+//           display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
+//           print_note_name(seq.note_data[current_pattern_id][j]);
+//         }
+//       }
+//     }
+//   }
 
-  // Draw buttons
-  TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
+//   // Draw buttons
+//   TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
 
-  if (chain_editor_state.recording_active) {
-    show(0, 0, 16, "Recording...");
-  }
-}
-
-
-void chain_editor_create_new_chain(uint8_t structure_type) {
-  const uint8_t* preset_data = nullptr;
-  switch (structure_type) {
-  case 0:
-    preset_data = chain_preset_abab;
-    break;
-  case 1:
-    preset_data = chain_preset_aaab;
-    break;
-  case 2:
-    preset_data = chain_preset_abcd;
-    break;
-  default:
-    return;
-  }
-
-  uint8_t pattern_map[16] = { 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-  uint8_t next_empty_pattern = 0;
-
-  for (int i = 0; i < NUM_SEQ_PATTERN; ++i) {
-    bool is_empty = true;
-    for (int j = 0; j < 16; ++j) {
-      if (seq.note_data[i][j] != 0) {
-        is_empty = false;
-        break;
-      }
-    }
-    if (is_empty) {
-      next_empty_pattern = i;
-      break;
-    }
-  }
-
-  for (int i = 0; i < 16; i++) {
-    if (preset_data[i] != 99) {
-      uint8_t template_pattern_index = preset_data[i];
-
-      if (pattern_map[template_pattern_index] == 99) {
-        while (next_empty_pattern < NUM_SEQ_PATTERN) {
-          bool is_occupied = false;
-          for (int j = 0; j < NUM_CHAINS; j++) {
-            for (int k = 0; k < 16; k++) {
-              if (seq.chain[j][k] == next_empty_pattern) {
-                is_occupied = true;
-                break;
-              }
-            }
-            if (is_occupied) break;
-          }
-
-          if (!is_occupied) {
-            pattern_map[template_pattern_index] = next_empty_pattern;
-            next_empty_pattern++;
-            break;
-          }
-          next_empty_pattern++;
-        }
-      }
-      seq.chain[chain_editor_state.active_chain][i] = pattern_map[template_pattern_index];
-    }
-    else {
-      seq.chain[chain_editor_state.active_chain][i] = 99;
-    }
-  }
-
-  show(0, 0, 16, "New chain created!");
-}
+//   if (chain_editor_state.recording_active) {
+//     show(0, 0, 16, "Recording...");
+//   }
+// }
 
 
-void chain_editor_midi_record_func() {
-  if (chain_editor_state.recording_active) {
-    if (seq.note_in != 0) {
-      uint8_t current_pattern = seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step];
-      if (current_pattern < NUM_SEQ_PATTERN) {
-        if (chain_editor_state.midi_record_pattern_step < 16) {
-          seq.note_data[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in;
-          seq.vel[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in_velocity;
-          chain_editor_state.midi_record_pattern_step++;
-          if (chain_editor_state.midi_record_pattern_step >= 16) {
-            chain_editor_state.midi_record_pattern_step = 0;
-            chain_editor_state.midi_record_chain_step++;
-            if (chain_editor_state.midi_record_chain_step >= 16 || seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step] == 99) {
-              chain_editor_state.recording_active = false;
-              show(0, 0, 16, "Recording finished.");
-              chain_editor_draw_ui();
-            }
-          }
-        }
-      }
-      seq.note_in = 0;
-    }
-  }
-}
+// void chain_editor_create_new_chain(uint8_t structure_type) {
+//   const uint8_t* preset_data = nullptr;
+//   switch (structure_type) {
+//   case 0:
+//     preset_data = chain_preset_abab;
+//     break;
+//   case 1:
+//     preset_data = chain_preset_aaab;
+//     break;
+//   case 2:
+//     preset_data = chain_preset_abcd;
+//     break;
+//   default:
+//     return;
+//   }
+
+//   uint8_t pattern_map[16] = { 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+//   uint8_t next_empty_pattern = 0;
+
+//   for (int i = 0; i < NUM_SEQ_PATTERN; ++i) {
+//     bool is_empty = true;
+//     for (int j = 0; j < 16; ++j) {
+//       if (seq.note_data[i][j] != 0) {
+//         is_empty = false;
+//         break;
+//       }
+//     }
+//     if (is_empty) {
+//       next_empty_pattern = i;
+//       break;
+//     }
+//   }
+
+//   for (int i = 0; i < 16; i++) {
+//     if (preset_data[i] != 99) {
+//       uint8_t template_pattern_index = preset_data[i];
+
+//       if (pattern_map[template_pattern_index] == 99) {
+//         while (next_empty_pattern < NUM_SEQ_PATTERN) {
+//           bool is_occupied = false;
+//           for (int j = 0; j < NUM_CHAINS; j++) {
+//             for (int k = 0; k < 16; k++) {
+//               if (seq.chain[j][k] == next_empty_pattern) {
+//                 is_occupied = true;
+//                 break;
+//               }
+//             }
+//             if (is_occupied) break;
+//           }
+
+//           if (!is_occupied) {
+//             pattern_map[template_pattern_index] = next_empty_pattern;
+//             next_empty_pattern++;
+//             break;
+//           }
+//           next_empty_pattern++;
+//         }
+//       }
+//       seq.chain[chain_editor_state.active_chain][i] = pattern_map[template_pattern_index];
+//     }
+//     else {
+//       seq.chain[chain_editor_state.active_chain][i] = 99;
+//     }
+//   }
+
+//   show(0, 0, 16, "New chain created!");
+// }
+
+
+// void chain_editor_midi_record_func() {
+//   if (chain_editor_state.recording_active) {
+//     if (seq.note_in != 0) {
+//       uint8_t current_pattern = seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step];
+//       if (current_pattern < NUM_SEQ_PATTERN) {
+//         if (chain_editor_state.midi_record_pattern_step < 16) {
+//           seq.note_data[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in;
+//           seq.vel[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in_velocity;
+//           chain_editor_state.midi_record_pattern_step++;
+//           if (chain_editor_state.midi_record_pattern_step >= 16) {
+//             chain_editor_state.midi_record_pattern_step = 0;
+//             chain_editor_state.midi_record_chain_step++;
+//             if (chain_editor_state.midi_record_chain_step >= 16 || seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step] == 99) {
+//               chain_editor_state.recording_active = false;
+//               show(0, 0, 16, "Recording finished.");
+//               chain_editor_draw_ui();
+//             }
+//           }
+//         }
+//       }
+//       seq.note_in = 0;
+//     }
+//   }
+// }

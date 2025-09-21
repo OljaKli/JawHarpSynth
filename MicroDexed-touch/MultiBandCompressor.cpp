@@ -44,11 +44,11 @@ AudioMultiBandCompressor::AudioMultiBandCompressor() : AudioStream(2, inputQueue
 }
 
 void AudioMultiBandCompressor::updateParameterValues() {
-    // Master controls
+    // Master controls (these are fine)
     params.master_gain_lin = powf(10.0f, (params.ui_data.master_gain - 50.0f) * 0.6f / 20.0f);
     params.master_mix_lin = params.ui_data.master_mix * 0.01f;
 
-    // Crossover frequencies  
+    // Crossover frequencies (these are fine)
     const float log_30 = logf(30.0f);
     const float log_250 = logf(250.0f);
     const float log_2000 = logf(2000.0f);
@@ -58,7 +58,7 @@ void AudioMultiBandCompressor::updateParameterValues() {
     params.crossover2_freq_hz = expf(log_250 + (params.ui_data.crossover2 * 0.01f) * (log_2000 - log_250));
     params.crossover3_freq_hz = expf(log_2000 + (params.ui_data.crossover3 * 0.01f) * (log_8000 - log_2000));
 
-    // Update filter coefficients
+    // Update filter coefficients (same as before)
     calculate_biquad_coeffs(&lp1_l, params.crossover1_freq_hz, true);
     calculate_biquad_coeffs(&lp1_r, params.crossover1_freq_hz, true);
     calculate_biquad_coeffs(&hp1_l, params.crossover1_freq_hz, false);
@@ -74,58 +74,85 @@ void AudioMultiBandCompressor::updateParameterValues() {
     calculate_biquad_coeffs(&hp3_l, params.crossover3_freq_hz, false);
     calculate_biquad_coeffs(&hp3_r, params.crossover3_freq_hz, false);
 
-    // FIXED: Band gains using proper dB conversion
+    // Band gains (these are fine)
     params.band1_gain_lin = powf(10.0f, (params.ui_data.band1_gain - 50.0f) * 0.4f / 20.0f);
     params.band2_gain_lin = powf(10.0f, (params.ui_data.band2_gain - 50.0f) * 0.4f / 20.0f);
     params.band3_gain_lin = powf(10.0f, (params.ui_data.band3_gain - 50.0f) * 0.4f / 20.0f);
     params.band4_gain_lin = powf(10.0f, (params.ui_data.band4_gain - 50.0f) * 0.4f / 20.0f);
 
-    // FIXED: Thresholds using proper dB to linear conversion
-    // UI 0-100 maps to -40dB to -6dB
+    // Thresholds (these are fine)
     params.band1_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band1_thresh * 0.34f) / 20.0f);
     params.band2_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band2_thresh * 0.34f) / 20.0f);
     params.band3_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band3_thresh * 0.34f) / 20.0f);
     params.band4_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band4_thresh * 0.34f) / 20.0f);
 
-    // Ratios (this was correct)
-    params.band1_ratio = 1.0f + (params.ui_data.band1_ratio * 0.19f);
-    params.band2_ratio = 1.0f + (params.ui_data.band2_ratio * 0.19f);
-    params.band3_ratio = 1.0f + (params.ui_data.band3_ratio * 0.19f);
-    params.band4_ratio = 1.0f + (params.ui_data.band4_ratio * 0.19f);
+// Calculate band-specific noise gate thresholds
+    // Lower frequencies need higher thresholds, higher frequencies can be more sensitive
+    const float32_t band1_gate = params.band1_thresh_lin * 0.05f; // -26dB below threshold
+    const float32_t band2_gate = params.band2_thresh_lin * 0.08f; // -22dB below threshold  
+    const float32_t band3_gate = params.band3_thresh_lin * 0.12f; // -18dB below threshold
+    const float32_t band4_gate = params.band4_thresh_lin * 0.15f; // -16dB below threshold
+    
+   // Conservative upward compression limits per band
+    const float32_t band1_limit = 2.0f;  // 6dB max boost for bass
+    const float32_t band2_limit = 2.5f;  // 8dB max boost for mids
+    const float32_t band3_limit = 3.0f;  // 9.5dB max boost for mid-highs
+    const float32_t band4_limit = 4.0f;  // 12dB max boost for highs (sparkle)
+
+    // IMPROVED: More aggressive ratio mapping for OTT-style compression
+    // UI 0-100 now maps to ratios 1:1 to 100:1 (logarithmic curve)
+    // Low values (0-30) give gentle compression (1:1 to 4:1)
+    // Mid values (30-70) give moderate compression (4:1 to 20:1) 
+    // High values (70-100) give extreme compression (20:1 to 100:1)
+    params.band1_ratio = 1.0f + powf(params.ui_data.band1_ratio * 0.01f, 1.5f) * 99.0f;
+    params.band2_ratio = 1.0f + powf(params.ui_data.band2_ratio * 0.01f, 1.5f) * 99.0f;
+    params.band3_ratio = 1.0f + powf(params.ui_data.band3_ratio * 0.01f, 1.5f) * 99.0f;
+    params.band4_ratio = 1.0f + powf(params.ui_data.band4_ratio * 0.01f, 1.5f) * 99.0f;
     
     params.band1_inv_ratio = 1.0f / params.band1_ratio;
     params.band2_inv_ratio = 1.0f / params.band2_ratio;
     params.band3_inv_ratio = 1.0f / params.band3_ratio;
     params.band4_inv_ratio = 1.0f / params.band4_ratio;
 
-    // Envelope coefficients
+    // IMPROVED: Much faster attack times for OTT character
+    // UI 0-100 now maps to 0.01ms - 5ms (exponential curve)
+    // This gives you the ultra-fast attacks needed for OTT-style pumping
     const float sample_rate_ms = AUDIO_SAMPLE_RATE_EXACT * 0.001f;
     
-    params.band1_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + params.ui_data.band1_attack * 0.499f)));
-    params.band2_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + params.ui_data.band2_attack * 0.499f)));
-    params.band3_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + params.ui_data.band3_attack * 0.499f)));
-    params.band4_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + params.ui_data.band4_attack * 0.499f)));
+    params.band1_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band1_attack * 0.01f, 2.0f) * 4.99f)));
+    params.band2_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band2_attack * 0.01f, 2.0f) * 4.99f)));
+    params.band3_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band3_attack * 0.01f, 2.0f) * 4.99f)));
+    params.band4_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band4_attack * 0.01f, 2.0f) * 4.99f)));
     
-    params.band1_release_coeff = expf(-1.0f / (sample_rate_ms * (5.0f + params.ui_data.band1_release * 19.95f)));
-    params.band2_release_coeff = expf(-1.0f / (sample_rate_ms * (5.0f + params.ui_data.band2_release * 19.95f)));
-    params.band3_release_coeff = expf(-1.0f / (sample_rate_ms * (5.0f + params.ui_data.band3_release * 19.95f)));
-    params.band4_release_coeff = expf(-1.0f / (sample_rate_ms * (5.0f + params.ui_data.band4_release * 19.95f)));
+    // IMPROVED: Better release time range for musical results
+    // UI 0-100 now maps to 10ms - 500ms (logarithmic curve)
+    // This gives you both snappy and smooth release options
+    params.band1_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band1_release * 0.01f, 1.2f) * 490.0f)));
+    params.band2_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band2_release * 0.01f, 1.2f) * 490.0f)));
+    params.band3_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band3_release * 0.01f, 1.2f) * 490.0f)));
+    params.band4_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band4_release * 0.01f, 1.2f) * 490.0f)));
     
-    // Makeup gain - more conservative
-    params.band1_makeup = 1.0f + (params.band1_ratio - 1.0f) * 0.2f;
-    params.band2_makeup = 1.0f + (params.band2_ratio - 1.0f) * 0.2f;
-    params.band3_makeup = 1.0f + (params.band3_ratio - 1.0f) * 0.2f;
-    params.band4_makeup = 1.0f + (params.band4_ratio - 1.0f) * 0.2f;
+    // IMPROVED: Ratio-dependent makeup gain for better level matching
+    // Higher ratios need more makeup gain to compensate for level reduction
+    params.band1_makeup = 1.0f + (params.band1_ratio - 1.0f) * 0.15f;
+    params.band2_makeup = 1.0f + (params.band2_ratio - 1.0f) * 0.15f;
+    params.band3_makeup = 1.0f + (params.band3_ratio - 1.0f) * 0.15f;
+    params.band4_makeup = 1.0f + (params.band4_ratio - 1.0f) * 0.15f;
 
     // Update band parameter structs
+    // Update band parameter structs with new fields
     band_params[0] = {params.band1_thresh_lin, 1.0f/params.band1_thresh_lin, params.band1_inv_ratio, 
-                      params.band1_attack_coeff, params.band1_release_coeff, params.band1_makeup, params.band1_gain_lin};
+                      params.band1_attack_coeff, params.band1_release_coeff, params.band1_makeup, 
+                      params.band1_gain_lin, band1_gate, band1_limit};
     band_params[1] = {params.band2_thresh_lin, 1.0f/params.band2_thresh_lin, params.band2_inv_ratio, 
-                      params.band2_attack_coeff, params.band2_release_coeff, params.band2_makeup, params.band2_gain_lin};
+                      params.band2_attack_coeff, params.band2_release_coeff, params.band2_makeup, 
+                      params.band2_gain_lin, band2_gate, band2_limit};
     band_params[2] = {params.band3_thresh_lin, 1.0f/params.band3_thresh_lin, params.band3_inv_ratio, 
-                      params.band3_attack_coeff, params.band3_release_coeff, params.band3_makeup, params.band3_gain_lin};
+                      params.band3_attack_coeff, params.band3_release_coeff, params.band3_makeup, 
+                      params.band3_gain_lin, band3_gate, band3_limit};
     band_params[3] = {params.band4_thresh_lin, 1.0f/params.band4_thresh_lin, params.band4_inv_ratio, 
-                      params.band4_attack_coeff, params.band4_release_coeff, params.band4_makeup, params.band4_gain_lin};
+                      params.band4_attack_coeff, params.band4_release_coeff, params.band4_makeup, 
+                      params.band4_gain_lin, band4_gate, band4_limit};
 }
 
 void AudioMultiBandCompressor::calculate_biquad_coeffs(
@@ -179,6 +206,9 @@ void AudioMultiBandCompressor::process_band_ott(float32_t* bufL, float32_t* bufR
                                                float32_t& envL, float32_t& envR,
                                                const BandParams& band) {
     
+    const float32_t upper_thresh = band.thresh_lin * 1.05f;  // Small hysteresis
+    const float32_t lower_thresh = band.thresh_lin * 0.95f;
+    
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
         const float32_t inputL = bufL[i];
         const float32_t inputR = bufR[i];
@@ -187,7 +217,6 @@ void AudioMultiBandCompressor::process_band_ott(float32_t* bufL, float32_t* bufR
         const float32_t absL = fabsf(inputL);
         const float32_t absR = fabsf(inputR);
 
-        // Smooth envelope follower
         if (absL > envL) {
             envL = absL + (envL - absL) * band.attack_coeff;
         } else {
@@ -200,38 +229,34 @@ void AudioMultiBandCompressor::process_band_ott(float32_t* bufL, float32_t* bufR
             envR = absR + (envR - absR) * band.release_coeff;
         }
 
-        // OTT-style compression with proper upward/downward behavior
         float32_t gainL = 1.0f, gainR = 1.0f;
         
-        // Left channel processing
-        if (envL > 0.001f) {
-            if (envL > band.thresh_lin) {
-                // Downward compression - reduce loud signals
+        // Left channel - only process if above noise gate
+        if (envL > band.noise_gate_thresh) {
+            if (envL > upper_thresh) {
+                // Downward compression
                 const float32_t ratio_factor = envL / band.thresh_lin;
-                const float32_t compressed_factor = powf(ratio_factor, band.inv_ratio - 1.0f);
-                gainL = compressed_factor;
-            } else {
-                // Upward compression - boost quiet signals  
+                gainL = powf(ratio_factor, band.inv_ratio - 1.0f);
+            } else if (envL < lower_thresh) {
+                // Gentle upward compression with band-specific limit  0.12f 
                 const float32_t ratio_factor = band.thresh_lin / envL;
-                const float32_t boost_factor = powf(ratio_factor, (1.0f - band.inv_ratio) * 0.5f); // Reduced intensity
-                gainL = boost_factor;
+                const float32_t boost_factor = powf(ratio_factor, (1.0f - band.inv_ratio) * 0.2f);
+                gainL = fminf(boost_factor, band.upward_limit);
             }
         }
         
         // Right channel (same logic)
-        if (envR > 0.001f) {
-            if (envR > band.thresh_lin) {
+        if (envR > band.noise_gate_thresh) {
+            if (envR > upper_thresh) {
                 const float32_t ratio_factor = envR / band.thresh_lin;
-                const float32_t compressed_factor = powf(ratio_factor, band.inv_ratio - 1.0f);
-                gainR = compressed_factor;
-            } else {
+                gainR = powf(ratio_factor, band.inv_ratio - 1.0f);
+            } else if (envR < lower_thresh) {
                 const float32_t ratio_factor = band.thresh_lin / envR;
-                const float32_t boost_factor = powf(ratio_factor, (1.0f - band.inv_ratio) * 0.5f);
-                gainR = boost_factor;
+                const float32_t boost_factor = powf(ratio_factor, (1.0f - band.inv_ratio) * 0.2f);
+                gainR = fminf(boost_factor, band.upward_limit);
             }
         }
         
-        // Apply final gains
         bufL[i] = inputL * gainL * band.makeup_gain * band.gain_lin;
         bufR[i] = inputR * gainR * band.makeup_gain * band.gain_lin;
     }

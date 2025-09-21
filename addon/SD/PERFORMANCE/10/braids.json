@@ -1,13 +1,13 @@
 {
-  "vol": 63,
+  "vol": 22,
   "algo": 14,
   "color": 0,
   "timbre": 106,
   "coarse": 0,
   "attack": 15,
-  "decay": 43,
-  "sustain": 38,
-  "release": 27,
+  "decay": 50,
+  "sustain": 41,
+  "release": 34,
   "filter_mode": 1,
   "freq_from": 12320,
   "freq_to": 640,
@@ -19,5 +19,7 @@
   "delay_1": 46,
   "delay_2": 44,
   "midi": 9,
-  "pan": 20
+  "pan": 20,
+  "sidechain_send": 0,
+  "name": "-FROM PERF-"
 }

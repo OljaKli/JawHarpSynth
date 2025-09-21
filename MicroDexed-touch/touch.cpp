@@ -1853,69 +1853,72 @@ FLASHMEM void handle_load_performance()
   }
 }
 
-bool redrawNeededChainEditor = false;
+// bool redrawNeededChainEditor = false;
 
-FLASHMEM void handle_touchscreen_chain_editor() {
-    // Check if there is a valid touch point.
-    // The TouchButton::isPressed() function will handle the single-press logic.
-   
-        // Use a local flag to check if any UI state was changed.
-        bool state_changed = false;
-      // Button presses using the defined GRID and TouchButton class
-        if (TouchButton::isPressed(GRID.X[0], GRID.Y[4])) {
-            chain_editor_state.current_ui_state = 2;
-            seq.temp_active_menu = 0;
-            show_smallfont_noGrid(0, 0, 16, "Choose new chain template");
-            state_changed = true;
-        } else if (TouchButton::isPressed(GRID.X[1], GRID.Y[4])) {
-            chain_editor_state.current_ui_state = 1;
-            show_smallfont_noGrid(0, 0, 16, "Editing chain slot ");
-            state_changed = true;
-        } else if (TouchButton::isPressed(GRID.X[2], GRID.Y[4])) {
-            chain_editor_state.recording_active = !chain_editor_state.recording_active;
-            if (chain_editor_state.recording_active) {
-                chain_editor_state.midi_record_chain_step = 0;
-                chain_editor_state.midi_record_pattern_step = 0;
-                show_smallfont_noGrid(0, 0, 16, "MIDI recording started!");
-            } else {
-                show_smallfont_noGrid(0, 0, 16, "MIDI recording stopped.");
-            }
-            state_changed = true;
-        } else if (TouchButton::isPressed(GRID.X[3], GRID.Y[4])) {
-            chain_editor_state.current_ui_state = 2;
-            seq.temp_active_menu = 0;
-            show_smallfont_noGrid(0, 0, 16, "Choose new chain template");
-            state_changed = true;
-        } else if (TouchButton::isPressed(GRID.X[4], GRID.Y[4])) {
-            LCDML.OTHER_jumpToFunc(UI_func_song);
-            state_changed = true;
-        }
+// FLASHMEM void handle_touchscreen_chain_editor() {
+//   // Check if there is a valid touch point.
+//   // The TouchButton::isPressed() function will handle the single-press logic.
 
-       
+//       // Use a local flag to check if any UI state was changed.
+//   bool state_changed = false;
+//   // Button presses using the defined GRID and TouchButton class
+//   if (TouchButton::isPressed(GRID.X[0], GRID.Y[4])) {
+//     chain_editor_state.current_ui_state = 2;
+//     seq.temp_active_menu = 0;
+//     show_smallfont_noGrid(0, 0, 16, "Choose new chain template");
+//     state_changed = true;
+//   }
+//   else if (TouchButton::isPressed(GRID.X[1], GRID.Y[4])) {
+//     chain_editor_state.current_ui_state = 1;
+//     show_smallfont_noGrid(0, 0, 16, "Editing chain slot ");
+//     state_changed = true;
+//   }
+//   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[4])) {
+//     chain_editor_state.recording_active = !chain_editor_state.recording_active;
+//     if (chain_editor_state.recording_active) {
+//       chain_editor_state.midi_record_chain_step = 0;
+//       chain_editor_state.midi_record_pattern_step = 0;
+//       show_smallfont_noGrid(0, 0, 16, "MIDI recording started!");
+//     }
+//     else {
+//       show_smallfont_noGrid(0, 0, 16, "MIDI recording stopped.");
+//     }
+//     state_changed = true;
+//   }
+//   else if (TouchButton::isPressed(GRID.X[3], GRID.Y[4])) {
+//     chain_editor_state.current_ui_state = 2;
+//     seq.temp_active_menu = 0;
+//     show_smallfont_noGrid(0, 0, 16, "Choose new chain template");
+//     state_changed = true;
+//   }
+//   else if (TouchButton::isPressed(GRID.X[4], GRID.Y[4])) {
+//     LCDML.OTHER_jumpToFunc(UI_func_song);
+//     state_changed = true;
+//   }
 
- if (numTouchPoints > 0) {
- int x = ts.p.x;
-        int y = ts.p.y;
-        // Pattern selection on the top part of the screen
-        if (y > 3 * CHAR_height && y < 5 * CHAR_height) {
-            int step = (x / (CHAR_width * 2));
-            if (step < 16) {
-                chain_editor_state.chain_cursor = step;
-                state_changed = true;
-            }
-        }
-        
-        
+//   if (numTouchPoints > 0) {
+//     int x = ts.p.x;
+//     int y = ts.p.y;
+//     // Pattern selection on the top part of the screen
+//     if (y > 3 * CHAR_height && y < 5 * CHAR_height) {
+//       int step = (x / (CHAR_width * 2));
+//       if (step < 16) {
+//         chain_editor_state.chain_cursor = step;
+//         state_changed = true;
+//       }
+//     }
 
-        // If any state was changed by a touch, set the global redraw flag.
-        if (state_changed) {
-            redrawNeededChainEditor = true;
-        }
-    }
-    
-    // Only redraw the screen if a state change has occurred.
-    if (redrawNeededChainEditor) {
-        chain_editor_draw_ui();
-        redrawNeededChainEditor = false; // Reset the flag after drawing.
-    }
-}
+
+
+//     // If any state was changed by a touch, set the global redraw flag.
+//     if (state_changed) {
+//       redrawNeededChainEditor = true;
+//     }
+//   }
+
+//   // Only redraw the screen if a state change has occurred.
+//   if (redrawNeededChainEditor) {
+//     chain_editor_draw_ui();
+//     redrawNeededChainEditor = false; // Reset the flag after drawing.
+//   }
+// }
