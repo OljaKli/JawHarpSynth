@@ -79,6 +79,11 @@ by fellpower (german language)
 ## If you want to donate to this project, please check out this link:
 
 <a href="https://liberapay.com/positionhigh/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
+<br>
+<p>
+<script src="https://liberapay.com/positionhigh/widgets/receiving.js"></script>
+<br>
+<p>
 
 ### User Chat groups
 
