@@ -6,7 +6,9 @@ FLASHMEM PsramLoader::PsramLoader(uint32_t &freeBytes) :
   freeBytesPSRAM(freeBytes) {
 }
 
-FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &slot) {
+
+FLASHMEM void PsramLoader::loadSampleToDrums(const String path, drum_config_t &slot,  SDClass &sd) {
+  File file = sd.open(path.c_str());
   if((slot.drum_data != nullptr) && (slot.len > 0)) {
     DBG_LOG(printf("unload...\n"));
     unloadSample(slot.drum_data, slot.len * 2); // len is 16bit

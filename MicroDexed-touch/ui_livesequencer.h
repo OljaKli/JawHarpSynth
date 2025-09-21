@@ -22,6 +22,10 @@ public:
     drawCpuLoad = (1 << 9)
   };
 
+  //  void setGridNeedsRedraw(bool needsRedraw) { gridNeedsRedraw = needsRedraw; }
+  // bool getGridNeedsRedraw() const { return gridNeedsRedraw; }
+  
+
   UI_LiveSequencer(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
   void init(void);
   void showDirectMappingWarning(uint8_t inChannel);
@@ -33,6 +37,8 @@ public:
   void drawUpdates(uint16_t flags);
   static void openScreen(LCDML_FuncPtr_pu8 screen, uint8_t p_param = 0);
   void updateTrackChannelSetupButtons(uint8_t track);
+  bool gridNeedsRedraw = true; // Track if grid needs redrawing
+void onGridStepChanged(void);  // Called when grid step changes to trigger redraw
 
 private:
   uint16_t msCount = 0;
@@ -114,6 +120,7 @@ private:
     TOOLS_SONG,
     TOOLS_ARP,
     TOOLS_SEQ,
+    TOOLS_SONG_MODE,  // New song mode selection tool
     TOOLS_KEYBOARD,
     TOOLS_NUM
   };
@@ -141,6 +148,38 @@ private:
   void drawTrackSubtext(uint8_t track);
   void checkApplyTrackInstrument(void);
   void drawKeyboard(uint8_t flags);
+
+  bool showingGridSongEditor = false;
+
+  static constexpr uint8_t GRID_SONG_COLS = 12; // All 12 tracks
+    static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps
+    
+    // Calculate cell dimensions based on available space
+    static constexpr uint8_t GRID_SONG_CELL_WIDTH = (320  - (GRID_SONG_COLS - 1)) / GRID_SONG_COLS;
+    static constexpr uint8_t GRID_SONG_CELL_HEIGHT = (154 - (GRID_SONG_ROWS - 1)) / GRID_SONG_ROWS; 
+
+  const uint8_t gridStartX = 19; 
+  const uint8_t gridStartY = 12;
+
+   std::vector<TouchButton*> gridLayerButtons;
+     std::vector<TouchButton*> gridControlButtons; 
+    void drawGridSongEditor(void);
+    void handleGridSongTouch(void);
+    void updateGridSongLayerButtons(void);
+    void toggleGridSongLayer(uint8_t layer);
+     void clearGridCell(void); 
+    void fillGridCell(void); 
+    void copyFromAbove(void); 
+    void scrollToTop(void); 
+    void scrollUp(void); 
+    void scrollDown(void); 
+    void slow_rect(uint16_t x, uint8_t y,uint16_t color);
+
+
+     bool inGridEditor = false; // Track if we're in grid editor mode
+    
+
+
 };
 
 #endif //UI_LIVESEQUENCER_H

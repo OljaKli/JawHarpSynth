@@ -96,9 +96,11 @@ void handle_page_with_touch_back_button();
 void print_file_manager_active_border();
 uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 void update_step_rec_buttons();
-
+void handle_touchscreen_chain_editor() ;
 void handle_touchscreen_braids(void);
 void handle_touchscreen_cv_screen(void);
+void handle_touchscreen_chord_arranger(void);
+void handle_touchscreen_noisemaker(void);
 void handle_touchscreen_arpeggio();
 void handle_touchscreen_midi_channel_page();
 void handle_touchscreen_mixer();
@@ -108,11 +110,13 @@ void handle_touchscreen_voice_select();
 void handle_touchscreen_multiband();
 void handle_touchscreen_menu();
 void handle_touchscreen_test_touchscreen();
-void handle_touchscreen_sample_editor();
+void handle_touchscreen_slice_editor();
 void handle_touchscreen_settings_button_test();
 void handle_touchscreen_file_manager();
 void handle_touchscreen_mute_matrix();
 void handle_touchscreen_custom_mappings();
 void handle_touchscreen_drums();
 void handle_load_performance();
+// Define a flag to track if a redraw is needed to prevent continuous flashing.
+extern bool redrawNeededChainEditor ;
 #endif

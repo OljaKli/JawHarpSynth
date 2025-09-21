@@ -69,8 +69,10 @@ bool save_sd_sys_json(void);
 bool load_sd_performance_json(uint8_t p);
 bool save_sd_performance_json(uint8_t p);
 
+#if defined COMPILE_FOR_PSRAM
 bool load_sd_multisample_presets_json(uint8_t p);
 bool save_sd_multisample_presets_json(uint8_t p);
+#endif
 
 bool check_performance_directory(uint8_t seq_number);
 

@@ -373,11 +373,12 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define FX_CONFIG_NAME "fx"
 #define VOICE_CONFIG_NAME "voice"
 #define SYS_CONFIG_NAME "sys"
+#define CONFIG_NOISEMAKER "nm_config"
 #define EPIANO_CONFIG_NAME "epiano"
 #define MICROSYNTH_CONFIG_NAME "msynth"
 #define MULTISAMPLE_PRESETS_CONFIG_NAME "msp_presets"
 #define BRAIDS_CONFIG_NAME "braids"
-#define MULTIBAND_CONFIG_NAME "multiband"
+#define MULTIBAND_CONFIG_NAME "mb_comp"
 #define SIDECHAIN_CONFIG_NAME "sc"
 #define LIVESEQUENCER_CONFIG_NAME "liveseq"
 #define SAMPLES_CONFIG_NAME "samples"
@@ -417,6 +418,9 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define CV_CLOCK_IN 22
 #define CV_CLOCK_OUT 39
 #define TRS_PEDAL_IN 23
+
+#define GATE_OUT 14
+
 #endif 
 
 #if defined(MUSIKANDMORE) || defined(SECOND_SD)
@@ -690,7 +694,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SCREEN_SAVER_START_DEFAULT 4
 #define SCREEN_SAVER_MODE_DEFAULT 0 //random mode
 #define SCREEN_SAVER_MODE_MIN 0
-#define SCREEN_SAVER_MODE_MAX 5
+#define SCREEN_SAVER_MODE_MAX 9
 
 
 #define GAMEPAD_SPEED_MIN 60
@@ -799,8 +803,8 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 
 // LED Pin Assignments
 #ifdef MIDI_ACTIVITY_LIGHTS
-  extern uint8_t LED_MIDI_IN;
-  extern uint8_t LED_MIDI_OUT;
+extern uint8_t LED_MIDI_IN;
+extern uint8_t LED_MIDI_OUT;
 #endif
 
 // Internal configuration structure
@@ -985,6 +989,7 @@ typedef struct braids_s
   char name[FILENAME_MAX_LEN];
   char temp_name[FILENAME_MAX_LEN];
 } braids_t;
+#define BRAIDS_NAME_LEN 15 //For the preset system
 
 typedef struct multisample_s
 {
@@ -1035,8 +1040,8 @@ typedef struct sys_s
   bool send_sysex_on_voice_change;
   bool send_midi_cc;
   bool swap_midi_leds;
-  uint8_t rgb_enc_color_def=4;
-  uint8_t rgb_enc_color_sel=1;
+  uint8_t rgb_enc_color_def = 4;
+  uint8_t rgb_enc_color_sel = 1;
   bool vol_control;
   bool sus_pedal;
   bool ext_clock;
@@ -1075,20 +1080,20 @@ typedef struct custom_midi_map_s
 
 enum virtual_keyboard_instruments
 {
- VK_LIVESEQUENCER = 0,
- VK_DEXED0,
- VK_DEXED1,
- VK_DEXED2,
- VK_DEXED3,
- VK_MICROSYNTH0,
- VK_MICROSYNTH1,
- VK_EPIANO,
- VK_DRUMS,
- VK_BRAIDS,
- VK_PS_1,
- VK_PS_2,
- VK_PS_3,
- VK_CV1,
+  VK_LIVESEQUENCER = 0,
+  VK_DEXED0,
+  VK_DEXED1,
+  VK_DEXED2,
+  VK_DEXED3,
+  VK_MICROSYNTH0,
+  VK_MICROSYNTH1,
+  VK_EPIANO,
+  VK_DRUMS,
+  VK_BRAIDS,
+  VK_PS_1,
+  VK_PS_2,
+  VK_PS_3,
+  VK_CV1,
 };
 
 enum master_mixer_ports
@@ -1125,7 +1130,7 @@ enum reverb_mixer_ports
 enum fm_modes
 {
   FM_BROWSE_FILES,
-  FM_DELETE_FILE,
+  FM_DELETE_FILE_OR_FOLDER,
   FM_COPY_PRESETS,
   FM_PLAY_SAMPLE,
   FM_COPY_TO_PSRAM,
@@ -1181,12 +1186,33 @@ struct EncoderEvents {
 
 enum perf_load_opt
 {
- perf_dexed,
- perf_msynth,
- perf_epiano,
- perf_braids,
- perf_samples,
- perf_effects,
- perf_seq,
- perf_liveseq
+  perf_dexed,
+  perf_msynth,
+  perf_epiano,
+  perf_braids,
+  perf_samples,
+  perf_effects,
+  perf_seq,
+  perf_liveseq
 };
+
+typedef struct {
+  bool active;
+  const char* type;
+  uint8_t root;      // 0–11
+  uint8_t third;
+  uint8_t fifth;
+  uint8_t seventh;   // pitch class
+  bool hasSeventh;
+  uint8_t inversion; // 0=root, 1=first, etc.
+} ChordInfo;
+
+
+#define MAX_CHORD_NOTES 4
+#define CHORD_CAPTURE_WINDOW 290  // milliseconds to wait for chord notes
+
+typedef struct {
+  char name[8];         // Chord name (e.g. "Cm7")
+  char notenames[12];         // Chord name (e.g. "Cm7")
+  uint8_t notes[4];      // MIDI note numbers (0 means unused)
+} SuggestedChord;

@@ -53,8 +53,6 @@ class Env {
 
   private:
 
-    // PG: This code is normalized to 44100, need to put a multiplier
-    // if we are not using 44100.
     static uint32_t sr_multiplier;
 
     int32_t rates_[4];

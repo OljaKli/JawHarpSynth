@@ -12,6 +12,7 @@ extern sequencer_t seq;
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
 extern ts_t ts;
+extern bool remote_active;
 
 bool openingScreen = false;
 
@@ -84,8 +85,9 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       b->draw("TOOL", (data.isSongMode) ? "SNG" : "PAT", instance->isModeToolActive() ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     },
     [this](auto* b) { // clickedHandler
-      instance->selectTools((data.isSongMode) ? TOOLS_SONG : TOOLS_PATTERN);
+      instance->selectTools((data.isSongMode) ? TOOLS_PATTERN : TOOLS_PATTERN);
     }));
+
   buttonsToolSelect.push_back(new TouchButton(GRID.X[1], GRID.Y[2],
     [this](auto* b) { // drawHandler
       b->draw("TOOL", "ARP", currentTools == TOOLS_ARP ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
@@ -93,6 +95,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b) { // clickedHandler
       instance->selectTools(TOOLS_ARP);
     }));
+
   buttonsToolSelect.push_back(new TouchButton(GRID.X[2], GRID.Y[2],
     [this](auto* b) { // drawHandler
       b->draw("TOOL", "SEQ", currentTools == TOOLS_SEQ ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
@@ -100,7 +103,18 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b) { // clickedHandler
       instance->selectTools(TOOLS_SEQ);
     }));
+
+  // NEW: Song Mode Selection Tool 
   buttonsToolSelect.push_back(new TouchButton(GRID.X[3], GRID.Y[2],
+    [this](auto* b) { // drawHandler
+      b->draw("SONG", "TYP", currentTools == TOOLS_SONG_MODE ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+    },
+    [this](auto* b) { // clickedHandler
+      instance->selectTools(TOOLS_SONG_MODE);
+    }));
+
+  // Keyboard tool 
+  buttonsToolSelect.push_back(new TouchButton(GRID.X[4], GRID.Y[2],
     [this](auto* b) { // drawHandler
       b->draw("TOOL", "KEY", currentTools == TOOLS_KEYBOARD ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     },
@@ -108,7 +122,50 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       instance->selectTools(TOOLS_KEYBOARD);
     }));
 
+
   // SEQUENCER TOOLS
+
+  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
+    [](auto* b) { // drawHandler
+      b->draw("SELECT", "MODE", TouchButton::BUTTON_LABEL);
+    }));
+
+  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[1], GRID.Y[3],
+    [this](auto* b) { // drawHandler
+      // Only highlight if this is the currently selected mode
+      b->draw("LIVE", "RECORD", !data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+    },
+    [this](auto* b) { // clickedHandler
+      data.useGridSongMode = false;
+      // Redraw all buttons in this tool to update their states
+      for (auto* btn : toolsPages[TOOLS_SONG_MODE]) {
+        btn->drawNow();
+      }
+    }));
+
+  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[2], GRID.Y[3],
+    [this](auto* b) { // drawHandler
+      // Only highlight if this is the currently selected mode
+      b->draw("GRID", "EDITOR", data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+    },
+    [this](auto* b) { // clickedHandler
+      data.useGridSongMode = true;
+      // Redraw all buttons in this tool to update their states
+      for (auto* btn : toolsPages[TOOLS_SONG_MODE]) {
+        btn->drawNow();
+      }
+    }));
+
+  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[0], GRID.Y[4],
+    [](auto* b) { // drawHandler
+      b->draw("CURRENT", "MODE", TouchButton::BUTTON_LABEL);
+    }));
+
+  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[1], GRID.Y[4],
+    [this](auto* b) { // drawHandler
+      b->draw(data.useGridSongMode ? "GRID" : "LIVE", data.useGridSongMode ? "EDITOR" : "RECORD", TouchButton::BUTTON_LABEL);
+    }));
+
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
     [](auto* b) { // drawHandler
       b->draw("TRACK", "SETUP", TouchButton::BUTTON_LABEL);
@@ -127,7 +184,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b, auto* v) { // drawHandler
       char name[10];
       char sub[10];
-      
+
       // MDT has instruments 0-12 / MIDI has instuments 0-15
       selectedTrackSetup.instrument = instrumentToInstrumentID[selectedInstrument];
       const uint8_t maxInstrument = (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) ? LiveSequencer::INSTR_MAX - 1 : 15;
@@ -161,7 +218,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     }));
 
   // track velocity
-  toolsPages[TOOLS_SEQ].push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID.X[5],GRID.Y[3], selectedTrackSetup.velocity, 0, 100, 5, data.trackSettings[data.activeTrack].velocityLevel,
+  toolsPages[TOOLS_SEQ].push_back(new ValueButtonRange<uint8_t>(&currentValue, GRID.X[5], GRID.Y[3], selectedTrackSetup.velocity, 0, 100, 5, data.trackSettings[data.activeTrack].velocityLevel,
     [this](auto* b, auto* v) { // drawHandler
       b->draw("VELOCTY", (v->getValue() == 0) ? "KEY" : v->toString() + std::string("%"), (v->getValue() == 0) ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE);
       if (data.trackSettings[data.activeTrack].velocityLevel != selectedTrackSetup.velocity) {
@@ -425,6 +482,92 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [](auto* b, auto* v) { // drawHandler
       b->draw("FREERUN", v->getValue() == 1 ? "ON" : "-", TouchButton::BUTTON_ACTIVE);
     }));
+
+
+  // Grid song mode layer buttons - initialize for 4 layers
+  for (uint8_t layer = 0; layer < 4; layer++) {
+    gridLayerButtons.push_back(new TouchButton(GRID.X[layer], GRID.Y[5],
+      [this, layer](auto* b) { // drawHandler 
+        const bool isActive = data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
+
+        b->draw("LAYER", std::to_string(layer + 1).c_str(),
+          isActive ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+      },
+      [this, layer](auto* b) { // clickedHandler
+        instance->toggleGridSongLayer(layer);
+      }));
+  }
+
+  // Grid song editor control buttons
+  gridControlButtons.push_back(new TouchButton(GRID.X[0], GRID.Y[4],
+    [](auto* b) { // drawHandler
+      b->draw("CLEAR", "CELL", TouchButton::BUTTON_ACTIVE);
+    },
+    [this](auto* b) { // clickedHandler
+      instance->clearGridCell();
+    }));
+
+  gridControlButtons.push_back(new TouchButton(GRID.X[1], GRID.Y[4],
+    [](auto* b) { // drawHandler
+      b->draw("FILL", "CELL", TouchButton::BUTTON_ACTIVE);
+    },
+    [this](auto* b) { // clickedHandler
+      instance->fillGridCell();
+    }));
+
+  gridControlButtons.push_back(new TouchButton(GRID.X[2], GRID.Y[4],
+    [this](auto* b) { // drawHandler
+      if (data.selectedGridStep > 0) {
+        b->draw("FROM", "ABOVE", TouchButton::BUTTON_ACTIVE);
+      }
+      else {
+        b->draw("FROM", "ABOVE", TouchButton::BUTTON_NORMAL);
+      }
+    },
+    [this](auto* b) { // clickedHandler
+      if (data.selectedGridStep > 0) {
+        instance->copyFromAbove();
+      }
+    }));
+
+  gridControlButtons.push_back(new TouchButton(GRID.X[3], GRID.Y[4],
+    [this](auto* b) { // drawHandler
+      if (data.selectedGridStep > 0) {
+        b->draw("SCROLL", "TOP", TouchButton::BUTTON_ACTIVE);
+      }
+      else {
+        b->draw("SCROLL", "TOP", TouchButton::BUTTON_NORMAL);
+      }
+    },
+    [this](auto* b) { // clickedHandler
+      if (data.selectedGridStep > 0) {
+        instance->scrollToTop();
+      }
+    }));
+
+  gridControlButtons.push_back(new TouchButton(GRID.X[4], GRID.Y[4],
+    [this](auto* b) { // drawHandler
+      if (data.selectedGridStep > 0) {
+        b->draw("SCROLL", "UP", TouchButton::BUTTON_ACTIVE);
+      }
+      else {
+        b->draw("SCROLL", "UP", TouchButton::BUTTON_NORMAL);
+      }
+    },
+    [this](auto* b) { // clickedHandler
+      if (data.selectedGridStep > 0) {
+        instance->scrollUp();
+      }
+    }));
+
+
+  gridControlButtons.push_back(new TouchButton(GRID.X[5], GRID.Y[4],
+    [](auto* b) { // drawHandler
+      b->draw("SCROLL", "DOWN", TouchButton::BUTTON_ACTIVE);
+    },
+    [this](auto* b) { // clickedHandler
+      instance->scrollDown();
+    }));
 }
 
 FLASHMEM void UI_LiveSequencer::selectTools(Tools tools) {
@@ -434,7 +577,7 @@ FLASHMEM void UI_LiveSequencer::selectTools(Tools tools) {
     }
     currentValue.valueBase = nullptr;
 
-    // handle keyboard visible changed
+    // Handle keyboard visible changed
     const bool keyboardVisibleChanged = (currentTools == TOOLS_KEYBOARD) || (tools == TOOLS_KEYBOARD);
     if (keyboardVisibleChanged) {
       seq.cycle_touch_element = (tools == TOOLS_KEYBOARD);
@@ -443,15 +586,27 @@ FLASHMEM void UI_LiveSequencer::selectTools(Tools tools) {
     currentTools = tools;
     clearBottomArea();
     drawUpdates(drawTools);
+
+    // Force immediate redraw for the new tool
+    drawGUI(guiUpdateFlags);
   }
 }
+
+// FLASHMEM bool UI_LiveSequencer::isModeToolActive(void) {
+//   bool result = false;
+//   result |= (currentTools == TOOLS_PATTERN) && (data.isSongMode == false);
+//   result |= (currentTools == TOOLS_SONG) && (data.isSongMode == true);
+//   return result;
+// }
 
 FLASHMEM bool UI_LiveSequencer::isModeToolActive(void) {
   bool result = false;
   result |= (currentTools == TOOLS_PATTERN) && (data.isSongMode == false);
-  result |= (currentTools == TOOLS_SONG) && (data.isSongMode == true);
+  //result |= (currentTools == TOOLS_SONG) && (data.isSongMode == true);
+  result |= (currentTools == TOOLS_SONG_MODE) && (data.isSongMode == true);
   return result;
 }
+
 
 FLASHMEM void UI_LiveSequencer::showDirectMappingWarning(uint8_t inChannel) {
   if (showingHowTo == false) {
@@ -516,13 +671,26 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     liveSeq.onGuiInit();
     updateTrackChannelSetupButtons(data.activeTrack); // update GUI for the case a new perf was loaded
 
+
+    // Ensure we start in pattern mode, not grid mode
+    data.isSongMode = false;
+
+    currentPage = PAGE_PATTERN;
+
     display.setTextSize(1);
     display.setCursor(GRID.X[2], 6);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(data.performanceName.c_str());
 
+    // Reset grid editor state
+    inGridEditor = false;
+    showingGridSongEditor = false;
+    gridNeedsRedraw = true; // Force initial draw
+    data.redraw_grid_header = true;
+    data.redraw_grid_buttons = true;
     resetProgressBars();
     redrawScreen();
+
     // setup function
     LCDML.FUNC_setLoopInterval(DRAW_INTERVAL); // 40Hz gui refresh
   }
@@ -532,11 +700,11 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     const EncoderEvents e = getEncoderEvents(ENC_R);
 
     msCount += DRAW_INTERVAL;
-    if(msCount >= 200 ) {
+    if (msCount >= 200) {
       drawUpdates(drawCpuLoad);
       msCount = 0;
     }
-    if (e.down) {
+    if (e.down && !inGridEditor) {
       if (currentValue.valueBase != nullptr) {
         currentValue.valueBase->next();
       }
@@ -549,7 +717,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
         }
       }
     }
-    if (e.up) {
+    if (e.up && !inGridEditor) {
       if (currentValue.valueBase != nullptr) {
         currentValue.valueBase->previous();
       }
@@ -563,6 +731,23 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
       }
     }
 
+    if (e.down && inGridEditor)
+    {
+      if (data.gridStepOffset < data.GRIDSONGLEN - 6)
+      {
+        data.gridStepOffset++;
+        gridNeedsRedraw = true;
+      }
+    }
+
+    else if (e.up && inGridEditor)
+    {
+      if (data.gridStepOffset > 0)
+      {
+        data.gridStepOffset--;
+        gridNeedsRedraw = true;
+      }
+    }
     if (e.pressed) {
       if (currentValue.valueBase != nullptr) {
         currentValue.button->setSelected(false);
@@ -570,14 +755,27 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
       }
     }
 
-    drawUpdates(data.isRunning ? (drawActiveNotes | drawTime) : 0);
-    if ((isLayerViewActive == false) && (currentTools == TOOLS_PATTERN) && (guiUpdateFlags & drawLastPlayedNote)) {
-      lastNoteLabel->drawNow();
+    // Handle different screen states
+    if (inGridEditor) {
+      // Only draw grid editor if it needs redrawing
+      if (gridNeedsRedraw) {
+        drawGridSongEditor();
+        gridNeedsRedraw = false; // Reset the flag after drawing
+      }
     }
 
-    if (showingHowTo == false) {
-      drawGUI(guiUpdateFlags);
+    else {
+      // Normal LiveSequencer operation
+      drawUpdates(data.isRunning ? (drawActiveNotes | drawTime) : 0);
+      if ((isLayerViewActive == false) && (currentTools == TOOLS_PATTERN) && (guiUpdateFlags & drawLastPlayedNote)) {
+        lastNoteLabel->drawNow();
+      }
+
+      if (showingHowTo == false) {
+        drawGUI(guiUpdateFlags);
+      }
     }
+
   }
 
   // ****** STABLE END *********
@@ -588,7 +786,24 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     isVisible = false;
     data.isRecording = false;
     showingHowTo = false;
+
+    inGridEditor = false;
+    showingGridSongEditor = false;
+    gridNeedsRedraw = true;
+    data.redraw_grid_buttons = true;
+    // Always return to pattern mode when closing
+    data.isSongMode = false;
+    inGridEditor = false;
+    showingGridSongEditor = false;
+    gridNeedsRedraw = true;
+
     display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+
+FLASHMEM void UI_LiveSequencer::onGridStepChanged(void) {
+  if (inGridEditor && showingGridSongEditor) {
+    gridNeedsRedraw = true;
   }
 }
 
@@ -599,6 +814,15 @@ FLASHMEM void UI_LiveSequencer::drawUpdates(uint16_t flags) {
 FLASHMEM void UI_LiveSequencer::clearBottomArea(void) {
   display.console = true;
   display.fillRect(0, GRID.Y[2], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[2], COLOR_BACKGROUND);
+
+
+  // Reset grid editor state when clearing bottom area
+  if (inGridEditor) {
+    inGridEditor = false;
+    showingGridSongEditor = false;
+    data.isSongMode = false; // Return to pattern mode
+    currentPage = PAGE_PATTERN;
+  }
 }
 
 FLASHMEM void UI_LiveSequencer::redrawScreen(void) {
@@ -654,7 +878,7 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
     if (showingTools && (currentTools == TOOLS_KEYBOARD)) {
       const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
       // only redraw if PADs / KEYs view needs redrawing
-      if(ts.current_virtual_keyboard_display_mode != isDrumsActive) {
+      if (ts.current_virtual_keyboard_display_mode != isDrumsActive) {
         drawKeyboard(VK_DRAW_KEYS);
       }
     }
@@ -673,8 +897,8 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   selectedTrackSetup.velocity = data.trackSettings[track].velocityLevel;
 
   // reverse lookup selected instrument index
-  for(size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
-    if(instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
+  for (size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
+    if (instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
       selectedInstrument = i;
     }
   }
@@ -700,7 +924,14 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
     return;
   }
 
-  if(showingTools && (currentTools == TOOLS_KEYBOARD)) {
+
+  // Handle grid song editor touch
+  if (showingGridSongEditor) {
+    handleGridSongTouch();
+    return;
+  }
+
+  if (showingTools && (currentTools == TOOLS_KEYBOARD)) {
     handleTouchVirtualKeyboard();
   }
 
@@ -709,6 +940,7 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   const bool runningPressed = TouchButton::isPressed(GRID.X[0], GRID.Y[0]);
   if (runningPressed) {
+    data.seq_started_from_pattern_mode = true;
     if (runningHere) {
       liveSeq.stop();
     }
@@ -747,6 +979,10 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   const bool toolsPressed = TouchButton::isPressed(GRID.X[4], GRID.Y[0]);
   if (toolsPressed) {
+    if (inGridEditor) {
+      inGridEditor = false;
+      showingGridSongEditor = false;
+    }
     // possible switch to song / pattern tools if mode changed
     currentTools = data.isSongMode && currentTools == TOOLS_PATTERN ? TOOLS_SONG : currentTools;
     currentTools = !data.isSongMode && currentTools == TOOLS_SONG ? TOOLS_PATTERN : currentTools;
@@ -762,14 +998,32 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   const bool modePressed = TouchButton::isPressed(GRID.X[5], GRID.Y[0]);
   if (modePressed) {
-    const bool newIsSongMode = !data.isSongMode;
-    currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
-    
-    if (isModeToolActive()) { // switch pattern / song tools if selected
-      currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
+    // if (data.useGridSongMode && data.isSongMode && !inGridEditor) {
+    if (data.useGridSongMode && !inGridEditor) {
+      inGridEditor = true;
+      showingGridSongEditor = true;
+      gridNeedsRedraw = true;
+      display.fillScreen(COLOR_BACKGROUND);
+      return;
     }
-    data.isSongMode = newIsSongMode;
-    redrawScreen();
+    else {
+      // Original behavior for live recording mode
+      const bool newIsSongMode = !data.isSongMode;
+      currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
+
+
+      // When switching from grid mode back to pattern mode, reset grid flags
+      if (data.useGridSongMode && !newIsSongMode) {
+        inGridEditor = false;
+        showingGridSongEditor = false;
+      }
+
+      if (isModeToolActive()) { // switch pattern / song tools if selected
+        currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
+      }
+      data.isSongMode = newIsSongMode;
+      redrawScreen();
+    }
   }
 
   for (TouchButton* b : trackButtons) {
@@ -854,24 +1108,32 @@ FLASHMEM void UI_LiveSequencer::processBar(const float progress, const uint16_t 
 }
 
 FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
-  display.console = true;
+  if (remote_active) {
+    display.console = true;
+  }
 
-  if (guiFlags & drawCpuLoad) {
+  if (guiFlags & drawCpuLoad && !inGridEditor) {
     static constexpr float size = 2 * TouchButton::BUTTON_SIZE_X + TouchButton::BUTTON_SPACING;
     uint16_t color = GREEN;
     const uint8_t cpuLoad = AudioProcessorUsage();
     const uint16_t barWidth = cpuLoad * size / float(100);
-    if(cpuLoad > 90) {
+    if (cpuLoad > 90) {
       color = RED;
-    } else if(cpuLoad > 75) {
+    }
+    else if (cpuLoad > 75) {
       color = COLOR_ARP;
     }
-
+    if (remote_active) {
+      display.console = true;
+    }
     display.drawLine(GRID.X[2], 0, GRID.X[2] + barWidth, 0, color);
+    if (remote_active) {
+      display.console = true;
+    }
     display.drawLine(GRID.X[2] + barWidth, 0, GRID.X[4] - TouchButton::BUTTON_SPACING, 0, GREY2);
   }
 
-  if (guiFlags & drawTopButtons) {
+  if (guiFlags & drawTopButtons && !inGridEditor) {
     TouchButton::Color playColor = runningHere ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
     if (data.remainingCountIns > 0) {
       playColor = (data.remainingCountIns) % 2 ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_HIGHLIGHTED;
@@ -879,15 +1141,23 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     TouchButton::drawButton(GRID.X[0], GRID.Y[0], (runningHere ? "STOP" : "START"), "", playColor);
     TouchButton::drawButton(GRID.X[1], GRID.Y[0], "REC", "", data.isRecording ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
     TouchButton::drawButton(GRID.X[4], GRID.Y[0], isLayerViewActive ? "LAYERS" : "TOOLS", "VIEW", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[5], GRID.Y[0], data.isSongMode ? "SONG" : "PATT", "MODE", TouchButton::BUTTON_HIGHLIGHTED);
+
+
+    // Update mode button label - show "PATT" when not in song mode
+    if (data.isSongMode) {
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", data.useGridSongMode ? "GRID" : "LIVE", TouchButton::BUTTON_HIGHLIGHTED);
+    }
+    else {
+      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "PATT", "MODE", TouchButton::BUTTON_HIGHLIGHTED);
+    }
   }
 
-  if (guiFlags & drawActiveTrackSubLabel) {
+  if (guiFlags & drawActiveTrackSubLabel && !inGridEditor) {
     drawTrackSubtext(data.activeTrack);
   }
 
   // print time
-  if (guiFlags & drawTime) {
+  if (guiFlags & drawTime && !inGridEditor) {
     uint16_t timeMs = data.isRunning ? uint16_t(data.patternTimer) : data.patternLengthMs;
     if (data.isRunning == false) {
       data.songPatternCount = data.lastSongEventPattern; // show song length
@@ -919,7 +1189,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
   }
 
   const bool doBlink = data.notesOn.size() || data.pendingEvents.size();
-  if (doBlink) {
+  if (doBlink && !inGridEditor) {
     if (guiCounter-- == 0) {
       guiCounter = 8;
       TouchButton::Color trackButtonRecColor = blinkPhase ? TouchButton::BUTTON_RED : TouchButton::BUTTON_HIGHLIGHTED;
@@ -933,14 +1203,14 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     blinkPhase = 0;
   }
 
-  if (guiUpdateFlags & drawTrackButtons) {
+  if (guiUpdateFlags & drawTrackButtons && !inGridEditor) {
     DBG_LOG(printf("draw tracks\n"));
     for (TouchButton* b : trackButtons) {
       b->drawNow();
     }
   }
 
-  if (isLayerViewActive) {
+  if (isLayerViewActive && !inGridEditor) {
     const bool isSongRec = (data.isSongMode && data.isRecording);
     const bool drawAllLayers = guiFlags & drawLayerButtons;
 
@@ -987,7 +1257,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     }
   }
   else {
-    if (guiFlags & drawTools) {
+    if (guiFlags & drawTools && !inGridEditor) {
       for (auto* b : buttonsToolSelect) {
         b->drawNow();
       }
@@ -1001,7 +1271,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         b->drawNow();
       }
     }
-    if (guiFlags & drawSongLayers) {
+    if (guiFlags & drawSongLayers && !inGridEditor) {
       TouchButton::Color color = TouchButton::BUTTON_ACTIVE;
       handleLayerEditButtonColor(songLayerMode, color);
       for (int songLayer = 0; songLayer < data.songLayerCount; songLayer++) {
@@ -1029,6 +1299,10 @@ FLASHMEM void UI_LiveSequencer::refreshToolsElements(Tools tools) {
 
   case TOOLS_KEYBOARD:
     drawKeyboard(VK_DRAW_ALL);
+    break;
+
+  case TOOLS_SONG_MODE:
+    // No special refresh needed for song mode tools
     break;
 
   default:
@@ -1080,7 +1354,7 @@ FLASHMEM void UI_LiveSequencer::drawLayerButton(const bool horizontal, uint8_t l
       label = "CLEAR";
       labelSub = "CC";
       break;
-    
+
     case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
       label = "CLEAR";
       labelSub = "PB";
@@ -1110,3 +1384,323 @@ FLASHMEM void UI_LiveSequencer::handleLayerEditButtonColor(uint8_t layerMode, To
   }
 }
 
+FLASHMEM void check_web_remote() {
+  if (remote_active) {
+    display.console = true;
+  }
+}
+
+
+FLASHMEM void UI_LiveSequencer::slow_rect(uint16_t x, uint8_t y,uint16_t color)
+{
+  display.drawLine(x, y, x + GRID_SONG_CELL_WIDTH+1, y, color);
+  display.drawLine(x, y, x, y + GRID_SONG_CELL_HEIGHT-1, color);
+  display.drawLine(x, y + GRID_SONG_CELL_HEIGHT, x + GRID_SONG_CELL_WIDTH+1, y + GRID_SONG_CELL_HEIGHT, color);
+  display.drawLine(x + GRID_SONG_CELL_WIDTH, y, x + GRID_SONG_CELL_WIDTH, y + GRID_SONG_CELL_HEIGHT-1, color);
+}
+
+FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
+  // Only draw if needed
+  if (!gridNeedsRedraw && !showingGridSongEditor) {
+    return;
+  }
+  if (!gridNeedsRedraw) {
+    return;
+  }
+
+  if (!seq.running)
+    data.seq_started_from_pattern_mode = false;  // handle long press encoder-l for seq start/stop logically to touch start button
+
+  if (data.redraw_grid_header)
+  {
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+
+  // Track the previous current step to know what changed
+  static uint8_t lastDrawnCurrentStep = 255;
+  static bool lastDrawnRunningState = false;
+  const bool playheadChanged = (data.currentGridStep != lastDrawnCurrentStep);
+  const bool runningStateChanged = (data.isRunning != lastDrawnRunningState);
+
+  // Calculate positions for the grid with the new tighter dimensions
+
+  if (data.redraw_grid_header)
+  {
+    // Draw grid header (track numbers)
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT);
+    for (uint8_t track = 0; track < GRID_SONG_COLS; track++) {
+      const uint16_t x = 16 + (track * (GRID_SONG_CELL_WIDTH));
+      display.setCursor(x + (GRID_SONG_CELL_WIDTH / 2) - 3, gridStartY - 15);
+      display.printf("T%i", track + 1);
+    }
+    data.redraw_grid_header = false;
+  }
+
+  // Draw the global grid lines first
+  check_web_remote();
+  display.drawRect(gridStartX, gridStartY, GRID_SONG_CELL_WIDTH * GRID_SONG_COLS + 1, GRID_SONG_CELL_HEIGHT * GRID_SONG_ROWS + 1, GREY3);
+
+  // Draw vertical grid lines
+  for (uint8_t track = 1; track < GRID_SONG_COLS; track++) {
+    const uint16_t x = gridStartX + (track * GRID_SONG_CELL_WIDTH);
+    check_web_remote();
+    display.drawLine(x, gridStartY, x, gridStartY + (GRID_SONG_CELL_HEIGHT * GRID_SONG_ROWS), GREY3);
+  }
+
+  // // Draw horizontal grid lines
+  for (uint8_t step = 1; step < GRID_SONG_ROWS; step++) {
+    const uint16_t y = gridStartY + (step * GRID_SONG_CELL_HEIGHT);
+    check_web_remote();
+    display.drawLine(gridStartX, y, (GRID_SONG_CELL_WIDTH * (GRID_SONG_COLS + 1)), y, GREY3);
+  }
+
+  // Draw grid cells content
+  for (uint8_t step = 0; step < GRID_SONG_ROWS; step++) {
+    const uint8_t actualStep = data.gridStepOffset + step;
+    if (actualStep >= data.GRIDSONGLEN) break;
+
+    const bool isCurrentStep = (actualStep == data.currentGridStep) && data.isRunning;
+    const bool isSelectedStep = (actualStep == data.selectedGridStep);
+
+    // Draw step number
+    display.setCursor(1, gridStartY + (step * (GRID_SONG_CELL_HEIGHT)) + GRID_SONG_CELL_HEIGHT / 2 - 4);
+    display.setTextColor(isCurrentStep ? RED : COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.printf("%02i", actualStep + 1);
+
+    for (uint8_t track = 0; track < GRID_SONG_COLS; track++) {
+      const uint16_t x = gridStartX + (track * (GRID_SONG_CELL_WIDTH));
+      const uint16_t y = gridStartY + (step * (GRID_SONG_CELL_HEIGHT));
+
+      // Highlight selected cell
+      if (isSelectedStep && (track == data.selectedGridTrack)) {
+        check_web_remote();
+
+         display.drawRect(x, y, GRID_SONG_CELL_WIDTH + 1, GRID_SONG_CELL_HEIGHT + 1, RED);
+        //slow_rect(x, y, RED);
+
+        // check_web_remote();
+
+      }
+
+      // Add green border around currently playing cells
+      if (isCurrentStep) {
+        bool hasActiveLayers = false;
+        for (uint8_t layer = 0; layer < 4; layer++) {
+          if (data.gridStep(actualStep, track, layer) && !liveSeq.isTrackLayerEmpty(track, layer))
+          {
+            hasActiveLayers = true;
+            break;
+          }
+        }
+        if (hasActiveLayers) {
+          check_web_remote();
+          display.drawRect(x, y, GRID_SONG_CELL_WIDTH + 1, GRID_SONG_CELL_HEIGHT + 1, GREEN);
+          // slow_rect(x, y, GREEN);
+        }
+      }
+
+      // Draw layer indicators in two rows (1-2 and 3-4)
+      display.setTextSize(1);
+      uint16_t color;
+      const uint8_t layerSpacing = GRID_SONG_CELL_WIDTH / 4;
+      const uint8_t layerOffset = 1;
+
+      // Row 1: Layers 1 and 2
+      for (uint8_t layer = 0; layer < 2; layer++) {
+        const uint16_t layerX = x + layerOffset + (layer * layerSpacing) + 6;
+        const uint16_t layerY = y + 3;
+
+        color = data.gridStep(actualStep, track, layer) ?
+          COLOR_SYSTEXT : GREY3;
+        display.setTextColor(color, COLOR_BACKGROUND);
+        display.setCursor(layerX, layerY);
+        if (!liveSeq.isTrackLayerEmpty(track, layer))
+          display.printf("%i", layer + 1);
+      }
+
+      // Row 2: Layers 3 and 4
+      for (uint8_t layer = 2; layer < 4; layer++) {
+        const uint16_t layerX = x + layerOffset + ((layer - 2) * layerSpacing) + 6;
+        const uint16_t layerY = y + GRID_SONG_CELL_HEIGHT / 2 + 3;
+        color = data.gridStep(actualStep, track, layer) ?
+          COLOR_SYSTEXT : GREY3;
+        display.setTextColor(color, COLOR_BACKGROUND);
+        display.setCursor(layerX, layerY);
+        if (!liveSeq.isTrackLayerEmpty(track, layer))
+          display.printf("%i", layer + 1);
+      }
+
+    }
+  }
+
+  if (data.redraw_grid_buttons)
+  {
+    // Draw control buttons
+    for (uint8_t i = 0; i < 6; i++) {
+      gridControlButtons[i]->drawNow();
+    }
+
+    // Draw layer control buttons at bottom
+    for (uint8_t layer = 0; layer < 4; layer++) {
+      const uint16_t x = GRID.X[layer + 1];
+      const uint16_t y = GRID.Y[5];
+      //  const bool isActive = data.gridSongSteps[data.selectedGridStep][data.selectedGridTrack][layer];
+
+      if (liveSeq.isTrackLayerEmpty(data.selectedGridTrack, layer))
+        TouchButton::drawButton(x, y, "LAYER", std::to_string(layer + 1).c_str(), TouchButton::BUTTON_INACTIVE);
+      else
+      {
+        const bool isActive = data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
+        TouchButton::drawButton(x, y, "LAYER", std::to_string(layer + 1).c_str(),
+          isActive ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+      }
+    }
+
+    // Draw back button
+    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BACK", "EDIT", TouchButton::BUTTON_NORMAL);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", data.isRunning ? "STOP" : "START",
+      data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+    data.redraw_grid_buttons = false;
+  }
+
+  // Mark that we've drawn the grid
+  gridNeedsRedraw = false;
+  showingGridSongEditor = true;
+}
+
+
+extern int numTouchPoints;
+
+FLASHMEM void UI_LiveSequencer::handleGridSongTouch(void) {
+
+  // Get touch coordinates
+  const uint16_t touchX = ts.p.x;
+  const uint8_t touchY = ts.p.y;
+
+  // Check if layer buttons were pressed
+  for (uint8_t layer = 0; layer < 4; layer++) {
+    if (TouchButton::isPressed(GRID.X[layer + 1], GRID.Y[5])) {
+      toggleGridSongLayer(layer);
+      return;
+    }
+  }
+
+  // Check if back button was pressed
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+    inGridEditor = false;
+    showingGridSongEditor = false;
+    gridNeedsRedraw = true;
+    data.isSongMode = false;
+    data.redraw_grid_header = true;
+    data.redraw_grid_buttons = true;
+
+    if (!seq.running)
+      data.seq_started_from_pattern_mode = true; //handle hardware encoder-l seq start/stop
+
+    currentPage = PAGE_PATTERN;
+    display.fillScreen(COLOR_BACKGROUND);
+    redrawScreen();
+    return;
+  }
+
+  // Check if play button was pressed
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
+    if (data.isRunning) {
+      data.seq_started_from_pattern_mode = false;
+      liveSeq.stop();
+    }
+    else {
+      data.seq_started_from_pattern_mode = false;
+      data.currentGridStep = 0;
+      data.redraw_grid_header = true; //strange but it is required to update the play indicator at step 1
+      liveSeq.start();
+    }
+    gridNeedsRedraw = true;
+    data.redraw_grid_buttons = true;
+    return;
+  }
+
+  // Check if control buttons were pressed
+  for (uint8_t i = 0; i < 6; i++) {
+    gridControlButtons[i]->processPressed();
+  }
+
+  if (numTouchPoints != 0)
+  {
+    // Check grid cell touches
+    for (uint8_t step = 0; step < GRID_SONG_ROWS; step++) {
+      const uint8_t actualStep = data.gridStepOffset + step;
+      if (actualStep >= data.GRIDSONGLEN) break;
+
+      for (uint8_t track = 0; track < GRID_SONG_COLS; track++) {
+        const uint16_t x = gridStartX + (track * GRID_SONG_CELL_WIDTH);
+        const uint16_t y = gridStartY + (step * GRID_SONG_CELL_HEIGHT);
+
+        if (touchX >= x && touchX <= x + GRID_SONG_CELL_WIDTH &&
+          touchY >= y && touchY <= y + GRID_SONG_CELL_HEIGHT) {
+          data.selectedGridStep = actualStep;
+          data.selectedGridTrack = track;
+          gridNeedsRedraw = true;
+          data.redraw_grid_buttons = true;
+          return;
+        }
+      }
+    }
+  }
+}
+
+FLASHMEM void UI_LiveSequencer::clearGridCell(void) {
+  for (uint8_t layer = 0; layer < 4; layer++) {
+    data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) = false;
+  }
+  gridNeedsRedraw = true;
+  data.redraw_grid_buttons = true;
+}
+
+FLASHMEM void UI_LiveSequencer::fillGridCell(void) {
+  for (uint8_t layer = 0; layer < 4; layer++) {
+    data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) = true;
+  }
+  gridNeedsRedraw = true;
+  data.redraw_grid_buttons = true;
+}
+
+FLASHMEM void UI_LiveSequencer::copyFromAbove(void) {
+  if (data.selectedGridStep > 0) {
+    for (uint8_t layer = 0; layer < 4; layer++) {
+      data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) =
+        data.gridStep(data.selectedGridStep - 1, data.selectedGridTrack, layer);
+    }
+    gridNeedsRedraw = true;
+    data.redraw_grid_buttons = true;
+  }
+}
+
+FLASHMEM void UI_LiveSequencer::scrollToTop(void) {
+  data.gridStepOffset = 0;
+  gridNeedsRedraw = true;
+  data.redraw_grid_buttons = true;
+}
+
+FLASHMEM void UI_LiveSequencer::scrollUp(void) {
+  if (data.gridStepOffset > 0) {
+    data.gridStepOffset--;
+    gridNeedsRedraw = true;
+  }
+}
+
+FLASHMEM void UI_LiveSequencer::scrollDown(void) {
+  if (data.gridStepOffset < data.GRIDSONGLEN - 6) { // Assuming 32 steps total, showing 6 at a time
+    data.gridStepOffset++;
+    gridNeedsRedraw = true;
+  }
+}
+
+FLASHMEM void UI_LiveSequencer::toggleGridSongLayer(uint8_t layer) {
+  // Use macro for grid access
+  data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) =
+    !data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
+  gridNeedsRedraw = true;
+  data.redraw_grid_buttons = true;
+}

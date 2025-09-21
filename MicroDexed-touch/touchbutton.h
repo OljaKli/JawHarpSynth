@@ -27,7 +27,8 @@ public:
     BUTTON_LABEL = 4,
     BUTTON_BLUE = 5,
     BUTTON_PINK = 6,
-    BUTTONCOLOR_NUM = 7
+    BUTTON_INACTIVE = 7,
+    BUTTONCOLOR_NUM = 8
   };
 
   template<int nx, int ny>

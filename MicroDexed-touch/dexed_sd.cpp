@@ -36,6 +36,8 @@ using namespace TeensyTimerTool;
 #include "microsynth.h"
 #include "braids.h"
 #include "touch.h"
+#include "noisemaker.h"
+//#include "livesequencer.h"
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -92,29 +94,6 @@ extern PeriodicTimer sequencer_timer;
 extern void sequencer();
 extern sequencer_t seq;
 
-extern uint16_t mb_cross_freq_low;
-extern uint16_t mb_cross_freq_mid;
-extern uint16_t mb_cross_freq_upper_mid;
-extern uint16_t mb_cross_freq_high;
-extern float mb_global_gain;
-extern float mb_gain_low;
-extern float mb_gain_mid;
-extern float mb_gain_upper_mid;
-extern float mb_gain_high;
-extern bool multiband_active;
-extern uint8_t mb_threshold_low;
-extern uint8_t mb_threshold_mid;
-extern uint8_t mb_threshold_upper_mid;
-extern uint8_t mb_threshold_high;
-extern float mb_q_low;
-extern float mb_q_mid;
-extern float mb_q_upper_mid;
-extern float mb_q_high;
-extern bool mb_solo_low;
-extern bool mb_solo_mid;
-extern bool mb_solo_upper_mid;
-extern bool mb_solo_high;
-extern uint8_t mb_global_ratio;
 extern uint8_t drum_midi_channel;
 extern uint8_t slices_midi_channel;
 
@@ -239,7 +218,7 @@ FLASHMEM bool load_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     string_toupper(bank_name);
     strcpy(g_bank_name[instance_id], bank_name);
 #ifdef DEBUG
-    char filename[FILENAME_LEN+5];
+    char filename[FILENAME_LEN + 5];
     //snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.syx"), DEXED_CONFIG_PATH, b, bank_name);
     sprintf(filename, "/%s/%d/%d/%s.syx", DEXED_CONFIG_PATH, p, b, bank_name);
     LOG.print(F("Loading voice from "));
@@ -324,8 +303,8 @@ FLASHMEM bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     char filename[FILENAME_LEN];
     uint8_t data[128];
 
-  //  snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
-     snprintf_P(filename, sizeof(filename), PSTR("/DEXED/%d/%d/%s.syx"),  p, b, g_bank_name[instance_id]);
+    //  snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
+    snprintf_P(filename, sizeof(filename), PSTR("/DEXED/%d/%d/%s.syx"), p, b, g_bank_name[instance_id]);
 
     AudioNoInterrupts();
     sysex = SD.open(filename, FILE_WRITE);
@@ -520,11 +499,14 @@ FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
   return (true);
 }
 
+extern uint8_t sysex_pool_number;
+extern uint8_t sysex_bank_number;
+
 FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
 {
-  char tmp[FILENAME_LEN];
-  char tmp2[FILENAME_LEN];
-  int bank_number;
+  char tmp[30];
+  char tmp2[35];
+  //int bank_number;
   File root, entry;
 
   if (sd_card_internal > 0)
@@ -536,8 +518,10 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
 #endif
 
     // first remove old bank => find the bank number
-    sscanf(bank_filename, "/%s/%d/%s", tmp, &bank_number, tmp2);
-    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d"), DEXED_CONFIG_PATH, bank_number);
+    //sscanf(bank_filename, "/%s/%d/%s", tmp, &bank_number, tmp2);
+    //snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d"), DEXED_CONFIG_PATH, bank_number);
+
+    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number);
     AudioNoInterrupts();
     root = SD.open(tmp);
     while (42 == 42)
@@ -554,7 +538,7 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
           LOG.println(entry.name());
 #endif
           //snprintf_P(tmp2, sizeof(tmp2), PSTR("/%s/%s/%s"), DEXED_CONFIG_PATH, tmp, entry.name());
-          sprintf(tmp2, "/%s/%s/%s", DEXED_CONFIG_PATH, tmp, entry.name());
+          snprintf(tmp2, sizeof(tmp2), "%s/%s", tmp, entry.name());
           entry.close();
 #ifdef DEBUG
           LOG.printf("Remove file %s\n", tmp2);
@@ -577,13 +561,17 @@ FLASHMEM bool save_sd_bank(const char* bank_filename, uint8_t* data)
     }
     root.close();
 
-    // store new bank at /DEXED/<b>/<bank_name>.syx
+    // store new bank at /DEXED/pool/bank/bank_name.syx
 #ifdef DEBUG
     LOG.print(F("Storing bank as "));
     LOG.print(bank_filename);
     LOG.print(F("..."));
 #endif
-    root = SD.open(bank_filename, FILE_WRITE);
+
+    snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%d/%s"), DEXED_CONFIG_PATH, sysex_pool_number, sysex_bank_number, bank_filename);
+    root = SD.open(tmp, FILE_WRITE);
+    // root = SD.open(bank_filename, FILE_WRITE);
+
     root.write(data, 4104);
     root.close();
     AudioInterrupts();
@@ -1831,18 +1819,18 @@ FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_E
 
 /**
  * Converts old layer mute events to the new format.
- * 
+ *
  * In old automation:
  * note_in is the layer
  * note_in_velocity is the mute state: 0 - mute,  1 - unmute
- * 
+ *
  * In new automation (note_in and note_in_velocity are swapped and mute states have new values):
  * note_in is the mute state: TYPE_MUTE_ON or TYPE_MUTE_OFF
  * note_in_velocity is the layer number
- * 
+ *
  * This should be used when loading legacy song chunks to ensure compatibility.
  */
-static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
+static void convert_old_layer_mute_event(LiveSequencer::MidiEvent& e) {
   // Only process if note_in_velocity is 0 or 1 and layer is valid
   if (e.note_in_velocity > 1 || e.note_in >= LiveSequencer::LIVESEQUENCER_NUM_LAYERS)
     return;
@@ -1862,7 +1850,7 @@ static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
 
   // to new automation:
   e.note_in = isMuted ? LiveSequencer::AutomationType::TYPE_MUTE_ON
-                      : LiveSequencer::AutomationType::TYPE_MUTE_OFF;
+    : LiveSequencer::AutomationType::TYPE_MUTE_OFF;
   e.note_in_velocity = layer;
 
 #ifdef DEBUG
@@ -1874,7 +1862,7 @@ static void convert_old_layer_mute_event(LiveSequencer::MidiEvent &e) {
 #endif
 }
 
-FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector &list, bool isSongChunk = false) {
+FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector& list, bool isSongChunk = false) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
     StaticJsonDocument<JSON_BUFFER_SIZE> doc;
@@ -1890,7 +1878,7 @@ FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector &list, 
       LiveSequencer::MidiEvent e;
       JsonObject o = doc[String(i)];
       deserializeJSONToEvent(o, e);
-      if( e.event == midi::MidiType::ControlChange && isSongChunk ) {
+      if (e.event == midi::MidiType::ControlChange && isSongChunk) {
         // If this is a song chunk, convert old layer mute events to the current format
         convert_old_layer_mute_event(e);
       }
@@ -2118,9 +2106,151 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
   return (true);
 }
 
+FLASHMEM bool save_sd_gridsong_json(uint8_t number)
+{
+  if (sd_card_internal > 0) {
+    LiveSequencer::LiveSeqData* data = liveSeq.getData();
+    number = constrain(number, 0, 99); 
+
+    // Use the GRID_STEP macro for accessing grid data
+    #define GRID_STEP(step, track, layer) \
+        data->gridSongSteps[(step) * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + \
+                           (track) * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + (layer)]
+
+    for (uint8_t track = 0; track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS; track++) {
+      // check if track is completely empty
+      bool emptyTrack = true;
+      for (uint8_t step = 0; step < LiveSequencer::LiveSeqData::GRIDSONGLEN && emptyTrack; step++) {
+        for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS && emptyTrack; layer++) {
+          if (GRID_STEP(step, track, layer) != 0) {
+            emptyTrack = false;
+          }
+        }
+      }
+
+      if (emptyTrack) {
+        // remove old file if it exists
+        snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/gridsng%02d.json"),
+                   PERFORMANCE_CONFIG_PATH, number, track + 1);
+        if (SD.exists(filename)) {
+          SD.remove(filename);
+        }
+        continue;
+      }
+
+      // create JSON
+      snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/gridsng%02d.json"),
+                 PERFORMANCE_CONFIG_PATH, number, track + 1);
+
+#ifdef DEBUG
+      LOG.print(F("Saving grid song track "));
+      LOG.print(track + 1);
+      LOG.print(F(" -> "));
+      LOG.println(filename);
+#endif
+
+      SD.remove(filename);
+      File json = SD.open(filename, FILE_WRITE);
+      if (json) {
+        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        doc["track"] = track + 1;
+        JsonArray stepsArr = doc.createNestedArray("steps");
+
+        for (uint8_t step = 0; step < LiveSequencer::LiveSeqData::GRIDSONGLEN; step++) {
+          JsonArray layersArr = stepsArr.createNestedArray();
+          for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; layer++) {
+            layersArr.add(GRID_STEP(step, track, layer));
+          }
+        }
+
+        serializeJsonPretty(doc, json);
+        json.close();
+      }
+    }
+
+    #undef GRID_STEP
+  }
+  return true;
+}
+
+FLASHMEM bool load_sd_gridsong_json(uint8_t number)
+{
+  // get pointer to sequencer data
+  LiveSequencer::LiveSeqData* data = liveSeq.getData();
+
+  // start with empty grid (zeros) - use memset for the linear array
+  if (data->gridSongSteps) {
+    memset(data->gridSongSteps, 0, 
+           LiveSequencer::LiveSeqData::GRIDSONGLEN * 
+           LiveSequencer::LIVESEQUENCER_NUM_TRACKS * 
+           LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+  }
+
+  if (sd_card_internal > 0) {
+    number = constrain(number, 0, 99);
+
+    // Use the GRID_STEP macro for accessing grid data
+    #define GRID_STEP(step, track, layer) \
+        data->gridSongSteps[(step) * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + \
+                           (track) * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + (layer)]
+
+    for (uint8_t track = 0; track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS; track++) {
+      snprintf_P(filename, sizeof(filename), 
+                 PSTR("/%s/%d/gridsng%02d.json"), 
+                 PERFORMANCE_CONFIG_PATH, number, track + 1);
+
+      if (!SD.exists(filename)) {
+        continue; // missing file → keep zeros
+      }
+
+#ifdef DEBUG
+      LOG.print(F("Loading grid song track "));
+      LOG.print(track + 1);
+      LOG.print(F(" <- "));
+      LOG.println(filename);
+#endif
+
+      File json = SD.open(filename, FILE_READ);
+      if (json) {
+        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        DeserializationError err = deserializeJson(doc, json);
+        json.close();
+
+        if (!err) {
+          JsonArray stepsArr = doc["steps"];
+          uint8_t stepIndex = 0;
+
+          for (JsonArray layersArr : stepsArr) {
+            if (stepIndex >= LiveSequencer::LiveSeqData::GRIDSONGLEN) break;
+
+            uint8_t layerIndex = 0;
+            for (JsonVariant val : layersArr) {
+              if (layerIndex >= LiveSequencer::LIVESEQUENCER_NUM_LAYERS) break;
+
+              GRID_STEP(stepIndex, track, layerIndex) = val.as<uint8_t>();
+              layerIndex++;
+            }
+            stepIndex++;
+          }
+        }
+      }
+    }
+
+    #undef GRID_STEP
+  }
+  return true;
+}
+
+
 /******************************************************************************
    SD SYS
  ******************************************************************************/
+
+extern uint8_t dac_cv_2;
+extern uint8_t dac_cv_4;
+extern uint8_t dac_cv_transpose;
+
+
 FLASHMEM bool load_sd_sys_json(void)
 {
 
@@ -2172,9 +2302,13 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
         configuration.sys.swap_midi_leds = data_json["swap_midi_leds"];
+
         configuration.sys.vol_control = data_json["vol_control"];
         configuration.sys.sus_pedal = data_json["sus_pedal"];
         configuration.sys.ext_clock = data_json["ext_clock"];
+        dac_cv_transpose = data_json["cvtranspose"];
+        dac_cv_2 = data_json["cv2cc"];
+        dac_cv_4 = data_json["cv4cc"];
 
         if (data_json["rgb_enc_color_def"] > 0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
@@ -2280,6 +2414,10 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["sus_pedal"] = configuration.sys.sus_pedal;
       data_json["ext_clock"] = configuration.sys.ext_clock;
 
+      data_json["cvtranspose"] = dac_cv_transpose;
+      data_json["cv2cc"] = dac_cv_2;
+      data_json["cv4cc"] = dac_cv_4;
+
       if (configuration.sys.rgb_enc_color_def != 0)
         data_json["rgb_enc_color_def"] = configuration.sys.rgb_enc_color_def;
       if (configuration.sys.rgb_enc_color_sel != 0)
@@ -2326,6 +2464,315 @@ FLASHMEM bool save_sd_sys_json(void)
   AudioInterrupts();
   return (false);
 }
+
+/******************************************************************************
+   SD NOISEMAKER
+ ******************************************************************************/
+
+#ifdef COMPILE_FOR_PSRAM
+
+FLASHMEM void load_sd_noisemaker_json(void)
+{
+  if (sd_card_internal > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
+
+    AudioNoInterrupts();
+    if (SD.exists(filename))
+    {
+      json = SD.open(filename);
+      if (json)
+      {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        deserializeJson(data_json, json);
+
+        json.close();
+
+        nm_params.category = data_json["category"];
+        nm_params.mode = data_json["mode"];
+        nm_params.randomizer = data_json["randomizer"];
+        nm_params.stereo_mode = data_json["stereo_mode"];
+        nm_params.stereo_width = data_json["stereo_width"];
+        nm_params.reverb_enable = data_json["reverb_enable"];
+        nm_params.reverb_room_size = data_json["reverb_room_size"];
+        nm_params.reverb_damping = data_json["reverb_damping"];
+        nm_params.reverb_wet = data_json["reverb_wet"];
+        nm_params.reverb_dry = data_json["reverb_dry"];
+        nm_params.reverb_width = data_json["reverb_width"];
+        nm_params.accent = data_json["accent"];
+        nm_params.bd_pitch = data_json["bd_pitch"];
+        nm_params.bd_pitch_env = data_json["bd_pitch_env"];
+        nm_params.bd_pitch_decay = data_json["bd_pitch_decay"];
+        nm_params.bd_attack = data_json["bd_attack"];
+        nm_params.bd_decay = data_json["bd_decay"];
+        nm_params.bd_release = data_json["bd_release"];
+        nm_params.bd_tone = data_json["bd_tone"];
+        nm_params.bd_click = data_json["bd_click"];
+        nm_params.bd_noise = data_json["bd_noise"];
+        nm_params.bd_drive = data_json["bd_drive"];
+        nm_params.bd_comp = data_json["bd_comp"];
+        nm_params.bd_spread = data_json["bd_spread"];
+        nm_params.sn_tone1 = data_json["sn_tone1"];
+        nm_params.sn_tone2 = data_json["sn_tone2"];
+        nm_params.sn_tone_mix = data_json["sn_tone_mix"];
+        nm_params.sn_pitch_env = data_json["sn_pitch_env"];
+        nm_params.sn_decay = data_json["sn_decay"];
+        nm_params.sn_noise = data_json["sn_noise"];
+        nm_params.sn_bp_freq = data_json["sn_bp_freq"];
+        nm_params.sn_bp_q = data_json["sn_bp_q"];
+        nm_params.sn_snap = data_json["sn_snap"];
+        nm_params.sn_drive = data_json["sn_drive"];
+        nm_params.sn_spread = data_json["sn_spread"];
+        nm_params.tom_pitch = data_json["tom_pitch"];
+        nm_params.tom_decay = data_json["tom_decay"];
+        nm_params.tom_pitch_env = data_json["tom_pitch_env"];
+        nm_params.tom_tone = data_json["tom_tone"];
+        nm_params.tom_noise = data_json["tom_noise"];
+        nm_params.tom_spread = data_json["tom_spread"];
+        nm_params.conga_pitch = data_json["conga_pitch"];
+        nm_params.conga_decay = data_json["conga_decay"];
+        nm_params.conga_tone = data_json["conga_tone"];
+        nm_params.conga_pitch_env = data_json["conga_pitch_env"];
+        nm_params.conga_noise = data_json["conga_noise"];
+        nm_params.conga_spread = data_json["conga_spread"];
+        nm_params.rim_decay = data_json["rim_decay"];
+        nm_params.rim_tone = data_json["rim_tone"];
+        nm_params.rim_pitch = data_json["rim_pitch"];
+        nm_params.rim_mod_freq = data_json["rim_mod_freq"];
+        nm_params.rim_noise_bp_freq = data_json["rim_noise_bp_freq"];
+        nm_params.rim_drive = data_json["rim_drive"];
+        nm_params.rim_click_level = data_json["rim_click_level"];
+        nm_params.rim_noise_level = data_json["rim_noise_level"];
+        nm_params.rim_spread = data_json["rim_spread"];
+        nm_params.clap_repeats = data_json["clap_repeats"];
+        nm_params.clap_spread = data_json["clap_spread"];
+        nm_params.clap_tail = data_json["clap_tail"];
+        nm_params.clap_bp_hz = data_json["clap_bp_hz"];
+        nm_params.clap_bp_q = data_json["clap_bp_q"];
+        nm_params.clap_decay = data_json["clap_decay"];
+        nm_params.clap_drive = data_json["clap_drive"];
+        nm_params.hh_mode = data_json["hh_mode"];
+        nm_params.hh_tone = data_json["hh_tone"];
+        nm_params.hh_noise = data_json["hh_noise"];
+        nm_params.hh_bp_hz = data_json["hh_bp_hz"];
+        nm_params.hh_bp_q = data_json["hh_bp_q"];
+        nm_params.hh_decay = data_json["hh_decay"];
+        nm_params.hh_drive = data_json["hh_drive"];
+        nm_params.hh_detune = data_json["hh_detune"];
+        nm_params.hh_spread = data_json["hh_spread"];
+        nm_params.crash_tone = data_json["crash_tone"];
+        nm_params.crash_bp_hz = data_json["crash_bp_hz"];
+        nm_params.crash_bp_q = data_json["crash_bp_q"];
+        nm_params.crash_decay = data_json["crash_decay"];
+        nm_params.crash_spread = data_json["crash_spread"];
+        nm_params.ride_tone = data_json["ride_tone"];
+        nm_params.ride_bp_hz = data_json["ride_bp_hz"];
+        nm_params.ride_bp_q = data_json["ride_bp_q"];
+        nm_params.ride_decay = data_json["ride_decay"];
+        nm_params.ride_spread = data_json["ride_spread"];
+        nm_params.cb_freq1 = data_json["cb_freq1"];
+        nm_params.cb_freq2 = data_json["cb_freq2"];
+        nm_params.cb_amp_attack = data_json["cb_amp_attack"];
+        nm_params.cb_amp_decay = data_json["cb_amp_decay"];
+        nm_params.cb_tone_balance = data_json["cb_tone_balance"];
+        nm_params.cb_noise = data_json["cb_noise"];
+        nm_params.cb_drive = data_json["cb_drive"];
+        nm_params.cb_spread = data_json["cb_spread"];
+        nm_params.claves_hz = data_json["claves_hz"];
+        nm_params.claves_decay = data_json["claves_decay"];
+        nm_params.claves_drive = data_json["claves_drive"];
+        nm_params.claves_spread = data_json["claves_spread"];
+        nm_params.mar_bp_hz = data_json["mar_bp_hz"];
+        nm_params.mar_bp_q = data_json["mar_bp_q"];
+        nm_params.mar_decay = data_json["mar_decay"];
+        nm_params.mar_spread = data_json["mar_spread"];
+        nm_params.zap_pitch_start = data_json["zap_pitch_start"];
+        nm_params.zap_pitch_end = data_json["zap_pitch_end"];
+        nm_params.zap_decay = data_json["zap_decay"];
+        nm_params.zap_spread = data_json["zap_spread"];
+        nm_params.snap_decay = data_json["snap_decay"];
+        nm_params.snap_tone = data_json["snap_tone"];
+        nm_params.snap_pitch = data_json["snap_pitch"];
+        nm_params.snap_drive = data_json["snap_drive"];
+        nm_params.snap_spread = data_json["snap_spread"];
+        nm_params.synth_midi_note = data_json["synth_midi_note"];
+        nm_params.synth_attack = data_json["synth_attack"];
+        nm_params.synth_decay = data_json["synth_decay"];
+        nm_params.synth_sustain_level = data_json["synth_sustain_level"];
+        nm_params.synth_release = data_json["synth_release"];
+        nm_params.synth_filter_cutoff = data_json["synth_filter_cutoff"];
+        nm_params.synth_filter_resonance = data_json["synth_filter_resonance"];
+        nm_params.synth_filter_env_amount = data_json["synth_filter_env_amount"];
+        nm_params.synth_filter_env_attack = data_json["synth_filter_env_attack"];
+        nm_params.synth_filter_env_decay = data_json["synth_filter_env_decay"];
+        nm_params.synth_filter_env_release = data_json["synth_filter_env_release"];
+        nm_params.synth_waveform_mix = data_json["synth_waveform_mix"];
+        nm_params.synth_octave_mix = data_json["synth_octave_mix"];
+        nm_params.synth_detune = data_json["synth_detune"];
+        nm_params.synth_noise_level = data_json["synth_noise_level"];
+        nm_params.synth_noise_decay =data_json["synth_noise_decay"];
+
+ nm_params.synth_pulse_width = data_json["synth_pulse_width"];
+        nm_params.synth_waveform =data_json["synth_waveform"];
+
+        }
+      }
+    }
+  AudioInterrupts();
+}
+
+FLASHMEM void save_sd_noisemaker_json(void)
+{
+  if (sd_card_internal > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
+
+#ifdef DEBUG
+    LOG.print(F("Saving sys config to "));
+    LOG.println(filename);
+#endif
+
+    SD.remove(filename);
+    json = SD.open(filename, FILE_WRITE);
+    if (json)
+    {
+      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+     
+      data_json["category"] = nm_params.category;
+      data_json["mode"] = nm_params.mode;
+      data_json["randomizer"] = nm_params.randomizer;
+      data_json["stereo_mode"] = nm_params.stereo_mode;
+      data_json["stereo_width"] = nm_params.stereo_width;
+      data_json["reverb_enable"] = nm_params.reverb_enable;
+      data_json["reverb_room_size"] = nm_params.reverb_room_size;
+      data_json["reverb_damping"] = nm_params.reverb_damping;
+      data_json["reverb_wet"] = nm_params.reverb_wet;
+      data_json["reverb_dry"] = nm_params.reverb_dry;
+      data_json["reverb_width"] = nm_params.reverb_width;
+      data_json["accent"] = nm_params.accent;
+      data_json["bd_pitch"] = nm_params.bd_pitch;
+      data_json["bd_pitch_env"] = nm_params.bd_pitch_env;
+      data_json["bd_pitch_decay"] = nm_params.bd_pitch_decay;
+      data_json["bd_attack"] = nm_params.bd_attack;
+      data_json["bd_decay"] = nm_params.bd_decay;
+      data_json["bd_release"] = nm_params.bd_release;
+      data_json["bd_tone"] = nm_params.bd_tone;
+      data_json["bd_click"] = nm_params.bd_click;
+      data_json["bd_noise"] = nm_params.bd_noise;
+      data_json["bd_drive"] = nm_params.bd_drive;
+      data_json["bd_comp"] = nm_params.bd_comp;
+      data_json["bd_spread"] = nm_params.bd_spread;
+      data_json["sn_tone1"] = nm_params.sn_tone1;
+      data_json["sn_tone2"] = nm_params.sn_tone2;
+      data_json["sn_tone_mix"] = nm_params.sn_tone_mix;
+      data_json["sn_pitch_env"] = nm_params.sn_pitch_env;
+      data_json["sn_decay"] = nm_params.sn_decay;
+      data_json["sn_noise"] = nm_params.sn_noise;
+      data_json["sn_bp_freq"] = nm_params.sn_bp_freq;
+      data_json["sn_bp_q"] = nm_params.sn_bp_q;
+      data_json["sn_snap"] = nm_params.sn_snap;
+      data_json["sn_drive"] = nm_params.sn_drive;
+      data_json["sn_spread"] = nm_params.sn_spread;
+      data_json["tom_pitch"] = nm_params.tom_pitch;
+      data_json["tom_decay"] = nm_params.tom_decay;
+      data_json["tom_pitch_env"] = nm_params.tom_pitch_env;
+      data_json["tom_tone"] = nm_params.tom_tone;
+      data_json["tom_noise"] = nm_params.tom_noise;
+      data_json["tom_spread"] = nm_params.tom_spread;
+      data_json["conga_pitch"] = nm_params.conga_pitch;
+      data_json["conga_decay"] = nm_params.conga_decay;
+      data_json["conga_tone"] = nm_params.conga_tone;
+      data_json["conga_pitch_env"] = nm_params.conga_pitch_env;
+      data_json["conga_noise"] = nm_params.conga_noise;
+      data_json["conga_spread"] = nm_params.conga_spread;
+      data_json["rim_decay"] = nm_params.rim_decay;
+      data_json["rim_tone"] = nm_params.rim_tone;
+      data_json["rim_pitch"] = nm_params.rim_pitch;
+      data_json["rim_mod_freq"] = nm_params.rim_mod_freq;
+      data_json["rim_noise_bp_freq"] = nm_params.rim_noise_bp_freq;
+      data_json["rim_drive"] = nm_params.rim_drive;
+      data_json["rim_click_level"] = nm_params.rim_click_level;
+      data_json["rim_noise_level"] = nm_params.rim_noise_level;
+      data_json["rim_spread"] = nm_params.rim_spread;
+      data_json["clap_repeats"] = nm_params.clap_repeats;
+      data_json["clap_spread"] = nm_params.clap_spread;
+      data_json["clap_tail"] = nm_params.clap_tail;
+      data_json["clap_bp_hz"] = nm_params.clap_bp_hz;
+      data_json["clap_bp_q"] = nm_params.clap_bp_q;
+      data_json["clap_decay"] = nm_params.clap_decay;
+      data_json["clap_drive"] = nm_params.clap_drive;
+      data_json["hh_mode"] = nm_params.hh_mode;
+      data_json["hh_tone"] = nm_params.hh_tone;
+      data_json["hh_noise"] = nm_params.hh_noise;
+      data_json["hh_bp_hz"] = nm_params.hh_bp_hz;
+      data_json["hh_bp_q"] = nm_params.hh_bp_q;
+      data_json["hh_decay"] = nm_params.hh_decay;
+      data_json["hh_drive"] = nm_params.hh_drive;
+      data_json["hh_detune"] = nm_params.hh_detune;
+      data_json["hh_spread"] = nm_params.hh_spread;
+      data_json["crash_tone"] = nm_params.crash_tone;
+      data_json["crash_bp_hz"] = nm_params.crash_bp_hz;
+      data_json["crash_bp_q"] = nm_params.crash_bp_q;
+      data_json["crash_decay"] = nm_params.crash_decay;
+      data_json["crash_spread"] = nm_params.crash_spread;
+      data_json["ride_tone"] = nm_params.ride_tone;
+      data_json["ride_bp_hz"] = nm_params.ride_bp_hz;
+      data_json["ride_bp_q"] = nm_params.ride_bp_q;
+      data_json["ride_decay"] = nm_params.ride_decay;
+      data_json["ride_spread"] = nm_params.ride_spread;
+      data_json["cb_freq1"] = nm_params.cb_freq1;
+      data_json["cb_freq2"] = nm_params.cb_freq2;
+      data_json["cb_amp_attack"] = nm_params.cb_amp_attack;
+      data_json["cb_amp_decay"] = nm_params.cb_amp_decay;
+      data_json["cb_tone_balance"] = nm_params.cb_tone_balance;
+      data_json["cb_noise"] = nm_params.cb_noise;
+      data_json["cb_drive"] = nm_params.cb_drive;
+      data_json["cb_spread"] = nm_params.cb_spread;
+      data_json["claves_hz"] = nm_params.claves_hz;
+      data_json["claves_decay"] = nm_params.claves_decay;
+      data_json["claves_drive"] = nm_params.claves_drive;
+      data_json["claves_spread"] = nm_params.claves_spread;
+      data_json["mar_bp_hz"] = nm_params.mar_bp_hz;
+      data_json["mar_bp_q"] = nm_params.mar_bp_q;
+      data_json["mar_decay"] = nm_params.mar_decay;
+      data_json["mar_spread"] = nm_params.mar_spread;
+      data_json["zap_pitch_start"] = nm_params.zap_pitch_start;
+      data_json["zap_pitch_end"] = nm_params.zap_pitch_end;
+      data_json["zap_decay"] = nm_params.zap_decay;
+      data_json["zap_spread"] = nm_params.zap_spread;
+      data_json["snap_decay"] = nm_params.snap_decay;
+      data_json["snap_tone"] = nm_params.snap_tone;
+      data_json["snap_pitch"] = nm_params.snap_pitch;
+      data_json["snap_drive"] = nm_params.snap_drive;
+      data_json["snap_spread"] = nm_params.snap_spread;
+      data_json["synth_midi_note"] = nm_params.synth_midi_note;
+      data_json["synth_attack"] = nm_params.synth_attack;
+      data_json["synth_decay"] = nm_params.synth_decay;
+      data_json["synth_sustain_level"] = nm_params.synth_sustain_level;
+      data_json["synth_release"] = nm_params.synth_release;
+      data_json["synth_filter_cutoff"] = nm_params.synth_filter_cutoff;
+      data_json["synth_filter_resonance"] = nm_params.synth_filter_resonance;
+      data_json["synth_filter_env_amount"] = nm_params.synth_filter_env_amount;
+      data_json["synth_filter_env_attack"] = nm_params.synth_filter_env_attack;
+      data_json["synth_filter_env_decay"] = nm_params.synth_filter_env_decay;
+      data_json["synth_filter_env_release"] = nm_params.synth_filter_env_release;
+      data_json["synth_waveform_mix"] = nm_params.synth_waveform_mix;
+      data_json["synth_octave_mix"] = nm_params.synth_octave_mix;
+       data_json["synth_detune"] = nm_params.synth_detune;
+        data_json["synth_noise_level"]=  nm_params.synth_noise_level ;
+  data_json["synth_noise_decay"]=  nm_params.synth_noise_decay ;
+   data_json["synth_pulse_width"]= nm_params.synth_pulse_width ;
+      data_json["synth_waveform"]=  nm_params.synth_waveform;
+ 
+      serializeJsonPretty(data_json, json);
+      json.close();
+    }
+    json.close();
+  }
+  AudioInterrupts();
+}
+
+#endif
 
 /******************************************************************************
    SD BRAIDS
@@ -2549,6 +2996,9 @@ FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 /******************************************************************************
    SD MULTIBAND
  ******************************************************************************/
+#include "MultiBandCompressor.h"
+extern MultiBandCompressor_UI_t MultiBandUIparams;
+extern AudioMultiBandCompressor MultiBandCompressor;
 
 FLASHMEM bool load_sd_multiband_json(uint8_t number)
 {
@@ -2583,29 +3033,33 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
         LOG.println();
 #endif
 
-        mb_cross_freq_low = data_json["f_low"];
-        mb_cross_freq_mid = data_json["f_mid"];
-        mb_cross_freq_upper_mid = data_json["f_upper_mid"];
-        mb_cross_freq_high = data_json["f_high"];
-        mb_global_gain = data_json["g_gain"];
-        mb_gain_low = data_json["g_low"];
-        mb_gain_mid = data_json["g_mid"];
-        mb_gain_upper_mid = data_json["g_upper_mid"];
-        mb_gain_high = data_json["g_high"];
-        multiband_active = data_json["active"];
-        mb_threshold_low = data_json["t_low"];
-        mb_threshold_mid = data_json["t_mid"];
-        mb_threshold_upper_mid = data_json["t_upper_mid"];
-        mb_threshold_low = data_json["t_low"];
-        mb_q_low = data_json["q_low"];
-        mb_q_mid = data_json["q_mid"];
-        mb_q_upper_mid = data_json["q_upper_mid"];
-        mb_q_high = data_json["q_high"];
-        mb_solo_low = data_json["s_low"];
-        mb_solo_mid = data_json["s_mid"];
-        mb_solo_upper_mid = data_json["s_upper_mid"];
-        mb_solo_high = data_json["s_high"];
-        mb_global_ratio = data_json["g_ratio"];
+MultiBandUIparams.master_gain = data_json["master_gain"];
+MultiBandUIparams.master_mix = data_json["master_mix"];
+MultiBandUIparams.crossover1 = data_json["crossover1"];
+MultiBandUIparams.crossover2 = data_json["crossover2"];
+MultiBandUIparams.crossover3 = data_json["crossover3"];
+MultiBandUIparams.band1_thresh = data_json["band1_thresh"];
+MultiBandUIparams.band1_ratio = data_json["band1_ratio"];
+MultiBandUIparams.band1_attack = data_json["band1_attack"];
+MultiBandUIparams.band1_release = data_json["band1_release"];
+MultiBandUIparams.band1_gain = data_json["band1_gain"];
+MultiBandUIparams.band2_thresh = data_json["band2_thresh"];
+MultiBandUIparams.band2_ratio = data_json["band2_ratio"];
+MultiBandUIparams.band2_attack = data_json["band2_attack"];
+MultiBandUIparams.band2_release = data_json["band2_release"];
+MultiBandUIparams.band2_gain = data_json["band2_gain"];
+MultiBandUIparams.band3_thresh = data_json["band3_thresh"];
+MultiBandUIparams.band3_ratio = data_json["band3_ratio"];
+MultiBandUIparams.band3_attack = data_json["band3_attack"];
+MultiBandUIparams.band3_release = data_json["band3_release"];
+MultiBandUIparams.band3_gain = data_json["band3_gain"];
+MultiBandUIparams.band4_thresh = data_json["band4_thresh"];
+MultiBandUIparams.band4_ratio = data_json["band4_ratio"];
+MultiBandUIparams.band4_attack = data_json["band4_attack"];
+MultiBandUIparams.band4_release = data_json["band4_release"];
+MultiBandUIparams.band4_gain = data_json["band4_gain"];
+
+ MultiBandCompressor.setUI(MultiBandUIparams);
 
         return (true);
       }
@@ -2648,29 +3102,32 @@ FLASHMEM bool save_sd_multiband_json(uint8_t number)
     if (json)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-      data_json["f_low"] = mb_cross_freq_low;
-      data_json["f_mid"] = mb_cross_freq_mid;
-      data_json["f_upper_mid"] = mb_cross_freq_upper_mid;
-      data_json["f_high"] = mb_cross_freq_high;
-      data_json["g_gain"] = mb_global_gain;
-      data_json["g_low"] = mb_gain_low;
-      data_json["g_mid"] = mb_gain_mid;
-      data_json["g_upper_mid"] = mb_gain_upper_mid;
-      data_json["g_high"] = mb_gain_high;
-      data_json["active"] = multiband_active;
-      data_json["t_low"] = mb_threshold_low;
-      data_json["t_mid"] = mb_threshold_mid;
-      data_json["t_upper_mid"] = mb_threshold_upper_mid;
-      data_json["t_low"] = mb_threshold_low;
-      data_json["q_low"] = mb_q_low;
-      data_json["q_mid"] = mb_q_mid;
-      data_json["q_upper_mid"] = mb_q_upper_mid;
-      data_json["q_high"] = mb_q_high;
-      data_json["s_low"] = mb_solo_low;
-      data_json["s_mid"] = mb_solo_mid;
-      data_json["s_upper_mid"] = mb_solo_upper_mid;
-      data_json["s_high"] = mb_solo_high;
-      data_json["g_ratio"] = mb_global_ratio;
+
+    data_json["master_gain"] = MultiBandUIparams.master_gain;
+data_json["master_mix"] = MultiBandUIparams.master_mix;
+data_json["crossover1"] = MultiBandUIparams.crossover1;
+data_json["crossover2"] = MultiBandUIparams.crossover2;
+data_json["crossover3"] = MultiBandUIparams.crossover3;
+data_json["band1_thresh"] = MultiBandUIparams.band1_thresh;
+data_json["band1_ratio"] = MultiBandUIparams.band1_ratio;
+data_json["band1_attack"] = MultiBandUIparams.band1_attack;
+data_json["band1_release"] = MultiBandUIparams.band1_release;
+data_json["band1_gain"] = MultiBandUIparams.band1_gain;
+data_json["band2_thresh"] = MultiBandUIparams.band2_thresh;
+data_json["band2_ratio"] = MultiBandUIparams.band2_ratio;
+data_json["band2_attack"] = MultiBandUIparams.band2_attack;
+data_json["band2_release"] = MultiBandUIparams.band2_release;
+data_json["band2_gain"] = MultiBandUIparams.band2_gain;
+data_json["band3_thresh"] = MultiBandUIparams.band3_thresh;
+data_json["band3_ratio"] = MultiBandUIparams.band3_ratio;
+data_json["band3_attack"] = MultiBandUIparams.band3_attack;
+data_json["band3_release"] = MultiBandUIparams.band3_release;
+data_json["band3_gain"] = MultiBandUIparams.band3_gain;
+data_json["band4_thresh"] = MultiBandUIparams.band4_thresh;
+data_json["band4_ratio"] = MultiBandUIparams.band4_ratio;
+data_json["band4_attack"] = MultiBandUIparams.band4_attack;
+data_json["band4_release"] = MultiBandUIparams.band4_release;
+data_json["band4_gain"] = MultiBandUIparams.band4_gain;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -2735,13 +3192,13 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
         LOG.println();
 #endif
         unload_all_custom_samples();
-        
+
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
 
           char fullpath[FULLPATH_MAX_LEN] = { 0 };
           strcpy(fullpath, data_json[i]["filename"]);
-          char *lastSlash = strrchr(fullpath, '/');
+          char* lastSlash = strrchr(fullpath, '/');
           if (lastSlash != nullptr) {
             strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename, lastSlash + 1);
             *lastSlash = '\0';
@@ -2757,9 +3214,9 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
             customSamples[i].end = 1000;   // 100%
             customSamples[i].loopType = 0; // loop_type::looptype_none
           }
-          
+
           uint8_t drumClass = data_json[i]["class"];
-          if(drumClass == 0) {
+          if (drumClass == 0) {
             drumClass = DRUM_POLY;
           }
           drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = drumClass;
@@ -3503,16 +3960,21 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_chain_json(number);
   save_sd_fx_json(number);
   save_sd_epiano_json(number);
+#if defined COMPILE_FOR_PSRAM
   save_sd_multisample_presets_json(number);
+  #endif
+  
   save_sd_braids_json(number, 0);
   save_sd_multiband_json(number);
   save_sd_sidechain_json(number);
   save_sd_livesequencer_json(number);
+  save_sd_gridsong_json(number);
   save_sd_envelopes_json(number);
 #ifdef COMPILE_FOR_PSRAM
   save_sd_samples_json(number);
   save_sd_slices_json(number);
 #endif
+
 
   for (uint8_t i = 0; i < NUM_DEXED; i++)
   {
@@ -3538,6 +4000,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
 
     LOG.print(F("  "));
     SD.remove(filename);
+LiveSequencer::LiveSeqData* data = liveSeq.getData();
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
@@ -3552,13 +4015,19 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["arp_style"] = seq.arp_style;
       data_json["arp_num_notes_max"] = seq.arp_num_notes_max;
       data_json["seq_chord_vel"] = seq.chord_vel;
-      data_json["seq_transpose"] = seq.transpose;
+      data_json["arr_split_note"] = seq.arr_split_note;
       data_json["chord_key_ammount"] = seq.chord_key_ammount;
       data_json["seq_oct_shift"] = seq.oct_shift;
       data_json["seq_element_shift"] = seq.element_shift;
       data_json["euclidean_active"] = seq.euclidean_active;
       data_json["euclidean_offset"] = seq.euclidean_offset;
       data_json["hihat_randomizer"] = seq.hihat_randomizer;
+      data_json["grid_song_mode"] = data->LiveSequencer::LiveSeqData::useGridSongMode;
+
+      for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
+      {
+        data_json["arr_type"][track] = seq.arr_type[track];
+      }
 
       for (uint8_t i = 0; i < sizeof(seq.track_type); i++)
       {
@@ -3869,8 +4338,10 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
 
   load_sd_drummappings_json(number);
 
+#if defined COMPILE_FOR_PSRAM
   if (bitRead(perf_load_options, perf_samples))
     load_sd_multisample_presets_json(number);
+#endif
 
   if (bitRead(perf_load_options, perf_braids))
     load_sd_braids_json(number, 0);
@@ -3903,6 +4374,8 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
       LOG.print(filename);
       LOG.println(F("]... loading..."));
 #endif
+
+LiveSequencer::LiveSeqData* data = liveSeq.getData();
       json = SD.open(filename);
       if (json)
       {
@@ -3954,6 +4427,12 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
             }
           }
 
+
+          for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
+          {
+            seq.arr_type[track] = data_json["arr_type"][track];
+          }
+
           seq.tempo_ms = data_json["seq_tempo_ms"];
           seq.bpm = data_json["seq_bpm"];
           seq.pattern_len_dec = data_json["pattern_len_dec"];
@@ -3967,7 +4446,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           else
             seq.arp_num_notes_max = 16;
           seq.chord_vel = data_json["seq_chord_vel"];
-          seq.transpose = data_json["seq_transpose"];
+          seq.arr_split_note = data_json["arr_split_note"];
           seq.chord_key_ammount = data_json["chord_key_ammount"];
           seq.oct_shift = data_json["seq_oct_shift"];
           seq.element_shift = data_json["seq_element_shift"];
@@ -3980,6 +4459,9 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           drum_midi_channel = data_json["drum_midi_channel"];
         if (data_json["slices_midi_channel"] > 0) //same as above
           slices_midi_channel = data_json["slices_midi_channel"];
+
+            data->LiveSequencer::LiveSeqData::useGridSongMode=data_json["grid_song_mode"];
+
 
 
         AudioNoInterrupts();
@@ -4031,7 +4513,10 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         }
 
         if (bitRead(perf_load_options, perf_liveseq))
+        {
           load_sd_livesequencer_json(number); // before handleStart()
+          load_sd_gridsong_json(number);
+        }
 
         update_seq_speed();
 
@@ -4109,6 +4594,36 @@ FLASHMEM bool check_sd_braids_patch_exists(uint8_t number)
     char filename[CONFIG_FILENAME_LEN];
 
     snprintf_P(filename, sizeof(filename), PSTR("/BRAIDS/pb%02d.json"), number);
+
+    // check if file exists...
+    if (SD.exists(filename))
+    {
+      AudioInterrupts();
+      return (true);
+    }
+    else
+    {
+      AudioInterrupts();
+      return (false);
+    }
+  }
+  else
+  {
+    AudioInterrupts();
+    return (false);
+  }
+}
+
+
+
+FLASHMEM bool check_sd_noisemaker_config_exists()
+{
+  
+  AudioNoInterrupts();
+  if (sd_card_internal > 0)
+  {
+    char filename[CONFIG_FILENAME_LEN];
+ snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
 
     // check if file exists...
     if (SD.exists(filename))
@@ -4449,6 +4964,8 @@ FLASHMEM void string_toupper(char* s)
   }
 }
 
+#if defined COMPILE_FOR_PSRAM
+
 FLASHMEM bool save_sd_multisample_presets_json(uint8_t number)
 {
   if (number < 0)
@@ -4615,6 +5132,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   }
   return (false);
 }
+#endif
 
 FLASHMEM int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
 {
@@ -4691,3 +5209,133 @@ FLASHMEM void load_sd_directory()
   std::sort(sdcard_infos.files.begin(), sdcard_infos.files.end(), compare_files_by_name);
 }
 
+
+#ifdef COMPILE_FOR_PSRAM
+#include <noisemaker.h>
+extern NoiseMakerParams nm_params;
+extern FLASHMEM void writeWavHeader(File file, unsigned int sampleRate, unsigned int channelCount);
+extern FLASHMEM void encodeUint32(File& file, uint32_t value);
+// Function to save the generated noise sample to the SD card
+// It creates the necessary directory structure if it doesn't exist
+FLASHMEM void saveNoiseToSdCard()
+{
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    Serial.println("SD Card initialization failed!");
+    return;
+  }
+
+  uint8_t targetSlot = NUM_STATIC_PITCHED_SAMPLES + noisemaker_custom_slot;
+
+  // Construct the full path
+  char path[FULLPATH_MAX_LEN];
+  snprintf(path, sizeof(path), "/CUSTOM/%s/%s", noisemaker_short_category_names[nm_params.category], drum_config[targetSlot].filename);
+
+  // Create directories if they don't exist
+  char dir_path[FULLPATH_MAX_LEN];
+  snprintf(dir_path, sizeof(dir_path), "/CUSTOM/%s", noisemaker_short_category_names[nm_params.category]);
+  AudioNoInterrupts();
+  if (!SD.exists(dir_path)) {
+    if (!SD.mkdir(dir_path)) {
+      return;
+    }
+  }
+
+  if (SD.exists(path))
+    SD.remove(path);
+
+  File file;
+
+  file = SD.open(path, FILE_WRITE);
+  writeWavHeader(file, 44100, drum_config[targetSlot].numChannels);
+
+  uint32_t totalToWrite = drum_config[targetSlot].len * sizeof(int16_t);
+  //uint32_t totalToWrite = drum_config[targetSlot].len * drum_config[targetSlot].numChannels * sizeof(int16_t);
+  uint8_t* dataPtr = (uint8_t*)drum_config[targetSlot].drum_data;
+  uint32_t totalWritten = 0;
+
+  while (totalWritten < totalToWrite) {
+    int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
+    if (n <= 0) {
+      break;
+    }
+    totalWritten += n;
+  }
+
+  uint32_t dataChunkSize = totalWritten;
+  uint32_t mainChunkSize = 36 + dataChunkSize;
+
+  file.seek(4);
+  encodeUint32(file, mainChunkSize);
+  file.seek(40);
+  encodeUint32(file, dataChunkSize);
+
+  file.flush();
+  file.close();
+
+  AudioInterrupts();
+}
+
+FLASHMEM void saveCustomSampleToSdCard(uint8_t sample_id)
+{
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    ;
+    return;
+  }
+
+  if (sample_id >= NUM_DRUMSET_CONFIG) return;
+
+  // Get the directory path and filename
+  const char* directoryPath = customSamples[sample_id - NUM_STATIC_PITCHED_SAMPLES].filepath;
+  const char* fileName = drum_config[sample_id].filename;
+
+  if (!directoryPath || strlen(directoryPath) == 0 || !fileName || strlen(fileName) == 0) {
+    return;
+  }
+
+  // Construct the full file path
+  char fullPath[FULLPATH_MAX_LEN]; // Use a buffer large enough for the full path
+  snprintf(fullPath, sizeof(fullPath), "%s/%s", directoryPath, fileName);
+
+  // Check if SD card is initialized
+  if (!SD.begin(BUILTIN_SDCARD)) {
+    return;
+  }
+
+  // Remove existing file to prevent corruption
+  if (SD.exists(fullPath)) {
+    SD.remove(fullPath);
+  }
+
+  File file = SD.open(fullPath, FILE_WRITE);
+  if (!file) {
+    return;
+  }
+
+  writeWavHeader(file, 44100, drum_config[sample_id].numChannels);
+
+  uint32_t totalToWrite = drum_config[sample_id].len * sizeof(int16_t);
+  uint8_t* dataPtr = (uint8_t*)drum_config[sample_id].drum_data;
+  uint32_t totalWritten = 0;
+
+  while (totalWritten < totalToWrite) {
+    int n = file.write(dataPtr + totalWritten, totalToWrite - totalWritten);
+    if (n <= 0) {
+      break;
+    }
+    totalWritten += n;
+  }
+
+  uint32_t dataChunkSize = totalWritten;
+  uint32_t mainChunkSize = 36 + dataChunkSize;
+
+  file.seek(4);
+  encodeUint32(file, mainChunkSize);
+  file.seek(40);
+  encodeUint32(file, dataChunkSize);
+
+  file.flush();
+  file.close();
+
+  AudioInterrupts();
+}
+#endif

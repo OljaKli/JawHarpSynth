@@ -25,7 +25,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#define _LCDML_DISP_cnt 64
+#define _LCDML_DISP_cnt 69 // max number of menu items (must match)
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1500  // 60s @ 25Hz rate
 #define SCREENSAVER_FADE_TIME 25    // 1s @ 25Hz rate
@@ -54,7 +54,7 @@ void draw_logo2(uint8_t yoffset, uint8_t progress = 10);
 void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y);
 void setCursor_textGrid_small(uint8_t pos_x, uint8_t pos_y);
 
-void previewWavSampleEditor();
+void previewWavSliceEditor();
 void previewWavFilemanager();
 
 void getNoteName(char* noteName, uint8_t noteNumber);
@@ -82,8 +82,12 @@ void UI_func_dexed_controllers(uint8_t param);
 void UI_func_dexed_setup(uint8_t param);
 void UI_func_information(uint8_t param);
 void UI_func_cv_page(uint8_t param);
+void UI_func_chord_arranger(uint8_t param);
+void UI_func_noisemaker(uint8_t param);
 void UI_func_master_effects(uint8_t param);
 void UI_func_braids(uint8_t param);
+void UI_func_set_multisample_name(uint8_t param);
+void UI_func_set_braids_name(uint8_t param);
 void UI_func_multiband_dynamics(uint8_t param);
 void UI_func_recorder(uint8_t param);
 void UI_func_file_manager(uint8_t param);
@@ -111,12 +115,13 @@ void UI_func_voice_select(uint8_t param);
 void UI_func_voice_editor(uint8_t param);
 void UI_func_sysex_receive_bank(uint8_t param);
 void UI_func_epiano(uint8_t param);
-void UI_func_sample_editor(uint8_t param);
+void UI_func_slice_editor(uint8_t param);
 void UI_func_midiplayer(uint8_t param);
 void UI_func_test_touchscreen(uint8_t param);
 void UI_func_sound_intensity(uint8_t param);
 void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
+
 
 void setup_ui(void);
 #if defined SMFPLAYER
@@ -127,9 +132,10 @@ uint8_t count_midi_channel_duplicates(bool find_first);
 void print_smf_parameters();
 void selectSample(uint8_t sample);
 void update_seq_speed();
-void mb_set_mutes();
-void mb_set_master();
-void mb_set_compressor();
+//swap multiband test
+// void mb_set_mutes();
+ void mb_set_master();
+// void mb_set_compressor();
 void clear_song_playhead();
 void sub_song_print_tracknumbers();
 bool load_performance_and_check_midi(uint8_t perf);
@@ -181,5 +187,37 @@ enum {
 };
 
 PROGMEM static const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
+
+
+
+// Define a new global state for the Chain Editor
+#define UI_FUNC_CHAIN_EDITOR_ID 10
+
+// New struct for chain editor specific variables
+typedef struct chain_editor_s {
+    uint8_t active_chain;
+    uint8_t chain_cursor;
+    uint8_t current_ui_state;
+    bool recording_active;
+    uint8_t midi_record_chain_step;
+    uint8_t midi_record_pattern_step;
+    // Add the missing member here
+    uint8_t pattern_cursor; 
+} chain_editor_t;
+
+// Extern declaration of the global struct instance
+extern chain_editor_t chain_editor_state;
+
+// Chain structure presets
+extern const uint8_t chain_preset_abab[];
+extern const uint8_t chain_preset_aaab[];
+extern const uint8_t chain_preset_abcd[];
+
+// Function prototypes
+void UI_func_chain_editor(uint8_t param);
+void chain_editor_draw_ui();
+void chain_editor_create_new_chain(uint8_t structure_type);
+void chain_editor_midi_record_func();
+
 
 #endif //_UI_H_
