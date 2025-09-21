@@ -37,6 +37,7 @@ using namespace TeensyTimerTool;
 #include "braids.h"
 #include "touch.h"
 #include "noisemaker.h"
+//#include "livesequencer.h"
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -93,29 +94,6 @@ extern PeriodicTimer sequencer_timer;
 extern void sequencer();
 extern sequencer_t seq;
 
-extern uint16_t mb_cross_freq_low;
-extern uint16_t mb_cross_freq_mid;
-extern uint16_t mb_cross_freq_upper_mid;
-extern uint16_t mb_cross_freq_high;
-extern float mb_global_gain;
-extern float mb_gain_low;
-extern float mb_gain_mid;
-extern float mb_gain_upper_mid;
-extern float mb_gain_high;
-extern bool multiband_active;
-extern uint8_t mb_threshold_low;
-extern uint8_t mb_threshold_mid;
-extern uint8_t mb_threshold_upper_mid;
-extern uint8_t mb_threshold_high;
-extern float mb_q_low;
-extern float mb_q_mid;
-extern float mb_q_upper_mid;
-extern float mb_q_high;
-extern bool mb_solo_low;
-extern bool mb_solo_mid;
-extern bool mb_solo_upper_mid;
-extern bool mb_solo_high;
-extern uint8_t mb_global_ratio;
 extern uint8_t drum_midi_channel;
 extern uint8_t slices_midi_channel;
 
@@ -2128,6 +2106,142 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
   return (true);
 }
 
+FLASHMEM bool save_sd_gridsong_json(uint8_t number)
+{
+  if (sd_card_internal > 0) {
+    LiveSequencer::LiveSeqData* data = liveSeq.getData();
+    number = constrain(number, 0, 99); 
+
+    // Use the GRID_STEP macro for accessing grid data
+    #define GRID_STEP(step, track, layer) \
+        data->gridSongSteps[(step) * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + \
+                           (track) * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + (layer)]
+
+    for (uint8_t track = 0; track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS; track++) {
+      // check if track is completely empty
+      bool emptyTrack = true;
+      for (uint8_t step = 0; step < LiveSequencer::LiveSeqData::GRIDSONGLEN && emptyTrack; step++) {
+        for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS && emptyTrack; layer++) {
+          if (GRID_STEP(step, track, layer) != 0) {
+            emptyTrack = false;
+          }
+        }
+      }
+
+      if (emptyTrack) {
+        // remove old file if it exists
+        snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/gridsng%02d.json"),
+                   PERFORMANCE_CONFIG_PATH, number, track + 1);
+        if (SD.exists(filename)) {
+          SD.remove(filename);
+        }
+        continue;
+      }
+
+      // create JSON
+      snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/gridsng%02d.json"),
+                 PERFORMANCE_CONFIG_PATH, number, track + 1);
+
+#ifdef DEBUG
+      LOG.print(F("Saving grid song track "));
+      LOG.print(track + 1);
+      LOG.print(F(" -> "));
+      LOG.println(filename);
+#endif
+
+      SD.remove(filename);
+      File json = SD.open(filename, FILE_WRITE);
+      if (json) {
+        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        doc["track"] = track + 1;
+        JsonArray stepsArr = doc.createNestedArray("steps");
+
+        for (uint8_t step = 0; step < LiveSequencer::LiveSeqData::GRIDSONGLEN; step++) {
+          JsonArray layersArr = stepsArr.createNestedArray();
+          for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; layer++) {
+            layersArr.add(GRID_STEP(step, track, layer));
+          }
+        }
+
+        serializeJsonPretty(doc, json);
+        json.close();
+      }
+    }
+
+    #undef GRID_STEP
+  }
+  return true;
+}
+
+FLASHMEM bool load_sd_gridsong_json(uint8_t number)
+{
+  // get pointer to sequencer data
+  LiveSequencer::LiveSeqData* data = liveSeq.getData();
+
+  // start with empty grid (zeros) - use memset for the linear array
+  if (data->gridSongSteps) {
+    memset(data->gridSongSteps, 0, 
+           LiveSequencer::LiveSeqData::GRIDSONGLEN * 
+           LiveSequencer::LIVESEQUENCER_NUM_TRACKS * 
+           LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+  }
+
+  if (sd_card_internal > 0) {
+    number = constrain(number, 0, 99);
+
+    // Use the GRID_STEP macro for accessing grid data
+    #define GRID_STEP(step, track, layer) \
+        data->gridSongSteps[(step) * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + \
+                           (track) * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + (layer)]
+
+    for (uint8_t track = 0; track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS; track++) {
+      snprintf_P(filename, sizeof(filename), 
+                 PSTR("/%s/%d/gridsng%02d.json"), 
+                 PERFORMANCE_CONFIG_PATH, number, track + 1);
+
+      if (!SD.exists(filename)) {
+        continue; // missing file → keep zeros
+      }
+
+#ifdef DEBUG
+      LOG.print(F("Loading grid song track "));
+      LOG.print(track + 1);
+      LOG.print(F(" <- "));
+      LOG.println(filename);
+#endif
+
+      File json = SD.open(filename, FILE_READ);
+      if (json) {
+        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        DeserializationError err = deserializeJson(doc, json);
+        json.close();
+
+        if (!err) {
+          JsonArray stepsArr = doc["steps"];
+          uint8_t stepIndex = 0;
+
+          for (JsonArray layersArr : stepsArr) {
+            if (stepIndex >= LiveSequencer::LiveSeqData::GRIDSONGLEN) break;
+
+            uint8_t layerIndex = 0;
+            for (JsonVariant val : layersArr) {
+              if (layerIndex >= LiveSequencer::LIVESEQUENCER_NUM_LAYERS) break;
+
+              GRID_STEP(stepIndex, track, layerIndex) = val.as<uint8_t>();
+              layerIndex++;
+            }
+            stepIndex++;
+          }
+        }
+      }
+    }
+
+    #undef GRID_STEP
+  }
+  return true;
+}
+
+
 /******************************************************************************
    SD SYS
  ******************************************************************************/
@@ -2882,6 +2996,9 @@ FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 /******************************************************************************
    SD MULTIBAND
  ******************************************************************************/
+#include "MultiBandCompressor.h"
+extern MultiBandCompressor_UI_t MultiBandUIparams;
+extern AudioMultiBandCompressor MultiBandCompressor;
 
 FLASHMEM bool load_sd_multiband_json(uint8_t number)
 {
@@ -2916,29 +3033,33 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
         LOG.println();
 #endif
 
-        mb_cross_freq_low = data_json["f_low"];
-        mb_cross_freq_mid = data_json["f_mid"];
-        mb_cross_freq_upper_mid = data_json["f_upper_mid"];
-        mb_cross_freq_high = data_json["f_high"];
-        mb_global_gain = data_json["g_gain"];
-        mb_gain_low = data_json["g_low"];
-        mb_gain_mid = data_json["g_mid"];
-        mb_gain_upper_mid = data_json["g_upper_mid"];
-        mb_gain_high = data_json["g_high"];
-        multiband_active = data_json["active"];
-        mb_threshold_low = data_json["t_low"];
-        mb_threshold_mid = data_json["t_mid"];
-        mb_threshold_upper_mid = data_json["t_upper_mid"];
-        mb_threshold_low = data_json["t_low"];
-        mb_q_low = data_json["q_low"];
-        mb_q_mid = data_json["q_mid"];
-        mb_q_upper_mid = data_json["q_upper_mid"];
-        mb_q_high = data_json["q_high"];
-        mb_solo_low = data_json["s_low"];
-        mb_solo_mid = data_json["s_mid"];
-        mb_solo_upper_mid = data_json["s_upper_mid"];
-        mb_solo_high = data_json["s_high"];
-        mb_global_ratio = data_json["g_ratio"];
+MultiBandUIparams.master_gain = data_json["master_gain"];
+MultiBandUIparams.master_mix = data_json["master_mix"];
+MultiBandUIparams.crossover1 = data_json["crossover1"];
+MultiBandUIparams.crossover2 = data_json["crossover2"];
+MultiBandUIparams.crossover3 = data_json["crossover3"];
+MultiBandUIparams.band1_thresh = data_json["band1_thresh"];
+MultiBandUIparams.band1_ratio = data_json["band1_ratio"];
+MultiBandUIparams.band1_attack = data_json["band1_attack"];
+MultiBandUIparams.band1_release = data_json["band1_release"];
+MultiBandUIparams.band1_gain = data_json["band1_gain"];
+MultiBandUIparams.band2_thresh = data_json["band2_thresh"];
+MultiBandUIparams.band2_ratio = data_json["band2_ratio"];
+MultiBandUIparams.band2_attack = data_json["band2_attack"];
+MultiBandUIparams.band2_release = data_json["band2_release"];
+MultiBandUIparams.band2_gain = data_json["band2_gain"];
+MultiBandUIparams.band3_thresh = data_json["band3_thresh"];
+MultiBandUIparams.band3_ratio = data_json["band3_ratio"];
+MultiBandUIparams.band3_attack = data_json["band3_attack"];
+MultiBandUIparams.band3_release = data_json["band3_release"];
+MultiBandUIparams.band3_gain = data_json["band3_gain"];
+MultiBandUIparams.band4_thresh = data_json["band4_thresh"];
+MultiBandUIparams.band4_ratio = data_json["band4_ratio"];
+MultiBandUIparams.band4_attack = data_json["band4_attack"];
+MultiBandUIparams.band4_release = data_json["band4_release"];
+MultiBandUIparams.band4_gain = data_json["band4_gain"];
+
+ MultiBandCompressor.setUI(MultiBandUIparams);
 
         return (true);
       }
@@ -2981,29 +3102,32 @@ FLASHMEM bool save_sd_multiband_json(uint8_t number)
     if (json)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-      data_json["f_low"] = mb_cross_freq_low;
-      data_json["f_mid"] = mb_cross_freq_mid;
-      data_json["f_upper_mid"] = mb_cross_freq_upper_mid;
-      data_json["f_high"] = mb_cross_freq_high;
-      data_json["g_gain"] = mb_global_gain;
-      data_json["g_low"] = mb_gain_low;
-      data_json["g_mid"] = mb_gain_mid;
-      data_json["g_upper_mid"] = mb_gain_upper_mid;
-      data_json["g_high"] = mb_gain_high;
-      data_json["active"] = multiband_active;
-      data_json["t_low"] = mb_threshold_low;
-      data_json["t_mid"] = mb_threshold_mid;
-      data_json["t_upper_mid"] = mb_threshold_upper_mid;
-      data_json["t_low"] = mb_threshold_low;
-      data_json["q_low"] = mb_q_low;
-      data_json["q_mid"] = mb_q_mid;
-      data_json["q_upper_mid"] = mb_q_upper_mid;
-      data_json["q_high"] = mb_q_high;
-      data_json["s_low"] = mb_solo_low;
-      data_json["s_mid"] = mb_solo_mid;
-      data_json["s_upper_mid"] = mb_solo_upper_mid;
-      data_json["s_high"] = mb_solo_high;
-      data_json["g_ratio"] = mb_global_ratio;
+
+    data_json["master_gain"] = MultiBandUIparams.master_gain;
+data_json["master_mix"] = MultiBandUIparams.master_mix;
+data_json["crossover1"] = MultiBandUIparams.crossover1;
+data_json["crossover2"] = MultiBandUIparams.crossover2;
+data_json["crossover3"] = MultiBandUIparams.crossover3;
+data_json["band1_thresh"] = MultiBandUIparams.band1_thresh;
+data_json["band1_ratio"] = MultiBandUIparams.band1_ratio;
+data_json["band1_attack"] = MultiBandUIparams.band1_attack;
+data_json["band1_release"] = MultiBandUIparams.band1_release;
+data_json["band1_gain"] = MultiBandUIparams.band1_gain;
+data_json["band2_thresh"] = MultiBandUIparams.band2_thresh;
+data_json["band2_ratio"] = MultiBandUIparams.band2_ratio;
+data_json["band2_attack"] = MultiBandUIparams.band2_attack;
+data_json["band2_release"] = MultiBandUIparams.band2_release;
+data_json["band2_gain"] = MultiBandUIparams.band2_gain;
+data_json["band3_thresh"] = MultiBandUIparams.band3_thresh;
+data_json["band3_ratio"] = MultiBandUIparams.band3_ratio;
+data_json["band3_attack"] = MultiBandUIparams.band3_attack;
+data_json["band3_release"] = MultiBandUIparams.band3_release;
+data_json["band3_gain"] = MultiBandUIparams.band3_gain;
+data_json["band4_thresh"] = MultiBandUIparams.band4_thresh;
+data_json["band4_ratio"] = MultiBandUIparams.band4_ratio;
+data_json["band4_attack"] = MultiBandUIparams.band4_attack;
+data_json["band4_release"] = MultiBandUIparams.band4_release;
+data_json["band4_gain"] = MultiBandUIparams.band4_gain;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -3836,16 +3960,21 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_chain_json(number);
   save_sd_fx_json(number);
   save_sd_epiano_json(number);
+#if defined COMPILE_FOR_PSRAM
   save_sd_multisample_presets_json(number);
+  #endif
+  
   save_sd_braids_json(number, 0);
   save_sd_multiband_json(number);
   save_sd_sidechain_json(number);
   save_sd_livesequencer_json(number);
+  save_sd_gridsong_json(number);
   save_sd_envelopes_json(number);
 #ifdef COMPILE_FOR_PSRAM
   save_sd_samples_json(number);
   save_sd_slices_json(number);
 #endif
+
 
   for (uint8_t i = 0; i < NUM_DEXED; i++)
   {
@@ -3871,6 +4000,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
 
     LOG.print(F("  "));
     SD.remove(filename);
+LiveSequencer::LiveSeqData* data = liveSeq.getData();
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
@@ -3892,6 +4022,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["euclidean_active"] = seq.euclidean_active;
       data_json["euclidean_offset"] = seq.euclidean_offset;
       data_json["hihat_randomizer"] = seq.hihat_randomizer;
+      data_json["grid_song_mode"] = data->LiveSequencer::LiveSeqData::useGridSongMode;
 
       for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
       {
@@ -4207,8 +4338,10 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
 
   load_sd_drummappings_json(number);
 
+#if defined COMPILE_FOR_PSRAM
   if (bitRead(perf_load_options, perf_samples))
     load_sd_multisample_presets_json(number);
+#endif
 
   if (bitRead(perf_load_options, perf_braids))
     load_sd_braids_json(number, 0);
@@ -4241,6 +4374,8 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
       LOG.print(filename);
       LOG.println(F("]... loading..."));
 #endif
+
+LiveSequencer::LiveSeqData* data = liveSeq.getData();
       json = SD.open(filename);
       if (json)
       {
@@ -4325,6 +4460,9 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         if (data_json["slices_midi_channel"] > 0) //same as above
           slices_midi_channel = data_json["slices_midi_channel"];
 
+            data->LiveSequencer::LiveSeqData::useGridSongMode=data_json["grid_song_mode"];
+
+
 
         AudioNoInterrupts();
 
@@ -4375,7 +4513,10 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         }
 
         if (bitRead(perf_load_options, perf_liveseq))
+        {
           load_sd_livesequencer_json(number); // before handleStart()
+          load_sd_gridsong_json(number);
+        }
 
         update_seq_speed();
 
@@ -4823,6 +4964,8 @@ FLASHMEM void string_toupper(char* s)
   }
 }
 
+#if defined COMPILE_FOR_PSRAM
+
 FLASHMEM bool save_sd_multisample_presets_json(uint8_t number)
 {
   if (number < 0)
@@ -4989,6 +5132,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
   }
   return (false);
 }
+#endif
 
 FLASHMEM int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
 {

@@ -2,7 +2,7 @@
 
 /*
 Note by lucian2599 13.05.2025: 
-this EXPERIMENTAL fork attempts to add support for older Akai APC Mini Mk1. 
+this adds support for older Akai APC Mini Mk1. 
 One advantage over Akai APC Mini Mk2 is that Mk1 needs only one midi channel, not all,
  because Mk1 has only 4 colours (red, green, yellow, white), with optional blinking.
 

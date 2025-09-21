@@ -21,6 +21,9 @@ public:
   static constexpr uint8_t LIVESEQUENCER_NUM_TRACKS = 2 * LIVESEQUENCER_TRACKS_PER_SCREEN;
   static constexpr uint8_t LIVESEQUENCER_NUM_LAYERS = 4;
 
+  bool isTrackLayerEmpty(uint8_t track, uint8_t layer);
+
+
   enum EventSource : uint8_t {
     EVENT_SONG = 0,
     EVENT_PATTERN = 1,
@@ -42,7 +45,7 @@ public:
     DEVICE_MIDI_INT = 3
   };
 
-   // !!! never change existing numbers, used as IDs in saved performances !!!
+  // !!! never change existing numbers, used as IDs in saved performances !!!
   enum InternalInstrument {
     INSTR_DRUM = 0,
     INSTR_DX1 = 1,
@@ -55,8 +58,8 @@ public:
     INSTR_MSP2 = 8,
     INSTR_SLC = 9,
     // The gap here is because in the other sequencer, all instruments are managed as the same thing, even the external 16+16+16=48 MIDI Channels (+ a safety gap)
-    INSTR_DX3 = 70,  
-    INSTR_DX4 = 71, 
+    INSTR_DX3 = 70,
+    INSTR_DX4 = 71,
     INSTR_MAX = 12
   };
 
@@ -97,7 +100,7 @@ public:
    * 0 and 1 as mute on/off.
    */
   enum AutomationType : uint8_t {
-    TYPE_MUTE_ON = 102, 
+    TYPE_MUTE_ON = 102,
     TYPE_MUTE_OFF = 103
   };
 
@@ -159,22 +162,22 @@ public:
     constexpr Alloc(const Alloc<U>&) noexcept {}
 
     T* allocate(std::size_t n) {
-        DBG_LOG(printf("alloc %i!\n", n));
-        return static_cast<T*>(extmem_malloc(n * sizeof(T)));
+      DBG_LOG(printf("alloc %i!\n", n));
+      return static_cast<T*>(extmem_malloc(n * sizeof(T)));
     }
 
     void deallocate(T* p, std::size_t) noexcept {
-        extmem_free((uint8_t*)p);
+      extmem_free((uint8_t*)p);
     }
 
     template<typename U, typename... Args>
     void construct(U* p, Args&&... args) {
-        new(p) U(std::forward<Args>(args)...);
+      new(p) U(std::forward<Args>(args)...);
     }
 
     template<typename U>
     void destroy(U* p) noexcept {
-        p->~U();
+      p->~U();
     }
 
     friend bool operator==(const Alloc&, const Alloc&) { return true; }
@@ -222,13 +225,37 @@ public:
     int currentBpm = 90;
     uint8_t performanceID = 0;
     uint8_t songMuteQuantizeDenom = 1;
+
+    // Grid-based song mode
+    static const uint8_t GRIDSONGLEN = 32;
+    bool useGridSongMode = false;  // false = live recording mode, true = grid mode
+  bool seq_started_from_pattern_mode=false;
+    //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // 32 song steps, 12 tracks, 4 layers
+    uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
+    uint8_t currentGridStep = 0;
+    uint8_t gridStepOffset = 0;  // for scrolling through steps
+    uint8_t selectedGridStep = 0;
+    uint8_t selectedGridTrack = 0;
+    bool redraw_grid_header;
+    bool redraw_grid_buttons;
+
+ uint8_t& gridStep(uint8_t step, uint8_t track, uint8_t layer) {
+        return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + 
+                           track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
+    }
+    
+    const uint8_t& gridStep(uint8_t step, uint8_t track, uint8_t layer) const {
+        return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + 
+                           track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
+    }
+
   };
 
   LiveSequencer();
   void initOnce(void);
   LiveSequencer::LiveSeqData* getData(void);
   void songLayerAction(uint8_t layer, LayerMode action);
-  bool trackLayerAction(uint8_t track, uint8_t layer, LayerMode action, bool &clearLayer);
+  bool trackLayerAction(uint8_t track, uint8_t layer, LayerMode action, bool& clearLayer);
   void handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity);
   void handlePatternBegin(void);
   void start(void);
@@ -302,9 +329,11 @@ private:
     // + a.source is a hack to sort song events before pattern events if the have same time
     return ((a.patternNumber * 5000) + a.patternMs + a.source) < ((b.patternNumber * 5000) + b.patternMs + b.source); // FIXME: patternLengthMs
   }
+  
 };
 
 void UI_func_livesequencer(uint8_t param);
 void handle_touchscreen_live_sequencer(void);
+
 
 #endif // LIVESEQUENCER_H

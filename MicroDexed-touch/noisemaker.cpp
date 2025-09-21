@@ -6,10 +6,12 @@
 #include "config.h"
 #include "drums.h"
 #include "psramloader.h"
+#include <Audio.h>
+#include "offline_reverb.h"
+#include "PitchSamplePlayer.h"
+extern PitchSamplePlayer WAV_preview_PSRAM;
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <algorithm>
+OfflineReverb noiseReverb;
 
 extern void drawDrumsSampleWave(bool fullRedraw);
 extern PsramLoader sampleLoader();
@@ -66,20 +68,6 @@ void nm_psram_free(void* ptr) {
   if (ptr) extmem_free(ptr);
 }
 
-// --- Noise preview buffer (PSRAM) ---
-// static int16_t* noisemaker_preview_buffer = nullptr;
-// static size_t noisemaker_preview_length = 0;
-
-// FLASHMEM void allocateNoisePreview(size_t length) {
-//   if (noisemaker_preview_buffer) {
-//     extmem_free(noisemaker_preview_buffer);
-//     noisemaker_preview_buffer = nullptr;
-//   }
-//   noisemaker_preview_buffer = (int16_t*)extmem_malloc(length * sizeof(int16_t));
-//   noisemaker_preview_length = length;
-// }
-
-
 FLASHMEM FLASHMEM void nm_preview_free() {
   if (nm_preview_data) {
     nm_psram_free(nm_preview_data);
@@ -117,12 +105,6 @@ FLASHMEM bool nm_preview_alloc(uint32_t frames, uint8_t channels) {
   nm_preview_len = targetFrames;
   return true;
 }
-
-#include <Audio.h>
-#include <TeensyVariablePlayback.h>
-#include "offline_reverb.h"
-extern AudioPlayArrayResmp WAV_preview_PSRAM;
-OfflineReverb noiseReverb;
 
 // helper function to convert a uint8_t value (0-100) to a float (0.0-1.0)
 float convertUint8ToFloat(uint8_t value) {
@@ -189,8 +171,7 @@ FLASHMEM void generateAndPlayNoise() {
   if ((const uint8_t*)nm_preview_data != NULL && nm_preview_len > 0)
   {
     if (isSampleDangerous() == false)
-      WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data,
-        nm_preview_len, channels);
+      WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data, nm_preview_len, channels);
   }
 
   // Give the audio engine a moment to start reading
@@ -203,8 +184,7 @@ FLASHMEM void PlayOnly() {
   if ((const uint8_t*)nm_preview_data != NULL && nm_preview_len > 0)
   {
     if (isSampleDangerous() == false)
-      WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data,
-        nm_preview_len, channels);
+      WAV_preview_PSRAM.playRaw((int16_t*)(const uint8_t*)nm_preview_data, nm_preview_len, channels);
   }
   // Give the audio engine a moment to start reading
   delay(40);
@@ -463,11 +443,9 @@ struct SVF {
   void setLP(float cutHz, float Q) {
     set(cutHz, Q);
   }
-
   void setBP(float cutHz, float Q) {
     set(cutHz, Q);
   }
-
   void setHP(float cutHz, float Q) {
     set(cutHz, Q);
   }
@@ -503,9 +481,6 @@ FLASHMEM void initNoiseMakerParams(NoiseMakerParams& p) {
   p.reverb_width = 100;
 
   setupNoiseReverb();
-  //p.mode = NM_MODE_TR808;
- //p.randomizer=0;
- // p.category = NM_BD;
   p.accent = 90;
 
   // BD
@@ -735,7 +710,6 @@ FLASHMEM static inline void generateBassdrum(NoiseMakerParams& p, int16_t* psram
 }
 
 // -------- Snare --------
-// Add to params: uint8_t sn_spread; // % stereo spread for noise
 
 FLASHMEM float nm_rand_pink() {
   // A simple approximation of pink noise
@@ -843,7 +817,6 @@ FLASHMEM static inline void generateSnare(const NoiseMakerParams& p, int16_t* ps
 }
 
 // -------- Toms (808) / Toms (909) --------
-// Add to params: uint8_t tom_spread; // % stereo spread for attack noise and tone
 
 FLASHMEM static inline void generateTom(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -902,7 +875,6 @@ FLASHMEM static inline void generateTom(const NoiseMakerParams& p, int16_t* psra
 }
 
 // -------- Congas (808/909 improved v3) --------
-// Add to params: uint8_t conga_spread; // % stereo spread
 
 FLASHMEM static inline void generateConga(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1141,7 +1113,6 @@ FLASHMEM static inline void generateClap(const NoiseMakerParams& p, int16_t* psr
 
 
 // -------- Hi-Hats --------
-// Add to params: uint8_t hh_spread; // % stereo spread
 
 FLASHMEM static inline void generateHiHat(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1215,7 +1186,6 @@ FLASHMEM static inline void generateHiHat(const NoiseMakerParams& p, int16_t* ps
 }
 
 // -------- Crash --------
-// Add to params: uint8_t crash_spread; // % stereo spread
 
 FLASHMEM static inline void generateCrash(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1287,7 +1257,6 @@ FLASHMEM static inline void generateCrash(const NoiseMakerParams& p, int16_t* ps
 }
 
 // -------- Ride --------
-// Add to params: uint8_t ride_spread; // % stereo spread
 
 FLASHMEM static inline void generateRide(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1358,7 +1327,6 @@ FLASHMEM static inline void generateRide(const NoiseMakerParams& p, int16_t* psr
 }
 
 // -------- Maracas (808-style, Multi-Grain) --------
-// Add to params: uint8_t mar_spread; // % stereo spread
 
 FLASHMEM static inline void generateMaracas(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1414,7 +1382,6 @@ FLASHMEM static inline void generateMaracas(NoiseMakerParams& p, int16_t* psram_
 }
 
 // -------- Cowbell (808) --------
-// Add to params: uint8_t cb_spread; // % stereo spread
 
 FLASHMEM void generateCowbell(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1457,7 +1424,6 @@ FLASHMEM void generateCowbell(const NoiseMakerParams& p, int16_t* psram_buf, uin
 }
 
 // -------- Claves (808) --------
-// Add to params: uint8_t claves_spread; // % stereo spread
 
 FLASHMEM static inline void generateClaves(NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1490,7 +1456,6 @@ FLASHMEM static inline void generateClaves(NoiseMakerParams& p, int16_t* psram_b
 }
 
 // -------- Zap --------
-// Add to params: uint8_t zap_spread; // % stereo spread
 
 FLASHMEM static inline void generateZap(const NoiseMakerParams& p, int16_t* psram_buf, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
@@ -1618,7 +1583,6 @@ struct OnePoleSmooth {
   }
 };
 
-
 // Map knob 0..100 to ~20..18000 Hz exponentially
 inline float knob_to_cutoff_hz(uint8_t knob01_100) {
   const float minHz = 20.0f, maxHz = 18000.0f;
@@ -1626,12 +1590,6 @@ inline float knob_to_cutoff_hz(uint8_t knob01_100) {
   // exponential between min and max
   return minHz * powf(maxHz / minHz, t);
 }
-
-
-#include <cmath>
-#include <cstdint>
-#include <algorithm>
-
 
 // -----------------------------
 // Utility
@@ -1924,7 +1882,7 @@ void generateSynth(const NoiseMakerParams& p, int16_t* psram_buffer, uint32_t n,
       osc_octave = polyblep_saw(phase4, freq4);
       break;
     case 3:
-            // Pulse wave with animated PWM
+      // Pulse wave with animated PWM
     {
       oscL_base = pulse_osc(phase1, freq1, current_duty);
       oscR_base = pulse_osc(phase2, freq2, current_duty);

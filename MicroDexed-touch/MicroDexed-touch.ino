@@ -89,7 +89,8 @@ using namespace TeensyTimerTool;
 #include "synth_mda_epiano.h"
 #include "effect_stereo_panorama.h"
 #include <synth_braids.h>
-
+#include "MultiBandCompressor.h" 
+#include "PitchSamplePlayer.h"
 #include "livesequencer.h"
 #include <vector>
 
@@ -101,9 +102,8 @@ using namespace TeensyTimerTool;
 #include "Adafruit_FT6206.h"
 #endif
 
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-#include <TeensyVariablePlayback.h>
-#endif
+
+
 
 #ifdef COMPILE_FOR_SDCARD
 #include <TeensyVariablePlayback.h>
@@ -121,6 +121,7 @@ uint8_t APC_TONAL_SCROLL_OFFSET = 64;
 uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
+
 
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
@@ -164,6 +165,8 @@ extern Adafruit_FT6206 touch;
 
 // Editor operations
 int menuhelper_previous_val;
+
+AudioMultiBandCompressor MultiBandCompressor;
 
 Realtime_Scope scope;
 
@@ -290,10 +293,12 @@ microsynth_t microsynth[NUM_MICROSYNTH];
 AudioPlaySdResmp* Drum[NUM_DRUMS];
 #endif
 
+PitchSamplePlayer* Drum[NUM_DRUMS];
+
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-AudioPlayArrayResmp* Drum[NUM_DRUMS];
 #include "effect_delay_ext8.h"
 #endif
+
 
 #if defined(DRUMS_FILTERS) 
 AudioFilterBiquad* Drum_filter[NUM_DRUMS * 2];
@@ -322,7 +327,7 @@ extern uint8_t gamepad_1_neutral;
 #ifdef COMPILE_FOR_PSRAM
 #include "psramloader.h"
 extern PsramLoader sampleLoader;
-AudioPlayArrayResmp WAV_preview_PSRAM;
+PitchSamplePlayer WAV_preview_PSRAM;
 #endif
 
 extern ILI9341_t3n display;
@@ -371,52 +376,17 @@ AudioOutputAnalogStereo dacOut;
 AudioInputI2S i2s1in;
 #endif
 
-AudioFilterBiquad mb_filter_l_0;
-AudioFilterBiquad mb_filter_l_1;
-AudioFilterBiquad mb_filter_l_2;
-AudioFilterBiquad mb_filter_l_3;
-AudioFilterBiquad mb_filter_r_0;
-AudioFilterBiquad mb_filter_r_1;
-AudioFilterBiquad mb_filter_r_2;
-AudioFilterBiquad mb_filter_r_3;
 
-AudioEffectDynamics mb_compressor_l_0;
-AudioEffectDynamics mb_compressor_l_1;
-AudioEffectDynamics mb_compressor_l_2;
-AudioEffectDynamics mb_compressor_l_3;
-
-AudioEffectDynamics mb_compressor_r_0;
-AudioEffectDynamics mb_compressor_r_1;
-AudioEffectDynamics mb_compressor_r_2;
-AudioEffectDynamics mb_compressor_r_3;
-
-AudioMixer<4> mb_mixer_l;
-AudioMixer<4> mb_mixer_r;
-
-AudioConnection patchCord3(mb_filter_l_0, 0, mb_compressor_l_0, 0);
-AudioConnection patchCord4(mb_filter_l_1, 0, mb_compressor_l_1, 0);
-AudioConnection patchCord5(mb_filter_l_2, 0, mb_compressor_l_2, 0);
-AudioConnection patchCord6(mb_filter_l_3, 0, mb_compressor_l_3, 0);
-
-AudioConnection patchCord7(mb_filter_r_0, 0, mb_compressor_r_0, 0);
-AudioConnection patchCord8(mb_filter_r_1, 0, mb_compressor_r_1, 0);
-AudioConnection patchCord9(mb_filter_r_2, 0, mb_compressor_r_2, 0);
-AudioConnection patchCord10(mb_filter_r_3, 0, mb_compressor_r_3, 0);
-
-AudioConnection patchCord11(mb_compressor_l_0, 0, mb_mixer_l, 0);
-AudioConnection patchCord12(mb_compressor_l_1, 0, mb_mixer_l, 1);
-AudioConnection patchCord13(mb_compressor_l_2, 0, mb_mixer_l, 2);
-AudioConnection patchCord14(mb_compressor_l_3, 0, mb_mixer_l, 3);
-
-AudioConnection patchCord15(mb_compressor_r_0, 0, mb_mixer_r, 0);
-AudioConnection patchCord16(mb_compressor_r_1, 0, mb_mixer_r, 1);
-AudioConnection patchCord17(mb_compressor_r_2, 0, mb_mixer_r, 2);
-AudioConnection patchCord18(mb_compressor_r_3, 0, mb_mixer_r, 3);
+// AudioMixer<4> mb_mixer_l;
+// AudioMixer<4> mb_mixer_r;
 
 AudioAnalyzePeak mb_before_l;
 AudioAnalyzePeak mb_before_r;
 AudioAnalyzePeak mb_after_l;
 AudioAnalyzePeak mb_after_r;
+
+  AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
+  AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
 
 // WAV/AUDIO Recording
 AudioRecordQueue record_queue_l;
@@ -443,7 +413,6 @@ const AudioConnection patchCord[] = {
      {reverb, 1, sidechain_mixer_l, MASTER_MIX_CH_REVERB},
      //sidechain end
 
-
        {master_mixer_l, volume_l},
        {master_mixer_r, volume_r},
        {volume_l, 0, stereo2mono, 0},
@@ -454,10 +423,7 @@ const AudioConnection patchCord[] = {
 
        {master_mixer_l, 0, mb_before_l, 0},
        {master_mixer_r, 0, mb_before_r, 0},
-
-       {mb_mixer_l, 0, mb_after_l, 0},
-       {mb_mixer_r, 0, mb_after_r, 0},
-
+       
        // Realtime Scope
        {master_mixer_l, 0, scope, 0},
 
@@ -468,28 +434,22 @@ const AudioConnection patchCord[] = {
            {dc1, 0, finalized_mixer_r, 2},
           #endif
 
-           {stereo2mono, 0, finalized_mixer_l, 0},
-           {stereo2mono, 1, finalized_mixer_r, 0},
+             {stereo2mono, 0, finalized_mixer_l, 0},
+             {stereo2mono, 1, finalized_mixer_r, 0},
 
-           {master_mixer_l, 0, mb_filter_l_0, 0},
-           {master_mixer_r, 0, mb_filter_r_0, 0},
+              {master_mixer_l, 0, MultiBandCompressor, 0},
+              {master_mixer_r, 0, MultiBandCompressor, 1},
 
-           {master_mixer_l, 0, mb_filter_l_1, 0},
-           {master_mixer_r, 0, mb_filter_r_1, 0},
+             {MultiBandCompressor, 0, finalized_mixer_l, 1},
+             {MultiBandCompressor, 1, finalized_mixer_r, 1},
 
-           {master_mixer_l, 0, mb_filter_l_2, 0},
-           {master_mixer_r, 0, mb_filter_r_2, 0},
+          {finalized_mixer_l, 0, mb_after_l, 0},
+         {finalized_mixer_r, 0, mb_after_r, 0},
 
-           {master_mixer_l, 0, mb_filter_l_3, 0},
-           {master_mixer_r, 0, mb_filter_r_3, 0},
+            // {finalized_mixer_l, 0, i2s1, 1},
+            // {finalized_mixer_r, 0, i2s1, 0},
 
-           {mb_mixer_l, 0, finalized_mixer_l, 1},
-           {mb_mixer_r, 0, finalized_mixer_r, 1},
-
-            {finalized_mixer_l, 0, i2s1, 1},
-            {finalized_mixer_r, 0, i2s1, 0},
-
-            // WAV RECORDER
+            //WAV RECORDER
             {finalized_mixer_l, 0, record_queue_l, 0},
             {finalized_mixer_r, 0, record_queue_r, 0},
 
@@ -840,11 +800,10 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   Drum[instance_id] = new AudioPlaySdResmp();
 #endif
 
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
-  Drum[instance_id] = new AudioPlayArrayResmp();
-#endif
+ Drum[instance_id] = new PitchSamplePlayer();
 
   Drum[instance_id]->enableInterpolation(false);
+
   Drum[instance_id]->setPlaybackRate(1.0);
 
 #if defined(DRUMS_FILTERS) 
@@ -914,7 +873,7 @@ uint8_t midi_bpm_counter = 0;
 uint8_t midi_bpm = 0;
 int16_t _midi_bpm = -1;
 elapsedMillis midi_bpm_timer;
-elapsedMillis long_button_pressed;
+//elapsedMillis long_button_pressed;
 elapsedMillis control_rate;
 elapsedMillis save_sys;
 elapsedMillis touchReadTimer = 0;
@@ -1077,8 +1036,8 @@ FLASHMEM void All_Button_LEDS(bool state)
     setled(LED_BUT_A, HIGH);
 
 #ifdef MCP_CV       
-           digitalWrite(GATE_OUT, HIGH); 
-            digitalWrite(CV_CLOCK_OUT, HIGH); 
+    digitalWrite(GATE_OUT, HIGH);
+    digitalWrite(CV_CLOCK_OUT, HIGH);
 #endif
 
   }
@@ -1101,9 +1060,9 @@ FLASHMEM void All_Button_LEDS(bool state)
     //if (seq.edit_state==0)
     setled(LED_BUT_A, LOW);
 
-    #ifdef MCP_CV       
-           digitalWrite(GATE_OUT, LOW); 
-            digitalWrite(CV_CLOCK_OUT, LOW); 
+#ifdef MCP_CV       
+    digitalWrite(GATE_OUT, LOW);
+    digitalWrite(CV_CLOCK_OUT, LOW);
 #endif
 
   }
@@ -1114,7 +1073,7 @@ FLASHMEM void All_Button_LEDS(bool state)
 void initMCP4728() {
   dac.attach(Wire, 14);
   //dac.readRegisters();
-  dac.selectVref(MCP4728::VREF::INTERNAL_2_8V,MCP4728::VREF::INTERNAL_2_8V,MCP4728::VREF::INTERNAL_2_8V,MCP4728::VREF::INTERNAL_2_8V);
+  dac.selectVref(MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V);
   dac.selectPowerDown(MCP4728::PWR_DOWN::NORMAL, MCP4728::PWR_DOWN::NORMAL, MCP4728::PWR_DOWN::NORMAL, MCP4728::PWR_DOWN::NORMAL);
   dac.selectGain(MCP4728::GAIN::X2, MCP4728::GAIN::X2, MCP4728::GAIN::X2, MCP4728::GAIN::X2);
   // dac.analogWrite(MCP4728::DAC_CH::A, 111);
@@ -1750,7 +1709,7 @@ FLASHMEM void setup()
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
     strcat(temp_name, ".wav");
-    sampleLoader.loadSampleToDrums(temp_name, drum_config[i],SD);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i], SD);
     printLoadedSample(i, temp_name);
   }
 
@@ -1760,7 +1719,7 @@ FLASHMEM void setup()
     strcpy(temp_name, "/DRUMS/");
     strcat(temp_name, drum_config[i].filename);
     strcat(temp_name, ".wav");
-    sampleLoader.loadSampleToDrums(temp_name, drum_config[i],SD);
+    sampleLoader.loadSampleToDrums(temp_name, drum_config[i], SD);
     printLoadedSample(i, temp_name);
   }
   display.setTextSize(2);
@@ -1771,7 +1730,7 @@ FLASHMEM void setup()
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
-load_sd_noisemaker_json();
+  load_sd_noisemaker_json();
 #endif
 
   //SD CARD PRESET CONTENT NOT FOUND, PROVIDE POSSIBLE SOLUTIONS TO USER
@@ -1827,7 +1786,7 @@ load_sd_noisemaker_json();
           break;
         case 11:
           LCDML.OTHER_jumpToFunc(UI_func_chord_arranger);
-           case 12:
+        case 12:
           LCDML.OTHER_jumpToFunc(UI_func_noisemaker);
           break;
         case 50:
@@ -1853,7 +1812,7 @@ FLASHMEM void load_custom_samples_to_psram()
     String fullpath = customSamples[i - NUM_STATIC_PITCHED_SAMPLES].filepath;
     fullpath += "/";
     fullpath += drum_config[i].filename;
-    sampleLoader.loadSampleToDrums(fullpath, drum_config[i],SD);
+    sampleLoader.loadSampleToDrums(fullpath, drum_config[i], SD);
     if (drum_config[i].len == 0 || drum_config[i].len > 10000000) {
       char temp_name[36];
       sprintf(temp_name, "CUSTOM%02d", i - NUM_STATIC_PITCHED_SAMPLES + 1);
@@ -2469,8 +2428,8 @@ uint16_t dac_cv_1;
 uint16_t dac_cv_3;
 uint8_t dac_cv_transpose;
 
-uint8_t dac_cv_2=1;
-uint8_t dac_cv_4=11;
+uint8_t dac_cv_2 = 1;
+uint8_t dac_cv_4 = 11;
 
 extern void print_note_name_and_octave(uint8_t inNumber);
 extern ChordInfo currentChord;
@@ -2581,9 +2540,6 @@ FLASHMEM void show_chord()
       display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
     }
 
-
-    // if (chord_input[0] != 0 && chord_input[1] != 0 && chord_input[2] != 0)
-     //{
     char result1[30];
     display.setTextSize(0);
 
@@ -2600,13 +2556,13 @@ FLASHMEM void show_chord()
 
     display.setTextSize(1);
     show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
-    // }
   }
 
 }
+
 void loop()
 {
- 
+
   // Chords Detection
 
 // Handle chord timeout
@@ -2642,7 +2598,6 @@ void loop()
 
     if (cv_clock != cv_clock_previous)
     {
-
       sequencer();
       sequencer();
       sequencer();
@@ -2692,6 +2647,9 @@ void loop()
   // check encoder (old, polling)
   //ENCODER[ENC_L].update();
   //ENCODER[ENC_R].update();
+
+  extern bool multiband_active;
+  extern bool multiband_confirm;
 
 #if defined APC
   if (apc_scroll_message)
@@ -2765,8 +2723,8 @@ void loop()
       {
         if (Drum[d]->isPlaying() != display_buffer_samples[d])
         {
-        //  setCursor_textGrid_small(24 + d * 2, 2);
-display.setCursor(122+(d*2*CHAR_width_small), 18);
+          //  setCursor_textGrid_small(24 + d * 2, 2);
+          display.setCursor(122 + (d * 2 * CHAR_width_small), 18);
           if (Drum[d]->isPlaying())
           {
             display.setTextColor(GREEN, COLOR_BACKGROUND);
@@ -2837,10 +2795,10 @@ display.setCursor(122+(d*2*CHAR_width_small), 18);
   {
 
 #ifdef COMPILE_FOR_PSRAM
-if (noisemaker_update_params_flag)
-{
-  refreshNoisemakerParameterEditors();
-}
+    if (noisemaker_update_params_flag)
+    {
+      refreshNoisemakerParameterEditors();
+    }
 #endif
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && dac_state != 0)
@@ -3071,6 +3029,7 @@ if (noisemaker_update_params_flag)
 
   if (save_sys > SAVE_SYS_MS && ui_save_notification_icon)
   {
+
     if (LCDML.FUNC_getID() == 255)
     {
       display.console = true;
@@ -3088,6 +3047,15 @@ if (noisemaker_update_params_flag)
       display.console = false;
     }
   }
+  else  if (multiband_confirm && multiband_active == false && save_sys > 1500)
+  {
+    multiband_confirm = false;
+    if (ts.keyb_in_menu_activated == false && LCDML.FUNC_getID() == 255)
+      TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", TouchButton::BUTTON_NORMAL);
+      else
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_multiband_dynamics))
+       TouchButton::drawButton(GRID.X[0], GRID.Y[1]+7, "MULTI", "BAND", TouchButton::BUTTON_NORMAL);
+  }
 
 #if defined(DEBUG) && defined(SHOW_CPU_LOAD_MSEC)
   if (cpu_mem_millis >= SHOW_CPU_LOAD_MSEC)
@@ -3098,7 +3066,10 @@ if (noisemaker_update_params_flag)
 #endif
 
   // send all buffered draw commands to WebRemote
-  display.flushSysEx();
+  if (remote_active)
+  {
+    display.flushSysEx();
+  }
 }
 
 /******************************************************************************
@@ -3210,9 +3181,11 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
 
           if (msz[instance][y].loop_type != 0)
           {
+
             //Drum[slot]->startLoop(msz[instance][y].loop_start);
             Drum[slot]->setLoopStart(msz[instance][y].loop_start);
             Drum[slot]->setLoopFinish(msz[instance][y].loop_end);
+
           }
 
         }
@@ -3833,15 +3806,15 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
         if (inChannel == 21 || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_cv_page) && seq.running == false)) ///CV Output
         {
-          dac_cv_1 = (inNumber-24+dac_cv_transpose)  * NOTESTEP_CV;
+          dac_cv_1 = (inNumber - 24 + dac_cv_transpose) * NOTESTEP_CV;
           dac_cv_3 = inVelocity * 25.98f;
 #ifdef MCP_CV 
-         // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
+          // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
 
           dac.analogWrite(0, dac_cv_1);
           dac.analogWrite(2, dac_cv_3);
 
-           digitalWrite(GATE_OUT, HIGH); //gate on
+          digitalWrite(GATE_OUT, HIGH); //gate on
 
           //dac.enable(true);
 #endif
@@ -4083,12 +4056,12 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
       dac_midi_note = 0;
       dac_midi_vel = 0;
       dac_state = 2;
-        digitalWrite(GATE_OUT, LOW); //gate off
+      digitalWrite(GATE_OUT, LOW); //gate off
 #endif
 
 
 #ifdef MUSIKANDMORE
-    
+
       //setled(LED_DOWN, false);
 #endif
 
@@ -4174,11 +4147,11 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
     // end MDT internal CC
 
 #ifdef  MCP_CV
-if (inCtrl==dac_cv_2)
- dac.analogWrite(1, inValue* 25.98f);
- else
- if (inCtrl==dac_cv_4)
- dac.analogWrite(3, inValue* 25.98f);
+    if (inCtrl == dac_cv_2)
+      dac.analogWrite(1, inValue * 25.98f);
+    else
+      if (inCtrl == dac_cv_4)
+        dac.analogWrite(3, inValue * 25.98f);
 #endif
 
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
@@ -4945,6 +4918,13 @@ FLASHMEM void dac_unmute(void)
 
 FLASHMEM void handleStart(void)
 {
+
+LiveSequencer::LiveSeqData* data = liveSeq.getData();
+   // Reset grid step to 0 when starting song mode
+     if (data->useGridSongMode) {
+       data->currentGridStep = 0;
+     }
+
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
     midi_bpm_timer = 0;
@@ -4954,9 +4934,10 @@ FLASHMEM void handleStart(void)
     seq.arp_note = 0;
     seq.arp_chord = 0;
 
-    mb_set_mutes();
-    mb_set_compressor();
-    mb_set_master();
+//swap multiband test
+    // mb_set_mutes();
+    // mb_set_compressor();
+     mb_set_master();
 
     if (seq.loop_start == 99) { // no loop start set, start at step 0
       seq.current_song_step = 0;
@@ -5312,9 +5293,11 @@ FLASHMEM void initial_values(bool init)
   }
   check_configuration();
   set_volume(configuration.sys.vol, configuration.sys.mono);
-  mb_set_mutes();
-  mb_set_compressor();
-  mb_set_master();
+
+  //swap multiband test
+  // mb_set_mutes();
+  // mb_set_compressor();
+   mb_set_master();
 
 #ifdef DEBUG
   show_configuration();

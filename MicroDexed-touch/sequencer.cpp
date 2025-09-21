@@ -791,6 +791,8 @@ void sequencer_part1(void)
                 {
                   if (check_probability(seq.current_pattern[d]))
                     handleNoteOn(braids_osc.midi_channel, harmonize(seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x],d), check_vel_variation(seq.current_pattern[d], seq.chord_vel), 4);
+               handleNoteOn(braids_osc.midi_channel, harmonize(seq.note_data[seq.current_pattern[d]][seq.step] + tr[d] + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x],d), check_vel_variation(seq.current_pattern[d], seq.chord_vel), 4);
+            
                 }
                 // else if (seq.instrument[d] > 5 && seq.instrument[d] < 16) // Chords: MSP - unstable for chords
                 //               {
@@ -905,7 +907,7 @@ void sequencer_part2(void)
           if (seq.prev_vel[d] > 199)
           {
             for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) // play chord notes
-            {
+            { 
               if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) // dexed
                 handleNoteOff(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, harmonize(seq.prev_note[d] + seq.arps[seq.prev_vel[d] - 200][x], d), 0, 0);
               else if (seq.instrument[d] == 2)

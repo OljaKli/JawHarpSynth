@@ -378,7 +378,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define MICROSYNTH_CONFIG_NAME "msynth"
 #define MULTISAMPLE_PRESETS_CONFIG_NAME "msp_presets"
 #define BRAIDS_CONFIG_NAME "braids"
-#define MULTIBAND_CONFIG_NAME "multiband"
+#define MULTIBAND_CONFIG_NAME "mb_comp"
 #define SIDECHAIN_CONFIG_NAME "sc"
 #define LIVESEQUENCER_CONFIG_NAME "liveseq"
 #define SAMPLES_CONFIG_NAME "samples"
