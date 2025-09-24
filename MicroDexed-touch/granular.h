@@ -8,10 +8,10 @@
 
 // Granular parameters with normalized values (0-100)
 typedef struct {
-  uint8_t sample_note;        // MIDI note that selects the sample (0-127)
+  uint8_t sample_note;        // Sample index (0-based)
   uint8_t grain_size;         // Grain size (0-100 maps to 10-1000ms)
   uint8_t grain_position;     // Position in sample (0-100 maps to 0.0-1.0)
-  uint8_t semitones;          // Pitch shift (0-100 maps to -24 to +24 semitones)
+  int8_t semitones;           // Pitch shift in semitones (-36 to +36, ±3 octaves)
   uint8_t volume;             // Volume (0-100)
   uint8_t density;            // Grains per second (0-100 maps to 1-100)
   uint8_t spread;             // Position randomization (0-100 maps to 0.0-1.0)
@@ -30,10 +30,17 @@ typedef struct {
 // Chromatic granular processor with pitch shifting
 class ChromaticGranularProcessor {
 public:
-  void init(uint32_t sampleRate = 44100);
+  void init();
   void startGrain(const int16_t* sampleData, uint32_t sampleLength, const granular_params_t& params);
-  void process(int16_t* left, int16_t* right, uint16_t blockSize);
+  void update(int16_t* left, int16_t* right, uint16_t blockSize);
   int getActiveGrainCount();
+  void stopAllGrains();
+  void setParams(const granular_params_t& params);
+  void triggerNote(uint8_t note, uint8_t velocity);
+  void noteOff();
+  void setSampleData(const int16_t* data, uint32_t length);
+    bool isPlaying();  
+     bool inRelease;   // true when the note is in the release phase
 
 private:
   struct Grain {
@@ -45,40 +52,62 @@ private:
     float volume;
     uint32_t age;
     bool active;
+   
   };
 
-  static const int MAX_GRAINS = 128;
-  static const int WINDOW_SIZE = 1024;
+  static const int MAX_GRAINS = 32;
   Grain grains[MAX_GRAINS];
-  float window[WINDOW_SIZE];
-  uint32_t sampleRate;
+  granular_params_t currentParams;
+  uint32_t lastGrainTime;
+  uint32_t grainInterval;     // Time between grain spawns (based on density)
+  bool noteOn;
+  uint8_t currentNote;
+  uint8_t currentVelocity;
+  const int16_t* globalSampleData;
+  uint32_t globalSampleLength;
+  uint32_t timeCounter;       // For tracking when to spawn new grains
 
-  void processGrain(Grain& grain, int16_t* left, int16_t* right, uint16_t blockSize);
-  
-  // Mapping functions
-  float mapGrainSize(uint8_t value) { return 10.0f + (value / 100.0f) * 990.0f; } // 10-1000ms
-  float mapGrainPosition(uint8_t value) { return value / 100.0f; } // 0.0-1.0
-  int mapSemitones(uint8_t value) { return (value / 100.0f) * 48 - 24; } // -24 to +24
-  float mapVolume(uint8_t value) { return value / 100.0f; } // 0.0-1.0
-  uint8_t mapDensity(uint8_t value) { return 1 + (value / 100.0f) * 99; } // 1-100 grains/sec
-  float mapSpread(uint8_t value) { return value / 100.0f; } // 0.0-1.0
-  uint8_t mapPitchRandom(uint8_t value) { return (value / 100.0f) * 12; } // 0-12 semitones
-  uint16_t mapFilterFreq(uint8_t value) { return 50 + (value / 100.0f) * 9950; } // 50-10000Hz
-  int8_t mapPan(uint8_t value) { return (value / 100.0f) * 198 - 99; } // -99 to +99
+  float envelopeLevel;        
+  bool envelopeActive;        
+  uint32_t envelopeTimeCounter; // FIXED: Separate counter for envelope timing
+  uint32_t releaseStartTime;  
+  static const uint32_t RELEASE_TIME; // Declaration only
+
 };
 
-// Audio adapter to integrate with Teensy Audio library
+
+
+
 class AudioChromaticGranular : public AudioStream {
 public:
-  AudioChromaticGranular();
-  void init(uint32_t sampleRate = 44100);
+  AudioChromaticGranular() : AudioStream(0, NULL) { 
+    processor = nullptr;
+  }
+  void begin();
+  void init(); 
   void startGrain(const int16_t* sampleData, uint32_t sampleLength, const granular_params_t& params);
   int getActiveGrainCount();
   virtual void update(void);
+  void stopAllGrains();
+  void setParams(const granular_params_t& params);
+  void triggerNote(uint8_t note, uint8_t velocity);
+  void noteOff();
+  void setSampleData(const int16_t* data, uint32_t length);
+  bool isPlaying();  // This declaration exists but was missing implementation
 
 private:
   ChromaticGranularProcessor* processor;
 };
+
+// Global declarations
+extern granular_params_t granular_params;
+extern bool granular_initialized;
+extern AudioChromaticGranular granular1;
+
+// Function declarations
+void initGranular();
+void setGranularActive(bool active);
+void updateGranularParams(granular_params_t newParams);
 
 #endif
 

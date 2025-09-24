@@ -364,7 +364,11 @@ void draw_euclidean_circle();
 extern SDClass SD_EXTERNAL;
 #endif
 
-
+FLASHMEM void flush_sysex()
+{
+   if (remote_active)
+          display.flushSysEx();
+}
 
 /***********************************************************************
    GLOBAL
@@ -1020,12 +1024,18 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
     }
   }
 }
+
+FLASHMEM void check_remote()
+{
+if (remote_active)
+    display.console = true;
+}
+
 FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color)
 {
 
-  if (remote_active)
-    display.console = true;
-
+  
+check_remote();
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
     display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, GREY2);
@@ -3857,9 +3867,7 @@ public:
     {
       seq.edit_state = 1 - seq.edit_state;
       editors[generic_temp_select_menu].draw_editor(true);
-      if (remote_active) {
-        display.flushSysEx();
-      }
+    flush_sysex();
     }
 
     EncoderEvents e = getEncoderEvents(ENC_R);
@@ -6705,8 +6713,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
       display.drawLine(x, yZero, x + w, yZero, waveColor); // horizontal zero line
     }
   }
-  if (remote_active)
-    display.flushSysEx();
+ flush_sysex();
 }
 
 FLASHMEM void selectSample(uint8_t sample) {
@@ -7003,8 +7010,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         drum_page_drawButtonsOnStateChange();
 #endif
         drum_page_show_sample_size();
-        if (remote_active)
-          display.flushSysEx();
+      flush_sysex();
       });
 
     ui.setCursor(0, 3);
@@ -7020,9 +7026,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
     addDrumParameterEditor_uint8_t((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+    flush_sysex();
 
     setCursor_textGrid_small(0, 10);
     display.setTextColor(RED);
@@ -7043,9 +7047,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 0, &drum_config[0].env_release);
 #endif
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+   flush_sysex();
 
     setCursor_textGrid_small(0, 16);
     display.setTextColor(RED);
@@ -7063,9 +7065,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
 #endif
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+   flush_sysex();
 
     ui.setCursor(20, 11);
     addSampleParameterEditor((const char*)F("STARTPOINT"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
@@ -7092,9 +7092,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
       }
       });
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+  flush_sysex();
 
     // TODO: add support for loop types. sample should loop until noteOff event
     /*addSampleParameterEditor_uint8_t((const char*)F("LOOP"), 0, 2, &customSamples[0].loopType, [](Editor *param, bool refresh) {
@@ -7146,9 +7144,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         seq.smartfilter = !seq.smartfilter;
       });
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+  flush_sysex();
 
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -7156,9 +7152,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.handle_input();
     handleCustomSliceEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
-    if (remote_active) {
-      display.flushSysEx();
-    }
+   flush_sysex();
 
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
@@ -8297,8 +8291,7 @@ FLASHMEM void seq_printAllVelocitySteps()
 
 FLASHMEM void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
 {
-  if (remote_active)
-    display.console = true;
+  check_remote();
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
@@ -11523,8 +11516,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 FLASHMEM void UI_toplineInfoText(uint8_t s)
 {
   // s=size 1/2 lines
-  if (remote_active)
-    display.console = true;
+  check_remote();
   if (s == 2)
     display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 2 + 3, DX_DARKCYAN);
   else if (s == 1)
@@ -16601,8 +16593,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
         {
           display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
           display.print(F("SAVED!"));
-          if (remote_active)
-            display.flushSysEx();
+         flush_sysex();
           delay(100);
           braids_presetno = seq.cycle_touch_element;
         }
@@ -16610,8 +16601,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
         {
           display.setTextColor(COLOR_SYSTEXT, RED);
           display.print(F("FAILED"));
-          if (remote_active)
-            display.flushSysEx();
+         flush_sysex();
         }
         delay(500);
         seq.edit_state = 0;
@@ -23192,8 +23182,7 @@ void midiCallback(midi_event* pev)
       handleNoteOff(inst_channel, in_note, pev->data[2], 0);
     }
 
-    if (remote_active)
-      display.flushSysEx();
+   flush_sysex();
 
     if (smf_line > 23)
       smf_line = 14;
@@ -24275,8 +24264,7 @@ FLASHMEM void splash_draw_header()
 }
 FLASHMEM void splash_draw_D()
 {
-  if (remote_active)
-    display.console = true;
+  check_remote();
 
   display.fillRect(3, 34, 89, 2, COLOR_PITCHSMP);
   display.fillRect(3, 39, 97, 2, COLOR_PITCHSMP);
@@ -24314,8 +24302,7 @@ FLASHMEM void splash_draw_X(uint8_t c)
 {
   uint16_t colors[2] = { COLOR_PITCHSMP, COLOR_SYSTEXT };
 
-  if (remote_active)
-    display.console = true;
+  check_remote();
   display.fillRect(107, 34, 27, 2, colors[c]);
   display.fillRect(186, 34, 27, 2, colors[c]);
   display.fillRect(112, 39, 27, 2, colors[c]);
@@ -24351,8 +24338,7 @@ FLASHMEM void splash_draw_X(uint8_t c)
 
 FLASHMEM void splash_draw_reverseD()
 {
-  if (remote_active)
-    display.console = true;
+  check_remote();
   display.fillRect(227, 34, 89, 2, COLOR_PITCHSMP);
   display.fillRect(220, 39, 96, 2, COLOR_PITCHSMP);
   display.fillRect(214, 44, 102, 2, COLOR_PITCHSMP);
@@ -25255,23 +25241,132 @@ struct ParamDesc {
 // Global granular parameters
 extern granular_params_t granular_params;
 
-// Global variable for sample selection
-uint8_t granular_sample_index = 0;
 
-// Function to draw the waveform display
-static void drawGranularWaveform(bool refresh) {
-  // Save the current active sample
+FLASHMEM void drawGranularWaveform(bool fullRedraw) {
   uint8_t saved_active_sample = activeSample;
-  
-  // Temporarily set the active sample to the granular sample
-  activeSample = granular_sample_index;
-  
-  // Use the same waveform drawing function as the drums UI
-  drawDrumsSampleWave(refresh);
-  
-  // Restore the original active sample
+  const drum_config_t& slot = drum_config[granular_params.sample_note];
+
+ uint16_t plotX = 120;
+uint16_t plotY = 19 + 8;
+  uint16_t plotW = 200;
+   uint16_t plotH = 63 + 8;
+
+  static int16_t lastPosX     = -1;
+  static int16_t lastSpreadL  = -1;
+  static int16_t lastSpreadR  = -1;
+  static int16_t lastDensity  = -1;
+// static int16_t lastGrainL = -1;
+// static int16_t lastGrainR = -1;
+  // recompute X coordinates
+  uint16_t posX = plotX + (granular_params.grain_position * plotW) / 100;
+  uint16_t spreadPixels = (granular_params.spread * plotW) / 100;
+  int16_t spreadL = (int16_t)posX - (spreadPixels / 2);
+  int16_t spreadR = (int16_t)posX + (spreadPixels / 2);
+  if (spreadL < (int16_t)plotX) spreadL = plotX;
+  if (spreadR > (int16_t)(plotX + plotW)) spreadR = plotX + plotW;
+
+  uint8_t numTicks = map(granular_params.density, 0, 100, 1, 10);
+
+  if (fullRedraw) {
+    // full waveform draw
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       plotX, plotX + plotW);
+
+    lastPosX    = -1;
+    lastSpreadL = -1;
+    lastSpreadR = -1;
+    lastDensity = -1;
+  }
+
+
+// // ---- Compute grain size window ----
+// uint16_t grainPixels = (granular_params.grain_size * plotW) / 100;
+// int16_t grainL = posX - grainPixels / 2;
+// int16_t grainR = posX + grainPixels / 2;
+// if (grainL < (int16_t)plotX) grainL = plotX;
+// if (grainR > (int16_t)(plotX + plotW)) grainR = plotX + plotW;
+
+// // ---- Erase old grain window ----
+// if (lastGrainL >= 0 && lastGrainR >= 0) {
+//   int16_t eraseL = min(lastGrainL, grainL);
+//   int16_t eraseR = max(lastGrainR, grainR);
+
+//   display.drawLine(eraseL,160, eraseR-eraseL,160,GREEN);
+//   // drawSampleWaveform(plotX, plotY, plotW, plotH,
+//   //                    (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+//   //                    eraseL, eraseR);
+// }
+
+// ---- Draw new grain window ----
+// if (grainR > grainL) {
+//   display.fillRect(grainL, plotY, grainR - grainL, plotH, GREY3);
+// }
+
+// Save for next pass
+// lastGrainL = grainL;
+// lastGrainR = grainR;
+  // ---- Update spread lines ----
+if (spreadL != lastSpreadL) {
+  if (lastSpreadL >= 0) {
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       lastSpreadL, lastSpreadL + 1);
+  }
+  lastSpreadL = spreadL;
+}
+
+if (spreadR != lastSpreadR) {
+  if (lastSpreadR >= 0) {
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       lastSpreadR, lastSpreadR + 1);
+  }
+  lastSpreadR = spreadR;
+}
+
+// ---- Update position line ----
+if (posX != lastPosX) {
+  if (lastPosX >= 0) {
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       lastPosX, lastPosX + 1);
+  }
+  lastPosX = posX;
+}
+
+// ---- Draw overlays in correct order ----
+if (granular_params.spread > 0) {
+  display.drawLine(spreadL, plotY, spreadL, plotY + plotH, GREY1);
+  display.drawLine(spreadR, plotY, spreadR, plotY + plotH, GREY1);
+}
+display.drawLine(posX, plotY, posX, plotY + plotH, RED);
+
+  // ---- Update density ticks ----
+  if (numTicks != lastDensity) {
+    // erase old ticks
+    if (lastDensity > 0) {
+      for (uint8_t i = 0; i < lastDensity; i++) {
+        uint16_t tickX = plotX + (i * plotW) / lastDensity;
+        drawSampleWaveform(plotX, plotY, plotW, plotH,
+                           (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                           tickX, tickX + 1);
+      }
+    }
+    // draw new ticks
+    check_remote();
+    display.fillRect( plotX, plotY + plotH +4,plotW-1,4,GREY3 );
+    for (uint8_t i = 0; i < numTicks; i++) {
+      uint16_t tickX = plotX + (i * plotW) / numTicks;
+      display.drawLine(tickX, plotY + plotH +4, tickX, plotY + plotH+7, GREY1);
+    }
+    lastDensity = numTicks;
+  }
+
   activeSample = saved_active_sample;
 }
+
+
 
 void granular_update_single_setting() {
   // Update the granular synth with the current settings
@@ -25279,15 +25374,15 @@ void granular_update_single_setting() {
 }
 
 // Touch handler function without parameters
-static void handle_touchscreen_granular() {
+FLASHMEM static void handle_touchscreen_granular() {
   // Handle touch events for the granular UI
   // You'll need to implement this based on your touchscreen handling
 }
 
 // Static functions for parameter access
-static int16_t granular_get_param_value(uint8_t param_index) {
+FLASHMEM static int16_t granular_get_param_value(uint8_t param_index) {
   switch(param_index) {
-    case 0: return granular_sample_index;
+    case 0: return granular_params.sample_note;
     case 1: return granular_params.grain_size;
     case 2: return granular_params.grain_position;
     case 3: return granular_params.semitones;
@@ -25308,10 +25403,10 @@ static int16_t granular_get_param_value(uint8_t param_index) {
   }
 }
 
-static void granular_set_param_value(uint8_t param_index, int16_t value) {
+FLASHMEM void granular_set_param_value(uint8_t param_index, int16_t value) {
   switch(param_index) {
     case 0: 
-      granular_sample_index = value; 
+      granular_params.sample_note = value; 
       granular_update_single_setting();
       break;
     case 1: granular_params.grain_size = value; break;
@@ -25347,18 +25442,18 @@ static void granular_param_##index##_renderer(Editor* editor, bool refresh) { \
   setModeColor(editor->select_id); \
   display.printf("%s: ", editor->name); \
   if (index == 0) { \
-    if (granular_sample_index < NUM_DRUMSET_CONFIG && drum_config[granular_sample_index].name[0] != '\0') { \
+    if (granular_params.sample_note < NUM_DRUMSET_CONFIG && drum_config[granular_params.sample_note].name[0] != '\0') { \
       char size_str[16]; \
-      if (drum_config[granular_sample_index].len < 1000) { \
-        sprintf(size_str, "%lu B", (unsigned long)drum_config[granular_sample_index].len); \
-      } else if (drum_config[granular_sample_index].len < 1000000) { \
-        sprintf(size_str, "%.1f KB", drum_config[granular_sample_index].len / 1024.0f); \
+      if (drum_config[granular_params.sample_note].len < 1000) { \
+        sprintf(size_str, "%lu B", (unsigned long)drum_config[granular_params.sample_note].len); \
+      } else if (drum_config[granular_params.sample_note].len < 1000000) { \
+        sprintf(size_str, "%.1f KB", drum_config[granular_params.sample_note].len / 1024.0f); \
       } else { \
-        sprintf(size_str, "%.1f MB", drum_config[granular_sample_index].len / 1048576.0f); \
+        sprintf(size_str, "%.1f MB", drum_config[granular_params.sample_note].len / 1048576.0f); \
       } \
-      display.printf("%02d: %s (%s)", granular_sample_index, drum_config[granular_sample_index].name, size_str); \
+      display.printf("%02d: %s (%s)", granular_params.sample_note, drum_config[granular_params.sample_note].name, size_str); \
     } else { \
-      display.printf("%02d: No Sample", granular_sample_index); \
+      display.printf("%02d: No Sample", granular_params.sample_note); \
     } \
   } else if (index == 8) { \
     const char* modes[] = {"Off", "LP", "BP", "HP"}; \
@@ -25501,14 +25596,28 @@ FLASHMEM void UI_func_granular(uint8_t param)
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     ui.handle_input();
-    // Redraw waveform if sample selection changes
-    static uint8_t last_sample_index = granular_sample_index;
-    if (last_sample_index != granular_sample_index) {
-      drawGranularWaveform(true);
-      last_sample_index = granular_sample_index;
-    }
+
+  static uint8_t last_sample_index = granular_params.sample_note;
+  static int last_position = -1;
+  static int last_spread   = -1;
+  static int last_density  = -1;
+
+  if (last_position     != granular_params.grain_position ||
+      last_spread       != granular_params.spread ||
+      last_density      != granular_params.density) {
+
+    drawGranularWaveform(false);
+    
+    last_position     = granular_params.grain_position;
+    last_spread       = granular_params.spread;
+    last_density      = granular_params.density;
   }
-  
+  else if (last_sample_index != granular_params.sample_note )
+  {
+     drawGranularWaveform(true);
+     last_sample_index = granular_params.sample_note;
+  }
+}
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
     unregisterTouchHandler();

@@ -1330,6 +1330,7 @@ FLASHMEM void CM5_frame_II()
 
 // External declarations for global variables
 extern bool remote_active;
+extern void check_remote();
 // Assuming display is defined elsewhere with appropriate methods
 
 AsteroidsScreensaver::AsteroidsScreensaver() : score(0), activeAsteroids(0) {}
@@ -1539,9 +1540,7 @@ FLASHMEM void AsteroidsScreensaver::drawAsteroid(Asteroid &a, uint16_t color) {
     int x1 = a.centerX + (a.relX[next] * cosRot - a.relY[next] * sinRot);
     int y1 = a.centerY + (a.relX[next] * sinRot + a.relY[next] * cosRot);
     
-    if (remote_active) {
-      display.console = true;
-    }
+    check_remote();
     
     display.drawLine(x0, y0, x1, y1, color);
   }
@@ -2070,24 +2069,16 @@ void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
   float rightY = ship.y + sin(ship.angle - 2.5 * PI / 3) * ship.size;
   
   // Draw ship
-  if (remote_active) {
-    display.console = true;
-  }
+check_remote();
   display.drawLine(noseX, noseY, leftX, leftY, color);
   
-  if (remote_active) {
-    display.console = true;
-  }
+check_remote();
   display.drawLine(noseX, noseY, rightX, rightY, color);
   
-  if (remote_active) {
-    display.console = true;
-  }
+check_remote();
   display.drawLine(leftX, leftY, ship.x, ship.y, color);
   
-  if (remote_active) {
-    display.console = true;
-  }
+check_remote();
   display.drawLine(rightX, rightY, ship.x, ship.y, color);
   
   // Draw thrusters if active
@@ -2104,9 +2095,7 @@ void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
     // Draw flame with appropriate color
     uint16_t flameColor = (color == 0x0000) ? COLOR_BACKGROUND : RED;
     
-    if (remote_active) {
-      display.console = true;
-    }
+    check_remote();
     display.drawLine(rearX, rearY, flameX, flameY, flameColor);
   }
 }
@@ -2116,9 +2105,7 @@ FLASHMEM void AsteroidsScreensaver::drawShot(LaserShot &shot) {
   float backX = shot.x - shot.vx * 0.6f;
   float backY = shot.y - shot.vy * 0.6f;
   
-  if (remote_active) {
-    display.console = true;
-  }
+check_remote();
   display.drawLine(backX, backY, shot.x, shot.y, RED);
 }
 
@@ -2141,21 +2128,15 @@ FLASHMEM void AsteroidsScreensaver::drawFuelGauge() {
     else gaugeColor = RED; 
     
     // Draw filled portion
-    if (remote_active) {
-      display.console = true;
-    }
+    check_remote();
     display.fillRect(gaugeX + 1, gaugeY + 1, fillWidth, gaugeHeight - 2, gaugeColor);
 
-    if (remote_active) {
-    display.console = true;
-  }
+ check_remote();
    display.fillRect(gaugeX+1+fillWidth, gaugeY+1, gaugeWidth-fillWidth-1, gaugeHeight-2, COLOR_BACKGROUND);
     
   }
 
-if (remote_active) {
-    display.console = true;
-  }
+check_remote();
 // Draw gauge outline
   display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
 }
@@ -2178,14 +2159,10 @@ FLASHMEM void AsteroidsScreensaver::drawShieldGauge() {
     else gaugeColor = RED; 
     
     // Draw filled portion
-    if (remote_active) {
-      display.console = true;
-    }
+check_remote();
     display.fillRect(gaugeX + 1, gaugeY + 1, fillWidth, gaugeHeight - 2, gaugeColor);
 
-     if (remote_active) {
-      display.console = true;
-    }
+     check_remote();
     display.fillRect(gaugeX + 1+fillWidth , gaugeY + 1, gaugeWidth-fillWidth-1, gaugeHeight - 2, COLOR_BACKGROUND);
 
   }
@@ -2284,9 +2261,7 @@ FLASHMEM void AsteroidsScreensaver::erasePreviousState() {
       float prevBackY = ship.shots[i].prevY - ship.shots[i].vy * 0.6f;
       
       // Erase the previous shot segment
-      if (remote_active) {
-        display.console = true;
-      }
+    check_remote();
       display.drawLine(prevBackX, prevBackY, ship.shots[i].prevX, ship.shots[i].prevY, 0x0000);
     }
   }

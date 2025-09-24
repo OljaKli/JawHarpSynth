@@ -1,128 +1,328 @@
 #ifdef GRANULAR
 
 #include "granular.h"
+#include <Arduino.h>
+#include <math.h>
+#include <stdlib.h>
 
-void ChromaticGranularProcessor::init(uint32_t sampleRate) {
-  this->sampleRate = sampleRate;
-  memset(grains, 0, sizeof(grains));
-  
-  // Pre-calculate window function for efficiency
-  for (int i = 0; i < WINDOW_SIZE; i++) {
-    window[i] = 0.5f - 0.5f * cosf(2.0f * PI * i / (WINDOW_SIZE - 1));
-  }
+// Global variable definitions
+granular_params_t granular_params;
+bool granular_initialized = false;
+AudioChromaticGranular granular1;
+
+// ChromaticGranularProcessor Implementation
+FLASHMEM void ChromaticGranularProcessor::init() {
+    for (int i = 0; i < MAX_GRAINS; i++) {
+        grains[i].active = false;
+        grains[i].sampleData = nullptr;
+        grains[i].sampleLength = 0;
+    }
+
+    timeCounter = 0;
+    grainInterval = 44100;
+    noteOn = false;
+    globalSampleData = nullptr;
+    globalSampleLength = 0;
+
+    envelopeLevel = 0.0f;
+    envelopeActive = false;
+    envelopeTimeCounter = 0;
+    releaseStartTime = 0;
+}
+
+void AudioChromaticGranular::init() {
+    if (processor) {
+        processor->init();
+    }
+}
+
+FLASHMEM void ChromaticGranularProcessor::setParams(const granular_params_t& params) {
+    currentParams = params;
+    float grainsPerSecond = 1.0f + (params.density / 100.0f) * 99.0f;
+    if (grainsPerSecond > 0) {
+        grainInterval = (uint32_t)(AUDIO_SAMPLE_RATE_EXACT / grainsPerSecond);
+    }
+}
+
+FLASHMEM void ChromaticGranularProcessor::triggerNote(uint8_t note, uint8_t velocity) {
+    if (!globalSampleData || globalSampleLength == 0) return;
+
+    noteOn = true;
+    currentNote = note;
+    currentVelocity = velocity;
+    timeCounter = grainInterval;
+
+    envelopeLevel = 1.0f;
+    envelopeActive = true;
+    envelopeTimeCounter = 0;
+    releaseStartTime = 0;
+}
+
+bool inRelease = false;
+
+FLASHMEM void ChromaticGranularProcessor::noteOff() {
+    if (!noteOn) return;
+    noteOn = false;
+    envelopeActive = true;
+    releaseStartTime = envelopeTimeCounter; 
+    inRelease = true; // start release mode
+}
+
+FLASHMEM void ChromaticGranularProcessor::setSampleData(const int16_t* data, uint32_t length) {
+    globalSampleData = data;
+    globalSampleLength = length;
 }
 
 void ChromaticGranularProcessor::startGrain(const int16_t* sampleData, uint32_t sampleLength, const granular_params_t& params) {
-  // Find an available grain slot
-  for (int i = 0; i < MAX_GRAINS; i++) {
-    if (!grains[i].active) {
-      grains[i].sampleData = sampleData;
-      grains[i].sampleLength = sampleLength;
-      grains[i].position = mapGrainPosition(params.grain_position) * sampleLength;
-      grains[i].size = (mapGrainSize(params.grain_size) / 1000.0f) * sampleRate;
-      
-      // Calculate base pitch with randomization
-      float randomPitch = (random(0, mapPitchRandom(params.pitch_random) * 200) - mapPitchRandom(params.pitch_random) * 100) / 100.0f;
-      grains[i].pitchRatio = pow(2.0, (mapSemitones(params.semitones) + randomPitch) / 12.0);
-      
-      grains[i].volume = mapVolume(params.volume);
-      grains[i].age = 0;
-      grains[i].active = true;
-      break;
+    if (!sampleData || sampleLength == 0) return;
+
+    for (int i = 0; i < MAX_GRAINS; i++) {
+        if (!grains[i].active) {
+            Grain& g = grains[i];
+            g.sampleData = sampleData;
+            g.sampleLength = sampleLength;
+
+            // Grain size in samples
+            float grainSizeMs = 10.0f + (params.grain_size / 100.0f) * 990.0f;
+            g.size = (grainSizeMs / 1000.0f) * AUDIO_SAMPLE_RATE_EXACT;
+            if (g.size < 1) g.size = 1;
+
+            // Pitch
+            float semitones = (params.semitones / 100.0f) * 48.0f - 24.0f;
+            g.pitchRatio = powf(2.0f, semitones / 12.0f);
+
+            // Position
+            float positionRatio = params.grain_position / 100.0f;
+            uint32_t maxStartPos = sampleLength - (uint32_t)(g.size * g.pitchRatio) - 2;
+            if (maxStartPos < 1) maxStartPos = 1;
+
+            float spreadPercent = 0.0f;
+#ifdef GRANULAR_SPREAD
+            spreadPercent = params.spread / 100.0f;
+#endif
+
+            int32_t maxOffset = (int32_t)(spreadPercent * maxStartPos);
+            int32_t offset = 0;
+            if (maxOffset > 0) offset = (rand() % (2 * maxOffset + 1)) - maxOffset;
+
+            int32_t chosenPos = (int32_t)(positionRatio * maxStartPos) + offset;
+            if (chosenPos < 0) chosenPos = 0;
+            if ((uint32_t)chosenPos > maxStartPos) chosenPos = maxStartPos;
+            g.position = (float)chosenPos;
+
+            g.volume = (params.volume / 100.0f) * (currentVelocity / 127.0f);
+            g.age = 0;
+            g.active = true;
+
+            break;
+        }
     }
-  }
 }
 
-void ChromaticGranularProcessor::process(int16_t* left, int16_t* right, uint16_t blockSize) {
-  memset(left, 0, blockSize * sizeof(int16_t));
-  memset(right, 0, blockSize * sizeof(int16_t));
-  
-  for (int i = 0; i < MAX_GRAINS; i++) {
-    if (grains[i].active) {
-      processGrain(grains[i], left, right, blockSize);
-      
-      // Deactivate grain if it's finished
-      if (grains[i].age >= grains[i].size) {
-        grains[i].active = false;
-      }
-    }
-  }
+FLASHMEM bool AudioChromaticGranular::isPlaying() {
+    return processor ? processor->isPlaying() : false;
 }
+
+bool ChromaticGranularProcessor::isPlaying() {
+    if (noteOn) return true;
+    for (int i = 0; i < MAX_GRAINS; i++)
+        if (grains[i].active) return true;
+    return false;
+}
+
+FLASHMEM void ChromaticGranularProcessor::update(int16_t* left, int16_t* right, uint16_t blockSize) {
+    // Clear output buffers
+    for (int i = 0; i < blockSize; i++) {
+        left[i] = 0;
+        right[i] = 0;
+    }
+
+    // Spawn new grains only if note is on
+    timeCounter += blockSize;
+    if (noteOn && envelopeLevel > 0.0f && globalSampleData && globalSampleLength > 0) {
+        while (timeCounter >= grainInterval) {
+            startGrain(globalSampleData, globalSampleLength, currentParams);
+            timeCounter -= grainInterval;
+        }
+    }
+
+    // Process each sample in the block
+    for (int i = 0; i < blockSize; i++) {
+        envelopeTimeCounter++;
+
+        // --- Envelope Handling ---
+        if (noteOn) {
+            envelopeLevel = 1.0f;
+            releaseStartTime = 0;
+            inRelease = false;
+        } else if (envelopeActive) {
+            if (!inRelease) {
+                releaseStartTime = envelopeTimeCounter;
+                inRelease = true;
+            }
+
+            float releaseTimeSeconds = 5.0f; 
+            float elapsed = (float)(envelopeTimeCounter - releaseStartTime) / AUDIO_SAMPLE_RATE_EXACT;
+
+            if (elapsed >= releaseTimeSeconds) {
+                envelopeLevel = 0.0f;
+                envelopeActive = false;
+                inRelease = false;
+                stopAllGrains(); // stop grains when release ends
+            } else {
+                envelopeLevel = 1.0f - (elapsed / releaseTimeSeconds);
+            }
+        }
+
+        float sampleOut = 0.0f;
+
+        // --- Grain Processing ---
+        for (int g = 0; g < MAX_GRAINS; g++) {
+            Grain &grain = grains[g];
+            if (!grain.active || !grain.sampleData || grain.sampleLength < 2) continue;
+
+            // Clamp position within buffer
+            if (grain.position < 0.0f) grain.position = 0.0f;
+            if (grain.position > (float)(grain.sampleLength - 2)) {
+                grain.position = (float)(grain.sampleLength - 2);
+                grain.active = false;
+                continue;
+            }
+
+         bool terminate = false;
+if (grain.age >= grain.size) terminate = true;
+uint32_t nextPos = (uint32_t)(grain.position + grain.pitchRatio);
+if (nextPos >= grain.sampleLength - 1) terminate = true;
+
+// ONLY terminate grains if envelope finished
+if (terminate && !inRelease) {
+    grain.active = false;
+}
+
+            // Grain envelope (fade in/out)
+            float ageRatio = (float)grain.age / grain.size;
+            float grainEnv = 1.0f;
+            if (ageRatio < 0.1f) grainEnv = ageRatio / 0.1f;
+            else if (ageRatio > 0.9f) grainEnv = (1.0f - ageRatio) / 0.1f;
+
+            // Safe linear interpolation
+            uint32_t intPos = (uint32_t)grain.position;
+            int16_t s1 = grain.sampleData[intPos];
+            int16_t s2 = grain.sampleData[intPos + 1];
+            float frac = grain.position - intPos;
+            float s = s1 + frac * (s2 - s1);
+
+            sampleOut += s * grainEnv * grain.volume;
+
+            // Advance grain
+            grain.position += grain.pitchRatio;
+            grain.age++;
+        }
+
+        // Apply global envelope
+        sampleOut *= envelopeLevel;
+
+        // Clamp output
+        left[i] = constrain((int16_t)sampleOut, -32768, 32767);
+        right[i] = left[i];
+    }
+}
+
+
 
 int ChromaticGranularProcessor::getActiveGrainCount() {
-  int count = 0;
-  for (int i = 0; i < MAX_GRAINS; i++) {
-    if (grains[i].active) count++;
-  }
-  return count;
+    int count = 0;
+    for (int i = 0; i < MAX_GRAINS; i++) if (grains[i].active) count++;
+    return count;
 }
 
-void ChromaticGranularProcessor::processGrain(Grain& grain, int16_t* left, int16_t* right, uint16_t blockSize) {
-  for (int i = 0; i < blockSize; i++) {
-    if (grain.age < grain.size) {
-      // Calculate window position
-      int windowIndex = (int)((grain.age / grain.size) * (WINDOW_SIZE - 1));
-      float win = window[windowIndex];
-      
-      // Get sample with linear interpolation
-      int idx = (int)grain.position;
-      float frac = grain.position - idx;
-      
-      // Handle wrap-around for sample data
-      int16_t s1 = grain.sampleData[idx % grain.sampleLength];
-      int16_t s2 = grain.sampleData[(idx + 1) % grain.sampleLength];
-      int16_t s = s1 + frac * (s2 - s1);
-      
-      // Apply window and volume
-      float sample = s * win * grain.volume;
-      
-      // Add to output
-      left[i] += sample;
-      right[i] += sample;
-      
-      // Advance position based on pitch ratio
-      grain.position += grain.pitchRatio;
-      if (grain.position >= grain.sampleLength) grain.position -= grain.sampleLength;
-      
-      // Increment age
-      grain.age++;
+void ChromaticGranularProcessor::stopAllGrains() {
+    for (int i = 0; i < MAX_GRAINS; i++) grains[i].active = false;
+    noteOn = false;
+    envelopeActive = false;
+    envelopeLevel = 0.0f;
+    envelopeTimeCounter = 0;
+    releaseStartTime = 0;
+}
+
+// AudioChromaticGranular Implementation
+void AudioChromaticGranular::begin() {
+    if (!processor) {
+        processor = new ChromaticGranularProcessor();
+        processor->init();
     }
-  }
 }
 
-AudioChromaticGranular::AudioChromaticGranular() : AudioStream(0, NULL) {
-  processor = nullptr;
-}
-
-void AudioChromaticGranular::init(uint32_t sampleRate) {
-  processor = new ChromaticGranularProcessor();
-  processor->init(sampleRate);
-}
-
-void AudioChromaticGranular::startGrain(const int16_t* sampleData, uint32_t sampleLength, const granular_params_t& params) {
-  if (processor) {
-    processor->startGrain(sampleData, sampleLength, params);
-  }
+void AudioChromaticGranular::startGrain(const int16_t* data, uint32_t length, const granular_params_t& params) {
+    if (processor) processor->startGrain(data, length, params);
 }
 
 int AudioChromaticGranular::getActiveGrainCount() {
-  if (processor) {
-    return processor->getActiveGrainCount();
-  }
-  return 0;
+    return processor ? processor->getActiveGrainCount() : 0;
+}
+
+void AudioChromaticGranular::stopAllGrains() {
+    if (processor) processor->stopAllGrains();
+}
+
+void AudioChromaticGranular::setParams(const granular_params_t& params) {
+    if (processor) processor->setParams(params);
+}
+
+void AudioChromaticGranular::triggerNote(uint8_t note, uint8_t velocity) {
+    if (processor) processor->triggerNote(note, velocity);
+}
+
+void AudioChromaticGranular::noteOff() {
+    if (processor) processor->noteOff();
+}
+
+void AudioChromaticGranular::setSampleData(const int16_t* data, uint32_t length) {
+    if (processor) processor->setSampleData(data, length);
 }
 
 void AudioChromaticGranular::update(void) {
-  if (!processor) return;
+    if (!processor) return;
 
-  audio_block_t* block;
-  block = allocate();
-  if (!block) return;
+    audio_block_t *leftBlock = allocate();
+    if (!leftBlock) return;
 
-  processor->process(block->data, block->data, AUDIO_BLOCK_SAMPLES);
-  
-  transmit(block, 0);
-  release(block);
+    audio_block_t *rightBlock = allocate();
+    if (!rightBlock) {
+        release(leftBlock);
+        return;
+    }
+
+    processor->update(leftBlock->data, rightBlock->data, AUDIO_BLOCK_SAMPLES);
+
+    transmit(leftBlock, 0);
+    transmit(rightBlock, 1);
+    release(leftBlock);
+    release(rightBlock);
+}
+
+// Global functions
+void initGranular() {
+    granular1.begin();
+    granular1.init();
+    granular_initialized = true;
+
+    granular_params.grain_size = 50;
+    granular_params.grain_position = 0;
+    granular_params.semitones = 50;
+    granular_params.volume = 100;
+    granular_params.density = 50;
+    granular_params.active = true;
+}
+
+void setGranularActive(bool active) {
+    granular_params.active = active;
+    if (!active) granular1.stopAllGrains();
+}
+
+void updateGranularParams(granular_params_t newParams) {
+    granular_params = newParams;
+    granular1.setParams(granular_params);
 }
 
 #endif

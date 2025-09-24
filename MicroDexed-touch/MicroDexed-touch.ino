@@ -378,12 +378,12 @@ AudioInputI2S i2s1in;
 
 #ifdef GRANULAR
 #include "granular.h"
-AudioChromaticGranular granular1;
-bool granular_initialized = false;
+extern AudioChromaticGranular granular1;
+extern bool granular_initialized;
+extern  granular_params_t granular_params;
 AudioConnection patchCordGranularR(granular1, 0, master_mixer_r, MASTER_MIX_CH_GRANULAR);
 AudioConnection patchCordGranularL(granular1, 0, master_mixer_l, MASTER_MIX_CH_GRANULAR);
 #endif
-
 
 // AudioMixer<4> mb_mixer_l;
 // AudioMixer<4> mb_mixer_r;
@@ -1058,6 +1058,7 @@ FLASHMEM void All_Button_LEDS(bool state)
   else {
     if (!(configuration.sys.ext_clock && cv_clock))
       setled(LED_UP, LOW);
+      
     if (configuration.sys.sus_pedal)
       setled(LED_DOWN, trs_pedal);
     else
@@ -1100,42 +1101,15 @@ void initMCP4728() {
 }
 #endif
 
-#ifdef GRANULAR
 
-granular_params_t granular_params;
 
-FLASHMEM void  setup_granular()
-{
-granular_params.sample_note = 60;      // Middle C
-  granular_params.grain_size = 50;       // 50% (505ms)
-  granular_params.grain_position = 50;   // 50% (middle of sample)
-  granular_params.semitones = 50;        // 50% (0 semitones)
-  granular_params.volume = 80;           // 80% volume
-  granular_params.density = 10;          // 10% (10 grains per second)
-  granular_params.spread = 10;           // 10% position randomization
-  granular_params.pitch_random = 8;      // 8% (~1 semitone randomization)
-  granular_params.filter_mode = 1;       // Lowpass filter
-  granular_params.filter_freq = 20;      // 20% (~2000Hz)
-  granular_params.filter_resonance = 30; // 30% resonance
-  granular_params.rev_send = 20;         // 20% reverb send
-  granular_params.delay_send_1 = 10;     // 10% delay 1 send
-  granular_params.delay_send_2 = 5;      // 5% delay 2 send
-  granular_params.pan = 50;              // 50% (center pan)
-  granular_params.midi_channel = 10;     // MIDI channel 10
-  granular_params.active = 1;            // Enable granular synth
-  
-  // Initialize granular processor
-  granular1.init(44100);
-  granular_initialized = true;
-}
-#endif
 
 
 FLASHMEM void setup()
 {
 
   #ifdef GRANULAR
-  setup_granular();
+  initGranular() ;
   #endif
 
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
@@ -1661,8 +1635,8 @@ FLASHMEM void setup()
   }
 
 #ifdef GRANULAR
- master_mixer_r.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
-  master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
+ master_mixer_r.gain(MASTER_MIX_CH_GRANULAR, 0.9);
+  master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, 0.9);
 #endif
 
   master_mixer_r.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
@@ -3418,9 +3392,6 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   }
 }
 
-
-
-
 void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 {
   wakeScreenFlag = true;
@@ -3880,7 +3851,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
       //setled(LED_DOWN, true);
 #endif
 
-
           dac_midi_note = inNumber;
           dac_midi_vel = inVelocity;
           dac_state = 1;
@@ -3888,33 +3858,39 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         }
 
 #ifdef GRANULAR
-         // Granular Synth
-    if (inChannel == granular_params.midi_channel || granular_params.midi_channel == 17) {
-      if (granular_initialized && granular_params.active) {
-        // Find the drum sample for this MIDI note
-        uint8_t d = midiNoteToSampleNote(inNumber);
+  if (inChannel == GRANULAR_MIDI_CHANNEL) {
+    if (granular_initialized && granular_params.active) {
+        uint8_t selected_sample = granular_params.sample_note;
         
-        // Check if we have a valid sample
-        if (drum_config[d].drum_data != NULL && drum_config[d].len > 0) {
-          // Cast the sample data to int16_t* and get length
-          const int16_t* sampleData = (const int16_t*)drum_config[d].drum_data;
-          uint32_t sampleLength = drum_config[d].len / (drum_config[d].numChannels * sizeof(int16_t));
+        if (selected_sample < NUM_DRUMSET_CONFIG &&
+            drum_config[selected_sample].drum_data != NULL) {
+            
+            const int16_t* sampleData = (const int16_t*)drum_config[selected_sample].drum_data;
+           // uint32_t sampleLength = drum_config[selected_sample].len / (drum_config[selected_sample].numChannels * sizeof(int16_t));
+             uint32_t sampleLength = drum_config[selected_sample].len;
+            granular1.setSampleData(sampleData, sampleLength);
+            
           
-          // Trigger grain with current parameters
-          granular1.startGrain(sampleData, sampleLength, granular_params);
           
-          #ifdef DEBUG
-            char note_name[4];
-            getNoteName(note_name, inNumber);
-            LOG.print(F("Granular grain triggered: "));
-            LOG.print(note_name);
-            LOG.print(F(" using sample "));
-            LOG.print(drum_config[d].name);
-            LOG.println();
-          #endif
+            // Calculate exact semitones shift for accurate pitch
+            // Center at MIDI note 60 (C3) = no pitch shift
+            float semitones_shift = (float)inNumber - 60.0f-12.0f;
+            
+            // Convert to parameter range: 
+            // 0-100 maps to -24 to +24 semitones, so 50 = no shift
+            float semitones_param = 50.0f + (semitones_shift * 50.0f / 24.0f);
+            
+            // Constrain to valid range
+            semitones_param = constrain(semitones_param, 0, 100);
+            
+            granular_params_t chromatic_params = granular_params;
+            chromatic_params.semitones = (uint8_t)semitones_param;
+            
+            granular1.setParams(chromatic_params);
+            granular1.triggerNote(inNumber, inVelocity);
         }
-      }
     }
+}
 #endif
 
 
@@ -4156,6 +4132,18 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
 
     }
+  
+
+#ifdef GRANULAR
+  if (inChannel == GRANULAR_MIDI_CHANNEL) {
+    
+           // granular1.setParams(chromatic_params);
+            granular1.noteOff();
+        }
+#endif
+
+
+
   }
 }
 

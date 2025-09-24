@@ -229,7 +229,7 @@ public:
     // Grid-based song mode
     static const uint8_t GRIDSONGLEN = 32;
     bool useGridSongMode = false;  // false = live recording mode, true = grid mode
-  bool seq_started_from_pattern_mode=false;
+    bool seq_started_from_pattern_mode = false;
     //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // 32 song steps, 12 tracks, 4 layers
     uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
     uint8_t currentGridStep = 0;
@@ -239,14 +239,14 @@ public:
     bool redraw_grid_header;
     bool redraw_grid_buttons;
 
- uint8_t& gridStep(uint8_t step, uint8_t track, uint8_t layer) {
-        return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + 
-                           track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
+    uint8_t& gridStep(uint8_t step, uint8_t track, uint8_t layer) {
+      return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) +
+        track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
     }
-    
+
     const uint8_t& gridStep(uint8_t step, uint8_t track, uint8_t layer) const {
-        return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + 
-                           track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
+      return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) +
+        track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
     }
 
   };
@@ -329,7 +329,7 @@ private:
     // + a.source is a hack to sort song events before pattern events if the have same time
     return ((a.patternNumber * 5000) + a.patternMs + a.source) < ((b.patternNumber * 5000) + b.patternMs + b.source); // FIXME: patternLengthMs
   }
-  
+
 };
 
 void UI_func_livesequencer(uint8_t param);
