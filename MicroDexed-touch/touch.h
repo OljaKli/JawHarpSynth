@@ -118,5 +118,5 @@ void handle_touchscreen_custom_mappings();
 void handle_touchscreen_drums();
 void handle_load_performance();
 // Define a flag to track if a redraw is needed to prevent continuous flashing.
-extern bool redrawNeededChainEditor ;
+//extern bool redrawNeededChainEditor ;
 #endif

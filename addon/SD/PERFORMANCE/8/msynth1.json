@@ -29,5 +29,6 @@
   "midi_channel": 2,
   "pan": 22,
   "vel_mod_filter_osc": 0,
-  "vel_mod_filter_noise": 0
+  "vel_mod_filter_noise": 0,
+  "sidechain_send": 0
 }

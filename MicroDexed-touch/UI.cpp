@@ -194,14 +194,14 @@ extern AudioMixer<3> finalized_mixer_l;
 
 #ifdef AUDIO_DEVICE_USB
 AudioOutputUSB usb1;
-AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 0);
-AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 1);
+AudioConnection patchCordUsbL(finalized_mixer_l, 0, usb1, 1);
+AudioConnection patchCordUsbR(finalized_mixer_r, 0, usb1, 0);
 #endif
 
 #ifndef MCP_CV
 AudioOutputSPDIF3 spdif3; // enable S/PDIF by default
-AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 0); //enable S/PDIF OUTPUT BY DEFAULT
-AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 1);
+AudioConnection patchCord_spdif_L(finalized_mixer_l, 0, spdif3, 1); //enable S/PDIF OUTPUT BY DEFAULT
+AudioConnection patchCord_spdif_R(finalized_mixer_r, 0, spdif3, 0);
 #endif
 
 extern AudioAnalyzePeak mb_before_l;
@@ -364,7 +364,11 @@ void draw_euclidean_circle();
 extern SDClass SD_EXTERNAL;
 #endif
 
-
+FLASHMEM void flush_sysex()
+{
+   if (remote_active)
+          display.flushSysEx();
+}
 
 /***********************************************************************
    GLOBAL
@@ -577,12 +581,19 @@ LCDML_add(61, LCDML_0_17, 3, "Map Gamepad", UI_func_map_gamepad);
 LCDML_add(62, LCDML_0_17, 4, "Test Touchscreen", UI_func_test_touchscreen);
 LCDML_add(63, LCDML_0_17, 5, "Test Audio Mute", UI_func_test_mute);
 LCDML_add(64, LCDML_0_17, 6, "Test PSRAM", UI_func_test_psram);
-LCDML_add(65, LCDML_0, 18, "Chain Editor", UI_func_chain_editor);
+//LCDML_add(65, LCDML_0, 18, "Chain Editor", UI_func_chain_editor);
+#ifdef GRANULAR
+LCDML_add(65, LCDML_0, 18, "Granular Synth", UI_func_granular);
 LCDML_add(66, LCDML_0, 19, "Info", UI_func_information);
 LCDML_addAdvanced(67, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(68, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(69, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-
+#else
+LCDML_add(65, LCDML_0, 18, "Info", UI_func_information);
+LCDML_addAdvanced(66, LCDML_0, 19, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(67, LCDML_0, 20, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(68, LCDML_0, 21, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+#endif
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -1013,12 +1024,18 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
     }
   }
 }
+
+FLASHMEM void check_remote()
+{
+if (remote_active)
+    display.console = true;
+}
+
 FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color)
 {
 
-  if (remote_active)
-    display.console = true;
-
+  
+check_remote();
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
     display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, GREY2);
@@ -3850,9 +3867,7 @@ public:
     {
       seq.edit_state = 1 - seq.edit_state;
       editors[generic_temp_select_menu].draw_editor(true);
-      if (remote_active) {
-        display.flushSysEx();
-      }
+    flush_sysex();
     }
 
     EncoderEvents e = getEncoderEvents(ENC_R);
@@ -6698,8 +6713,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
       display.drawLine(x, yZero, x + w, yZero, waveColor); // horizontal zero line
     }
   }
-  if (remote_active)
-    display.flushSysEx();
+ flush_sysex();
 }
 
 FLASHMEM void selectSample(uint8_t sample) {
@@ -6996,8 +7010,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         drum_page_drawButtonsOnStateChange();
 #endif
         drum_page_show_sample_size();
-        if (remote_active)
-          display.flushSysEx();
+      flush_sysex();
       });
 
     ui.setCursor(0, 3);
@@ -7013,9 +7026,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("PITCH"), 1, 200, &drum_config[0].pitch);
     addDrumParameterEditor_uint8_t((const char*)F("TUNE"), 0, 200, &drum_config[0].p_offset);
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+    flush_sysex();
 
     setCursor_textGrid_small(0, 10);
     display.setTextColor(RED);
@@ -7036,9 +7047,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 0, &drum_config[0].env_release);
 #endif
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+   flush_sysex();
 
     setCursor_textGrid_small(0, 16);
     display.setTextColor(RED);
@@ -7056,9 +7065,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
 #endif
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+   flush_sysex();
 
     ui.setCursor(20, 11);
     addSampleParameterEditor((const char*)F("STARTPOINT"), 0, 1000, &customSamples[0].start, sampleStartEndRenderer);
@@ -7085,9 +7092,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
       }
       });
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+  flush_sysex();
 
     // TODO: add support for loop types. sample should loop until noteOff event
     /*addSampleParameterEditor_uint8_t((const char*)F("LOOP"), 0, 2, &customSamples[0].loopType, [](Editor *param, bool refresh) {
@@ -7139,9 +7144,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         seq.smartfilter = !seq.smartfilter;
       });
 
-    if (remote_active) {
-      display.flushSysEx();
-    }
+  flush_sysex();
 
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -7149,9 +7152,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.handle_input();
     handleCustomSliceEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
-    if (remote_active) {
-      display.flushSysEx();
-    }
+   flush_sysex();
 
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
@@ -8290,8 +8291,7 @@ FLASHMEM void seq_printAllVelocitySteps()
 
 FLASHMEM void seq_printAllVelocitySteps_single_step(uint8_t step, int color)
 {
-  if (remote_active)
-    display.console = true;
+  check_remote();
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
@@ -11516,8 +11516,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 FLASHMEM void UI_toplineInfoText(uint8_t s)
 {
   // s=size 1/2 lines
-  if (remote_active)
-    display.console = true;
+  check_remote();
   if (s == 2)
     display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 2 + 3, DX_DARKCYAN);
   else if (s == 1)
@@ -16594,8 +16593,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
         {
           display.setTextColor(COLOR_SYSTEXT, DARKGREEN);
           display.print(F("SAVED!"));
-          if (remote_active)
-            display.flushSysEx();
+         flush_sysex();
           delay(100);
           braids_presetno = seq.cycle_touch_element;
         }
@@ -16603,8 +16601,7 @@ FLASHMEM void UI_func_braids(uint8_t param)
         {
           display.setTextColor(COLOR_SYSTEXT, RED);
           display.print(F("FAILED"));
-          if (remote_active)
-            display.flushSysEx();
+         flush_sysex();
         }
         delay(500);
         seq.edit_state = 0;
@@ -23185,8 +23182,7 @@ void midiCallback(midi_event* pev)
       handleNoteOff(inst_channel, in_note, pev->data[2], 0);
     }
 
-    if (remote_active)
-      display.flushSysEx();
+   flush_sysex();
 
     if (smf_line > 23)
       smf_line = 14;
@@ -24268,8 +24264,7 @@ FLASHMEM void splash_draw_header()
 }
 FLASHMEM void splash_draw_D()
 {
-  if (remote_active)
-    display.console = true;
+  check_remote();
 
   display.fillRect(3, 34, 89, 2, COLOR_PITCHSMP);
   display.fillRect(3, 39, 97, 2, COLOR_PITCHSMP);
@@ -24307,8 +24302,7 @@ FLASHMEM void splash_draw_X(uint8_t c)
 {
   uint16_t colors[2] = { COLOR_PITCHSMP, COLOR_SYSTEXT };
 
-  if (remote_active)
-    display.console = true;
+  check_remote();
   display.fillRect(107, 34, 27, 2, colors[c]);
   display.fillRect(186, 34, 27, 2, colors[c]);
   display.fillRect(112, 39, 27, 2, colors[c]);
@@ -24344,8 +24338,7 @@ FLASHMEM void splash_draw_X(uint8_t c)
 
 FLASHMEM void splash_draw_reverseD()
 {
-  if (remote_active)
-    display.console = true;
+  check_remote();
   display.fillRect(227, 34, 89, 2, COLOR_PITCHSMP);
   display.fillRect(220, 39, 96, 2, COLOR_PITCHSMP);
   display.fillRect(214, 44, 102, 2, COLOR_PITCHSMP);
@@ -24960,277 +24953,676 @@ FLASHMEM void clear_volmeter(int x, int y)
 }
 
 
-// Instantiate the new struct (definition)
-chain_editor_t chain_editor_state;
+// // Instantiate the new struct (definition)
+// chain_editor_t chain_editor_state;
 
-// Chain structure presets (definitions)
-const uint8_t chain_preset_abab[] = { 0, 1, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-const uint8_t chain_preset_aaab[] = { 0, 0, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-const uint8_t chain_preset_abcd[] = { 0, 1, 2, 3, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-void print_note_name(uint8_t note) {
-  const char* note_names[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-  uint8_t octave = (note / 12) - 1; // MIDI note 0 is C-1
-  uint8_t note_index = note % 12;
+// // Chain structure presets (definitions)
+// const uint8_t chain_preset_abab[] = { 0, 1, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+// const uint8_t chain_preset_aaab[] = { 0, 0, 0, 1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+// const uint8_t chain_preset_abcd[] = { 0, 1, 2, 3, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+// void print_note_name(uint8_t note) {
+//   const char* note_names[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+//   uint8_t octave = (note / 12) - 1; // MIDI note 0 is C-1
+//   uint8_t note_index = note % 12;
 
-  display.print(note_names[note_index]);
-  display.print(octave);
+//   display.print(note_names[note_index]);
+//   display.print(octave);
+// }
+
+// void chain_editor_handle_encoder(const EncoderEvents& e) {
+//   if (e.turned) {
+//     if (chain_editor_state.current_ui_state == 0) {
+//       chain_editor_state.chain_cursor = constrain(chain_editor_state.chain_cursor + e.dir, 0, 15);
+//     }
+//     else if (chain_editor_state.current_ui_state == 1) {
+//       // Edit pattern steps
+//       chain_editor_state.pattern_cursor = constrain(chain_editor_state.pattern_cursor + e.dir, 0, 15);
+//     }
+//     else if (chain_editor_state.current_ui_state == 2) {
+//       seq.temp_active_menu = constrain(seq.temp_active_menu + e.dir, 0, 2);
+//       show(0, 0, 16, seq.temp_active_menu == 0 ? "ABAB" : (seq.temp_active_menu == 1 ? "AAAB" : "ABCD"));
+//     }
+//     redrawNeededChainEditor = true;
+//   }
+//   if (e.pressed) {
+//     if (chain_editor_state.current_ui_state == 0) {
+//       chain_editor_state.current_ui_state = 1;
+//     }
+//     else if (chain_editor_state.current_ui_state == 1) {
+//       chain_editor_state.current_ui_state = 0;
+//     }
+//     else if (chain_editor_state.current_ui_state == 2) {
+//       chain_editor_create_new_chain(seq.temp_active_menu);
+//       chain_editor_state.current_ui_state = 0;
+//     }
+//     redrawNeededChainEditor = true;
+//   }
+// }
+
+// FLASHMEM void UI_func_chain_editor(uint8_t param) {
+//   if (LCDML.FUNC_setup()) {
+//     seq.active_function = 99;
+//     registerTouchHandler(handle_touchscreen_chain_editor);
+
+//     // Initial full screen setup
+//     display.fillScreen(COLOR_BACKGROUND);
+
+//     // Draw static header and info
+//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//     display.setTextSize(2);
+//     setCursor_textGrid(0, 0);
+//     display.print("CHAIN EDITOR");
+
+//     // Draw static buttons
+//     TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
+//     TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
+
+//     chain_editor_state.active_chain = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+//     if (chain_editor_state.active_chain == 99) {
+//       for (int i = 0; i < NUM_CHAINS; i++) {
+//         bool is_chain_empty = true;
+//         for (int j = 0; j < 16; j++) {
+//           if (seq.chain[i][j] != 99) {
+//             is_chain_empty = false;
+//             break;
+//           }
+//         }
+//         if (is_chain_empty) {
+//           chain_editor_state.active_chain = i;
+//           break;
+//         }
+//       }
+//       if (chain_editor_state.active_chain == 99) {
+//         chain_editor_state.active_chain = 0;
+//       }
+//     }
+//     chain_editor_state.chain_cursor = 0;
+//     encoderDir[ENC_R].reset();
+
+//     // Set redraw flag to trigger the first draw of dynamic content
+//     redrawNeededChainEditor = true;
+//     seq.help_text_needs_refresh = true;
+//     chain_editor_state.recording_active = false;
+//   }
+
+//   if (LCDML.FUNC_loop()) {
+//     const EncoderEvents e = getEncoderEvents(ENC_R);
+//     chain_editor_handle_encoder(e);
+
+//     if (redrawNeededChainEditor) {
+//       chain_editor_draw_ui();
+//       redrawNeededChainEditor = false;
+//     }
+//   }
+//   if (LCDML.FUNC_close()) {
+//     unregisterTouchHandler();
+//     display.fillScreen(COLOR_BACKGROUND);
+//     encoderDir[ENC_R].reset();
+//   }
+// }
+
+// void chain_editor_draw_ui() {
+//   display.fillScreen(COLOR_BACKGROUND);
+
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//   display.setTextSize(2);
+//   setCursor_textGrid(0, 0);
+//   display.print("CHAIN EDITOR");
+
+//   display.setTextSize(1);
+//   setCursor_textGrid(0, 2);
+//   display.print("CHAIN:");
+//   display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
+//   print_formatted_number(chain_editor_state.active_chain, 2);
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//   display.print(" CURSOR:");
+//   display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
+//   print_formatted_number(chain_editor_state.chain_cursor, 2);
+
+//   // Draw the patterns and their steps in a single, compact view
+//   display.setTextSize(1);
+//   for (int i = 0; i < 16; i++) {
+//     setCursor_textGrid_small(0, 5 + i);
+
+//     // Draw cursor
+//     display.setTextColor(i == chain_editor_state.chain_cursor ? RED : GREY1, COLOR_BACKGROUND);
+//     display.print(i == chain_editor_state.chain_cursor ? ">" : " ");
+
+//     print_formatted_number(i, 2);
+//     display.print(":");
+
+//     // Get the current pattern ID from the chain
+//     uint8_t current_pattern_id = seq.chain[chain_editor_state.active_chain][i];
+
+//     // Now, print all 16 steps for this pattern
+//     if (current_pattern_id == 99) {
+//       setCursor_textGrid_small(5, 5 + i);
+//       display.setTextColor(GREY1, COLOR_BACKGROUND);
+//       display.print("--- EMPTY ---");
+//     }
+//     else {
+//       for (int j = 0; j < 16; j++) {
+
+//         setCursor_textGrid_small(5 + j * 3, 5 + i);
+
+//         // Display the step's note data
+//         if (seq.note_data[current_pattern_id][j] == 0) {
+//           display.setTextColor(GREY1, COLOR_BACKGROUND);
+//           display.print("--");
+//         }
+//         else {
+//           display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
+//           print_note_name(seq.note_data[current_pattern_id][j]);
+//         }
+//       }
+//     }
+//   }
+
+//   // Draw buttons
+//   TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
+//   TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
+
+//   if (chain_editor_state.recording_active) {
+//     show(0, 0, 16, "Recording...");
+//   }
+// }
+
+
+// void chain_editor_create_new_chain(uint8_t structure_type) {
+//   const uint8_t* preset_data = nullptr;
+//   switch (structure_type) {
+//   case 0:
+//     preset_data = chain_preset_abab;
+//     break;
+//   case 1:
+//     preset_data = chain_preset_aaab;
+//     break;
+//   case 2:
+//     preset_data = chain_preset_abcd;
+//     break;
+//   default:
+//     return;
+//   }
+
+//   uint8_t pattern_map[16] = { 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
+//   uint8_t next_empty_pattern = 0;
+
+//   for (int i = 0; i < NUM_SEQ_PATTERN; ++i) {
+//     bool is_empty = true;
+//     for (int j = 0; j < 16; ++j) {
+//       if (seq.note_data[i][j] != 0) {
+//         is_empty = false;
+//         break;
+//       }
+//     }
+//     if (is_empty) {
+//       next_empty_pattern = i;
+//       break;
+//     }
+//   }
+
+//   for (int i = 0; i < 16; i++) {
+//     if (preset_data[i] != 99) {
+//       uint8_t template_pattern_index = preset_data[i];
+
+//       if (pattern_map[template_pattern_index] == 99) {
+//         while (next_empty_pattern < NUM_SEQ_PATTERN) {
+//           bool is_occupied = false;
+//           for (int j = 0; j < NUM_CHAINS; j++) {
+//             for (int k = 0; k < 16; k++) {
+//               if (seq.chain[j][k] == next_empty_pattern) {
+//                 is_occupied = true;
+//                 break;
+//               }
+//             }
+//             if (is_occupied) break;
+//           }
+
+//           if (!is_occupied) {
+//             pattern_map[template_pattern_index] = next_empty_pattern;
+//             next_empty_pattern++;
+//             break;
+//           }
+//           next_empty_pattern++;
+//         }
+//       }
+//       seq.chain[chain_editor_state.active_chain][i] = pattern_map[template_pattern_index];
+//     }
+//     else {
+//       seq.chain[chain_editor_state.active_chain][i] = 99;
+//     }
+//   }
+
+//   show(0, 0, 16, "New chain created!");
+// }
+
+
+// void chain_editor_midi_record_func() {
+//   if (chain_editor_state.recording_active) {
+//     if (seq.note_in != 0) {
+//       uint8_t current_pattern = seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step];
+//       if (current_pattern < NUM_SEQ_PATTERN) {
+//         if (chain_editor_state.midi_record_pattern_step < 16) {
+//           seq.note_data[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in;
+//           seq.vel[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in_velocity;
+//           chain_editor_state.midi_record_pattern_step++;
+//           if (chain_editor_state.midi_record_pattern_step >= 16) {
+//             chain_editor_state.midi_record_pattern_step = 0;
+//             chain_editor_state.midi_record_chain_step++;
+//             if (chain_editor_state.midi_record_chain_step >= 16 || seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step] == 99) {
+//               chain_editor_state.recording_active = false;
+//               show(0, 0, 16, "Recording finished.");
+//               chain_editor_draw_ui();
+//             }
+//           }
+//         }
+//       }
+//       seq.note_in = 0;
+//     }
+//   }
+// }
+
+#ifdef GRANULAR
+#include "granular.h"
+
+// Parameter descriptor structure
+struct ParamDesc {
+  const char* name;
+  int16_t min;
+  int16_t max;
+};
+
+// Global granular parameters
+extern granular_params_t granular_params;
+
+
+FLASHMEM void drawGranularWaveform(bool fullRedraw) {
+  uint8_t saved_active_sample = activeSample;
+  const drum_config_t& slot = drum_config[granular_params.sample_note];
+
+ uint16_t plotX = 120;
+uint16_t plotY = 19 + 8;
+  uint16_t plotW = 200;
+   uint16_t plotH = 63 + 8;
+
+  static int16_t lastPosX     = -1;
+  static int16_t lastSpreadL  = -1;
+  static int16_t lastSpreadR  = -1;
+  static int16_t lastDensity  = -1;
+// static int16_t lastGrainL = -1;
+// static int16_t lastGrainR = -1;
+  // recompute X coordinates
+  uint16_t posX = plotX + (granular_params.grain_position * plotW) / 100;
+  uint16_t spreadPixels = (granular_params.spread * plotW) / 100;
+  int16_t spreadL = (int16_t)posX - (spreadPixels / 2);
+  int16_t spreadR = (int16_t)posX + (spreadPixels / 2);
+  if (spreadL < (int16_t)plotX) spreadL = plotX;
+  if (spreadR > (int16_t)(plotX + plotW)) spreadR = plotX + plotW;
+
+  uint8_t numTicks = map(granular_params.density, 0, 100, 1, 10);
+
+  if (fullRedraw) {
+    // full waveform draw
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       plotX, plotX + plotW);
+
+    lastPosX    = -1;
+    lastSpreadL = -1;
+    lastSpreadR = -1;
+    lastDensity = -1;
+  }
+
+
+// // ---- Compute grain size window ----
+// uint16_t grainPixels = (granular_params.grain_size * plotW) / 100;
+// int16_t grainL = posX - grainPixels / 2;
+// int16_t grainR = posX + grainPixels / 2;
+// if (grainL < (int16_t)plotX) grainL = plotX;
+// if (grainR > (int16_t)(plotX + plotW)) grainR = plotX + plotW;
+
+// // ---- Erase old grain window ----
+// if (lastGrainL >= 0 && lastGrainR >= 0) {
+//   int16_t eraseL = min(lastGrainL, grainL);
+//   int16_t eraseR = max(lastGrainR, grainR);
+
+//   display.drawLine(eraseL,160, eraseR-eraseL,160,GREEN);
+//   // drawSampleWaveform(plotX, plotY, plotW, plotH,
+//   //                    (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+//   //                    eraseL, eraseR);
+// }
+
+// ---- Draw new grain window ----
+// if (grainR > grainL) {
+//   display.fillRect(grainL, plotY, grainR - grainL, plotH, GREY3);
+// }
+
+// Save for next pass
+// lastGrainL = grainL;
+// lastGrainR = grainR;
+  // ---- Update spread lines ----
+if (spreadL != lastSpreadL) {
+  if (lastSpreadL >= 0) {
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       lastSpreadL, lastSpreadL + 1);
+  }
+  lastSpreadL = spreadL;
 }
 
-void chain_editor_handle_encoder(const EncoderEvents& e) {
-  if (e.turned) {
-    if (chain_editor_state.current_ui_state == 0) {
-      chain_editor_state.chain_cursor = constrain(chain_editor_state.chain_cursor + e.dir, 0, 15);
-    }
-    else if (chain_editor_state.current_ui_state == 1) {
-      // Edit pattern steps
-      chain_editor_state.pattern_cursor = constrain(chain_editor_state.pattern_cursor + e.dir, 0, 15);
-    }
-    else if (chain_editor_state.current_ui_state == 2) {
-      seq.temp_active_menu = constrain(seq.temp_active_menu + e.dir, 0, 2);
-      show(0, 0, 16, seq.temp_active_menu == 0 ? "ABAB" : (seq.temp_active_menu == 1 ? "AAAB" : "ABCD"));
-    }
-    redrawNeededChainEditor = true;
+if (spreadR != lastSpreadR) {
+  if (lastSpreadR >= 0) {
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       lastSpreadR, lastSpreadR + 1);
   }
-  if (e.pressed) {
-    if (chain_editor_state.current_ui_state == 0) {
-      chain_editor_state.current_ui_state = 1;
-    }
-    else if (chain_editor_state.current_ui_state == 1) {
-      chain_editor_state.current_ui_state = 0;
-    }
-    else if (chain_editor_state.current_ui_state == 2) {
-      chain_editor_create_new_chain(seq.temp_active_menu);
-      chain_editor_state.current_ui_state = 0;
-    }
-    redrawNeededChainEditor = true;
-  }
+  lastSpreadR = spreadR;
 }
 
-FLASHMEM void UI_func_chain_editor(uint8_t param) {
-  if (LCDML.FUNC_setup()) {
-    seq.active_function = 99;
-    registerTouchHandler(handle_touchscreen_chain_editor);
-
-    // Initial full screen setup
-    display.fillScreen(COLOR_BACKGROUND);
-
-    // Draw static header and info
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(2);
-    setCursor_textGrid(0, 0);
-    display.print("CHAIN EDITOR");
-
-    // Draw static buttons
-    TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
-
-    chain_editor_state.active_chain = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
-    if (chain_editor_state.active_chain == 99) {
-      for (int i = 0; i < NUM_CHAINS; i++) {
-        bool is_chain_empty = true;
-        for (int j = 0; j < 16; j++) {
-          if (seq.chain[i][j] != 99) {
-            is_chain_empty = false;
-            break;
-          }
-        }
-        if (is_chain_empty) {
-          chain_editor_state.active_chain = i;
-          break;
-        }
-      }
-      if (chain_editor_state.active_chain == 99) {
-        chain_editor_state.active_chain = 0;
-      }
-    }
-    chain_editor_state.chain_cursor = 0;
-    encoderDir[ENC_R].reset();
-
-    // Set redraw flag to trigger the first draw of dynamic content
-    redrawNeededChainEditor = true;
-    seq.help_text_needs_refresh = true;
-    chain_editor_state.recording_active = false;
+// ---- Update position line ----
+if (posX != lastPosX) {
+  if (lastPosX >= 0) {
+    drawSampleWaveform(plotX, plotY, plotW, plotH,
+                       (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                       lastPosX, lastPosX + 1);
   }
-
-  if (LCDML.FUNC_loop()) {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    chain_editor_handle_encoder(e);
-
-    if (redrawNeededChainEditor) {
-      chain_editor_draw_ui();
-      redrawNeededChainEditor = false;
-    }
-  }
-  if (LCDML.FUNC_close()) {
-    unregisterTouchHandler();
-    display.fillScreen(COLOR_BACKGROUND);
-    encoderDir[ENC_R].reset();
-  }
+  lastPosX = posX;
 }
 
-void chain_editor_draw_ui() {
-  display.fillScreen(COLOR_BACKGROUND);
+// ---- Draw overlays in correct order ----
+if (granular_params.spread > 0) {
+  display.drawLine(spreadL, plotY, spreadL, plotY + plotH, GREY1);
+  display.drawLine(spreadR, plotY, spreadR, plotY + plotH, GREY1);
+}
+display.drawLine(posX, plotY, posX, plotY + plotH, RED);
 
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.setTextSize(2);
-  setCursor_textGrid(0, 0);
-  display.print("CHAIN EDITOR");
-
-  display.setTextSize(1);
-  setCursor_textGrid(0, 2);
-  display.print("CHAIN:");
-  display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  print_formatted_number(chain_editor_state.active_chain, 2);
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(" CURSOR:");
-  display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-  print_formatted_number(chain_editor_state.chain_cursor, 2);
-
-  // Draw the patterns and their steps in a single, compact view
-  display.setTextSize(1);
-  for (int i = 0; i < 16; i++) {
-    setCursor_textGrid_small(0, 5 + i);
-
-    // Draw cursor
-    display.setTextColor(i == chain_editor_state.chain_cursor ? RED : GREY1, COLOR_BACKGROUND);
-    display.print(i == chain_editor_state.chain_cursor ? ">" : " ");
-
-    print_formatted_number(i, 2);
-    display.print(":");
-
-    // Get the current pattern ID from the chain
-    uint8_t current_pattern_id = seq.chain[chain_editor_state.active_chain][i];
-
-    // Now, print all 16 steps for this pattern
-    if (current_pattern_id == 99) {
-      setCursor_textGrid_small(5, 5 + i);
-      display.setTextColor(GREY1, COLOR_BACKGROUND);
-      display.print("--- EMPTY ---");
-    }
-    else {
-      for (int j = 0; j < 16; j++) {
-
-        setCursor_textGrid_small(5 + j * 3, 5 + i);
-
-        // Display the step's note data
-        if (seq.note_data[current_pattern_id][j] == 0) {
-          display.setTextColor(GREY1, COLOR_BACKGROUND);
-          display.print("--");
-        }
-        else {
-          display.setTextColor(COLOR_INSTR, COLOR_BACKGROUND);
-          print_note_name(seq.note_data[current_pattern_id][j]);
-        }
+  // ---- Update density ticks ----
+  if (numTicks != lastDensity) {
+    // erase old ticks
+    if (lastDensity > 0) {
+      for (uint8_t i = 0; i < lastDensity; i++) {
+        uint16_t tickX = plotX + (i * plotW) / lastDensity;
+        drawSampleWaveform(plotX, plotY, plotW, plotH,
+                           (int16_t*)slot.drum_data, slot.len, slot.numChannels,
+                           tickX, tickX + 1);
       }
     }
+    // draw new ticks
+    check_remote();
+    display.fillRect( plotX, plotY + plotH +4,plotW-1,4,GREY3 );
+    for (uint8_t i = 0; i < numTicks; i++) {
+      uint16_t tickX = plotX + (i * plotW) / numTicks;
+      display.drawLine(tickX, plotY + plotH +4, tickX, plotY + plotH+7, GREY1);
+    }
+    lastDensity = numTicks;
   }
 
-  // Draw buttons
-  TouchButton::drawButton(GRID.X[0], GRID.Y[4], "NEW", "", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[1], GRID.Y[4], "EDIT", "", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[2], GRID.Y[4], "MIDI", "REC.", chain_editor_state.recording_active ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[3], GRID.Y[4], "TEMP-", "LATE", TouchButton::BUTTON_NORMAL);
-  TouchButton::drawButton(GRID.X[4], GRID.Y[4], "QUIT", "", TouchButton::BUTTON_NORMAL);
-
-  if (chain_editor_state.recording_active) {
-    show(0, 0, 16, "Recording...");
-  }
+  activeSample = saved_active_sample;
 }
 
 
-void chain_editor_create_new_chain(uint8_t structure_type) {
-  const uint8_t* preset_data = nullptr;
-  switch (structure_type) {
-  case 0:
-    preset_data = chain_preset_abab;
-    break;
-  case 1:
-    preset_data = chain_preset_aaab;
-    break;
-  case 2:
-    preset_data = chain_preset_abcd;
-    break;
-  default:
-    return;
+
+void granular_update_single_setting() {
+  // Update the granular synth with the current settings
+  // This would be called when parameters change
+}
+
+// Touch handler function without parameters
+FLASHMEM static void handle_touchscreen_granular() {
+  // Handle touch events for the granular UI
+  // You'll need to implement this based on your touchscreen handling
+}
+
+// Static functions for parameter access
+FLASHMEM static int16_t granular_get_param_value(uint8_t param_index) {
+  switch(param_index) {
+    case 0: return granular_params.sample_note;
+    case 1: return granular_params.grain_size;
+    case 2: return granular_params.grain_position;
+    case 3: return granular_params.semitones;
+    case 4: return granular_params.volume;
+    case 5: return granular_params.density;
+    case 6: return granular_params.spread;
+    case 7: return granular_params.pitch_random;
+    case 8: return granular_params.filter_mode;
+    case 9: return granular_params.filter_freq;
+    case 10: return granular_params.filter_resonance;
+    case 11: return granular_params.rev_send;
+    case 12: return granular_params.delay_send_1;
+    case 13: return granular_params.delay_send_2;
+    case 14: return granular_params.pan;
+    case 15: return granular_params.midi_channel;
+    case 16: return granular_params.active;
+    default: return 0;
   }
+}
 
-  uint8_t pattern_map[16] = { 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99 };
-  uint8_t next_empty_pattern = 0;
-
-  for (int i = 0; i < NUM_SEQ_PATTERN; ++i) {
-    bool is_empty = true;
-    for (int j = 0; j < 16; ++j) {
-      if (seq.note_data[i][j] != 0) {
-        is_empty = false;
-        break;
-      }
-    }
-    if (is_empty) {
-      next_empty_pattern = i;
+FLASHMEM void granular_set_param_value(uint8_t param_index, int16_t value) {
+  switch(param_index) {
+    case 0: 
+      granular_params.sample_note = value; 
+      granular_update_single_setting();
       break;
-    }
+    case 1: granular_params.grain_size = value; break;
+    case 2: granular_params.grain_position = value; break;
+    case 3: granular_params.semitones = value; break;
+    case 4: granular_params.volume = value; break;
+    case 5: granular_params.density = value; break;
+    case 6: granular_params.spread = value; break;
+    case 7: granular_params.pitch_random = value; break;
+    case 8: granular_params.filter_mode = value; break;
+    case 9: granular_params.filter_freq = value; break;
+    case 10: granular_params.filter_resonance = value; break;
+    case 11: granular_params.rev_send = value; break;
+    case 12: granular_params.delay_send_1 = value; break;
+    case 13: granular_params.delay_send_2 = value; break;
+    case 14: granular_params.pan = value; break;
+    case 15: granular_params.midi_channel = value; break;
+    case 16: granular_params.active = value; break;
   }
-
-  for (int i = 0; i < 16; i++) {
-    if (preset_data[i] != 99) {
-      uint8_t template_pattern_index = preset_data[i];
-
-      if (pattern_map[template_pattern_index] == 99) {
-        while (next_empty_pattern < NUM_SEQ_PATTERN) {
-          bool is_occupied = false;
-          for (int j = 0; j < NUM_CHAINS; j++) {
-            for (int k = 0; k < 16; k++) {
-              if (seq.chain[j][k] == next_empty_pattern) {
-                is_occupied = true;
-                break;
-              }
-            }
-            if (is_occupied) break;
-          }
-
-          if (!is_occupied) {
-            pattern_map[template_pattern_index] = next_empty_pattern;
-            next_empty_pattern++;
-            break;
-          }
-          next_empty_pattern++;
-        }
-      }
-      seq.chain[chain_editor_state.active_chain][i] = pattern_map[template_pattern_index];
-    }
-    else {
-      seq.chain[chain_editor_state.active_chain][i] = 99;
-    }
-  }
-
-  show(0, 0, 16, "New chain created!");
+  granular_update_single_setting();
 }
 
+// Create individual functions for each parameter
+#define GRANULAR_PARAM_FUNCTIONS(index) \
+static int16_t granular_param_##index##_getter(Editor* editor) { \
+  return granular_get_param_value(index); \
+} \
+static void granular_param_##index##_setter(Editor* editor, int16_t value) { \
+  granular_set_param_value(index, value); \
+} \
+static void granular_param_##index##_renderer(Editor* editor, bool refresh) { \
+  setCursor_textGrid_small(editor->x, editor->y); \
+  setModeColor(editor->select_id); \
+  display.printf("%s: ", editor->name); \
+  if (index == 0) { \
+    if (granular_params.sample_note < NUM_DRUMSET_CONFIG && drum_config[granular_params.sample_note].name[0] != '\0') { \
+      char size_str[16]; \
+      if (drum_config[granular_params.sample_note].len < 1000) { \
+        sprintf(size_str, "%lu B", (unsigned long)drum_config[granular_params.sample_note].len); \
+      } else if (drum_config[granular_params.sample_note].len < 1000000) { \
+        sprintf(size_str, "%.1f KB", drum_config[granular_params.sample_note].len / 1024.0f); \
+      } else { \
+        sprintf(size_str, "%.1f MB", drum_config[granular_params.sample_note].len / 1048576.0f); \
+      } \
+      display.printf("%02d: %s (%s)", granular_params.sample_note, drum_config[granular_params.sample_note].name, size_str); \
+    } else { \
+      display.printf("%02d: No Sample", granular_params.sample_note); \
+    } \
+  } else if (index == 8) { \
+    const char* modes[] = {"Off", "LP", "BP", "HP"}; \
+    display.print(modes[granular_params.filter_mode]); \
+  } else if (index == 15) { \
+    if (granular_params.midi_channel == 17) { \
+      display.print("Omni"); \
+    } else { \
+      display.print(granular_params.midi_channel); \
+    } \
+  } else if (index == 16) { \
+    display.print(granular_params.active ? "ON" : "OFF"); \
+  } else { \
+    display.printf("%d%%", granular_get_param_value(index)); \
+  } \
+}
 
-void chain_editor_midi_record_func() {
-  if (chain_editor_state.recording_active) {
-    if (seq.note_in != 0) {
-      uint8_t current_pattern = seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step];
-      if (current_pattern < NUM_SEQ_PATTERN) {
-        if (chain_editor_state.midi_record_pattern_step < 16) {
-          seq.note_data[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in;
-          seq.vel[current_pattern][chain_editor_state.midi_record_pattern_step] = seq.note_in_velocity;
-          chain_editor_state.midi_record_pattern_step++;
-          if (chain_editor_state.midi_record_pattern_step >= 16) {
-            chain_editor_state.midi_record_pattern_step = 0;
-            chain_editor_state.midi_record_chain_step++;
-            if (chain_editor_state.midi_record_chain_step >= 16 || seq.chain[chain_editor_state.active_chain][chain_editor_state.midi_record_chain_step] == 99) {
-              chain_editor_state.recording_active = false;
-              show(0, 0, 16, "Recording finished.");
-              chain_editor_draw_ui();
-            }
-          }
-        }
-      }
-      seq.note_in = 0;
+// Generate functions for all parameters
+GRANULAR_PARAM_FUNCTIONS(0)
+GRANULAR_PARAM_FUNCTIONS(1)
+GRANULAR_PARAM_FUNCTIONS(2)
+GRANULAR_PARAM_FUNCTIONS(3)
+GRANULAR_PARAM_FUNCTIONS(4)
+GRANULAR_PARAM_FUNCTIONS(5)
+GRANULAR_PARAM_FUNCTIONS(6)
+GRANULAR_PARAM_FUNCTIONS(7)
+GRANULAR_PARAM_FUNCTIONS(8)
+GRANULAR_PARAM_FUNCTIONS(9)
+GRANULAR_PARAM_FUNCTIONS(10)
+GRANULAR_PARAM_FUNCTIONS(11)
+GRANULAR_PARAM_FUNCTIONS(12)
+GRANULAR_PARAM_FUNCTIONS(13)
+GRANULAR_PARAM_FUNCTIONS(14)
+GRANULAR_PARAM_FUNCTIONS(15)
+GRANULAR_PARAM_FUNCTIONS(16)
+
+FLASHMEM void UI_func_granular(uint8_t param)
+{
+  // Define parameter descriptors for granular synth
+  static const ParamDesc granular_param_descs[] = {
+    {"SAMPLE", 0, NUM_DRUMSET_CONFIG - 1},
+    {"GRAIN SIZE", 0, 100},
+    {"POSITION", 0, 100},
+    {"PITCH", 0, 100},
+    {"VOLUME", 0, 100},
+    {"DENSITY", 0, 100},
+    {"SPREAD", 0, 100},
+    {"PITCH RND", 0, 100},
+    {"FILTER MODE", 0, 3},
+    {"FILTER FREQ", 0, 100},
+    {"FILTER RESO", 0, 100},
+    {"REVERB", 0, 100},
+    {"DELAY1", 0, 100},
+    {"DELAY2", 0, 100},
+    {"PAN", 0, 100},
+    {"MIDI CH", 0, 17},
+    {"ACTIVE", 0, 1}
+  };
+  
+  const int num_granular_params = sizeof(granular_param_descs) / sizeof(granular_param_descs[0]);
+
+  // Arrays of function pointers for each parameter
+  static int16_t (*getters[])(Editor*) = {
+    granular_param_0_getter, granular_param_1_getter, granular_param_2_getter, granular_param_3_getter,
+    granular_param_4_getter, granular_param_5_getter, granular_param_6_getter, granular_param_7_getter,
+    granular_param_8_getter, granular_param_9_getter, granular_param_10_getter, granular_param_11_getter,
+    granular_param_12_getter, granular_param_13_getter, granular_param_14_getter, granular_param_15_getter,
+    granular_param_16_getter
+  };
+  
+  static void (*setters[])(Editor*, int16_t) = {
+    granular_param_0_setter, granular_param_1_setter, granular_param_2_setter, granular_param_3_setter,
+    granular_param_4_setter, granular_param_5_setter, granular_param_6_setter, granular_param_7_setter,
+    granular_param_8_setter, granular_param_9_setter, granular_param_10_setter, granular_param_11_setter,
+    granular_param_12_setter, granular_param_13_setter, granular_param_14_setter, granular_param_15_setter,
+    granular_param_16_setter
+  };
+  
+  static void (*renderers[])(Editor*, bool) = {
+    granular_param_0_renderer, granular_param_1_renderer, granular_param_2_renderer, granular_param_3_renderer,
+    granular_param_4_renderer, granular_param_5_renderer, granular_param_6_renderer, granular_param_7_renderer,
+    granular_param_8_renderer, granular_param_9_renderer, granular_param_10_renderer, granular_param_11_renderer,
+    granular_param_12_renderer, granular_param_13_renderer, granular_param_14_renderer, granular_param_15_renderer,
+    granular_param_16_renderer
+  };
+
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    registerTouchHandler(handle_touchscreen_granular);
+    ui.reset();
+    ui.clear();
+
+    // Header
+    ui.setCursor(0, 0);
+    ui.addEditor((const char*)F("GRANULAR SYNTH"), 0, 0,
+      [](Editor* editor) -> int16_t { return 0; },
+      [](Editor* editor, int16_t value) { /* No-op */ },
+      [](Editor* editor, bool refresh) {
+        setCursor_textGrid_small(editor->x, editor->y);
+        display.setTextColor(RED, COLOR_BACKGROUND);
+        display.print("GRANULAR SYNTH");
+      });
+
+    // Draw waveform display
+    drawGranularWaveform(true);
+
+    // Sample selection - placed below the waveform
+    ui.setCursor(0, 11);
+    ui.addEditor(granular_param_descs[0].name, granular_param_descs[0].min, granular_param_descs[0].max,
+      getters[0], setters[0], renderers[0]);
+
+    // First column - Main parameters (start below sample selection)
+    int y_pos = 13;
+    ui.setCursor(0, y_pos);
+    for (uint8_t i = 1; i < 6; i++) {
+      ui.addEditor(granular_param_descs[i].name, granular_param_descs[i].min, granular_param_descs[i].max,
+        getters[i], setters[i], renderers[i]);
+      y_pos++;
+    }
+
+    // Second column - Filter and effects
+    y_pos = 13;
+    ui.setCursor(20, y_pos);
+    for (uint8_t i = 6; i < 11; i++) {
+      ui.addEditor(granular_param_descs[i].name, granular_param_descs[i].min, granular_param_descs[i].max,
+        getters[i], setters[i], renderers[i]);
+      y_pos++;
+    }
+
+    // Third column - MIDI and other settings
+    y_pos = 13;
+    ui.setCursor(40, y_pos);
+    for (uint8_t i = 11; i < num_granular_params; i++) {
+      ui.addEditor(granular_param_descs[i].name, granular_param_descs[i].min, granular_param_descs[i].max,
+        getters[i], setters[i], renderers[i]);
+      y_pos++;
     }
   }
+  
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    ui.handle_input();
+
+  static uint8_t last_sample_index = granular_params.sample_note;
+  static int last_position = -1;
+  static int last_spread   = -1;
+  static int last_density  = -1;
+
+  if (last_position     != granular_params.grain_position ||
+      last_spread       != granular_params.spread ||
+      last_density      != granular_params.density) {
+
+    drawGranularWaveform(false);
+    
+    last_position     = granular_params.grain_position;
+    last_spread       = granular_params.spread;
+    last_density      = granular_params.density;
+  }
+  else if (last_sample_index != granular_params.sample_note )
+  {
+     drawGranularWaveform(true);
+     last_sample_index = granular_params.sample_note;
+  }
 }
+  if (LCDML.FUNC_close()) // ****** CLOSE *********
+  {
+    unregisterTouchHandler();
+    ui.clear();
+  }
+}
+
+#endif

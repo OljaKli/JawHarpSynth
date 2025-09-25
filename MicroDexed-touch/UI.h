@@ -25,7 +25,12 @@
 #ifndef _UI_H_
 #define _UI_H_
 
+#ifdef GRANULAR
 #define _LCDML_DISP_cnt 69 // max number of menu items (must match)
+#else
+#define _LCDML_DISP_cnt 68 // max number of menu items (must match)
+#endif
+
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1500  // 60s @ 25Hz rate
 #define SCREENSAVER_FADE_TIME 25    // 1s @ 25Hz rate
@@ -121,7 +126,7 @@ void UI_func_test_touchscreen(uint8_t param);
 void UI_func_sound_intensity(uint8_t param);
 void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
-
+void UI_func_granular(uint8_t param);
 
 void setup_ui(void);
 #if defined SMFPLAYER

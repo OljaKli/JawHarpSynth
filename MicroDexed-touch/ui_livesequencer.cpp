@@ -147,6 +147,24 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b) { // drawHandler
       // Only highlight if this is the currently selected mode
       b->draw("GRID", "EDITOR", data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+
+      display.setTextSize(1);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      if (data.useGridSongMode)
+      {
+        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 22);
+        display.print(F("ARRANGE THE PATTERNS/LAYERS IN YOUR SONG "));
+        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 23);
+        display.print(F("WITH A GLOBAL TOUCH GRID/MATRIX STRUCTURE"));
+      }
+      else
+      {
+        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 22);
+        display.print(F("RECORD MUTE AUTOMATION IN REAL TIME. YOU  "));
+        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 23);
+        display.print(F("ALSO CAN RECORD GLOBAL, LINEAR MIDI TRACKS"));
+      }
+
     },
     [this](auto* b) { // clickedHandler
       data.useGridSongMode = true;
@@ -156,15 +174,15 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       }
     }));
 
-  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[0], GRID.Y[4],
-    [](auto* b) { // drawHandler
-      b->draw("CURRENT", "MODE", TouchButton::BUTTON_LABEL);
-    }));
+  // toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[0], GRID.Y[4],
+  //   [](auto* b) { // drawHandler
+  //     b->draw("CURRENT", "MODE", TouchButton::BUTTON_LABEL);
+  //   }));
 
-  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[1], GRID.Y[4],
-    [this](auto* b) { // drawHandler
-      b->draw(data.useGridSongMode ? "GRID" : "LIVE", data.useGridSongMode ? "EDITOR" : "RECORD", TouchButton::BUTTON_LABEL);
-    }));
+  // toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[1], GRID.Y[4],
+  //   [this](auto* b) { // drawHandler
+  //     b->draw(data.useGridSongMode ? "GRID" : "LIVE", data.useGridSongMode ? "EDITOR" : "RECORD", TouchButton::BUTTON_LABEL);
+  //   }));
 
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
     [](auto* b) { // drawHandler
@@ -1391,12 +1409,12 @@ FLASHMEM void check_web_remote() {
 }
 
 
-FLASHMEM void UI_LiveSequencer::slow_rect(uint16_t x, uint8_t y,uint16_t color)
+FLASHMEM void UI_LiveSequencer::slow_rect(uint16_t x, uint8_t y, uint16_t color)
 {
-  display.drawLine(x, y, x + GRID_SONG_CELL_WIDTH+1, y, color);
-  display.drawLine(x, y, x, y + GRID_SONG_CELL_HEIGHT-1, color);
-  display.drawLine(x, y + GRID_SONG_CELL_HEIGHT, x + GRID_SONG_CELL_WIDTH+1, y + GRID_SONG_CELL_HEIGHT, color);
-  display.drawLine(x + GRID_SONG_CELL_WIDTH, y, x + GRID_SONG_CELL_WIDTH, y + GRID_SONG_CELL_HEIGHT-1, color);
+  display.drawLine(x, y, x + GRID_SONG_CELL_WIDTH + 1, y, color);
+  display.drawLine(x, y, x, y + GRID_SONG_CELL_HEIGHT - 1, color);
+  display.drawLine(x, y + GRID_SONG_CELL_HEIGHT, x + GRID_SONG_CELL_WIDTH + 1, y + GRID_SONG_CELL_HEIGHT, color);
+  display.drawLine(x + GRID_SONG_CELL_WIDTH, y, x + GRID_SONG_CELL_WIDTH, y + GRID_SONG_CELL_HEIGHT - 1, color);
 }
 
 FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
@@ -1476,7 +1494,7 @@ FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
       if (isSelectedStep && (track == data.selectedGridTrack)) {
         check_web_remote();
 
-         display.drawRect(x, y, GRID_SONG_CELL_WIDTH + 1, GRID_SONG_CELL_HEIGHT + 1, RED);
+        display.drawRect(x, y, GRID_SONG_CELL_WIDTH + 1, GRID_SONG_CELL_HEIGHT + 1, RED);
         //slow_rect(x, y, RED);
 
         // check_web_remote();

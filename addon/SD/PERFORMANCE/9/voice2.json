@@ -6,7 +6,7 @@
   "highest_note": 108,
   "transpose": 24,
   "tune": 100,
-  "sound_intensity": 68,
+  "sound_intensity": 40,
   "pan": 20,
   "polyphony": 1,
   "velocity_level": 67,
@@ -30,5 +30,6 @@
   "portamento_glissando": 0,
   "portamento_time": 0,
   "op_enabled": 63,
-  "midi_channel": 5
+  "midi_channel": 5,
+  "sidechain_send": 0
 }

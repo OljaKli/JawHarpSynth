@@ -19,5 +19,7 @@
   "delay_1": 0,
   "delay_2": 12,
   "midi": 15,
-  "pan": 0
+  "pan": 0,
+  "sidechain_send": 0,
+  "name": "-FROM PERF-"
 }

@@ -269,23 +269,18 @@ FLASHMEM void LiveSequencer::refreshSongLength(void) {
 }
 
 FLASHMEM void LiveSequencer::onSongStopped(void) {
-  if (data.recordedToSong) {
-    data.songLayerCount++;
-    ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawSongLayers);
-    data.recordedToSong = false;
-
-
-    // Reset grid step when song stops
-    if (data.useGridSongMode) {
-      data.currentGridStep = 0;
-     // data.redraw_grid_header = true;
-     ui_liveSeq->gridNeedsRedraw=true;
-    }
-    refreshSongLength();
-    applySongStartLayerMutes();
+  // Reset grid step when song stops
+  if (data.useGridSongMode) {
+    data.currentGridStep = 0;
+    // data.redraw_grid_header = true;
+    ui_liveSeq->gridNeedsRedraw = true;
   }
-
-
+  else
+    if (data.recordedToSong) {
+      data.songLayerCount++;
+      ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawSongLayers);
+      data.recordedToSong = false;
+    }
 
   refreshSongLength();
   applySongStartLayerMutes();
@@ -622,98 +617,96 @@ FLASHMEM void LiveSequencer::loadNextEvent(int timeMs) {
 }
 
 FLASHMEM void LiveSequencer::playNextEvent(void) {
-  if (playIterator != data.eventsList.end()) {
-    bool isMuted = false;
 
-    // Apply grid-based muting to ALL events when in grid song mode
+  bool isMuted = false;
+  if (playIterator->source == EVENT_PATTERN) {
     if (data.useGridSongMode && !data.seq_started_from_pattern_mode) {
-      // mute if the grid cell is NOT active
       isMuted = !data.gridStep(data.currentGridStep, playIterator->track, playIterator->layer);
-
     }
     else {
-      // Original layer mute logic for non-grid modes
       isMuted = (data.tracks[playIterator->track].layerMutes & (1 << playIterator->layer));
     }
+  }
 
-    if (isMuted) {
-      // Just advance to next event without playing ANYTHING
 
-      // Advance iterator and schedule next event
-      if (++playIterator != data.eventsList.end()) {
-        const unsigned long now = ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
-        int timeToNextEvent = timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
-        loadNextEvent(timeToNextEvent);
-      }
-      return; // EXIT WITHOUT PROCESSING THE MUTED EVENT
-    }
+  if (isMuted) {
+    // Just advance to next event without playing ANYTHING
 
-    // Only process events that are NOT muted
-    const midi::Channel channel = data.tracks[playIterator->track].channel;
-    const uint8_t device = data.trackSettings[playIterator->track].device;
-
-    switch (playIterator->event) {
-    case midi::PitchBend:
-      midiPitchBend(toPitchBend(playIterator->note_in, playIterator->note_in_velocity), channel, device);
-      data.tracks[playIterator->track].pitchBend[playIterator->layer] = { true, playIterator->note_in_velocity };
-      break;
-
-    case midi::ControlChange:
-      midiControlChange(playIterator->note_in, playIterator->note_in_velocity, channel, device);
-      switch (playIterator->note_in) {
-      case AutomationType::TYPE_MUTE_ON:
-      case AutomationType::TYPE_MUTE_OFF:
-        const uint8_t muteLayer = playIterator->note_in_velocity;
-#ifdef DEBUG
-        DBG_LOG(printf("track %i layer %i %s\n", muteLayer, playIterator->track, playIterator->note_in == AutomationType::TYPE_MUTE_ON ? "MUTE" : "UNMUTE"));
-#endif
-        setLayerMuted(playIterator->track, muteLayer, playIterator->note_in == AutomationType::TYPE_MUTE_ON);
-        break;
-      }
-      break;
-
-    case midi::NoteOff:
-      if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
-        activeArpKeys.erase(playIterator->note_in);
-        data.arpSettings.keysChanged = true;
-      }
-      else {
-        const auto it = data.tracks[playIterator->track].activeNotes[playIterator->layer].find(playIterator->note_in);
-        if (it != data.tracks[playIterator->track].activeNotes[playIterator->layer].end()) {
-          data.tracks[playIterator->track].activeNotes[playIterator->layer].erase(it);
-        }
-        handleNoteOff(channel, playIterator->note_in, playIterator->note_in_velocity, device);
-      }
-      break;
-
-    case midi::NoteOn:
-      if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
-        activeArpKeys.insert(playIterator->note_in);
-        data.arpSettings.keysChanged = true;
-      }
-      else {
-        data.tracks[playIterator->track].activeNotes[playIterator->layer].insert(playIterator->note_in);
-        const uint8_t velocitySetting = data.trackSettings[playIterator->track].velocityLevel;
-        const uint8_t velocityActive = (velocitySetting == 0) ? playIterator->note_in_velocity : velocitySetting * 1.27f;
-        handleNoteOn(channel, playIterator->note_in, velocityActive, device);
-      }
-      break;
-
-    default:
-      break;
-    }
-
-    if (playIterator->source == EVENT_SONG) {
-      playIterator->event = midi::InvalidType;
-    }
-
+    // Advance iterator and schedule next event
     if (++playIterator != data.eventsList.end()) {
       const unsigned long now = ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
       int timeToNextEvent = timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
       loadNextEvent(timeToNextEvent);
     }
+    return; // EXIT WITHOUT PROCESSING THE MUTED EVENT
+  }
+
+  // Only process events that are NOT muted
+  const midi::Channel channel = data.tracks[playIterator->track].channel;
+  const uint8_t device = data.trackSettings[playIterator->track].device;
+
+  switch (playIterator->event) {
+  case midi::PitchBend:
+    midiPitchBend(toPitchBend(playIterator->note_in, playIterator->note_in_velocity), channel, device);
+    data.tracks[playIterator->track].pitchBend[playIterator->layer] = { true, playIterator->note_in_velocity };
+    break;
+
+  case midi::ControlChange:
+    midiControlChange(playIterator->note_in, playIterator->note_in_velocity, channel, device);
+    switch (playIterator->note_in) {
+    case AutomationType::TYPE_MUTE_ON:
+    case AutomationType::TYPE_MUTE_OFF:
+      const uint8_t muteLayer = playIterator->note_in_velocity;
+#ifdef DEBUG
+      DBG_LOG(printf("track %i layer %i %s\n", muteLayer, playIterator->track, playIterator->note_in == AutomationType::TYPE_MUTE_ON ? "MUTE" : "UNMUTE"));
+#endif
+      setLayerMuted(playIterator->track, muteLayer, playIterator->note_in == AutomationType::TYPE_MUTE_ON);
+      break;
+    }
+    break;
+
+  case midi::NoteOff:
+    if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
+      activeArpKeys.erase(playIterator->note_in);
+      data.arpSettings.keysChanged = true;
+    }
+    else {
+      const auto it = data.tracks[playIterator->track].activeNotes[playIterator->layer].find(playIterator->note_in);
+      if (it != data.tracks[playIterator->track].activeNotes[playIterator->layer].end()) {
+        data.tracks[playIterator->track].activeNotes[playIterator->layer].erase(it);
+      }
+      handleNoteOff(channel, playIterator->note_in, playIterator->note_in_velocity, device);
+    }
+    break;
+
+  case midi::NoteOn:
+    if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
+      activeArpKeys.insert(playIterator->note_in);
+      data.arpSettings.keysChanged = true;
+    }
+    else {
+      data.tracks[playIterator->track].activeNotes[playIterator->layer].insert(playIterator->note_in);
+      const uint8_t velocitySetting = data.trackSettings[playIterator->track].velocityLevel;
+      const uint8_t velocityActive = (velocitySetting == 0) ? playIterator->note_in_velocity : velocitySetting * 1.27f;
+      handleNoteOn(channel, playIterator->note_in, velocityActive, device);
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  if (playIterator->source == EVENT_SONG) {
+    playIterator->event = midi::InvalidType;
+  }
+
+  if (++playIterator != data.eventsList.end()) {
+    const unsigned long now = ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
+    int timeToNextEvent = timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
+    loadNextEvent(timeToNextEvent);
   }
 }
+
 
 inline uint32_t LiveSequencer::timeToMs(uint8_t patternNumber, uint16_t patternMs) const {
   return (patternNumber * data.patternLengthMs) + patternMs;
@@ -1023,9 +1016,9 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
     activeArps.clear();
     data.arpSettings.notePlayCount = 0;
     data.arpSettings.delayToNextArpOnMs = 0;
-if (data.useGridSongMode )
-  ui_liveSeq->onGridStepChanged();
-
+    if (data.useGridSongMode) {
+      ui_liveSeq->onGridStepChanged();
+    }
     if (data.isSongMode && data.isRecording && !data.useGridSongMode) {
       // save current song start layer mutes
       for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
@@ -1045,9 +1038,9 @@ if (data.useGridSongMode )
 
         // Trigger UI redraw 
        // data.redraw_grid_header = true;
-        ui_liveSeq->gridNeedsRedraw=true;
+        ui_liveSeq->gridNeedsRedraw = true;
       }
-      else  if (data.isSongMode) {
+      else  if (data.isSongMode && !data.useGridSongMode) {
         // Traditional song mode
         if ((data.isRecording == false) && (data.songPatternCount == data.lastSongEventPattern)) {
           data.songPatternCount = 0;

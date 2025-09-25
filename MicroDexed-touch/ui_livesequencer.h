@@ -22,11 +22,7 @@ public:
     drawCpuLoad = (1 << 9)
   };
 
-  //  void setGridNeedsRedraw(bool needsRedraw) { gridNeedsRedraw = needsRedraw; }
-  // bool getGridNeedsRedraw() const { return gridNeedsRedraw; }
-  
-
-  UI_LiveSequencer(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
+  UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d);
   void init(void);
   void showDirectMappingWarning(uint8_t inChannel);
   void processLCDM(void);
@@ -38,7 +34,7 @@ public:
   static void openScreen(LCDML_FuncPtr_pu8 screen, uint8_t p_param = 0);
   void updateTrackChannelSetupButtons(uint8_t track);
   bool gridNeedsRedraw = true; // Track if grid needs redrawing
-void onGridStepChanged(void);  // Called when grid step changes to trigger redraw
+  void onGridStepChanged(void);  // Called when grid step changes to trigger redraw
 
 private:
   uint16_t msCount = 0;
@@ -49,7 +45,7 @@ private:
   uint8_t trackOffset = 0;
   struct ProgressBar {
     bool currentPhase;
-    uint8_t drawnLength;  
+    uint8_t drawnLength;
   };
   ProgressBar barPattern;
   ProgressBar barTotal;
@@ -63,21 +59,21 @@ private:
   bool isLayerViewActive = false;
 
   ActiveValue currentValue = { nullptr, nullptr };
-  TouchButton *applyPatternLength;
+  TouchButton* applyPatternLength;
 
   std::vector<TouchButton*> buttonsToolSelect;
 
-  TouchButton *lastNoteLabel;
+  TouchButton* lastNoteLabel;
 
   struct SelectedTrackSetup {
-    TouchButton *label;
+    TouchButton* label;
     uint8_t device;
     uint8_t instrument;
     uint8_t quantizeDenom;
     uint8_t velocity;
   } selectedTrackSetup;
 
- // instrument order in GUI in track instrument config, free to change
+  // instrument order in GUI in track instrument config, free to change
   static constexpr std::array<LiveSequencer::InternalInstrument, 12> instrumentToInstrumentID = {
     LiveSequencer::INSTR_DRUM,
     LiveSequencer::INSTR_DX1,
@@ -97,7 +93,7 @@ private:
 
   UI_LiveSequencer* instance;
   LiveSequencer& liveSeq;
-  LiveSequencer::LiveSeqData &data;
+  LiveSequencer::LiveSeqData& data;
 
   uint8_t currentPage = 0; // PagePattern, PageSong or PageTools
   uint8_t currentTools = 0;
@@ -105,7 +101,7 @@ private:
 
   uint8_t guiCounter = 0;
   bool blinkPhase = 0;
-  
+
   uint8_t trackLayerMode = LiveSequencer::LAYER_MUTE;
   uint8_t songLayerMode = LiveSequencer::LAYER_MUTE;
 
@@ -127,7 +123,7 @@ private:
 
   std::vector<TouchButton*> toolsPages[TOOLS_NUM];
   std::vector<TouchButton*> trackButtons;
- 
+
   static constexpr uint8_t BAR_WIDTH = 104; // 2 * BUTTON_WIDTH + spacing
   static constexpr uint8_t BAR_HEIGHT = 3;
   static constexpr uint8_t BUTTON_SPACING = 4;  // center in screen
@@ -138,11 +134,11 @@ private:
   void refreshToolsElements(Tools tools);
   bool isModeToolActive(void);
   void redrawScreen(void);
-  void drawGUI(uint16_t &guiFlags);
-  void processBar(const float progressTotal, const uint16_t y, ProgressBar &bar, const uint16_t color);
+  void drawGUI(uint16_t& guiFlags);
+  void processBar(const float progressTotal, const uint16_t y, ProgressBar& bar, const uint16_t color);
   static std::string getArpModeName(uint8_t mode);
   void drawLayerButton(const bool horizontal, uint8_t layerMode, int layer, const bool layerEditActive, TouchButton::Color color, uint16_t x, uint16_t y);
-  void handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color &color);
+  void handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color& color);
   void resetProgressBars(void);
   void drawBar(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
   void drawTrackSubtext(uint8_t track);
@@ -152,33 +148,30 @@ private:
   bool showingGridSongEditor = false;
 
   static constexpr uint8_t GRID_SONG_COLS = 12; // All 12 tracks
-    static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps
-    
-    // Calculate cell dimensions based on available space
-    static constexpr uint8_t GRID_SONG_CELL_WIDTH = (320  - (GRID_SONG_COLS - 1)) / GRID_SONG_COLS;
-    static constexpr uint8_t GRID_SONG_CELL_HEIGHT = (154 - (GRID_SONG_ROWS - 1)) / GRID_SONG_ROWS; 
+  static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps
 
-  const uint8_t gridStartX = 19; 
+  // Calculate cell dimensions based on available space
+  static constexpr uint8_t GRID_SONG_CELL_WIDTH = (320 - (GRID_SONG_COLS - 1)) / GRID_SONG_COLS;
+  static constexpr uint8_t GRID_SONG_CELL_HEIGHT = (154 - (GRID_SONG_ROWS - 1)) / GRID_SONG_ROWS;
+
+  const uint8_t gridStartX = 19;
   const uint8_t gridStartY = 12;
 
-   std::vector<TouchButton*> gridLayerButtons;
-     std::vector<TouchButton*> gridControlButtons; 
-    void drawGridSongEditor(void);
-    void handleGridSongTouch(void);
-    void updateGridSongLayerButtons(void);
-    void toggleGridSongLayer(uint8_t layer);
-     void clearGridCell(void); 
-    void fillGridCell(void); 
-    void copyFromAbove(void); 
-    void scrollToTop(void); 
-    void scrollUp(void); 
-    void scrollDown(void); 
-    void slow_rect(uint16_t x, uint8_t y,uint16_t color);
+  std::vector<TouchButton*> gridLayerButtons;
+  std::vector<TouchButton*> gridControlButtons;
+  void drawGridSongEditor(void);
+  void handleGridSongTouch(void);
+  void updateGridSongLayerButtons(void);
+  void toggleGridSongLayer(uint8_t layer);
+  void clearGridCell(void);
+  void fillGridCell(void);
+  void copyFromAbove(void);
+  void scrollToTop(void);
+  void scrollUp(void);
+  void scrollDown(void);
+  void slow_rect(uint16_t x, uint8_t y, uint16_t color);
 
-
-     bool inGridEditor = false; // Track if we're in grid editor mode
-    
-
+  bool inGridEditor = false; // Track if we're in grid editor mode
 
 };
 
