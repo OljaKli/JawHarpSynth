@@ -676,6 +676,27 @@ FLASHMEM void print_file_manager_buttons()
 }
 
 
+extern void play_sample(uint8_t note);
+extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL);
+#include "drums.h"
+extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
+extern uint8_t current_played_pitched_sample;
+
+ #ifdef GRANULAR
+ #include "granular.h"
+ extern granular_params_t granular_params;
+
+FLASHMEM  void handle_touchscreen_granular() {
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
+  {
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_RED);
+    play_sample(granular_params.sample_note);
+    delay(60);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+  }
+}
+#endif
+
 FLASHMEM void print_file_manager_active_border()
 {
   // active_window   0 = left window (SDCARD) , 1 = PSRAM OR SDCARD2
@@ -951,11 +972,6 @@ FLASHMEM void handle_touchscreen_custom_mappings()
   }
 }
 
-extern void play_sample(uint8_t note);
-extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL);
-#include "drums.h"
-extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
-extern uint8_t current_played_pitched_sample;
 
 #ifdef COMPILE_FOR_PSRAM
 extern void PlayOnly();

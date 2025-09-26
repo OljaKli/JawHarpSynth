@@ -1,0 +1,177 @@
+#ifndef UI_LIVESEQ_PIANOROLL_H
+#define UI_LIVESEQ_PIANOROLL_H
+
+#include <stdio.h>
+#include "editableValue.h"
+#include "touchbutton.h"
+#include "valuebutton.h"
+#include "livesequencer.h"
+#include "touchbutton.h"
+#include "config.h"
+#include <set>
+
+void UI_func_liveseq_graphic(uint8_t param);
+
+class UI_LiveSeq_PianoRoll {
+public:
+  UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
+  void processLCDM(uint8_t param);
+  void handleTouchScreen(void);
+  void handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity);
+  FLASHMEM void onEventsChanged(void);
+
+private:
+  std::set<uint8_t> keysPressed;
+  enum ViewMode {
+    VIEW_ZOOM_X,
+    VIEW_SCROLL_X,
+    VIEW_ZOOM_Y,
+    VIEW_SCROLL_Y,
+    VIEW_NUM
+  };
+  uint8_t viewMode = VIEW_ZOOM_X;
+
+  enum EditMode {
+    EDIT_SELECT_NOTE,
+    EDIT_LAYER,
+    EDIT_NOTEON,
+    EDIT_NOTEOFF,
+    EDIT_VELOCITY,
+    EDIT_NOTE,
+    EDIT_NUM
+  };
+  uint8_t editMode = EDIT_SELECT_NOTE;
+
+  enum StepMode {
+    STEP_RECORD,
+    STEP_SIZE,
+    STEP_LAYER,
+    STEP_NUM
+  };
+  uint8_t stepMode = STEP_RECORD;
+
+  enum Mode {
+    MODE_VIEW,
+    MODE_EDIT,
+    MODE_STEP
+  };
+  uint8_t mode = MODE_VIEW;
+
+  struct ViewSettings {
+    int8_t startOctave;
+    int8_t numOctaves;
+    float noteHeight;   // populated automatically
+    uint8_t numNotes;   // populated automatically
+    int8_t startBar;
+    int8_t numBars;
+    float msToPix;      // populated automatically
+    uint8_t lowestNote; // populated automatically
+    uint8_t highestNote;// populated automatically
+    uint16_t cursorPos;
+    uint16_t cursorPosPrev;
+    uint16_t cursorColor;
+  } view;
+
+  enum DrawFlags {
+    DRAW_PIANOROLL = (1 << 0),
+    DRAW_VERTICAL_BARS = (1 << 1),
+    DRAW_BACKGROUND = (1 << 2),
+    DRAW_NOTES = (1 << 3),
+    DRAW_CURSOR = (1 << 4),
+    DRAW_SINGLE_NOTE = (1 << 5),
+    DRAW_STEP_CURSOR = (1 << 6),
+    DRAW_CONTENT_AREA = DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES,
+    DRAW_CONTENT_FULL = 1 << 7 // force full redraw
+  };
+  uint16_t drawFlags = 0;
+
+  struct UpdateRange {
+    uint16_t fromX;
+    uint16_t toX;
+    std::set<uint8_t> notes; // empty = all
+  };
+  std::vector<UpdateRange> drawRegionsX;
+
+  LiveSequencer::MidiEvent currentNote;
+
+  void initGUI(void);
+  void drawPianoRoll(void);
+  void handleEncoderRight(EncoderEvents e);
+  template <class T> bool hasConstrainedChanged(T &value, int16_t diff, T min, T max); 
+
+  void queueDrawNote(LiveSequencer::NotePair note);
+  void queueDrawNote(UpdateRange coords);
+  uint16_t getNoteCoord(uint32_t time) const;
+  uint16_t getRelativeNoteTime(uint32_t time) const;
+  void deleteSelectedNote(void);
+
+  void drawHeader(uint16_t modeFlags = 0);
+  void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
+  bool isSettingActivated = false;
+  void toggleSettingActivated(void);
+
+  void drawCursor(void);
+  void drawStepCursor(void);
+  void drawVerticalBars(void);
+  void drawNote(LiveSequencer::NotePair note, bool isSelected = false) const;
+  void setNumOctaves(int8_t num);
+  void setStartOctave(int8_t num);
+  void setNumBars(int8_t num);
+  void setBarStart(int8_t num);
+  void drawNotes(void);
+  void drawGUI(void);
+  void drawBackground(void);
+  void drawAreaIndicator(void);
+  void drawLayersIndicator(void);
+  bool setMode(uint8_t newMode);
+  void setIsHighlighted(bool isActiveMode);
+
+  std::string getNoteString(uint8_t note);
+
+  void reloadNotes(bool autoAdaptView = false);
+  int16_t selectedNote = -1; // index of notePairs or -1
+
+  bool step(int8_t diff);
+
+  const uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
+  void setEventTime(LiveSequencer::MidiEvent &e, uint32_t time);
+
+  LiveSequencer &liveSeq;
+  LiveSequencer::LiveSeqData &data;
+  bool isRunningHere;
+  bool isVisible = false;
+  bool openendFromLiveSequencer = false;
+
+  std::vector<LiveSequencer::NotePair> notePairs;
+
+  ActiveValue currentValue = { nullptr, nullptr };
+  std::vector<uint16_t> layerColors;
+  std::vector<TouchButton*> buttons;
+
+  EditableValueVector<uint8_t> *recordSteps;
+
+  TouchButton *buttonPlay;
+  TouchButton *buttonInst;
+  TouchButton *buttonView;
+  TouchButton *buttonEdit;
+  TouchButton *buttonStep;
+
+  static constexpr uint8_t TOTAL_OCTAVES = 8;
+  static constexpr uint16_t HEADER_DRAW_ALL = 0xFFFF;
+  static constexpr uint16_t HEADER_BG_COLOR = COLOR_BACKGROUND;
+  static constexpr uint16_t CURSOR_BG_COLOR = HEADER_BG_COLOR; // for now..
+  static constexpr uint16_t ROLL_WIDTH = 20;
+  static constexpr uint16_t CONTENT_HEIGHT = 180; // divides nicely by 12
+  static constexpr uint16_t CONTENT_WIDTH = DISPLAY_WIDTH - ROLL_WIDTH;
+  static constexpr uint16_t LINE_HEIGHT = 1;
+  static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y - LINE_HEIGHT;
+
+  static constexpr uint8_t STEPS_MAX = 32;
+  int8_t stepRecordLayer = 0;
+  uint8_t stepRecordSteps = 16;
+  float stepRecordStepSizeMs = 0.0f;
+  uint16_t stepCursorPositionIndex = 0;
+  uint16_t stepCursorPosition = ROLL_WIDTH;
+};
+
+#endif // UI_LIVESEQ_PIANOROLL_H

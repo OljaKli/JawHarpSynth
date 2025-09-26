@@ -264,7 +264,7 @@ extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
-extern AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
+extern AudioMixer<2 * NUM_DRUMS + 3>* global_delay_in_mixer[2];
 extern AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 #ifdef PSRAM
@@ -299,9 +299,16 @@ extern AudioAnalyzePeak drum_mixer_peak_r;
 extern AudioAnalyzePeak reverb_return_peak_l;
 extern AudioAnalyzePeak reverb_return_peak_r;
 
-extern AudioMixer<10> reverb_mixer_r;
-extern AudioMixer<10> reverb_mixer_l;
+// #ifdef GRANULAR
+// extern AudioMixer<11> reverb_mixer_r;
+// extern AudioMixer<11> reverb_mixer_l;
+// #else
+// extern AudioMixer<10> reverb_mixer_r;
+// extern AudioMixer<10> reverb_mixer_l;
+// #endif
 
+extern AudioMixer<REVERB_MIX_CH_MAX> reverb_mixer_r;
+extern AudioMixer<REVERB_MIX_CH_MAX> reverb_mixer_l;
 
 extern microsynth_t microsynth[NUM_MICROSYNTH];
 
@@ -316,8 +323,8 @@ extern AudioEffectStereoPanorama ep_stereo_panorama;
 extern AudioSynthWaveform ep_chorus_modulator;
 extern AudioMixer<2> ep_chorus_mixer_r;
 extern AudioMixer<2> ep_chorus_mixer_l;
-extern AudioMixer<14> master_mixer_r;
-extern AudioMixer<14> master_mixer_l;
+extern AudioMixer<MASTER_MIX_CH_MAX> master_mixer_r;
+extern AudioMixer<MASTER_MIX_CH_MAX> master_mixer_l;
 
 extern AudioEffectStereoMono stereo2mono;
 extern AudioAnalyzePeak master_peak_r;
@@ -527,73 +534,67 @@ LCDML_add(7, LCDML_0_1, 7, "Save Voice", UI_func_save_voice);
 LCDML_add(8, LCDML_0, 2, "E-Piano", UI_func_epiano);
 LCDML_add(9, LCDML_0, 3, "MicroSynth", UI_func_microsynth);
 LCDML_add(10, LCDML_0, 4, "Braids", UI_func_braids);
-LCDML_add(11, LCDML_0, 5, "MultiSamplePlayer", UI_func_MultiSamplePlay);
-LCDML_add(12, LCDML_0, 6, "Drums", UI_func_drums);
-LCDML_add(13, LCDML_0, 7, "NoiseMaker", UI_func_noisemaker);
-LCDML_add(14, LCDML_0, 8, "Master Effects", NULL);
-LCDML_add(15, LCDML_0_8, 1, "Delay+Reverb", UI_func_master_effects);
-LCDML_add(16, LCDML_0_8, 2, "SideChain Comp.", UI_func_sidechain);
-LCDML_add(17, LCDML_0_8, 3, "Multiband Comp.", UI_func_multiband_dynamics);
-LCDML_add(18, LCDML_0, 9, "Sequencer", NULL);
-LCDML_add(19, LCDML_0_9, 1, "Song", UI_func_song);
-LCDML_add(20, LCDML_0_9, 2, "Pattern Editor", UI_func_seq_pattern_editor);
-LCDML_add(21, LCDML_0_9, 3, "Vel./Chrd Edit", UI_func_seq_vel_editor);
-LCDML_add(22, LCDML_0_9, 4, "Live Sequencer", UI_func_livesequencer);
-LCDML_add(23, LCDML_0_9, 5, "Live Seq. Editor", UI_func_liveseq_graphic);
-LCDML_add(24, LCDML_0_9, 6, "Arpeggio", UI_func_arpeggio);
-LCDML_add(25, LCDML_0_9, 7, "Mute Matrix", UI_func_seq_mute_matrix);
-LCDML_add(26, LCDML_0_9, 8, "Tracker", UI_func_seq_tracker);
-LCDML_add(27, LCDML_0_9, 9, "Probabilities", UI_func_seq_probabilities);
-LCDML_add(28, LCDML_0_9, 10, "Smart Filter", UI_func_smart_filter);
-LCDML_add(29, LCDML_0_9, 11, "Clear ALL", UI_func_clear_all);
-LCDML_add(30, LCDML_0_9, 12, "Clear Song", UI_func_clear_song);
-LCDML_add(31, LCDML_0_9, 13, "Clear Chains", UI_func_clear_song_chains);
-LCDML_add(32, LCDML_0_9, 14, "Clear Patterns", UI_func_clear_patterns);
-LCDML_add(33, LCDML_0_9, 15, "Settings", UI_func_seq_settings);
-LCDML_add(34, LCDML_0, 10, "Mixer", UI_func_mixer);
-LCDML_add(35, LCDML_0, 11, "Slice Editor", UI_func_slice_editor);
-LCDML_add(36, LCDML_0, 12, "Audio/SMP Record", UI_func_recorder);
-LCDML_add(37, LCDML_0, 13, "SMF/MIDI Player", UI_func_midiplayer);
-LCDML_add(38, LCDML_0, 14, "Load/Save", NULL);
-LCDML_add(39, LCDML_0_14, 1, "Load Perf.", UI_func_load_performance);
-LCDML_add(40, LCDML_0_14, 2, "Save Perf.", UI_func_save_performance);
-LCDML_add(41, LCDML_0_14, 3, "Name Perf.", UI_func_set_performance_name);
-LCDML_add(42, LCDML_0_14, 4, "Name Multisample", UI_func_set_multisample_name);
-LCDML_add(43, LCDML_0_14, 5, "Name Braids", UI_func_set_braids_name);
-LCDML_add(44, LCDML_0_14, 6, "MIDI", NULL);
-LCDML_add(45, LCDML_0_14_6, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(46, LCDML_0_14_6, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
-LCDML_add(47, LCDML_0_14_6, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
-LCDML_add(48, LCDML_0, 15, "File Manager", UI_func_file_manager);
-LCDML_add(49, LCDML_0, 16, "System", NULL);
-LCDML_add(50, LCDML_0_16, 1, "Stereo/Mono", UI_func_stereo_mono);
-LCDML_add(51, LCDML_0_16, 2, "MIDI channels", UI_func_midi_channels);
-LCDML_add(52, LCDML_0_16, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
-LCDML_add(53, LCDML_0_16, 4, "MIDI Mapping", UI_func_custom_mappings);
-LCDML_add(54, LCDML_0_16, 5, "Favorites", UI_func_favorites);
-LCDML_add(55, LCDML_0_16, 6, "Startup Perform.", UI_func_startup_performance);
-LCDML_add(56, LCDML_0_16, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(57, LCDML_0_16, 8, "System Settings", UI_func_system_settings);
-LCDML_add(58, LCDML_0, 17, "Extras/Test", NULL);
-LCDML_add(59, LCDML_0_17, 1, "MIDI/CV Translate", UI_func_cv_page);
-LCDML_add(60, LCDML_0_17, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(61, LCDML_0_17, 3, "Map Gamepad", UI_func_map_gamepad);
-LCDML_add(62, LCDML_0_17, 4, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(63, LCDML_0_17, 5, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(64, LCDML_0_17, 6, "Test PSRAM", UI_func_test_psram);
-//LCDML_add(65, LCDML_0, 18, "Chain Editor", UI_func_chain_editor);
-#ifdef GRANULAR
-LCDML_add(65, LCDML_0, 18, "Granular Synth", UI_func_granular);
+LCDML_add(11, LCDML_0, 5, "Granular Synth", UI_func_granular);
+LCDML_add(12, LCDML_0, 6, "MultiSamplePlayer", UI_func_MultiSamplePlay);
+LCDML_add(13, LCDML_0, 7, "Drums", UI_func_drums);
+LCDML_add(14, LCDML_0, 8, "NoiseMaker", UI_func_noisemaker);
+LCDML_add(15, LCDML_0, 9, "Master Effects", NULL);
+LCDML_add(16, LCDML_0_9, 1, "Delay+Reverb", UI_func_master_effects);
+LCDML_add(17, LCDML_0_9, 2, "SideChain Comp.", UI_func_sidechain);
+LCDML_add(18, LCDML_0_9, 3, "Multiband Comp.", UI_func_multiband_dynamics);
+LCDML_add(19, LCDML_0, 10, "Sequencer", NULL);
+LCDML_add(20, LCDML_0_10, 1, "Song", UI_func_song);
+LCDML_add(21, LCDML_0_10, 2, "Pattern Editor", UI_func_seq_pattern_editor);
+LCDML_add(22, LCDML_0_10, 3, "Vel./Chrd Edit", UI_func_seq_vel_editor);
+LCDML_add(23, LCDML_0_10, 4, "Live Sequencer", UI_func_livesequencer);
+LCDML_add(24, LCDML_0_10, 5, "Live Seq. Editor", UI_func_liveseq_graphic);
+LCDML_add(25, LCDML_0_10, 6, "Arpeggio", UI_func_arpeggio);
+LCDML_add(26, LCDML_0_10, 7, "Mute Matrix", UI_func_seq_mute_matrix);
+LCDML_add(27, LCDML_0_10, 8, "Tracker", UI_func_seq_tracker);
+LCDML_add(28, LCDML_0_10, 9, "Probabilities", UI_func_seq_probabilities);
+LCDML_add(29, LCDML_0_10, 10, "Smart Filter", UI_func_smart_filter);
+LCDML_add(30, LCDML_0_10, 11, "Clear ALL", UI_func_clear_all);
+LCDML_add(31, LCDML_0_10, 12, "Clear Song", UI_func_clear_song);
+LCDML_add(32, LCDML_0_10, 13, "Clear Chains", UI_func_clear_song_chains);
+LCDML_add(33, LCDML_0_10, 14, "Clear Patterns", UI_func_clear_patterns);
+LCDML_add(34, LCDML_0_10, 15, "Settings", UI_func_seq_settings);
+LCDML_add(35, LCDML_0, 11, "Mixer", UI_func_mixer);
+LCDML_add(36, LCDML_0, 12, "Slice Editor", UI_func_slice_editor);
+LCDML_add(37, LCDML_0, 13, "Audio/SMP Record", UI_func_recorder);
+LCDML_add(38, LCDML_0, 14, "SMF/MIDI Player", UI_func_midiplayer);
+LCDML_add(39, LCDML_0, 15, "Load/Save", NULL);
+LCDML_add(40, LCDML_0_15, 1, "Load Perf.", UI_func_load_performance);
+LCDML_add(41, LCDML_0_15, 2, "Save Perf.", UI_func_save_performance);
+LCDML_add(42, LCDML_0_15, 3, "Name Perf.", UI_func_set_performance_name);
+LCDML_add(43, LCDML_0_15, 4, "Name Multisample", UI_func_set_multisample_name);
+LCDML_add(44, LCDML_0_15, 5, "Name Braids", UI_func_set_braids_name);
+LCDML_add(45, LCDML_0_15, 6, "MIDI", NULL);
+LCDML_add(46, LCDML_0_15_6, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
+LCDML_add(47, LCDML_0_15_6, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
+LCDML_add(48, LCDML_0_15_6, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
+LCDML_add(49, LCDML_0, 16, "File Manager", UI_func_file_manager);
+LCDML_add(50, LCDML_0, 17, "System", NULL);
+LCDML_add(51, LCDML_0_17, 1, "Stereo/Mono", UI_func_stereo_mono);
+LCDML_add(52, LCDML_0_17, 2, "MIDI channels", UI_func_midi_channels);
+LCDML_add(53, LCDML_0_17, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
+LCDML_add(54, LCDML_0_17, 4, "MIDI Mapping", UI_func_custom_mappings);
+LCDML_add(55, LCDML_0_17, 5, "Favorites", UI_func_favorites);
+LCDML_add(56, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
+LCDML_add(57, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
+LCDML_add(58, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
+LCDML_add(59, LCDML_0, 18, "Extras/Test", NULL);
+LCDML_add(60, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(61, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
+LCDML_add(62, LCDML_0_18, 3, "Map Gamepad", UI_func_map_gamepad);
+LCDML_add(63, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(64, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(65, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
 LCDML_add(66, LCDML_0, 19, "Info", UI_func_information);
 LCDML_addAdvanced(67, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(68, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(69, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-#else
-LCDML_add(65, LCDML_0, 18, "Info", UI_func_information);
-LCDML_addAdvanced(66, LCDML_0, 19, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(67, LCDML_0, 20, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(68, LCDML_0, 21, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-#endif
+
+//LCDML_add(65, LCDML_0, 18, "Chain Editor", UI_func_chain_editor);
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -25231,6 +25232,8 @@ FLASHMEM void clear_volmeter(int x, int y)
 #ifdef GRANULAR
 #include "granular.h"
 
+extern AudioChromaticGranularPoly granularPoly;
+
 // Parameter descriptor structure
 struct ParamDesc {
   const char* name;
@@ -25239,8 +25242,103 @@ struct ParamDesc {
 };
 
 // Global granular parameters
-extern granular_params_t granular_params;
+ extern granular_params_t granular_params;
+extern AudioFilterBiquad granular_filter_l;
+extern AudioFilterBiquad granular_filter_r;
 
+FLASHMEM void updateGranularPan() {
+    float pan = granular_params.pan / 100.0f; // Convert to -1.0 to 1.0
+    
+    // Calculate left and right gains using equal power panning
+    float leftGain, rightGain;
+    
+    if (pan <= 0) {
+        // Pan left or center
+        leftGain = 1.0f;
+        rightGain = 1.0f + pan; // pan is negative or zero, so rightGain <= 1.0
+    } else {
+        // Pan right
+        leftGain = 1.0f - pan;
+        rightGain = 1.0f;
+    }
+    
+    // Ensure gains are never negative
+    leftGain = max(0.0f, leftGain);
+    rightGain = max(0.0f, rightGain);
+    
+    // Apply the gains directly to the master mixer channels for granular //swapped seems correct
+    master_mixer_r.gain(MASTER_MIX_CH_GRANULAR, volume_transform(leftGain));
+    master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, volume_transform(rightGain));
+}
+
+FLASHMEM void updateGranularFilters() {
+    float frequency, resonance;
+    
+    // Convert UI values to usable ranges
+    // Assuming filter_freq is 0-127, map to reasonable frequency range
+    frequency = map(granular_params.filter_freq, 0, 100, 90, 8000);  // 80Hz to 8kHz
+    
+    // Convert resonance (0-127 to 0.7-5.0 Q factor)
+    resonance = map(granular_params.filter_resonance, 0, 100, 70, 500) / 100.0;  // 0.7 to 5.0
+    
+    // Apply filter mode and settings to both channels
+    switch(granular_params.filter_mode) {
+        case 0: // Bypass (no filtering)
+            granular_filter_l.setLowpass(0, 20000, 0.7);  // Wide open lowpass
+            granular_filter_r.setLowpass(0, 20000, 0.7);
+            break;
+
+        case 1:  // Low pass
+            granular_filter_l.setLowpass(0, frequency/1.5, resonance);
+            granular_filter_r.setLowpass(0, frequency/1.5, resonance);
+            break;
+            
+        case 2:  // High pass  
+            granular_filter_l.setHighpass(0, frequency, resonance);
+            granular_filter_r.setHighpass(0, frequency, resonance);
+            break;
+            
+        case 3:  // Band pass
+            granular_filter_l.setBandpass(0, frequency, resonance);
+            granular_filter_r.setBandpass(0, frequency, resonance);
+            break;
+            
+        case 4:  // Notch
+            granular_filter_l.setNotch(0, frequency, resonance);
+            granular_filter_r.setNotch(0, frequency, resonance);
+            break;
+    }
+}
+
+FLASHMEM void updateGranularParams() {
+
+    if (granular_params.active) {
+        // Update the polyphonic granular with current parameters
+        granularPoly.setParams(granular_params);
+           updateGranularPan();
+ updateGranularFilters();
+global_delay_in_mixer[0]->gain(18, mapfloat(granular_params.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.3f));
+global_delay_in_mixer[1]->gain(18, mapfloat(granular_params.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.3f));
+ reverb_mixer_r.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, 1.8f)));
+   reverb_mixer_l.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, 1.8f)));
+
+        // Also update sample data if the sample selection changed
+        static uint8_t last_sample_note = 255; // Initialize with invalid value
+        if (granular_params.sample_note != last_sample_note) {
+            last_sample_note = granular_params.sample_note;
+            
+            if (granular_params.sample_note < NUM_DRUMSET_CONFIG && 
+                drum_config[granular_params.sample_note].drum_data != NULL) {
+                
+                uint32_t sampleFrames = drum_config[granular_params.sample_note].len / 
+                                       (drum_config[granular_params.sample_note].numChannels * sizeof(int16_t));
+                granularPoly.setSampleData((const int16_t*)drum_config[granular_params.sample_note].drum_data, 
+                                          sampleFrames);
+            }
+        }
+     
+    }
+}
 
 FLASHMEM void drawGranularWaveform(bool fullRedraw) {
   uint8_t saved_active_sample = activeSample;
@@ -25255,8 +25353,6 @@ uint16_t plotY = 19 + 8;
   static int16_t lastSpreadL  = -1;
   static int16_t lastSpreadR  = -1;
   static int16_t lastDensity  = -1;
-// static int16_t lastGrainL = -1;
-// static int16_t lastGrainR = -1;
   // recompute X coordinates
   uint16_t posX = plotX + (granular_params.grain_position * plotW) / 100;
   uint16_t spreadPixels = (granular_params.spread * plotW) / 100;
@@ -25279,33 +25375,6 @@ uint16_t plotY = 19 + 8;
     lastDensity = -1;
   }
 
-
-// // ---- Compute grain size window ----
-// uint16_t grainPixels = (granular_params.grain_size * plotW) / 100;
-// int16_t grainL = posX - grainPixels / 2;
-// int16_t grainR = posX + grainPixels / 2;
-// if (grainL < (int16_t)plotX) grainL = plotX;
-// if (grainR > (int16_t)(plotX + plotW)) grainR = plotX + plotW;
-
-// // ---- Erase old grain window ----
-// if (lastGrainL >= 0 && lastGrainR >= 0) {
-//   int16_t eraseL = min(lastGrainL, grainL);
-//   int16_t eraseR = max(lastGrainR, grainR);
-
-//   display.drawLine(eraseL,160, eraseR-eraseL,160,GREEN);
-//   // drawSampleWaveform(plotX, plotY, plotW, plotH,
-//   //                    (int16_t*)slot.drum_data, slot.len, slot.numChannels,
-//   //                    eraseL, eraseR);
-// }
-
-// ---- Draw new grain window ----
-// if (grainR > grainL) {
-//   display.fillRect(grainL, plotY, grainR - grainL, plotH, GREY3);
-// }
-
-// Save for next pass
-// lastGrainL = grainL;
-// lastGrainR = grainR;
   // ---- Update spread lines ----
 if (spreadL != lastSpreadL) {
   if (lastSpreadL >= 0) {
@@ -25367,38 +25436,26 @@ display.drawLine(posX, plotY, posX, plotY + plotH, RED);
 }
 
 
-
-void granular_update_single_setting() {
-  // Update the granular synth with the current settings
-  // This would be called when parameters change
-}
-
-// Touch handler function without parameters
-FLASHMEM static void handle_touchscreen_granular() {
-  // Handle touch events for the granular UI
-  // You'll need to implement this based on your touchscreen handling
-}
-
 // Static functions for parameter access
 FLASHMEM static int16_t granular_get_param_value(uint8_t param_index) {
   switch(param_index) {
     case 0: return granular_params.sample_note;
     case 1: return granular_params.grain_size;
     case 2: return granular_params.grain_position;
-    case 3: return granular_params.semitones;
-    case 4: return granular_params.volume;
-    case 5: return granular_params.density;
-    case 6: return granular_params.spread;
-    case 7: return granular_params.pitch_random;
-    case 8: return granular_params.filter_mode;
-    case 9: return granular_params.filter_freq;
-    case 10: return granular_params.filter_resonance;
-    case 11: return granular_params.rev_send;
-    case 12: return granular_params.delay_send_1;
-    case 13: return granular_params.delay_send_2;
-    case 14: return granular_params.pan;
-    case 15: return granular_params.midi_channel;
-    case 16: return granular_params.active;
+      case 3: return granular_params.spread;
+    case 4: return granular_params.density;
+     case 5: return granular_params.volume;
+     case 6: return granular_params.semitones;
+    case 7: return granular_params.attack;
+ case 8: return granular_params.release;
+    case 9: return granular_params.filter_mode;
+    case 10: return granular_params.filter_freq;
+    case 11: return granular_params.filter_resonance;
+    case 12: return granular_params.rev_send;
+    case 13: return granular_params.delay_send_1;
+    case 14: return granular_params.delay_send_2;
+    case 15: return granular_params.pan;
+    case 16: return granular_params.midi_channel;
     default: return 0;
   }
 }
@@ -25406,223 +25463,262 @@ FLASHMEM static int16_t granular_get_param_value(uint8_t param_index) {
 FLASHMEM void granular_set_param_value(uint8_t param_index, int16_t value) {
   switch(param_index) {
     case 0: 
-      granular_params.sample_note = value; 
-      granular_update_single_setting();
-      break;
+      granular_params.sample_note = value; break;
     case 1: granular_params.grain_size = value; break;
     case 2: granular_params.grain_position = value; break;
-    case 3: granular_params.semitones = value; break;
-    case 4: granular_params.volume = value; break;
-    case 5: granular_params.density = value; break;
-    case 6: granular_params.spread = value; break;
-    case 7: granular_params.pitch_random = value; break;
-    case 8: granular_params.filter_mode = value; break;
-    case 9: granular_params.filter_freq = value; break;
-    case 10: granular_params.filter_resonance = value; break;
-    case 11: granular_params.rev_send = value; break;
-    case 12: granular_params.delay_send_1 = value; break;
-    case 13: granular_params.delay_send_2 = value; break;
-    case 14: granular_params.pan = value; break;
-    case 15: granular_params.midi_channel = value; break;
-    case 16: granular_params.active = value; break;
+      case 3: granular_params.spread = value; break;
+     case 4: granular_params.density = value; break;
+    case 5: granular_params.volume = value; break;
+    case 6: granular_params.semitones = value; break;
+ 
+    case 7: granular_params.attack = value; break;
+ case 8: granular_params.release = value; break;
+    case 9: granular_params.filter_mode = value;
+ updateGranularFilters();
+     break;
+    case 10: granular_params.filter_freq = value;
+ updateGranularFilters();
+     break;
+    case 11: granular_params.filter_resonance = value;
+ updateGranularFilters();
+     break;
+    case 12: granular_params.rev_send = value;
+   reverb_mixer_r.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, 1.8f)));
+   reverb_mixer_l.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, 1.8f)));
+     break;
+    case 13: granular_params.delay_send_1 = value; 
+global_delay_in_mixer[0]->gain(18, mapfloat(granular_params.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.3f));
+    break;
+    case 14: granular_params.delay_send_2 = value;
+global_delay_in_mixer[1]->gain(18, mapfloat(granular_params.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.3f));
+     break;
+    case 15: granular_params.pan = value;
+ updateGranularPan(); // Update panorama when pan parameter changes
+     break;
+    case 16: granular_params.midi_channel = value; break;
   }
-  granular_update_single_setting();
+  updateGranularParams();
 }
 
-// Create individual functions for each parameter
-#define GRANULAR_PARAM_FUNCTIONS(index) \
-static int16_t granular_param_##index##_getter(Editor* editor) { \
-  return granular_get_param_value(index); \
-} \
-static void granular_param_##index##_setter(Editor* editor, int16_t value) { \
-  granular_set_param_value(index, value); \
-} \
-static void granular_param_##index##_renderer(Editor* editor, bool refresh) { \
-  setCursor_textGrid_small(editor->x, editor->y); \
-  setModeColor(editor->select_id); \
-  display.printf("%s: ", editor->name); \
-  if (index == 0) { \
-    if (granular_params.sample_note < NUM_DRUMSET_CONFIG && drum_config[granular_params.sample_note].name[0] != '\0') { \
-      char size_str[16]; \
-      if (drum_config[granular_params.sample_note].len < 1000) { \
-        sprintf(size_str, "%lu B", (unsigned long)drum_config[granular_params.sample_note].len); \
-      } else if (drum_config[granular_params.sample_note].len < 1000000) { \
-        sprintf(size_str, "%.1f KB", drum_config[granular_params.sample_note].len / 1024.0f); \
-      } else { \
-        sprintf(size_str, "%.1f MB", drum_config[granular_params.sample_note].len / 1048576.0f); \
-      } \
-      display.printf("%02d: %s (%s)", granular_params.sample_note, drum_config[granular_params.sample_note].name, size_str); \
-    } else { \
-      display.printf("%02d: No Sample", granular_params.sample_note); \
-    } \
-  } else if (index == 8) { \
-    const char* modes[] = {"Off", "LP", "BP", "HP"}; \
-    display.print(modes[granular_params.filter_mode]); \
-  } else if (index == 15) { \
-    if (granular_params.midi_channel == 17) { \
-      display.print("Omni"); \
-    } else { \
-      display.print(granular_params.midi_channel); \
-    } \
-  } else if (index == 16) { \
-    display.print(granular_params.active ? "ON" : "OFF"); \
-  } else { \
-    display.printf("%d%%", granular_get_param_value(index)); \
-  } \
+// =======================================================
+// Updated parameter functions with visual gauges
+// =======================================================
+
+// Generic gauge renderer for granular parameters
+FLASHMEM static void granularGaugeRenderer(Editor* e, bool refresh, const char* label, int16_t value) {
+   
+    // Draw the visual gauge
+    print_small_scaled_bar(e->x , e->y, value, e->limit_min, e->limit_max, e->select_id, 1, NULL);
+     setCursor_textGrid_small(e->x+10, e->y);
+   // display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+     setModeColor(e->select_id);
+    display.printf("%s", label);
 }
 
-// Generate functions for all parameters
-GRANULAR_PARAM_FUNCTIONS(0)
-GRANULAR_PARAM_FUNCTIONS(1)
-GRANULAR_PARAM_FUNCTIONS(2)
-GRANULAR_PARAM_FUNCTIONS(3)
-GRANULAR_PARAM_FUNCTIONS(4)
-GRANULAR_PARAM_FUNCTIONS(5)
-GRANULAR_PARAM_FUNCTIONS(6)
-GRANULAR_PARAM_FUNCTIONS(7)
-GRANULAR_PARAM_FUNCTIONS(8)
-GRANULAR_PARAM_FUNCTIONS(9)
-GRANULAR_PARAM_FUNCTIONS(10)
-GRANULAR_PARAM_FUNCTIONS(11)
-GRANULAR_PARAM_FUNCTIONS(12)
-GRANULAR_PARAM_FUNCTIONS(13)
-GRANULAR_PARAM_FUNCTIONS(14)
-GRANULAR_PARAM_FUNCTIONS(15)
-GRANULAR_PARAM_FUNCTIONS(16)
+// Custom panorama renderer that matches the drum page style
+FLASHMEM static void granularPanRenderer(Editor* e, bool refresh) {
+    // Draw the visual gauge similar to drum page
+    print_small_scaled_bar(e->x, e->y, granular_params.pan, e->limit_min, e->limit_max, e->select_id, 1, NULL);
+    setCursor_textGrid_small(e->x + 10, e->y);
+    setModeColor(e->select_id);
+        display.printf(F("PANORAMA"));
+}
+
+// Custom getter and setter for panorama parameter
+FLASHMEM static int16_t granularPanGetter(Editor* e) { 
+    return granular_params.pan; 
+}
+
+FLASHMEM static void granularPanSetter(Editor* e, int16_t v) { 
+    granular_set_param_value(15, v); 
+}
+
+// Replace the existing pan parameter functions with our custom ones
+#undef GRANULAR_PARAM_FUNCTIONS
+#define GRANULAR_PARAM_FUNCTIONS(index, label) \
+static int16_t granularGetter_##index(Editor* e) { return granular_get_param_value(index); } \
+static void    granularSetter_##index(Editor* e, int16_t v) { granular_set_param_value(index, v); } \
+static void    granularRenderer_##index(Editor* e, bool refresh) { \
+    granularGaugeRenderer(e, refresh, label, granular_get_param_value(index)); \
+}
+
+// Generate standard params with gauges
+GRANULAR_PARAM_FUNCTIONS(1, "GRAIN SIZE")
+GRANULAR_PARAM_FUNCTIONS(2, "POSITION")
+GRANULAR_PARAM_FUNCTIONS(3, "SPREAD")
+GRANULAR_PARAM_FUNCTIONS(4, "DENSITY")
+GRANULAR_PARAM_FUNCTIONS(5, "VOLUME")
+GRANULAR_PARAM_FUNCTIONS(6, "PITCH")
+GRANULAR_PARAM_FUNCTIONS(7, "ATTACK")
+GRANULAR_PARAM_FUNCTIONS(8, "RELEASE")
+GRANULAR_PARAM_FUNCTIONS(10, "FILTER FREQ")
+GRANULAR_PARAM_FUNCTIONS(11, "FILTER RESO")
+GRANULAR_PARAM_FUNCTIONS(12, "REVERB")
+GRANULAR_PARAM_FUNCTIONS(13, "DELAY1")
+GRANULAR_PARAM_FUNCTIONS(14, "DELAY2")
+
+// Special cases with custom rendering
+FLASHMEM static int16_t granularSampleGetter(Editor* e) { return granular_params.sample_note; }
+FLASHMEM static void    granularSampleSetter(Editor* e, int16_t v) { granular_set_param_value(0, v); }
+FLASHMEM static void granularSampleRenderer(Editor* e, bool refresh) {
+    setCursor_textGrid_small(e->x, e->y);
+    setModeColor(e->select_id);
+
+    if (granular_params.sample_note < NUM_DRUMSET_CONFIG &&
+        drum_config[granular_params.sample_note].name[0] != '\0') {
+
+        uint32_t sample_size_bytes = drum_config[granular_params.sample_note].len * sizeof(int16_t);
+        char size_str[20];
+        const char* ch_str = "MONO";
+
+        if (drum_config[granular_params.sample_note].numChannels == 2) {
+            ch_str = "STEREO";
+        }
+        if (sample_size_bytes >= 1024 * 1024) {
+            uint32_t size_mb_main = sample_size_bytes / (1024 * 1024);
+            uint32_t size_mb_rem = (sample_size_bytes % (1024 * 1024)) / (1024 * 1024 / 100);
+            sprintf(size_str, "%lu.%02lu MB", (unsigned long)size_mb_main, (unsigned long)size_mb_rem);
+        } else {
+            uint32_t size_kb = sample_size_bytes / 1024;
+            sprintf(size_str, "%lu KB", (unsigned long)size_kb);
+        }
+        display.printf("%02d: %-34s (%s) %7s", granular_params.sample_note,
+                       drum_config[granular_params.sample_note].name, ch_str, size_str);
+    } 
+}
+
+FLASHMEM static int16_t granularFilterModeGetter(Editor* e) { return granular_params.filter_mode; }
+FLASHMEM static void    granularFilterModeSetter(Editor* e, int16_t v) { granular_set_param_value(9, v); }
+FLASHMEM static void    granularFilterModeRenderer(Editor* e, bool refresh) {
+    static const char* modes[] = {"OFF", "LP ", "BP ", "HP "};
+  
+    // Draw gauge for filter mode
+    print_small_scaled_bar(e->x , e->y, granular_params.filter_mode, 
+                          e->limit_min, e->limit_max, e->select_id, 1, NULL);
+                           setCursor_textGrid_small(e->x+10, e->y);
+    setModeColor(e->select_id);
+    display.printf("FILTER MODE: %s", modes[granular_params.filter_mode]);
+}
+
+FLASHMEM static int16_t granularMidiGetter(Editor* e) { return granular_params.midi_channel; }
+FLASHMEM static void    granularMidiSetter(Editor* e, int16_t v) { granular_set_param_value(16, v); }
+FLASHMEM static void    granularMidiRenderer(Editor* e, bool refresh) {
+   
+    // Draw gauge for MIDI channel
+    print_small_scaled_bar(e->x , e->y, granular_params.midi_channel, 
+                          e->limit_min, e->limit_max, e->select_id, 1, NULL);
+                           setCursor_textGrid_small(e->x+10, e->y);
+    setModeColor(e->select_id);
+        display.printf("MIDI CH:%2d", granular_params.midi_channel);
+}
+
+extern void   display_granular_status();
 
 FLASHMEM void UI_func_granular(uint8_t param)
 {
-  // Define parameter descriptors for granular synth
-  static const ParamDesc granular_param_descs[] = {
-    {"SAMPLE", 0, NUM_DRUMSET_CONFIG - 1},
-    {"GRAIN SIZE", 0, 100},
-    {"POSITION", 0, 100},
-    {"PITCH", 0, 100},
-    {"VOLUME", 0, 100},
-    {"DENSITY", 0, 100},
-    {"SPREAD", 0, 100},
-    {"PITCH RND", 0, 100},
-    {"FILTER MODE", 0, 3},
-    {"FILTER FREQ", 0, 100},
-    {"FILTER RESO", 0, 100},
-    {"REVERB", 0, 100},
-    {"DELAY1", 0, 100},
-    {"DELAY2", 0, 100},
-    {"PAN", 0, 100},
-    {"MIDI CH", 0, 17},
-    {"ACTIVE", 0, 1}
-  };
-  
-  const int num_granular_params = sizeof(granular_param_descs) / sizeof(granular_param_descs[0]);
+    if (LCDML.FUNC_setup()) // ****** SETUP *********
+    {
+        registerTouchHandler(handle_touchscreen_granular);
+        ui.reset();
+        ui.clear();
+  display_granular_status();
 
-  // Arrays of function pointers for each parameter
-  static int16_t (*getters[])(Editor*) = {
-    granular_param_0_getter, granular_param_1_getter, granular_param_2_getter, granular_param_3_getter,
-    granular_param_4_getter, granular_param_5_getter, granular_param_6_getter, granular_param_7_getter,
-    granular_param_8_getter, granular_param_9_getter, granular_param_10_getter, granular_param_11_getter,
-    granular_param_12_getter, granular_param_13_getter, granular_param_14_getter, granular_param_15_getter,
-    granular_param_16_getter
-  };
-  
-  static void (*setters[])(Editor*, int16_t) = {
-    granular_param_0_setter, granular_param_1_setter, granular_param_2_setter, granular_param_3_setter,
-    granular_param_4_setter, granular_param_5_setter, granular_param_6_setter, granular_param_7_setter,
-    granular_param_8_setter, granular_param_9_setter, granular_param_10_setter, granular_param_11_setter,
-    granular_param_12_setter, granular_param_13_setter, granular_param_14_setter, granular_param_15_setter,
-    granular_param_16_setter
-  };
-  
-  static void (*renderers[])(Editor*, bool) = {
-    granular_param_0_renderer, granular_param_1_renderer, granular_param_2_renderer, granular_param_3_renderer,
-    granular_param_4_renderer, granular_param_5_renderer, granular_param_6_renderer, granular_param_7_renderer,
-    granular_param_8_renderer, granular_param_9_renderer, granular_param_10_renderer, granular_param_11_renderer,
-    granular_param_12_renderer, granular_param_13_renderer, granular_param_14_renderer, granular_param_15_renderer,
-    granular_param_16_renderer
-  };
+ TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
 
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
+        // Header
+        setCursor_textGrid_small(0, 0);
+        display.setTextColor(RED);
+        display.print(F("GRANULAR SYNTH"));
+
+        // Waveform
+        drawGranularWaveform(true);
+
+        // SAMPLE selector with gauge
+        ui.setCursor(0, 12);
+        ui.addEditor("SAMPLE", 0, NUM_DRUMSET_CONFIG - 2,
+                     granularSampleGetter,
+                     granularSampleSetter,
+                     granularSampleRenderer);
+
+        // First column with gauges
+        ui.setCursor(0, 14);
+        ui.addEditor("GRAIN SIZE", 0, 100, granularGetter_1, granularSetter_1, granularRenderer_1);
+        ui.addEditor("POSITION",   0, 100, granularGetter_2, granularSetter_2, granularRenderer_2);
+        ui.addEditor("SPREAD",     0, 100, granularGetter_3, granularSetter_3, granularRenderer_3);
+        ui.addEditor("DENSITY",    0, 100, granularGetter_4, granularSetter_4, granularRenderer_4);
+        ui.addEditor("VOLUME",     0, 100, granularGetter_5, granularSetter_5, granularRenderer_5);
+        ui.addEditor("PITCH",      0, 100, granularGetter_6, granularSetter_6, granularRenderer_6);
+ ui.addEditor("ATTACK", 0, 100, granularGetter_7, granularSetter_7, granularRenderer_7);
+ ui.addEditor("RELEASE", 0, 100, granularGetter_8, granularSetter_8, granularRenderer_8);
+        // Second column with gauges
+        ui.setCursor(24, 14);
+        ui.addEditor("FILTER MODE", 0, 3,  granularFilterModeGetter,  granularFilterModeSetter,  granularFilterModeRenderer);
+        ui.addEditor("FILTER FREQ", 0, 100, granularGetter_10,  granularSetter_10,  granularRenderer_10);
+        ui.addEditor("FILTER RESO", 0, 100, granularGetter_11, granularSetter_11, granularRenderer_11);
+
+        ui.addEditor("REVERB", 0, 100, granularGetter_12, granularSetter_12, granularRenderer_12);
+        ui.addEditor("DELAY1", 0, 100, granularGetter_13, granularSetter_13, granularRenderer_13);
+        ui.addEditor("DELAY2", 0, 100, granularGetter_14, granularSetter_14, granularRenderer_14);
+        // Use custom pan editor that matches drum page style
+        ui.addEditor("PAN", -99, 99, granularPanGetter, granularPanSetter, granularPanRenderer);
+        ui.addEditor("MIDI CH", 1, 16,    granularMidiGetter,  granularMidiSetter,  granularMidiRenderer);
+    }
+
+    if (LCDML.FUNC_loop()) // ****** LOOP *********
+    {
+        ui.handle_input();
+
+        static uint8_t last_sample_index = granular_params.sample_note;
+        static int last_position = -1, last_spread = -1, last_density = -1;
+
+        if (last_position != granular_params.grain_position ||
+            last_spread   != granular_params.spread ||
+            last_density  != granular_params.density)
+        {
+            drawGranularWaveform(false);
+            last_position = granular_params.grain_position;
+            last_spread   = granular_params.spread;
+            last_density  = granular_params.density;
+        }
+        else if (last_sample_index != granular_params.sample_note)
+        {
+            drawGranularWaveform(true);
+            last_sample_index = granular_params.sample_note;
+        }
+    }
+
+    if (LCDML.FUNC_close()) // ****** CLOSE *********
+    {
+        unregisterTouchHandler();
+        ui.clear();
+    }
+}
+#else
+FLASHMEM void UI_func_granular(uint8_t param)
+{
+ if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-    registerTouchHandler(handle_touchscreen_granular);
-    ui.reset();
-    ui.clear();
-
-    // Header
-    ui.setCursor(0, 0);
-    ui.addEditor((const char*)F("GRANULAR SYNTH"), 0, 0,
-      [](Editor* editor) -> int16_t { return 0; },
-      [](Editor* editor, int16_t value) { /* No-op */ },
-      [](Editor* editor, bool refresh) {
-        setCursor_textGrid_small(editor->x, editor->y);
-        display.setTextColor(RED, COLOR_BACKGROUND);
-        display.print("GRANULAR SYNTH");
-      });
-
-    // Draw waveform display
-    drawGranularWaveform(true);
-
-    // Sample selection - placed below the waveform
-    ui.setCursor(0, 11);
-    ui.addEditor(granular_param_descs[0].name, granular_param_descs[0].min, granular_param_descs[0].max,
-      getters[0], setters[0], renderers[0]);
-
-    // First column - Main parameters (start below sample selection)
-    int y_pos = 13;
-    ui.setCursor(0, y_pos);
-    for (uint8_t i = 1; i < 6; i++) {
-      ui.addEditor(granular_param_descs[i].name, granular_param_descs[i].min, granular_param_descs[i].max,
-        getters[i], setters[i], renderers[i]);
-      y_pos++;
-    }
-
-    // Second column - Filter and effects
-    y_pos = 13;
-    ui.setCursor(20, y_pos);
-    for (uint8_t i = 6; i < 11; i++) {
-      ui.addEditor(granular_param_descs[i].name, granular_param_descs[i].min, granular_param_descs[i].max,
-        getters[i], setters[i], renderers[i]);
-      y_pos++;
-    }
-
-    // Third column - MIDI and other settings
-    y_pos = 13;
-    ui.setCursor(40, y_pos);
-    for (uint8_t i = 11; i < num_granular_params; i++) {
-      ui.addEditor(granular_param_descs[i].name, granular_param_descs[i].min, granular_param_descs[i].max,
-        getters[i], setters[i], renderers[i]);
-      y_pos++;
-    }
+    display.fillScreen(COLOR_BACKGROUND);
+    encoderDir[ENC_R].reset();
+    helptext_l(back_text);
+    setCursor_textGrid(1, 1);
+    display.setTextSize(1);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F("NOT AVAILABLE IN THIS FIRMWARE"));
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
-  
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    ui.handle_input();
-
-  static uint8_t last_sample_index = granular_params.sample_note;
-  static int last_position = -1;
-  static int last_spread   = -1;
-  static int last_density  = -1;
-
-  if (last_position     != granular_params.grain_position ||
-      last_spread       != granular_params.spread ||
-      last_density      != granular_params.density) {
-
-    drawGranularWaveform(false);
-    
-    last_position     = granular_params.grain_position;
-    last_spread       = granular_params.spread;
-    last_density      = granular_params.density;
+    ;
   }
-  else if (last_sample_index != granular_params.sample_note )
+
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-     drawGranularWaveform(true);
-     last_sample_index = granular_params.sample_note;
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
   }
-}
-  if (LCDML.FUNC_close()) // ****** CLOSE *********
-  {
-    unregisterTouchHandler();
-    ui.clear();
-  }
+
 }
 
 #endif

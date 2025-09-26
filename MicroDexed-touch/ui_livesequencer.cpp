@@ -1434,12 +1434,6 @@ FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
     display.fillScreen(COLOR_BACKGROUND);
   }
 
-  // Track the previous current step to know what changed
-  static uint8_t lastDrawnCurrentStep = 255;
-  static bool lastDrawnRunningState = false;
-  const bool playheadChanged = (data.currentGridStep != lastDrawnCurrentStep);
-  const bool runningStateChanged = (data.isRunning != lastDrawnRunningState);
-
   // Calculate positions for the grid with the new tighter dimensions
 
   if (data.redraw_grid_header)

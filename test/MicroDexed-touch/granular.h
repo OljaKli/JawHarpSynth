@@ -1,0 +1,138 @@
+// ==================== granular.h ====================
+#ifndef GRANULAR_H
+#define GRANULAR_H
+
+#ifdef GRANULAR
+
+#include <Arduino.h>
+#include "AudioStream.h"
+
+// ---------- USER TUNABLE ----------
+#define MAX_POLY_VOICES 4
+#define MAX_GRAINS_PER_VOICE 8
+// ----------------------------------
+
+// ---------- Parameter struct ----------
+typedef struct {
+  uint8_t grain_size;      // 0..100 -> ms mapping inside voice
+  uint8_t grain_position;  // 0..100
+  uint8_t semitones;       // 0..100 where 50 == 0 semitone shift
+  uint8_t volume;          // 0..100
+  uint8_t density;         // 0..100
+  uint8_t spread;          // 0..100
+  float release_seconds;   // release time in seconds
+  bool active;
+  uint8_t sample_note;
+  uint8_t filter_mode;
+  uint8_t rev_send;
+  uint8_t filter_freq;
+  uint8_t filter_resonance;
+  uint8_t delay_send_1;
+  uint8_t delay_send_2;
+  uint8_t pan;
+  uint8_t  pitch_random;
+  uint8_t midi_channel;
+
+} granular_params_t;
+
+// ---------- Grain ----------
+struct GranularGrain {
+  bool active;
+  const int16_t* sampleData;
+  uint32_t sampleLength;
+  float position;      // fractional position in samples
+  float pitchRatio;    // increment per sample
+  uint32_t size;       // grain size in samples
+  float volume;        // 0..1 per-grain
+  uint32_t age;        // samples played
+};
+
+// ---------- Chromatic granular voice (one voice) ----------
+class ChromaticGranularVoice {
+public:
+  ChromaticGranularVoice();
+  ~ChromaticGranularVoice();
+
+  void init();
+  void setParams(const granular_params_t& params);
+  void setSampleData(const int16_t* data, uint32_t sampleFrames);
+  void setSampleDataBytes(const int16_t* data, uint32_t bytes, uint8_t numChannels = 1);
+  void triggerNote(uint8_t note, uint8_t velocity);
+  void noteOff();
+  bool isPlaying() const;
+  bool isActiveFor(uint8_t note) const;
+
+  void mixInto(float* leftFloat, float* rightFloat, uint16_t blockSize);
+  int getActiveGrainCount() const;
+  void stopAllGrains();
+
+private:
+  void startGrain(const granular_params_t& params);
+
+  GranularGrain grains[MAX_GRAINS_PER_VOICE];
+
+  const int16_t* sampleData;
+  uint32_t sampleLength; // frames (mono)
+
+  bool noteOn;
+  uint8_t currentNote;
+  uint8_t currentVelocity;
+
+  bool envelopeActive;
+  float envelopeLevel;
+  uint32_t envelopeTimeCounter;
+  uint32_t releaseStartTime;
+  bool inRelease;
+
+  granular_params_t currentParams;
+
+  float movingPosition;
+  uint16_t randState;
+  float perNotePitchShift;  // Per-note pitch adjustment
+
+  // Add voice-specific timing offset
+  uint32_t voiceTimeOffset;
+
+  // New organic variation members
+  float voiceAmpContour[4];      // Attack, decay, sustain, release curve variations
+  float voiceGrainBias[3];       // Position, size, density bias per voice  
+  float voicePitchDrift;         // Slow pitch drift amount
+  uint32_t pitchDriftCounter;    // Counter for pitch drift updates
+  float currentPitchDrift;       // Current drift offset
+  float voiceTimbreShift;        // Per-voice timbral character
+  uint32_t grainSpawnJitter;     // Variable grain spawn timing
+  
+  // Organic envelope shaping
+  float calculateOrganicEnvelope(float baseLevel, float timeRatio, bool isRelease);
+  float generateVoiceLFO(uint32_t counter, float rate, float depth);
+
+};
+
+// ---------- Polyphonic manager (AudioStream) ----------
+class AudioChromaticGranularPoly : public AudioStream {
+public:
+  AudioChromaticGranularPoly();
+  ~AudioChromaticGranularPoly();
+
+  void begin();
+  void setParams(const granular_params_t& params);
+  void setSampleData(const int16_t* data, uint32_t sampleFrames);
+  void setSampleDataBytes(const int16_t* data, uint32_t bytes, uint8_t numChannels = 1);
+  void triggerNote(uint8_t note, uint8_t velocity);
+  void noteOff(uint8_t note);
+  void stopAllVoices();
+  int getActiveVoiceCount() const;
+  int getActiveGrainCount() const;
+
+  virtual void update(void); // AudioStream callback
+
+private:
+  ChromaticGranularVoice* voices[MAX_POLY_VOICES];
+  granular_params_t sharedParams;
+  
+  // Add poly-level random seed
+  uint32_t polyRandSeed;
+};
+
+#endif // GRANULAR
+#endif // GRANULAR_H

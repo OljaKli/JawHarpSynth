@@ -102,9 +102,6 @@ using namespace TeensyTimerTool;
 #include "Adafruit_FT6206.h"
 #endif
 
-
-
-
 #ifdef COMPILE_FOR_SDCARD
 #include <TeensyVariablePlayback.h>
 #endif
@@ -228,7 +225,9 @@ AudioEffectModulatedDelay* dexed_chorus[NUM_DEXED];
 
 AudioEffectGate* Gate[NUM_DEXED];  //noise gate for delay feedback channels A+B
 
-AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
+//AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
+AudioMixer<2 * NUM_DRUMS + 3>* global_delay_in_mixer[2];
+
 AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 AudioFilterStateVariable global_delay_filter[NUM_DEXED];
@@ -262,13 +261,16 @@ AudioAnalyzePeak microdexed_peak_2;
 AudioAnalyzePeak microdexed_peak_3;
 #endif
 
-AudioMixer<10> reverb_mixer_r;
-AudioMixer<10> reverb_mixer_l;
+AudioMixer<REVERB_MIX_CH_MAX> reverb_mixer_r;
+AudioMixer<REVERB_MIX_CH_MAX> reverb_mixer_l;
 
 AudioEffectPlateReverb reverb;
 
-AudioMixer<14> master_mixer_r;
-AudioMixer<14> master_mixer_l;
+// AudioMixer<14> master_mixer_r;
+// AudioMixer<14> master_mixer_l;
+
+AudioMixer<MASTER_MIX_CH_MAX> master_mixer_r;
+AudioMixer<MASTER_MIX_CH_MAX> master_mixer_l;
 
 AudioAmplifier volume_r;
 AudioAmplifier volume_l;
@@ -378,23 +380,22 @@ AudioInputI2S i2s1in;
 
 #ifdef GRANULAR
 #include "granular.h"
-extern AudioChromaticGranular granular1;
-extern bool granular_initialized;
-extern  granular_params_t granular_params;
-AudioConnection patchCordGranularR(granular1, 0, master_mixer_r, MASTER_MIX_CH_GRANULAR);
-AudioConnection patchCordGranularL(granular1, 0, master_mixer_l, MASTER_MIX_CH_GRANULAR);
-#endif
+AudioChromaticGranularPoly granularPoly;
 
-// AudioMixer<4> mb_mixer_l;
-// AudioMixer<4> mb_mixer_r;
+AudioFilterBiquad granular_filter_l;
+AudioFilterBiquad granular_filter_r;
+
+granular_params_t granular_params;
+
+#endif
 
 AudioAnalyzePeak mb_before_l;
 AudioAnalyzePeak mb_before_r;
 AudioAnalyzePeak mb_after_l;
 AudioAnalyzePeak mb_after_r;
 
-  AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
-  AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
+AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
+AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
 
 // WAV/AUDIO Recording
 AudioRecordQueue record_queue_l;
@@ -431,7 +432,7 @@ const AudioConnection patchCord[] = {
 
        {master_mixer_l, 0, mb_before_l, 0},
        {master_mixer_r, 0, mb_before_r, 0},
-       
+
        // Realtime Scope
        {master_mixer_l, 0, scope, 0},
 
@@ -454,133 +455,146 @@ const AudioConnection patchCord[] = {
           {finalized_mixer_l, 0, mb_after_l, 0},
          {finalized_mixer_r, 0, mb_after_r, 0},
 
-            // {finalized_mixer_l, 0, i2s1, 1},
-            // {finalized_mixer_r, 0, i2s1, 0},
+         // {finalized_mixer_l, 0, i2s1, 1},
+         // {finalized_mixer_r, 0, i2s1, 0},
 
-            //WAV RECORDER
-            {finalized_mixer_l, 0, record_queue_l, 0},
-            {finalized_mixer_r, 0, record_queue_r, 0},
+         //WAV RECORDER
+         {finalized_mixer_l, 0, record_queue_l, 0},
+         {finalized_mixer_r, 0, record_queue_r, 0},
 
-        #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
-            {stereo2mono, 0, audio_thru_mixer_r, 0},
-            {stereo2mono, 1, audio_thru_mixer_l, 0},
-            {audio_thru_mixer_r, 0, i2s1, 0},
-            {audio_thru_mixer_l, 0, i2s1, 1},
-        #endif
+     #if defined(TEENSY_AUDIO_BOARD) && defined(SGTL5000_AUDIO_THRU)
+         {stereo2mono, 0, audio_thru_mixer_r, 0},
+         {stereo2mono, 1, audio_thru_mixer_l, 0},
+         {audio_thru_mixer_r, 0, i2s1, 0},
+         {audio_thru_mixer_l, 0, i2s1, 1},
+     #endif
 
-            {drum_reverb_send_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_DRUMS},
-            {drum_reverb_send_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_DRUMS},
-            {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
-            {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
-            {drum_mixer_r, 0, drum_mixer_peak_r, 0},
-            {drum_mixer_l, 0, drum_mixer_peak_l, 0},
+         {drum_reverb_send_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_DRUMS},
+         {drum_reverb_send_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_DRUMS},
 
-            {reverb, 0, reverb_return_peak_r, 0},
-            {reverb, 1, reverb_return_peak_l, 0},
+#ifdef GRANULAR
+  {granularPoly, 0, granular_filter_l,0},
+   {granularPoly, 0, granular_filter_r,0},
 
-            {ep, 0, ep_stereo_panorama, 0},
-            {ep, 1, ep_stereo_panorama, 1},
-            {ep_stereo_panorama, 0, ep_peak_r, 0},
-            {ep_stereo_panorama, 1, ep_peak_l, 0},
-            {ep_stereo_panorama, 0, ep_chorus_mixer_r, 0},
-            {ep_stereo_panorama, 1, ep_chorus_mixer_l, 0},
-            {ep_stereo_panorama, 0, ep_modchorus, 0},
-            {ep_stereo_panorama, 1, ep_modchorus, 1},
-            {ep_chorus_modulator, 0, ep_modchorus_filter, 0},
-            {ep_modchorus_filter, 0, ep_modchorus, 2},
-            {ep_modchorus, 0, ep_chorus_mixer_r, 1},
-            {ep_modchorus, 1, ep_chorus_mixer_l, 1},
-            {ep_chorus_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_EPIANO},
-            {ep_chorus_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_EPIANO},
-            {ep_chorus_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_EPIANO},
-            {ep_chorus_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_EPIANO},
+     {granular_filter_l, 0, master_mixer_l, MASTER_MIX_CH_GRANULAR},
+    {granular_filter_r, 0, master_mixer_r, MASTER_MIX_CH_GRANULAR},
 
-            {ep_chorus_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_EPIANO},
-            {ep_chorus_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_EPIANO},
+          {granular_filter_r, 0, reverb_mixer_r, REVERB_MIX_CH_GRANULAR},
+          {granular_filter_l, 0, reverb_mixer_l, REVERB_MIX_CH_GRANULAR},
 
-            {microsynth_noise[0], 0, microsynth_envelope_noise[0], 0}, // noise generator to envelope
-            {microsynth_noise[1], 0, microsynth_envelope_noise[1], 0},
+#endif
 
-            {microsynth_envelope_noise[0], 0, microsynth_filter_noise[0], 0}, // noise envelope to filter
-            {microsynth_envelope_noise[1], 0, microsynth_filter_noise[1], 0},
+         {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
+         {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
+         {drum_mixer_r, 0, drum_mixer_peak_r, 0},
+         {drum_mixer_l, 0, drum_mixer_peak_l, 0},
 
-            {microsynth_filter_noise[0], 0, microsynth_mixer_filter_noise[0], 0}, // noise filter to mixer
-            {microsynth_filter_noise[0], 1, microsynth_mixer_filter_noise[0], 1},
-            {microsynth_filter_noise[0], 2, microsynth_mixer_filter_noise[0], 2},
+         {reverb, 0, reverb_return_peak_r, 0},
+         {reverb, 1, reverb_return_peak_l, 0},
 
-            {microsynth_filter_noise[1], 0, microsynth_mixer_filter_noise[1], 0},
-            {microsynth_filter_noise[1], 1, microsynth_mixer_filter_noise[1], 1},
-            {microsynth_filter_noise[1], 2, microsynth_mixer_filter_noise[1], 2},
+         {ep, 0, ep_stereo_panorama, 0},
+         {ep, 1, ep_stereo_panorama, 1},
+         {ep_stereo_panorama, 0, ep_peak_r, 0},
+         {ep_stereo_panorama, 1, ep_peak_l, 0},
+         {ep_stereo_panorama, 0, ep_chorus_mixer_r, 0},
+         {ep_stereo_panorama, 1, ep_chorus_mixer_l, 0},
+         {ep_stereo_panorama, 0, ep_modchorus, 0},
+         {ep_stereo_panorama, 1, ep_modchorus, 1},
+         {ep_chorus_modulator, 0, ep_modchorus_filter, 0},
+         {ep_modchorus_filter, 0, ep_modchorus, 2},
+         {ep_modchorus, 0, ep_chorus_mixer_r, 1},
+         {ep_modchorus, 1, ep_chorus_mixer_l, 1},
+         {ep_chorus_mixer_r, 0, reverb_mixer_r, REVERB_MIX_CH_EPIANO},
+         {ep_chorus_mixer_l, 0, reverb_mixer_l, REVERB_MIX_CH_EPIANO},
+         {ep_chorus_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_EPIANO},
+         {ep_chorus_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_EPIANO},
 
-            {microsynth_envelope_noise[0], 0, microsynth_mixer_filter_noise[0], 3}, // unfiltered noise to mixer
-            {microsynth_envelope_noise[1], 0, microsynth_mixer_filter_noise[1], 3},
+         {ep_chorus_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_EPIANO},
+         {ep_chorus_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_EPIANO},
 
-            {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 0}, // noise to panorama 0
-            {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 1},
+         {microsynth_noise[0], 0, microsynth_envelope_noise[0], 0}, // noise generator to envelope
+         {microsynth_noise[1], 0, microsynth_envelope_noise[1], 0},
 
-            {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 0}, // noise to panorama 1
-            {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 1},
+         {microsynth_envelope_noise[0], 0, microsynth_filter_noise[0], 0}, // noise envelope to filter
+         {microsynth_envelope_noise[1], 0, microsynth_filter_noise[1], 0},
 
-            {microsynth_waveform[0], 0, microsynth_envelope_osc[0], 0}, // osc waveform to envelope
-            {microsynth_waveform[1], 0, microsynth_envelope_osc[1], 0},
+         {microsynth_filter_noise[0], 0, microsynth_mixer_filter_noise[0], 0}, // noise filter to mixer
+         {microsynth_filter_noise[0], 1, microsynth_mixer_filter_noise[0], 1},
+         {microsynth_filter_noise[0], 2, microsynth_mixer_filter_noise[0], 2},
 
-            {microsynth_envelope_osc[0], 0, microsynth_filter_osc[0], 0}, // osc envelope to filter
-            {microsynth_envelope_osc[1], 0, microsynth_filter_osc[1], 0},
+         {microsynth_filter_noise[1], 0, microsynth_mixer_filter_noise[1], 0},
+         {microsynth_filter_noise[1], 1, microsynth_mixer_filter_noise[1], 1},
+         {microsynth_filter_noise[1], 2, microsynth_mixer_filter_noise[1], 2},
 
-            {microsynth_envelope_osc[0], 0, microsynth_mixer_filter_osc[0], 3}, // osc env to mixer for bypass
-            {microsynth_envelope_osc[1], 0, microsynth_mixer_filter_osc[1], 3},
+         {microsynth_envelope_noise[0], 0, microsynth_mixer_filter_noise[0], 3}, // unfiltered noise to mixer
+         {microsynth_envelope_noise[1], 0, microsynth_mixer_filter_noise[1], 3},
 
-            {microsynth_filter_osc[0], 0, microsynth_mixer_filter_osc[0], 0}, // osc filter 0 to mixer 0
-            {microsynth_filter_osc[0], 1, microsynth_mixer_filter_osc[0], 1},
-            {microsynth_filter_osc[0], 2, microsynth_mixer_filter_osc[0], 2},
+         {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 0}, // noise to panorama 0
+         {microsynth_mixer_filter_noise[0], 0, microsynth_stereo_panorama_noise[0], 1},
 
-            {microsynth_filter_osc[1], 0, microsynth_mixer_filter_osc[1], 0}, // osc filter 1 to mixer 1
-            {microsynth_filter_osc[1], 1, microsynth_mixer_filter_osc[1], 1},
-            {microsynth_filter_osc[1], 2, microsynth_mixer_filter_osc[1], 2},
+         {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 0}, // noise to panorama 1
+         {microsynth_mixer_filter_noise[1], 0, microsynth_stereo_panorama_noise[1], 1},
 
-            {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 0}, // mixer 0 to panorama 0
-            {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 1},
+         {microsynth_waveform[0], 0, microsynth_envelope_osc[0], 0}, // osc waveform to envelope
+         {microsynth_waveform[1], 0, microsynth_envelope_osc[1], 0},
 
-            {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 0}, // mixer 1 to panorama 1
-            {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 1},
+         {microsynth_envelope_osc[0], 0, microsynth_filter_osc[0], 0}, // osc envelope to filter
+         {microsynth_envelope_osc[1], 0, microsynth_filter_osc[1], 0},
 
-            {microsynth_stereo_panorama_osc[0], 0, microsynth_mixer_r[0], 0}, // osc 0 pan to internal mixer
-            {microsynth_stereo_panorama_osc[0], 1, microsynth_mixer_l[0], 0},
+         {microsynth_envelope_osc[0], 0, microsynth_mixer_filter_osc[0], 3}, // osc env to mixer for bypass
+         {microsynth_envelope_osc[1], 0, microsynth_mixer_filter_osc[1], 3},
 
-            {microsynth_stereo_panorama_osc[1], 0, microsynth_mixer_r[1], 0}, // osc 1 pan to internal mixer
-            {microsynth_stereo_panorama_osc[1], 1, microsynth_mixer_l[1], 0},
+         {microsynth_filter_osc[0], 0, microsynth_mixer_filter_osc[0], 0}, // osc filter 0 to mixer 0
+         {microsynth_filter_osc[0], 1, microsynth_mixer_filter_osc[0], 1},
+         {microsynth_filter_osc[0], 2, microsynth_mixer_filter_osc[0], 2},
 
-            {microsynth_stereo_panorama_noise[0], 0, microsynth_mixer_r[0], 1}, // noise 0 to mixer
-            {microsynth_stereo_panorama_noise[0], 1, microsynth_mixer_l[0], 1},
+         {microsynth_filter_osc[1], 0, microsynth_mixer_filter_osc[1], 0}, // osc filter 1 to mixer 1
+         {microsynth_filter_osc[1], 1, microsynth_mixer_filter_osc[1], 1},
+         {microsynth_filter_osc[1], 2, microsynth_mixer_filter_osc[1], 2},
 
-            {microsynth_stereo_panorama_noise[1], 0, microsynth_mixer_r[1], 1}, // noise 1 to mixer
-            {microsynth_stereo_panorama_noise[1], 1, microsynth_mixer_l[1], 1},
+         {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 0}, // mixer 0 to panorama 0
+         {microsynth_mixer_filter_osc[0], 0, microsynth_stereo_panorama_osc[0], 1},
 
-            {microsynth_mixer_r[0], 0, microsynth_main_mixer_r, 0},
-            {microsynth_mixer_l[0], 0, microsynth_main_mixer_l, 0},
+         {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 0}, // mixer 1 to panorama 1
+         {microsynth_mixer_filter_osc[1], 0, microsynth_stereo_panorama_osc[1], 1},
 
-            {microsynth_mixer_r[1], 0, microsynth_main_mixer_r, 1},
-            {microsynth_mixer_l[1], 0, microsynth_main_mixer_l, 1},
+         {microsynth_stereo_panorama_osc[0], 0, microsynth_mixer_r[0], 0}, // osc 0 pan to internal mixer
+         {microsynth_stereo_panorama_osc[0], 1, microsynth_mixer_l[0], 0},
 
-            {microsynth_main_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_MICROSYNTH},
-            {microsynth_main_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+         {microsynth_stereo_panorama_osc[1], 0, microsynth_mixer_r[1], 0}, // osc 1 pan to internal mixer
+         {microsynth_stereo_panorama_osc[1], 1, microsynth_mixer_l[1], 0},
 
-            //sidechain
+         {microsynth_stereo_panorama_noise[0], 0, microsynth_mixer_r[0], 1}, // noise 0 to mixer
+         {microsynth_stereo_panorama_noise[0], 1, microsynth_mixer_l[0], 1},
 
-            {microsynth_main_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_MICROSYNTH},
-            {microsynth_main_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_MICROSYNTH},
-            //sidechain end
+         {microsynth_stereo_panorama_noise[1], 0, microsynth_mixer_r[1], 1}, // noise 1 to mixer
+         {microsynth_stereo_panorama_noise[1], 1, microsynth_mixer_l[1], 1},
 
-               {microsynth_mixer_r[0], 0, microsynth_mixer_reverb, 0},
-               {microsynth_mixer_r[1], 0, microsynth_mixer_reverb, 1},
+         {microsynth_mixer_r[0], 0, microsynth_main_mixer_r, 0},
+         {microsynth_mixer_l[0], 0, microsynth_main_mixer_l, 0},
 
-               {microsynth_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_MICROSYNTH},
-               {microsynth_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_MICROSYNTH},
+         {microsynth_mixer_r[1], 0, microsynth_main_mixer_r, 1},
+         {microsynth_mixer_l[1], 0, microsynth_main_mixer_l, 1},
 
-               {microsynth_mixer_filter_osc[0], 0, microsynth_peak_osc_0, 0},     // osc 1 (inst1) to peak analyzer
-               {microsynth_mixer_filter_osc[1], 0, microsynth_peak_osc_1, 0},     // osc 2 (inst2) to peak analyzer
-               {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
-               {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
+         {microsynth_main_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_MICROSYNTH},
+         {microsynth_main_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+
+         //sidechain
+
+         {microsynth_main_mixer_r, 0, sidechain_mixer_r, MASTER_MIX_CH_MICROSYNTH},
+         {microsynth_main_mixer_l, 0, sidechain_mixer_l, MASTER_MIX_CH_MICROSYNTH},
+         //sidechain end
+
+            {microsynth_mixer_r[0], 0, microsynth_mixer_reverb, 0},
+            {microsynth_mixer_r[1], 0, microsynth_mixer_reverb, 1},
+
+            {microsynth_mixer_reverb, 0, reverb_mixer_r, REVERB_MIX_CH_MICROSYNTH},
+            {microsynth_mixer_reverb, 1, reverb_mixer_l, REVERB_MIX_CH_MICROSYNTH},
+
+            {microsynth_mixer_filter_osc[0], 0, microsynth_peak_osc_0, 0},     // osc 1 (inst1) to peak analyzer
+            {microsynth_mixer_filter_osc[1], 0, microsynth_peak_osc_1, 0},     // osc 2 (inst2) to peak analyzer
+            {microsynth_mixer_filter_noise[0], 0, microsynth_peak_noise_0, 0}, // unfiltered noise to mixer
+            {microsynth_mixer_filter_noise[1], 0, microsynth_peak_noise_1, 0},
 };
 
 //
@@ -599,7 +613,7 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
 
   if (instance_id == 0 || instance_id == 1)
-    global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS * 2 + 2>();
+    global_delay_in_mixer[instance_id] = new AudioMixer<NUM_DRUMS * 2 + 3>();
 
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
 
@@ -627,12 +641,6 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN));
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN));
-
-    #ifdef GRANULAR
-    dynamicConnections.emplace_back(new AudioConnection(granular1, 0, master_mixer_r, MASTER_MIX_CH_GRANULAR));
-    dynamicConnections.emplace_back(new AudioConnection(granular1, 0, master_mixer_l, MASTER_MIX_CH_GRANULAR));
-    #endif
-
 
   }
   else
@@ -738,9 +746,14 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   if (instance_id == 1)
   {
     // delay1 to delay2
-    dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[0], 0, *global_delay_in_mixer[1], 9));  //previously 7
+    dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[0], 0, *global_delay_in_mixer[1], 9));
     // delay2 to delay1
-    dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[1], 0, *global_delay_in_mixer[0], 9));  //previously 7
+    dynamicConnections.emplace_back(new AudioConnection(*global_delay_in_mixer[1], 0, *global_delay_in_mixer[0], 9));
+
+#ifdef GRANULAR
+    dynamicConnections.emplace_back(new AudioConnection(granular_filter_l, 0, *global_delay_in_mixer[0], 18));
+    dynamicConnections.emplace_back(new AudioConnection(granular_filter_r, 0, *global_delay_in_mixer[1], 18));
+#endif
 
   }
 
@@ -814,7 +827,7 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   Drum[instance_id] = new AudioPlaySdResmp();
 #endif
 
- Drum[instance_id] = new PitchSamplePlayer();
+  Drum[instance_id] = new PitchSamplePlayer();
 
   Drum[instance_id]->enableInterpolation(false);
 
@@ -1058,7 +1071,7 @@ FLASHMEM void All_Button_LEDS(bool state)
   else {
     if (!(configuration.sys.ext_clock && cv_clock))
       setled(LED_UP, LOW);
-      
+
     if (configuration.sys.sus_pedal)
       setled(LED_DOWN, trs_pedal);
     else
@@ -1101,16 +1114,35 @@ void initMCP4728() {
 }
 #endif
 
-
-
-
+#ifdef GRANULAR
+extern void updateGranularFilters();
+#endif
 
 FLASHMEM void setup()
 {
 
-  #ifdef GRANULAR
-  initGranular() ;
-  #endif
+  //**************************
+  //Reset QSPI clock from 88Mhz to 132 Mhz.
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
+  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+    | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+  //**************************
+
+#ifdef GRANULAR
+  granularPoly.begin();
+
+  granular_params.grain_size = 40;
+  granular_params.grain_position = 50;
+  granular_params.semitones = 50;
+  granular_params.volume = 95;
+  granular_params.density = 30;
+  granular_params.spread = 80;
+  granular_params.active = true;
+
+  //  granularPoly.setParams(params);
+
+#endif
 
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
   delay(60);
@@ -1173,8 +1205,6 @@ FLASHMEM void setup()
   pinMode(CV_CLOCK_IN, INPUT_PULLUP);
   pinMode(TRS_PEDAL_IN, INPUT_PULLUP);
 #endif
-
-
 
 #ifdef DEBUG
   LOG.println(CrashReport);
@@ -1476,6 +1506,10 @@ FLASHMEM void setup()
   microsynth_update_all_settings(0);
   microsynth_update_all_settings(1);
 
+#ifdef GRANULAR
+  updateGranularFilters();
+#endif
+
   braids_update_all_settings();
 
   liveSeq.initOnce();
@@ -1635,8 +1669,8 @@ FLASHMEM void setup()
   }
 
 #ifdef GRANULAR
- master_mixer_r.gain(MASTER_MIX_CH_GRANULAR, 0.9);
-  master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, 0.9);
+  master_mixer_r.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
+  master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
 #endif
 
   master_mixer_r.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
@@ -2588,6 +2622,45 @@ FLASHMEM void show_chord()
 
 }
 
+#ifdef GRANULAR
+FLASHMEM void display_granular_status()
+{
+  uint16_t y = 12;
+  uint8_t totalVoices = MAX_POLY_VOICES;
+  // Static variables to track previous state
+  static bool lastVoiceState[MAX_POLY_VOICES] = { false };
+  static bool firstRun = true;
+  bool needsUpdate = false;
+
+  // Check if any voice state has changed
+  for (int i = 0; i < totalVoices; i++) {
+    bool currentState = granularPoly.voices[i]->isPlaying();
+    if (firstRun || currentState != lastVoiceState[i]) {
+      needsUpdate = true;
+      lastVoiceState[i] = currentState;
+    }
+  }
+  // Only update the display if something changed or it's the first run
+  if (needsUpdate || firstRun) {
+    firstRun = false;
+    uint8_t Box = 8;
+    uint16_t startX = 120;
+
+    for (int i = 0; i < totalVoices; i++) {
+      uint16_t voiceX = startX + i * (Box + 4);
+      if (granularPoly.voices[i]->isPlaying()) {
+        // Active voice - filled rectangle
+        display.fillRect(voiceX, y, Box, Box, GREEN);
+      }
+      else {
+        // Inactive voice - outline only
+        display.fillRect(voiceX, y, Box, Box, GREY2);
+      }
+    }
+  }
+}
+#endif
+
 void loop()
 {
 
@@ -2743,80 +2816,87 @@ void loop()
       continueWavRecording();
     }
   }
-  else
-    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
+
+#ifdef GRANULAR
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_granular))
+  {
+    display_granular_status();
+  }
+#endif
+
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
+  {
+    display.setTextSize(1);
+    for (uint8_t d = 0; d < NUM_DRUMS; d++)
+    {
+      if (Drum[d]->isPlaying() != display_buffer_samples[d])
+      {
+        //  setCursor_textGrid_small(24 + d * 2, 2);
+        display.setCursor(122 + (d * 2 * CHAR_width_small), 18);
+        if (Drum[d]->isPlaying())
+        {
+          display.setTextColor(GREEN, COLOR_BACKGROUND);
+          display.print("o");
+        }
+        else
+        {
+          display.setTextColor(GREY2, COLOR_BACKGROUND);
+          display.print("-");
+        }
+        display_buffer_samples[d] = Drum[d]->isPlaying();
+      }
+    }
+  }
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
+  {
+    if (Gate[0]->get_state() != gate_state_old[0])
     {
       display.setTextSize(1);
-      for (uint8_t d = 0; d < NUM_DRUMS; d++)
-      {
-        if (Drum[d]->isPlaying() != display_buffer_samples[d])
-        {
-          //  setCursor_textGrid_small(24 + d * 2, 2);
-          display.setCursor(122 + (d * 2 * CHAR_width_small), 18);
-          if (Drum[d]->isPlaying())
-          {
-            display.setTextColor(GREEN, COLOR_BACKGROUND);
-            display.print("o");
-          }
-          else
-          {
-            display.setTextColor(GREY2, COLOR_BACKGROUND);
-            display.print("-");
-          }
-          display_buffer_samples[d] = Drum[d]->isPlaying();
-        }
-      }
+      setCursor_textGrid_small(1 + 5, 5);
+      display.setTextColor(GREEN, GREY4);
+      print_gate_state(0);
+      gate_state_old[0] = Gate[0]->get_state();
     }
-    else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_master_effects))
-    {
-      if (Gate[0]->get_state() != gate_state_old[0])
-      {
-        display.setTextSize(1);
-        setCursor_textGrid_small(1 + 5, 5);
-        display.setTextColor(GREEN, GREY4);
-        print_gate_state(0);
-        gate_state_old[0] = Gate[0]->get_state();
-      }
 
-      if (Gate[1]->get_state() != gate_state_old[1])
-      {
-        display.setTextSize(1);
-        setCursor_textGrid_small(17 + 5, 5);
-        display.setTextColor(GREEN, GREY3);
-        print_gate_state(1);
-        gate_state_old[1] = Gate[1]->get_state();
-      }
-    }
-    else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
+    if (Gate[1]->get_state() != gate_state_old[1])
     {
-      if (seq.running == false) {
-        sub_step_recording(false, 0);
-      }
+      display.setTextSize(1);
+      setCursor_textGrid_small(17 + 5, 5);
+      display.setTextColor(GREEN, GREY3);
+      print_gate_state(1);
+      gate_state_old[1] = Gate[1]->get_state();
     }
+  }
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
+  {
+    if (seq.running == false) {
+      sub_step_recording(false, 0);
+    }
+  }
 
 #if defined SMFPLAYER
-    else if (!SMF.isEOF())
-    {
-      if (SMF.getNextEvent()) {
-      }
+  else if (!SMF.isEOF())
+  {
+    if (SMF.getNextEvent()) {
     }
-    else if (smf_playing)
+  }
+  else if (smf_playing)
+  {
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
     {
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
-      {
-        if (generic_temp_select_menu == 1)
-          display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-        else
-          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        setCursor_textGrid_small(33, 6);
-        display.print("STOPPED");
-        print_smf_parameters();
-        helptext_r("START PLAYING");
-        seq.edit_state = false;
-      }
-      smf_playing = false;
-      SMF.close();
+      if (generic_temp_select_menu == 1)
+        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+      else
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      setCursor_textGrid_small(33, 6);
+      display.print("STOPPED");
+      print_smf_parameters();
+      helptext_r("START PLAYING");
+      seq.edit_state = false;
     }
+    smf_playing = false;
+    SMF.close();
+  }
 #endif
 
   if (microsynth_control_rate > MICROSYNTH_CONTROL_RATE_MS) // update lfos, filters etc. when played live or by seq.
@@ -3080,9 +3160,9 @@ void loop()
     multiband_confirm = false;
     if (ts.keyb_in_menu_activated == false && LCDML.FUNC_getID() == 255)
       TouchButton::drawButton(GRID.X[4], GRID.Y[5], "MULTI", "BAND", TouchButton::BUTTON_NORMAL);
-      else
+    else
       if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_multiband_dynamics))
-       TouchButton::drawButton(GRID.X[0], GRID.Y[1]+7, "MULTI", "BAND", TouchButton::BUTTON_NORMAL);
+        TouchButton::drawButton(GRID.X[0], GRID.Y[1] + 7, "MULTI", "BAND", TouchButton::BUTTON_NORMAL);
   }
 
 #if defined(DEBUG) && defined(SHOW_CPU_LOAD_MSEC)
@@ -3858,41 +3938,15 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         }
 
 #ifdef GRANULAR
-  if (inChannel == GRANULAR_MIDI_CHANNEL) {
-    if (granular_initialized && granular_params.active) {
-        uint8_t selected_sample = granular_params.sample_note;
-        
-        if (selected_sample < NUM_DRUMSET_CONFIG &&
-            drum_config[selected_sample].drum_data != NULL) {
-            
-            const int16_t* sampleData = (const int16_t*)drum_config[selected_sample].drum_data;
-           // uint32_t sampleLength = drum_config[selected_sample].len / (drum_config[selected_sample].numChannels * sizeof(int16_t));
-             uint32_t sampleLength = drum_config[selected_sample].len;
-            granular1.setSampleData(sampleData, sampleLength);
-            
-          
-          
-            // Calculate exact semitones shift for accurate pitch
-            // Center at MIDI note 60 (C3) = no pitch shift
-            float semitones_shift = (float)inNumber - 60.0f-12.0f;
-            
-            // Convert to parameter range: 
-            // 0-100 maps to -24 to +24 semitones, so 50 = no shift
-            float semitones_param = 50.0f + (semitones_shift * 50.0f / 24.0f);
-            
-            // Constrain to valid range
-            semitones_param = constrain(semitones_param, 0, 100);
-            
-            granular_params_t chromatic_params = granular_params;
-            chromatic_params.semitones = (uint8_t)semitones_param;
-            
-            granular1.setParams(chromatic_params);
-            granular1.triggerNote(inNumber, inVelocity);
+        if (inChannel == granular_params.midi_channel && granular_params.active) {
+          uint8_t selected_sample = granular_params.sample_note;
+          if (selected_sample < NUM_DRUMSET_CONFIG && drum_config[selected_sample].drum_data != NULL) {
+            uint32_t sampleFrames = drum_config[selected_sample].len / (drum_config[selected_sample].numChannels * sizeof(int16_t));
+            granularPoly.setSampleData((const int16_t*)drum_config[selected_sample].drum_data, sampleFrames);
+            granularPoly.triggerNote(inNumber, inVelocity);
+          }
         }
-    }
-}
 #endif
-
 
       }
     }
@@ -4132,14 +4186,13 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
 
     }
-  
+
 
 #ifdef GRANULAR
-  if (inChannel == GRANULAR_MIDI_CHANNEL) {
-    
-           // granular1.setParams(chromatic_params);
-            granular1.noteOff();
-        }
+    if (inChannel == granular_params.midi_channel) {
+      granularPoly.noteOff(inNumber);
+    }
+
 #endif
 
 
@@ -4995,11 +5048,11 @@ FLASHMEM void dac_unmute(void)
 FLASHMEM void handleStart(void)
 {
 
-LiveSequencer::LiveSeqData* data = liveSeq.getData();
-   // Reset grid step to 0 when starting song mode
-     if (data->useGridSongMode) {
-       data->currentGridStep = 0;
-     }
+  LiveSequencer::LiveSeqData* data = liveSeq.getData();
+  // Reset grid step to 0 when starting song mode
+  if (data->useGridSongMode) {
+    data->currentGridStep = 0;
+  }
 
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
   {
@@ -5010,10 +5063,10 @@ LiveSequencer::LiveSeqData* data = liveSeq.getData();
     seq.arp_note = 0;
     seq.arp_chord = 0;
 
-//swap multiband test
-    // mb_set_mutes();
-    // mb_set_compressor();
-     mb_set_master();
+    //swap multiband test
+        // mb_set_mutes();
+        // mb_set_compressor();
+    mb_set_master();
 
     if (seq.loop_start == 99) { // no loop start set, start at step 0
       seq.current_song_step = 0;
@@ -5354,6 +5407,9 @@ FLASHMEM void initial_values(bool init)
 
     configuration.dexed[0].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST0;
     configuration.dexed[1].midi_channel = DEFAULT_DEXED_MIDI_CHANNEL_INST1;
+#ifdef GRANULAR
+    granular_params.midi_channel = DEFAULT_GRANULAR_MIDI_CHANNEL;
+#endif
     if (NUM_DEXED > 2)
     {
       configuration.dexed[2].midi_channel = MIDI_CHANNEL_OFF;
@@ -5373,7 +5429,7 @@ FLASHMEM void initial_values(bool init)
   //swap multiband test
   // mb_set_mutes();
   // mb_set_compressor();
-   mb_set_master();
+  mb_set_master();
 
 #ifdef DEBUG
   show_configuration();
@@ -5816,11 +5872,6 @@ FLASHMEM void set_fx_params(void)
     global_delay_in_mixer[1]->gain(9, mapfloat(configuration.fx.delay1_to_delay2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));//previously 7
     global_delay_in_mixer[0]->gain(9, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));//previously 7
 
-    // REVERB SEND
-    reverb_mixer_l.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
-    reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
-    reverb_mixer_l.gain(REVERB_MIX_CH_AUX_DELAY2, mapfloat(configuration.fx.delay_to_reverb[1], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
-    reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY2, mapfloat(configuration.fx.delay_to_reverb[1], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
     microsynth_mixer_reverb.gain(0, volume_transform(mapfloat(microsynth[0].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
     microsynth_mixer_reverb.gain(1, volume_transform(mapfloat(microsynth[1].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
     braids_mixer_reverb.gain(0, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
@@ -5843,10 +5894,18 @@ FLASHMEM void set_fx_params(void)
   global_delay_in_mixer[1]->gain(9, mapfloat(configuration.fx.delay1_to_delay2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9)); //previously 7
   global_delay_in_mixer[0]->gain(9, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9)); //previously 7
 
+  // REVERB SEND
   reverb_mixer_l.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
   reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY1, mapfloat(configuration.fx.delay_to_reverb[0], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
   reverb_mixer_l.gain(REVERB_MIX_CH_AUX_DELAY2, mapfloat(configuration.fx.delay_to_reverb[1], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
   reverb_mixer_r.gain(REVERB_MIX_CH_AUX_DELAY2, mapfloat(configuration.fx.delay_to_reverb[1], REVERB_LEVEL_MIN, REVERB_LEVEL_MAX, 0.0, 1.0));
+
+  //   reverb_mixer_r.gain(REVERB_MIX_CH_GRANULAR,0 );
+  // reverb_mixer_l.gain(REVERB_MIX_CH_GRANULAR, 0);
+#ifdef GRANULAR
+  reverb_mixer_r.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+  reverb_mixer_l.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+#endif
 
   // REVERB
   reverb.size(mapfloat(configuration.fx.reverb_roomsize, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX, 0.0, 1.0));

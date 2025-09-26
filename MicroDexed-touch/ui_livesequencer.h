@@ -148,7 +148,7 @@ private:
   bool showingGridSongEditor = false;
 
   static constexpr uint8_t GRID_SONG_COLS = 12; // All 12 tracks
-  static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps
+  static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps visible on screen
 
   // Calculate cell dimensions based on available space
   static constexpr uint8_t GRID_SONG_CELL_WIDTH = (320 - (GRID_SONG_COLS - 1)) / GRID_SONG_COLS;

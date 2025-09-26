@@ -154,8 +154,7 @@
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST3 4
 
 #ifdef GRANULAR
-#define GRANULAR_MIDI_CHANNEL 11
-#define GRANULAR_BASE_NOTE 48     // C3 as base note
+#define DEFAULT_GRANULAR_MIDI_CHANNEL 11
 #endif
 
 // NUMBER OF PARALLEL SAMPLEDRUMS
@@ -1119,6 +1118,7 @@ enum master_mixer_ports
 #ifdef GRANULAR
   MASTER_MIX_CH_GRANULAR,
 #endif
+MASTER_MIX_CH_MAX,
 };
 
 enum reverb_mixer_ports
@@ -1133,6 +1133,10 @@ enum reverb_mixer_ports
   REVERB_MIX_CH_BRAIDS,
   REVERB_MIX_CH_AUX_DELAY1,
   REVERB_MIX_CH_AUX_DELAY2,
+  #ifdef GRANULAR
+  REVERB_MIX_CH_GRANULAR,
+#endif
+REVERB_MIX_CH_MAX,
 };
 
 enum fm_modes
