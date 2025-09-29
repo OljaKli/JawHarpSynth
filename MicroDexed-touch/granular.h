@@ -21,9 +21,9 @@ typedef struct {
   uint8_t density;         // 0..100
   uint8_t spread;          // 0..100
   uint8_t sample_note;
- 
+
   uint8_t rev_send;
-   uint8_t filter_mode;
+  uint8_t filter_mode;
   uint8_t filter_freq;
   uint8_t filter_resonance;
   uint8_t delay_send_1;
@@ -68,17 +68,15 @@ public:
   void mixInto(float* leftFloat, float* rightFloat, uint16_t blockSize);
   int getActiveGrainCount() const;
   void stopAllGrains();
-
+  GranularGrain grains[MAX_GRAINS_PER_VOICE];
 private:
   void startGrain(const granular_params_t& params);
-
-  GranularGrain grains[MAX_GRAINS_PER_VOICE];
 
   const int16_t* sampleData;
   uint32_t sampleLength; // frames (mono)
 
   bool noteOn;
-  
+
   uint8_t currentNote;
   uint8_t currentVelocity;
 
@@ -86,7 +84,7 @@ private:
   float envelopeLevel;
   uint32_t envelopeTimeCounter;
   bool inAttack;
-uint32_t attackStartTime;
+  uint32_t attackStartTime;
   uint32_t releaseStartTime;
   bool inRelease;
 
@@ -122,10 +120,10 @@ public:
   int getActiveGrainCount() const;
 
   virtual void update(void); // AudioStream callback
- ChromaticGranularVoice* voices[MAX_POLY_VOICES];
- 
+  ChromaticGranularVoice* voices[MAX_POLY_VOICES];
+
 private:
- 
+
   granular_params_t sharedParams;
   uint32_t polyRandSeed;
 };

@@ -25,9 +25,21 @@ FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequen
 
 FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
   const LiveSequencer::TrackSettings& trackSettings = data.trackSettings[data.activeTrack];
-  const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) || (trackSettings.instrument != selectedTrackSetup.instrument);
+  
+  // For external MIDI devices, we need to handle the instrument parameter differently
+  uint8_t newInstrument = selectedTrackSetup.instrument;
+  
+  // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
+  if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
+    // For external MIDI, use the selectedInstrument directly as MIDI channel
+    newInstrument = selectedInstrument;
+  }
+  
+  const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) || 
+                         (trackSettings.instrument != newInstrument);
+  
   if (hasChanged) {
-    liveSeq.changeTrackInstrument(data.activeTrack, selectedTrackSetup.device, selectedTrackSetup.instrument);
+    liveSeq.changeTrackInstrument(data.activeTrack, selectedTrackSetup.device, newInstrument);
     drawUpdates(drawTrackButtons);
   }
 }
@@ -198,20 +210,29 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   toolsPages[TOOLS_SEQ].push_back(selectedTrackSetup.label);
 
   // track instrument
-  ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedInstrument, 0, 15, 1, instrumentToInstrumentID[data.trackSettings[data.activeTrack].instrument],
+    ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedInstrument, 0, 15, 1, data.trackSettings[data.activeTrack].instrument,
     [this](auto* b, auto* v) { // drawHandler
       char name[10];
       char sub[10];
 
-      // MDT has instruments 0-12 / MIDI has instuments 0-15
-      selectedTrackSetup.instrument = instrumentToInstrumentID[selectedInstrument];
-      const uint8_t maxInstrument = (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) ? LiveSequencer::INSTR_MAX - 1 : 15;
-      static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, maxInstrument);
-
-      liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
+      // Handle instrument selection based on device type
+      if (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) {
+        // For internal devices: use instrumentToInstrumentID mapping
+        selectedTrackSetup.instrument = instrumentToInstrumentID[selectedInstrument];
+        const uint8_t maxInstrument = LiveSequencer::INSTR_MAX - 1;
+        static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, maxInstrument);
+        liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
+      } else {
+        // For external MIDI devices: use selectedInstrument directly as MIDI channel (0-15)
+        selectedTrackSetup.instrument = selectedInstrument;
+        static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, 15);
+        liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
+      }
+      
       b->draw(name, sub, TouchButton::BUTTON_ACTIVE);
       instance->checkApplyTrackInstrument();
     });
+
   toolsPages[TOOLS_SEQ].push_back(currentTrackInstrument);
 
   // track device
@@ -691,9 +712,8 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
 
 
     // Ensure we start in pattern mode, not grid mode
-    data.isSongMode = false;
-
-    currentPage = PAGE_PATTERN;
+    // data.isSongMode = false;
+    // currentPage = PAGE_PATTERN;  //phtodo
 
     display.setTextSize(1);
     display.setCursor(GRID.X[2], 6);
@@ -810,7 +830,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     gridNeedsRedraw = true;
     data.redraw_grid_buttons = true;
     // Always return to pattern mode when closing
-    data.isSongMode = false;
+    //data.isSongMode = false; //phtodo
     inGridEditor = false;
     showingGridSongEditor = false;
     gridNeedsRedraw = true;
@@ -914,12 +934,20 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   selectedTrackSetup.quantizeDenom = data.trackSettings[track].quantizeDenom;
   selectedTrackSetup.velocity = data.trackSettings[track].velocityLevel;
 
-  // reverse lookup selected instrument index
-  for (size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
-    if (instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
-      selectedInstrument = i;
+  // Set selectedInstrument based on device type
+  if (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) {
+    // For internal devices: reverse lookup selected instrument index
+    for (size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
+      if (instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
+        selectedInstrument = i;
+        break;
+      }
     }
+  } else {
+    // For external MIDI devices: use instrument value directly as MIDI channel
+    selectedInstrument = selectedTrackSetup.instrument;
   }
+
   // update currently selected track
   if ((isLayerViewActive == false) && (currentTools == TOOLS_SEQ)) {
     drawUpdates(drawTools);

@@ -74,12 +74,13 @@ private:
   } selectedTrackSetup;
 
   // instrument order in GUI in track instrument config, free to change
-  static constexpr std::array<LiveSequencer::InternalInstrument, 12> instrumentToInstrumentID = {
+  static constexpr std::array<LiveSequencer::InternalInstrument, 13> instrumentToInstrumentID = {
     LiveSequencer::INSTR_DRUM,
     LiveSequencer::INSTR_DX1,
     LiveSequencer::INSTR_DX2,
     LiveSequencer::INSTR_DX3,
     LiveSequencer::INSTR_DX4,
+    LiveSequencer::INSTR_GRA,
     LiveSequencer::INSTR_EP,
     LiveSequencer::INSTR_MS1,
     LiveSequencer::INSTR_MS2,

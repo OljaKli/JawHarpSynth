@@ -2625,37 +2625,133 @@ FLASHMEM void show_chord()
 #ifdef GRANULAR
 FLASHMEM void display_granular_status()
 {
-  uint16_t y = 12;
   uint8_t totalVoices = MAX_POLY_VOICES;
+  
   // Static variables to track previous state
   static bool lastVoiceState[MAX_POLY_VOICES] = { false };
+  static float lastGrainPositions[MAX_POLY_VOICES * MAX_GRAINS_PER_VOICE] = {0};
+  static uint8_t lastGrainCount = 0;
   static bool firstRun = true;
-  bool needsUpdate = false;
+  
+  // Voice indicators area (top right corner)
+  static const uint16_t voiceY = 2;
+  static const uint8_t Box = 6;
+  static const uint16_t startX = 320 - (totalVoices * (Box + 2));
+  
+  // Grain indicators area
+  static const uint16_t grainAreaY = 23;
+  static const uint16_t grainAreaHeight = 7;
+  static const uint16_t grainAreaX = 0;
+  static const uint16_t grainAreaWidth = 320;
 
-  // Check if any voice state has changed
-  for (int i = 0; i < totalVoices; i++) {
+  bool voiceStateChanged = false;
+  bool grainPositionsChanged = false;
+
+  // Get current sample info for position mapping
+  const drum_config_t& slot = drum_config[granular_params.sample_note];
+  uint32_t sampleFrames = slot.len / (sizeof(int16_t) * slot.numChannels);
+  if (sampleFrames == 0) sampleFrames = 1;
+
+  // Check if voice states changed
+  for (uint8_t i = 0; i < totalVoices; i++) {
     bool currentState = granularPoly.voices[i]->isPlaying();
     if (firstRun || currentState != lastVoiceState[i]) {
-      needsUpdate = true;
+      voiceStateChanged = true;
       lastVoiceState[i] = currentState;
     }
   }
-  // Only update the display if something changed or it's the first run
-  if (needsUpdate || firstRun) {
-    firstRun = false;
-    uint8_t Box = 8;
-    uint16_t startX = 120;
 
-    for (int i = 0; i < totalVoices; i++) {
-      uint16_t voiceX = startX + i * (Box + 4);
-      if (granularPoly.voices[i]->isPlaying()) {
-        // Active voice - filled rectangle
-        display.fillRect(voiceX, y, Box, Box, GREEN);
+  // Collect current grain positions
+  uint8_t currentGrainCount = 0;
+  float currentGrainPositions[MAX_POLY_VOICES * MAX_GRAINS_PER_VOICE];
+  
+  for (uint8_t v = 0; v < MAX_POLY_VOICES; v++) {
+    if (granularPoly.voices[v]->isPlaying()) {
+      for (uint8_t g = 0; g < MAX_GRAINS_PER_VOICE; g++) {
+        if (granularPoly.voices[v]->grains[g].active) {
+          float grainPos = granularPoly.voices[v]->grains[g].position;
+          if (grainPos >= 0 && grainPos < sampleFrames && 
+              currentGrainCount < MAX_POLY_VOICES * MAX_GRAINS_PER_VOICE) {
+            currentGrainPositions[currentGrainCount++] = grainPos;
+          }
+        }
       }
-      else {
-        // Inactive voice - outline only
-        display.fillRect(voiceX, y, Box, Box, GREY2);
+    }
+  }
+
+  // Check if grain positions changed significantly
+  if (currentGrainCount != lastGrainCount) {
+    grainPositionsChanged = true;
+  } else {
+    for (uint8_t i = 0; i < currentGrainCount; i++) {
+      // Only redraw if position changed by more than 2 pixels on screen
+      uint16_t oldX = grainAreaX + (uint16_t)((lastGrainPositions[i] / sampleFrames) * grainAreaWidth);
+      uint16_t newX = grainAreaX + (uint16_t)((currentGrainPositions[i] / sampleFrames) * grainAreaWidth);
+      if (abs((int16_t)newX - (int16_t)oldX) > 2) {
+        grainPositionsChanged = true;
+        break;
       }
+    }
+  }
+
+  // Only update if something changed or it's the first run
+  if (voiceStateChanged || grainPositionsChanged || firstRun) {
+    firstRun = false;
+
+    // Update voice indicators only if they changed
+    if (voiceStateChanged || firstRun) {
+      for (uint8_t i = 0; i < totalVoices; i++) {
+        uint16_t voiceX = startX + i * (Box + 2);
+        if (granularPoly.voices[i]->isPlaying()) {
+          // Active voice - filled rectangle
+          display.fillRect(voiceX, voiceY, Box, Box, GREEN);
+        } else {
+          // Inactive voice - outline only
+          display.fillRect(voiceX, voiceY, Box, Box, GREY2);
+        }
+      }
+    }
+
+    // Update grain indicators only if they changed
+    if (grainPositionsChanged || firstRun) {
+      // Instead of clearing entire area, only clear what's necessary
+      
+      // Method 1: Clear only the areas around changed grains (most efficient)
+      if (!firstRun) {
+        // Erase only the old grain lines that are no longer needed or have moved
+        for (uint8_t i = 0; i < lastGrainCount; i++) {
+          if (lastGrainPositions[i] >= 0) {
+            uint16_t oldX = grainAreaX + (uint16_t)((lastGrainPositions[i] / sampleFrames) * grainAreaWidth);
+            if (oldX >= grainAreaX && oldX < grainAreaX + grainAreaWidth) {
+              // Erase the old grain line by drawing a black line
+              display.drawLine(oldX, grainAreaY + 1, oldX, grainAreaY + grainAreaHeight - 2, COLOR_BACKGROUND);
+            }
+          }
+        }
+      } else {
+        // First run - clear entire area
+        display.fillRect(grainAreaX, grainAreaY, grainAreaWidth, grainAreaHeight, COLOR_BACKGROUND);
+      }
+
+      // Draw new grain positions
+      for (uint8_t i = 0; i < currentGrainCount; i++) {
+        uint16_t grainX = grainAreaX + (uint16_t)((currentGrainPositions[i] / sampleFrames) * grainAreaWidth);
+        if (grainX >= grainAreaX && grainX < grainAreaX + grainAreaWidth) {
+          // Draw small vertical line
+          uint8_t lineHeight = grainAreaHeight - 2;
+          display.drawLine(grainX, grainAreaY + 1, grainX, grainAreaY + lineHeight, COLOR_SYSTEXT);
+        //  display.drawPixel(grainX, grainAreaY + 1, ;
+        }
+      }
+    }
+
+    // Update tracking
+    lastGrainCount = currentGrainCount;
+    for (uint8_t i = 0; i < currentGrainCount; i++) {
+      lastGrainPositions[i] = currentGrainPositions[i];
+    }
+    for (uint8_t i = currentGrainCount; i < MAX_POLY_VOICES * MAX_GRAINS_PER_VOICE; i++) {
+      lastGrainPositions[i] = -1;
     }
   }
 }
@@ -3254,8 +3350,8 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
         drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
 
-        global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(msz[instance][y].psram_entry_number) / 5); //previously 8
-        global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5); //previously 8
+        global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(msz[instance][y].psram_entry_number) / 5); 
+        global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5); 
 
         msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
 

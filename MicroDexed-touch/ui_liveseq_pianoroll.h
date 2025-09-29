@@ -2,6 +2,8 @@
 #define UI_LIVESEQ_PIANOROLL_H
 
 #include <stdio.h>
+#include <map>
+#include <utility>
 #include "editableValue.h"
 #include "touchbutton.h"
 #include "valuebutton.h"
@@ -9,6 +11,10 @@
 #include "touchbutton.h"
 #include "config.h"
 #include <set>
+
+static constexpr uint8_t SONG_MODE_NOTES_TRACK = 12;
+static constexpr uint8_t SONG_MODE_MUTE_TRACK = 13;
+static constexpr uint8_t MAX_TRACKS = 14; // 12 patterns + 2 song mode tracks
 
 void UI_func_liveseq_graphic(uint8_t param);
 
@@ -21,6 +27,11 @@ public:
   FLASHMEM void onEventsChanged(void);
 
 private:
+uint16_t getMaxBarsForCurrentMode() const;
+
+void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w) const;
+void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
+ bool step(int8_t diff);
   std::set<uint8_t> keysPressed;
   enum ViewMode {
     VIEW_ZOOM_X,
@@ -38,6 +49,7 @@ private:
     EDIT_NOTEOFF,
     EDIT_VELOCITY,
     EDIT_NOTE,
+    EDIT_MUTE_AUTOMATION,
     EDIT_NUM
   };
   uint8_t editMode = EDIT_SELECT_NOTE;
@@ -81,7 +93,8 @@ private:
     DRAW_SINGLE_NOTE = (1 << 5),
     DRAW_STEP_CURSOR = (1 << 6),
     DRAW_CONTENT_AREA = DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES,
-    DRAW_CONTENT_FULL = 1 << 7 // force full redraw
+    DRAW_CONTENT_FULL = 1 << 7, // force full redraw
+    DRAW_MUTE_AUTOMATION = (1 << 8)
   };
   uint16_t drawFlags = 0;
 
@@ -93,6 +106,9 @@ private:
   std::vector<UpdateRange> drawRegionsX;
 
   LiveSequencer::MidiEvent currentNote;
+  int16_t selectedNote = -1;
+  int16_t selectedMuteEvent = -1;
+  std::vector<LiveSequencer::MidiEvent> muteAutomationEvents;
 
   void initGUI(void);
   void drawPianoRoll(void);
@@ -102,8 +118,11 @@ private:
   void queueDrawNote(LiveSequencer::NotePair note);
   void queueDrawNote(UpdateRange coords);
   uint16_t getNoteCoord(uint32_t time) const;
-  uint16_t getRelativeNoteTime(uint32_t time) const;
+uint32_t getRelativeNoteTime(uint32_t time) const;
   void deleteSelectedNote(void);
+  void deleteSelectedMuteEvent(void);
+  void updateMuteEventInSequencer(LiveSequencer::MidiEvent &updatedEvent);
+  void removeMuteEventFromSequencer(LiveSequencer::MidiEvent &eventToRemove);
 
   void drawHeader(uint16_t modeFlags = 0);
   void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
@@ -123,18 +142,23 @@ private:
   void drawBackground(void);
   void drawAreaIndicator(void);
   void drawLayersIndicator(void);
+  void drawMuteAutomation(void);
   bool setMode(uint8_t newMode);
   void setIsHighlighted(bool isActiveMode);
 
   std::string getNoteString(uint8_t note);
 
   void reloadNotes(bool autoAdaptView = false);
-  int16_t selectedNote = -1; // index of notePairs or -1
-
-  bool step(int8_t diff);
-
   const uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
   void setEventTime(LiveSequencer::MidiEvent &e, uint32_t time);
+
+  // New methods for song mode support
+  std::vector<LiveSequencer::NotePair> getNotePairsFromSongTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo);
+  std::vector<LiveSequencer::MidiEvent> getMuteAutomationEvents(uint8_t track, uint8_t patternFrom, uint8_t patternTo);
+  void drawSongModeIndicator(void);
+  
+  // New helper method for track button
+  uint8_t getMaxTrackForCurrentMode() const;
 
   LiveSequencer &liveSeq;
   LiveSequencer::LiveSeqData &data;

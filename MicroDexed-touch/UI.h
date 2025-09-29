@@ -135,7 +135,7 @@ void selectSample(uint8_t sample);
 void update_seq_speed();
 //swap multiband test
 // void mb_set_mutes();
- void mb_set_master();
+void mb_set_master();
 // void mb_set_compressor();
 void clear_song_playhead();
 void sub_song_print_tracknumbers();
@@ -177,8 +177,8 @@ const EncoderEvents getEncoderEvents(uint8_t id);
 
 #define MAX_CC_DEST 15
 PROGMEM static const uint8_t cc_dest_values[MAX_CC_DEST] = { 7, 10, 20, 21, 22, 23, 24,
-  // 25,
-  26, 27, 32, 91, 200, 201, 202, 203 };
+// 25,
+26, 27, 32, 91, 200, 201, 202, 203 };
 
 PROGMEM static const char noteNames[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
@@ -196,14 +196,14 @@ PROGMEM static const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24
 
 // New struct for chain editor specific variables
 typedef struct chain_editor_s {
-    uint8_t active_chain;
-    uint8_t chain_cursor;
-    uint8_t current_ui_state;
-    bool recording_active;
-    uint8_t midi_record_chain_step;
-    uint8_t midi_record_pattern_step;
-    // Add the missing member here
-    uint8_t pattern_cursor; 
+  uint8_t active_chain;
+  uint8_t chain_cursor;
+  uint8_t current_ui_state;
+  bool recording_active;
+  uint8_t midi_record_chain_step;
+  uint8_t midi_record_pattern_step;
+  // Add the missing member here
+  uint8_t pattern_cursor;
 } chain_editor_t;
 
 // Extern declaration of the global struct instance

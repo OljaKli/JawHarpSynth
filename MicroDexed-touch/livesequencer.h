@@ -60,7 +60,8 @@ public:
     // The gap here is because in the other sequencer, all instruments are managed as the same thing, even the external 16+16+16=48 MIDI Channels (+ a safety gap)
     INSTR_DX3 = 70,
     INSTR_DX4 = 71,
-    INSTR_MAX = 12
+    INSTR_GRA = 72,
+    INSTR_MAX = 13
   };
 
   struct MidiEvent {
@@ -275,7 +276,7 @@ public:
   void startCountIn(void);
   void getDeviceName(uint8_t device, char* name, char* sub) const;
   void getInstrumentName(uint8_t device, uint8_t instrument, char* name, char* sub) const;
-  void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument);
+void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel);
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
   void requestSortEvents(void);
   void setActiveTrack(uint8_t track);
