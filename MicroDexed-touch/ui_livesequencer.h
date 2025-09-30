@@ -117,7 +117,6 @@ private:
     TOOLS_SONG,
     TOOLS_ARP,
     TOOLS_SEQ,
-    TOOLS_SONG_MODE,  // New song mode selection tool
     TOOLS_KEYBOARD,
     TOOLS_NUM
   };

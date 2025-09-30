@@ -288,12 +288,11 @@ extern granular_params_t granular_params;
 
 void arp_track(uint8_t d)
 {
-  // Early exit conditions (same as original)
   if (seq.track_type[d] != 3) return;
   if (seq.arp_num_notes_count >= seq.arp_num_notes_max) return;
   if (seq.euclidean_active && !seq.euclidean_state[seq.step]) return;
 
-  // Arp timing conditions (preserving original logic exactly)
+  // Arp timing conditions 
   bool process_arp = false;
   if (seq.arp_speed == 0 && seq.ticks == 0) {
     process_arp = true;

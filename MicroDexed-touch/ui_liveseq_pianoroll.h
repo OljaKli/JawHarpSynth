@@ -2,8 +2,6 @@
 #define UI_LIVESEQ_PIANOROLL_H
 
 #include <stdio.h>
-#include <map>
-#include <utility>
 #include "editableValue.h"
 #include "touchbutton.h"
 #include "valuebutton.h"
@@ -11,6 +9,9 @@
 #include "touchbutton.h"
 #include "config.h"
 #include <set>
+//#include <map>
+//#include <utility>
+
 
 static constexpr uint8_t SONG_MODE_NOTES_TRACK = 12;
 static constexpr uint8_t SONG_MODE_MUTE_TRACK = 13;
@@ -28,7 +29,7 @@ public:
 
 private:
 uint16_t getMaxBarsForCurrentMode() const;
-
+uint16_t getActualBarForNote(const LiveSequencer::NotePair& note) const;
 void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w) const;
 void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
  bool step(int8_t diff);
@@ -49,9 +50,9 @@ void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
     EDIT_NOTEOFF,
     EDIT_VELOCITY,
     EDIT_NOTE,
-    EDIT_MUTE_AUTOMATION,
     EDIT_NUM
   };
+  
   uint8_t editMode = EDIT_SELECT_NOTE;
 
   enum StepMode {

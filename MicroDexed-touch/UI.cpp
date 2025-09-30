@@ -19160,12 +19160,23 @@ _show_midi_channel(buf, 18, slices_midi_channel);
       setModeColor(0);
       setCursor_textGrid_small(40, 5);
       _print_midi_channel(configuration.dexed[0].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 0)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 5 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.dexed[0].midi_channel), 0, 1);
+#endif
+
+
     }
     if (menu_item_check(1))
     {
       setModeColor(1);
       setCursor_textGrid_small(40, 6);
       _print_midi_channel(configuration.dexed[1].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 1)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 6 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.dexed[1].midi_channel), 1, 1);
+#endif
+
     }
     if (menu_item_check(2))
     {
@@ -19173,6 +19184,10 @@ _show_midi_channel(buf, 18, slices_midi_channel);
       setCursor_textGrid_small(40, 7);
 #if (NUM_DEXED>2)
       _print_midi_channel(configuration.dexed[2].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 2)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 7 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.dexed[2].midi_channel), 2, 1);
+#endif
 #else
       _print_midi_channel(MIDI_CHANNEL_OFF);
 #endif
@@ -19183,6 +19198,10 @@ _show_midi_channel(buf, 18, slices_midi_channel);
       setCursor_textGrid_small(40, 8);
 #if (NUM_DEXED>2)
       _print_midi_channel(configuration.dexed[3].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 3)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 8 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.dexed[3].midi_channel), 3, 1);
+#endif
 #else
       _print_midi_channel(MIDI_CHANNEL_OFF);
 #endif
@@ -19194,6 +19213,10 @@ _show_midi_channel(buf, 18, slices_midi_channel);
       setModeColor(4);
       setCursor_textGrid_small(40, 9);
       _print_midi_channel(granular_params.midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 4)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 9 * (CHAR_height_small + 2), 4, get_midi_channel_name(granular_params.midi_channel), 4, 1);
+#endif
     }
 #endif
 
@@ -19202,48 +19225,80 @@ _show_midi_channel(buf, 18, slices_midi_channel);
       setModeColor(5);
       setCursor_textGrid_small(40, 10);
       _print_midi_channel(configuration.epiano.midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 5)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 9 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.epiano.midi_channel), 4, 1);
+#endif
     }
     if (menu_item_check(6))
     {
       setModeColor(6);
       setCursor_textGrid_small(40, 12);
       _print_midi_channel(microsynth[0].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 6)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 11 * (CHAR_height_small + 2), 4, get_midi_channel_name(microsynth[0].midi_channel), 5, 1);
+#endif
     }
     if (menu_item_check(7))
     {
       setModeColor(7);
       setCursor_textGrid_small(40, 13);
       _print_midi_channel(microsynth[1].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 7)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 12 * (CHAR_height_small + 2), 4, get_midi_channel_name(microsynth[1].midi_channel), 6, 1);
+#endif
     }
   if (menu_item_check(8))
     {
       setModeColor(8);
       setCursor_textGrid_small(40, 14);
       _print_midi_channel(braids_osc.midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 8)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 14 * (CHAR_height_small + 2), 4, get_midi_channel_name(braids_osc.midi_channel), 7, 1);
+#endif
     }
     if (menu_item_check(9))
     {
       setModeColor(9);
       setCursor_textGrid_small(40, 15);
       _print_midi_channel(msp[0].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 9)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 16 * (CHAR_height_small + 2), 4, get_midi_channel_name(msp[0].midi_channel), 8, 1);
+#endif
     }
     if (menu_item_check(10))
     {
       setModeColor(10);
       setCursor_textGrid_small(40, 16);
       _print_midi_channel(msp[1].midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 10)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 17 * (CHAR_height_small + 2), 4, get_midi_channel_name(msp[1].midi_channel), 9, 1);
+#endif
     }
     if (menu_item_check(11))
     {
       setModeColor(11);
       setCursor_textGrid_small(40, 17);
       _print_midi_channel(drum_midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 11)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 18 * (CHAR_height_small + 2), 4, get_midi_channel_name(drum_midi_channel), 10, 1);
+#endif
     }
     if (menu_item_check(12))
     {
       setModeColor(12);
       setCursor_textGrid_small(40, 18);
       _print_midi_channel(slices_midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == 12)
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 19 * (CHAR_height_small + 2), 4, get_midi_channel_name(slices_midi_channel), 11, 1);
+#endif
     }
 
     if (count_omni() != 0)
