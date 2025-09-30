@@ -284,6 +284,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
+
 FLASHMEM std::vector<LiveSequencer::NotePair> UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo) {
   std::vector<LiveSequencer::NotePair> result;
   uint8_t lowestFound = 0xFF;
@@ -292,18 +293,21 @@ FLASHMEM std::vector<LiveSequencer::NotePair> UI_LiveSeq_PianoRoll::getNotePairs
   DBG_LOG(printf("getNotePairsFromSongTrack: Track %s, Patterns %d-%d\n", 
                  track == 0xFF ? "ALL" : std::to_string(track).c_str(), patternFrom, patternTo));
   
-  // Get song events from songEvents map
-  for (uint8_t pattern = patternFrom; pattern <= patternTo; pattern++) {
-    if (data.songEvents.find(pattern) == data.songEvents.end()) {
-      continue;
-    }
-    
-    const auto& events = data.songEvents.at(pattern);
+  // Calculate time range for visible area
+  const uint32_t timeFrom = patternFrom * data.patternLengthMs;
+  const uint32_t timeTo = (patternTo + 1) * data.patternLengthMs;
+  
+  // Iterate through ALL song events, not just visible patterns
+  for (const auto& patternEntry : data.songEvents) {
+    const auto& events = patternEntry.second;
     
     // Pair NoteOn events with their corresponding NoteOff
     for (auto itOn = events.begin(); itOn != events.end(); itOn++) {
       // Filter by track if not showing all (0xFF = show all)
       if ((track == 0xFF || itOn->track == track) && itOn->event == midi::NoteOn) {
+        // Calculate note time
+        uint32_t noteTime = itOn->patternNumber * data.patternLengthMs + itOn->patternMs;
+        
         // Find matching NoteOff
         for (auto itOff = itOn; itOff != events.end(); itOff++) {
           if (itOff->track == itOn->track && 
@@ -311,14 +315,19 @@ FLASHMEM std::vector<LiveSequencer::NotePair> UI_LiveSeq_PianoRoll::getNotePairs
               itOff->note_in == itOn->note_in &&
               itOff->event == midi::NoteOff) {
             
-            LiveSequencer::NotePair p = {
-              .noteOn = const_cast<LiveSequencer::MidiEvent&>(*itOn),
-              .noteOff = const_cast<LiveSequencer::MidiEvent&>(*itOff),
-              .isMuted = false // Don't use layer mutes for song view
-            };
-            highestFound = std::max(highestFound, itOn->note_in);
-            lowestFound = std::min(lowestFound, itOn->note_in);
-            result.emplace_back(p);
+            uint32_t noteOffTime = itOff->patternNumber * data.patternLengthMs + itOff->patternMs;
+            
+            // Only include if note overlaps with visible time range
+            if (noteTime < timeTo && noteOffTime > timeFrom) {
+              LiveSequencer::NotePair p = {
+                .noteOn = const_cast<LiveSequencer::MidiEvent&>(*itOn),
+                .noteOff = const_cast<LiveSequencer::MidiEvent&>(*itOff),
+                .isMuted = false
+              };
+              highestFound = std::max(highestFound, itOn->note_in);
+              lowestFound = std::min(lowestFound, itOn->note_in);
+              result.emplace_back(p);
+            }
             break;
           }
         }
@@ -336,25 +345,32 @@ FLASHMEM std::vector<LiveSequencer::NotePair> UI_LiveSeq_PianoRoll::getNotePairs
 FLASHMEM std::vector<LiveSequencer::MidiEvent> UI_LiveSeq_PianoRoll::getMuteAutomationEvents(uint8_t track, uint8_t patternFrom, uint8_t patternTo) {
   std::vector<LiveSequencer::MidiEvent> result;
   
+  // Calculate time range for visible area
+  const uint32_t timeFrom = patternFrom * data.patternLengthMs;
+  const uint32_t timeTo = (patternTo + 1) * data.patternLengthMs;
+  
+  // Iterate through ALL patterns
   for (const auto& patternEntry : data.songEvents) {
-    uint8_t patternNumber = patternEntry.first;
-    
-    if (patternNumber < patternFrom || patternNumber > patternTo) {
-      continue;
-    }
-    
     for (const auto& e : patternEntry.second) {
       // Filter by track if not showing all (0xFF = show all)
       if ((track == 0xFF || e.track == track) &&
           e.event == midi::ControlChange &&
           (e.note_in == LiveSequencer::TYPE_MUTE_ON || e.note_in == LiveSequencer::TYPE_MUTE_OFF)) {
-        result.emplace_back(e);
+        
+        // Calculate event time
+        uint32_t eventTime = e.patternNumber * data.patternLengthMs + e.patternMs;
+        
+        // Only include if event falls within visible time range
+        if (eventTime >= timeFrom && eventTime < timeTo) {
+          result.emplace_back(e);
+        }
       }
     }
   }
   
   return result;
 }
+
 
 
 FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
@@ -418,10 +434,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
 
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawMuteAutomation(void) {
-  if (!data.isSongMode || data.useGridSongMode) return;
+ if (!data.isSongMode || data.useGridSongMode) return;
   
   // Only draw if we're in automation view
-  if (data.activeTrack != 1) return;
+  if (data.activeTrack != SONG_MODE_MUTE_TRACK) return;  // Fixed!
   
   display.setTextSize(1);
   display.console = true;
@@ -595,10 +611,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
   drawAreaIndicator();
 }
 
+// FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
+//   isSettingActivated = !isSettingActivated;
+//   if ((mode == MODE_EDIT) && (editMode == EDIT_SELECT_NOTE || editMode == EDIT_MUTE_AUTOMATION)) {
+//     buttonEdit->drawNow(); // Redraw Edit button to show/hide DELETE text
+//   }
+//   drawHeader(HEADER_DRAW_ALL);
+// }
+
 FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
   isSettingActivated = !isSettingActivated;
-  if ((mode == MODE_EDIT) && (editMode == EDIT_SELECT_NOTE || editMode == EDIT_MUTE_AUTOMATION)) {
-    buttonEdit->drawNow(); // Redraw Edit button to show/hide DELETE text
+  if (mode == MODE_EDIT) {
+    buttonEdit->drawNow(); // Redraw Edit button to show/hide DELETE text for ALL edit modes
   }
   drawHeader(HEADER_DRAW_ALL);
 }
@@ -734,46 +758,119 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       }
       break;
 
-    case MODE_EDIT:
-      headerFlags |= (1 << editMode);
-      switch (editMode) {
-      case EDIT_SELECT_NOTE:
-        if (selectedNote > -1 && !notePairs.empty()) {
-          int16_t newSelection = selectedNote + e.dir;
-          if (newSelection < 0) newSelection = notePairs.size() - 1;
-          else if (newSelection >= static_cast<int16_t>(notePairs.size())) newSelection = 0;
+case MODE_EDIT:
+    headerFlags |= (1 << editMode);
+    switch (editMode) {
+    case EDIT_SELECT_NOTE:
+        if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+            // For mute automation: scroll through events
+            if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
+                int16_t newSelection = selectedMuteEvent + e.dir;
+                if (newSelection < 0) newSelection = muteAutomationEvents.size() - 1;
+                else if (newSelection >= static_cast<int16_t>(muteAutomationEvents.size())) newSelection = 0;
 
-          if (newSelection != selectedNote) {
-            if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-            selectedNote = newSelection;
-            if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-            drawFlags |= DRAW_NOTES;
-            headerFlags = (1 << EDIT_SELECT_NOTE);
-          }
+                if (newSelection != selectedMuteEvent) {
+                    selectedMuteEvent = newSelection;
+                    headerFlags |= (1 << EDIT_MUTE_AUTOMATION);
+                    drawFlags |= DRAW_MUTE_AUTOMATION;
+                }
+            }
+        } else {
+            // Original note selection logic for pattern mode
+            if (selectedNote > -1 && !notePairs.empty()) {
+                int16_t newSelection = selectedNote + e.dir;
+                if (newSelection < 0) newSelection = notePairs.size() - 1;
+                else if (newSelection >= static_cast<int16_t>(notePairs.size())) newSelection = 0;
+
+                if (newSelection != selectedNote) {
+                    if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+                    selectedNote = newSelection;
+                    if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+                    drawFlags |= DRAW_NOTES;
+                    headerFlags = (1 << EDIT_SELECT_NOTE);
+                }
+            }
         }
         break;
 
-      case EDIT_LAYER:
-        if (selectedNote > -1) {
-          int8_t layer = notePairs.at(selectedNote).noteOn.layer;
-          const int8_t maxLayer = (data.isSongMode && !data.useGridSongMode) ?
-                                 int8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1) :
-                                 int8_t(data.trackSettings[data.activeTrack].layerCount - 1);
-          if (hasConstrainedChanged(layer, e.dir, int8_t(0), maxLayer)) {
-            notePairs.at(selectedNote).noteOn.layer = layer;
-            notePairs.at(selectedNote).noteOff.layer = layer;
-            if (data.isSongMode && !data.useGridSongMode) {
-              updateSongEvent(notePairs.at(selectedNote).noteOn);
-              updateSongEvent(notePairs.at(selectedNote).noteOff);
-              reloadNotes();
+     case EDIT_LAYER:
+        if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+            // For mute automation: change layer
+            if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
+                LiveSequencer::MidiEvent &event = muteAutomationEvents.at(selectedMuteEvent);
+                int8_t layer = event.note_in_velocity;
+                if (hasConstrainedChanged(layer, e.dir, int8_t(0), int8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1))) {
+                    event.note_in_velocity = layer;
+                    updateSongEvent(event);
+                    headerFlags |= (1 << EDIT_MUTE_AUTOMATION);
+                    drawFlags |= DRAW_MUTE_AUTOMATION;
+                }
             }
-            headerFlags |= (1 << EDIT_LAYER);
-            drawFlags |= DRAW_CONTENT_FULL;
-          }
+        } else {
+            // Original layer editing for pattern mode
+            if (selectedNote > -1) {
+                int8_t layer = notePairs.at(selectedNote).noteOn.layer;
+                const int8_t maxLayer = (data.isSongMode && !data.useGridSongMode) ?
+                                       int8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1) :
+                                       int8_t(data.trackSettings[data.activeTrack].layerCount - 1);
+                if (hasConstrainedChanged(layer, e.dir, int8_t(0), maxLayer)) {
+                    notePairs.at(selectedNote).noteOn.layer = layer;
+                    notePairs.at(selectedNote).noteOff.layer = layer;
+                    if (data.isSongMode && !data.useGridSongMode) {
+                        updateSongEvent(notePairs.at(selectedNote).noteOn);
+                        updateSongEvent(notePairs.at(selectedNote).noteOff);
+                        reloadNotes();
+                    }
+                    headerFlags |= (1 << EDIT_LAYER);
+                    drawFlags |= DRAW_CONTENT_FULL;
+                }
+            }
         }
         break;
 
       case EDIT_NOTEON:
+        if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+            // For mute automation: change timing
+            if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
+                LiveSequencer::MidiEvent &event = muteAutomationEvents.at(selectedMuteEvent);
+                uint32_t time = getEventTime(event);
+                uint32_t newTime = time + (e.dir * e.speed * 10); // Small timing adjustments
+                if (newTime != time) {
+                    setEventTime(event, newTime);
+                    updateSongEvent(event);
+                    headerFlags |= (1 << EDIT_MUTE_AUTOMATION);
+                    drawFlags |= DRAW_MUTE_AUTOMATION;
+                }
+            }
+        } else {
+            // Original timing editing for pattern mode
+            if (selectedNote > -1) {
+                LiveSequencer::MidiEvent &on  = notePairs.at(selectedNote).noteOn;
+                LiveSequencer::MidiEvent &off = notePairs.at(selectedNote).noteOff;
+
+                const uint32_t noteOnTime  = getEventTime(on);
+                const uint32_t noteOffTime = getEventTime(off);
+
+                uint32_t time = noteOnTime;
+                const uint32_t minTime = 0;
+                const uint32_t maxTime = noteOffTime;
+
+                if (hasConstrainedChanged(time, e.dir * e.speed, minTime, maxTime)) {
+                    setEventTime(on, time);
+                    memcpy(&currentNote, &on, sizeof(on));
+                    if (data.isSongMode && !data.useGridSongMode) {
+                        updateSongEvent(on);
+                        reloadNotes();
+                    } else {
+                        liveSeq.requestSortEvents();
+                    }
+                    headerFlags |= (1 << EDIT_NOTEON);
+                    drawFlags |= DRAW_CONTENT_FULL;
+                }
+            }
+        }
+        break;
+
       case EDIT_NOTEOFF:
         if (selectedNote > -1) {
           LiveSequencer::MidiEvent &on  = notePairs.at(selectedNote).noteOn;
@@ -823,38 +920,80 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
               reloadNotes();
             }
             headerFlags |= (1 << EDIT_VELOCITY);
-            drawFlags |= DRAW_CONTENT_FULL;
+           // drawFlags |= DRAW_CONTENT_FULL;  not necessary for velocity
           }
         }
         break;
 
-      case EDIT_NOTE:
-        if (selectedNote > -1) {
-          LiveSequencer::NotePair &thisNote = notePairs.at(selectedNote);
-          int8_t note = thisNote.noteOn.note_in;
-          if (hasConstrainedChanged(note, e.dir, int8_t(view.lowestNote), int8_t(view.highestNote))) {
+case EDIT_NOTE:
+    if (selectedNote > -1) {
+        LiveSequencer::NotePair &thisNote = notePairs.at(selectedNote);
+        int8_t note = thisNote.noteOn.note_in;
+        if (hasConstrainedChanged(note, e.dir, int8_t(view.lowestNote), int8_t(view.highestNote))) {
+            // Store the old note for targeted redraw
+            uint8_t oldNote = thisNote.noteOn.note_in;
+            
+            // Create a temporary note pair for the old position to clear it
+            LiveSequencer::NotePair oldNotePair = thisNote;
+            oldNotePair.noteOn.note_in = oldNote;
+            oldNotePair.noteOff.note_in = oldNote;
+            
             thisNote.noteOn.note_in = note;
             thisNote.noteOff.note_in = note;
             if (data.isSongMode && !data.useGridSongMode) {
-              updateSongEvent(thisNote.noteOn);
-              updateSongEvent(thisNote.noteOff);
-              reloadNotes();
+                updateSongEvent(thisNote.noteOn);
+                updateSongEvent(thisNote.noteOff);
+                reloadNotes();
             }
             headerFlags |= (1 << EDIT_NOTE);
-            drawFlags |= DRAW_CONTENT_FULL;
-          }
+            
+            // Get precise coordinates for old note with proper boundaries
+            const uint32_t timeOn = getEventTime(oldNotePair.noteOn);
+            const uint32_t timeOff = getEventTime(oldNotePair.noteOff);
+            uint16_t fromX = getNoteCoord(timeOn);
+            uint16_t toX = getNoteCoord(timeOff);
+            
+            // Ensure we clear exactly the right area (match note drawing logic)
+            fromX = (fromX < 2 + ROLL_WIDTH) ? ROLL_WIDTH : (fromX - 2);
+            toX = (toX > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (toX + 2);
+            
+            // Queue background redraw for old note position
+            UpdateRange clearRange;
+            clearRange.fromX = fromX;
+            clearRange.toX = toX;
+            clearRange.notes = { oldNote };
+            drawRegionsX.push_back(clearRange);
+            
+            // Queue drawing of new note position
+            queueDrawNote(thisNote);
+            drawFlags |= DRAW_NOTES | DRAW_BACKGROUND; // Redraw background and notes
         }
-        break;
+    }
+    break;
 
-      case EDIT_MUTE_AUTOMATION:
-        if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
-          LiveSequencer::MidiEvent &event = muteAutomationEvents.at(selectedMuteEvent);
-          if (e.dir != 0) {
-            event.note_in = (event.note_in == LiveSequencer::TYPE_MUTE_ON) ? LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
-            updateSongEvent(event);
-            headerFlags |= (1 << EDIT_MUTE_AUTOMATION);
-            drawFlags |= DRAW_MUTE_AUTOMATION;
-          }
+    case EDIT_MUTE_AUTOMATION:
+        if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+            // For mute automation: toggle mute state
+            if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
+                LiveSequencer::MidiEvent &event = muteAutomationEvents.at(selectedMuteEvent);
+                if (e.dir != 0) {
+                    event.note_in = (event.note_in == LiveSequencer::TYPE_MUTE_ON) ? LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
+                    updateSongEvent(event);
+                    headerFlags |= (1 << EDIT_MUTE_AUTOMATION);
+                    drawFlags |= DRAW_MUTE_AUTOMATION;
+                }
+            }
+        } else {
+            // This case shouldn't happen for pattern mode, but keep original logic
+            if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
+                LiveSequencer::MidiEvent &event = muteAutomationEvents.at(selectedMuteEvent);
+                if (e.dir != 0) {
+                    event.note_in = (event.note_in == LiveSequencer::TYPE_MUTE_ON) ? LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
+                    updateSongEvent(event);
+                    headerFlags |= (1 << EDIT_MUTE_AUTOMATION);
+                    drawFlags |= DRAW_MUTE_AUTOMATION;
+                }
+            }
         }
         break;
       } // end switch(editMode)
@@ -888,12 +1027,42 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       buttonView->drawNow();
       break;
 
-    case MODE_EDIT:
-      oldMode = editMode;
-      newMode = constrain(editMode + e.dir, 0, EDIT_NUM - 1);
-      editMode = newMode;
-      buttonEdit->drawNow();
-      break;
+case MODE_EDIT:
+    oldMode = editMode;
+    if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+        // For mute track, cycle through these specific parameters:
+        // EDIT_SELECT_NOTE (SEL), EDIT_LAYER (LAYR), EDIT_NOTEON (Time), EDIT_MUTE_AUTOMATION (Mute State)
+        newMode = editMode + e.dir;
+        
+        // Define the valid modes for mute automation in order
+        uint8_t validModes[] = {EDIT_SELECT_NOTE, EDIT_LAYER, EDIT_NOTEON, EDIT_MUTE_AUTOMATION};
+        uint8_t numValidModes = 4;
+        
+        // Find current position in valid modes
+        uint8_t currentIndex = 0;
+        for (uint8_t i = 0; i < numValidModes; i++) {
+            if (validModes[i] == editMode) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        // Calculate new index with wrap-around
+        int8_t newIndex = currentIndex + e.dir;
+        if (newIndex < 0) newIndex = numValidModes - 1;
+        if (newIndex >= numValidModes) newIndex = 0;
+        
+        newMode = validModes[newIndex];
+        
+    } else {
+        newMode = constrain(editMode + e.dir, 0, EDIT_NUM - 1);
+    }
+    editMode = newMode;
+    buttonEdit->drawNow();
+    
+    // Force header redraw to show the new selection
+    drawHeader(HEADER_DRAW_ALL);
+    break;
 
     case MODE_STEP:
       oldMode = stepMode;
@@ -901,9 +1070,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       stepMode = newMode;
       break;
     }
-    if (oldMode != newMode && mode != MODE_EDIT) {
-      drawHeader((1 << oldMode) | (1 << newMode));
-    }
+    // if (oldMode != newMode && mode != MODE_EDIT) {
+    //   drawHeader((1 << oldMode) | (1 << newMode));
+    // }
+    if (oldMode != newMode) {
+  if (mode == MODE_VIEW || mode == MODE_EDIT) {
+    drawHeader((1 << oldMode) | (1 << newMode));
+  }
+}
   }
 }
 
@@ -949,8 +1123,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
     } else {
       display.print("PATTERN");
     }
-     display.setCursor(GRID.X[2], CONTENT_HEIGHT + 4+CHAR_height_small);
-      display.print("MODE");
+    display.setCursor(GRID.X[2], CONTENT_HEIGHT + 4+CHAR_height_small);
+    display.print("MODE");
   }
   
 
@@ -971,7 +1145,28 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
     break;
 
   case MODE_EDIT:
-    if (selectedNote > -1) {
+    if (data.activeTrack == SONG_MODE_MUTE_TRACK && selectedMuteEvent > -1 && muteAutomationEvents.size() > 0) {
+      // Draw mute automation header - always show when on mute track
+      LiveSequencer::MidiEvent &m = muteAutomationEvents.at(selectedMuteEvent);
+      
+        // Highlight based on current edit mode selection
+    if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
+        sprintf(s, "%03i", selectedMuteEvent + 1);
+        drawHeaderSetting(GRID.X[3], "SEL", s, (editMode == EDIT_SELECT_NOTE), false);
+    }
+    if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
+        sprintf(s, "%i", m.note_in_velocity + 1);
+        drawHeaderSetting(GRID.X[3] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
+    }
+    if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
+        sprintf(s, "/ %i.%04i", m.patternNumber, m.patternMs);
+        drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
+    }
+    if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
+        sprintf(s, "%s", m.note_in == LiveSequencer::TYPE_MUTE_ON ? "MUTE ON " : "MUTE OFF");
+        drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_MUTE_AUTOMATION));
+    }
+    } else if (selectedNote > -1) {
       LiveSequencer::NotePair &p = notePairs.at(selectedNote);
       std::string noteString = getNoteString(p.noteOn.note_in);
       if (noteString.length() == 2) {
@@ -1001,25 +1196,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       if (modeFlags & (1 << EDIT_NOTE)) {
         sprintf(s, "%s", noteString.c_str());
         drawHeaderSetting(GRID.X[5] + 25, "NOTE", s, false, (editMode == EDIT_NOTE));
-      }
-    } else if (selectedMuteEvent > -1 && editMode == EDIT_MUTE_AUTOMATION && muteAutomationEvents.size() > 0) {
-      LiveSequencer::MidiEvent &m = muteAutomationEvents.at(selectedMuteEvent);
-      
-      if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
-        sprintf(s, "%03i", selectedMuteEvent + 1);
-        drawHeaderSetting(GRID.X[3], "SEL", s, false, (editMode == EDIT_MUTE_AUTOMATION));
-      }
-      if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
-        sprintf(s, "%i", m.note_in_velocity + 1);
-        drawHeaderSetting(GRID.X[3] + 25, "LAYR", s, false, (editMode == EDIT_MUTE_AUTOMATION));
-      }
-      if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
-        sprintf(s, "/ %i.%04i", m.patternNumber, m.patternMs);
-        drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_MUTE_AUTOMATION), false);
-      }
-      if (modeFlags & (1 << EDIT_MUTE_AUTOMATION)) {
-        sprintf(s, "%s", m.note_in == LiveSequencer::TYPE_MUTE_ON ? "MUTE ON" : "MUTE OFF");
-        drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_MUTE_AUTOMATION));
       }
     }
     break;
@@ -1264,12 +1440,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
     display.console = true;
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
-    display.setCursor(33, CONTENT_HEIGHT / 2 - 30);
-    if (data.isSongMode && !data.useGridSongMode) {
+    display.setCursor(100, CONTENT_HEIGHT / 2 );
+    if (data.isSongMode && !data.useGridSongMode && data.activeTrack != SONG_MODE_MUTE_TRACK) {
       display.print("SONG MODE - NO NOTES");
     } else if (data.useGridSongMode) {
       display.print("GRID MODE - NO NOTES");
-    } else {
+    } else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+      display.print("SONG - MUTE AUTOMATION");
+    }
+    else {
       display.print("PATTERN MODE - NO NOTES");
     }
   }
@@ -1384,7 +1563,12 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
-  if (editMode == EDIT_MUTE_AUTOMATION && selectedMuteEvent > -1 && muteAutomationEvents.size() > 0) {
+  // For mute automation track, delete works for any mute automation parameter
+  bool isMuteAutomationMode = (data.activeTrack == SONG_MODE_MUTE_TRACK) && 
+                             (editMode == EDIT_SELECT_NOTE || editMode == EDIT_LAYER || 
+                              editMode == EDIT_NOTEON || editMode == EDIT_MUTE_AUTOMATION);
+  
+  if (isMuteAutomationMode && selectedMuteEvent > -1 && muteAutomationEvents.size() > 0) {
     LiveSequencer::MidiEvent eventToRemove = muteAutomationEvents.at(selectedMuteEvent);
     
     // Remove from songEvents
@@ -1414,8 +1598,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
       selectedMuteEvent = std::min(selectedMuteEvent, (int16_t)(muteAutomationEvents.size() - 1));
     }
     
-    // Only set draw flags, don't call drawGUI() - let the main loop handle it
+    // Use the same draw flags that were working before
     drawFlags |= DRAW_CONTENT_FULL | DRAW_MUTE_AUTOMATION;
+    
     
   } else if (selectedNote > -1) {
     // Get the events to delete
@@ -1609,31 +1794,48 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   });
   buttons.push_back(buttonView);
 
-  buttonEdit = new TouchButton(GRID.X[4], y,
-  [ this ] (auto* b) { // drawHandler
+buttonEdit = new TouchButton(GRID.X[4], y,
+[this](auto* b) { // drawHandler
     std::string txt = "EDIT";
     std::string sub = "MODE";
-    TouchButton::Color color = (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
+  TouchButton::Color color = (mode == MODE_EDIT) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE;
     
-    if (mode == MODE_EDIT) {
-      if ((editMode == EDIT_SELECT_NOTE && isSettingActivated) || 
-          (editMode == EDIT_MUTE_AUTOMATION && isSettingActivated)) {
-        txt = (editMode == EDIT_MUTE_AUTOMATION) ? "MUTE" : "NOTE";
-        sub = "DELETE";
-        color = TouchButton::BUTTON_RED;
-      }
+    if (mode == MODE_EDIT && isSettingActivated) {
+        // For mute automation track: show DELETE for ANY parameter (SEL, LAYR, Time, Mute State)
+        if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+
+                txt = "MUTE";
+                sub = "DELETE";
+                color = TouchButton::BUTTON_RED;
+            
+        }
+        // For pattern mode: show DELETE only when in SELECT_NOTE mode
+        else if (editMode == EDIT_SELECT_NOTE) {
+            txt = "NOTE";
+            sub = "DELETE";
+            color = TouchButton::BUTTON_RED;
+        }
     }
     
     b->draw(txt.c_str(), sub.c_str(), color);
-  },
-  [ this ] (auto* b) { // clickedHandler
+},
+[this](auto* b) { // clickedHandler
     ui_pianoroll->setMode(MODE_EDIT);
-    if (isSettingActivated && 
-        (editMode == EDIT_SELECT_NOTE || editMode == EDIT_MUTE_AUTOMATION)) {
-      ui_pianoroll->deleteSelectedNote();
+    
+    // Check if we should delete
+    if (isSettingActivated) {
+        // For mute automation track: delete works for any parameter
+        if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+            ui_pianoroll->deleteSelectedNote();
+        }
+        // For pattern mode: delete only works when in SELECT_NOTE mode
+        else if (editMode == EDIT_SELECT_NOTE) {
+            ui_pianoroll->deleteSelectedNote();
+        }
     }
     b->drawNow();
-  });
+});
+
   buttons.push_back(buttonEdit);
 
   buttonStep = new TouchButton(GRID.X[5], y,
