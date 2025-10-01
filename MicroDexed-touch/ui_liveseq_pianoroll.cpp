@@ -16,18 +16,24 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getActualBarForNote(const LiveSequencer:
   if (!data.isSongMode || data.useGridSongMode) {
     return note.noteOn.patternNumber;
   }
-  
-  // Search songEvents map to find which bar this note is in
+
+  // For song mode, search through songEvents to find which absolute bar contains this note
   for (const auto& patternEntry : data.songEvents) {
+    const uint16_t absoluteBar = patternEntry.first;
+
     for (const auto& event : patternEntry.second) {
-      // Check if this is our noteOn event (by address comparison)
-      if (&event == &note.noteOn) {
-        return patternEntry.first;  // Return actual bar from map key
+      // Use more flexible matching - don't require exact velocity match
+      if (event.track == note.noteOn.track &&
+        event.layer == note.noteOn.layer &&
+        event.note_in == note.noteOn.note_in &&
+        event.patternMs == note.noteOn.patternMs &&
+        event.event == midi::NoteOn) {
+        return absoluteBar;
       }
     }
   }
-  
-  // Fallback to wrapped pattern number
+
+  // If we can't find it, fall back to patternNumber
   return note.noteOn.patternNumber;
 }
 
@@ -58,9 +64,14 @@ FLASHMEM UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, Li
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getMaxBarsForCurrentMode() const {
   if (data.isSongMode && !data.useGridSongMode) {
-    uint16_t songBars = (uint16_t)data.lastSongEventPattern + 1;
-    uint16_t patternBars = (uint16_t)data.numberOfBars;
-    return (songBars > patternBars) ? songBars : patternBars;
+    // Find the highest bar number in songEvents
+    uint16_t maxBar = 0;
+    for (const auto& patternEntry : data.songEvents) {
+      if (patternEntry.first > maxBar) {
+        maxBar = patternEntry.first;
+      }
+    }
+    return maxBar + 1; // +1 because bars are 0-based
   }
   else {
     return data.numberOfBars; // Pattern mode
@@ -86,8 +97,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
   static constexpr uint16_t layerViewSizeX = ROLL_WIDTH / 2;
   static constexpr uint16_t layerViewY = CONTENT_HEIGHT + LINE_HEIGHT;
 
-  // Only show layers for pattern mode
+  // Handle both pattern mode and song mode
   if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
+    // Pattern mode: show layers for current pattern track
     for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
       const uint16_t x = GRID.X[0] + (l % 2) * (layerViewSizeX);
       const uint16_t y = layerViewY + (l / 2) * (HEADER_HEIGHT / 2);
@@ -114,9 +126,78 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
       display.print(l + 1);
     }
   }
+  else if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
+    // Song mode: show song tracks (layers) instead of pattern layers
+    for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
+      const uint16_t x = GRID.X[0] + (l % 2) * (layerViewSizeX);
+      const uint16_t y = layerViewY + (l / 2) * (HEADER_HEIGHT / 2);
+
+      // For song mode, check if the layer has any notes in the current view
+      bool hasNotes = false;
+      for (const auto& note : notePairs) {
+        if (note.noteOn.layer == l) {
+          hasNotes = true;
+          break;
+        }
+      }
+
+      // Check if this is the active layer (for filtering)
+      bool isActiveLayer = false;
+      if (selectedNote > -1) {
+        isActiveLayer = (notePairs.at(selectedNote).noteOn.layer == l);
+      }
+
+      display.console = true;
+      if (hasNotes) {
+        if (isActiveLayer) {
+          // Active layer: filled with color
+          display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
+          display.setTextColor(COLOR_BACKGROUND, layerColors[l]);
+        }
+        else {
+          // Non-active layer: outline only
+          display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
+          display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
+          display.setTextColor(layerColors[l], COLOR_BACKGROUND);
+        }
+      }
+      else {
+        // No notes in this layer: grey outline
+        display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
+        display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), GREY2);
+        display.setTextColor(GREY2, COLOR_BACKGROUND);
+      }
+      display.setCursor(x + 2, y + 2);
+      display.print(l + 1); // Show layer number 1-4
+    }
+  }
   else {
-    // Clear the layer indicator area for song mode
+    // Mute automation track or other tracks: clear the area
     display.fillRect(GRID.X[0], layerViewY, ROLL_WIDTH, HEADER_HEIGHT, COLOR_BACKGROUND);
+  }
+}
+
+FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getAbsoluteEventTime(const LiveSequencer::MidiEvent& e) const {
+  if (data.isSongMode && !data.useGridSongMode) {
+    // For song mode, find the actual bar from songEvents
+    for (const auto& patternEntry : data.songEvents) {
+      const uint16_t actualBar = patternEntry.first;
+      for (const auto& event : patternEntry.second) {
+        if (event.track == e.track &&
+          event.layer == e.layer &&
+          event.note_in == e.note_in &&
+          event.patternMs == e.patternMs &&
+          event.event == e.event) {
+          return actualBar * data.patternLengthMs + e.patternMs;
+        }
+      }
+    }
+    // Fallback
+    return e.patternNumber * data.patternLengthMs + e.patternMs;
+  }
+  else {
+    // Pattern mode
+    return e.patternNumber * data.patternLengthMs + e.patternMs;
   }
 }
 
@@ -125,14 +206,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(UpdateRange coords) {
   drawFlags |= DRAW_NOTES;
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected) const {
+FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected, bool drawInGrey) const {
   uint32_t timeOn, timeOff;
-  
+
   if (data.isSongMode && !data.useGridSongMode) {
+    // Use absolute timing for song mode - same logic as getNotePairsFromSongTrack
     uint16_t actualBar = getActualBarForNote(note);
-    timeOn = actualBar * data.patternLengthMs + note.noteOn.patternMs;
-    timeOff = actualBar * data.patternLengthMs + note.noteOff.patternMs;
-  } else {
+    timeOn = uint32_t(actualBar) * data.patternLengthMs + note.noteOn.patternMs;
+    timeOff = uint32_t(actualBar) * data.patternLengthMs + note.noteOff.patternMs;
+  }
+  else {
+    // Pattern mode - use relative timing
     timeOn = getEventTime(note.noteOn);
     timeOff = getEventTime(note.noteOff);
   }
@@ -146,13 +230,13 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
       const bool isInsideX = (int32_t(x) <= int32_t(u.toX)) && (int32_t(x + w) >= int32_t(u.fromX));
       const bool isInsideY = u.notes.count(note.noteOn.note_in) || u.notes.empty();
       if (isInsideX && isInsideY) {
-        drawNoteAtPosition(note, isSelected, x, uint16_t(w));
+        drawNoteAtPosition(note, isSelected, x, uint16_t(w), drawInGrey);
         break;
       }
     }
   }
   else {
-    drawNoteAtPosition(note, isSelected, x, uint16_t(w));
+    drawNoteAtPosition(note, isSelected, x, uint16_t(w), drawInGrey);
   }
 }
 
@@ -169,9 +253,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   display.fillRect(ROLL_WIDTH + 1, layerViewY + 1, wTotal, hTotal, COLOR_BACKGROUND);
 
   uint16_t maxBars = getMaxBarsForCurrentMode();
-  const uint32_t totalTimeMs = uint32_t(maxBars) * data.patternLengthMs;
-  const uint32_t viewTimeMs = uint32_t(view.numBars) * data.patternLengthMs;
-  const uint32_t startTimeMs = uint32_t(view.startBar) * data.patternLengthMs;
+  uint32_t totalTimeMs, viewTimeMs, startTimeMs;
+
+  if (data.isSongMode && !data.useGridSongMode) {
+    // Song mode: convert visual bars to internal bars for timing
+    uint16_t maxVisualBars = (maxBars + 3) / 4;
+    totalTimeMs = uint32_t(maxVisualBars) * 4 * data.patternLengthMs;
+    viewTimeMs = uint32_t(view.numBars) * 4 * data.patternLengthMs;
+    startTimeMs = uint32_t(view.startBar) * 4 * data.patternLengthMs;
+  }
+  else {
+    // Pattern mode
+    totalTimeMs = uint32_t(maxBars) * data.patternLengthMs;
+    viewTimeMs = uint32_t(view.numBars) * data.patternLengthMs;
+    startTimeMs = uint32_t(view.startBar) * data.patternLengthMs;
+  }
 
   if (totalTimeMs == 0) return;
 
@@ -185,21 +281,50 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   if (x + w > ROLL_WIDTH + wTotal) w = (ROLL_WIDTH + wTotal) - x;
 
   display.fillRect(x, y, uint16_t(w), h, MIDDLEGREEN);
+
+  // Show bar info
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setTextSize(1);
   display.setCursor(GRID.X[1], layerViewY + 3);
 
   if (data.isSongMode && !data.useGridSongMode) {
-    display.printf("BAR %i-%i/%i", view.startBar + 1, view.startBar + view.numBars, maxBars);
+    uint16_t startInternalBar = view.startBar * 4 + 1;
+    uint16_t endInternalBar = (view.startBar + view.numBars) * 4;
+    uint16_t maxInternalBars = maxBars;
+    display.printf("BAR:%i-%i/%i", startInternalBar, endInternalBar, maxInternalBars);
   }
   else {
-    display.printf("BAR %i-%i", view.startBar + 1, view.startBar + view.numBars);
+    display.printf("BAR:%i-%i", view.startBar + 1, view.startBar + view.numBars);
   }
 
   display.setCursor(GRID.X[1], layerViewY + CHAR_height_small + 5);
-  display.printf("OCT %i-%i", view.startOctave, view.startOctave + view.numOctaves - 1);
+  display.printf("OCT:%i-%i", view.startOctave, view.startOctave + view.numOctaves - 1);
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
+  for (auto& u : drawRegionsX) {
+    for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
+      if (u.notes.count(note) || u.notes.empty()) {
+        const uint8_t noteIndex = view.highestNote - note - 1;
+        const uint16_t y = round(noteIndex * view.noteHeight);
+        const bool isPressed = keysPressed.find(note) != keysPressed.end();
+        const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
+        display.console = true;
+
+        const uint16_t width = u.toX - u.fromX;
+        const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
+
+        // Draw full height background to match grid
+        if (width > 1) {
+          display.fillRect(xFrom, y, u.toX - u.fromX, view.noteHeight, bgColor);
+        }
+        else {
+          display.drawLine(xFrom, y, xFrom, y + view.noteHeight - 1, bgColor);
+        }
+      }
+    }
+  }
+}
 
 FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) {
   UpdateRange coords;
@@ -213,7 +338,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   coords.toX = (coords.toX > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (coords.toX + 2);
 
   drawRegionsX.push_back(coords);
-  drawFlags |= DRAW_NOTES;
+  drawFlags |= DRAW_NOTES | DRAW_VERTICAL_BARS;
 }
 
 
@@ -239,18 +364,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
 
-    // Adjust view for song mode
     if (data.isSongMode && !data.useGridSongMode) {
-      // In song mode, show more bars to accommodate song length
+      uint16_t maxBars = getMaxBarsForCurrentMode();
       view.startBar = 0;
-      view.numBars = std::max(static_cast<uint8_t>(data.lastSongEventPattern + 1), data.numberOfBars);
+      view.numBars = std::min(uint16_t(16), maxBars);
+
+      // Calculate msToPix: patternLengthMs is 4 bars, so divide by 4 to get per-bar time
+      view.msToPix = CONTENT_WIDTH / float(view.numBars * (data.patternLengthMs));
     }
     else {
+      // Pattern mode
       view.startBar = 0;
       view.numBars = data.numberOfBars;
+      view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
+
     }
 
-    view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
     reloadNotes(true);
 
     // setup function
@@ -289,19 +418,49 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     }
 
     if (isRunningHere || justStopped) {
-      const uint16_t patternTime = isRunningHere ? ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer) : 0;
-      view.cursorPos = ROLL_WIDTH + round(patternTime * view.msToPix);
-      const bool offLeft = (data.currentPattern < view.startBar);
-      const bool offRight = (data.currentPattern >= (view.startBar + view.numBars));
-      view.cursorPos = offLeft ? ROLL_WIDTH : view.cursorPos;
-      view.cursorPos = offRight ? DISPLAY_WIDTH - 1 : view.cursorPos;
-      const uint16_t color = (offLeft || offRight) ? RED : MIDDLEGREEN;
+      uint32_t currentTimeMs = 0;
+      uint32_t viewStartMs = 0;
+      uint32_t viewEndMs = 0;
+
+      if (data.isSongMode && !data.useGridSongMode) {
+        // Song mode: use absolute time from song start with 1:1 mapping
+        currentTimeMs = data.currentPattern * data.patternLengthMs + data.patternTimer;
+        // Convert to view-relative time for positioning
+        currentTimeMs -= uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+      }
+      else {
+        // Pattern mode: use relative time within current pattern
+        currentTimeMs = ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer);
+      }
+
+      // Calculate cursor position
+      if (currentTimeMs >= viewStartMs && currentTimeMs <= viewEndMs) {
+        float ratio = float(currentTimeMs - viewStartMs) / float(viewEndMs - viewStartMs);
+        view.cursorPos = ROLL_WIDTH + roundf(ratio * CONTENT_WIDTH);
+      }
+      else if (currentTimeMs < viewStartMs) {
+        view.cursorPos = ROLL_WIDTH;
+      }
+      else {
+        view.cursorPos = DISPLAY_WIDTH - 1;
+      }
+
+      // Handle cursor color based on whether it's in viewport
+      const bool inViewport = (currentTimeMs >= viewStartMs && currentTimeMs <= viewEndMs);
+      const uint16_t color = inViewport ? MIDDLEGREEN : RED;
       const bool colorChanged = color != view.cursorColor;
       const bool cursorPosChanged = (view.cursorPos != view.cursorPosPrev);
 
       if (justStopped || colorChanged || cursorPosChanged) {
-        queueDrawNote({ view.cursorPosPrev, view.cursorPosPrev, {} });
-        drawFlags |= DRAW_CONTENT_AREA;
+        // Redraw the area where the cursor was
+        if (view.cursorPosPrev >= ROLL_WIDTH && view.cursorPosPrev < DISPLAY_WIDTH) {
+          UpdateRange cursorRegion;
+          cursorRegion.fromX = view.cursorPosPrev - 1;
+          cursorRegion.toX = view.cursorPosPrev + 1;
+          cursorRegion.notes = {}; // Empty set = all notes (for background redraw)
+          drawRegionsX.push_back(cursorRegion);
+          drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+        }
 
         if (!justStopped) {
           view.cursorColor = color;
@@ -334,43 +493,61 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
-
-FLASHMEM std::vector<LiveSequencer::NotePair> UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
-    uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, 
-    uint8_t patternFrom, uint8_t patternTo) {
-  
+FLASHMEM std::vector<LiveSequencer::NotePair>
+UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
+  uint8_t track, uint8_t& lowestNote, uint8_t& highestNote,
+  uint8_t patternFrom, uint8_t patternTo) {
+  // KEEP THE ORIGINAL CODE - it was working
   std::vector<LiveSequencer::NotePair> result;
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
 
-  const uint32_t timeFrom = patternFrom * data.patternLengthMs;
-  const uint32_t timeTo = (patternTo + 1) * data.patternLengthMs;
+  const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+  const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
+  const uint16_t pixStartX = ROLL_WIDTH;
+  const uint16_t pixEndX = DISPLAY_WIDTH - 1;
+
+  const uint8_t viewLowestNote = view.lowestNote;
+  const uint8_t viewHighestNote = view.highestNote;
+
+  if (data.songEvents.empty()) {
+    lowestNote = viewLowestNote;
+    highestNote = viewHighestNote;
+    return result;
+  }
 
   for (const auto& patternEntry : data.songEvents) {
     const uint16_t actualBar = patternEntry.first;
     const auto& events = patternEntry.second;
 
-    for (auto itOn = events.begin(); itOn != events.end(); itOn++) {
+    for (auto itOn = events.begin(); itOn != events.end(); ++itOn) {
       if ((track == 0xFF || itOn->track == track) && itOn->event == midi::NoteOn) {
-        
-        uint32_t noteTime = actualBar * data.patternLengthMs + itOn->patternMs;
 
-        for (auto itOff = itOn; itOff != events.end(); itOff++) {
+        if (itOn->note_in < viewLowestNote || itOn->note_in >= viewHighestNote) {
+          continue;
+        }
+
+        const uint32_t noteOnTime = uint32_t(actualBar) * data.patternLengthMs + itOn->patternMs;
+
+        for (auto itOff = itOn; itOff != events.end(); ++itOff) {
           if (itOff->track == itOn->track &&
-              itOff->layer == itOn->layer &&
-              itOff->note_in == itOn->note_in &&
-              itOff->event == midi::NoteOff) {
+            itOff->layer == itOn->layer &&
+            itOff->note_in == itOn->note_in &&
+            itOff->event == midi::NoteOff) {
 
-            uint32_t noteOffTime = actualBar * data.patternLengthMs + itOff->patternMs;
+            const uint32_t noteOffTime = uint32_t(actualBar) * data.patternLengthMs + itOff->patternMs;
 
-            if (noteTime < timeTo && noteOffTime > timeFrom) {
+            const bool isInTime = (noteOnTime <= viewEndMs && noteOffTime >= viewStartMs);
+
+            if (isInTime) {
               LiveSequencer::NotePair p = {
-                .noteOn = const_cast<LiveSequencer::MidiEvent&>(*itOn),
-                .noteOff = const_cast<LiveSequencer::MidiEvent&>(*itOff),
-                .isMuted = false
+                const_cast<LiveSequencer::MidiEvent&>(*itOn),
+                const_cast<LiveSequencer::MidiEvent&>(*itOff),
+                false
               };
-              
+
               result.emplace_back(p);
+
               highestFound = std::max(highestFound, itOn->note_in);
               lowestFound = std::min(lowestFound, itOn->note_in);
             }
@@ -381,33 +558,62 @@ FLASHMEM std::vector<LiveSequencer::NotePair> UI_LiveSeq_PianoRoll::getNotePairs
     }
   }
 
-  lowestNote = lowestFound;
-  highestNote = highestFound;
+  lowestNote = (lowestFound == 0xFF) ? viewLowestNote : lowestFound;
+  highestNote = (highestFound == 0x00) ? viewHighestNote : highestFound;
   return result;
 }
 
-FLASHMEM std::vector<LiveSequencer::MidiEvent> UI_LiveSeq_PianoRoll::getMuteAutomationEvents(
-    uint8_t track, uint8_t patternFrom, uint8_t patternTo) {
-  
+FLASHMEM std::vector<LiveSequencer::MidiEvent>
+UI_LiveSeq_PianoRoll::getMuteAutomationEvents(
+  uint8_t track, uint8_t patternFrom, uint8_t patternTo) {
+
   std::vector<LiveSequencer::MidiEvent> result;
 
-  const uint32_t timeFrom = patternFrom * data.patternLengthMs;
-  const uint32_t timeTo = (patternTo + 1) * data.patternLengthMs;
+  // View time (ms) and pixel bounds (X)
+  const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+  const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
+  const uint16_t pixStartX = ROLL_WIDTH;
+  const uint16_t pixEndX = DISPLAY_WIDTH - 1;
+
+  // Check if songEvents is empty
+  if (data.songEvents.empty()) {
+    return result;
+  }
 
   for (const auto& patternEntry : data.songEvents) {
     const uint16_t actualBar = patternEntry.first;
-    
+
+    // Skip patterns outside our view range
+    if (actualBar < view.startBar || actualBar >= view.startBar + view.numBars) {
+      continue;
+    }
+
+    // Skip empty event lists
+    if (patternEntry.second.empty()) {
+      continue;
+    }
+
     for (const auto& e : patternEntry.second) {
       if ((track == 0xFF || e.track == track) &&
-          e.event == midi::ControlChange &&
-          (e.note_in == LiveSequencer::TYPE_MUTE_ON || 
-           e.note_in == LiveSequencer::TYPE_MUTE_OFF)) {
+        e.event == midi::ControlChange &&
+        (e.note_in == LiveSequencer::TYPE_MUTE_ON || e.note_in == LiveSequencer::TYPE_MUTE_OFF)) {
 
-        uint32_t eventTime = actualBar * data.patternLengthMs + e.patternMs;
+        // absolute time for this song-map event
+        const uint32_t eventTime = uint32_t(actualBar) * data.patternLengthMs + e.patternMs;
 
-        if (eventTime >= timeFrom && eventTime < timeTo) {
-          result.emplace_back(e);
-        }
+        // time overlap (allow endpoints)
+        const bool isInTime = (eventTime >= viewStartMs && eventTime <= viewEndMs);
+        if (!isInTime) continue;
+
+        // pixel overlap
+        const uint16_t x = getNoteCoord(eventTime);
+        const bool isInPixels = (x >= pixStartX && x <= pixEndX);
+        if (!isInPixels) continue;
+
+        // Return a copy but set the absolute patternNumber so downstream code sees the absolute bar
+        LiveSequencer::MidiEvent ev = e;
+        ev.patternNumber = actualBar;
+        result.emplace_back(ev);
       }
     }
   }
@@ -442,28 +648,51 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
     notePairs = getNotePairsFromSongTrack(0xFF, lowestNote, highestNote, patternFrom, patternTo);
     muteAutomationEvents.clear();
     selectedMuteEvent = -1;
+
+    // Reset selected note if it's now out of bounds
+    if (selectedNote >= static_cast<int16_t>(notePairs.size())) {
+      selectedNote = notePairs.empty() ? -1 : 0;
+    }
   }
   else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
     // Song mode: show only automation events
     notePairs.clear();
     muteAutomationEvents = getMuteAutomationEvents(0xFF, patternFrom, patternTo);
     selectedNote = -1;
-    selectedMuteEvent = (muteAutomationEvents.size() > 0) ? 0 : -1;
+
+    // Reset selected mute event if it's now out of bounds
+    if (selectedMuteEvent >= static_cast<int16_t>(muteAutomationEvents.size())) {
+      selectedMuteEvent = muteAutomationEvents.empty() ? -1 : 0;
+    }
   }
   else {
     // Pattern mode: use the existing method for specific track
     notePairs = liveSeq.getNotePairsFromTrack(data.activeTrack, lowestNote, highestNote, patternFrom, patternTo);
     muteAutomationEvents.clear();
     selectedMuteEvent = -1;
+
+    // Reset selected note if it's now out of bounds
+    if (selectedNote >= static_cast<int16_t>(notePairs.size())) {
+      selectedNote = notePairs.empty() ? -1 : 0;
+    }
   }
 
   // Only set draw flags if data actually changed
   bool dataChanged = (prevNotePairsCount != notePairs.size()) ||
     (prevMuteEventsCount != muteAutomationEvents.size());
 
-  if (autoAdaptView && notePairs.size()) {
+  if (autoAdaptView && !notePairs.empty()) {
     view.startOctave = std::min((lowestNote - 24) / 12, TOTAL_OCTAVES - view.numOctaves);
     setNumOctaves(5);
+
+    // RECALCULATE msToPix after setNumOctaves changes view parameters
+    if (data.isSongMode && !data.useGridSongMode) 
+    {
+      view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs * 4);  //phtodo
+    }
+    else { view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
+    }
+     
     drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
   }
   else if (dataChanged) {
@@ -473,6 +702,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
 
   // Always update header when reloading
   drawHeader(HEADER_DRAW_ALL);
+  drawLayersIndicator();
 }
 
 
@@ -489,12 +719,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawMuteAutomation(void) {
   for (size_t i = 0; i < muteAutomationEvents.size(); i++) {
     const auto& event = muteAutomationEvents.at(i);
     const uint32_t eventTime = getEventTime(event);
-    
+
     // Skip events outside viewport
     if (eventTime < viewStartMs || eventTime > viewEndMs) {
       continue;
     }
-    
+
     const uint16_t x = getNoteCoord(eventTime);
     const uint16_t y = CONTENT_HEIGHT - 12;
 
@@ -557,10 +787,19 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
     drawPianoRoll();
   }
 
+  // ADDED: Draw bar information on top of everything
+  // Only draw when we're actually drawing content, not just UI elements
+  if (drawFlags & (DRAW_CONTENT_FULL | DRAW_BACKGROUND | DRAW_NOTES | DRAW_VERTICAL_BARS)) {
+    drawBarInfoOnTop();
+  }
+
   // Clear all draw flags after processing
   drawFlags = 0;
   drawRegionsX.clear();
 }
+
+// ADDED: New function to draw bar/time information that won't be cleared by background
+
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity) {
   if (isVisible) {
@@ -629,28 +868,48 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
   if (num == view.numBars) return; // No change
 
   uint16_t maxBars = getMaxBarsForCurrentMode();
-  view.numBars = constrain(num, 1, (int8_t)maxBars);
+  uint16_t newNumBars = constrain(num, 1, maxBars);
 
-  // Adjust start bar if needed
-  if (view.startBar > (int8_t)(maxBars - view.numBars)) {
-    setBarStart((int8_t)(maxBars - view.numBars));
+  if (newNumBars != view.numBars) {
+    view.numBars = newNumBars;
+
+    // Adjust start bar if needed
+    if (view.startBar > (maxBars - view.numBars)) {
+      setBarStart(maxBars - view.numBars);
+    }
+    if (data.isSongMode && !data.useGridSongMode) {
+      view.msToPix = CONTENT_WIDTH / float(view.numBars * (data.patternLengthMs * 4)); //phtodo
+    }
+    else {
+      view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
+    }
+    reloadNotes();
+    drawAreaIndicator();
   }
-  view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
-  reloadNotes();
-  drawAreaIndicator();
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
   if (num == view.startBar) return; // No change
 
   uint16_t maxBars = getMaxBarsForCurrentMode();
-  int8_t maxStartBar = (int8_t)(maxBars - view.numBars);
-  if (maxStartBar < 0) maxStartBar = 0;
-  view.startBar = constrain(num, 0, maxStartBar);
+  uint16_t maxStartBar;
 
-  DBG_LOG(printf("pattern from %i to %i\n", view.startBar, view.startBar + view.numBars - 1));
-  reloadNotes();
-  drawAreaIndicator();
+  if (data.isSongMode && !data.useGridSongMode) {
+  // For song mode, maxBars is already in the correct visual representation
+    maxStartBar = (maxBars > view.numBars) ? (maxBars - view.numBars) : 0;
+  }
+  else {
+    maxStartBar = (maxBars > view.numBars) ? (maxBars - view.numBars) : 0;
+  }
+
+  uint16_t newStartBar = constrain(num, 0, maxStartBar);
+
+  if (newStartBar != view.startBar) {
+    view.startBar = newStartBar;
+    DBG_LOG(printf("View: bars %i to %i\n", view.startBar, view.startBar + view.numBars - 1));
+    reloadNotes();
+    drawAreaIndicator();
+  }
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
@@ -723,19 +982,35 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
         break;
 
       case VIEW_SCROLL_Y:
-        if (hasConstrainedChanged(view.startOctave, -e.dir, int8_t(0), int8_t(TOTAL_OCTAVES - view.numOctaves))) {
-          setStartOctave(view.startOctave);
-          drawFlags |= DRAW_CONTENT_FULL;
-        }
-        break;
+      {
+        int8_t newStartOctave = view.startOctave + e.dir;
+        int8_t maxStartOctave = TOTAL_OCTAVES - view.numOctaves;
+        if (maxStartOctave < 0) maxStartOctave = 0;
 
+        if (newStartOctave < 0) newStartOctave = 0;
+        if (newStartOctave > maxStartOctave) newStartOctave = maxStartOctave;
+
+        if (newStartOctave != view.startOctave) {
+          view.startOctave = newStartOctave;
+          view.lowestNote = 24 + view.startOctave * 12;
+          view.highestNote = (view.lowestNote + view.numNotes);
+
+          // Force full content redraw
+          drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
+          drawAreaIndicator();
+        }
+      }
+      break;
+
+      // In handleEncoderRight - restore original VIEW_ZOOM_X and VIEW_SCROLL_X:
       case VIEW_ZOOM_X:
         if (data.isSongMode && !data.useGridSongMode) {
-          uint16_t songBars = uint16_t(data.lastSongEventPattern) + 1;
-          uint16_t patternBars = uint16_t(data.numberOfBars);
-          uint16_t maxBars = (songBars > patternBars) ? songBars : patternBars;
+          uint16_t maxBars = getMaxBarsForCurrentMode();
 
-          int16_t newNumBars = view.numBars - (2 * e.dir);
+          // Allow larger zoom steps in song mode
+          int16_t zoomStep = e.dir * (e.speed > 1 ? 4 : 1);
+
+          int16_t newNumBars = view.numBars + zoomStep;
           if (newNumBars < 1) newNumBars = 1;
           if (newNumBars > int16_t(maxBars)) newNumBars = int16_t(maxBars);
 
@@ -745,7 +1020,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           }
         }
         else {
-          // pattern mode: finer change
+          // pattern mode: original logic
           int16_t newNumBars = view.numBars - e.dir;
           if (newNumBars < 1) newNumBars = 1;
           if (newNumBars > int16_t(data.numberOfBars)) newNumBars = data.numberOfBars;
@@ -758,21 +1033,29 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
 
       case VIEW_SCROLL_X:
         if (data.isSongMode && !data.useGridSongMode) {
-          uint16_t songBars = uint16_t(data.lastSongEventPattern) + 1;
-          uint16_t patternBars = uint16_t(data.numberOfBars);
-          uint16_t maxBars = (songBars > patternBars) ? songBars : patternBars;
+    // Use the proper method to get maximum bars
+    uint16_t maxBars = getMaxBarsForCurrentMode();
+    
+    // For song mode, we need to handle the visual representation
+    // view.startBar and view.numBars are in visual bars (1 bar = 1 pattern length)
+    int16_t newStartBar = view.startBar + e.dir;
+    
+    // Calculate maximum start bar based on available bars and view size
+    int16_t maxStartBar = int16_t(maxBars) - view.numBars;
+    if (maxStartBar < 0) maxStartBar = 0;
+    
+    // Constrain the new start bar
+    if (newStartBar < 0) newStartBar = 0;
+    if (newStartBar > maxStartBar) newStartBar = maxStartBar;
 
-          int16_t newStartBar = view.startBar + e.dir;
-          int16_t maxStartBar = int16_t(maxBars) - view.numBars;
-          if (maxStartBar < 0) maxStartBar = 0;
-          if (newStartBar < 0) newStartBar = 0;
-          if (newStartBar > maxStartBar) newStartBar = maxStartBar;
-
-          if (newStartBar != view.startBar) {
-            setBarStart(newStartBar);
-            drawFlags |= DRAW_CONTENT_FULL;
-          }
-        }
+    if (newStartBar != view.startBar) {
+      setBarStart(newStartBar);
+      drawFlags |= DRAW_CONTENT_FULL;
+      
+      DBG_LOG(printf("Song Mode Scroll X: startBar=%i, numBars=%i, maxBars=%i\n", 
+                     view.startBar, view.numBars, maxBars));
+    }
+  }
         else {
           int16_t newStartBar = view.startBar + e.dir;
           int16_t maxStartBar = int16_t(data.numberOfBars) - view.numBars;
@@ -787,16 +1070,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
         break;
       } // end switch(viewMode)
 
-
-     // if (viewChanged) {
-     //   drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
-     //   if (data.isRunning) drawFlags |= DRAW_CURSOR;
-     // }
-
       if (drawFlags && data.isRunning) {
         drawFlags |= DRAW_CURSOR; // handle cursor off on viewport changed redraw
       }
-
       break;
 
     case MODE_EDIT:
@@ -818,18 +1094,116 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           }
         }
         else {
-          // Original note selection logic for pattern mode
-          if (selectedNote > -1 && !notePairs.empty()) {
-            int16_t newSelection = selectedNote + e.dir;
-            if (newSelection < 0) newSelection = notePairs.size() - 1;
-            else if (newSelection >= static_cast<int16_t>(notePairs.size())) newSelection = 0;
+          if (!notePairs.empty()) {
+            // Get the current track/layer
+            int8_t currentTrackLayer = 0;
+            if (selectedNote > -1) {
+              currentTrackLayer = notePairs.at(selectedNote).noteOn.layer;
+            }
 
-            if (newSelection != selectedNote) {
-              if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-              selectedNote = newSelection;
-              if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-              drawFlags |= DRAW_NOTES;
-              headerFlags = (1 << EDIT_SELECT_NOTE);
+            // Calculate current viewport time range
+            uint32_t viewStartMs, viewEndMs;
+            if (data.isSongMode && !data.useGridSongMode) {
+              // Song mode: view.startBar is in visual bars (1:1 mapping now)
+              viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+              viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
+            }
+            else {
+              // Pattern mode
+              viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+              viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
+            }
+
+            // Build list of notes in current track/layer AND visible in viewport
+            std::vector<int16_t> visibleTrackNotes;
+            for (size_t i = 0; i < notePairs.size(); i++) {
+              auto& note = notePairs[i];
+
+              // Filter by track/layer
+              if (note.noteOn.layer != currentTrackLayer) {
+                continue;
+              }
+
+              // Filter by viewport
+              uint32_t noteTime;
+              if (data.isSongMode && !data.useGridSongMode) {
+                uint16_t actualBar = getActualBarForNote(note);
+                noteTime = actualBar * data.patternLengthMs + note.noteOn.patternMs;
+              }
+              else {
+                noteTime = getEventTime(note.noteOn);
+              }
+
+              if (noteTime >= viewStartMs && noteTime <= viewEndMs) {
+                visibleTrackNotes.push_back(i);
+              }
+            }
+
+            // Sort by time for logical navigation order
+            std::sort(visibleTrackNotes.begin(), visibleTrackNotes.end(),
+              [this](int16_t a, int16_t b) {
+                uint32_t timeA, timeB;
+
+                if (data.isSongMode && !data.useGridSongMode) {
+                  uint16_t barA = getActualBarForNote(notePairs[a]);
+                  uint16_t barB = getActualBarForNote(notePairs[b]);
+                  timeA = barA * data.patternLengthMs + notePairs[a].noteOn.patternMs;
+                  timeB = barB * data.patternLengthMs + notePairs[b].noteOn.patternMs;
+                }
+                else {
+                  timeA = getEventTime(notePairs[a].noteOn);
+                  timeB = getEventTime(notePairs[b].noteOn);
+                }
+
+                return timeA < timeB;
+              });
+
+            if (!visibleTrackNotes.empty()) {
+              int16_t newSelection;
+
+              if (selectedNote == -1) {
+                // Start with first visible note in current track
+                newSelection = visibleTrackNotes[0];
+              }
+              else {
+                // Find current position in visible track notes
+                int16_t currentPos = -1;
+                for (size_t i = 0; i < visibleTrackNotes.size(); i++) {
+                  if (visibleTrackNotes[i] == selectedNote) {
+                    currentPos = i;
+                    break;
+                  }
+                }
+
+                if (currentPos == -1) {
+                  // Current selection not visible - start with first visible
+                  newSelection = visibleTrackNotes[0];
+                }
+                else {
+                  // Move within visible track notes
+                  int16_t newPos = currentPos + e.dir;
+                  if (newPos < 0) newPos = visibleTrackNotes.size() - 1;
+                  else if (newPos >= static_cast<int16_t>(visibleTrackNotes.size())) newPos = 0;
+
+                  newSelection = visibleTrackNotes[newPos];
+                }
+              }
+
+              if (newSelection != selectedNote) {
+                if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+                selectedNote = newSelection;
+                if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+                drawFlags |= DRAW_NOTES;
+                headerFlags = (1 << EDIT_SELECT_NOTE);
+              }
+            }
+            else {
+              // No visible notes in current track - clear selection
+              if (selectedNote > -1) {
+                queueDrawNote(notePairs.at(selectedNote));
+                selectedNote = -1;
+                drawFlags |= DRAW_NOTES;
+              }
             }
           }
         }
@@ -850,22 +1224,62 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           }
         }
         else {
-          // Original layer editing for pattern mode
+          // Layer editing for both pattern mode AND song mode
+          // Layer editing for both pattern mode AND song mode
           if (selectedNote > -1) {
             int8_t layer = notePairs.at(selectedNote).noteOn.layer;
-            const int8_t maxLayer = (data.isSongMode && !data.useGridSongMode) ?
-              int8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1) :
-              int8_t(data.trackSettings[data.activeTrack].layerCount - 1);
-            if (hasConstrainedChanged(layer, e.dir, int8_t(0), maxLayer)) {
-              notePairs.at(selectedNote).noteOn.layer = layer;
-              notePairs.at(selectedNote).noteOff.layer = layer;
+            const int8_t maxLayer = LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1; // Always 0-3
+            
+            // Find available layers with notes
+            std::set<int8_t> availableLayers;
+            for (const auto& note : notePairs) {
+              availableLayers.insert(note.noteOn.layer);
+            }
+            
+            // If current layer is not in available layers (shouldn't happen), add it
+            if (availableLayers.empty()) {
+              availableLayers.insert(layer);
+            }
+            
+            // Find next/previous available layer
+            int8_t newLayer = layer;
+            if (e.dir > 0) {
+              // Move to next available layer
+              auto it = availableLayers.upper_bound(layer);
+              if (it == availableLayers.end()) {
+                newLayer = *availableLayers.begin(); // Wrap around to first
+              } else {
+                newLayer = *it;
+              }
+            } else if (e.dir < 0) {
+              // Move to previous available layer
+              auto it = availableLayers.lower_bound(layer);
+              if (it == availableLayers.begin()) {
+                newLayer = *availableLayers.rbegin(); // Wrap around to last
+              } else {
+                --it;
+                newLayer = *it;
+              }
+            }
+            
+            if (newLayer != layer) {
+              // Update both noteOn and noteOff
+              notePairs.at(selectedNote).noteOn.layer = newLayer;
+              notePairs.at(selectedNote).noteOff.layer = newLayer;
+
               if (data.isSongMode && !data.useGridSongMode) {
+                // Update in songEvents for song mode
                 updateSongEvent(notePairs.at(selectedNote).noteOn);
                 updateSongEvent(notePairs.at(selectedNote).noteOff);
-                reloadNotes();
               }
+
+              // Reload to reflect changes
+              reloadNotes();
               headerFlags |= (1 << EDIT_LAYER);
               drawFlags |= DRAW_CONTENT_FULL;
+              drawLayersIndicator();
+
+              DBG_LOG(printf("Changed layer to %i\n", newLayer));
             }
           }
         }
@@ -887,30 +1301,84 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           }
         }
         else {
-          // Original timing editing for pattern mode
           if (selectedNote > -1) {
             LiveSequencer::MidiEvent& on = notePairs.at(selectedNote).noteOn;
             LiveSequencer::MidiEvent& off = notePairs.at(selectedNote).noteOff;
 
-            const uint32_t noteOnTime = getEventTime(on);
-            const uint32_t noteOffTime = getEventTime(off);
+            uint32_t oldNoteOnTime, noteOffTime;
 
-            uint32_t time = noteOnTime;
+            if (data.isSongMode && !data.useGridSongMode) {
+              // Use absolute timing for song mode
+              uint16_t actualBar = getActualBarForNote(notePairs.at(selectedNote));
+              oldNoteOnTime = uint32_t(actualBar) * data.patternLengthMs + on.patternMs;
+              noteOffTime = uint32_t(actualBar) * data.patternLengthMs + off.patternMs;
+
+              DBG_LOG(printf("EDIT_NOTEON - Song Mode: actualBar=%i, relTime=%i, absTime=%i\n",
+                actualBar, on.patternMs, oldNoteOnTime));
+            }
+            else {
+              // Pattern mode - use relative timing
+              oldNoteOnTime = getEventTime(on);
+              noteOffTime = getEventTime(off);
+            }
+
+            uint32_t time = oldNoteOnTime;
+            const uint32_t gridStep = data.patternLengthMs / 16;
+
             const uint32_t minTime = 0;
-            const uint32_t maxTime = noteOffTime;
+            const uint32_t maxTime = noteOffTime - gridStep;
 
-            if (hasConstrainedChanged(time, e.dir * e.speed, minTime, maxTime)) {
-              setEventTime(on, time);
-              memcpy(&currentNote, &on, sizeof(on));
+            // Snap to grid
+            int32_t gridSteps = roundf(float(time) / float(gridStep));
+            gridSteps = constrain(gridSteps + e.dir * e.speed,
+              roundf(float(minTime) / float(gridStep)),
+              roundf(float(maxTime) / float(gridStep)));
+            uint32_t newTime = gridSteps * gridStep;
+
+            if (newTime != time) {
+              // Create update region for OLD position (to clear it properly)
+              UpdateRange oldRegion;
+              const uint16_t oldX = getNoteCoord(oldNoteOnTime);
+              const uint32_t oldLenMs = (noteOffTime > oldNoteOnTime) ? (noteOffTime - oldNoteOnTime) : 1;
+              const int oldW = std::max(1, int(roundf(oldLenMs * view.msToPix)));
+              oldRegion.fromX = (oldX < 2 + ROLL_WIDTH) ? ROLL_WIDTH : (oldX - 2);
+              oldRegion.toX = (oldX + oldW > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (oldX + oldW + 2);
+              oldRegion.notes = { on.note_in };
+              drawRegionsX.push_back(oldRegion);
+
+              // Update the note time
               if (data.isSongMode && !data.useGridSongMode) {
+                // Convert absolute time back to pattern-relative for storage
+                uint16_t newActualBar = newTime / data.patternLengthMs;
+                uint32_t newPatternMs = newTime % data.patternLengthMs;
+
+                DBG_LOG(printf("EDIT_NOTEON - Updating: newAbsTime=%i, newBar=%i, newPatternMs=%i\n",
+                  newTime, newActualBar, newPatternMs));
+
+                // Update the event in songEvents
+                on.patternNumber = newActualBar; // Store absolute bar number
+                on.patternMs = newPatternMs;
                 updateSongEvent(on);
-                reloadNotes();
+
+                // Also update the noteOff event to maintain consistency
+                uint32_t noteLength = noteOffTime - oldNoteOnTime;
+                off.patternNumber = newActualBar;
+                off.patternMs = newPatternMs + noteLength;
+                updateSongEvent(off);
               }
               else {
+                setEventTime(on, newTime);
                 liveSeq.requestSortEvents();
               }
+
+              memcpy(&currentNote, &on, sizeof(on));
+
+              // Queue redraw of NEW position
+              queueDrawNote(notePairs.at(selectedNote));
+
               headerFlags |= (1 << EDIT_NOTEON);
-              drawFlags |= DRAW_CONTENT_FULL;
+              // Redraw background AND notes to ensure proper cleanup
+              drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
             }
           }
         }
@@ -923,20 +1391,38 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
 
           const bool isNoteOn = editMode == EDIT_NOTEON;
           const uint32_t noteOnTime = getEventTime(on);
-          const uint32_t noteOffTime = getEventTime(off);
+          const uint32_t oldNoteOffTime = getEventTime(off);
 
-          // Use 32-bit time variable (fix truncation bug)
-          uint32_t time = isNoteOn ? noteOnTime : noteOffTime;
-          const uint32_t minTime = isNoteOn ? 0 : noteOnTime;
-          const uint32_t maxTime = isNoteOn ? noteOffTime : uint32_t(data.numberOfBars) * data.patternLengthMs;
+          uint32_t time = isNoteOn ? noteOnTime : oldNoteOffTime;
+          const uint32_t gridStep = data.patternLengthMs / 16;
 
-          if (hasConstrainedChanged(time, e.dir * e.speed, minTime, maxTime)) {
+          // Ensure minimum note length of 1/16 step
+          const uint32_t minTime = isNoteOn ? 0 : noteOnTime + gridStep;
+          const uint32_t maxTime = isNoteOn ? oldNoteOffTime - gridStep : uint32_t(data.numberOfBars) * data.patternLengthMs;
+
+          // Snap to grid
+          int32_t gridSteps = roundf(float(time) / float(gridStep));
+          gridSteps = constrain(gridSteps + e.dir * e.speed,
+            roundf(float(minTime) / float(gridStep)),
+            roundf(float(maxTime) / float(gridStep)));
+          uint32_t newTime = gridSteps * gridStep;
+
+          if (newTime != time) {
+            // Create update region for OLD position (to clear it properly)
+            UpdateRange oldRegion;
+            const uint16_t oldX = getNoteCoord(noteOnTime);
+            const uint32_t oldLenMs = (oldNoteOffTime > noteOnTime) ? (oldNoteOffTime - noteOnTime) : 1;
+            const int oldW = std::max(1, int(roundf(oldLenMs * view.msToPix)));
+            oldRegion.fromX = (oldX < 2 + ROLL_WIDTH) ? ROLL_WIDTH : (oldX - 2);
+            oldRegion.toX = (oldX + oldW > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (oldX + oldW + 2);
+            oldRegion.notes = { on.note_in };
+            drawRegionsX.push_back(oldRegion);
+
             if (isNoteOn) {
-              setEventTime(on, time);
+              setEventTime(on, newTime);
               memcpy(&currentNote, &on, sizeof(on));
               if (data.isSongMode && !data.useGridSongMode) {
                 updateSongEvent(on);
-                reloadNotes();
               }
               else {
                 liveSeq.requestSortEvents();
@@ -944,14 +1430,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
               headerFlags |= (1 << EDIT_NOTEON);
             }
             else {
-              setEventTime(off, time);
+              setEventTime(off, newTime);
               if (data.isSongMode && !data.useGridSongMode) {
                 updateSongEvent(off);
-                reloadNotes();
               }
               headerFlags |= (1 << EDIT_NOTEOFF);
             }
-            drawFlags |= DRAW_CONTENT_FULL;
+
+            // Queue redraw of NEW position
+            queueDrawNote(notePairs.at(selectedNote));
+
+            // Redraw background AND notes to ensure proper cleanup
+            drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
           }
         }
         break;
@@ -972,74 +1462,54 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
         break;
 
       case EDIT_NOTE:
-
         if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
-               // For mute automation: toggle mute state
-                      if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
-                          LiveSequencer::MidiEvent &event = muteAutomationEvents.at(selectedMuteEvent);
-                          if (e.dir != 0) {
-                              event.note_in = (event.note_in == LiveSequencer::TYPE_MUTE_ON) ? LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
-                              updateSongEvent(event);
-                             headerFlags |= (1 << EDIT_NOTE);
-                              drawFlags |= DRAW_MUTE_AUTOMATION;
-                          }
-                      }
-          // headerFlags |= (1 << EDIT_NOTEON);
-          // drawFlags |= DRAW_CONTENT_FULL;   //phtodo
-        }
-        else if (selectedNote > -1) {
-            LiveSequencer::NotePair& thisNote = notePairs.at(selectedNote);
-            int8_t note = thisNote.noteOn.note_in;
-            if (hasConstrainedChanged(note, e.dir, int8_t(view.lowestNote), int8_t(view.highestNote))) {
-              // Store the old note for targeted redraw
-              uint8_t oldNote = thisNote.noteOn.note_in;
-
-              // Create a temporary note pair for the old position to clear it
-              LiveSequencer::NotePair oldNotePair = thisNote;
-              oldNotePair.noteOn.note_in = oldNote;
-              oldNotePair.noteOff.note_in = oldNote;
-
-              thisNote.noteOn.note_in = note;
-              thisNote.noteOff.note_in = note;
-              if (data.isSongMode && !data.useGridSongMode) {
-                updateSongEvent(thisNote.noteOn);
-                updateSongEvent(thisNote.noteOff);
-                reloadNotes();
-              }
+          // For mute automation: toggle mute state
+          if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
+            LiveSequencer::MidiEvent& event = muteAutomationEvents.at(selectedMuteEvent);
+            if (e.dir != 0) {
+              event.note_in = (event.note_in == LiveSequencer::TYPE_MUTE_ON) ? LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
+              updateSongEvent(event);
               headerFlags |= (1 << EDIT_NOTE);
-
-              // Get precise coordinates for old note with proper boundaries
-              const uint32_t timeOn = getEventTime(oldNotePair.noteOn);
-              const uint32_t timeOff = getEventTime(oldNotePair.noteOff);
-              uint16_t fromX = getNoteCoord(timeOn);
-              uint16_t toX = getNoteCoord(timeOff);
-
-              // Ensure we clear exactly the right area (match note drawing logic)
-              fromX = (fromX < 2 + ROLL_WIDTH) ? ROLL_WIDTH : (fromX - 2);
-              toX = (toX > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (toX + 2);
-
-              // Queue background redraw for old note position
-              UpdateRange clearRange;
-              clearRange.fromX = fromX;
-              clearRange.toX = toX;
-              clearRange.notes = { oldNote };
-              drawRegionsX.push_back(clearRange);
-
-              // Queue drawing of new note position
-              queueDrawNote(thisNote);
-              drawFlags |= DRAW_NOTES | DRAW_BACKGROUND; // Redraw background and notes
+              drawFlags |= DRAW_MUTE_AUTOMATION;
             }
           }
+        }
+        else if (selectedNote > -1) {
+          LiveSequencer::NotePair& thisNote = notePairs.at(selectedNote);
+          int8_t note = thisNote.noteOn.note_in;
+          if (hasConstrainedChanged(note, e.dir, int8_t(view.lowestNote), int8_t(view.highestNote))) {
+            uint8_t oldNote = thisNote.noteOn.note_in;
+
+            thisNote.noteOn.note_in = note;
+            thisNote.noteOff.note_in = note;
+            headerFlags |= (1 << EDIT_NOTE);
+
+            // Get precise coordinates for old and new note positions
+            const uint32_t timeOn = getEventTime(thisNote.noteOn);
+            const uint32_t timeOff = getEventTime(thisNote.noteOff);
+            uint16_t fromX = getNoteCoord(timeOn);
+            uint16_t toX = getNoteCoord(timeOff);
+
+            fromX = (fromX < 2 + ROLL_WIDTH) ? ROLL_WIDTH : (fromX - 2);
+            toX = (toX > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (toX + 2);
+
+            // Queue redraw for BOTH old and new note rows with EMPTY notes set
+            UpdateRange updateRange;
+            updateRange.fromX = fromX;
+            updateRange.toX = toX;
+            updateRange.notes = { oldNote, static_cast<uint8_t>(note) };
+            drawRegionsX.push_back(updateRange);
+
+            // Set flags for complete redraw of this region
+            drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+          }
+        }
         break;
-
-
-
       } // end switch(editMode)
       break;
 
     case MODE_STEP:
     {
-      uint8_t oldMode = stepMode;
       uint8_t newMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
       stepMode = newMode;
       if ((data.isRunning == false) && (newMode == STEP_RECORD)) {
@@ -1082,20 +1552,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       }
       editMode = newMode;
       buttonEdit->drawNow();
-
-      // Force header redraw to show the new selection
-     // drawHeader(HEADER_DRAW_ALL);
       break;
 
     case MODE_STEP:
-      oldMode = stepMode;
       newMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
       stepMode = newMode;
+      if ((data.isRunning == false) && (newMode == STEP_RECORD)) {
+        drawFlags |= DRAW_STEP_CURSOR;
+      }
+      queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
+      buttonStep->drawNow();
       break;
     }
-    // if (oldMode != newMode && mode != MODE_EDIT) {
-    //   drawHeader((1 << oldMode) | (1 << newMode));
-    // }
     if (oldMode != newMode) {
       if (mode == MODE_VIEW || mode == MODE_EDIT) {
         drawHeader((1 << oldMode) | (1 << newMode));
@@ -1120,7 +1588,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
   view.noteHeight = CONTENT_HEIGHT / float(view.numNotes);
   view.lowestNote = 24 + view.startOctave * 12;
   view.highestNote = (view.lowestNote + view.numNotes);
-  reloadNotes();
+  // reloadNotes();
   drawAreaIndicator();
 }
 
@@ -1133,26 +1601,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextSize(1);
   char s[16] = { "\0" };
 
-  if (modeFlags == HEADER_DRAW_ALL) {
-    display.fillRect(GRID.X[2], CONTENT_HEIGHT + LINE_HEIGHT, DISPLAY_WIDTH - GRID.X[3], HEADER_HEIGHT, HEADER_BG_COLOR);
-
-    // Display mode indicator
-    display.setCursor(GRID.X[2], CONTENT_HEIGHT + 4);
-    display.setTextColor(COLOR_SYSTEXT, HEADER_BG_COLOR);
-    if (data.isSongMode && !data.useGridSongMode) {
-      display.print("SONG");
-    }
-    else if (data.useGridSongMode) {
-      display.print("GRID");
-    }
-    else {
-      display.print("PATTERN");
-    }
-    display.setCursor(GRID.X[2], CONTENT_HEIGHT + 4 + CHAR_height_small);
-    display.print("MODE");
-  }
-
-
   switch (mode) {
   case MODE_VIEW:
     if (modeFlags & (1 << VIEW_ZOOM_X)) {
@@ -1162,7 +1610,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       drawHeaderSetting(GRID.X[4], "SCROLL X", "", (viewMode == VIEW_SCROLL_X), false);
     }
     if (modeFlags & (1 << VIEW_ZOOM_Y)) {
-      drawHeaderSetting(GRID.X[3], "", "ZOOM Y", false, (viewMode == VIEW_ZOOM_Y));
+      drawHeaderSetting(GRID.X[3], "", "ZOOM Y ", false, (viewMode == VIEW_ZOOM_Y));
     }
     if (modeFlags & (1 << VIEW_SCROLL_Y)) {
       drawHeaderSetting(GRID.X[4], "", "SCROLL Y", false, (viewMode == VIEW_SCROLL_Y));
@@ -1175,16 +1623,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       LiveSequencer::MidiEvent& m = muteAutomationEvents.at(selectedMuteEvent);
 
       // Highlight based on current edit mode selection
-      if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
-        sprintf(s, "%03i", selectedMuteEvent + 1);
-        drawHeaderSetting(GRID.X[3], "SEL", s, (editMode == EDIT_SELECT_NOTE), false);
-      }
       if (modeFlags & (1 << EDIT_LAYER)) {
         sprintf(s, "%i", m.note_in_velocity + 1);
-        drawHeaderSetting(GRID.X[3] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
+        drawHeaderSetting(GRID.X[2] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
       }
+      if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
+        sprintf(s, "%03i", selectedMuteEvent + 1);
+        drawHeaderSetting(GRID.X[3], "SELECT", s, (editMode == EDIT_SELECT_NOTE), false);
+      }
+
       if (modeFlags & (1 << EDIT_NOTEON)) {
-        sprintf(s, "/ %i.%04i", m.patternNumber, m.patternMs);
+        if (data.isSongMode && !data.useGridSongMode) {
+          sprintf(s, "/ %i.%04i", m.patternNumber, m.patternMs);
+        }
+        else {
+          sprintf(s, "/ %i.%04i", m.patternNumber, m.patternMs);
+        }
         drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
       }
       if (modeFlags & (1 << EDIT_NOTE)) {
@@ -1192,7 +1646,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
         drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_NOTE));
       }
     }
-
     else if (selectedNote > -1) {
       LiveSequencer::NotePair& p = notePairs.at(selectedNote);
       std::string noteString = getNoteString(p.noteOn.note_in);
@@ -1201,19 +1654,44 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       }
 
       if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
-        sprintf(s, "%03i", selectedNote + 1);
-        drawHeaderSetting(GRID.X[3], "SEL", s, false, (editMode == EDIT_SELECT_NOTE));
+        // Count only notes in the current layer (both song mode and pattern mode)
+        int8_t currentLayer = p.noteOn.layer;
+        int16_t layerNoteIndex = 1;
+        int16_t totalLayerNotes = 0;
+
+        for (size_t i = 0; i < notePairs.size(); i++) {
+          if (notePairs[i].noteOn.layer == currentLayer) {
+            totalLayerNotes++;
+            if (i < static_cast<size_t>(selectedNote)) {
+              layerNoteIndex++;
+            }
+          }
+        }
+        sprintf(s, "%03i/%03i", layerNoteIndex, totalLayerNotes);
+        drawHeaderSetting(GRID.X[3], "SELECT", s, false, (editMode == EDIT_SELECT_NOTE));
       }
       if (modeFlags & (1 << EDIT_LAYER)) {
         sprintf(s, "%i", p.noteOn.layer + 1);
-        drawHeaderSetting(GRID.X[3] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
+        drawHeaderSetting(GRID.X[2] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
       }
       if (modeFlags & (1 << EDIT_NOTEON)) {
-        sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+        if (data.isSongMode && !data.useGridSongMode) {
+          uint16_t actualBar = getActualBarForNote(p);
+          sprintf(s, "/ %i.%04i", actualBar, p.noteOn.patternMs);
+        }
+        else {
+          sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+        }
         drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
       }
       if (modeFlags & (1 << EDIT_NOTEOFF)) {
-        sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
+        if (data.isSongMode && !data.useGridSongMode) {
+          uint16_t actualBar = getActualBarForNote(p);
+          sprintf(s, "\\ %i.%04i", actualBar, p.noteOff.patternMs);
+        }
+        else {
+          sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
+        }
         drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_NOTEOFF));
       }
       if (modeFlags & (1 << EDIT_VELOCITY)) {
@@ -1236,7 +1714,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
     if (modeFlags & (1 << STEP_SIZE)) {
       sprintf(s, "1/%02i", stepRecordSteps);
       drawHeaderSetting(GRID.X[4], "STEPSIZE", s, false, (stepMode == STEP_SIZE));
-
     }
     if (modeFlags & (1 << STEP_LAYER)) {
       sprintf(s, "%i", stepRecordLayer + 1);
@@ -1306,100 +1783,186 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getNoteString(uint8_t note) {
   return result;
 }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
-  for (auto& u : drawRegionsX) {
-    for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
+FLASHMEM void UI_LiveSeq_PianoRoll::drawBarInfoOnTop(void) {
+  display.console = true;
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setTextSize(1);
 
-      if (u.notes.count(note) || u.notes.empty()) {
-        const uint8_t noteIndex = view.highestNote - note - 1;
-        const uint16_t y = round(noteIndex * view.noteHeight);
-        const bool isPressed = keysPressed.find(note) != keysPressed.end();
-        const uint16_t bgColor = isPressed ? GREY2 : (note & 0x01 ? GREY4 : COLOR_BACKGROUND);
-        display.console = true;
+  static constexpr uint8_t substeps = 4;
+  const float stepWidth = CONTENT_WIDTH / float(view.numBars * substeps);
 
-        //DBG_LOG(printf("draw X %i to %i\n", u.fromX, u.toX));
-        const uint16_t width = u.toX - u.fromX;
-        const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
-        if (width > 1) {
-          display.fillRect(xFrom, y, u.toX - u.fromX, view.noteHeight, bgColor);
+  // Draw bar numbers and time information at the TOP of the screen
+  for (uint8_t bar = 0; bar <= view.numBars; bar++) {
+    const uint16_t x = ROLL_WIDTH + round(bar * stepWidth * substeps);
+
+    if (bar < view.numBars) {
+      const uint16_t displayBar = view.startBar + bar;
+
+      // Draw bar number at the TOP (above the grid)
+      char barInfo[16];
+      if (data.isSongMode && !data.useGridSongMode) {
+        // Song mode: show absolute bar number
+        snprintf(barInfo, sizeof(barInfo), "%d", displayBar + 1);
+      }
+      else {
+        // Pattern mode: show bar number within pattern
+        snprintf(barInfo, sizeof(barInfo), "%d", (displayBar % data.numberOfBars) + 1);
+      }
+
+      // Position text at the top of the screen
+      display.setCursor(x - 4, 5);
+      display.print(barInfo);
+
+      // Draw time information for every few bars to avoid clutter
+      if (bar % 2 == 0 && view.numBars > 4) {
+        const uint32_t barTimeMs = displayBar * data.patternLengthMs;
+        const uint32_t barMinutes = barTimeMs / 60000;
+        const uint32_t barSeconds = (barTimeMs % 60000) / 1000;
+        const uint32_t barMillis = barTimeMs % 1000;
+
+        char timeInfo[16];
+        if (barTimeMs < 60000) {
+          snprintf(timeInfo, sizeof(timeInfo), "%lu.%02lu",
+            (unsigned long)barSeconds,
+            (unsigned long)(barMillis / 10));
         }
         else {
-          display.drawLine(xFrom, y, xFrom, y + view.noteHeight - 1, bgColor);
+          snprintf(timeInfo, sizeof(timeInfo), "%lu:%02lu",
+            (unsigned long)barMinutes,
+            (unsigned long)barSeconds);
         }
+
+        display.setCursor(x - 8, 15);
+        display.print(timeInfo);
       }
+    }
+  }
+
+  // Current playback position indicator at the top
+  if (data.isRunning) {
+    const uint32_t currentTimeMs = data.currentPattern * data.patternLengthMs + data.patternTimer;
+    const uint32_t currentMinutes = currentTimeMs / 60000;
+    const uint32_t currentSeconds = (currentTimeMs % 60000) / 1000;
+    const uint32_t currentMillis = currentTimeMs % 1000;
+
+    char currentTime[16];
+    if (currentTimeMs < 60000) {
+      snprintf(currentTime, sizeof(currentTime), "%lu.%02lu",
+        (unsigned long)currentSeconds,
+        (unsigned long)(currentMillis / 10));
+    }
+    else {
+      snprintf(currentTime, sizeof(currentTime), "%lu:%02lu",
+        (unsigned long)currentMinutes,
+        (unsigned long)currentSeconds);
+    }
+
+    // Draw current time in top-left corner
+    display.setCursor(ROLL_WIDTH + 5, 5);
+    display.printf("%s", currentTime);
+
+    // Draw current bar info
+    display.setCursor(ROLL_WIDTH + 5, 15);
+    if (data.isSongMode && !data.useGridSongMode) {
+      display.printf("BAR: %d", data.currentPattern + 1);
+    }
+    else {
+      display.printf("BAR: %d", (data.currentPattern % data.numberOfBars) + 1);
     }
   }
 }
 
+
 FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
-
-  // Calculate white key height to match the keyboard
-  const uint16_t numWhiteKeys = view.numOctaves * 7;
-  const float whiteKeyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
-
-  // Draw horizontal lines at each white key position
-  for (uint8_t whiteKey = 0; whiteKey <= numWhiteKeys; whiteKey++) {
-    const uint16_t y = round(whiteKey * whiteKeyHeight);
-    const uint16_t lineColor = (whiteKey % 7 == 0) ? GREY3 : GREY4; // Octave boundaries are darker
-
-    for (auto& u : drawRegionsX) {
-      const bool drawLine = (u.notes.empty());
-      if (drawLine) {
-        display.console = true;
-        display.drawLine(ROLL_WIDTH, y, DISPLAY_WIDTH, y, lineColor);
-      }
-    }
-  }
-
-  // Draw vertical pattern lines
+  // Draw vertical pattern lines first
   static constexpr uint8_t substeps = 4;
   const float stepWidth = CONTENT_WIDTH / float(view.numBars * substeps);
 
-  // Draw vertical lines
+  // Draw vertical lines (full height) - always draw regardless of note filter
   for (uint8_t step = 0; step < view.numBars * substeps; step++) {
     const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
     const uint16_t lineColor = (step % substeps == 0) ? GREY3 : GREY4;
 
     for (auto& u : drawRegionsX) {
       const bool drawLine = ((x >= u.fromX) && (x <= u.toX));
-      if (drawLine && u.notes.empty()) {
+      if (drawLine) {  // <-- REMOVED the u.notes.empty() check
         display.console = true;
-        display.drawLine(x, 0, x, CONTENT_HEIGHT - 1, lineColor);
+        display.drawFastVLine(x, 0, CONTENT_HEIGHT, lineColor);
+        break; // Only draw once per line
       }
+    }
+  }
+
+  // Calculate white key height to match the keyboard
+  const uint16_t numWhiteKeys = view.numOctaves * 7;
+  const float whiteKeyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
+
+  // Draw horizontal lines - respect note filter for horizontal lines
+  for (uint8_t whiteKey = 0; whiteKey <= numWhiteKeys; whiteKey++) {
+    const uint16_t y = (uint16_t)(whiteKey * whiteKeyHeight + 0.5f);
+    const uint16_t lineColor = (whiteKey % 7 == 0) ? GREY3 : GREY4;
+
+    // Check if any update region wants this line drawn
+    bool shouldDraw = false;
+    for (auto& u : drawRegionsX) {
+      if (u.notes.empty()) {
+        shouldDraw = true;
+        break;
+      }
+    }
+
+    if (shouldDraw) {
+      display.console = true;
+      display.drawFastHLine(ROLL_WIDTH, y, CONTENT_WIDTH, lineColor);
     }
   }
 }
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getNoteCoord(uint32_t time) const {
-  const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
-  const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
-  
-  int32_t relativeTime = int32_t(time) - int32_t(viewStartMs);
-  
-  float px = ROLL_WIDTH;
-  if (viewEndMs > viewStartMs && relativeTime >= 0) {
-    float ratio = float(relativeTime) / float(viewEndMs - viewStartMs);
-    px = ROLL_WIDTH + ratio * CONTENT_WIDTH;
-  }
-  
-  int32_t coord = int32_t(roundf(px));
-  if (coord < int32_t(ROLL_WIDTH)) coord = ROLL_WIDTH;
-  if (coord > int32_t(DISPLAY_WIDTH - 1)) coord = DISPLAY_WIDTH - 1;
-  
-  return uint16_t(coord);
-}
+  uint32_t viewStartMs, viewEndMs;
 
+  if (data.isSongMode && !data.useGridSongMode) {
+    // Song mode: use 1:1 mapping (no 4:1 compression)
+    viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+    viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
+  }
+  else {
+    // Pattern mode
+    viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+    viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
+  }
+
+  // Handle times before viewport
+  if (time < viewStartMs) {
+    return ROLL_WIDTH;
+  }
+
+  // Handle times after viewport  
+  if (time > viewEndMs) {
+    return DISPLAY_WIDTH - 1;
+  }
+
+  // Calculate position within viewport
+  float ratio = float(time - viewStartMs) / float(viewEndMs - viewStartMs);
+  uint16_t px = ROLL_WIDTH + roundf(ratio * CONTENT_WIDTH);
+
+  // Clamp to display bounds
+  if (px < ROLL_WIDTH) px = ROLL_WIDTH;
+  if (px > DISPLAY_WIDTH - 1) px = DISPLAY_WIDTH - 1;
+
+  return px;
+}
 
 FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const {
   if (data.isSongMode && !data.useGridSongMode) {
     // Song mode: return time relative to viewport start
     // DO NOT clamp to viewport end - we need full time for length calculations
     const uint32_t startMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
-    
+
     if (time < startMs) {
       return 0;
     }
-    
+
     return time - startMs;
   }
   else {
@@ -1416,98 +1979,103 @@ FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
-  // LCD DEBUG
-  if ((drawFlags & DRAW_CONTENT_FULL) && data.isSongMode && !data.useGridSongMode) {
-    display.console = true;
-    display.setTextColor(YELLOW, COLOR_BACKGROUND);
-    display.setTextSize(1);
-    
-    display.setCursor(22, 5);
-    display.printf("View: Bar %d-%d", view.startBar, view.startBar + view.numBars - 1);
-    
-    for (size_t i = 0; i < std::min(size_t(3), notePairs.size()); i++) {
-      uint16_t actualBar = getActualBarForNote(notePairs[i]);
-      uint32_t time = actualBar * data.patternLengthMs + notePairs[i].noteOn.patternMs;
-      display.setCursor(22, 15 + i * 10);
-      display.printf("N%d: Bar=%u t=%lu", i, actualBar, time);
-    }
-    
-    if (notePairs.size() > 3) {
-      display.setCursor(22, 45);
-      display.printf("Total: %d notes", notePairs.size());
-    }
-  }
-  
-  if (drawFlags & DRAW_CONTENT_FULL) {
-    for (size_t i = 0; i < notePairs.size(); ++i) {
-      drawNote(notePairs[i], (selectedNote == int16_t(i)));
-    }
-  }
-  else if (drawFlags & DRAW_NOTES) {
-    for (auto& updateRegion : drawRegionsX) {
-      for (size_t i = 0; i < notePairs.size(); ++i) {
-        const LiveSequencer::NotePair& note = notePairs[i];
-        
-        // Calculate time with actual bar for song mode
-        uint32_t timeOn, timeOff;
-        if (data.isSongMode && !data.useGridSongMode) {
-          uint16_t actualBar = getActualBarForNote(note);
-          timeOn = actualBar * data.patternLengthMs + note.noteOn.patternMs;
-          timeOff = actualBar * data.patternLengthMs + note.noteOff.patternMs;
-        } else {
-          timeOn = getEventTime(note.noteOn);
-          timeOff = getEventTime(note.noteOff);
-        }
-        
-        if (data.isSongMode && !data.useGridSongMode) {
-          const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
-          const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
-          
-          if (timeOff < viewStartMs || timeOn > viewEndMs) {
-            continue;
-          }
-        }
-        
-        const uint16_t x = getNoteCoord(timeOn);
-        const uint32_t lenMs = (timeOff > timeOn) ? (timeOff - timeOn) : 1;
-        const int w = std::max(1, int(roundf(lenMs * view.msToPix)));
+  // Always determine active layer for both song mode and pattern mode
+  int8_t activeLayer = -1;
 
-        const bool isInsideX = (int32_t(x) <= int32_t(updateRegion.toX)) &&
-          (int32_t(x + w) >= int32_t(updateRegion.fromX));
-        const bool isInsideY = updateRegion.notes.count(note.noteOn.note_in) || updateRegion.notes.empty();
-
-        if (isInsideX && isInsideY) {
-          drawNote(note, (selectedNote == int16_t(i)));
-        }
-      }
+  if (data.activeTrack == SONG_MODE_NOTES_TRACK || data.activeTrack < SONG_MODE_NOTES_TRACK) {
+    // For both song mode and pattern mode, filter by layer
+    // Use the selected note's layer if available, regardless of mode
+    if (selectedNote > -1 && selectedNote < int16_t(notePairs.size())) {
+      activeLayer = notePairs.at(selectedNote).noteOn.layer;
     }
-  }
-
-  if (notePairs.empty() && (drawFlags & DRAW_CONTENT_FULL)) {
-    display.console = true;
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(1);
-    display.setCursor(100, CONTENT_HEIGHT / 2);
-    if (data.isSongMode && !data.useGridSongMode && data.activeTrack != SONG_MODE_MUTE_TRACK) {
-      display.print("SONG MODE - NO NOTES");
-    }
-    else if (data.useGridSongMode) {
-      display.print("GRID MODE - NO NOTES");
-    }
-    else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
-      display.print("SONG - MUTE AUTOMATION");
+    else if (!notePairs.empty()) {
+      // If no note selected but we have notes, use the first note's layer
+      activeLayer = notePairs.at(0).noteOn.layer;
     }
     else {
-      display.print("PATTERN MODE - NO NOTES");
+      // Only default to 0 if there are no notes at all
+      activeLayer = 0;
     }
+  }
+
+  // Early return if there are no notes to draw
+  if (notePairs.empty()) {
+    if (drawFlags & DRAW_CONTENT_FULL) {
+      display.console = true;
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.setTextSize(1);
+      display.setCursor(100, CONTENT_HEIGHT / 2);
+      if (data.isSongMode && !data.useGridSongMode && data.activeTrack != SONG_MODE_MUTE_TRACK) {
+        display.print("SONG MODE - NO NOTES");
+      }
+      else if (data.useGridSongMode) {
+        display.print("GRID MODE - NO NOTES");
+      }
+      else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+        display.print("SONG - MUTE AUTOMATION");
+      }
+      else {
+        display.print("PATTERN MODE - NO NOTES");
+      }
+    }
+    return;
+  }
+
+  // Three-pass drawing to ensure selected note is always on top
+
+  // First pass: draw non-active layer notes in grey
+  for (size_t i = 0; i < notePairs.size(); ++i) {
+    if ((data.activeTrack == SONG_MODE_NOTES_TRACK || data.activeTrack < SONG_MODE_NOTES_TRACK) &&
+      notePairs[i].noteOn.layer != activeLayer) {
+      drawNote(notePairs[i], false, true); // true = draw in grey
+    }
+  }
+
+  // Second pass: draw active layer notes in color (except selected note)
+  for (size_t i = 0; i < notePairs.size(); ++i) {
+    if ((data.activeTrack >= SONG_MODE_MUTE_TRACK || notePairs[i].noteOn.layer == activeLayer) &&
+      selectedNote != int16_t(i)) {
+      drawNote(notePairs[i], false, false);
+    }
+  }
+
+  // Third pass: draw selected note last (on top)
+  if (selectedNote > -1 && selectedNote < int16_t(notePairs.size())) {
+    drawNote(notePairs.at(selectedNote), true, false);
   }
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w, bool drawInGrey) const {
+  // Skip notes outside the visible octave range
+  if (note.noteOn.note_in < view.lowestNote || note.noteOn.note_in >= view.highestNote) {
+    return;
+  }
 
-FLASHMEM void UI_LiveSeq_PianoRoll::drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w) const {
-  const uint16_t y = CONTENT_HEIGHT - (note.noteOn.note_in - view.lowestNote + 1) * view.noteHeight;
-  const uint16_t h = view.noteHeight;
-  const uint16_t color = isSelected ? COLOR_SYSTEXT : layerColors.at(note.noteOn.layer);
+  // Calculate Y position
+  const uint8_t noteIndex = view.highestNote - note.noteOn.note_in - 1;
+  const int16_t y = (int16_t)(noteIndex * view.noteHeight);
+  const uint8_t h = view.noteHeight;
+
+  // Ensure note is fully within content area
+  if (y < 0 || y >= CONTENT_HEIGHT) {
+    return;
+  }
+
+  // Ensure note doesn't overflow into header area
+  if (y + h > CONTENT_HEIGHT) {
+    return;
+  }
+
+  uint16_t color;
+  if (drawInGrey) {
+    color = GREY2; // Draw non-active layer notes in grey
+  }
+  else if (isSelected) {
+    color = COLOR_SYSTEXT;
+  }
+  else {
+    color = layerColors.at(note.noteOn.layer);
+  }
 
   display.console = true;
 
@@ -1524,9 +2092,25 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNoteAtPosition(LiveSequencer::NotePair n
   }
 }
 
-
 FLASHMEM const uint32_t UI_LiveSeq_PianoRoll::getEventTime(LiveSequencer::MidiEvent e) const {
-  return e.patternNumber * data.patternLengthMs + e.patternMs;
+  if (data.isSongMode && !data.useGridSongMode) {
+    // For song mode, find the absolute bar and convert to absolute time
+    for (const auto& patternEntry : data.songEvents) {
+      const uint16_t absoluteBar = patternEntry.first;
+      for (const auto& event : patternEntry.second) {
+        if (memcmp(&event, &e, sizeof(LiveSequencer::MidiEvent)) == 0) {
+          // Found the event, return absolute time
+          return absoluteBar * data.patternLengthMs + e.patternMs;
+        }
+      }
+    }
+    // Fallback: assume patternNumber is absolute bar (might not be true)
+    return e.patternNumber * data.patternLengthMs + e.patternMs;
+  }
+  else {
+    // Pattern mode
+    return e.patternNumber * data.patternLengthMs + e.patternMs;
+  }
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
@@ -1543,7 +2127,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       break;
 
     case MODE_EDIT:
-      editMode = EDIT_SELECT_NOTE;
+      editMode = EDIT_LAYER;
       buttonEdit->drawNow();
       if (selectedNote > -1) {
         // Only redraw the selected note to remove highlight
@@ -1744,7 +2328,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       if (newTrack >= MAX_TRACKS) {
         newTrack = 0;
       }
-
       // Clear screen and reset state
       display.console = true;
       display.fillRect(ROLL_WIDTH, 0, CONTENT_WIDTH, CONTENT_HEIGHT, COLOR_BACKGROUND);
@@ -1759,12 +2342,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       }
       else {
         data.isSongMode = false;
+
+
       }
 
       // Reset edit mode state
       if (mode == MODE_EDIT) {
         isSettingActivated = false;
-        editMode = EDIT_SELECT_NOTE;
+        editMode = EDIT_LAYER;
         selectedMuteEvent = -1;
       }
 

@@ -9,9 +9,6 @@
 #include "touchbutton.h"
 #include "config.h"
 #include <set>
-//#include <map>
-//#include <utility>
-
 
 static constexpr uint8_t SONG_MODE_NOTES_TRACK = 12;
 static constexpr uint8_t SONG_MODE_MUTE_TRACK = 13;
@@ -28,12 +25,15 @@ public:
   FLASHMEM void onEventsChanged(void);
 
 private:
-uint16_t getMaxBarsForCurrentMode() const;
-uint16_t getActualBarForNote(const LiveSequencer::NotePair& note) const;
-void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w) const;
-void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
- bool step(int8_t diff);
+  void drawBarInfoOnTop(void);
+  uint32_t getAbsoluteEventTime(const LiveSequencer::MidiEvent& e) const;
+  uint16_t getMaxBarsForCurrentMode() const;
+  uint16_t getActualBarForNote(const LiveSequencer::NotePair& note) const;
+  void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w, bool drawInGrey = false) const;
+  void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
+  bool step(int8_t diff);
   std::set<uint8_t> keysPressed;
+  
   enum ViewMode {
     VIEW_ZOOM_X,
     VIEW_SCROLL_X,
@@ -44,8 +44,8 @@ void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
   uint8_t viewMode = VIEW_ZOOM_X;
 
   enum EditMode {
-    EDIT_SELECT_NOTE,
     EDIT_LAYER,
+    EDIT_SELECT_NOTE,
     EDIT_NOTEON,
     EDIT_NOTEOFF,
     EDIT_VELOCITY,
@@ -53,7 +53,7 @@ void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
     EDIT_NUM
   };
   
-  uint8_t editMode = EDIT_SELECT_NOTE;
+  uint8_t editMode = EDIT_LAYER;
 
   enum StepMode {
     STEP_RECORD,
@@ -119,7 +119,7 @@ void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
   void queueDrawNote(LiveSequencer::NotePair note);
   void queueDrawNote(UpdateRange coords);
   uint16_t getNoteCoord(uint32_t time) const;
-uint32_t getRelativeNoteTime(uint32_t time) const;
+  uint32_t getRelativeNoteTime(uint32_t time) const;
   void deleteSelectedNote(void);
   void deleteSelectedMuteEvent(void);
   void updateMuteEventInSequencer(LiveSequencer::MidiEvent &updatedEvent);
@@ -133,7 +133,8 @@ uint32_t getRelativeNoteTime(uint32_t time) const;
   void drawCursor(void);
   void drawStepCursor(void);
   void drawVerticalBars(void);
-  void drawNote(LiveSequencer::NotePair note, bool isSelected = false) const;
+  void drawNote(LiveSequencer::NotePair note, bool isSelected = false, bool drawInGrey = false) const;
+
   void setNumOctaves(int8_t num);
   void setStartOctave(int8_t num);
   void setNumBars(int8_t num);
