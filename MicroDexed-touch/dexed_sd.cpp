@@ -2246,11 +2246,6 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
    SD SYS
  ******************************************************************************/
 
-extern uint8_t dac_cv_2;
-extern uint8_t dac_cv_4;
-extern uint8_t dac_cv_transpose;
-
-
 FLASHMEM bool load_sd_sys_json(void)
 {
 
@@ -2306,9 +2301,10 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.vol_control = data_json["vol_control"];
         configuration.sys.sus_pedal = data_json["sus_pedal"];
         configuration.sys.ext_clock = data_json["ext_clock"];
-        dac_cv_transpose = data_json["cvtranspose"];
-        dac_cv_2 = data_json["cv2cc"];
-        dac_cv_4 = data_json["cv4cc"];
+        configuration.sys.dac_cv_transpose = data_json["cvtranspose"];
+        configuration.sys.dac_cv_2 = data_json["cv2cc"];
+        configuration.sys.dac_cv_4 = data_json["cv4cc"];
+        configuration.sys.cv_midi_channel = data_json["cv_midi_channel"];
 
         if (data_json["rgb_enc_color_def"] > 0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
@@ -2414,9 +2410,10 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["sus_pedal"] = configuration.sys.sus_pedal;
       data_json["ext_clock"] = configuration.sys.ext_clock;
 
-      data_json["cvtranspose"] = dac_cv_transpose;
-      data_json["cv2cc"] = dac_cv_2;
-      data_json["cv4cc"] = dac_cv_4;
+      data_json["cvtranspose"] = configuration.sys.dac_cv_transpose;
+      data_json["cv2cc"] = configuration.sys.dac_cv_2;
+      data_json["cv4cc"] = configuration.sys.dac_cv_4;
+      data_json["cv_midi_channel"] = configuration.sys.cv_midi_channel;
 
       if (configuration.sys.rgb_enc_color_def != 0)
         data_json["rgb_enc_color_def"] = configuration.sys.rgb_enc_color_def;

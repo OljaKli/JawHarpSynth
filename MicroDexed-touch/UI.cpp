@@ -3557,17 +3557,17 @@ class Editor
   friend class UI;
 
 private:
-  // Helper function to determine the acceleration level based on range
+  // Helper function to determine the acceleration level based on range  // too many side effects, have to come up with something better
   int get_accel_level(int16_t value_range) {
-    if (value_range > 1000) {
-      return 3; // Super-fast (for very large ranges)
-    }
-    if (value_range > 500) {
-      return 2; // Fast (for large ranges)
-    }
-    if (value_range > 260) {
-      return 1; // Normal fast (for medium ranges)
-    }
+    // if (value_range > 1000) {
+    //   return 3; // Super-fast (for very large ranges)
+    // }
+    // if (value_range > 500) {
+    //   return 2; // Fast (for large ranges)
+    // }
+    // if (value_range > 260) {
+    //   return 1; // Normal fast (for medium ranges)
+    // }
     return 0; // Default step of 1 (for small ranges)
   }
 
@@ -3897,20 +3897,20 @@ public:
         int16_t speed_multiplier = 1;
         Editor& current_editor = editors[generic_temp_select_menu];
 
-        switch (current_editor.accel_level) {
-        case 3:
-          speed_multiplier = 50;
-          break;
-        case 2:
-          speed_multiplier = 5;
-          break;
-        case 1:
-          speed_multiplier = 2;
-          break;
-        default:
-          speed_multiplier = 1;
-          break;
-        }
+        // switch (current_editor.accel_level) {  //too much sideeffects. needs a better solution
+        // case 3:
+        //   speed_multiplier = 50;
+        //   break;
+        // case 2:
+        //   speed_multiplier = 5;
+        //   break;
+        // case 1:
+        //   speed_multiplier = 2;
+        //   break;
+        // default:
+        //   speed_multiplier = 1;
+        //   break;
+        // }
 
         e.speed = speed_multiplier;
 
@@ -13610,7 +13610,7 @@ FLASHMEM void UI_func_arpeggio(uint8_t param)
     setCursor_textGrid_small(2, 9);
     display.print(F("MX NOTES"));
     display.setTextColor(GREY1, COLOR_BACKGROUND);
- 
+
     setCursor_textGrid_small(2, 11);
     display.print(F("FROM ADV. SETTINGS:"));
 
@@ -14533,7 +14533,7 @@ FLASHMEM void print_delay_time(uint8_t instance, uint8_t param)
   else
   {
     if (instance == 0)
-      print_formatted_number(configuration.fx.delay_time[instance] * 10, 2, 1, 1);
+      print_formatted_number(configuration.fx.delay_time[instance] * 10, 4, 1, 1);
     else
       print_formatted_number(configuration.fx.delay_time[instance] * 10, 4, 19, 1);
     if (seq.edit_state == 1)
@@ -16640,10 +16640,6 @@ FLASHMEM void UI_func_braids(uint8_t param)
   }
 }
 
-extern uint8_t dac_cv_2;
-extern uint8_t dac_cv_4;
-extern uint8_t dac_cv_transpose;
-
 FLASHMEM void UI_func_cv_page(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
@@ -16651,6 +16647,9 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     // setup function
     registerTouchHandler(handle_touchscreen_cv_screen);
     registerScope(250, 0, 62, 50);
+    if (configuration.sys.cv_midi_channel == MIDI_CHANNEL_OMNI)
+      configuration.sys.cv_midi_channel = 1;
+
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
     virtual_keyboard_smart_preselect_mode();
@@ -16659,6 +16658,7 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
 
     display.setTextSize(1);
     seq.edit_state = 0;
+    generic_temp_select_menu = 0;
 
     setCursor_textGrid_small(1, 1);
     display.setTextColor(RED);
@@ -16674,31 +16674,29 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     setCursor_textGrid_small(1, 5);
     display.print(F("CV OUTPUT VALUE"));
 
-    setCursor_textGrid_small(1, 7);
+    setCursor_textGrid_small(1, 6);
     display.print(F("VELOCITY"));
-    setCursor_textGrid_small(1, 8);
+    setCursor_textGrid_small(1, 7);
     display.print(F("OUTPUT VELOCITY"));
 
+    setCursor_textGrid_small(1, 8);
+    display.print(F("MIDI CHANNEL"));
     setCursor_textGrid_small(1, 9);
     display.print(F("MIDI CC > CV2"));
     setCursor_textGrid_small(1, 10);
     display.print(F("MIDI CC > CV4"));
     setCursor_textGrid_small(1, 11);
     display.print(F("NOTE TRANSP.>CV1"));
-    display.setTextColor(GREY2);
-    setCursor_textGrid_small(28, 10);
-    display.print(F("EDIT PARAMETERS IN"));
-    setCursor_textGrid_small(28, 11);
-    display.print(F("SYSTEM > SYSTEM SETTINGS"));
-    display.setTextColor(GREY1);
 
+    display.setTextColor(COLOR_SYSTEXT);
+    setCursor_textGrid_small(19, 8);
+    print_formatted_number(configuration.sys.cv_midi_channel, 2);
     setCursor_textGrid_small(19, 9);
-    print_formatted_number(dac_cv_2, 2);
+    print_formatted_number(configuration.sys.dac_cv_2, 2);
     setCursor_textGrid_small(19, 10);
-    print_formatted_number(dac_cv_4, 2);
+    print_formatted_number(configuration.sys.dac_cv_4, 2);
     setCursor_textGrid_small(19, 11);
-    print_formatted_number(dac_cv_transpose, 2);
-
+    print_formatted_number(configuration.sys.dac_cv_transpose, 2);
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
       LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -16707,8 +16705,42 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      if (seq.edit_state == false)
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 3);
+      else if (generic_temp_select_menu == 0)
+      {
+ configuration.sys.cv_midi_channel = constrain(configuration.sys.cv_midi_channel + (e.dir * e.speed), 1, 16);
+ //if (seq.cycle_touch_element == 1 )
+  ts.virtual_keyboard_midi_channel = configuration.sys.cv_midi_channel;
+      }
+      else if (generic_temp_select_menu == 1)
+        configuration.sys.dac_cv_2 = constrain(configuration.sys.dac_cv_2 + (e.dir * e.speed), 0, 99);
+      else if (generic_temp_select_menu == 2)
+        configuration.sys.dac_cv_4 = constrain(configuration.sys.dac_cv_4 + (e.dir * e.speed), 0, 99);
+      else if (generic_temp_select_menu == 3)
+        configuration.sys.dac_cv_transpose = constrain(configuration.sys.dac_cv_transpose + (e.dir * e.speed), 0, 36);
+    }
+    if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    {
+      seq.edit_state = !seq.edit_state;
+    }
+    // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    // long button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    display.setTextSize(1);
+    setModeColor(0);
+    setCursor_textGrid_small(19, 8);
+    print_formatted_number(configuration.sys.cv_midi_channel, 2, 0, 1);
+    setModeColor(1);
+    setCursor_textGrid_small(19, 9);
+    print_formatted_number(configuration.sys.dac_cv_2, 2, 1, 1);
+    setModeColor(2);
+    setCursor_textGrid_small(19, 10);
+    print_formatted_number(configuration.sys.dac_cv_4, 2, 2, 1);
+    setModeColor(3);
+    setCursor_textGrid_small(19, 11);
+    print_formatted_number(configuration.sys.dac_cv_transpose, 2, 3, 1);
 
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -16717,7 +16749,6 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     unregisterTouchHandler();
     unregisterScope();
     encoderDir[ENC_R].reset();
-
   }
 }
 
@@ -17799,7 +17830,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
-}
+      }
 #else
 FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
 {
@@ -19619,9 +19650,9 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
     case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
 
-    case 19: print_formatted_number(dac_cv_2, 2);  break;
-    case 20: print_formatted_number(dac_cv_4, 2);  break;
-    case 21: print_formatted_number(dac_cv_transpose, 2);  break;
+    case 19: print_formatted_number(configuration.sys.dac_cv_2, 2);  break;
+    case 20: print_formatted_number(configuration.sys.dac_cv_4, 2);  break;
+    case 21: print_formatted_number(configuration.sys.dac_cv_transpose, 2);  break;
 
 
       break;
@@ -19740,22 +19771,22 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
             seq.clock = 0;
           break;
 
-        case 19: dac_cv_2 = constrain(dac_cv_2 + (e.dir * 1), 0, 99); break;
-        case 20: dac_cv_4 = constrain(dac_cv_4 + (e.dir * 1), 0, 99); break;
-        case 21: dac_cv_transpose = constrain(dac_cv_transpose + (e.dir * 1), 0, 36); break;
+        case 19: configuration.sys.dac_cv_2 = constrain(configuration.sys.dac_cv_2 + (e.dir * 1), 0, 99); break;
+        case 20: configuration.sys.dac_cv_4 = constrain(configuration.sys.dac_cv_4 + (e.dir * 1), 0, 99); break;
+        case 21: configuration.sys.dac_cv_transpose = constrain(configuration.sys.dac_cv_transpose + (e.dir * 1), 0, 36); break;
 
         }
-      }
+        }
       _render_misc_settings(scroll_position, total_menu_items);
       set_sys_params();
-    }
+      }
 
     // Handle button presses during menu
     if (e.pressed) {
       generic_active_function = !generic_active_function;
       _render_misc_settings(scroll_position, total_menu_items);
     }
-  }
+    }
 
   if (LCDML.FUNC_close())
   {
@@ -19765,7 +19796,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     previous_scroll_position = 255; //reset
   }
-}
+  }
 
 FLASHMEM void _setup_rotation_and_encoders(bool init)
 {
@@ -22127,8 +22158,8 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
       }
-    }
   }
+}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -22276,8 +22307,8 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         LCDML.FUNC_goBackToMenu();
         break;
       }
+      }
     }
-  }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -22289,7 +22320,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 FLASHMEM void UI_func_startup_performance(uint8_t param)
 {
@@ -24012,7 +24043,7 @@ FLASHMEM void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instan
         ts.fav_buttton_state = 1;
       }
     }
-  }
+      }
 }
 
 FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instance_id)
@@ -24116,9 +24147,9 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Removed from Favorites..."));
 #endif
-    }
   }
 }
+    }
 
 FLASHMEM char* basename(const char* filename)
 {
