@@ -2246,11 +2246,6 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
    SD SYS
  ******************************************************************************/
 
-extern uint8_t dac_cv_2;
-extern uint8_t dac_cv_4;
-extern uint8_t dac_cv_transpose;
-
-
 FLASHMEM bool load_sd_sys_json(void)
 {
 
@@ -2306,9 +2301,10 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.vol_control = data_json["vol_control"];
         configuration.sys.sus_pedal = data_json["sus_pedal"];
         configuration.sys.ext_clock = data_json["ext_clock"];
-        dac_cv_transpose = data_json["cvtranspose"];
-        dac_cv_2 = data_json["cv2cc"];
-        dac_cv_4 = data_json["cv4cc"];
+        configuration.sys.dac_cv_transpose = data_json["cvtranspose"];
+        configuration.sys.dac_cv_2 = data_json["cv2cc"];
+        configuration.sys.dac_cv_4 = data_json["cv4cc"];
+        configuration.sys.cv_midi_channel = data_json["cv_midi_channel"];
 
         if (data_json["rgb_enc_color_def"] > 0)
           configuration.sys.rgb_enc_color_def = data_json["rgb_enc_color_def"];
@@ -2414,9 +2410,10 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["sus_pedal"] = configuration.sys.sus_pedal;
       data_json["ext_clock"] = configuration.sys.ext_clock;
 
-      data_json["cvtranspose"] = dac_cv_transpose;
-      data_json["cv2cc"] = dac_cv_2;
-      data_json["cv4cc"] = dac_cv_4;
+      data_json["cvtranspose"] = configuration.sys.dac_cv_transpose;
+      data_json["cv2cc"] = configuration.sys.dac_cv_2;
+      data_json["cv4cc"] = configuration.sys.dac_cv_4;
+      data_json["cv_midi_channel"] = configuration.sys.cv_midi_channel;
 
       if (configuration.sys.rgb_enc_color_def != 0)
         data_json["rgb_enc_color_def"] = configuration.sys.rgb_enc_color_def;
@@ -3526,6 +3523,128 @@ FLASHMEM bool save_sd_sidechain_json(uint8_t number)
 }
 
 /******************************************************************************
+   SD GRANULAR
+ ******************************************************************************/
+#ifdef GRANULAR
+#include "granular.h"
+extern void updateGranularParams();
+extern granular_params_t granular_params;
+
+FLASHMEM bool load_sd_granular_json(uint8_t number)
+{
+  if (number < 0)
+    return (false);
+
+  if (sd_card_internal > 0)
+  {
+    number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, "granular");
+
+    // first check if file exists...
+    AudioNoInterrupts();
+    if (SD.exists(filename))
+    {
+      // ... and if: load
+#ifdef DEBUG
+      LOG.print(F("Found granular configuration"));
+#endif
+      json = SD.open(filename);
+      if (json)
+      {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        deserializeJson(data_json, json);
+
+        json.close();
+        AudioInterrupts();
+
+        // Load granular parameters
+        
+        granular_params.sample_note = data_json["sample_note"];
+        granular_params.attack = data_json["attack"];
+        granular_params.release = data_json["release"] ;
+        granular_params.grain_size = data_json["grain_size"] ;
+        granular_params.grain_position = data_json["grain_position"] ;
+        granular_params.semitones = data_json["semitones"] ;
+        granular_params.volume = data_json["volume"];
+        granular_params.density = data_json["density"] ;
+        granular_params.spread = data_json["spread"] ;
+        granular_params.filter_mode = data_json["filter_mode"] ;
+        granular_params.rev_send = data_json["rev_send"];
+        granular_params.filter_freq = data_json["filter_freq"] | 0;
+        granular_params.filter_resonance = data_json["filter_resonance"];
+        granular_params.delay_send_1 = data_json["delay_send_1"] ;
+        granular_params.delay_send_2 = data_json["delay_send_2"] ;
+        granular_params.pan = data_json["pan"];
+        granular_params.midi_channel = data_json["midi_channel"] | 11;
+
+          if ( granular_params.midi_channel==0)
+granular_params.midi_channel=DEFAULT_GRANULAR_MIDI_CHANNEL;
+
+   updateGranularParams();
+        return (true);
+      }
+    }
+    
+  }
+ // Update the granular synth with loaded parameters
+           if ( granular_params.midi_channel==0)
+granular_params.midi_channel=DEFAULT_GRANULAR_MIDI_CHANNEL;
+        updateGranularParams();
+  AudioInterrupts();
+  return (false);
+}
+
+FLASHMEM bool save_sd_granular_json(uint8_t number)
+{
+  if (sd_card_internal > 0)
+  {
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, "granular");
+
+    AudioNoInterrupts();
+    SD.remove(filename);
+    json = SD.open(filename, FILE_WRITE);
+    if (json)
+    {
+      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+
+      // Save granular parameters
+     
+      data_json["sample_note"] = granular_params.sample_note;
+      data_json["grain_size"] = granular_params.grain_size;
+      data_json["grain_position"] = granular_params.grain_position;
+      data_json["semitones"] = granular_params.semitones;
+      data_json["volume"] = granular_params.volume;
+      data_json["density"] = granular_params.density;
+      data_json["spread"] = granular_params.spread;
+        data_json["attack"] = granular_params.attack;
+      data_json["release"] = granular_params.release;
+      data_json["filter_mode"] = granular_params.filter_mode;
+      data_json["rev_send"] = granular_params.rev_send;
+      data_json["filter_freq"] = granular_params.filter_freq;
+      data_json["filter_resonance"] = granular_params.filter_resonance;
+      data_json["delay_send_1"] = granular_params.delay_send_1;
+      data_json["delay_send_2"] = granular_params.delay_send_2;
+      data_json["pan"] = granular_params.pan;
+      data_json["midi_channel"] = granular_params.midi_channel;
+
+      serializeJsonPretty(data_json, json);
+      json.close();
+      AudioInterrupts();
+      return (true);
+    }
+    json.close();
+  }
+  else
+  {
+;
+  }
+
+  AudioInterrupts();
+  return (false);
+}
+#endif
+
+/******************************************************************************
    SD SEQUENCER
  ******************************************************************************/
 
@@ -3975,6 +4094,9 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_slices_json(number);
 #endif
 
+#ifdef GRANULAR
+save_sd_granular_json(number);
+#endif
 
   for (uint8_t i = 0; i < NUM_DEXED; i++)
   {
@@ -4357,6 +4479,10 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
 #ifdef COMPILE_FOR_PSRAM
   load_sd_samples_json(number);
   load_sd_slices_json(number);
+#endif
+
+#ifdef GRANULAR
+load_sd_granular_json(number);
 #endif
 
   configuration.sys.performance_number = number;

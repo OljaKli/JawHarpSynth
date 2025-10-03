@@ -127,14 +127,14 @@
 // #define COMPILE_FOR_SDCARD  // experimental, for testing purposes only
 
 #if !defined(COMPILE_FOR_PROGMEM) && !defined(COMPILE_FOR_SDCARD) && !defined(COMPILE_FOR_PSRAM)
-#define COMPILE_FOR_PROGMEM // default
+#define COMPILE_FOR_PROGMEM // legacy (outdated)
 #endif
 
 //*************************************************************************************************
 //* DISPLAY AND TOUCHSCREEN
 //*************************************************************************************************
-#ifndef CAPACITIVE_TOUCH_DISPLAY // TFT with Capacitive Touchscreen, currently for testing purposes only
-#define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (default)
+#ifndef CAPACITIVE_TOUCH_DISPLAY // TFT with Capacitive Touchscreen (default)
+#define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (outdated)
 #endif
 
 //*************************************************************************************************
@@ -154,8 +154,7 @@
 #define DEFAULT_DEXED_MIDI_CHANNEL_INST3 4
 
 #ifdef GRANULAR
-#define GRANULAR_MIDI_CHANNEL 11
-#define GRANULAR_BASE_NOTE 48     // C3 as base note
+#define DEFAULT_GRANULAR_MIDI_CHANNEL 11
 #endif
 
 // NUMBER OF PARALLEL SAMPLEDRUMS
@@ -1050,6 +1049,11 @@ typedef struct sys_s
   bool vol_control;
   bool sus_pedal;
   bool ext_clock;
+  uint8_t cv_midi_channel;
+  uint8_t dac_cv_2;
+  uint8_t dac_cv_4;
+  uint8_t dac_cv_transpose;
+
 } sys_t;
 
 typedef struct storage_file_s
@@ -1095,6 +1099,7 @@ enum virtual_keyboard_instruments
   VK_EPIANO,
   VK_DRUMS,
   VK_BRAIDS,
+  VK_GRANULAR,
   VK_PS_1,
   VK_PS_2,
   VK_PS_3,
@@ -1119,6 +1124,7 @@ enum master_mixer_ports
 #ifdef GRANULAR
   MASTER_MIX_CH_GRANULAR,
 #endif
+  MASTER_MIX_CH_MAX,
 };
 
 enum reverb_mixer_ports
@@ -1133,6 +1139,10 @@ enum reverb_mixer_ports
   REVERB_MIX_CH_BRAIDS,
   REVERB_MIX_CH_AUX_DELAY1,
   REVERB_MIX_CH_AUX_DELAY2,
+#ifdef GRANULAR
+  REVERB_MIX_CH_GRANULAR,
+#endif
+  REVERB_MIX_CH_MAX,
 };
 
 enum fm_modes

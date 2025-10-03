@@ -74,12 +74,13 @@ private:
   } selectedTrackSetup;
 
   // instrument order in GUI in track instrument config, free to change
-  static constexpr std::array<LiveSequencer::InternalInstrument, 12> instrumentToInstrumentID = {
+  static constexpr std::array<LiveSequencer::InternalInstrument, 13> instrumentToInstrumentID = {
     LiveSequencer::INSTR_DRUM,
     LiveSequencer::INSTR_DX1,
     LiveSequencer::INSTR_DX2,
     LiveSequencer::INSTR_DX3,
     LiveSequencer::INSTR_DX4,
+    LiveSequencer::INSTR_GRA,
     LiveSequencer::INSTR_EP,
     LiveSequencer::INSTR_MS1,
     LiveSequencer::INSTR_MS2,
@@ -116,7 +117,6 @@ private:
     TOOLS_SONG,
     TOOLS_ARP,
     TOOLS_SEQ,
-    TOOLS_SONG_MODE,  // New song mode selection tool
     TOOLS_KEYBOARD,
     TOOLS_NUM
   };
@@ -148,7 +148,7 @@ private:
   bool showingGridSongEditor = false;
 
   static constexpr uint8_t GRID_SONG_COLS = 12; // All 12 tracks
-  static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps
+  static constexpr uint8_t GRID_SONG_ROWS = 6;  // no of song steps visible on screen
 
   // Calculate cell dimensions based on available space
   static constexpr uint8_t GRID_SONG_CELL_WIDTH = (320 - (GRID_SONG_COLS - 1)) / GRID_SONG_COLS;

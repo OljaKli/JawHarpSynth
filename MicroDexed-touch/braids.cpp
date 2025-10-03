@@ -23,7 +23,7 @@ extern AudioEffectFlange braids_flanger_l;
 extern int braids_flanger_idx;
 extern int braids_flanger_depth;
 extern uint8_t generic_temp_select_menu;
-extern AudioMixer<2 * NUM_DRUMS + 2>* global_delay_in_mixer[2];
+extern AudioMixer<2 * NUM_DRUMS + 3>* global_delay_in_mixer[2];
 
 extern float volume_transform(float amp);
 
@@ -108,8 +108,8 @@ FLASHMEM void braids_update_all_settings()
   braids_mixer_reverb.gain(1, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
   braids_stereo_panorama.panorama(mapfloat(braids_osc.pan, PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
 
-  global_delay_in_mixer[0]->gain(6, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.80)); //previously 4
-  global_delay_in_mixer[1]->gain(6, mapfloat(braids_osc.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.80)); //previously 4
+  global_delay_in_mixer[0]->gain(6, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.80)); 
+  global_delay_in_mixer[1]->gain(6, mapfloat(braids_osc.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.80)); 
 
   for (uint8_t instance_id = 0; instance_id < NUM_BRAIDS; instance_id++)
   {

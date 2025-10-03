@@ -7,6 +7,12 @@
 #include "ui_liveseq_pianoroll.h"
 #include <map>
 
+
+#ifdef GRANULAR
+#include "granular.h"
+extern granular_params_t granular_params;
+#endif
+
 extern sequencer_t seq;
 extern uint8_t drum_midi_channel;
 extern uint8_t slices_midi_channel;
@@ -1222,11 +1228,11 @@ FLASHMEM void LiveSequencer::checkAddMetronome(void) {
   }
 }
 
-FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrument) {
-  DBG_LOG(printf("change track %i to device %i and instrument %i\n", track, newDevice, newInstrument));
+FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel) {
+  DBG_LOG(printf("change track %i to device %i and instrument/channel %i\n", track, newDevice, newInstrumentOrChannel));
   allTrackNotesOff(track);
   data.trackSettings[track].device = newDevice;
-  data.trackSettings[track].instrument = newInstrument;
+  data.trackSettings[track].instrument = newInstrumentOrChannel;
   updateTrackChannels();
 }
 
@@ -1324,6 +1330,12 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         break;
 #endif
 
+#ifdef GRANULAR
+      case INSTR_GRA:
+        data.tracks[i].channel = static_cast<midi::Channel>(granular_params.midi_channel);
+        data.tracks[i].screen = UI_func_granular;
+        break;
+#endif
       case INSTR_EP:
         data.tracks[i].channel = static_cast<midi::Channel>(configuration.epiano.midi_channel);
         data.tracks[i].screen = UI_func_epiano;
@@ -1353,7 +1365,6 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].screenSetupFn = (instrument == INSTR_MSP1) ? (SetupFn)selectMsp0 : (SetupFn)selectMsp1;
         break;
 
-
       default:
         data.tracks[i].channel = 99; // probably unused
         break;
@@ -1363,7 +1374,12 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
     case DEVICE_MIDI_USB:
     case DEVICE_MIDI_DIN:
     case DEVICE_MIDI_INT:
-      data.tracks[i].channel = (instrument + 1); // 1 - 16
+      // FIX: For external MIDI, instrument parameter should be the MIDI channel (0-15)
+      data.tracks[i].channel = static_cast<midi::Channel>(instrument % 16); // Ensure 0-15 range
+      break;
+
+    default:
+      data.tracks[i].channel = 99; // probably unused
       break;
     }
   }
@@ -1418,6 +1434,10 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
       sprintf(sub, "DX%i", instrument - INSTR_DX3 + 3);
       break;
 
+    case INSTR_GRA:
+      sprintf(sub, "GRA");
+      break;
+
     case INSTR_EP:
       sprintf(sub, "EP");
       break;
@@ -1448,17 +1468,17 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
 
   case DEVICE_MIDI_USB:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "USB %02i", (instrument + 1));
+    sprintf(sub, "USB %02i", (instrument % 16) + 1); // Show 1-16 to user
     break;
 
   case DEVICE_MIDI_DIN:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "DIN %02i", (instrument + 1));
+    sprintf(sub, "DIN %02i", (instrument % 16) + 1); // Show 1-16 to user
     break;
 
   case DEVICE_MIDI_INT:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "INT %02i", (instrument + 1));
+    sprintf(sub, "INT %02i", (instrument % 16) + 1); // Show 1-16 to user
     break;
 
   default:
@@ -1474,6 +1494,9 @@ FLASHMEM void LiveSequencer::updateInstrumentChannels(void) {
   for (int i = 0; i < NUM_DEXED; i++) {
     data.instrumentChannels.insert(configuration.dexed[i].midi_channel);
   }
+#ifdef GRANULAR
+  data.instrumentChannels.insert(granular_params.midi_channel);
+#endif
   data.instrumentChannels.insert(configuration.epiano.midi_channel);
   for (int i = 0; i < NUM_MICROSYNTH; i++) {
     data.instrumentChannels.insert(microsynth[i].midi_channel);

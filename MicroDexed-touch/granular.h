@@ -1,114 +1,132 @@
-#ifdef GRANULAR
-
+// ==================== granular.h ====================
 #ifndef GRANULAR_H
 #define GRANULAR_H
 
-#include <Audio.h>
-#include <Arduino.h>
+#ifdef GRANULAR
 
-// Granular parameters with normalized values (0-100)
+#include <Arduino.h>
+#include "AudioStream.h"
+
+// ---------- USER TUNABLE ----------
+#define MAX_POLY_VOICES 6
+#define MAX_GRAINS_PER_VOICE 8
+// ----------------------------------
+
+// ---------- Parameter struct ----------
 typedef struct {
-  uint8_t sample_note;        // Sample index (0-based)
-  uint8_t grain_size;         // Grain size (0-100 maps to 10-1000ms)
-  uint8_t grain_position;     // Position in sample (0-100 maps to 0.0-1.0)
-  int8_t semitones;           // Pitch shift in semitones (-36 to +36, ±3 octaves)
-  uint8_t volume;             // Volume (0-100)
-  uint8_t density;            // Grains per second (0-100 maps to 1-100)
-  uint8_t spread;             // Position randomization (0-100 maps to 0.0-1.0)
-  uint8_t pitch_random;       // Pitch randomization (0-100 maps to 0-12 semitones)
-  uint8_t filter_mode;        // Filter mode (0-3)
-  uint8_t filter_freq;        // Filter frequency (0-100 maps to 50-10000Hz)
-  uint8_t filter_resonance;   // Filter resonance (0-100)
-  uint8_t rev_send;           // Reverb send level (0-100)
-  uint8_t delay_send_1;       // Delay 1 send level (0-100)
-  uint8_t delay_send_2;       // Delay 2 send level (0-100)
-  uint8_t pan;                // Panorama (0-100 maps to -99 to +99)
-  uint8_t midi_channel;       // MIDI channel (0-16, 17=Omni)
-  uint8_t active;             // Whether granular synth is active
+  uint8_t grain_size;      // 0..100 -> ms mapping inside voice
+  uint8_t grain_position;  // 0..100
+  uint8_t semitones;       // 0..100 where 50 == 0 semitone shift
+  uint8_t volume;          // 0..100
+  uint8_t density;         // 0..100
+  uint8_t spread;          // 0..100
+  uint8_t sample_note;
+
+  uint8_t rev_send;
+  uint8_t filter_mode;
+  uint8_t filter_freq;
+  uint8_t filter_resonance;
+  uint8_t delay_send_1;
+  uint8_t delay_send_2;
+  int8_t pan;
+  uint8_t  attack;
+  uint8_t release;
+  uint8_t midi_channel;
+
+  bool active;
+
 } granular_params_t;
 
-// Chromatic granular processor with pitch shifting
-class ChromaticGranularProcessor {
+// ---------- Grain ----------
+struct GranularGrain {
+  bool active;
+  const int16_t* sampleData;
+  uint32_t sampleLength;
+  float position;      // fractional position in samples
+  float pitchRatio;    // increment per sample
+  uint32_t size;       // grain size in samples
+  float invSize;
+  float volume;        // 0..1 per-grain
+  uint32_t age;        // samples played
+};
+
+// ---------- Chromatic granular voice (one voice) ----------
+class ChromaticGranularVoice {
 public:
+  ChromaticGranularVoice();
+  ~ChromaticGranularVoice();
+
   void init();
-  void startGrain(const int16_t* sampleData, uint32_t sampleLength, const granular_params_t& params);
-  void update(int16_t* left, int16_t* right, uint16_t blockSize);
-  int getActiveGrainCount();
-  void stopAllGrains();
   void setParams(const granular_params_t& params);
+  void setSampleData(const int16_t* data, uint32_t sampleFrames);
+  void setSampleDataBytes(const int16_t* data, uint32_t bytes, uint8_t numChannels = 1);
   void triggerNote(uint8_t note, uint8_t velocity);
   void noteOff();
-  void setSampleData(const int16_t* data, uint32_t length);
-    bool isPlaying();  
-     bool inRelease;   // true when the note is in the release phase
+  bool isPlaying() const;
+  bool isActiveFor(uint8_t note) const;
 
+  void mixInto(float* leftFloat, float* rightFloat, uint16_t blockSize);
+  int getActiveGrainCount() const;
+  void stopAllGrains();
+  GranularGrain grains[MAX_GRAINS_PER_VOICE];
 private:
-  struct Grain {
-    const int16_t* sampleData;
-    uint32_t sampleLength;
-    float position;
-    float size;
-    float pitchRatio;
-    float volume;
-    uint32_t age;
-    bool active;
-   
-  };
+  void startGrain(const granular_params_t& params);
 
-  static const int MAX_GRAINS = 32;
-  Grain grains[MAX_GRAINS];
-  granular_params_t currentParams;
-  uint32_t lastGrainTime;
-  uint32_t grainInterval;     // Time between grain spawns (based on density)
+  const int16_t* sampleData;
+  uint32_t sampleLength; // frames (mono)
+
   bool noteOn;
+
   uint8_t currentNote;
   uint8_t currentVelocity;
-  const int16_t* globalSampleData;
-  uint32_t globalSampleLength;
-  uint32_t timeCounter;       // For tracking when to spawn new grains
 
-  float envelopeLevel;        
-  bool envelopeActive;        
-  uint32_t envelopeTimeCounter; // FIXED: Separate counter for envelope timing
-  uint32_t releaseStartTime;  
-  static const uint32_t RELEASE_TIME; // Declaration only
+  bool envelopeActive;
+  float envelopeLevel;
+  uint32_t envelopeTimeCounter;
+  bool inAttack;
+  uint32_t attackStartTime;
+  uint32_t releaseStartTime;
+  bool inRelease;
+
+  granular_params_t currentParams;
+
+  float movingPosition;
+  uint16_t randState;
+  float perNotePitchShift;  // Per-note pitch adjustment
+
+  // Add voice-specific timing offset
+  uint32_t voiceTimeOffset;
+
+  // New organic variation members
+  float voiceAmpContour[4];      // Attack, decay, sustain, release curve variations
+  float voiceGrainBias[3];       // Position, size, density bias per voice  
 
 };
 
-
-
-
-class AudioChromaticGranular : public AudioStream {
+// ---------- Polyphonic manager (AudioStream) ----------
+class AudioChromaticGranularPoly : public AudioStream {
 public:
-  AudioChromaticGranular() : AudioStream(0, NULL) { 
-    processor = nullptr;
-  }
+  AudioChromaticGranularPoly();
+  ~AudioChromaticGranularPoly();
+
   void begin();
-  void init(); 
-  void startGrain(const int16_t* sampleData, uint32_t sampleLength, const granular_params_t& params);
-  int getActiveGrainCount();
-  virtual void update(void);
-  void stopAllGrains();
   void setParams(const granular_params_t& params);
+  void setSampleData(const int16_t* data, uint32_t sampleFrames);
+  void setSampleDataBytes(const int16_t* data, uint32_t bytes, uint8_t numChannels = 1);
   void triggerNote(uint8_t note, uint8_t velocity);
-  void noteOff();
-  void setSampleData(const int16_t* data, uint32_t length);
-  bool isPlaying();  // This declaration exists but was missing implementation
+  void noteOff(uint8_t note);
+  void stopAllVoices();
+  int getActiveVoiceCount() const;
+  int getActiveGrainCount() const;
+
+  virtual void update(void); // AudioStream callback
+  ChromaticGranularVoice* voices[MAX_POLY_VOICES];
 
 private:
-  ChromaticGranularProcessor* processor;
+
+  granular_params_t sharedParams;
+  uint32_t polyRandSeed;
 };
 
-// Global declarations
-extern granular_params_t granular_params;
-extern bool granular_initialized;
-extern AudioChromaticGranular granular1;
-
-// Function declarations
-void initGranular();
-void setGranularActive(bool active);
-void updateGranularParams(granular_params_t newParams);
-
-#endif
-
-#endif
+#endif // GRANULAR
+#endif // GRANULAR_H

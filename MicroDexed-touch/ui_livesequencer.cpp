@@ -25,9 +25,21 @@ FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequen
 
 FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
   const LiveSequencer::TrackSettings& trackSettings = data.trackSettings[data.activeTrack];
-  const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) || (trackSettings.instrument != selectedTrackSetup.instrument);
+
+  // For external MIDI devices, we need to handle the instrument parameter differently
+  uint8_t newInstrument = selectedTrackSetup.instrument;
+
+  // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
+  if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
+    // For external MIDI, use the selectedInstrument directly as MIDI channel
+    newInstrument = selectedInstrument;
+  }
+
+  const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) ||
+    (trackSettings.instrument != newInstrument);
+
   if (hasChanged) {
-    liveSeq.changeTrackInstrument(data.activeTrack, selectedTrackSetup.device, selectedTrackSetup.instrument);
+    liveSeq.changeTrackInstrument(data.activeTrack, selectedTrackSetup.device, newInstrument);
     drawUpdates(drawTrackButtons);
   }
 }
@@ -85,7 +97,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       b->draw("TOOL", (data.isSongMode) ? "SNG" : "PAT", instance->isModeToolActive() ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     },
     [this](auto* b) { // clickedHandler
-      instance->selectTools((data.isSongMode) ? TOOLS_PATTERN : TOOLS_PATTERN);
+      instance->selectTools((data.isSongMode) ? TOOLS_SONG : TOOLS_PATTERN);
     }));
 
   buttonsToolSelect.push_back(new TouchButton(GRID.X[1], GRID.Y[2],
@@ -104,17 +116,8 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       instance->selectTools(TOOLS_SEQ);
     }));
 
-  // NEW: Song Mode Selection Tool 
-  buttonsToolSelect.push_back(new TouchButton(GRID.X[3], GRID.Y[2],
-    [this](auto* b) { // drawHandler
-      b->draw("SONG", "TYP", currentTools == TOOLS_SONG_MODE ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
-    },
-    [this](auto* b) { // clickedHandler
-      instance->selectTools(TOOLS_SONG_MODE);
-    }));
-
   // Keyboard tool 
-  buttonsToolSelect.push_back(new TouchButton(GRID.X[4], GRID.Y[2],
+  buttonsToolSelect.push_back(new TouchButton(GRID.X[3], GRID.Y[2],
     [this](auto* b) { // drawHandler
       b->draw("TOOL", "KEY", currentTools == TOOLS_KEYBOARD ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     },
@@ -122,67 +125,6 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       instance->selectTools(TOOLS_KEYBOARD);
     }));
 
-
-  // SEQUENCER TOOLS
-
-  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
-    [](auto* b) { // drawHandler
-      b->draw("SELECT", "MODE", TouchButton::BUTTON_LABEL);
-    }));
-
-  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[1], GRID.Y[3],
-    [this](auto* b) { // drawHandler
-      // Only highlight if this is the currently selected mode
-      b->draw("LIVE", "RECORD", !data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
-    },
-    [this](auto* b) { // clickedHandler
-      data.useGridSongMode = false;
-      // Redraw all buttons in this tool to update their states
-      for (auto* btn : toolsPages[TOOLS_SONG_MODE]) {
-        btn->drawNow();
-      }
-    }));
-
-  toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[2], GRID.Y[3],
-    [this](auto* b) { // drawHandler
-      // Only highlight if this is the currently selected mode
-      b->draw("GRID", "EDITOR", data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
-
-      display.setTextSize(1);
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      if (data.useGridSongMode)
-      {
-        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 22);
-        display.print(F("ARRANGE THE PATTERNS/LAYERS IN YOUR SONG "));
-        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 23);
-        display.print(F("WITH A GLOBAL TOUCH GRID/MATRIX STRUCTURE"));
-      }
-      else
-      {
-        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 22);
-        display.print(F("RECORD MUTE AUTOMATION IN REAL TIME. YOU  "));
-        display.setCursor(CHAR_width_small * 10, CHAR_height_small * 23);
-        display.print(F("ALSO CAN RECORD GLOBAL, LINEAR MIDI TRACKS"));
-      }
-
-    },
-    [this](auto* b) { // clickedHandler
-      data.useGridSongMode = true;
-      // Redraw all buttons in this tool to update their states
-      for (auto* btn : toolsPages[TOOLS_SONG_MODE]) {
-        btn->drawNow();
-      }
-    }));
-
-  // toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[0], GRID.Y[4],
-  //   [](auto* b) { // drawHandler
-  //     b->draw("CURRENT", "MODE", TouchButton::BUTTON_LABEL);
-  //   }));
-
-  // toolsPages[TOOLS_SONG_MODE].push_back(new TouchButton(GRID.X[1], GRID.Y[4],
-  //   [this](auto* b) { // drawHandler
-  //     b->draw(data.useGridSongMode ? "GRID" : "LIVE", data.useGridSongMode ? "EDITOR" : "RECORD", TouchButton::BUTTON_LABEL);
-  //   }));
 
   toolsPages[TOOLS_SEQ].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
     [](auto* b) { // drawHandler
@@ -198,17 +140,26 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   toolsPages[TOOLS_SEQ].push_back(selectedTrackSetup.label);
 
   // track instrument
-  ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedInstrument, 0, 15, 1, instrumentToInstrumentID[data.trackSettings[data.activeTrack].instrument],
+  ValueButtonRange<uint8_t>* currentTrackInstrument = new ValueButtonRange<uint8_t>(&currentValue, GRID.X[3], GRID.Y[3], selectedInstrument, 0, 15, 1, data.trackSettings[data.activeTrack].instrument,
     [this](auto* b, auto* v) { // drawHandler
       char name[10];
       char sub[10];
 
-      // MDT has instruments 0-12 / MIDI has instuments 0-15
-      selectedTrackSetup.instrument = instrumentToInstrumentID[selectedInstrument];
-      const uint8_t maxInstrument = (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) ? LiveSequencer::INSTR_MAX - 1 : 15;
-      static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, maxInstrument);
+      // Handle instrument selection based on device type
+      if (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) {
+        // For internal devices: use instrumentToInstrumentID mapping
+        selectedTrackSetup.instrument = instrumentToInstrumentID[selectedInstrument];
+        const uint8_t maxInstrument = LiveSequencer::INSTR_MAX - 1;
+        static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, maxInstrument);
+        liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
+      }
+      else {
+        // For external MIDI devices: use selectedInstrument directly as MIDI channel (0-15)
+        selectedTrackSetup.instrument = selectedInstrument;
+        static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, 15);
+        liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
+      }
 
-      liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
       b->draw(name, sub, TouchButton::BUTTON_ACTIVE);
       instance->checkApplyTrackInstrument();
     });
@@ -411,27 +362,140 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       liveSeq.fillTrackLayer();
     }));
 
+
   // SONG TOOLS
+
+  // SONG TOOLS - with song mode selection at the top
   toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
     [](auto* b) { // drawHandler
-      b->draw("MUTE", "QUANT", TouchButton::BUTTON_LABEL);
+      b->draw("SELECT", "MODE", TouchButton::BUTTON_LABEL);
     }));
-  toolsPages[TOOLS_SONG].push_back(new ValueButtonVector<uint8_t>(&currentValue, GRID.X[1], GRID.Y[3], data.songMuteQuantizeDenom, { 1, 2, 4, 8 }, 1,
-    [](auto* b, auto* v) { // drawHandler
-      b->draw("QUANT", (v->getValue() == 1) ? "NONE" : v->toString(), (v->getValue() == 1) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
-    }));
-  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[0], GRID.Y[4],
-    [](auto* b) { // drawHandler
-      b->draw("SONG", "LAYERS", TouchButton::BUTTON_LABEL);
-    }));
-  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[1], GRID.Y[4],
+
+  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[1], GRID.Y[3],
     [this](auto* b) { // drawHandler
-      std::string t1 = (data.songLayerCount == 0) ? "NO" : "LAYER";
-      std::string t2 = (data.songLayerCount == 0) ? "LAYERS" : "ACTION";
-      b->draw(t1, t2, (data.songLayerCount == 0) ? TouchButton::BUTTON_LABEL : TouchButton::BUTTON_ACTIVE);
-      instance->drawUpdates(drawSongLayers);
+      // Only highlight if this is the currently selected mode
+      b->draw("LIVE", "RECORD", !data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+    },
+    [this](auto* b) { // clickedHandler
+      data.useGridSongMode = false;
+      // Redraw all buttons in this tool to update their states
+      for (auto* btn : toolsPages[TOOLS_SONG]) {
+        btn->drawNow();
+      }
+    }));
+
+  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[2], GRID.Y[3],
+    [this](auto* b) { // drawHandler
+      // Only highlight if this is the currently selected mode
+      b->draw("GRID", "EDITOR", data.useGridSongMode ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
+
+      display.setTextSize(1);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      uint8_t xpos = CHAR_width_small * 28;
+
+      if (data.useGridSongMode)
+      {
+
+        // Clear the song layer buttons when entering grid editor
+        for (int songLayer = 0; songLayer < 4; songLayer++) {
+          TouchButton::clearButton(GRID.X[2 + songLayer], GRID.Y[5], COLOR_BACKGROUND);
+        }
+
+        display.setCursor(xpos, CHAR_height_small * 17 - 4);
+        display.print(F("ARRANGE THE PATTERNS +"));
+        display.setCursor(xpos, CHAR_height_small * 18 - 2);
+        display.print(F("LAYERS  IN YOUR SONG  "));
+        display.setCursor(xpos, CHAR_height_small * 19);
+        display.print(F("WITH A GLOBAL TOUCH"));
+        display.setCursor(xpos, CHAR_height_small * 20 + 3);
+        display.print(F("GRID/MATRIX STRUCTURE"));  //phtodo
+      }
+      else
+      {
+        display.setCursor(xpos, CHAR_height_small * 17 - 4);
+        display.print(F("RECORD MUTE AUTOMATION"));
+        display.setCursor(xpos, CHAR_height_small * 18 - 2);
+        display.print(F("IN REAL TIME. YOU ALSO"));
+        display.setCursor(xpos, CHAR_height_small * 19);
+        display.print(F("CAN RECORD 4 GLOBAL,"));
+        display.setCursor(xpos, CHAR_height_small * 20 + 3);
+        display.print(F("LINEAR MIDI TRACKS.  "));
+      }
+    },
+    [this](auto* b) { // clickedHandler
+      data.useGridSongMode = true;
+      // Redraw all buttons in this tool to update their states
+      for (auto* btn : toolsPages[TOOLS_SONG]) {
+
+        btn->drawNow();
+      }
+    }));
+
+  // Grid mode button - only visible when grid mode is active
+  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[5], GRID.Y[5],
+    [this](auto* b) { // drawHandler
+      if (data.useGridSongMode) {
+        b->draw("ENTER", "GRID", TouchButton::BUTTON_ACTIVE);
+      }
+      else {
+        b->clear(COLOR_BACKGROUND);
+      }
+    },
+    [this](auto* b) { // clickedHandler
+      if (data.useGridSongMode) {
+        inGridEditor = true;
+        showingGridSongEditor = true;
+        gridNeedsRedraw = true;
+        display.fillScreen(COLOR_BACKGROUND);
+      }
+    }));
+
+  // MUTE QUANT - only visible in live mode
+  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[0], GRID.Y[4],
+    [this](auto* b) { // drawHandler
+      if (!data.useGridSongMode) {
+        b->draw("MUTE", "QUANT", TouchButton::BUTTON_LABEL);
+      }
+      else {
+        b->clear(COLOR_BACKGROUND);
+      }
+    }));
+
+  toolsPages[TOOLS_SONG].push_back(new ValueButtonVector<uint8_t>(&currentValue, GRID.X[1], GRID.Y[4],
+    data.songMuteQuantizeDenom, { 1, 2, 4, 8 }, 1,
+    [this](auto* b, auto* v) { // drawHandler
+      if (!data.useGridSongMode) {
+        b->draw("QUANT", (v->getValue() == 1) ? "NONE" : v->toString(), (v->getValue() == 1) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_HIGHLIGHTED);
+      }
+      else {
+        b->clear(COLOR_BACKGROUND);
+      }
+    }));
+
+  // SONG LAYERS - only visible in live mode
+  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[0], GRID.Y[5],
+    [this](auto* b) { // drawHandler
+      if (!data.useGridSongMode) {
+        b->draw("SONG", "LAYERS", TouchButton::BUTTON_LABEL);
+      }
+      else {
+        b->clear(COLOR_BACKGROUND);
+      }
+    }));
+
+  toolsPages[TOOLS_SONG].push_back(new TouchButton(GRID.X[1], GRID.Y[5],
+    [this](auto* b) { // drawHandler
+      if (!data.useGridSongMode) {
+        std::string t1 = (data.songLayerCount == 0) ? "NO" : "LAYER";
+        std::string t2 = (data.songLayerCount == 0) ? "LAYERS" : "ACTION";
+        b->draw(t1, t2, (data.songLayerCount == 0) ? TouchButton::BUTTON_LABEL : TouchButton::BUTTON_ACTIVE);
+        instance->drawUpdates(drawSongLayers);
+      }
+      else {
+        b->clear(COLOR_BACKGROUND);
+      }
     }, [this](auto* b) { // clickedHandler
-      if (data.songLayerCount > 0) {
+      if (!data.useGridSongMode && data.songLayerCount > 0) {
         if (++songLayerMode == LiveSequencer::LayerMode::LAYER_MODE_NUM) {
           songLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
         }
@@ -610,21 +674,12 @@ FLASHMEM void UI_LiveSequencer::selectTools(Tools tools) {
   }
 }
 
-// FLASHMEM bool UI_LiveSequencer::isModeToolActive(void) {
-//   bool result = false;
-//   result |= (currentTools == TOOLS_PATTERN) && (data.isSongMode == false);
-//   result |= (currentTools == TOOLS_SONG) && (data.isSongMode == true);
-//   return result;
-// }
-
 FLASHMEM bool UI_LiveSequencer::isModeToolActive(void) {
   bool result = false;
   result |= (currentTools == TOOLS_PATTERN) && (data.isSongMode == false);
-  //result |= (currentTools == TOOLS_SONG) && (data.isSongMode == true);
-  result |= (currentTools == TOOLS_SONG_MODE) && (data.isSongMode == true);
+  result |= (currentTools == TOOLS_SONG) && (data.isSongMode == true);
   return result;
 }
-
 
 FLASHMEM void UI_LiveSequencer::showDirectMappingWarning(uint8_t inChannel) {
   if (showingHowTo == false) {
@@ -690,10 +745,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     updateTrackChannelSetupButtons(data.activeTrack); // update GUI for the case a new perf was loaded
 
 
-    // Ensure we start in pattern mode, not grid mode
-    data.isSongMode = false;
-
-    currentPage = PAGE_PATTERN;
+    // currentPage = PAGE_PATTERN;  //phtodo
 
     display.setTextSize(1);
     display.setCursor(GRID.X[2], 6);
@@ -809,8 +861,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     showingGridSongEditor = false;
     gridNeedsRedraw = true;
     data.redraw_grid_buttons = true;
-    // Always return to pattern mode when closing
-    data.isSongMode = false;
+    //data.isSongMode = false; //phtodo
     inGridEditor = false;
     showingGridSongEditor = false;
     gridNeedsRedraw = true;
@@ -914,12 +965,21 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   selectedTrackSetup.quantizeDenom = data.trackSettings[track].quantizeDenom;
   selectedTrackSetup.velocity = data.trackSettings[track].velocityLevel;
 
-  // reverse lookup selected instrument index
-  for (size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
-    if (instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
-      selectedInstrument = i;
+  // Set selectedInstrument based on device type
+  if (selectedTrackSetup.device == LiveSequencer::DEVICE_INTERNAL) {
+    // For internal devices: reverse lookup selected instrument index
+    for (size_t i = 0; i < instrumentToInstrumentID.size(); i++) {
+      if (instrumentToInstrumentID[i] == selectedTrackSetup.instrument) {
+        selectedInstrument = i;
+        break;
+      }
     }
   }
+  else {
+    // For external MIDI devices: use instrument value directly as MIDI channel
+    selectedInstrument = selectedTrackSetup.instrument;
+  }
+
   // update currently selected track
   if ((isLayerViewActive == false) && (currentTools == TOOLS_SEQ)) {
     drawUpdates(drawTools);
@@ -1016,33 +1076,23 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
 
   const bool modePressed = TouchButton::isPressed(GRID.X[5], GRID.Y[0]);
   if (modePressed) {
-    // if (data.useGridSongMode && data.isSongMode && !inGridEditor) {
-    if (data.useGridSongMode && !inGridEditor) {
-      inGridEditor = true;
-      showingGridSongEditor = true;
-      gridNeedsRedraw = true;
-      display.fillScreen(COLOR_BACKGROUND);
-      return;
+    const bool newIsSongMode = !data.isSongMode;
+    currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
+
+
+    // When switching from grid mode back to pattern mode, reset grid flags
+    if (data.useGridSongMode && !newIsSongMode) {
+      inGridEditor = false;
+      showingGridSongEditor = false;
     }
-    else {
-      // Original behavior for live recording mode
-      const bool newIsSongMode = !data.isSongMode;
-      currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
 
-
-      // When switching from grid mode back to pattern mode, reset grid flags
-      if (data.useGridSongMode && !newIsSongMode) {
-        inGridEditor = false;
-        showingGridSongEditor = false;
-      }
-
-      if (isModeToolActive()) { // switch pattern / song tools if selected
-        currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
-      }
-      data.isSongMode = newIsSongMode;
-      redrawScreen();
+    if (isModeToolActive()) { // switch pattern / song tools if selected
+      currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
     }
+    data.isSongMode = newIsSongMode;
+    redrawScreen();
   }
+
 
   for (TouchButton* b : trackButtons) {
     b->processPressed();
@@ -1085,13 +1135,13 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
       b->processPressed();
     }
 
-    if (currentTools == TOOLS_SONG) {
-      if (songLayerMode != LiveSequencer::LayerMode::LAYER_MUTE) { // song layers can not be muted
+    if (currentTools == TOOLS_SONG) {  //phtodo
+      if (songLayerMode != LiveSequencer::LayerMode::LAYER_MUTE && !data.useGridSongMode) { // song layers can not be muted
         for (uint8_t songLayer = 0; songLayer < data.songLayerCount; songLayer++) {
-          if (TouchButton::isPressed(GRID.X[2 + songLayer], GRID.Y[4])) {
+          if (TouchButton::isPressed(GRID.X[2 + songLayer], GRID.Y[5])) {
             liveSeq.songLayerAction(songLayer, LiveSequencer::LayerMode(songLayerMode));
             songLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
-            TouchButton::clearButton(GRID.X[2 + data.songLayerCount], GRID.Y[4], COLOR_BACKGROUND);
+            TouchButton::clearButton(GRID.X[2 + data.songLayerCount], GRID.Y[5], COLOR_BACKGROUND);
             drawUpdates(drawSongLayers);
             break;
           }
@@ -1293,7 +1343,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
       TouchButton::Color color = TouchButton::BUTTON_ACTIVE;
       handleLayerEditButtonColor(songLayerMode, color);
       for (int songLayer = 0; songLayer < data.songLayerCount; songLayer++) {
-        drawLayerButton(data.isSongMode, songLayerMode, songLayer, true, color, GRID.X[2 + songLayer], GRID.Y[4]);
+        drawLayerButton(data.isSongMode, songLayerMode, songLayer, true, color, GRID.X[2 + songLayer], GRID.Y[5]);
       }
     }
   }
@@ -1317,10 +1367,6 @@ FLASHMEM void UI_LiveSequencer::refreshToolsElements(Tools tools) {
 
   case TOOLS_KEYBOARD:
     drawKeyboard(VK_DRAW_ALL);
-    break;
-
-  case TOOLS_SONG_MODE:
-    // No special refresh needed for song mode tools
     break;
 
   default:
@@ -1433,12 +1479,6 @@ FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
   {
     display.fillScreen(COLOR_BACKGROUND);
   }
-
-  // Track the previous current step to know what changed
-  static uint8_t lastDrawnCurrentStep = 255;
-  static bool lastDrawnRunningState = false;
-  const bool playheadChanged = (data.currentGridStep != lastDrawnCurrentStep);
-  const bool runningStateChanged = (data.isRunning != lastDrawnRunningState);
 
   // Calculate positions for the grid with the new tighter dimensions
 
