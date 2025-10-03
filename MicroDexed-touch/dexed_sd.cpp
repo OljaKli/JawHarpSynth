@@ -2110,10 +2110,10 @@ FLASHMEM bool save_sd_gridsong_json(uint8_t number)
 {
   if (sd_card_internal > 0) {
     LiveSequencer::LiveSeqData* data = liveSeq.getData();
-    number = constrain(number, 0, 99); 
+    number = constrain(number, 0, 99);
 
     // Use the GRID_STEP macro for accessing grid data
-    #define GRID_STEP(step, track, layer) \
+#define GRID_STEP(step, track, layer) \
         data->gridSongSteps[(step) * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + \
                            (track) * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + (layer)]
 
@@ -2131,7 +2131,7 @@ FLASHMEM bool save_sd_gridsong_json(uint8_t number)
       if (emptyTrack) {
         // remove old file if it exists
         snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/gridsng%02d.json"),
-                   PERFORMANCE_CONFIG_PATH, number, track + 1);
+          PERFORMANCE_CONFIG_PATH, number, track + 1);
         if (SD.exists(filename)) {
           SD.remove(filename);
         }
@@ -2140,7 +2140,7 @@ FLASHMEM bool save_sd_gridsong_json(uint8_t number)
 
       // create JSON
       snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/gridsng%02d.json"),
-                 PERFORMANCE_CONFIG_PATH, number, track + 1);
+        PERFORMANCE_CONFIG_PATH, number, track + 1);
 
 #ifdef DEBUG
       LOG.print(F("Saving grid song track "));
@@ -2168,7 +2168,7 @@ FLASHMEM bool save_sd_gridsong_json(uint8_t number)
       }
     }
 
-    #undef GRID_STEP
+#undef GRID_STEP
   }
   return true;
 }
@@ -2180,24 +2180,24 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
 
   // start with empty grid (zeros) - use memset for the linear array
   if (data->gridSongSteps) {
-    memset(data->gridSongSteps, 0, 
-           LiveSequencer::LiveSeqData::GRIDSONGLEN * 
-           LiveSequencer::LIVESEQUENCER_NUM_TRACKS * 
-           LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+    memset(data->gridSongSteps, 0,
+      LiveSequencer::LiveSeqData::GRIDSONGLEN *
+      LiveSequencer::LIVESEQUENCER_NUM_TRACKS *
+      LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
   }
 
   if (sd_card_internal > 0) {
     number = constrain(number, 0, 99);
 
     // Use the GRID_STEP macro for accessing grid data
-    #define GRID_STEP(step, track, layer) \
+#define GRID_STEP(step, track, layer) \
         data->gridSongSteps[(step) * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) + \
                            (track) * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + (layer)]
 
     for (uint8_t track = 0; track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS; track++) {
-      snprintf_P(filename, sizeof(filename), 
-                 PSTR("/%s/%d/gridsng%02d.json"), 
-                 PERFORMANCE_CONFIG_PATH, number, track + 1);
+      snprintf_P(filename, sizeof(filename),
+        PSTR("/%s/%d/gridsng%02d.json"),
+        PERFORMANCE_CONFIG_PATH, number, track + 1);
 
       if (!SD.exists(filename)) {
         continue; // missing file → keep zeros
@@ -2236,7 +2236,7 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
       }
     }
 
-    #undef GRID_STEP
+#undef GRID_STEP
   }
   return true;
 }
@@ -2607,14 +2607,14 @@ FLASHMEM void load_sd_noisemaker_json(void)
         nm_params.synth_octave_mix = data_json["synth_octave_mix"];
         nm_params.synth_detune = data_json["synth_detune"];
         nm_params.synth_noise_level = data_json["synth_noise_level"];
-        nm_params.synth_noise_decay =data_json["synth_noise_decay"];
+        nm_params.synth_noise_decay = data_json["synth_noise_decay"];
 
- nm_params.synth_pulse_width = data_json["synth_pulse_width"];
-        nm_params.synth_waveform =data_json["synth_waveform"];
+        nm_params.synth_pulse_width = data_json["synth_pulse_width"];
+        nm_params.synth_waveform = data_json["synth_waveform"];
 
-        }
       }
     }
+  }
   AudioInterrupts();
 }
 
@@ -2634,7 +2634,7 @@ FLASHMEM void save_sd_noisemaker_json(void)
     if (json)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-     
+
       data_json["category"] = nm_params.category;
       data_json["mode"] = nm_params.mode;
       data_json["randomizer"] = nm_params.randomizer;
@@ -2755,12 +2755,12 @@ FLASHMEM void save_sd_noisemaker_json(void)
       data_json["synth_filter_env_release"] = nm_params.synth_filter_env_release;
       data_json["synth_waveform_mix"] = nm_params.synth_waveform_mix;
       data_json["synth_octave_mix"] = nm_params.synth_octave_mix;
-       data_json["synth_detune"] = nm_params.synth_detune;
-        data_json["synth_noise_level"]=  nm_params.synth_noise_level ;
-  data_json["synth_noise_decay"]=  nm_params.synth_noise_decay ;
-   data_json["synth_pulse_width"]= nm_params.synth_pulse_width ;
-      data_json["synth_waveform"]=  nm_params.synth_waveform;
- 
+      data_json["synth_detune"] = nm_params.synth_detune;
+      data_json["synth_noise_level"] = nm_params.synth_noise_level;
+      data_json["synth_noise_decay"] = nm_params.synth_noise_decay;
+      data_json["synth_pulse_width"] = nm_params.synth_pulse_width;
+      data_json["synth_waveform"] = nm_params.synth_waveform;
+
       serializeJsonPretty(data_json, json);
       json.close();
     }
@@ -3030,33 +3030,33 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
         LOG.println();
 #endif
 
-MultiBandUIparams.master_gain = data_json["master_gain"];
-MultiBandUIparams.master_mix = data_json["master_mix"];
-MultiBandUIparams.crossover1 = data_json["crossover1"];
-MultiBandUIparams.crossover2 = data_json["crossover2"];
-MultiBandUIparams.crossover3 = data_json["crossover3"];
-MultiBandUIparams.band1_thresh = data_json["band1_thresh"];
-MultiBandUIparams.band1_ratio = data_json["band1_ratio"];
-MultiBandUIparams.band1_attack = data_json["band1_attack"];
-MultiBandUIparams.band1_release = data_json["band1_release"];
-MultiBandUIparams.band1_gain = data_json["band1_gain"];
-MultiBandUIparams.band2_thresh = data_json["band2_thresh"];
-MultiBandUIparams.band2_ratio = data_json["band2_ratio"];
-MultiBandUIparams.band2_attack = data_json["band2_attack"];
-MultiBandUIparams.band2_release = data_json["band2_release"];
-MultiBandUIparams.band2_gain = data_json["band2_gain"];
-MultiBandUIparams.band3_thresh = data_json["band3_thresh"];
-MultiBandUIparams.band3_ratio = data_json["band3_ratio"];
-MultiBandUIparams.band3_attack = data_json["band3_attack"];
-MultiBandUIparams.band3_release = data_json["band3_release"];
-MultiBandUIparams.band3_gain = data_json["band3_gain"];
-MultiBandUIparams.band4_thresh = data_json["band4_thresh"];
-MultiBandUIparams.band4_ratio = data_json["band4_ratio"];
-MultiBandUIparams.band4_attack = data_json["band4_attack"];
-MultiBandUIparams.band4_release = data_json["band4_release"];
-MultiBandUIparams.band4_gain = data_json["band4_gain"];
+        MultiBandUIparams.master_gain = data_json["master_gain"];
+        MultiBandUIparams.master_mix = data_json["master_mix"];
+        MultiBandUIparams.crossover1 = data_json["crossover1"];
+        MultiBandUIparams.crossover2 = data_json["crossover2"];
+        MultiBandUIparams.crossover3 = data_json["crossover3"];
+        MultiBandUIparams.band1_thresh = data_json["band1_thresh"];
+        MultiBandUIparams.band1_ratio = data_json["band1_ratio"];
+        MultiBandUIparams.band1_attack = data_json["band1_attack"];
+        MultiBandUIparams.band1_release = data_json["band1_release"];
+        MultiBandUIparams.band1_gain = data_json["band1_gain"];
+        MultiBandUIparams.band2_thresh = data_json["band2_thresh"];
+        MultiBandUIparams.band2_ratio = data_json["band2_ratio"];
+        MultiBandUIparams.band2_attack = data_json["band2_attack"];
+        MultiBandUIparams.band2_release = data_json["band2_release"];
+        MultiBandUIparams.band2_gain = data_json["band2_gain"];
+        MultiBandUIparams.band3_thresh = data_json["band3_thresh"];
+        MultiBandUIparams.band3_ratio = data_json["band3_ratio"];
+        MultiBandUIparams.band3_attack = data_json["band3_attack"];
+        MultiBandUIparams.band3_release = data_json["band3_release"];
+        MultiBandUIparams.band3_gain = data_json["band3_gain"];
+        MultiBandUIparams.band4_thresh = data_json["band4_thresh"];
+        MultiBandUIparams.band4_ratio = data_json["band4_ratio"];
+        MultiBandUIparams.band4_attack = data_json["band4_attack"];
+        MultiBandUIparams.band4_release = data_json["band4_release"];
+        MultiBandUIparams.band4_gain = data_json["band4_gain"];
 
- MultiBandCompressor.setUI(MultiBandUIparams);
+        MultiBandCompressor.setUI(MultiBandUIparams);
 
         return (true);
       }
@@ -3100,31 +3100,31 @@ FLASHMEM bool save_sd_multiband_json(uint8_t number)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
-    data_json["master_gain"] = MultiBandUIparams.master_gain;
-data_json["master_mix"] = MultiBandUIparams.master_mix;
-data_json["crossover1"] = MultiBandUIparams.crossover1;
-data_json["crossover2"] = MultiBandUIparams.crossover2;
-data_json["crossover3"] = MultiBandUIparams.crossover3;
-data_json["band1_thresh"] = MultiBandUIparams.band1_thresh;
-data_json["band1_ratio"] = MultiBandUIparams.band1_ratio;
-data_json["band1_attack"] = MultiBandUIparams.band1_attack;
-data_json["band1_release"] = MultiBandUIparams.band1_release;
-data_json["band1_gain"] = MultiBandUIparams.band1_gain;
-data_json["band2_thresh"] = MultiBandUIparams.band2_thresh;
-data_json["band2_ratio"] = MultiBandUIparams.band2_ratio;
-data_json["band2_attack"] = MultiBandUIparams.band2_attack;
-data_json["band2_release"] = MultiBandUIparams.band2_release;
-data_json["band2_gain"] = MultiBandUIparams.band2_gain;
-data_json["band3_thresh"] = MultiBandUIparams.band3_thresh;
-data_json["band3_ratio"] = MultiBandUIparams.band3_ratio;
-data_json["band3_attack"] = MultiBandUIparams.band3_attack;
-data_json["band3_release"] = MultiBandUIparams.band3_release;
-data_json["band3_gain"] = MultiBandUIparams.band3_gain;
-data_json["band4_thresh"] = MultiBandUIparams.band4_thresh;
-data_json["band4_ratio"] = MultiBandUIparams.band4_ratio;
-data_json["band4_attack"] = MultiBandUIparams.band4_attack;
-data_json["band4_release"] = MultiBandUIparams.band4_release;
-data_json["band4_gain"] = MultiBandUIparams.band4_gain;
+      data_json["master_gain"] = MultiBandUIparams.master_gain;
+      data_json["master_mix"] = MultiBandUIparams.master_mix;
+      data_json["crossover1"] = MultiBandUIparams.crossover1;
+      data_json["crossover2"] = MultiBandUIparams.crossover2;
+      data_json["crossover3"] = MultiBandUIparams.crossover3;
+      data_json["band1_thresh"] = MultiBandUIparams.band1_thresh;
+      data_json["band1_ratio"] = MultiBandUIparams.band1_ratio;
+      data_json["band1_attack"] = MultiBandUIparams.band1_attack;
+      data_json["band1_release"] = MultiBandUIparams.band1_release;
+      data_json["band1_gain"] = MultiBandUIparams.band1_gain;
+      data_json["band2_thresh"] = MultiBandUIparams.band2_thresh;
+      data_json["band2_ratio"] = MultiBandUIparams.band2_ratio;
+      data_json["band2_attack"] = MultiBandUIparams.band2_attack;
+      data_json["band2_release"] = MultiBandUIparams.band2_release;
+      data_json["band2_gain"] = MultiBandUIparams.band2_gain;
+      data_json["band3_thresh"] = MultiBandUIparams.band3_thresh;
+      data_json["band3_ratio"] = MultiBandUIparams.band3_ratio;
+      data_json["band3_attack"] = MultiBandUIparams.band3_attack;
+      data_json["band3_release"] = MultiBandUIparams.band3_release;
+      data_json["band3_gain"] = MultiBandUIparams.band3_gain;
+      data_json["band4_thresh"] = MultiBandUIparams.band4_thresh;
+      data_json["band4_ratio"] = MultiBandUIparams.band4_ratio;
+      data_json["band4_attack"] = MultiBandUIparams.band4_attack;
+      data_json["band4_release"] = MultiBandUIparams.band4_release;
+      data_json["band4_gain"] = MultiBandUIparams.band4_gain;
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -3558,38 +3558,39 @@ FLASHMEM bool load_sd_granular_json(uint8_t number)
         AudioInterrupts();
 
         // Load granular parameters
-        
+
         granular_params.sample_note = data_json["sample_note"];
         granular_params.attack = data_json["attack"];
-        granular_params.release = data_json["release"] ;
-        granular_params.grain_size = data_json["grain_size"] ;
-        granular_params.grain_position = data_json["grain_position"] ;
-        granular_params.semitones = data_json["semitones"] ;
+        granular_params.release = data_json["release"];
+        granular_params.grain_size = data_json["grain_size"];
+        granular_params.grain_position = data_json["grain_position"];
+        granular_params.play_mode = data_json["play_mode"];
+        granular_params.semitones = data_json["semitones"];
         granular_params.volume = data_json["volume"];
-        granular_params.density = data_json["density"] ;
-        granular_params.spread = data_json["spread"] ;
-        granular_params.filter_mode = data_json["filter_mode"] ;
+        granular_params.density = data_json["density"];
+        granular_params.spread = data_json["spread"];
+        granular_params.filter_mode = data_json["filter_mode"];
         granular_params.rev_send = data_json["rev_send"];
         granular_params.filter_freq = data_json["filter_freq"] | 0;
         granular_params.filter_resonance = data_json["filter_resonance"];
-        granular_params.delay_send_1 = data_json["delay_send_1"] ;
-        granular_params.delay_send_2 = data_json["delay_send_2"] ;
+        granular_params.delay_send_1 = data_json["delay_send_1"];
+        granular_params.delay_send_2 = data_json["delay_send_2"];
         granular_params.pan = data_json["pan"];
         granular_params.midi_channel = data_json["midi_channel"] | 11;
 
-          if ( granular_params.midi_channel==0)
-granular_params.midi_channel=DEFAULT_GRANULAR_MIDI_CHANNEL;
+        if (granular_params.midi_channel == 0)
+          granular_params.midi_channel = DEFAULT_GRANULAR_MIDI_CHANNEL;
 
-   updateGranularParams();
+        updateGranularParams();
         return (true);
       }
     }
-    
+
   }
- // Update the granular synth with loaded parameters
-           if ( granular_params.midi_channel==0)
-granular_params.midi_channel=DEFAULT_GRANULAR_MIDI_CHANNEL;
-        updateGranularParams();
+  // Update the granular synth with loaded parameters
+  if (granular_params.midi_channel == 0)
+    granular_params.midi_channel = DEFAULT_GRANULAR_MIDI_CHANNEL;
+  updateGranularParams();
   AudioInterrupts();
   return (false);
 }
@@ -3608,15 +3609,16 @@ FLASHMEM bool save_sd_granular_json(uint8_t number)
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
       // Save granular parameters
-     
+
       data_json["sample_note"] = granular_params.sample_note;
       data_json["grain_size"] = granular_params.grain_size;
       data_json["grain_position"] = granular_params.grain_position;
+      data_json["play_mode"] = granular_params.play_mode;
       data_json["semitones"] = granular_params.semitones;
       data_json["volume"] = granular_params.volume;
       data_json["density"] = granular_params.density;
       data_json["spread"] = granular_params.spread;
-        data_json["attack"] = granular_params.attack;
+      data_json["attack"] = granular_params.attack;
       data_json["release"] = granular_params.release;
       data_json["filter_mode"] = granular_params.filter_mode;
       data_json["rev_send"] = granular_params.rev_send;
@@ -3636,7 +3638,7 @@ FLASHMEM bool save_sd_granular_json(uint8_t number)
   }
   else
   {
-;
+    ;
   }
 
   AudioInterrupts();
@@ -4081,8 +4083,8 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   save_sd_epiano_json(number);
 #if defined COMPILE_FOR_PSRAM
   save_sd_multisample_presets_json(number);
-  #endif
-  
+#endif
+
   save_sd_braids_json(number, 0);
   save_sd_multiband_json(number);
   save_sd_sidechain_json(number);
@@ -4095,7 +4097,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
 #endif
 
 #ifdef GRANULAR
-save_sd_granular_json(number);
+  save_sd_granular_json(number);
 #endif
 
   for (uint8_t i = 0; i < NUM_DEXED; i++)
@@ -4122,7 +4124,7 @@ save_sd_granular_json(number);
 
     LOG.print(F("  "));
     SD.remove(filename);
-LiveSequencer::LiveSeqData* data = liveSeq.getData();
+    LiveSequencer::LiveSeqData* data = liveSeq.getData();
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
@@ -4482,7 +4484,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
 #endif
 
 #ifdef GRANULAR
-load_sd_granular_json(number);
+  load_sd_granular_json(number);
 #endif
 
   configuration.sys.performance_number = number;
@@ -4501,7 +4503,7 @@ load_sd_granular_json(number);
       LOG.println(F("]... loading..."));
 #endif
 
-LiveSequencer::LiveSeqData* data = liveSeq.getData();
+      LiveSequencer::LiveSeqData* data = liveSeq.getData();
       json = SD.open(filename);
       if (json)
       {
@@ -4586,7 +4588,7 @@ LiveSequencer::LiveSeqData* data = liveSeq.getData();
         if (data_json["slices_midi_channel"] > 0) //same as above
           slices_midi_channel = data_json["slices_midi_channel"];
 
-            data->LiveSequencer::LiveSeqData::useGridSongMode=data_json["grid_song_mode"];
+        data->LiveSequencer::LiveSeqData::useGridSongMode = data_json["grid_song_mode"];
 
 
 
@@ -4744,12 +4746,12 @@ FLASHMEM bool check_sd_braids_patch_exists(uint8_t number)
 
 FLASHMEM bool check_sd_noisemaker_config_exists()
 {
-  
+
   AudioNoInterrupts();
   if (sd_card_internal > 0)
   {
     char filename[CONFIG_FILENAME_LEN];
- snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s.json"), CONFIG_NOISEMAKER);
 
     // check if file exists...
     if (SD.exists(filename))
