@@ -25516,6 +25516,7 @@ FLASHMEM static int16_t granular_get_param_value(uint8_t param_index) {
   case 14: return granular_params.delay_send_2;
   case 15: return granular_params.pan;
   case 16: return granular_params.midi_channel;
+  case 17: return granular_params.play_mode;  // NEW: Play mode
   default: return 0;
   }
 }
@@ -25530,7 +25531,6 @@ FLASHMEM void granular_set_param_value(uint8_t param_index, int16_t value) {
   case 4: granular_params.density = value; break;
   case 5: granular_params.volume = value; break;
   case 6: granular_params.semitones = value; break;
-
   case 7: granular_params.attack = value; break;
   case 8: granular_params.release = value; break;
   case 9: granular_params.filter_mode = value;
@@ -25553,9 +25553,10 @@ FLASHMEM void granular_set_param_value(uint8_t param_index, int16_t value) {
     global_delay_in_mixer[1]->gain(18, mapfloat(granular_params.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.3f));
     break;
   case 15: granular_params.pan = value;
-    updateGranularPan(); // Update panorama when pan parameter changes
+    updateGranularPan();
     break;
   case 16: granular_params.midi_channel = value; break;
+  case 17: granular_params.play_mode = value; break;  // NEW: Play mode
   }
   updateGranularParams();
 }
@@ -25675,6 +25676,18 @@ FLASHMEM static void    granularMidiRenderer(Editor* e, bool refresh) {
 
 }
 
+FLASHMEM static int16_t granularPlayModeGetter(Editor* e) { return granular_params.play_mode; }
+FLASHMEM static void    granularPlayModeSetter(Editor* e, int16_t v) { granular_set_param_value(17, v); }
+FLASHMEM static void    granularPlayModeRenderer(Editor* e, bool refresh) {
+  static const char* modes[] = { "FORWARD", "REVERSE", "RANDOM " };
+
+  print_small_scaled_bar(e->x, e->y, granular_params.play_mode,
+    e->limit_min, e->limit_max, e->select_id, 1, NULL);
+  setCursor_textGrid_small(e->x + 10, e->y);
+  setModeColor(e->select_id);
+  display.printf("PLAY MODE: %s", modes[granular_params.play_mode]);
+}
+
 extern void   display_granular_status();
 
 FLASHMEM void UI_func_granular(uint8_t param)
@@ -25697,14 +25710,14 @@ FLASHMEM void UI_func_granular(uint8_t param)
     drawGranularWaveform(true);
 
     // SAMPLE selector with gauge
-    ui.setCursor(0, 12);
+    ui.setCursor(0, 11);
     ui.addEditor("SAMPLE", 0, NUM_DRUMSET_CONFIG - 2,
       granularSampleGetter,
       granularSampleSetter,
       granularSampleRenderer);
 
     // First column with gauges
-    ui.setCursor(0, 14);
+    ui.setCursor(0, 13);
     ui.addEditor("GRAIN SIZE", 0, 100, granularGetter_1, granularSetter_1, granularRenderer_1);
     ui.addEditor("POSITION", 0, 100, granularGetter_2, granularSetter_2, granularRenderer_2);
     ui.addEditor("SPREAD", 0, 100, granularGetter_3, granularSetter_3, granularRenderer_3);
@@ -25713,16 +25726,16 @@ FLASHMEM void UI_func_granular(uint8_t param)
     ui.addEditor("PITCH", 0, 100, granularGetter_6, granularSetter_6, granularRenderer_6);
     ui.addEditor("ATTACK", 0, 100, granularGetter_7, granularSetter_7, granularRenderer_7);
     ui.addEditor("RELEASE", 0, 100, granularGetter_8, granularSetter_8, granularRenderer_8);
+    
     // Second column with gauges
-    ui.setCursor(22, 14);
+    ui.setCursor(22, 13);
+    ui.addEditor("PLAY MODE", 0, 2, granularPlayModeGetter, granularPlayModeSetter, granularPlayModeRenderer);  // NEW
     ui.addEditor("FILTER MODE", 0, 3, granularFilterModeGetter, granularFilterModeSetter, granularFilterModeRenderer);
     ui.addEditor("FILTER FREQ", 0, 100, granularGetter_10, granularSetter_10, granularRenderer_10);
     ui.addEditor("FILTER RESO", 0, 100, granularGetter_11, granularSetter_11, granularRenderer_11);
-
     ui.addEditor("REVERB", 0, 100, granularGetter_12, granularSetter_12, granularRenderer_12);
     ui.addEditor("DELAY1", 0, 100, granularGetter_13, granularSetter_13, granularRenderer_13);
     ui.addEditor("DELAY2", 0, 100, granularGetter_14, granularSetter_14, granularRenderer_14);
-    // Use custom pan editor that matches drum page style
     ui.addEditor("PAN", -99, 99, granularPanGetter, granularPanSetter, granularPanRenderer);
     ui.addEditor("MIDI CH", 1, 17, granularMidiGetter, granularMidiSetter, granularMidiRenderer);
   }

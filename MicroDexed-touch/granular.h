@@ -12,6 +12,12 @@
 #define MAX_GRAINS_PER_VOICE 8
 // ----------------------------------
 
+// ---------- Play Mode Constants ----------
+#define PLAYMODE_FORWARD  0
+#define PLAYMODE_REVERSE  1
+#define PLAYMODE_RANDOM   2
+// ------------------------------------------
+
 // ---------- Parameter struct ----------
 typedef struct {
   uint8_t grain_size;      // 0..100 -> ms mapping inside voice
@@ -29,8 +35,9 @@ typedef struct {
   uint8_t delay_send_1;
   uint8_t delay_send_2;
   int8_t pan;
-  uint8_t  attack;
+  uint8_t attack;
   uint8_t release;
+  uint8_t play_mode;       // 0=Forward, 1=Reverse, 2=Random
   uint8_t midi_channel;
 
   bool active;
@@ -43,11 +50,12 @@ struct GranularGrain {
   const int16_t* sampleData;
   uint32_t sampleLength;
   float position;      // fractional position in samples
-  float pitchRatio;    // increment per sample
+  float pitchRatio;    // increment per sample (can be negative for reverse)
   uint32_t size;       // grain size in samples
   float invSize;
   float volume;        // 0..1 per-grain
   uint32_t age;        // samples played
+  bool reverse;        // true if this grain plays backwards
 };
 
 // ---------- Chromatic granular voice (one voice) ----------

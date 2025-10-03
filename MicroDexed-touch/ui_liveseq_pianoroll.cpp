@@ -17,7 +17,21 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getActualBarForNote(const LiveSequencer:
     return note.noteOn.patternNumber;
   }
 
-  // For song mode, the patternNumber in the event IS the absolute bar
+  // For song mode, find which map entry this event belongs to
+  for (const auto& patternEntry : data.songEvents) {
+    const uint16_t songPatternIndex = patternEntry.first;
+    const auto& events = patternEntry.second;
+
+    // Look for this specific event in the map
+    for (const auto& event : events) {
+      if (&event == &note.noteOn) {
+        // Found it! Calculate absolute bar
+        return (songPatternIndex * data.numberOfBars) + event.patternNumber;
+      }
+    }
+  }
+
+  // Fallback (shouldn't happen)
   return note.noteOn.patternNumber;
 }
 
@@ -49,14 +63,32 @@ FLASHMEM UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, Li
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getMaxBarsForCurrentMode() const {
   if (data.isSongMode && !data.useGridSongMode) {
     uint16_t maxBar = 0;
+
+    // Check if songEvents is empty
+    if (data.songEvents.empty()) {
+      return 1; // At least 1 bar even if empty
+    }
+
     for (const auto& patternEntry : data.songEvents) {
+      const uint16_t songPatternIndex = patternEntry.first; // Map key
+
+      // Skip empty event lists
+      if (patternEntry.second.empty()) {
+        continue;
+      }
+
       for (const auto& event : patternEntry.second) {
-        if (event.patternNumber > maxBar) {
-          maxBar = event.patternNumber;
+        // Calculate absolute bar from map key and cyclic pattern number
+        uint16_t absoluteBar = (songPatternIndex * data.numberOfBars) + event.patternNumber;
+
+        if (absoluteBar > maxBar) {
+          maxBar = absoluteBar;
         }
       }
     }
-    return maxBar + 1;
+
+    // Return maxBar + 1 to convert from index to count, but ensure at least 1
+    return (maxBar == 0) ? 1 : (maxBar + 1);
   }
   else {
     return data.numberOfBars;
@@ -105,7 +137,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
       else {
         display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
         display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), GREY2);
-        display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND); // no text
+        display.setTextColor(GREY3, COLOR_BACKGROUND); // no text
       }
       display.setCursor(x + 2, y + 2);
       display.print(l + 1);
@@ -180,8 +212,23 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
   uint32_t timeOn, timeOff;
 
   if (data.isSongMode && !data.useGridSongMode) {
-    timeOn = note.noteOn.patternNumber * data.patternLengthMs + note.noteOn.patternMs;
-    timeOff = note.noteOff.patternNumber * data.patternLengthMs + note.noteOff.patternMs;
+    // Use absolute bar for time calculation
+    uint16_t absoluteBarOn = getActualBarForNote(note);
+    timeOn = absoluteBarOn * data.patternLengthMs + note.noteOn.patternMs;
+
+    // Note: noteOff will be in the same or later absolute bar
+    uint16_t absoluteBarOff = absoluteBarOn; // Start with same bar
+
+    // If noteOff has a different cyclic patternNumber, it might wrap to next cycle
+    if (note.noteOff.patternNumber < note.noteOn.patternNumber) {
+      // Wrapped to next 4-bar cycle
+      absoluteBarOff = absoluteBarOn + (data.numberOfBars - note.noteOn.patternNumber) + note.noteOff.patternNumber;
+    }
+    else {
+      absoluteBarOff = absoluteBarOn + (note.noteOff.patternNumber - note.noteOn.patternNumber);
+    }
+
+    timeOff = absoluteBarOff * data.patternLengthMs + note.noteOff.patternMs;
   }
   else {
     timeOn = getEventTime(note.noteOn);
@@ -390,25 +437,32 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       uint32_t viewEndMs = 0;
 
       if (data.isSongMode && !data.useGridSongMode) {
-        // Song mode: use absolute time from song start with 1:1 mapping
+        // Song mode: calculate absolute time from song start
         currentTimeMs = data.currentPattern * data.patternLengthMs + data.patternTimer;
-        // Convert to view-relative time for positioning
-        currentTimeMs -= uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+
+        // Calculate viewport time range (absolute time)
+        viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+        viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
       }
       else {
-        // Pattern mode: use relative time within current pattern
-        currentTimeMs = ((data.currentPattern - view.startBar) * data.patternLengthMs + data.patternTimer);
+        // Pattern mode: calculate relative time within pattern
+        currentTimeMs = data.currentPattern * data.patternLengthMs + data.patternTimer;
+        viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+        viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
       }
 
       // Calculate cursor position
       if (currentTimeMs >= viewStartMs && currentTimeMs <= viewEndMs) {
+        // Cursor is within viewport - calculate position
         float ratio = float(currentTimeMs - viewStartMs) / float(viewEndMs - viewStartMs);
         view.cursorPos = ROLL_WIDTH + roundf(ratio * CONTENT_WIDTH);
       }
       else if (currentTimeMs < viewStartMs) {
+        // Cursor is before viewport
         view.cursorPos = ROLL_WIDTH;
       }
       else {
+        // Cursor is after viewport
         view.cursorPos = DISPLAY_WIDTH - 1;
       }
 
@@ -455,8 +509,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
-  DBG_LOG(printf("draw step cursor...\n"));
   display.console = true;
+  
+  // First, clear the previous cursor position by redrawing the background
+  if (stepCursorPositionPrev != stepCursorPosition && stepCursorPositionPrev >= ROLL_WIDTH) {
+    // We rely on the background/notes being redrawn first via drawFlags
+  }
+  
+  // Then draw the new cursor
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
@@ -464,7 +524,7 @@ FLASHMEM std::vector<LiveSequencer::NotePair>
 UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
   uint8_t track, uint8_t& lowestNote, uint8_t& highestNote,
   uint8_t patternFrom, uint8_t patternTo) {
-  
+
   std::vector<LiveSequencer::NotePair> result;
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
@@ -479,6 +539,7 @@ UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
   }
 
   for (const auto& patternEntry : data.songEvents) {
+    const uint16_t songPatternIndex = patternEntry.first;
     const auto& events = patternEntry.second;
 
     for (auto itOn = events.begin(); itOn != events.end(); ++itOn) {
@@ -488,12 +549,15 @@ UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
           continue;
         }
 
-        if (itOn->patternNumber >= patternFrom && itOn->patternNumber <= patternTo) {
+        // Calculate absolute bar for filtering
+        uint16_t absoluteBar = (songPatternIndex * data.numberOfBars) + itOn->patternNumber;
+
+        if (absoluteBar >= patternFrom && absoluteBar <= patternTo) {
           for (auto itOff = itOn; itOff != events.end(); ++itOff) {
             if (itOff->track == itOn->track &&
-                itOff->layer == itOn->layer &&
-                itOff->note_in == itOn->note_in &&
-                itOff->event == midi::NoteOff) {
+              itOff->layer == itOn->layer &&
+              itOff->note_in == itOn->note_in &&
+              itOff->event == midi::NoteOff) {
 
               LiveSequencer::NotePair p = {
                 const_cast<LiveSequencer::MidiEvent&>(*itOn),
@@ -636,15 +700,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
   bool dataChanged = (prevNotePairsCount != notePairs.size()) ||
     (prevMuteEventsCount != muteAutomationEvents.size());
 
-if (autoAdaptView && !notePairs.empty()) {
-  view.startOctave = std::min((lowestNote - 24) / 12, TOTAL_OCTAVES - view.numOctaves);
-  setNumOctaves(5);
+  if (autoAdaptView && !notePairs.empty()) {
+    view.startOctave = std::min((lowestNote - 24) / 12, TOTAL_OCTAVES - view.numOctaves);
+    setNumOctaves(5);
 
-  // Use same calculation for both modes
-  view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
-   
-  drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
-}
+    // Use same calculation for both modes
+    view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
+
+    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
+  }
   else if (dataChanged) {
     // Only redraw if data actually changed
     drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
@@ -772,7 +836,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
       queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, { key } }); // fullwidth highlight key bar
     }
 
-    if ((data.isRunning == false) && (mode == MODE_STEP) && (stepMode == STEP_RECORD)) { // step record will draw itself
+    // CHANGE: Allow step recording in ANY step mode, not just STEP_RECORD
+    if ((data.isRunning == false) && (mode == MODE_STEP) ) {
       if (event == midi::NoteOn) {
         // record note
         const uint16_t stepCursorPositionMs = view.startBar * data.patternLengthMs + round(stepCursorPositionIndex * stepRecordStepSizeMs);
@@ -826,9 +891,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
     if (view.startBar > (maxBars - view.numBars)) {
       setBarStart(maxBars - view.numBars);
     }
-    
+
     view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
-    
+
     reloadNotes();
     drawAreaIndicator();
   }
@@ -838,7 +903,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
   if (num == view.startBar) return;
 
   uint16_t maxBars = getMaxBarsForCurrentMode();
-  uint16_t maxStartBar = (maxBars > view.numBars) ? (maxBars - view.numBars) : 0;
+
+  // Calculate maximum start bar that still shows content
+  uint16_t maxStartBar = 0;
+  if (maxBars > view.numBars) {
+    maxStartBar = maxBars - view.numBars;
+  }
+
+  // Additional safety: ensure we don't scroll past actual content
+  // If there are fewer bars than our view, always start at 0
+  if (maxBars < view.numBars) {
+    maxStartBar = 0;
+  }
 
   uint16_t newStartBar = constrain(num, 0, maxStartBar);
 
@@ -942,11 +1018,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       case VIEW_ZOOM_X:
         if (data.isSongMode && !data.useGridSongMode) {
           uint16_t maxBars = getMaxBarsForCurrentMode();
-          
+
           int16_t newNumBars = view.numBars + e.dir;
           if (newNumBars < 1) newNumBars = 1;
           if (newNumBars > int16_t(maxBars)) newNumBars = int16_t(maxBars);
-          
+
           if (newNumBars != view.numBars) {
             setNumBars(newNumBars);
             drawFlags |= DRAW_CONTENT_FULL;
@@ -966,11 +1042,15 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       case VIEW_SCROLL_X:
         if (data.isSongMode && !data.useGridSongMode) {
           uint16_t maxBars = getMaxBarsForCurrentMode();
-          
+
           int16_t newStartBar = view.startBar + e.dir;
-          int16_t maxStartBar = int16_t(maxBars) - view.numBars;
-          if (maxStartBar < 0) maxStartBar = 0;
-          
+
+          // Use the same logic as setBarStart
+          uint16_t maxStartBar = 0;
+          if (maxBars > view.numBars) {
+            maxStartBar = maxBars - view.numBars;
+          }
+
           if (newStartBar < 0) newStartBar = 0;
           if (newStartBar > maxStartBar) newStartBar = maxStartBar;
 
@@ -1150,18 +1230,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           // Layer editing for both pattern mode AND song mode
           if (selectedNote > -1) {
             int8_t layer = notePairs.at(selectedNote).noteOn.layer;
-            
+
             // Find available layers with notes
             std::set<int8_t> availableLayers;
             for (const auto& note : notePairs) {
               availableLayers.insert(note.noteOn.layer);
             }
-            
+
             // If current layer is not in available layers (shouldn't happen), add it
             if (availableLayers.empty()) {
               availableLayers.insert(layer);
             }
-            
+
             // Find next/previous available layer
             int8_t newLayer = layer;
             if (e.dir > 0) {
@@ -1169,20 +1249,23 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
               auto it = availableLayers.upper_bound(layer);
               if (it == availableLayers.end()) {
                 newLayer = *availableLayers.begin(); // Wrap around to first
-              } else {
+              }
+              else {
                 newLayer = *it;
               }
-            } else if (e.dir < 0) {
+            }
+            else if (e.dir < 0) {
               // Move to previous available layer
               auto it = availableLayers.lower_bound(layer);
               if (it == availableLayers.begin()) {
                 newLayer = *availableLayers.rbegin(); // Wrap around to last
-              } else {
+              }
+              else {
                 --it;
                 newLayer = *it;
               }
             }
-            
+
             if (newLayer != layer) {
               // Update both noteOn and noteOff
               notePairs.at(selectedNote).noteOn.layer = newLayer;
@@ -1430,16 +1513,47 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       break;
 
     case MODE_STEP:
-    {
-      uint8_t newMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
-      stepMode = newMode;
-      if ((data.isRunning == false) && (newMode == STEP_RECORD)) {
-        drawFlags |= DRAW_STEP_CURSOR;
+      switch (stepMode) {
+  case STEP_RECORD:
+  // Change record/advance position
+  if (hasConstrainedChanged(stepCursorPositionIndex, e.dir * e.speed, 
+                           uint16_t(0), uint16_t(view.numBars * stepRecordSteps - 1))) {
+    // Store previous position
+    stepCursorPositionPrev = stepCursorPosition;
+    
+    // Calculate new position
+    stepCursorPosition = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
+    
+    // Queue redraw for both positions
+    queueDrawNote({ stepCursorPositionPrev, stepCursorPositionPrev, {} });
+    queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
+    
+    drawFlags |= DRAW_STEP_CURSOR | DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
+    headerFlags |= (1 << STEP_RECORD);
+  }
+  break;
+
+      case STEP_SIZE:
+        // Change step size (number of steps per bar)
+        if (hasConstrainedChanged(stepRecordSteps, e.dir, uint8_t(1), uint8_t(32))) {
+          stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
+          // Reset or adjust step cursor position when step size changes
+          stepCursorPositionIndex = 0;
+          stepCursorPosition = ROLL_WIDTH;
+          drawFlags |= DRAW_STEP_CURSOR;
+          headerFlags |= (1 << STEP_SIZE);
+        }
+        break;
+
+      case STEP_LAYER:
+        // Change recording layer
+        if (hasConstrainedChanged(stepRecordLayer, e.dir, 
+                                 int8_t(0), int8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1))) {
+          headerFlags |= (1 << STEP_LAYER);
+        }
+        break;
       }
-      queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
-      buttonStep->drawNow();
-    }
-    break;
+      break;
     } // end switch(mode)
 
     drawHeader(headerFlags);
@@ -1475,15 +1589,22 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       buttonEdit->drawNow();
       break;
 
-    case MODE_STEP:
-      newMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
-      stepMode = newMode;
-      if ((data.isRunning == false) && (newMode == STEP_RECORD)) {
-        drawFlags |= DRAW_STEP_CURSOR;
-      }
-      queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
-      buttonStep->drawNow();
-      break;
+case MODE_STEP:
+  // Store old step mode to detect changes
+  uint8_t oldStepMode = stepMode;
+  stepMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
+  
+  if ((data.isRunning == false) && (stepMode == STEP_RECORD)) {
+    drawFlags |= DRAW_STEP_CURSOR;
+  }
+  queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
+  buttonStep->drawNow();
+  
+  // ADD: Redraw header when step mode changes (like view/edit modes do)
+  if (oldStepMode != stepMode) {
+    drawHeader(HEADER_DRAW_ALL);
+  }
+  break;
     }
     if (oldMode != newMode) {
       if (mode == MODE_VIEW || mode == MODE_EDIT) {
@@ -1521,6 +1642,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent& e, ui
 FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextSize(1);
   char s[16] = { "\0" };
+
+if (modeFlags == HEADER_DRAW_ALL) {
+    display.console = true;
+    display.fillRect(132, CONTENT_HEIGHT+4, DISPLAY_WIDTH, HEADER_HEIGHT-6, HEADER_BG_COLOR);
+  }
 
   switch (mode) {
   case MODE_VIEW:
@@ -1626,21 +1752,25 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
     }
     break;
 
-  case MODE_STEP:
-    if (modeFlags & (1 << STEP_RECORD)) {
-      const uint8_t pattern = (stepCursorPositionIndex / stepRecordSteps);
-      sprintf(s, "P%i %02i/%02i", pattern, stepCursorPositionIndex % stepRecordSteps, stepRecordSteps);
-      drawHeaderSetting(GRID.X[3], "REC/ADV", s, false, (stepMode == STEP_RECORD));
-    }
-    if (modeFlags & (1 << STEP_SIZE)) {
-      sprintf(s, "1/%02i", stepRecordSteps);
-      drawHeaderSetting(GRID.X[4], "STEPSIZE", s, false, (stepMode == STEP_SIZE));
-    }
-    if (modeFlags & (1 << STEP_LAYER)) {
-      sprintf(s, "%i", stepRecordLayer + 1);
-      drawHeaderSetting(GRID.X[5], "TO LAYER", s, false, (stepMode == STEP_LAYER));
-    }
-    break;
+case MODE_STEP:
+  // Always show all step modes, highlight the active one (like view/edit modes)
+  if (modeFlags & (1 << STEP_RECORD)) {
+    const uint8_t pattern = (stepCursorPositionIndex / stepRecordSteps);
+    sprintf(s, "P%i %02i/%02i", pattern, stepCursorPositionIndex % stepRecordSteps, stepRecordSteps);
+    // CHANGE: Remove the isSettingActivated check - highlight based on stepMode only
+    drawHeaderSetting(GRID.X[3], "REC/ADV", s, false, (stepMode == STEP_RECORD));
+  }
+  if (modeFlags & (1 << STEP_SIZE)) {
+    sprintf(s, "1/%02i", stepRecordSteps);
+    // CHANGE: Remove the isSettingActivated check - highlight based on stepMode only
+    drawHeaderSetting(GRID.X[4], "STEPSIZE", s, false, (stepMode == STEP_SIZE));
+  }
+  if (modeFlags & (1 << STEP_LAYER)) {
+    sprintf(s, "%i", stepRecordLayer + 1);
+    // CHANGE: Remove the isSettingActivated check - highlight based on stepMode only
+    drawHeaderSetting(GRID.X[5], "TO LAYER", s, false, (stepMode == STEP_LAYER));
+  }
+  break;
   }
 }
 
@@ -1921,24 +2051,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
 
   // Early return if there are no notes to draw
   if (notePairs.empty()) {
-    if (drawFlags & DRAW_CONTENT_FULL) {
-      display.console = true;
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      display.setTextSize(1);
-      display.setCursor(100, CONTENT_HEIGHT / 2);
-      if (data.isSongMode && !data.useGridSongMode && data.activeTrack != SONG_MODE_MUTE_TRACK) {
-        display.print("SONG MODE - NO NOTES");
-      }
-      else if (data.useGridSongMode) {
-        display.print("GRID MODE - NO NOTES");
-      }
-      else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
-        display.print("SONG - MUTE AUTOMATION");
-      }
-      else {
-        display.print("PATTERN MODE - NO NOTES");
-      }
-    }
     return;
   }
 
@@ -2034,22 +2146,22 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
       editMode = EDIT_LAYER;
       buttonEdit->drawNow();
       if (selectedNote > -1) {
-        // Only redraw the selected note to remove highlight
         queueDrawNote(notePairs.at(selectedNote));
         drawFlags |= DRAW_NOTES;
         selectedNote = -1;
       }
       break;
 
-    case MODE_STEP:
-      // reset step cursor
-      stepMode = STEP_RECORD;
-      buttonStep->drawNow();
-      queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
-      stepCursorPositionIndex = 0;
-      stepCursorPosition = ROLL_WIDTH;
-      drawFlags |= DRAW_CONTENT_AREA; // Only redraw content area, not full screen
-      break;
+   case MODE_STEP:
+  // reset step cursor
+  stepMode = STEP_RECORD;
+  buttonStep->drawNow();
+  queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
+  stepCursorPositionIndex = 0;
+  stepCursorPosition = ROLL_WIDTH;
+  stepCursorPositionPrev = ROLL_WIDTH; // Initialize previous position
+  drawFlags |= DRAW_CONTENT_AREA;
+  break;
     }
 
     // entering new mode actions
@@ -2060,19 +2172,20 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
     case MODE_EDIT:
       if ((selectedNote == -1) && notePairs.size()) {
         selectedNote = 0;
-        // Only redraw the first note to add highlight
         queueDrawNote(notePairs.at(0));
         drawFlags |= DRAW_NOTES;
       }
       break;
 
     case MODE_STEP:
+      // Initialize step record parameters
       stepRecordStepSizeMs = data.patternLengthMs / float(stepRecordSteps);
+      stepCursorPositionIndex = 0;
+      stepCursorPosition = ROLL_WIDTH;
       drawFlags |= DRAW_STEP_CURSOR;
       break;
     }
 
-    // Only redraw header, not full content
     drawHeader(HEADER_DRAW_ALL);
   }
   return modeChanged;
@@ -2210,21 +2323,27 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   buttons.push_back(new TouchButton(GRID.X[1], y,
     [this](auto* b) { // drawHandler
       char temp_char[4];
-
       if (data.activeTrack >= SONG_MODE_NOTES_TRACK) {
         // Song mode tracks
         if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
           b->draw("SONG", "NOTES", TouchButton::BUTTON_ACTIVE);
+          TouchButton::drawButton(GRID.X[2], GRID.Y[5], "", "", TouchButton::BUTTON_INACTIVE);
         }
         else {
           b->draw("SONG", "MUTES", TouchButton::BUTTON_ACTIVE);
+          TouchButton::drawButton(GRID.X[2], GRID.Y[5], "", "", TouchButton::BUTTON_INACTIVE);
         }
       }
-
       else {
         // Pattern tracks
         itoa(data.activeTrack + 1, temp_char, 10);
         b->draw("PATTERN", temp_char, TouchButton::BUTTON_ACTIVE);
+        const uint8_t device = data.trackSettings[data.activeTrack].device;
+        const uint8_t instrument = data.trackSettings[data.activeTrack].instrument;
+        char name[10];
+        char sub[10];
+        liveSeq.getInstrumentName(device, instrument, name, sub);
+        TouchButton::drawButton(GRID.X[2], GRID.Y[5], name, sub, TouchButton::BUTTON_ACTIVE);
       }
     }, [this](auto* b) { // clickedHandler
       // Cycle through all tracks: 12 patterns + 2 song mode tracks
@@ -2246,8 +2365,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       }
       else {
         data.isSongMode = false;
-
-
       }
 
       // Reset edit mode state
@@ -2289,22 +2406,37 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       b->drawNow();
       }));
 
+
+  //pattern mode
+
   buttonInst = new TouchButton(GRID.X[2], y,
     [this](auto* b) { // drawHandler
-      const uint8_t device = data.trackSettings[data.activeTrack].device;
-      const uint8_t instrument = data.trackSettings[data.activeTrack].instrument;
-      char name[10];
-      char sub[10];
-      liveSeq.getInstrumentName(device, instrument, name, sub);
-      b->draw(name, sub, TouchButton::BUTTON_ACTIVE);
-    }, [this](auto* b) { // clickedHandler
-      // open instrument settings
-      if (data.tracks[data.activeTrack].screenSetupFn != nullptr) {
-        SetupFn f = (SetupFn)data.tracks[data.activeTrack].screenSetupFn;
-        f(0);
+      if (data.activeTrack == SONG_MODE_MUTE_TRACK)
+        ;
+      else if (data.activeTrack == SONG_MODE_NOTES_TRACK)
+        ;
+      else
+      {
+        const uint8_t device = data.trackSettings[data.activeTrack].device;
+        const uint8_t instrument = data.trackSettings[data.activeTrack].instrument;
+        char name[10];
+        char sub[10];
+        liveSeq.getInstrumentName(device, instrument, name, sub);
+        b->draw(name, sub, TouchButton::BUTTON_ACTIVE);
       }
-      UI_LiveSequencer::openScreen(data.tracks[data.activeTrack].screen);
+    }, [this](auto* b) { // clickedHandler
+
+      if (data.activeTrack != SONG_MODE_MUTE_TRACK && data.activeTrack != SONG_MODE_NOTES_TRACK)
+      {
+        // open instrument settings
+        if (data.tracks[data.activeTrack].screenSetupFn != nullptr) {
+          SetupFn f = (SetupFn)data.tracks[data.activeTrack].screenSetupFn;
+          f(0);
+        }
+        UI_LiveSequencer::openScreen(data.tracks[data.activeTrack].screen);
+      }
       });
+
   buttons.push_back(buttonInst);
 
   buttonView = new TouchButton(GRID.X[3], y,
@@ -2366,13 +2498,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       if (data.isRunning) {
         color = TouchButton::BUTTON_NORMAL;
       }
-      else {
-        if ((mode == MODE_STEP) && (stepMode == STEP_RECORD)) {
-          color = TouchButton::BUTTON_RED;
-        }
-      }
       b->draw("STEP", "RECORD", color);
-    }, [this](auto* b) { // clickedHandler
+    },
+    [this](auto* b) { // clickedHandler
       if (data.isRunning == false) {
         const bool modeChanged = ui_pianoroll->setMode(MODE_STEP);
         if ((modeChanged == false) && (stepMode == STEP_RECORD)) {
@@ -2380,19 +2508,29 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         }
         b->drawNow();
       }
-      });
+    });
   buttons.push_back(buttonStep);
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
-  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps));
+  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps - 1));
+  
   if (stepCursorChanged) {
     if (stepCursorPositionIndex == view.numBars * stepRecordSteps) {
       stepCursorPositionIndex = 0;
     }
-    queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
+    
+    // Store previous position for clearing
+    stepCursorPositionPrev = stepCursorPosition;
+    
+    // Calculate new position
     stepCursorPosition = ROLL_WIDTH + round(stepCursorPositionIndex * stepRecordStepSizeMs * view.msToPix);
-    drawFlags |= DRAW_STEP_CURSOR | DRAW_CONTENT_AREA;
+    
+    // Queue redraw for BOTH old and new cursor positions
+    queueDrawNote({ stepCursorPositionPrev, stepCursorPositionPrev, {} });
+    queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
+    
+    drawFlags |= DRAW_STEP_CURSOR | DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
     drawHeader(1 << STEP_RECORD);
   }
   return stepCursorChanged;

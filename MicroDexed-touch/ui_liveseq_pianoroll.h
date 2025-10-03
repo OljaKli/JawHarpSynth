@@ -18,6 +18,8 @@ void UI_func_liveseq_graphic(uint8_t param);
 
 class UI_LiveSeq_PianoRoll {
 public:
+uint16_t stepCursorPositionPrev = ROLL_WIDTH;
+uint32_t getCurrentPlaybackTime() const;
   UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
   void processLCDM(uint8_t param);
   void handleTouchScreen(void);
