@@ -6076,7 +6076,15 @@ FLASHMEM uint8_t check_internal_sd_card(void)
 
   memset(sd_string, 0, sizeof(sd_string));
 
-  if (!card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD))
+  bool sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);
+  // Sometimes fails after re-programming - try a few times if needed
+  for (int i=0;i<5 && !sdok;i++)
+  {
+    delay(200);
+    sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);
+  }
+
+  if (!sdok)
   {
 #ifdef DEBUG
     LOG.println("Initialization failed. Things to check:");

@@ -19068,6 +19068,22 @@ FLASHMEM void UI_func_sd_content_not_found(uint8_t param)
 extern void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize);
 #endif
 
+static FLASHMEM void check_midi_channel(uint8_t item, uint8_t pos_x, uint8_t pos_y, uint8_t midi_channel)
+{
+    if (menu_item_check(item))
+    {
+      setModeColor(item);
+      setCursor_textGrid_small(pos_x, pos_y);
+      _print_midi_channel(midi_channel);
+#if defined GLOW
+      if (generic_temp_select_menu == item)
+        set_glow_show_text_no_grid(pos_x * CHAR_width_small, pos_y * (CHAR_height_small + 2), 4, get_midi_channel_name(midi_channel), item, 1);
+#endif
+
+
+    }
+}
+
 FLASHMEM void UI_func_midi_channels(uint8_t param)
 {
   if (LCDML.FUNC_setup())
@@ -19168,14 +19184,15 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     // button check end
 
     display.setTextSize(1);
+//*
     if (menu_item_check(0))
     {
       setModeColor(0);
-      setCursor_textGrid_small(40, 5);
+      setCursor_textGrid_small(25, 5);
       _print_midi_channel(configuration.dexed[0].midi_channel);
 #if defined GLOW
       if (generic_temp_select_menu == 0)
-        set_glow_show_text_no_grid(40 * CHAR_width_small, 5 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.dexed[0].midi_channel), 0, 1);
+        set_glow_show_text_no_grid(30 * CHAR_width_small, 5 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.dexed[0].midi_channel), 0, 1);
 #endif
 
 
@@ -19240,7 +19257,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       _print_midi_channel(configuration.epiano.midi_channel);
 #if defined GLOW
       if (generic_temp_select_menu == 5)
-        set_glow_show_text_no_grid(40 * CHAR_width_small, 9 * (CHAR_height_small + 2), 4, get_midi_channel_name(configuration.epiano.midi_channel), 4, 1);
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 10 * (CHAR_height_small + 2), 5, get_midi_channel_name(configuration.epiano.midi_channel), 5, 1);
 #endif
     }
     if (menu_item_check(6))
@@ -19250,7 +19267,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       _print_midi_channel(microsynth[0].midi_channel);
 #if defined GLOW
       if (generic_temp_select_menu == 6)
-        set_glow_show_text_no_grid(40 * CHAR_width_small, 11 * (CHAR_height_small + 2), 4, get_midi_channel_name(microsynth[0].midi_channel), 5, 1);
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 12 * (CHAR_height_small + 2), 4, get_midi_channel_name(microsynth[0].midi_channel), 5, 1);
 #endif
     }
     if (menu_item_check(7))
@@ -19260,7 +19277,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       _print_midi_channel(microsynth[1].midi_channel);
 #if defined GLOW
       if (generic_temp_select_menu == 7)
-        set_glow_show_text_no_grid(40 * CHAR_width_small, 12 * (CHAR_height_small + 2), 4, get_midi_channel_name(microsynth[1].midi_channel), 6, 1);
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 13 * (CHAR_height_small + 2), 4, get_midi_channel_name(microsynth[1].midi_channel), 7, 1);
 #endif
     }
     if (menu_item_check(8))
@@ -19270,7 +19287,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       _print_midi_channel(braids_osc.midi_channel);
 #if defined GLOW
       if (generic_temp_select_menu == 8)
-        set_glow_show_text_no_grid(40 * CHAR_width_small, 14 * (CHAR_height_small + 2), 4, get_midi_channel_name(braids_osc.midi_channel), 7, 1);
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 14 * (CHAR_height_small + 2), 4, get_midi_channel_name(braids_osc.midi_channel), 8, 1);
 #endif
     }
     if (menu_item_check(9))
@@ -19280,7 +19297,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       _print_midi_channel(msp[0].midi_channel);
 #if defined GLOW
       if (generic_temp_select_menu == 9)
-        set_glow_show_text_no_grid(40 * CHAR_width_small, 16 * (CHAR_height_small + 2), 4, get_midi_channel_name(msp[0].midi_channel), 8, 1);
+        set_glow_show_text_no_grid(40 * CHAR_width_small, 16 * (CHAR_height_small + 2), 4, get_midi_channel_name(msp[0].midi_channel), 9, 1);
 #endif
     }
     if (menu_item_check(10))
@@ -19313,6 +19330,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
         set_glow_show_text_no_grid(40 * CHAR_width_small, 19 * (CHAR_height_small + 2), 4, get_midi_channel_name(slices_midi_channel), 11, 1);
 #endif
     }
+//*/
 
     if (count_omni() != 0)
     {
