@@ -605,8 +605,12 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   chorus_modulator[instance_id] = new AudioSynthWaveform();
   dexed_chorus[instance_id] = new AudioEffectModulatedDelay();
 
-  if (instance_id == 0 || instance_id == 1)
-    global_delay_in_mixer[instance_id] = new AudioMixer<2 * NUM_DRUMS + 3>();
+  // Allocate global delay mixer once for all instances
+  if (instance_id == 0)
+  {
+    global_delay_in_mixer[0] = new AudioMixer<2 * NUM_DRUMS + 3>();
+    global_delay_in_mixer[1] = new AudioMixer<2 * NUM_DRUMS + 3>();
+  }
 
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
 
