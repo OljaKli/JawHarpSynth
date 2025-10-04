@@ -18,24 +18,31 @@ void UI_func_liveseq_graphic(uint8_t param);
 
 class UI_LiveSeq_PianoRoll {
 public:
-uint16_t stepCursorPositionPrev = ROLL_WIDTH;
-uint32_t getCurrentPlaybackTime() const;
-  UI_LiveSeq_PianoRoll(LiveSequencer &sequencer, LiveSequencer::LiveSeqData &d);
+
+  uint32_t getCurrentPlaybackTime() const;
+  UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d);
   void processLCDM(uint8_t param);
   void handleTouchScreen(void);
   void handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity);
   FLASHMEM void onEventsChanged(void);
+  FLASHMEM void drawBarNumbers(void);
+  FLASHMEM uint16_t getSongPatternForNote(const LiveSequencer::NotePair& note) const;
+  uint16_t stepCursorPositionPrev = ROLL_WIDTH;
 
 private:
+ uint32_t getPatternRelativeTime(const LiveSequencer::MidiEvent& e) const;
+  void setPatternRelativeTime(LiveSequencer::MidiEvent& e, uint32_t time, uint16_t songPatternIndex = 0);
+  uint16_t getSongPatternForEvent(const LiveSequencer::MidiEvent& e) const;
   void drawBarInfoOnTop(void);
   uint32_t getAbsoluteEventTime(const LiveSequencer::MidiEvent& e) const;
   uint16_t getMaxBarsForCurrentMode() const;
   uint16_t getActualBarForNote(const LiveSequencer::NotePair& note) const;
   void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w, bool drawInGrey = false) const;
-  void updateSongEvent(LiveSequencer::MidiEvent &updatedEvent);
+  void updateSongEvent(LiveSequencer::MidiEvent& updatedEvent);
+  
   bool step(int8_t diff);
   std::set<uint8_t> keysPressed;
-  
+
   enum ViewMode {
     VIEW_ZOOM_X,
     VIEW_SCROLL_X,
@@ -54,7 +61,7 @@ private:
     EDIT_NOTE,
     EDIT_NUM
   };
-  
+
   uint8_t editMode = EDIT_LAYER;
 
   enum StepMode {
@@ -116,7 +123,7 @@ private:
   void initGUI(void);
   void drawPianoRoll(void);
   void handleEncoderRight(EncoderEvents e);
-  template <class T> bool hasConstrainedChanged(T &value, int16_t diff, T min, T max); 
+  template <class T> bool hasConstrainedChanged(T& value, int16_t diff, T min, T max);
 
   void queueDrawNote(LiveSequencer::NotePair note);
   void queueDrawNote(UpdateRange coords);
@@ -124,11 +131,11 @@ private:
   uint32_t getRelativeNoteTime(uint32_t time) const;
   void deleteSelectedNote(void);
   void deleteSelectedMuteEvent(void);
-  void updateMuteEventInSequencer(LiveSequencer::MidiEvent &updatedEvent);
-  void removeMuteEventFromSequencer(LiveSequencer::MidiEvent &eventToRemove);
+  void updateMuteEventInSequencer(LiveSequencer::MidiEvent& updatedEvent);
+  void removeMuteEventFromSequencer(LiveSequencer::MidiEvent& eventToRemove);
 
   void drawHeader(uint16_t modeFlags = 0);
-  void drawHeaderSetting(uint16_t x, const char *topText, const char *bottomText, bool topHighlighted, bool bottomHighlighted);
+  void drawHeaderSetting(uint16_t x, const char* topText, const char* bottomText, bool topHighlighted, bool bottomHighlighted);
   bool isSettingActivated = false;
   void toggleSettingActivated(void);
 
@@ -154,18 +161,18 @@ private:
 
   void reloadNotes(bool autoAdaptView = false);
   const uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
-  void setEventTime(LiveSequencer::MidiEvent &e, uint32_t time);
+  void setEventTime(LiveSequencer::MidiEvent& e, uint32_t time);
 
   // New methods for song mode support
   std::vector<LiveSequencer::NotePair> getNotePairsFromSongTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo);
   std::vector<LiveSequencer::MidiEvent> getMuteAutomationEvents(uint8_t track, uint8_t patternFrom, uint8_t patternTo);
   void drawSongModeIndicator(void);
-  
+
   // New helper method for track button
   uint8_t getMaxTrackForCurrentMode() const;
 
-  LiveSequencer &liveSeq;
-  LiveSequencer::LiveSeqData &data;
+  LiveSequencer& liveSeq;
+  LiveSequencer::LiveSeqData& data;
   bool isRunningHere;
   bool isVisible = false;
   bool openendFromLiveSequencer = false;
@@ -176,13 +183,13 @@ private:
   std::vector<uint16_t> layerColors;
   std::vector<TouchButton*> buttons;
 
-  EditableValueVector<uint8_t> *recordSteps;
+  EditableValueVector<uint8_t>* recordSteps;
 
-  TouchButton *buttonPlay;
-  TouchButton *buttonInst;
-  TouchButton *buttonView;
-  TouchButton *buttonEdit;
-  TouchButton *buttonStep;
+  TouchButton* buttonPlay;
+  TouchButton* buttonInst;
+  TouchButton* buttonView;
+  TouchButton* buttonEdit;
+  TouchButton* buttonStep;
 
   static constexpr uint8_t TOTAL_OCTAVES = 8;
   static constexpr uint16_t HEADER_DRAW_ALL = 0xFFFF;
