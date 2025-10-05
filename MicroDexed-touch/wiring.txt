@@ -1,7 +1,3 @@
-
-
-
-
 AudioMultiBandCompressor MultiBandCompressor;
 
 Realtime_Scope scope;
