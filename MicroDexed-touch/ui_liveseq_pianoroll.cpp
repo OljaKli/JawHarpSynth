@@ -695,26 +695,14 @@ UI_LiveSeq_PianoRoll::getMuteAutomationEvents(
 
   std::vector<LiveSequencer::MidiEvent> result;
 
-  // View time (ms) and pixel bounds (X)
-  const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
-  const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
-  const uint16_t pixStartX = ROLL_WIDTH;
-  const uint16_t pixEndX = DISPLAY_WIDTH - 1;
-
-  // Check if songEvents is empty
   if (data.songEvents.empty()) {
     return result;
   }
 
   for (const auto& patternEntry : data.songEvents) {
-    const uint16_t actualBar = patternEntry.first;
+    const uint16_t songPatternIndex = patternEntry.first;
+    const uint16_t absoluteBarStart = songPatternIndex * data.numberOfBars;
 
-    // Skip patterns outside our view range
-    if (actualBar < view.startBar || actualBar >= view.startBar + view.numBars) {
-      continue;
-    }
-
-    // Skip empty event lists
     if (patternEntry.second.empty()) {
       continue;
     }
@@ -724,22 +712,12 @@ UI_LiveSeq_PianoRoll::getMuteAutomationEvents(
         e.event == midi::ControlChange &&
         (e.note_in == LiveSequencer::TYPE_MUTE_ON || e.note_in == LiveSequencer::TYPE_MUTE_OFF)) {
 
-        // absolute time for this song-map event
-        const uint32_t eventTime = uint32_t(actualBar) * data.patternLengthMs + e.patternMs;
+        const uint16_t eventAbsoluteBar = absoluteBarStart + e.patternNumber;
 
-        // time overlap (allow endpoints)
-        const bool isInTime = (eventTime >= viewStartMs && eventTime <= viewEndMs);
-        if (!isInTime) continue;
-
-        // pixel overlap
-        const uint16_t x = getNoteCoord(eventTime);
-        const bool isInPixels = (x >= pixStartX && x <= pixEndX);
-        if (!isInPixels) continue;
-
-        // Return a copy but set the absolute patternNumber so downstream code sees the absolute bar
-        LiveSequencer::MidiEvent ev = e;
-        ev.patternNumber = actualBar;
-        result.emplace_back(ev);
+        if (eventAbsoluteBar >= patternFrom && eventAbsoluteBar <= patternTo) {
+          // Keep original cyclic pattern number - don't modify!
+          result.emplace_back(e);
+        }
       }
     }
   }
@@ -781,7 +759,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
     }
   }
   else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
-    // Song mode: show only automation events
+    // Song mode: show only automation events 
     notePairs.clear();
     muteAutomationEvents = getMuteAutomationEvents(0xFF, patternFrom, patternTo);
     selectedNote = -1;
@@ -839,7 +817,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawMuteAutomation(void) {
 
   for (size_t i = 0; i < muteAutomationEvents.size(); i++) {
     const auto& event = muteAutomationEvents.at(i);
-    const uint32_t eventTime = getEventTime(event);
+
+    // Calculate absolute bar on the fly for this event
+    uint16_t songPatternIndex = getSongPatternForEvent(event);
+    uint16_t absoluteBar = (songPatternIndex * data.numberOfBars) + event.patternNumber;
+    const uint32_t eventTime = absoluteBar * data.patternLengthMs + event.patternMs;
 
     // Skip events outside viewport
     if (eventTime < viewStartMs || eventTime > viewEndMs) {
@@ -1161,7 +1143,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       break;
 
       case VIEW_ZOOM_X:
-        if (data.isSongMode && !data.useGridSongMode) {
+        if ((data.isSongMode && !data.useGridSongMode) || data.activeTrack == SONG_MODE_MUTE_TRACK) {
           uint16_t maxBars = getMaxBarsForCurrentMode();
 
           int16_t newNumBars = view.numBars + e.dir;
@@ -1185,7 +1167,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
         break;
 
       case VIEW_SCROLL_X:
-        if (data.isSongMode && !data.useGridSongMode) {
+        if ((data.isSongMode && !data.useGridSongMode) || data.activeTrack == SONG_MODE_MUTE_TRACK) {
           uint16_t maxBars = getMaxBarsForCurrentMode();
 
           int16_t newStartBar = view.startBar + e.dir;
@@ -1228,18 +1210,118 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       switch (editMode) {
       case EDIT_SELECT_NOTE:
         if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
-          // For mute automation: scroll through events
-          if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
-            int16_t newSelection = selectedMuteEvent + e.dir;
-            if (newSelection < 0) newSelection = muteAutomationEvents.size() - 1;
-            else if (newSelection >= static_cast<int16_t>(muteAutomationEvents.size())) newSelection = 0;
+          // For mute automation: scroll through events sorted by screen position
+          if (!muteAutomationEvents.empty()) {
+            // Build list of events with their screen positions
+            std::vector<std::pair<int16_t, uint16_t>> eventsWithPos; // (index, screenX)
 
-            if (newSelection != selectedMuteEvent) {
-              selectedMuteEvent = newSelection;
-              headerFlags = (1 << EDIT_SELECT_NOTE);
-              drawFlags |= DRAW_MUTE_AUTOMATION;
+            for (size_t i = 0; i < muteAutomationEvents.size(); i++) {
+              auto& event = muteAutomationEvents[i];
+
+              // Calculate screen position using absolute time
+              uint16_t songPatternIndex = getSongPatternForEvent(event);
+              uint32_t absoluteTime = (songPatternIndex * data.numberOfBars * data.patternLengthMs) +
+                (event.patternNumber * data.patternLengthMs) + event.patternMs;
+              const uint16_t screenX = getNoteCoord(absoluteTime);
+
+              // Only include events that are actually visible on screen
+              if (screenX >= ROLL_WIDTH && screenX < DISPLAY_WIDTH) {
+                eventsWithPos.push_back({ (int16_t)i, screenX });
+              }
+            }
+
+            // Sort by screen position
+            std::sort(eventsWithPos.begin(), eventsWithPos.end(),
+              [](const auto& a, const auto& b) {
+                return a.second < b.second;
+              });
+
+            // Create the final sorted list
+            std::vector<int16_t> sortedEvents;
+            for (const auto& pair : eventsWithPos) {
+              sortedEvents.push_back(pair.first);
+            }
+
+            if (!sortedEvents.empty()) {
+              int16_t newSelection;
+
+              if (selectedMuteEvent == -1) {
+                // Start with leftmost event on screen
+                newSelection = sortedEvents[0];
+              }
+              else {
+                // Find current position in sorted list
+                int16_t currentPos = -1;
+                for (size_t i = 0; i < sortedEvents.size(); i++) {
+                  if (sortedEvents[i] == selectedMuteEvent) {
+                    currentPos = i;
+                    break;
+                  }
+                }
+
+                if (currentPos == -1) {
+                  // Current selection not visible - start with leftmost
+                  newSelection = sortedEvents[0];
+                }
+                else {
+                  // Move within sorted list
+                  int16_t newPos = currentPos + e.dir;
+                  if (newPos < 0) newPos = sortedEvents.size() - 1;
+                  else if (newPos >= static_cast<int16_t>(sortedEvents.size())) newPos = 0;
+
+                  newSelection = sortedEvents[newPos];
+                }
+              }
+
+              if (newSelection != selectedMuteEvent) {
+                // Queue redraw for OLD selected event
+                if (selectedMuteEvent > -1) {
+                  const auto& oldEvent = muteAutomationEvents.at(selectedMuteEvent);
+                  uint16_t oldSongPattern = getSongPatternForEvent(oldEvent);
+                  uint32_t oldAbsoluteTime = (oldSongPattern * data.numberOfBars * data.patternLengthMs) +
+                    (oldEvent.patternNumber * data.patternLengthMs) + oldEvent.patternMs;
+                  UpdateRange oldRegion;
+                  oldRegion.fromX = getNoteCoord(oldAbsoluteTime) - 5;
+                  oldRegion.toX = getNoteCoord(oldAbsoluteTime) + 5;
+                  drawRegionsX.push_back(oldRegion);
+                }
+
+                selectedMuteEvent = newSelection;
+
+                // Queue redraw for NEW selected event  
+                if (selectedMuteEvent > -1) {
+                  const auto& newEvent = muteAutomationEvents.at(selectedMuteEvent);
+                  uint16_t newSongPattern = getSongPatternForEvent(newEvent);
+                  uint32_t newAbsoluteTime = (newSongPattern * data.numberOfBars * data.patternLengthMs) +
+                    (newEvent.patternNumber * data.patternLengthMs) + newEvent.patternMs;
+                  UpdateRange newRegion;
+                  newRegion.fromX = getNoteCoord(newAbsoluteTime) - 5;
+                  newRegion.toX = getNoteCoord(newAbsoluteTime) + 5;
+                  drawRegionsX.push_back(newRegion);
+                }
+
+                headerFlags = (1 << EDIT_SELECT_NOTE);
+                drawFlags |= DRAW_MUTE_AUTOMATION | DRAW_BACKGROUND;
+              }
+            }
+            else {
+              // No visible events - clear selection
+              if (selectedMuteEvent > -1) {
+                const auto& oldEvent = muteAutomationEvents.at(selectedMuteEvent);
+                uint16_t oldSongPattern = getSongPatternForEvent(oldEvent);
+                uint32_t oldAbsoluteTime = (oldSongPattern * data.numberOfBars * data.patternLengthMs) +
+                  (oldEvent.patternNumber * data.patternLengthMs) + oldEvent.patternMs;
+                UpdateRange oldRegion;
+                oldRegion.fromX = getNoteCoord(oldAbsoluteTime) - 5;
+                oldRegion.toX = getNoteCoord(oldAbsoluteTime) + 5;
+                drawRegionsX.push_back(oldRegion);
+
+                selectedMuteEvent = -1;
+                drawFlags |= DRAW_MUTE_AUTOMATION | DRAW_BACKGROUND;
+              }
             }
           }
+          break;
         }
         else {
           if (!notePairs.empty()) {
@@ -1348,10 +1430,23 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
             LiveSequencer::MidiEvent& event = muteAutomationEvents.at(selectedMuteEvent);
             int8_t layer = event.note_in_velocity;
             if (hasConstrainedChanged(layer, e.dir, int8_t(0), int8_t(LiveSequencer::LIVESEQUENCER_NUM_LAYERS - 1))) {
+              // Queue redraw for OLD state
+              uint16_t songPattern = getSongPatternForEvent(event);
+              uint32_t absoluteTime = (songPattern * data.numberOfBars * data.patternLengthMs) +
+                (event.patternNumber * data.patternLengthMs) + event.patternMs;
+              UpdateRange region;
+              region.fromX = getNoteCoord(absoluteTime) - 5;
+              region.toX = getNoteCoord(absoluteTime) + 5;
+              drawRegionsX.push_back(region);
+
               event.note_in_velocity = layer;
               updateSongEvent(event);
+
+              // Queue redraw for NEW state
+              drawRegionsX.push_back(region); // Same region since position didn't change
+
               headerFlags |= (1 << EDIT_LAYER);
-              drawFlags |= DRAW_MUTE_AUTOMATION;
+              drawFlags |= DRAW_MUTE_AUTOMATION | DRAW_BACKGROUND;
             }
           }
         }
@@ -1420,20 +1515,85 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
 
       case EDIT_NOTEON:
         if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
-          // For mute automation: change timing
-          if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
-            LiveSequencer::MidiEvent& event = muteAutomationEvents.at(selectedMuteEvent);
-            uint32_t time = getEventTime(event);
-            uint32_t newTime = time + (e.dir * e.speed * 10); // Small timing adjustments
+          if (selectedMuteEvent > -1 && selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
+            LiveSequencer::MidiEvent& eventCopy = muteAutomationEvents.at(selectedMuteEvent);
+
+            // Queue redraw for OLD position
+            uint16_t oldSongPattern = getSongPatternForEvent(eventCopy);
+            uint32_t oldAbsoluteTime = (oldSongPattern * data.numberOfBars * data.patternLengthMs) +
+              (eventCopy.patternNumber * data.patternLengthMs) + eventCopy.patternMs;
+            UpdateRange oldRegion;
+            oldRegion.fromX = getNoteCoord(oldAbsoluteTime) - 5;
+            oldRegion.toX = getNoteCoord(oldAbsoluteTime) + 5;
+            drawRegionsX.push_back(oldRegion);
+
+            // FIND CANONICAL EVENT in data.songEvents (same as notes)
+            LiveSequencer::MidiEvent* realEvent = nullptr;
+            uint16_t songPatternIndex = 0;
+            for (auto& patternEntry : data.songEvents) {
+              for (auto& ev : patternEntry.second) {
+                if (ev.track == eventCopy.track &&
+                  ev.layer == eventCopy.layer &&
+                  ev.note_in == eventCopy.note_in &&
+                  ev.event == eventCopy.event &&
+                  ev.patternMs == eventCopy.patternMs &&
+                  ev.note_in_velocity == eventCopy.note_in_velocity) {
+                  realEvent = &ev;
+                  songPatternIndex = patternEntry.first;
+                  break;
+                }
+              }
+              if (realEvent) break;
+            }
+            if (!realEvent) {
+              songPatternIndex = getSongPatternForEvent(eventCopy);
+            }
+
+            // Use pattern-relative timing (same as notes)
+            uint32_t time = getPatternRelativeTime(eventCopy);
+            const uint32_t gridStep = data.patternLengthMs / 16;
+            uint32_t newTime = time + (e.dir * e.speed * gridStep);
+
+            // Constrain to valid range (same as notes)
+            uint32_t maxTime = uint32_t(data.numberOfBars) * data.patternLengthMs;
+            newTime = constrain(newTime, 0U, maxTime);
+
             if (newTime != time) {
-              setEventTime(event, newTime);
-              updateSongEvent(event);
+              // Convert back to cyclic patternNumber/patternMs (SAME AS NOTES)
+              uint32_t absoluteTime = (songPatternIndex * data.numberOfBars * data.patternLengthMs) + newTime;
+              uint8_t newPatternNumber = (absoluteTime / data.patternLengthMs) % data.numberOfBars;
+              uint32_t newPatternMs = absoluteTime % data.patternLengthMs;
+
+              // Update the CANONICAL event in data.songEvents (same as notes)
+              if (realEvent) {
+                realEvent->patternNumber = newPatternNumber;
+                realEvent->patternMs = newPatternMs;
+
+                // Also update the local copy for immediate display
+                eventCopy.patternNumber = newPatternNumber;
+                eventCopy.patternMs = newPatternMs;
+              }
+              else {
+                // Fallback: update via the copy
+                eventCopy.patternNumber = newPatternNumber;
+                eventCopy.patternMs = newPatternMs;
+                updateSongEvent(eventCopy);
+              }
+
               headerFlags |= (1 << EDIT_NOTEON);
-              drawFlags |= DRAW_MUTE_AUTOMATION;
+
+              // Queue redraw for NEW position
+              uint32_t newAbsoluteTime = (songPatternIndex * data.numberOfBars * data.patternLengthMs) +
+                (newPatternNumber * data.patternLengthMs) + newPatternMs;
+              UpdateRange newRegion;
+              newRegion.fromX = getNoteCoord(newAbsoluteTime) - 5;
+              newRegion.toX = getNoteCoord(newAbsoluteTime) + 5;
+              drawRegionsX.push_back(newRegion);
+
+              drawFlags |= DRAW_MUTE_AUTOMATION | DRAW_BACKGROUND;
             }
           }
         }
-
         else if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
           if (selectedNote > -1) {
             // Queue redraw of OLD position first
@@ -1574,6 +1734,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
           }
           break;
         }
+
       case EDIT_NOTEOFF:
         if (selectedNote > -1) {
           LiveSequencer::MidiEvent& on = notePairs.at(selectedNote).noteOn;
@@ -1651,12 +1812,57 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
         if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
           // For mute automation: toggle mute state
           if (selectedMuteEvent > -1 && !muteAutomationEvents.empty()) {
-            LiveSequencer::MidiEvent& event = muteAutomationEvents.at(selectedMuteEvent);
+            LiveSequencer::MidiEvent& eventCopy = muteAutomationEvents.at(selectedMuteEvent);
+
+            // Queue redraw for OLD state
+            uint16_t songPattern = getSongPatternForEvent(eventCopy);
+            uint32_t absoluteTime = (songPattern * data.numberOfBars * data.patternLengthMs) +
+              (eventCopy.patternNumber * data.patternLengthMs) + eventCopy.patternMs;
+            UpdateRange region;
+            region.fromX = getNoteCoord(absoluteTime) - 5;
+            region.toX = getNoteCoord(absoluteTime) + 5;
+            drawRegionsX.push_back(region);
+
+            // FIND CANONICAL EVENT first (same as time editing)
+            LiveSequencer::MidiEvent* realEvent = nullptr;
+            //uint16_t songPatternIndex = 0;
+            for (auto& patternEntry : data.songEvents) {
+              for (auto& ev : patternEntry.second) {
+                if (ev.track == eventCopy.track &&
+                  ev.layer == eventCopy.layer &&
+                  ev.note_in == eventCopy.note_in &&
+                  ev.event == eventCopy.event &&
+                  ev.patternMs == eventCopy.patternMs &&
+                  ev.note_in_velocity == eventCopy.note_in_velocity) {
+                  realEvent = &ev;
+                  //songPatternIndex = patternEntry.first;
+                  break;
+                }
+              }
+              if (realEvent) break;
+            }
+
             if (e.dir != 0) {
-              event.note_in = (event.note_in == LiveSequencer::TYPE_MUTE_ON) ? LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
-              updateSongEvent(event);
+              uint8_t newMuteState = (eventCopy.note_in == LiveSequencer::TYPE_MUTE_ON) ?
+                LiveSequencer::TYPE_MUTE_OFF : LiveSequencer::TYPE_MUTE_ON;
+
+              // Update the CANONICAL event first
+              if (realEvent) {
+                realEvent->note_in = newMuteState;
+                // Also update the local copy
+                eventCopy.note_in = newMuteState;
+              }
+              else {
+                // Fallback
+                eventCopy.note_in = newMuteState;
+                updateSongEvent(eventCopy);
+              }
+
+              // Queue redraw for NEW state
+              drawRegionsX.push_back(region); // Same region since position didn't change
+
               headerFlags |= (1 << EDIT_NOTE);
-              drawFlags |= DRAW_MUTE_AUTOMATION;
+              drawFlags |= DRAW_MUTE_AUTOMATION | DRAW_BACKGROUND;
             }
           }
         }
@@ -1756,13 +1962,31 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       oldMode = editMode;
       if (data.activeTrack == SONG_MODE_MUTE_TRACK)
       {
-        newMode = constrain(editMode + e.dir, 0, EDIT_NUM - 1);
-        //this is not pretty but without splitting up the whole editMode loop in 2 parts with new enum for automation, this is the best i can do.
-        //automation editor has less paramater than noteeditor but i want to use the most meaningful case names for it.
-        if (oldMode == 2 && newMode == 3)
-          newMode = 5;
-        else if (oldMode == 5 && newMode == 4)
-          newMode = 2;
+        // For mute automation, cycle through only these 3 parameters (no LAYER):
+        const uint8_t muteEditModes[] = { EDIT_SELECT_NOTE, EDIT_NOTEON, EDIT_NOTE };
+        const uint8_t numMuteModes = 3;
+
+        // Find current position in mute modes array
+        uint8_t currentPos = 0;
+        for (uint8_t i = 0; i < numMuteModes; i++) {
+          if (muteEditModes[i] == editMode) {
+            currentPos = i;
+            break;
+          }
+        }
+
+        // If current mode is not in mute modes (like LAYER), start from first
+        if (currentPos == 0 && muteEditModes[0] != editMode) {
+          currentPos = 0;
+          editMode = muteEditModes[0]; // Force to valid mode
+        }
+
+        // Calculate new position
+        int8_t newPos = currentPos + e.dir;
+        if (newPos < 0) newPos = numMuteModes - 1;
+        else if (newPos >= numMuteModes) newPos = 0;
+
+        newMode = muteEditModes[newPos];
       }
       else {
         newMode = constrain(editMode + e.dir, 0, EDIT_NUM - 1);
@@ -1772,6 +1996,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
       break;
 
     case MODE_STEP:
+    {
       // Store old step mode to detect changes
       uint8_t oldStepMode = stepMode;
       stepMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
@@ -1787,6 +2012,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
         drawHeader(HEADER_DRAW_ALL);
       }
       break;
+    }
     }
     if (oldMode != newMode) {
       if (mode == MODE_VIEW || mode == MODE_EDIT) {
@@ -1847,53 +2073,40 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
     break;
 
   case MODE_EDIT:
-    if (data.activeTrack == SONG_MODE_MUTE_TRACK && selectedMuteEvent > -1 && muteAutomationEvents.size() > 0) {
-      // Draw mute automation header - always show when on mute track
-      LiveSequencer::MidiEvent& m = muteAutomationEvents.at(selectedMuteEvent);
-
-      // Highlight based on current edit mode selection
-      if (modeFlags & (1 << EDIT_LAYER)) {
-        sprintf(s, "%i", m.note_in_velocity + 1);
-        drawHeaderSetting(GRID.X[2] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
-      }
+    if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+      // Mute automation header - only show relevant parameters
       if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
-        if (selectedNote > -1) {
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-
-          // Simple count of notes in the current layer
-          int8_t currentLayer = p.noteOn.layer;
-          int16_t layerNoteIndex = 1;
-          int16_t totalLayerNotes = 0;
-
-          for (size_t i = 0; i < notePairs.size(); i++) {
-            if (notePairs[i].noteOn.layer == currentLayer) {
-              totalLayerNotes++;
-              if (i < static_cast<size_t>(selectedNote)) {
-                layerNoteIndex++;
-              }
-            }
-          }
-
-          sprintf(s, "%03i/%03i", layerNoteIndex, totalLayerNotes);
-          drawHeaderSetting(GRID.X[3], "SELECT", s, false, (editMode == EDIT_SELECT_NOTE));
+        if (selectedMuteEvent > -1 && selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
+          sprintf(s, "%03i/%03i", selectedMuteEvent + 1, muteAutomationEvents.size());
         }
+        else {
+          sprintf(s, "---/%03i", muteAutomationEvents.size());
+        }
+        drawHeaderSetting(GRID.X[3], "SELECT", s, false, (editMode == EDIT_SELECT_NOTE));
       }
-
       if (modeFlags & (1 << EDIT_NOTEON)) {
-        if (data.isSongMode && !data.useGridSongMode && selectedNote > -1) {
-          // Show pattern-relative timing for editing (0-4 bars)
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          uint32_t patternRelativeTime = getPatternRelativeTime(p.noteOn);
-          // Show as bar.ms within the 4-bar cycle (0.0000 to 3.9999)
-          sprintf(s, "/ %lu.%04lu",
-            (patternRelativeTime / data.patternLengthMs) % data.numberOfBars,  // Which bar in the 4-bar cycle (0-3)
-            patternRelativeTime % data.patternLengthMs); // Ms within that bar
+        if (selectedMuteEvent > -1 && selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
+          auto& event = muteAutomationEvents[selectedMuteEvent];
+          // Use the EXACT same pattern as song mode notes
+          uint32_t patternRelativeTime = getPatternRelativeTime(event);
+          sprintf(s, "%lu.%04lu",
+            patternRelativeTime / data.patternLengthMs,
+            patternRelativeTime % data.patternLengthMs);
         }
-        else if (selectedNote > -1) {
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+        else {
+          sprintf(s, "--.----");
         }
-        drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
+        drawHeaderSetting(GRID.X[4], s, "POS", (editMode == EDIT_NOTEON), false);
+      }
+      if (modeFlags & (1 << EDIT_NOTE)) {
+        if (selectedMuteEvent > -1 && selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
+          auto& event = muteAutomationEvents[selectedMuteEvent];
+          sprintf(s, "%s", event.note_in == LiveSequencer::TYPE_MUTE_ON ? "ON " : "OFF");
+        }
+        else {
+          sprintf(s, "---");
+        }
+        drawHeaderSetting(GRID.X[5], "MUTE", s, false, (editMode == EDIT_NOTE));
       }
     }
     else if (selectedNote > -1) {
@@ -1925,12 +2138,21 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
         drawHeaderSetting(GRID.X[2] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
       }
       if (modeFlags & (1 << EDIT_NOTEON)) {
-        if (data.isSongMode && !data.useGridSongMode) {
-          uint16_t actualBar = getActualBarForNote(p);
-          sprintf(s, "/ %i.%04i", actualBar, p.noteOn.patternMs);
+        if (selectedNote > -1) {
+          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+          if (data.isSongMode && !data.useGridSongMode) {
+            // Show pattern-relative timing (like note-off does)
+            uint32_t patternRelativeTime = getPatternRelativeTime(p.noteOn);
+            sprintf(s, "/ %lu.%04lu",
+              patternRelativeTime / data.patternLengthMs,
+              patternRelativeTime % data.patternLengthMs);
+          }
+          else {
+            sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+          }
         }
         else {
-          sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+          sprintf(s, "/ --.----");
         }
         drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
       }
@@ -1948,6 +2170,27 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
           sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
         }
         drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_NOTEOFF));
+      }
+      if (modeFlags & (1 << EDIT_VELOCITY)) {
+        if (selectedNote > -1) {
+          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+          sprintf(s, "%i", p.noteOn.note_in_velocity);
+        }
+        else {
+          sprintf(s, "---");
+        }
+        drawHeaderSetting(GRID.X[5], "VEL", s, false, (editMode == EDIT_VELOCITY));
+      }
+      if (modeFlags & (1 << EDIT_NOTE)) {
+        if (selectedNote > -1) {
+          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+          std::string noteString = getNoteString(p.noteOn.note_in);
+          sprintf(s, "%s", noteString.c_str());
+        }
+        else {
+          sprintf(s, "---");
+        }
+        drawHeaderSetting(GRID.X[5] + 4 * CHAR_width_small, "NOTE", s, false, (editMode == EDIT_NOTE));
       }
     }
     break;
