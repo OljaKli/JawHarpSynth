@@ -2155,94 +2155,86 @@ uint8_t  glow_textsize;
 const char* glow_zero_name;
 uint8_t glow_type;
 
+FLASHMEM static bool set_glow_params(uint8_t x, uint8_t y, uint8_t type, int menuitem, bool force=false)
+{
+  bool result = menuitem == generic_temp_select_menu || force;
+  if (result)
+  {
+    glow_x = x;
+    glow_y = y;
+    glow_menu_item = menuitem;
+    glow_type = type;
+    glow_count = 0;
+  }
+  return result;
+}
+
 //song page only
 FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize, bool state)
 {
-  glow_x = x;
-  glow_y = y;
+  set_glow_params(x,y,state?5:6,menuitem,true);
   glow_input_value = input;
-  glow_menu_item = menuitem;
   glow_len = length;
   glow_textsize = textsize;
   glow_track = track;
-  if (state)
-    glow_type = 5;
-  else
-    glow_type = 6;
 }
 
 FLASHMEM void set_glow_print_formatted_number_signed(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize)
 {
-  if (menuitem == generic_temp_select_menu)
+  if (set_glow_params(x,y,4,menuitem))
   {
-    glow_x = x;
-    glow_y = y;
     glow_input_value = input;
-    glow_menu_item = menuitem;
     glow_len = length;
     glow_textsize = textsize;
-    glow_type = 4;
   }
 }
 FLASHMEM void set_glow_show_text_no_grid(uint16_t x, uint8_t y, uint8_t field_size, const char* str, uint8_t menuitem, uint8_t textsize)
 {
-  if (menuitem == generic_temp_select_menu)
+  if (set_glow_params(x,y,3,menuitem))
   {
-    glow_x = x;
-    glow_y = y;
     glow_str = str;
-    glow_menu_item = menuitem;
     glow_len = field_size;
     glow_textsize = textsize;
-    glow_type = 3;
   }
 }
 
 FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize)
 {
-  if (menuitem == generic_temp_select_menu)
+  if (set_glow_params(x,y,2,menuitem))
   {
-    glow_x = x;
-    glow_y = y;
     glow_input_value = input;
-    glow_menu_item = menuitem;
     glow_len = length;
     glow_textsize = textsize;
-    glow_type = 2;
   }
 }
 
 FLASHMEM void set_glow_panbar(uint8_t x, uint8_t y, int input, int menuitem)
 {
-  if (menuitem == generic_temp_select_menu)
+  if (set_glow_params(x,y,1,menuitem))
   {
-    glow_x = x;
-    glow_y = y;
     glow_input_value = input;
-    glow_menu_item = menuitem;
-    glow_type = 1;
   }
 }
 
 FLASHMEM void set_glow_bargraph(uint8_t x, uint8_t y, int input, int menuitem, int min, int max, const char* zero)
 {
-  if (menuitem == generic_temp_select_menu)
+  if (set_glow_params(x,y,0,menuitem))
   {
-    glow_x = x;
-    glow_y = y;
     glow_input_value = input;
-    glow_menu_item = menuitem;
     glow_limit_min = min;
     glow_limit_max = max;
     glow_zero_name = zero;
-    glow_type = 0;
   }
 }
 
+#define GLOW_OFF -999.0f
 FLASHMEM void draw_glow()
 {
   display.setTextSize(1);
-  display.setTextColor(COLOR_BACKGROUND, ColorHSV(0, 0, int(glow_bright)));
+  if (glow_bright > GLOW_OFF)
+    display.setTextColor(COLOR_BACKGROUND, ColorHSV(0, 0, int(glow_bright)));
+  else    
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
   if (glow_type == 0)
   {
@@ -2308,7 +2300,7 @@ FLASHMEM void draw_glow()
   display.setTextSize(1);
 }
 
-FLASHMEM void glow()
+FLASHMEM void glow(void)
 {
   if (!remote_active)
   {
@@ -2316,15 +2308,26 @@ FLASHMEM void glow()
       || (seq.edit_state == 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && glow_track == seq.selected_track &&
         seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0))
     {
-      if (glow_count < glow_smoothness_pts)
-        glow_count++;
-      else
-        glow_count = 0;
+      if (glow_count >= 0)
+      {
+        if (glow_count < glow_smoothness_pts)
+          glow_count++;
+        else
+          glow_count = 0;
 
-      glow_bright = 255.0 * (exp(-(pow(((glow_count / glow_smoothness_pts) - glow_beta) / glow_gamma, 2.0)) / 2.0));
+        glow_bright = 255.0 * (exp(-(pow(((glow_count / glow_smoothness_pts) - glow_beta) / glow_gamma, 2.0)) / 2.0));
+      }
+      else
+        glow_bright = GLOW_OFF;
       draw_glow();
     }
   }
+}
+
+FLASHMEM void remove_glow(void)
+{
+  glow_count = -1;
+  glow();
 }
 #endif
 

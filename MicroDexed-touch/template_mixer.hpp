@@ -79,7 +79,7 @@ static void applyGain(int16_t *data, int32_t mult)
 //     static void applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
 // #endif
 
-static void applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
+static void __attribute__((unused))  applyGainThenAdd(int16_t *data, const int16_t *in, int32_t mult)
 {
   uint32_t *dst = (uint32_t *)data;
   const uint32_t *src = (uint32_t *)in;
