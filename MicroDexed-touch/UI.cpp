@@ -19168,8 +19168,10 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
           new_menu = constrain(new_menu + e.dir, 0, 12); // keep going: 0 and 12 better be valid!
         }
 
+#if defined(GLOW)
         if (new_menu != generic_temp_select_menu)
           remove_glow();
+#endif // defined(GLOW)
 
         generic_temp_select_menu = new_menu;
       }
