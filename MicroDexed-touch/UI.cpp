@@ -18972,19 +18972,23 @@ FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
   }
 }
 
-FLASHMEM void _show_midi_channel(char* text, uint8_t line, uint8_t midi_channel)
+FLASHMEM void _show_midi_channel(const __FlashStringHelper* _txt, uint8_t line, uint8_t midi_channel, uint8_t instance=0)
 {
+  char text[21];
+  const char* txt = (const char*) _txt;
+
+  if (0 == instance)
+      snprintf_P(text, sizeof(text), PSTR("%s"), txt);
+  else      
+      snprintf_P(text, sizeof(text), PSTR("%s%d"), txt, instance);
+    
   setCursor_textGrid_small(2, line);
   display.setTextColor(GREY1);
   display.print(text);
   display.setTextColor(COLOR_SYSTEXT);
   setCursor_textGrid_small(40, line);
-  if (midi_channel == MIDI_CHANNEL_OFF)
-  {
-    display.print(F("OFF "));
-  }
-  else
-    _print_midi_channel(midi_channel);
+
+  _print_midi_channel(midi_channel); // deals with OMNI and OFF itself
 }
 
 FLASHMEM void UI_func_sd_content_not_found(uint8_t param)
@@ -19105,46 +19109,36 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     helptext_l(back_text);
     helptext_r("EDIT");
     display.setTextSize(1);
-    char buf[21];
     for (uint8_t i = 0; i < 4; i++)
     {
-      snprintf_P(buf, sizeof(buf), PSTR("%s%d"), F("DEXED INSTANCE #"), i + 1);
 #if (NUM_DEXED>2)
-      _show_midi_channel(buf, 5 + i, configuration.dexed[i].midi_channel);
+      _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, configuration.dexed[i].midi_channel, i+1);
 #else
-      _show_midi_channel(buf, 5 + i, MIDI_CHANNEL_OFF);
+      _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, MIDI_CHANNEL_OFF, i+1);
 #endif
     }
 
-    snprintf_P(buf, sizeof(buf), PSTR("%s"), F("GRANULAR SYNTH"));
 #ifdef GRANULAR
-    _show_midi_channel(buf, 9, granular_params.midi_channel);
+    _show_midi_channel(F("GRANULAR SYNTH"), 9, granular_params.midi_channel);
 #endif
-    snprintf_P(buf, sizeof(buf), PSTR("%s"), F("MDA ePIANO"));
-    _show_midi_channel(buf, 10, configuration.epiano.midi_channel);
+    _show_midi_channel(F("MDA ePIANO"), 10, configuration.epiano.midi_channel);
 
     for (uint8_t i = 0; i < 2; i++)
     {
-      snprintf_P(buf, sizeof(buf), PSTR("%s%d"), F("MICROSYNTH #"), i + 1);
-      _show_midi_channel(buf, 12 + i, microsynth[i].midi_channel);
+      _show_midi_channel(F("MICROSYNTH #"), 12 + i, microsynth[i].midi_channel, i+1);
     }
 
-    snprintf_P(buf, sizeof(buf), PSTR("%s"), F("BRAIDS"));
-    _show_midi_channel(buf, 14, braids_osc.midi_channel);
+    _show_midi_channel(F("BRAIDS"), 14, braids_osc.midi_channel);
 
     for (uint8_t i = 0; i < 2; i++)
     {
-      snprintf_P(buf, sizeof(buf), PSTR("%s%d"), F("MULTISAMPLE (MSP) #"), i + 1);
-      _show_midi_channel(buf, 15 + i, msp[i].midi_channel);
+      _show_midi_channel(F("MULTISAMPLE (MSP) #"), 15 + i, msp[i].midi_channel, i+1);
     }
 
-    snprintf_P(buf, sizeof(buf), PSTR("%s"), F("DRUMS/SAMPLES"));
-    _show_midi_channel(buf, 17, drum_midi_channel);
-
-    snprintf_P(buf, sizeof(buf), PSTR("%s"), F("DRUM SLICES"));
-    _show_midi_channel(buf, 18, slices_midi_channel);
-
+    _show_midi_channel(F("DRUMS/SAMPLES"), 17, drum_midi_channel);
+    _show_midi_channel(F("DRUM SLICES"), 18, slices_midi_channel);
   }
+
   if (LCDML.FUNC_loop())
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
