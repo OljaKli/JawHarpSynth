@@ -140,7 +140,7 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   }
   
   // Calculate x position
-  uint16_t x_pos;
+  uint16_t x_pos=0;
   switch(position) {
     case 0: x_pos = 0; break;
     case 1: x_pos = DISPLAY_WIDTH - CHAR_width_small * l; break;  
