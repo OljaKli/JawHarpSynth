@@ -38,6 +38,8 @@
 #include "MD_REncoder.h"
 #include "MD_MIDIFile.h"
 
+#define MIDI_CHANNEL_ABSENT     255 // no instrument
+
 struct ScopeSettings {
   bool enabled;
   uint16_t x;
