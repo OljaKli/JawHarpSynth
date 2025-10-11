@@ -101,24 +101,97 @@ FLASHMEM void updateTouchScreen() {
   wakeScreenFlag |= (numTouchPoints > 0);
 }
 
-FLASHMEM void helptext_l(const char* str)
+// Main function that handles both types
+FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash) 
 {
   display.setTextSize(1);
-  uint8_t l = strlen(str);
-
-  display.setCursor(0, DISPLAY_HEIGHT - CHAR_height_small);
-  display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-  display.print(str);
-
-  if (l < ts.old_helptext_length[0])
-  {
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    for (uint8_t x = 0; x < ts.old_helptext_length[0] - l; x++)
-      display.print(" ");
+  
+  // Calculate string length based on type
+  uint8_t l;
+  if (is_flash) {
+    // Flash string length calculation
+    PGM_P p = reinterpret_cast<PGM_P>(str);
+    l = 0;
+    char c;
+    while ((c = pgm_read_byte(p + l)) != 0) {
+      l++;
+    }
+  } else {
+    // RAM string length calculation
+    l = strlen((const char*)str);
   }
-
-  ts.old_helptext_length[0] = l;
+  
+  uint8_t old_len = ts.old_helptext_length[position];
+  uint8_t y_pos = DISPLAY_HEIGHT - CHAR_height_small;
+  
+  // Clear previous text if new text is shorter (except center)
+  if (l < old_len && position != 2) {
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    uint16_t clear_x, clear_width;
+    
+    if (position == 0) {
+      clear_x = CHAR_width_small * l;
+      clear_width = CHAR_width_small * (old_len - l);
+    } else {
+      clear_x = DISPLAY_WIDTH - CHAR_width_small * old_len;
+      clear_width = CHAR_width_small * (old_len - l);
+    }
+   display.fillRect(clear_x, y_pos, clear_width, CHAR_height_small, COLOR_BACKGROUND);
+  }
+  
+  // Calculate x position
+  uint16_t x_pos;
+  switch(position) {
+    case 0: x_pos = 0; break;
+    case 1: x_pos = DISPLAY_WIDTH - CHAR_width_small * l; break;  
+    case 2: 
+      if (l != old_len) {
+        display.fillRect(0, y_pos, DISPLAY_WIDTH, CHAR_height_small, COLOR_BACKGROUND);
+      }
+      x_pos = (DISPLAY_WIDTH - CHAR_width_small * l) / 2;
+      break;
+  }
+  
+  // Draw the text
+  display.setCursor(x_pos, y_pos);
+  display.setTextColor(COLOR_SYSTEXT, position == 2 ? COLOR_BACKGROUND : DX_DARKCYAN);
+  
+  if (is_flash) {
+    display.print((const __FlashStringHelper*)str);
+  } else {
+    display.print((const char*)str);
+  }
+  
+  ts.old_helptext_length[position] = l;
 }
+
+// RAM string versions
+FLASHMEM void helptext_l(const char* str) { 
+  helptext_impl(str, 0, false); 
+}
+
+FLASHMEM void helptext_r(const char* str) { 
+  helptext_impl(str, 1, false); 
+}
+
+FLASHMEM void helptext_c(const char* str) { 
+  helptext_impl(str, 2, false); 
+}
+
+// Flash string versions  
+FLASHMEM void helptext_l(const __FlashStringHelper* str) { 
+  helptext_impl(str, 0, true); 
+}
+
+FLASHMEM void helptext_r(const __FlashStringHelper* str) { 
+  helptext_impl(str, 1, true); 
+}
+
+FLASHMEM void helptext_c(const __FlashStringHelper* str) { 
+  helptext_impl(str, 2, true); 
+}
+
+
 extern void clear_bottom_half_screen_without_backbutton();
 
 FLASHMEM void draw_back_touchbutton()
@@ -153,40 +226,6 @@ FLASHMEM void draw_back_touchbutton()
   {
     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
   }
-}
-
-FLASHMEM void helptext_r(const char* str)
-{
-  display.setTextSize(1);
-  uint8_t l = strlen(str);
-  display.setCursor(DISPLAY_WIDTH - CHAR_width_small * l, DISPLAY_HEIGHT - CHAR_height_small);
-  display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-  display.print(str);
-  if (l < ts.old_helptext_length[1])
-  {
-    display.setCursor(DISPLAY_WIDTH - CHAR_width_small * (ts.old_helptext_length[1]), DISPLAY_HEIGHT - CHAR_height_small);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    for (uint8_t x = 0; x < ts.old_helptext_length[1] - l; x++)
-      display.print(" ");
-  }
-  ts.old_helptext_length[1] = l;
-}
-
-FLASHMEM void helptext_c(const char* str)
-{
-  display.setTextSize(1);
-  uint8_t l = strlen(str);
-  display.setCursor(DISPLAY_WIDTH / 2 - (l / 2) * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small);
-  display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-  display.print(str);
-  if (l < ts.old_helptext_length[2])
-  {
-    display.setCursor(DISPLAY_WIDTH / 2 - (ts.old_helptext_length[2] / 2) * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    for (uint8_t x = 0; x < ts.old_helptext_length[2] - l; x++)
-      display.print(" ");
-  }
-  ts.old_helptext_length[2] = l;
 }
 
 FLASHMEM uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b)
@@ -278,7 +317,7 @@ FLASHMEM bool handleLiveModButtons(void) {
   }
   if (pressedOne) {
     if (dexed_live_mod.active_button > 0) {
-      helptext_r("< > CHANGE MODIFIER VALUE");
+      helptext_r(F("< > CHANGE MODIFIER VALUE"));
       display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
       print_empty_spaces(38, 1);
       display.setCursor(9 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small * 1);

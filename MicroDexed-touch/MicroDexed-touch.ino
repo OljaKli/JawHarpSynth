@@ -2962,7 +2962,7 @@ void loop()
       setCursor_textGrid_small(33, 6);
       display.print("STOPPED");
       print_smf_parameters();
-      helptext_r("START PLAYING");
+      helptext_r(F("START PLAYING"));
       seq.edit_state = false;
     }
     smf_playing = false;

@@ -62,7 +62,7 @@ Dexed::Dexed(uint8_t maxnotes, uint16_t rate)
   sustain = false;
   voices = NULL;
 
-  max_notes=maxnotes;
+  max_notes = maxnotes;
   if (max_notes > 0)
   {
     voices = new ProcessorVoice[max_notes]; // sizeof(ProcessorVoice) = 20
@@ -78,7 +78,7 @@ Dexed::Dexed(uint8_t maxnotes, uint16_t rate)
   else
     voices = NULL;
 
-  used_notes=max_notes;
+  used_notes = max_notes;
   setMonoMode(false);
   loadInitVoice();
 
@@ -108,24 +108,24 @@ void Dexed::setEngineType(uint8_t engine)
 {
   panic();
 
-  switch(engine)
+  switch (engine)
   {
-    case MSFA:
-      controllers.core = (FmCore*)engineMsfa;
-      engineType=MSFA;
-      break;
-    case MKI:
-      controllers.core = (FmCore*)engineMkI;
-      engineType=MKI;
-      break;
-    case OPL:
-      controllers.core = (FmCore*)engineOpl;
-      engineType=OPL;
-      break;
-    default:
-      controllers.core = (FmCore*)engineMsfa;
-      engineType=MSFA;
-      break;
+  case MSFA:
+    controllers.core = (FmCore*)engineMsfa;
+    engineType = MSFA;
+    break;
+  case MKI:
+    controllers.core = (FmCore*)engineMkI;
+    engineType = MKI;
+    break;
+  case OPL:
+    controllers.core = (FmCore*)engineOpl;
+    engineType = OPL;
+    break;
+  default:
+    controllers.core = (FmCore*)engineMsfa;
+    engineType = MSFA;
+    break;
   }
 
   controllers.refresh();
@@ -164,7 +164,7 @@ void Dexed::getSamples(float* buffer, uint16_t n_samples)
   {
     for (uint8_t i = 0; i < used_notes; i++)
     {
-      if ( voices[i].live )
+      if (voices[i].live)
         voices[i].dx7_note->update(data, voices[i].midi_note, voices[i].velocity, voices[i].porta, &controllers);
     }
     lfo.reset(data + 137);
@@ -213,12 +213,12 @@ void Dexed::getSamples(int16_t* buffer, uint16_t n_samples)
 }
 
 void Dexed::keydown(uint8_t pitch, uint8_t velo) {
-  if ( velo == 0 ) {
+  if (velo == 0) {
     keyup(pitch);
     return;
   }
 
-  velo=uint8_t((float(velo)/127.0)*velocity_diff+0.5)+velocity_offset;
+  velo = uint8_t((float(velo) / 127.0) * velocity_diff + 0.5) + velocity_offset;
 
   pitch += data[144] - TRANSPOSE_FIX;
 
@@ -226,7 +226,7 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
   lastKeyDown = pitch;
 
   int32_t porta = -1;
-  if ( controllers.portamento_enable_cc && previousKeyDown >= 0 )
+  if (controllers.portamento_enable_cc && previousKeyDown >= 0)
     porta = controllers.portamento_cc;
 
   uint8_t note = currentNote;
@@ -281,14 +281,14 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
     {
       currentNote = (note + 1) % used_notes;
       //if (keydown_counter == 0) // Original comment: TODO: should only do this if # keys down was 0
-        lfo.keydown();
+      lfo.keydown();
       voices[note].midi_note = pitch;
       voices[note].velocity = velo;
       voices[note].sustained = sustain;
       voices[note].keydown = true;
       int32_t srcnote = (previousKeyDown >= 0) ? previousKeyDown : pitch;
       voices[note].dx7_note->init(data, pitch, velo, srcnote, porta, &controllers);
-      if ( data[136] )
+      if (data[136])
         voices[note].dx7_note->oscSync();
       voices[i].key_pressed_timer = millis();
       keydown_counter++;
@@ -301,16 +301,16 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
     note = (note + 1) % used_notes;
   }
 
-  if ( monoMode ) {
+  if (monoMode) {
     for (uint8_t i = 0; i < used_notes; i++) {
-      if ( voices[i].live ) {
+      if (voices[i].live) {
         // all keys are up, only transfer signal
-        if ( ! voices[i].keydown ) {
+        if (!voices[i].keydown) {
           voices[i].live = false;
           voices[note].dx7_note->transferSignal(*voices[i].dx7_note);
           break;
         }
-        if ( voices[i].midi_note < pitch ) {
+        if (voices[i].midi_note < pitch) {
           voices[i].live = false;
           voices[note].dx7_note->transferState(*voices[i].dx7_note);
           break;
@@ -331,7 +331,7 @@ void Dexed::keyup(uint8_t pitch) {
   pitch += data[144] - TRANSPOSE_FIX;
 
   for (note = 0; note < used_notes; note++) {
-    if ( voices[note].midi_note == pitch && voices[note].keydown ) {
+    if (voices[note].midi_note == pitch && voices[note].keydown) {
       voices[note].keydown = false;
       voices[note].key_pressed_timer = 0;
 
@@ -340,21 +340,21 @@ void Dexed::keyup(uint8_t pitch) {
   }
 
   // note not found ?
-  if ( note >= used_notes ) {
+  if (note >= used_notes) {
     return;
   }
 
-  if ( monoMode ) {
+  if (monoMode) {
     int8_t highNote = -1;
     uint8_t target = 0;
     for (int8_t i = 0; i < used_notes; i++) {
-      if ( voices[i].keydown && voices[i].midi_note > highNote ) {
+      if (voices[i].keydown && voices[i].midi_note > highNote) {
         target = i;
         highNote = voices[i].midi_note;
       }
     }
 
-    if ( highNote != -1 && voices[note].live ) {
+    if (highNote != -1 && voices[note].live) {
       voices[note].live = false;
       voices[note].key_pressed_timer = 0;
       voices[target].live = true;
@@ -362,9 +362,10 @@ void Dexed::keyup(uint8_t pitch) {
     }
   }
 
-  if ( sustain ) {
+  if (sustain) {
     voices[note].sustained = true;
-  } else {
+  }
+  else {
     voices[note].dx7_note->keyup();
   }
 }
@@ -429,7 +430,7 @@ void Dexed::panic(void)
       voices[i].live = false;
       voices[i].sustained = false;
       voices[i].key_pressed_timer = 0;
-      if ( voices[i].dx7_note != NULL ) {
+      if (voices[i].dx7_note != NULL) {
         voices[i].dx7_note->oscSync();
       }
     }
@@ -581,7 +582,7 @@ bool Dexed::decodeVoice(uint8_t* new_data, uint8_t* encoded_data)
   panic();
   doRefreshVoice();
 
-  strncpy(dexed_voice_name, (char *)&encoded_data[118], sizeof(dexed_voice_name) - 1);
+  strncpy(dexed_voice_name, (char*)&encoded_data[118], sizeof(dexed_voice_name) - 1);
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   Serial.print(F("Voice ["));
   Serial.print(dexed_voice_name);
@@ -670,7 +671,7 @@ void Dexed::loadVoiceParameters(uint8_t* new_data)
   memcpy(&data, new_data, 155);
   doRefreshVoice();
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
-  strncpy(dexed_voice_name, (char *)&new_data[145], sizeof(dexed_voice_name) - 1);
+  strncpy(dexed_voice_name, (char*)&new_data[145], sizeof(dexed_voice_name) - 1);
 
   Serial.print(F("Voice ["));
   Serial.print(dexed_voice_name);
@@ -842,10 +843,10 @@ int16_t Dexed::checkSystemExclusive(const uint8_t* sysex, const uint16_t len)
         -9:     Wrong length for SysEx bank bulk upload (not 4096).
         -10:    Checksum error for bank.
         -11:    Unknown SysEx message.
-	64-77:	Function parameter changed.
-	100:	Voice loaded.
-	200:	Bank loaded.
-	300-455:	Voice parameter changed.
+  64-77:	Function parameter changed.
+  100:	Voice loaded.
+  200:	Bank loaded.
+  300-455:	Voice parameter changed.
 */
 {
   int32_t bulk_checksum_calc = 0;
@@ -862,57 +863,57 @@ int16_t Dexed::checkSystemExclusive(const uint8_t* sysex, const uint16_t len)
   // Decode SYSEX by means of length
   switch (len)
   {
-    case 7: // parse parameter change
-      if (((sysex[3] & 0x7c) >> 2) != 0 && ((sysex[3] & 0x7c) >> 2) != 2)
-        return(-3);
+  case 7: // parse parameter change
+    if (((sysex[3] & 0x7c) >> 2) != 0 && ((sysex[3] & 0x7c) >> 2) != 2)
+      return(-3);
 
-      if ((sysex[3] & 0x7c) >> 2 == 0) // Voice parameter
-      {
-        setVoiceDataElement((sysex[4] & 0x7f) + ((sysex[3] & 0x03) * 128), sysex[5]);
-	doRefreshVoice();
-	return((sysex[4] & 0x7f) + ((sysex[3] & 0x03) * 128)+300);
-      }
-      else if ((sysex[3] & 0x7c) >> 2 == 2) // Function parameter
-        return(sysex[4]);
-      else
-	return(-4);
-      break;
-    case 163: // 1 Voice bulk upload
-      if ((sysex[3] & 0x7f) != 0)
-        return(-5);
+    if ((sysex[3] & 0x7c) >> 2 == 0) // Voice parameter
+    {
+      setVoiceDataElement((sysex[4] & 0x7f) + ((sysex[3] & 0x03) * 128), sysex[5]);
+      doRefreshVoice();
+      return((sysex[4] & 0x7f) + ((sysex[3] & 0x03) * 128) + 300);
+    }
+    else if ((sysex[3] & 0x7c) >> 2 == 2) // Function parameter
+      return(sysex[4]);
+    else
+      return(-4);
+    break;
+  case 163: // 1 Voice bulk upload
+    if ((sysex[3] & 0x7f) != 0)
+      return(-5);
 
-      if (((sysex[4] << 7) | sysex[5]) != 0x9b)
-        return(-6);
+    if (((sysex[4] << 7) | sysex[5]) != 0x9b)
+      return(-6);
 
-      // checksum calculation
-      for (uint8_t i = 0; i < 155 ; i++)
-        bulk_checksum_calc -= sysex[i + 6];
-      bulk_checksum_calc &= 0x7f;
+    // checksum calculation
+    for (uint8_t i = 0; i < 155; i++)
+      bulk_checksum_calc -= sysex[i + 6];
+    bulk_checksum_calc &= 0x7f;
 
-      if (bulk_checksum_calc != bulk_checksum)
-        return(-7);
+    if (bulk_checksum_calc != bulk_checksum)
+      return(-7);
 
-      return(100);
-      break;
-    case 4104: // 1 Bank bulk upload
-      if ((sysex[3] & 0x7f) != 9)
-        return(-8);
+    return(100);
+    break;
+  case 4104: // 1 Bank bulk upload
+    if ((sysex[3] & 0x7f) != 9)
+      return(-8);
 
-      if (((sysex[4] << 7) | sysex[5]) != 0x1000)
-        return(-9);
+    if (((sysex[4] << 7) | sysex[5]) != 0x1000)
+      return(-9);
 
-      // checksum calculation
-      for (uint16_t i = 0; i < 4096 ; i++)
-        bulk_checksum_calc -= sysex[i + 6];
-      bulk_checksum_calc &= 0x7f;
+    // checksum calculation
+    for (uint16_t i = 0; i < 4096; i++)
+      bulk_checksum_calc -= sysex[i + 6];
+    bulk_checksum_calc &= 0x7f;
 
-      if (bulk_checksum_calc != bulk_checksum)
-        return(-10);
+    if (bulk_checksum_calc != bulk_checksum)
+      return(-10);
 
-      return(200);
-      break;
-    default:
-      return(-11);
+    return(200);
+    break;
+  default:
+    return(-11);
   }
 }
 
@@ -1466,7 +1467,7 @@ uint8_t Dexed::getOPFrequencyCoarse(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
-  return (data[(op * 21) + DEXED_OP_FREQ_COARSE ]);
+  return (data[(op * 21) + DEXED_OP_FREQ_COARSE]);
 }
 
 void Dexed::setOPFrequencyFine(uint8_t op, uint8_t frq_fine)
@@ -1535,7 +1536,7 @@ uint8_t Dexed::getPitchLevel(uint8_t step)
 
 void Dexed::setAlgorithm(uint8_t algorithm)
 {
-  algorithm  = constrain(algorithm, 0, 31);
+  algorithm = constrain(algorithm, 0, 31);
 
   data[DEXED_VOICE_OFFSET + DEXED_ALGORITHM] = algorithm;
   doRefreshVoice();
@@ -1548,7 +1549,7 @@ uint8_t Dexed::getAlgorithm(void)
 
 void Dexed::setFeedback(uint8_t feedback)
 {
-  feedback  = constrain(feedback, 0, 31);
+  feedback = constrain(feedback, 0, 31);
 
   data[DEXED_VOICE_OFFSET + DEXED_FEEDBACK] = feedback;
   doRefreshVoice();
@@ -1572,7 +1573,7 @@ bool Dexed::getOscillatorSync(void)
 
 void Dexed::setLFOSpeed(uint8_t speed)
 {
-  speed  = constrain(speed, 0, 99);
+  speed = constrain(speed, 0, 99);
 
   data[DEXED_VOICE_OFFSET + DEXED_LFO_SPEED] = speed;
   lfo.reset(data + 137);
@@ -1585,7 +1586,7 @@ uint8_t Dexed::getLFOSpeed(void)
 
 void Dexed::setLFODelay(uint8_t delay)
 {
-  delay  = constrain(delay, 0, 99);
+  delay = constrain(delay, 0, 99);
 
   data[DEXED_VOICE_OFFSET + DEXED_LFO_DELAY] = delay;
   lfo.reset(data + 137);
@@ -1648,7 +1649,7 @@ uint8_t Dexed::getLFOWaveform(void)
 
 void Dexed::setLFOPitchModulationSensitivity(uint8_t sensitivity)
 {
-  sensitivity  = constrain(sensitivity, 0, 5);
+  sensitivity = constrain(sensitivity, 0, 5);
 
   data[DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_SENS] = sensitivity;
   lfo.reset(data + 137);
@@ -1696,24 +1697,24 @@ void Dexed::getVelocityScale(uint8_t* offset, uint8_t* max)
 
 void Dexed::setVelocityScale(uint8_t setup = MIDI_VELOCITY_SCALING_OFF)
 {
-  switch(setup)
+  switch (setup)
   {
-    case MIDI_VELOCITY_SCALING_OFF:
-      velocity_offset=0;
-      velocity_max=127;
-      break;
-    case MIDI_VELOCITY_SCALING_DX7:
-      velocity_offset=16;
-      velocity_max=109;
-      break;
-    case MIDI_VELOCITY_SCALING_DX7II:
-      velocity_offset=6;
-      velocity_max=119;
-      break;
-    default:
-      velocity_offset=0;
-      velocity_max=127;
-      break;
+  case MIDI_VELOCITY_SCALING_OFF:
+    velocity_offset = 0;
+    velocity_max = 127;
+    break;
+  case MIDI_VELOCITY_SCALING_DX7:
+    velocity_offset = 16;
+    velocity_max = 109;
+    break;
+  case MIDI_VELOCITY_SCALING_DX7II:
+    velocity_offset = 6;
+    velocity_max = 119;
+    break;
+  default:
+    velocity_offset = 0;
+    velocity_max = 127;
+    break;
   }
   setVelocityScale(velocity_offset, velocity_max);
 }

@@ -85,8 +85,20 @@ void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
 uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
-void helptext_l(const char* str);
-void helptext_r(const char* str);
+
+// void helptext_l(const char* str);
+// void helptext_r(const char* str);
+
+// RAM string versions
+FLASHMEM void helptext_l(const char* str);
+FLASHMEM void helptext_r(const char* str);
+FLASHMEM void helptext_c(const char* str);
+
+// Flash string versions  
+FLASHMEM void helptext_l(const __FlashStringHelper* str);
+FLASHMEM void helptext_r(const __FlashStringHelper* str);
+FLASHMEM void helptext_c(const __FlashStringHelper* str);
+
 void update_latch_button();
 void draw_back_touchbutton();
 void draw_loop_buttons();
@@ -96,7 +108,7 @@ void handle_page_with_touch_back_button();
 void print_file_manager_active_border();
 uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
 void update_step_rec_buttons();
-void handle_touchscreen_chain_editor() ;
+void handle_touchscreen_chain_editor();
 void handle_touchscreen_braids(void);
 void handle_touchscreen_cv_screen(void);
 void handle_touchscreen_chord_arranger(void);

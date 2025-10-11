@@ -304,7 +304,7 @@ FLASHMEM bool save_sd_voice(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
     uint8_t data[128];
 
     //  snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
-    snprintf_P(filename, sizeof(filename), PSTR("/DEXED/%d/%d/%s.syx"), p, b, g_bank_name[instance_id]);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/%s.syx"), DEXED_CONFIG_PATH, p, b, g_bank_name[instance_id]);
 
     AudioNoInterrupts();
     sysex = SD.open(filename, FILE_WRITE);
@@ -436,7 +436,16 @@ FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
 {
   int32_t bulk_checksum_calc = 0;
 
+if (!sysex) return false; // Check file is valid
+  
   AudioNoInterrupts();
+  
+  // Check if file is writable
+  if (sysex.size() != 4104) {
+    AudioInterrupts();
+    return false;
+  }
+
   sysex.seek(0);
 
   if (sysex.size() != 4104) // check sysex size

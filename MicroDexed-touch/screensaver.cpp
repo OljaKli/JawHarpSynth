@@ -1190,12 +1190,12 @@ FLASHMEM void gol_loop() {
     delay(120); // Adjust speed as needed
 }
 
-// CM5 Connection Machine ScreenSaver
-
-uint8_t ar[18][34];
+//Connection Machine CM5
+// Use bit-packed storage for exact same dimensions: 18 rows x 34 columns
+uint32_t ar_bits[6] = {0}; // 6x32 bits = 192 bits, enough for 18x34 (612 bits needed)
 uint8_t pixel;
-uint8_t  w = 16;
- uint8_t spacer;
+uint8_t w = 16;
+uint8_t spacer;
 #define RNUM_SEED 0xBAD
 static uint16_t rnum = RNUM_SEED;
 
@@ -1209,121 +1209,138 @@ static uint16_t get_random_bit(void)
   return rand_bit;
 }
 
+// Get pixel from bit-packed array - identical to original ar[i][j]
+FLASHMEM bool get_pixel(uint8_t i, uint8_t j) {
+    uint16_t index = i * 34 + j;  // 34 columns like original
+    uint8_t array_index = index / 32;
+    uint8_t bit_index = index % 32;
+    return (ar_bits[array_index] >> bit_index) & 1;
+}
+
+// Set pixel in bit-packed array - identical to original ar[i][j]
+FLASHMEM void set_pixel(uint8_t i, uint8_t j, bool state) {
+    uint16_t index = i * 34 + j;  // 34 columns like original
+    uint8_t array_index = index / 32;
+    uint8_t bit_index = index % 32;
+    
+    if (state) {
+        ar_bits[array_index] |= (1UL << bit_index);
+    } else {
+        ar_bits[array_index] &= ~(1UL << bit_index);
+    }
+}
+
 FLASHMEM void paintCM5_I(int x,int y) {
-   uint8_t i, j;bool pixel;
-  spacer = 4;
-  uint8_t ledsize = 3;
-  for (i = 0; i < w; i++)
-  {
-    for (j = 0; j < 32; j++)
-    {
-      pixel = ar[i][j];
-      if (j % 2 == 0)
-      {
-        if (pixel == 1)
-          display.fillRect(((w - i) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, RED);
-        else
-          display.fillRect(((w - i) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
-      }
-      else  if (pixel == 1)
-        display.fillRect(((i + 1) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, RED);
-      else
-        display.fillRect(((i + 1) * spacer) - spacer +x, j * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
+    uint8_t i, j;
+    spacer = 4;
+    uint8_t ledsize = 3;
+    for (i = 0; i < w; i++) {
+        for (j = 0; j < 32; j++) {
+            bool pixel = get_pixel(i, j);
+            if (j % 2 == 0) {
+                if (pixel)
+                    display.fillRect(((w - i) * spacer) - spacer + x, j * spacer + y, ledsize, ledsize, RED);
+                else
+                    display.fillRect(((w - i) * spacer) - spacer + x, j * spacer + y, ledsize, ledsize, COLOR_BACKGROUND);
+            } else {
+                if (pixel)
+                    display.fillRect(((i + 1) * spacer) - spacer + x, j * spacer + y, ledsize, ledsize, RED);
+                else
+                    display.fillRect(((i + 1) * spacer) - spacer + x, j * spacer + y, ledsize, ledsize, COLOR_BACKGROUND);
+            }
+        }
     }
-  }
 }
 
-FLASHMEM void CM5_init()
-{
-  display.fillScreen(COLOR_BACKGROUND);
+FLASHMEM void CM5_init() {
+    display.fillScreen(COLOR_BACKGROUND);
+    // Clear the bit array
+    for (int i = 0; i < 6; i++) {
+        ar_bits[i] = 0;
+    }
 }
 
-FLASHMEM void CM5_frame_I()
-{
-  byte pixel; int i, j;
-  uint16_t bit;
-  for (j = 32; j >= 0; j--)
-  {
-    bit = get_random_bit();
-    if (bit == 0)
-    {
-      ar[w][j] = 1;
+FLASHMEM void CM5_frame_I() {
+    uint16_t bit;
+    
+    // IDENTICAL to original: for (j = 32; j >= 0; j--)
+    for (int j = 32; j >= 0; j--) {
+        bit = get_random_bit();
+        if (bit == 0) {
+            set_pixel(w, j, true);  // ar[w][j] = 1 where w=16
+        } else {
+            set_pixel(w, j, false); // ar[w][j] = 0
+        }
     }
-  }
-  for (j = 0; j < 32; j++)
-  {
-    for (i = 0; i < w + 1;i++)
-    {
-      pixel = ar[i + 1][j];
-      if (pixel == 1)
-        ar[i][j] = 1;
-      else
-        ar[i][j] = 0;
+    
+    // IDENTICAL to original shifting logic
+    for (int j = 0; j < 32; j++) {
+        for (int i = 0; i < w + 1; i++) {
+            bool pixel_val = get_pixel(i + 1, j);
+            set_pixel(i, j, pixel_val);
+        }
     }
-  }
- 
-  for (int xx = 0; xx < 3; xx++) {
-    paintCM5_I((xx*32)*(spacer),spacer);
-    paintCM5_I((xx*32)*(spacer),spacer*32);
-  }
+    
+    // IDENTICAL drawing calls
+    for (int xx = 0; xx < 3; xx++) {
+        paintCM5_I((xx * 32) * spacer, spacer);
+        paintCM5_I((xx * 32) * spacer, spacer * 32);
+    }
 
     check_midi_devices();
-  delay(100);
+    delay(100);
 }
 
 FLASHMEM void paintCM5_II(int x,int y) {
-  uint8_t offset= DISPLAY_WIDTH/2-((spacer*2)*9);
-   uint8_t i, j;bool pixel;
- spacer = 4;
-  uint8_t ledsize = 6;
-  for (i = 0; i < w+1; i++)
-  {
-    for (j = 0; j < 32; j++)
-    {
-      pixel = ar[i][j];
-      if (j % 2 == 0)
-      {
-        if (pixel == 1)
-          display.fillRect(offset+((w - i) * spacer*2)  +x , (j*3) * spacer +y, ledsize, ledsize, RED);
-        else
-          display.fillRect(offset+((w - i) * spacer*2)  +x,(j*3) * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
-      }
-      else  if (pixel == 1)
-        display.fillRect(offset+((i + 1) * spacer*2)  +x, (j*3) * spacer +y, ledsize, ledsize, RED);
-      else
-        display.fillRect(offset+((i + 1) * spacer*2)  +x, (j*3) * spacer +y, ledsize, ledsize, COLOR_BACKGROUND);
+    uint8_t offset = DISPLAY_WIDTH / 2 - ((spacer * 2) * 9);
+    uint8_t i, j;
+    spacer = 4;
+    uint8_t ledsize = 6;
+    
+    // IDENTICAL to original: for (i = 0; i < w+1; i++)
+    for (i = 0; i < w + 1; i++) {
+        for (j = 0; j < 32; j++) {
+            bool pixel = get_pixel(i, j);
+            if (j % 2 == 0) {
+                if (pixel)
+                    display.fillRect(offset + ((w - i) * spacer * 2) + x, (j * 3) * spacer + y, ledsize, ledsize, RED);
+                else
+                    display.fillRect(offset + ((w - i) * spacer * 2) + x, (j * 3) * spacer + y, ledsize, ledsize, COLOR_BACKGROUND);
+            } else {
+                if (pixel)
+                    display.fillRect(offset + ((i + 1) * spacer * 2) + x, (j * 3) * spacer + y, ledsize, ledsize, RED);
+                else
+                    display.fillRect(offset + ((i + 1) * spacer * 2) + x, (j * 3) * spacer + y, ledsize, ledsize, COLOR_BACKGROUND);
+            }
+        }
     }
-  }
 }
 
-FLASHMEM void CM5_frame_II()
-{
-  byte pixel; int i, j;
-  uint16_t bit;
-  for (j = 32; j >= 0; j--)
-  {
-    bit = get_random_bit();
-    if (bit == 0)
-    {
-      ar[w][j] = 1;
+FLASHMEM void CM5_frame_II() {
+    uint16_t bit;
+    
+    // IDENTICAL to original: for (j = 32; j >= 0; j--)
+    for (int j = 32; j >= 0; j--) {
+        bit = get_random_bit();
+        if (bit == 0) {
+            set_pixel(w, j, true);  // ar[w][j] = 1 where w=16
+        } else {
+            set_pixel(w, j, false); // ar[w][j] = 0
+        }
     }
-  }
-  for (j = 0; j < 32; j++)
-  {
-    for (i = 0; i < w + 1;i++)
-    {
-      pixel = ar[i + 1][j];
-      if (pixel == 1)
-        ar[i][j] = 1;
-      else
-        ar[i][j] = 0;
+    
+    // IDENTICAL shifting logic
+    for (int j = 0; j < 32; j++) {
+        for (int i = 0; i < w + 1; i++) {
+            bool pixel_val = get_pixel(i + 1, j);
+            set_pixel(i, j, pixel_val);
+        }
     }
-  }
-    paintCM5_II(0,2);
-      check_midi_devices();
-  delay(150);
+    
+    paintCM5_II(0, 2);
+    check_midi_devices();
+    delay(150);
 }
-
 
 
 #include <math.h>
