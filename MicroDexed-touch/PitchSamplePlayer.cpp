@@ -48,7 +48,7 @@ bool PitchSamplePlayer::isPlaying() {
 }
 
 void PitchSamplePlayer::setPlaybackRate(float multiplier) {
-    if (multiplier < 0.1f) multiplier = 0.1f;
+    if (multiplier < 0.01f) multiplier = 0.01f;
     if (multiplier > 4.0f) multiplier = 4.0f;
     pitchMultiplier = multiplier;
 }
