@@ -358,7 +358,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 
 #define MAX_BANKS 100
 #define MAX_VOICES 32     // voices per bank
-#define BANK_NAME_LEN 11  // 10 (plus '\0')
+#define BANK_NAME_LEN 12  // 10 (plus '\0')  //changed to 12 for save single voice to .syx bank filename issue
 #define VOICE_NAME_LEN 12 // 11 (plus '\0')
 #define FILENAME_LEN BANK_NAME_LEN + VOICE_NAME_LEN
 #define CONFIG_FILENAME_LEN 50

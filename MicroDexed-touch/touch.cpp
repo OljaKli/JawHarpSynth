@@ -102,10 +102,10 @@ FLASHMEM void updateTouchScreen() {
 }
 
 // Main function that handles both types
-FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash) 
+FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
 {
   display.setTextSize(1);
-  
+
   // Calculate string length based on type
   uint8_t l;
   if (is_flash) {
@@ -116,79 +116,82 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
     while ((c = pgm_read_byte(p + l)) != 0) {
       l++;
     }
-  } else {
+  }
+  else {
     // RAM string length calculation
     l = strlen((const char*)str);
   }
-  
+
   uint8_t old_len = ts.old_helptext_length[position];
   uint8_t y_pos = DISPLAY_HEIGHT - CHAR_height_small;
-  
+
   // Clear previous text if new text is shorter (except center)
   if (l < old_len && position != 2) {
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     uint16_t clear_x, clear_width;
-    
+
     if (position == 0) {
       clear_x = CHAR_width_small * l;
       clear_width = CHAR_width_small * (old_len - l);
-    } else {
+    }
+    else {
       clear_x = DISPLAY_WIDTH - CHAR_width_small * old_len;
       clear_width = CHAR_width_small * (old_len - l);
     }
-   display.fillRect(clear_x, y_pos, clear_width, CHAR_height_small, COLOR_BACKGROUND);
+    display.fillRect(clear_x, y_pos, clear_width, CHAR_height_small, COLOR_BACKGROUND);
   }
-  
+
   // Calculate x position
-  uint16_t x_pos=0;
-  switch(position) {
-    case 0: x_pos = 0; break;
-    case 1: x_pos = DISPLAY_WIDTH - CHAR_width_small * l; break;  
-    case 2: 
-      if (l != old_len) {
-        display.fillRect(0, y_pos, DISPLAY_WIDTH, CHAR_height_small, COLOR_BACKGROUND);
-      }
-      x_pos = (DISPLAY_WIDTH - CHAR_width_small * l) / 2;
-      break;
+  uint16_t x_pos = 0;
+  switch (position) {
+  case 0: x_pos = 0; break;
+  case 1: x_pos = DISPLAY_WIDTH - CHAR_width_small * l; break;
+  case 2:
+    if (l != old_len) {
+      display.fillRect(0, y_pos, DISPLAY_WIDTH, CHAR_height_small, COLOR_BACKGROUND);
+    }
+    x_pos = (DISPLAY_WIDTH - CHAR_width_small * l) / 2;
+    break;
   }
-  
+
   // Draw the text
   display.setCursor(x_pos, y_pos);
   display.setTextColor(COLOR_SYSTEXT, position == 2 ? COLOR_BACKGROUND : DX_DARKCYAN);
-  
+
   if (is_flash) {
     display.print((const __FlashStringHelper*)str);
-  } else {
+  }
+  else {
     display.print((const char*)str);
   }
-  
+
   ts.old_helptext_length[position] = l;
 }
 
 // RAM string versions
-FLASHMEM void helptext_l(const char* str) { 
-  helptext_impl(str, 0, false); 
+FLASHMEM void helptext_l(const char* str) {
+  helptext_impl(str, 0, false);
 }
 
-FLASHMEM void helptext_r(const char* str) { 
-  helptext_impl(str, 1, false); 
+FLASHMEM void helptext_r(const char* str) {
+  helptext_impl(str, 1, false);
 }
 
-FLASHMEM void helptext_c(const char* str) { 
-  helptext_impl(str, 2, false); 
+FLASHMEM void helptext_c(const char* str) {
+  helptext_impl(str, 2, false);
 }
 
 // Flash string versions  
-FLASHMEM void helptext_l(const __FlashStringHelper* str) { 
-  helptext_impl(str, 0, true); 
+FLASHMEM void helptext_l(const __FlashStringHelper* str) {
+  helptext_impl(str, 0, true);
 }
 
-FLASHMEM void helptext_r(const __FlashStringHelper* str) { 
-  helptext_impl(str, 1, true); 
+FLASHMEM void helptext_r(const __FlashStringHelper* str) {
+  helptext_impl(str, 1, true);
 }
 
-FLASHMEM void helptext_c(const __FlashStringHelper* str) { 
-  helptext_impl(str, 2, true); 
+FLASHMEM void helptext_c(const __FlashStringHelper* str) {
+  helptext_impl(str, 2, true);
 }
 
 
@@ -332,6 +335,104 @@ FLASHMEM bool handleLiveModButtons(void) {
   return pressedOne;
 }
 
+#include "virtualtypewriter.h"
+extern char edit_string_global[FILENAME_LEN];
+extern uint8_t edit_len_global;
+extern uint8_t edit_pos_global;
+extern bool edit_mode_global;
+extern uint8_t vtw_x;
+extern char g_voice_name[6][11]; // Assuming 6 instances, 10 chars + null terminator
+extern void remove_glow(void);
+void virtual_typewriter_init(int8_t pos);
+bool virtual_typewriter_touchloop(char* out_key);
+void virtual_typewriter_update_display();
+// void drawVoiceNameButton();
+// void UI_update_instance_icons();
+// void draw_favorite_icon(uint8_t pool, uint8_t bank, uint8_t voice, uint8_t instance);
+extern void save_voice_name_and_exit();
+
+extern uint8_t edit_pos_global;
+extern bool edit_mode_global;
+extern uint8_t edit_len_global;
+extern  void   save_braids_preset();
+extern void update_multisample_name();
+extern void update_performance_name();
+extern void virtual_typewriter_waitforsysex();
+bool virtual_typewriter_active = false;
+
+FLASHMEM void handle_generic_virtual_typewriter_touch() {
+  if (virtual_typewriter_active)
+  {
+    static bool touch_processed = false;
+    updateTouchScreen();
+    if (numTouchPoints == 0) {
+      touch_processed = false;
+      return;
+    }
+    if (touch_processed) {
+      return;
+    }
+    char vt_key = 0;
+    if (virtual_typewriter_touchloop(&vt_key)) {
+      touch_processed = true;
+      if (vt_key == VK_ENTER) {
+        if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_braids_name))
+        {
+          edit_mode_global = false;
+          save_braids_preset();
+        }
+        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_multisample_name))
+        {
+          edit_mode_global = false;
+          update_multisample_name();
+        }
+        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_performance_name))
+        {
+          edit_mode_global = false;
+          update_performance_name();
+        }
+        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_voice_name))
+        {
+          edit_mode_global = false;
+          save_voice_name_and_exit();
+        }
+        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_receive_bank))
+        {
+          virtual_typewriter_waitforsysex();
+          virtual_typewriter_active = false;
+        }
+
+        return;
+      }
+      else if (vt_key == VK_LEFT) {
+        // Move cursor left
+        if (edit_pos_global > 0) {
+          edit_pos_global--;
+        }
+      }
+      else if (vt_key == VK_RIGHT) {
+        // Move cursor right
+        if (edit_pos_global < edit_len_global - 1) {
+          edit_pos_global++;
+        }
+      }
+      else {
+        // Handle regular character input
+        if (edit_pos_global < edit_len_global) {
+          edit_string_global[edit_pos_global] = vt_key;
+          // Auto-advance cursor
+          if (edit_pos_global < edit_len_global - 1) {
+            edit_pos_global++;
+          }
+        }
+      }
+      // Update display
+      if (virtual_typewriter_active || seq.cycle_touch_element == 2)
+        virtual_typewriter_update_display();
+    }
+  }
+}
+
 FLASHMEM void handle_touchscreen_voice_select()
 {
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
@@ -354,6 +455,14 @@ FLASHMEM void handle_touchscreen_voice_select()
   else if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
     save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
   }
+  // VOICE NAME BUTTON HANDLER - Enter naming mode
+  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23)) {
+    // Enter voice naming mode
+    seq.cycle_touch_element = 2;
+    remove_glow();
+    unregisterTouchHandler();
+    LCDML.OTHER_jumpToFunc(UI_func_set_voice_name);
+  }
   else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2])) {
     if (++configuration.sys.favorites > 3) {
       configuration.sys.favorites = 0;
@@ -361,7 +470,10 @@ FLASHMEM void handle_touchscreen_voice_select()
     print_voice_select_fav_search_button();
   }
   else {
-    if (seq.cycle_touch_element != 1) {
+    if (seq.cycle_touch_element == 1) {
+      handleTouchVirtualKeyboard();
+    }
+    else if (seq.cycle_touch_element == 0) {
       if (handleLiveModButtons()) {
         // touch handled
       }
@@ -377,18 +489,13 @@ FLASHMEM void handle_touchscreen_voice_select()
         LCDML.FUNC_setGBAToLastFunc();
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
       }
-
       else if (TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
-        //if touched somewhere else, reset live modifier edit mode
         const int8_t buttonOld = dexed_live_mod.active_button - 1;
         if (buttonOld >= 0) {
           dexed_live_mod.active_button = 0;
           printLiveModButton(buttonOld);
         }
       }
-    }
-    else {
-      handleTouchVirtualKeyboard();
     }
   }
 }
@@ -721,9 +828,9 @@ extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, in
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 extern uint8_t current_played_pitched_sample;
 
- #ifdef GRANULAR
- #include "granular.h"
- extern granular_params_t granular_params;
+#ifdef GRANULAR
+#include "granular.h"
+extern granular_params_t granular_params;
 
 FLASHMEM  void handle_touchscreen_granular() {
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
@@ -1277,94 +1384,6 @@ FLASHMEM void handle_touchscreen_braids()
   }
 }
 
-#include "virtualtypewriter.h"
-extern char edit_string_global[16];  // same as UI_select_name uses
-extern uint8_t edit_pos_global;
-extern bool edit_mode_global;
-extern uint8_t edit_len_global;
-extern  void   save_braids_preset();
-extern void update_multisample_name();
-extern void update_performance_name();
-extern void virtual_typewriter_waitforsysex();
-
-bool virtual_typewriter_active = false;
-
-FLASHMEM void handle_generic_virtual_typewriter_touch() {
-  if (virtual_typewriter_active)
-  {
-    static bool touch_processed = false;
-
-    updateTouchScreen();
-
-    if (numTouchPoints == 0) {
-      touch_processed = false;
-      return;
-    }
-
-    if (touch_processed) {
-      return;
-    }
-
-    char vt_key = 0;
-    if (virtual_typewriter_touchloop(&vt_key)) {
-      touch_processed = true;
-
-      if (vt_key == VK_ENTER) {
-
-
-        if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_braids_name))
-        {
-          edit_mode_global = false;
-          save_braids_preset();
-        }
-        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_multisample_name))
-        {
-          edit_mode_global = false;
-          update_multisample_name();
-        }
-        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_set_performance_name))
-        {
-          edit_mode_global = false;
-          update_performance_name();
-        }
-        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sysex_receive_bank))
-        {
-          virtual_typewriter_waitforsysex();
-          virtual_typewriter_active = false;
-        }
-
-        return;
-      }
-      else if (vt_key == VK_LEFT) {
-        // Move cursor left
-        if (edit_pos_global > 0) {
-          edit_pos_global--;
-        }
-      }
-      else if (vt_key == VK_RIGHT) {
-        // Move cursor right
-        if (edit_pos_global < edit_len_global - 1) {
-          edit_pos_global++;
-        }
-      }
-      else {
-        // Handle regular character input
-        if (edit_pos_global < edit_len_global) {
-          edit_string_global[edit_pos_global] = vt_key;
-
-          // Auto-advance cursor
-          if (edit_pos_global < edit_len_global - 1) {
-            edit_pos_global++;
-          }
-        }
-      }
-
-      // Update display
-      if (virtual_typewriter_active)
-        virtual_typewriter_update_display();
-    }
-  }
-}
 
 FLASHMEM void handle_touchscreen_cv_screen()
 {

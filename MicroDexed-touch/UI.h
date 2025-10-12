@@ -25,7 +25,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#define _LCDML_DISP_cnt 69 // max number of menu items (must match)
+#define _LCDML_DISP_cnt 70 // max number of menu items (must match)
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1500  // 60s @ 25Hz rate
@@ -91,6 +91,7 @@ void UI_func_master_effects(uint8_t param);
 void UI_func_braids(uint8_t param);
 void UI_func_set_multisample_name(uint8_t param);
 void UI_func_set_braids_name(uint8_t param);
+void UI_func_set_voice_name(uint8_t param);
 void UI_func_multiband_dynamics(uint8_t param);
 void UI_func_recorder(uint8_t param);
 void UI_func_file_manager(uint8_t param);
