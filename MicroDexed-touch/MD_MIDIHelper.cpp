@@ -29,31 +29,31 @@
  * \brief Main file for helper functions implementation
  */
 
-FLASHMEM uint32_t readMultiByte(SdFile *f, uint8_t nLen)
+FLASHMEM uint32_t readMultiByte(SdFile* f, uint8_t nLen)
 // read fixed length parameter from input
 {
   uint32_t  value = 0L;
-  
-  for (uint8_t i=0; i<nLen; i++)
+
+  for (uint8_t i = 0; i < nLen; i++)
   {
     value = (value << 8) + f->read();
   }
-  
+
   return(value);
 }
 
-FLASHMEM uint32_t readVarLen(SdFile *f)
+FLASHMEM uint32_t readVarLen(SdFile* f)
 // read variable length parameter from input
 {
   uint32_t  value = 0;
   char      c;
-  
+
   do
   {
     c = f->read();
     value = (value << 7) + (c & 0x7f);
-  }  while (c & 0x80);
-  
+  } while (c & 0x80);
+
   return(value);
 }
 

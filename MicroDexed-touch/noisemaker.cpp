@@ -107,7 +107,7 @@ FLASHMEM bool nm_preview_alloc(uint32_t frames, uint8_t channels) {
 }
 
 // helper function to convert a uint8_t value (0-100) to a float (0.0-1.0)
-float convertUint8ToFloat(uint8_t value) {
+FLASHMEM float convertUint8ToFloat(uint8_t value) {
   return static_cast<float>(value) / 100.0f;
 }
 
@@ -1584,7 +1584,7 @@ struct OnePoleSmooth {
 };
 
 // Map knob 0..100 to ~20..18000 Hz exponentially
-inline float knob_to_cutoff_hz(uint8_t knob01_100) {
+FLASHMEM  inline float knob_to_cutoff_hz(uint8_t knob01_100) {
   const float minHz = 20.0f, maxHz = 18000.0f;
   float t = std::clamp(knob01_100 / 100.0f, 0.0f, 1.0f);
   // exponential between min and max
@@ -1594,19 +1594,19 @@ inline float knob_to_cutoff_hz(uint8_t knob01_100) {
 // -----------------------------
 // Utility
 // -----------------------------
-inline float lerp(float a, float b, float t) {
+FLASHMEM inline float lerp(float a, float b, float t) {
   return a + t * (b - a);
 }
 
 // MIDI note to Hz
-inline float midi_to_hz(uint8_t midi_note) {
+FLASHMEM inline float midi_to_hz(uint8_t midi_note) {
   return 440.0f * powf(2.0f, (midi_note - 69.0f) / 12.0f);
 }
 
 // -----------------------------
 // PolyBLEP Oscillator
 // -----------------------------
-inline float poly_blep(float t, float dt) {
+ inline float poly_blep(float t, float dt) {
   if (t < dt) {
     float x = t / dt;
     return x + x - x * x - 1.0f;
@@ -1620,7 +1620,7 @@ inline float poly_blep(float t, float dt) {
   }
 }
 
-inline float polyblep_saw(float& phase, float freq) {
+ inline float polyblep_saw(float& phase, float freq) {
   float dt = freq / SAMPLE_RATE;
   float t = phase;
   float value = 2.0f * t - 1.0f; // naive saw
@@ -1630,7 +1630,7 @@ inline float polyblep_saw(float& phase, float freq) {
   return value;
 }
 
-inline float sine_osc(float& phase, float freq) {
+ inline float sine_osc(float& phase, float freq) {
   float dt = freq / SAMPLE_RATE;
   float value = sinf(2.0f * PI * phase);
   phase += dt;
@@ -1639,7 +1639,7 @@ inline float sine_osc(float& phase, float freq) {
 }
 
 // pulse wave oscillator function
-inline float pulse_osc(float& phase, float freq, float duty_cycle) {
+ inline float pulse_osc(float& phase, float freq, float duty_cycle) {
   float dt = freq / SAMPLE_RATE;
   float value = (phase < duty_cycle) ? 1.0f : -1.0f;
   // Add polyblep to remove aliasing
@@ -1774,7 +1774,7 @@ struct DCBlocker {
 inline float soft_limit(float x) {
   return tanh(x);
 }
-void generateSynth(const NoiseMakerParams& p, int16_t* psram_buffer, uint32_t n, bool mode909, uint8_t channels) {
+FLASHMEM void generateSynth(const NoiseMakerParams& p, int16_t* psram_buffer, uint32_t n, bool mode909, uint8_t channels) {
   const bool stereo = (channels == 2);
   bool note_off_triggered = false; // Add a flag to track the trigger
   const float detune = (p.synth_detune / 100.0f) * 0.01f;

@@ -40,7 +40,7 @@ struct WavHeader {
 
 class WavHeaderParser {
 public:
-    bool readWaveHeader(const char *filename, WavHeader &header, WavHeader &wav_header) {
+ FLASHMEM   bool readWaveHeader(const char *filename, WavHeader &header, WavHeader &wav_header) {
         __disable_irq();
         File wavFile = SD.open(filename);
         __enable_irq();
@@ -53,7 +53,7 @@ public:
         return result;
     }
 
-    bool readWaveHeader(WavHeader &header, File wavFile) {
+  FLASHMEM  bool readWaveHeader(WavHeader &header, File wavFile) {
         static constexpr uint16_t MAX_HEADER_SIZE = 512; // this should be enough for most LIST chunks...
         uint8_t buffer[MAX_HEADER_SIZE];
         __disable_irq();
@@ -65,7 +65,7 @@ public:
         return readWaveHeaderFromBuffer(buffer, header);
     }
 
-    bool readWaveHeaderFromBuffer(uint8_t *buffer, WavHeader &header) {
+  FLASHMEM  bool readWaveHeaderFromBuffer(uint8_t *buffer, WavHeader &header) {
         const uint32_t riff = parse_uint32_BE(&buffer[0]);
         if(riff != FOURCCRIFF) {
             DBG_LOG(printf("expected RIFF (was %s)\n", buffer));

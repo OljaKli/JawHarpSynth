@@ -8,7 +8,7 @@
 extern ILI9341_t3n display;
 
 // Comb filter implementation
-void OfflineReverb::CombFilter::init(uint32_t size) {
+FLASHMEM void OfflineReverb::CombFilter::init(uint32_t size) {
     // Check if a buffer already exists and free it to prevent memory leaks.
     if (buffer) {
         extmem_free(buffer);
@@ -26,7 +26,7 @@ void OfflineReverb::CombFilter::init(uint32_t size) {
     clear();
 }
 
-float OfflineReverb::CombFilter::process(float input) {
+FLASHMEM float OfflineReverb::CombFilter::process(float input) {
     if (!buffer) return 0.0f;
 
     float output = buffer[bufferIndex];
@@ -39,7 +39,7 @@ float OfflineReverb::CombFilter::process(float input) {
     return output;
 }
 
-void OfflineReverb::CombFilter::clear() {
+FLASHMEM void OfflineReverb::CombFilter::clear() {
     if (buffer) {
         memset(buffer, 0, bufferSize * sizeof(float));
     }
@@ -48,7 +48,7 @@ void OfflineReverb::CombFilter::clear() {
 }
 
 // Allpass filter implementation
-void OfflineReverb::AllpassFilter::init(uint32_t size, float fb) {
+FLASHMEM void OfflineReverb::AllpassFilter::init(uint32_t size, float fb) {
     // Check if a buffer already exists and free it to prevent memory leaks.
     if (buffer) {
         extmem_free(buffer);
@@ -67,7 +67,7 @@ void OfflineReverb::AllpassFilter::init(uint32_t size, float fb) {
     clear();
 }
 
-float OfflineReverb::AllpassFilter::process(float input) {
+FLASHMEM float OfflineReverb::AllpassFilter::process(float input) {
     if (!buffer) return input;
 
     float bufferOut = buffer[bufferIndex];
@@ -77,7 +77,7 @@ float OfflineReverb::AllpassFilter::process(float input) {
     return output;
 }
 
-void OfflineReverb::AllpassFilter::clear() {
+FLASHMEM void OfflineReverb::AllpassFilter::clear() {
     if (buffer) {
         memset(buffer, 0, bufferSize * sizeof(float));
     }
@@ -100,7 +100,7 @@ void OfflineReverb::TappedDelayLine::init(uint32_t size) {
     clear();
 }
 
-float OfflineReverb::TappedDelayLine::process(float input) {
+FLASHMEM float OfflineReverb::TappedDelayLine::process(float input) {
     if (!buffer) return 0.0f;
 
     // Store the new sample
@@ -119,7 +119,7 @@ float OfflineReverb::TappedDelayLine::process(float input) {
     return output;
 }
 
-void OfflineReverb::TappedDelayLine::clear() {
+FLASHMEM void OfflineReverb::TappedDelayLine::clear() {
     if (buffer) {
         memset(buffer, 0, bufferSize * sizeof(float));
     }
@@ -127,7 +127,7 @@ void OfflineReverb::TappedDelayLine::clear() {
 }
 
 // Main reverb class
-OfflineReverb::OfflineReverb() :
+FLASHMEM OfflineReverb::OfflineReverb() :
     roomSize(0.8f), damping(0.5f), wetLevel(0.3f),
     dryLevel(0.5f), width(1.0f), freezeMode(false),
     sampleRate(44100.0f),
@@ -135,11 +135,11 @@ OfflineReverb::OfflineReverb() :
 }
 
 // The destructor now relies on the individual filter destructors.
-OfflineReverb::~OfflineReverb() {
+FLASHMEM OfflineReverb::~OfflineReverb() {
     // The filter destructors will handle freeing the memory.
 }
 
-void OfflineReverb::init(float sampleRate) {
+FLASHMEM void OfflineReverb::init(float sampleRate) {
     this->sampleRate = sampleRate;
 
     // IMPROVEMENT: More comb filters for a denser reverb tail.
@@ -172,7 +172,7 @@ void OfflineReverb::init(float sampleRate) {
 extern int32_t reverb_generation_process;
 extern FLASHMEM void print_formatted_number(uint16_t number, uint8_t length);
 
-void progress_display(uint8_t value)
+FLASHMEM void progress_display(uint8_t value)
 {
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
@@ -181,7 +181,7 @@ void progress_display(uint8_t value)
     display.print("%");
 }
 
-void OfflineReverb::applyReverb(int16_t* buffer, uint32_t numFrames, bool isStereo) {
+FLASHMEM void OfflineReverb::applyReverb(int16_t* buffer, uint32_t numFrames, bool isStereo) {
     if (!buffer || numFrames == 0) return;
 
     // Process stereo samples, always outputting stereo
@@ -281,34 +281,34 @@ void OfflineReverb::applyReverb(int16_t* buffer, uint32_t numFrames, bool isSter
     display.print(" ON ");
 }
 
-void OfflineReverb::setRoomSize(float size) {
+FLASHMEM void OfflineReverb::setRoomSize(float size) {
     roomSize = fmaxf(fminf(size, 1.0f), 0.0f);
     updateParameters();
 }
 
-void OfflineReverb::setDamping(float damping) {
+FLASHMEM void OfflineReverb::setDamping(float damping) {
     this->damping = fmaxf(fminf(damping, 1.0f), 0.0f);
     updateParameters();
 }
 
-void OfflineReverb::setWetLevel(float wet) {
+FLASHMEM void OfflineReverb::setWetLevel(float wet) {
     wetLevel = fmaxf(fminf(wet, 1.0f), 0.0f);
 }
 
-void OfflineReverb::setDryLevel(float dry) {
+FLASHMEM void OfflineReverb::setDryLevel(float dry) {
     dryLevel = fmaxf(fminf(dry, 1.0f), 0.0f);
 }
 
-void OfflineReverb::setWidth(float width) {
+FLASHMEM void OfflineReverb::setWidth(float width) {
     this->width = fmaxf(fminf(width, 1.0f), 0.0f);
 }
 
-void OfflineReverb::setFreezeMode(bool freeze) {
+FLASHMEM void OfflineReverb::setFreezeMode(bool freeze) {
     freezeMode = freeze;
     updateParameters();
 }
 
-void OfflineReverb::reset() {
+FLASHMEM void OfflineReverb::reset() {
     for (int i = 0; i < 16; i++) {
         combL[i].clear();
         combR[i].clear();
@@ -324,7 +324,7 @@ void OfflineReverb::reset() {
     lpFilterStateR = 0.0f;
 }
 
-void OfflineReverb::updateParameters() {
+FLASHMEM void OfflineReverb::updateParameters() {
     float feedback = freezeMode ? 1.0f : roomSize * 0.94f;
     float damp = freezeMode ? 0.0f : damping * 0.4f + 0.05f;
 
