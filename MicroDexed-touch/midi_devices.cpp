@@ -39,9 +39,20 @@ struct MicroDexedSettings : public midi::DefaultSettings
 #ifdef MIDI_DEVICE_DIN
 MIDI_CREATE_CUSTOM_INSTANCE(HardwareSerial, MIDI_DEVICE_DIN, midi_serial, MicroDexedSettings);
 #endif
+
+#define MAX_USB_MIDI_DEVICES 3
+
 #ifdef MIDI_DEVICE_USB_HOST
 USBHost usb_host;
-MIDIDevice midi_usb(usb_host);
+
+// MIDIDevice midi_usb(usb_host);
+
+MIDIDevice midi_usb_1(usb_host);
+MIDIDevice midi_usb_2(usb_host);
+MIDIDevice midi_usb_3(usb_host);
+
+MIDIDevice* midi_usb_devices[MAX_USB_MIDI_DEVICES] = { &midi_usb_1, &midi_usb_2, &midi_usb_3 };
+
 #define COUNT_JOYSTICKS 1
 JoystickController joysticks[COUNT_JOYSTICKS]{ usb_host };
 #endif
@@ -53,7 +64,17 @@ KeyboardController keyboard1(usb_host);
 USBHub hub1(usb_host);
 USBHIDParser hid1(usb_host);
 
-USBDriver* drivers[] = { &hub1, &joysticks[0], &joysticks[1], &joysticks[2], &joysticks[3], &hid1 };
+USBDriver* drivers[] = {
+  &hub1,
+  &joysticks[0],
+  &joysticks[1],
+  &joysticks[2],
+  &joysticks[3],
+  &midi_usb_1,
+  &midi_usb_2,
+  &midi_usb_3,
+  &hid1 };
+
 #define CNT_DEVICES (sizeof(drivers) / sizeof(drivers[0]))
 
 bool driver_active[CNT_DEVICES] = { false, false, false, false };
@@ -107,9 +128,31 @@ extern void handleStop(void);
 extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
-void midiSendRealtime(midi::MidiType event) {
 #ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendRealTime(event);
+// Helper to send to all USB MIDI devices
+void midiSendToAllUSB(midi::MidiType event) {
+  for (int i = 0; i < MAX_USB_MIDI_DEVICES; i++) {
+    if (midi_usb_devices[i]) {
+      midi_usb_devices[i]->sendRealTime(event);
+    }
+  }
+}
+
+// Helper to check all USB MIDI devices
+void checkAllUSBMIDI() {
+  for (int i = 0; i < MAX_USB_MIDI_DEVICES; i++) {
+    if (midi_usb_devices[i]) {
+      midi_usb_devices[i]->read();
+    }
+  }
+}
+#endif
+
+
+FLASHMEM void midiSendRealtime(midi::MidiType event) {
+#ifdef MIDI_DEVICE_USB_HOST
+  // midi_usb.sendRealTime(event);
+  midiSendToAllUSB(event);
 #endif
 
 #ifdef MIDI_DEVICE_DIN
@@ -125,7 +168,9 @@ void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device)
   switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
-    midi_usb.sendNoteOn(note, velocity, channel);
+    midi_usb_1.sendNoteOn(note, velocity, channel);
+    midi_usb_2.sendNoteOn(note, velocity, channel);
+    midi_usb_3.sendNoteOn(note, velocity, channel);
     break;
 #endif
 
@@ -145,7 +190,9 @@ void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device
   switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
-    midi_usb.sendNoteOff(note, velocity, channel);
+    midi_usb_1.sendNoteOff(note, velocity, channel);
+    midi_usb_2.sendNoteOff(note, velocity, channel);
+    midi_usb_3.sendNoteOff(note, velocity, channel);
     break;
 #endif
 
@@ -165,7 +212,9 @@ void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
   switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
-    midi_usb.sendPitchBend(pitch, channel);
+    midi_usb_1.sendPitchBend(pitch, channel);
+    midi_usb_2.sendPitchBend(pitch, channel);
+    midi_usb_3.sendPitchBend(pitch, channel);
     break;
 #endif
 
@@ -192,11 +241,13 @@ void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
   }
 }
 
-void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device) {
+FLASHMEM void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device) {
   switch (device) {
 #ifdef MIDI_DEVICE_USB_HOST
   case 1:
-    midi_usb.sendControlChange(control, value, channel);
+    midi_usb_1.sendControlChange(control, value, channel);
+    midi_usb_2.sendControlChange(control, value, channel);
+    midi_usb_3.sendControlChange(control, value, channel);
     break;
 #endif
 
@@ -245,10 +296,10 @@ extern void apc_fader_control(uint8_t in1, uint8_t in2);
 extern void start_MIDI_input_timer();
 extern void stop_MIDI_input_timer();
 
-void apc(uint8_t a, uint8_t b, uint8_t c)
+FLASHMEM void apc(uint8_t a, uint8_t b, uint8_t c)
 {
 #if (APC != 1) //LUC regular apc mini mk2
-  midi_usb.sendNoteOn(a, b, c);
+  midi_usb_1.sendNoteOn(a, b, c);
 #else
   static uint8_t a_old = 255, b_old = 255;
   //a=inNoteNumber, b=inVelocity (128 colour), c=inChannel (brightness,blink)
@@ -276,7 +327,7 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
     //increment colour for blink mode request (1,3,5 to 2,4,6), 11 is blink for Mk2
     //avoid blink if colour is 0 (OFF) or if colour is already blinking (even number)
     b += ((c == 11) && b && (b & 1u)) ? 1 : 0;
-    midi_usb.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+    midi_usb_1.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
   }
   else {
     a_old = a; b_old = b;
@@ -285,8 +336,6 @@ void apc(uint8_t a, uint8_t b, uint8_t c)
 }
 
 #endif
-
-
 
 uint8_t chord_input[MAX_CHORD_NOTES] = { 0 };
 uint8_t chord_note_count = 0;
@@ -324,15 +373,10 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     }
     else   //live chord arranger
     {
-      // Shift all notes down one position (making room for new note)
-        // chord_input[0] = chord_input[1];
-        // chord_input[1] = chord_input[2];
-        // chord_input[2] = chord_input[3];  // This will be 0 for 3-note chords
-        // chord_input[3] = inData1;
 
- // Shift all notes down (making room for new note)
-    // memmove(chord_input, chord_input+1, 3);  // Moves elements 1,2,3 to 0,1,2
-    // chord_input[3] = inData1;  // Add new note at end
+      // Shift all notes down (making room for new note)
+         // memmove(chord_input, chord_input+1, 3);  // Moves elements 1,2,3 to 0,1,2
+         // chord_input[3] = inData1;  // Add new note at end
 
 
       if (!seq.running)
@@ -625,25 +669,39 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
       switch (event)
       {
       case midi::NoteOn:
-        midi_usb.sendNoteOn(inData1, inData2, inChannel);
+        midi_usb_1.sendNoteOn(inData1, inData2, inChannel);
+        midi_usb_2.sendNoteOn(inData1, inData2, inChannel);
+        midi_usb_3.sendNoteOn(inData1, inData2, inChannel);
         break;
       case midi::NoteOff:
-        midi_usb.sendNoteOff(inData1, inData2, inChannel);
+        midi_usb_1.sendNoteOff(inData1, inData2, inChannel);
+        midi_usb_2.sendNoteOff(inData1, inData2, inChannel);
+        midi_usb_3.sendNoteOff(inData1, inData2, inChannel);
         break;
       case midi::ControlChange:
-        midi_usb.sendControlChange(inData1, inData2, inChannel);
+        midi_usb_1.sendControlChange(inData1, inData2, inChannel);
+        midi_usb_2.sendControlChange(inData1, inData2, inChannel);
+        midi_usb_3.sendControlChange(inData1, inData2, inChannel);
         break;
       case midi::AfterTouchChannel:
-        midi_usb.sendAfterTouch(inData1, inChannel);
+        midi_usb_1.sendAfterTouch(inData1, inChannel);
+        midi_usb_2.sendAfterTouch(inData1, inChannel);
+        midi_usb_3.sendAfterTouch(inData1, inChannel);
         break;
       case midi::PitchBend:
-        midi_usb.sendPitchBend(inData1, inChannel);
+        midi_usb_1.sendPitchBend(inData1, inChannel);
+        midi_usb_2.sendPitchBend(inData1, inChannel);
+        midi_usb_3.sendPitchBend(inData1, inChannel);
         break;
       case midi::ProgramChange:
-        midi_usb.sendProgramChange(inData1, inChannel);
+        midi_usb_1.sendProgramChange(inData1, inChannel);
+        midi_usb_2.sendProgramChange(inData1, inChannel);
+        midi_usb_3.sendProgramChange(inData1, inChannel);
         break;
       case midi::AfterTouchPoly:
-        midi_usb.sendAfterTouch(inData1, inData2, inChannel);
+        midi_usb_1.sendAfterTouch(inData1, inData2, inChannel);
+        midi_usb_2.sendAfterTouch(inData1, inData2, inChannel);
+        midi_usb_3.sendAfterTouch(inData1, inData2, inChannel);
         break;
       default:
         break;
@@ -673,7 +731,7 @@ void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_devic
   handle_generic(inChannel, lsb, msb, midi_device, event);
 }
 
-void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
+FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
 {
   handleSystemExclusive(data, len);
 #ifdef DEBUG
@@ -706,7 +764,9 @@ void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device
 #ifdef MIDI_DEVICE_USB_HOST
     if (strcmp(MIDI_BY_USB_HOST, midi_device))
     {
-      midi_usb.sendSysEx(len, data);
+      midi_usb_1.sendSysEx(len, data);
+      midi_usb_2.sendSysEx(len, data);
+      midi_usb_2.sendSysEx(len, data);
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_USB_HOST"));
 #endif
@@ -719,7 +779,7 @@ void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device
 #endif
 }
 
-void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::MidiType event)
+FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::MidiType event)
 {
   //char text[10];
 
@@ -799,13 +859,13 @@ void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::Mid
       switch (event)
       {
       case midi::TimeCodeQuarterFrame:
-        midi_usb.sendTimeCodeQuarterFrame(0xF1, inData1);
+        midi_usb_1.sendTimeCodeQuarterFrame(0xF1, inData1);
         break;
       case midi::SongSelect:
-        midi_usb.sendSongSelect(inData1);
+        midi_usb_1.sendSongSelect(inData1);
         break;
       case midi::TuneRequest:
-        midi_usb.sendTuneRequest();
+        midi_usb_1.sendTuneRequest();
         break;
       default:
         break;
@@ -885,7 +945,9 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 #ifdef MIDI_DEVICE_USB_HOST
     if (strcmp(MIDI_BY_USB_HOST, midi_device))
     {
-      midi_usb.sendRealTime(event);
+      midi_usb_1.sendRealTime(event);
+      midi_usb_2.sendRealTime(event);
+      midi_usb_3.sendRealTime(event);
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_USB_HOST"));
 #endif
@@ -1332,7 +1394,9 @@ FLASHMEM void MD_sendControlChange(uint8_t channel, uint8_t cc, uint8_t value)
 #endif
 #endif
 #ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendControlChange(cc, value, channel);
+  midi_usb_1.sendControlChange(cc, value, channel);
+  midi_usb_2.sendControlChange(cc, value, channel);
+  midi_usb_3.sendControlChange(cc, value, channel);
 #ifdef DEBUG
   LOG.print(F(" MIDI-USB-HOST"));
 #endif
@@ -1483,25 +1547,43 @@ FLASHMEM void setup_midi_devices(void)
   // keyboard1.attachExtrasRelease(OnHIDExtrasRelease);
 #endif
 
-  midi_usb.setHandleNoteOn(handleNoteOn_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandlePitchChange(handlePitchBend_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB_HOST);
+
+  midi_usb_1.setHandleNoteOn(handleNoteOn_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandlePitchChange(handlePitchBend_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB_HOST);
   // midi_usb.setHandleSystemExclusiveChunk(handleSystemExclusiveChunk_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleTimeCodeQuarterFrame(handleTimeCodeQuarterFrame_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleAfterTouchPoly(handleAfterTouchPoly_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleSongSelect(handleSongSelect_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleTuneRequest(handleTuneRequest_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleClock(handleClock_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleStart(handleStart_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleContinue(handleContinue_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleStop(handleStop_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleActiveSensing(handleActiveSensing_MIDI_DEVICE_USB_HOST);
-  midi_usb.setHandleSystemReset(handleSystemReset_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleTimeCodeQuarterFrame(handleTimeCodeQuarterFrame_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleAfterTouchPoly(handleAfterTouchPoly_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleSongSelect(handleSongSelect_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleTuneRequest(handleTuneRequest_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleClock(handleClock_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleStart(handleStart_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleContinue(handleContinue_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleStop(handleStop_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleActiveSensing(handleActiveSensing_MIDI_DEVICE_USB_HOST);
+  midi_usb_1.setHandleSystemReset(handleSystemReset_MIDI_DEVICE_USB_HOST);
   // midi_usb.setHandleRealTimeSystem(handleRealTimeSystem_MIDI_DEVICE_USB_HOST);
+
+  midi_usb_2.setHandleNoteOn(handleNoteOn_MIDI_DEVICE_USB_HOST);
+  midi_usb_2.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB_HOST);
+  midi_usb_2.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB_HOST);
+  midi_usb_2.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB_HOST);
+  midi_usb_2.setHandlePitchChange(handlePitchBend_MIDI_DEVICE_USB_HOST);
+  midi_usb_2.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB_HOST);
+  midi_usb_2.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB_HOST);
+
+  midi_usb_3.setHandleNoteOn(handleNoteOn_MIDI_DEVICE_USB_HOST);
+  midi_usb_3.setHandleNoteOff(handleNoteOff_MIDI_DEVICE_USB_HOST);
+  midi_usb_3.setHandleControlChange(handleControlChange_MIDI_DEVICE_USB_HOST);
+  midi_usb_3.setHandleAfterTouchChannel(handleAfterTouch_MIDI_DEVICE_USB_HOST);
+  midi_usb_3.setHandlePitchChange(handlePitchBend_MIDI_DEVICE_USB_HOST);
+  midi_usb_3.setHandleProgramChange(handleProgramChange_MIDI_DEVICE_USB_HOST);
+  midi_usb_3.setHandleSystemExclusive(handleSystemExclusive_MIDI_DEVICE_USB_HOST);
+
 #ifdef DEBUG
   LOG.println(F("MIDI_DEVICE_USB_HOST enabled."));
 #endif
@@ -1550,7 +1632,8 @@ void check_midi_devices(void)
 
 #ifdef MIDI_DEVICE_USB_HOST
   usb_host.Task();
-  midi_usb.read();
+  // midi_usb.read();
+  checkAllUSBMIDI();  // Check all USB MIDI devices
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
@@ -1585,7 +1668,7 @@ FLASHMEM void send_sysex_voice(uint8_t midi_channel, uint8_t* data)
   usbMIDI.sendSysEx(161, vd); // Send to USB MIDI
 #endif
 #ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendSysEx(161, vd); // Send to USB-HOST MIDI
+  midi_usb_1.sendSysEx(161, vd); // Send to USB-HOST MIDI
 #endif
 }
 
@@ -1605,7 +1688,7 @@ FLASHMEM void send_sysex_bank(uint8_t midi_channel, uint8_t* bank_data)
   usbMIDI.sendSysEx(8, bank_data + 4096, true);
 #endif
 #ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendSysEx(4104, bank_data); // Send to USB-HOST MIDI
+  midi_usb_1.sendSysEx(4104, bank_data); // Send to USB-HOST MIDI
 #endif
 }
 
@@ -1634,6 +1717,6 @@ FLASHMEM void send_sysex_param(uint8_t midi_channel, uint8_t var, uint8_t val, u
   usbMIDI.sendSysEx(5, s); // Send to USB MIDI
 #endif
 #ifdef MIDI_DEVICE_USB_HOST
-  midi_usb.sendSysEx(5, s); // Send to USB-HOST MIDI
+  midi_usb_1.sendSysEx(5, s); // Send to USB-HOST MIDI
 #endif
 }
