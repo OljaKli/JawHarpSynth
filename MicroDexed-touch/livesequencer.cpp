@@ -1232,7 +1232,16 @@ FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDev
   DBG_LOG(printf("change track %i to device %i and instrument/channel %i\n", track, newDevice, newInstrumentOrChannel));
   allTrackNotesOff(track);
   data.trackSettings[track].device = newDevice;
-  data.trackSettings[track].instrument = newInstrumentOrChannel;
+
+  // if (data.trackSettings[track].device == LiveSequencer::DEVICE_INTERNAL)
+  // {
+    data.trackSettings[track].instrument = newInstrumentOrChannel;
+  //}
+  // else
+  // { // For external MIDI, convert 0-15 to 1-16 for MIDI channel
+  //   data.trackSettings[track].instrument = newInstrumentOrChannel + 1;
+  // }
+
   updateTrackChannels();
 }
 
@@ -1374,8 +1383,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
     case DEVICE_MIDI_USB:
     case DEVICE_MIDI_DIN:
     case DEVICE_MIDI_INT:
-      // FIX: For external MIDI, instrument parameter should be the MIDI channel (0-15)
-      data.tracks[i].channel = static_cast<midi::Channel>(instrument % 16); // Ensure 0-15 range
+       data.tracks[i].channel = static_cast<midi::Channel>((instrument % 16) + 1);
       break;
 
     default:
@@ -1468,17 +1476,17 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
 
   case DEVICE_MIDI_USB:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "USB %02i", (instrument % 16) + 1); // Show 1-16 to user
+    sprintf(sub, "USB %02i", instrument +1);
     break;
 
   case DEVICE_MIDI_DIN:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "DIN %02i", (instrument % 16) + 1); // Show 1-16 to user
+    sprintf(sub, "DIN %02i", instrument+1 );
     break;
 
   case DEVICE_MIDI_INT:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "INT %02i", (instrument % 16) + 1); // Show 1-16 to user
+    sprintf(sub, "INT %02i", instrument +1);
     break;
 
   default:

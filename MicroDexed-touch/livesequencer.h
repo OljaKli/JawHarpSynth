@@ -276,7 +276,7 @@ public:
   void startCountIn(void);
   void getDeviceName(uint8_t device, char* name, char* sub) const;
   void getInstrumentName(uint8_t device, uint8_t instrument, char* name, char* sub) const;
-void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel);
+  void changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel);
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
   void requestSortEvents(void);
   void setActiveTrack(uint8_t track);

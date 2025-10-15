@@ -26,14 +26,14 @@ FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequen
 FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
   const LiveSequencer::TrackSettings& trackSettings = data.trackSettings[data.activeTrack];
 
-  // For external MIDI devices, we need to handle the instrument parameter differently
   uint8_t newInstrument = selectedTrackSetup.instrument;
 
-  // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
-  if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
-    // For external MIDI, use the selectedInstrument directly as MIDI channel
-    newInstrument = selectedInstrument;
-  }
+// For external MIDI devices, we need to handle the instrument parameter differently
+  // // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
+  // if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
+  //   // For external MIDI, use the selectedInstrument directly as MIDI channel
+  //   newInstrument = selectedInstrument+ 1;
+  // }
 
   const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) ||
     (trackSettings.instrument != newInstrument);
@@ -154,7 +154,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
         liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
       }
       else {
-        // For external MIDI devices: use selectedInstrument directly as MIDI channel (0-15)
+        // For external MIDI devices: 
         selectedTrackSetup.instrument = selectedInstrument;
         static_cast<EditableValueRange<uint8_t>*>(v)->changeRange(0, 15);
         liveSeq.getInstrumentName(selectedTrackSetup.device, selectedTrackSetup.instrument, name, sub);
@@ -976,7 +976,7 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
     }
   }
   else {
-    // For external MIDI devices: use instrument value directly as MIDI channel
+    // For external MIDI devices
     selectedInstrument = selectedTrackSetup.instrument;
   }
 

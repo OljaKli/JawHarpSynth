@@ -20999,7 +20999,6 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
           mode = 0xff;
           
         save_voice_name_and_exit();
-        //xxxxxxxxxxxxxxxx
         }
       }
     }
