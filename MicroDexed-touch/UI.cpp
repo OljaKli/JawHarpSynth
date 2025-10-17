@@ -4149,36 +4149,36 @@ FLASHMEM void lcdml_menu_control(void)
   // if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad))
   // {
 
-    if (digitalRead(BI_SELECT) == false)
-    {
+  if (digitalRead(BI_SELECT) == false)
+  {
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-      setled(LED_SEL, HIGH);
+    setled(LED_SEL, HIGH);
 #endif
-      buttons = GAMEPAD_SELECT;
-    }
-    if (digitalRead(BI_START) == false)
-    {
-      if (buttons == GAMEPAD_SELECT)
-        buttons = buttons + GAMEPAD_START;
-      else
-        buttons = GAMEPAD_START;
-    }
-    if (digitalRead(BI_BUTTON_A) == false)
-    {
+    buttons = GAMEPAD_SELECT;
+  }
+  if (digitalRead(BI_START) == false)
+  {
+    if (buttons == GAMEPAD_SELECT)
+      buttons = buttons + GAMEPAD_START;
+    else
+      buttons = GAMEPAD_START;
+  }
+  if (digitalRead(BI_BUTTON_A) == false)
+  {
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-      setled(LED_BUT_A, HIGH);
+    setled(LED_BUT_A, HIGH);
 #endif
-      // buttons = buttons + GAMEPAD_BUTTON_A;
-      buttons = GAMEPAD_BUTTON_A;
-    }
-    if (digitalRead(BI_BUTTON_B) == false)
-    {
+    // buttons = buttons + GAMEPAD_BUTTON_A;
+    buttons = GAMEPAD_BUTTON_A;
+  }
+  if (digitalRead(BI_BUTTON_B) == false)
+  {
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-      setled(LED_BUT_B, HIGH);
+    setled(LED_BUT_B, HIGH);
 #endif
-      // buttons = buttons + GAMEPAD_BUTTON_B;
-      buttons = GAMEPAD_BUTTON_B;
-    }
+    // buttons = buttons + GAMEPAD_BUTTON_B;
+    buttons = GAMEPAD_BUTTON_B;
+  }
   //}
 #endif
 
@@ -4232,114 +4232,75 @@ FLASHMEM void lcdml_menu_control(void)
     //else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad))
     //{
 
-      bool reverse_y = false;
-      bool xy_navigation = false;
+    bool reverse_y = false;
+    bool xy_navigation = false;
 
-      if (seq.edit_state || generic_active_function != 0) // is in edit state
-        if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song))
-          reverse_y = true;
+    if (seq.edit_state || generic_active_function != 0) // is in edit state
+      if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song))
+        reverse_y = true;
 
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
+    {
+      if (seq.active_function != 99 || seq.quicknav_song_to_pattern_jump)
+        reverse_y = true;
+      if (seq.active_function == 99)
+        reverse_y = false;
+    }
+
+    // if ((LCDML.FUNC_getID() > 5 && LCDML.FUNC_getID() < 9) || (LCDML.FUNC_getID() > 17 && LCDML.FUNC_getID() < 25) || (LCDML.FUNC_getID() > 33 && LCDML.FUNC_getID() < 41))  //"2-line menus", reverse y
+    //   reverse_y = true;
+
+    // some pages do x/y navigation using ENC[R]for y and ENC[L] for x movement - depending on that and the edit state of the field, this needs special handling for gamepad usage
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker))
+    {
+
+      if (seq.edit_state)
       {
-        if (seq.active_function != 99 || seq.quicknav_song_to_pattern_jump)
-          reverse_y = true;
-        if (seq.active_function == 99)
-          reverse_y = false;
+        ;
       }
-
-      // if ((LCDML.FUNC_getID() > 5 && LCDML.FUNC_getID() < 9) || (LCDML.FUNC_getID() > 17 && LCDML.FUNC_getID() < 25) || (LCDML.FUNC_getID() > 33 && LCDML.FUNC_getID() < 41))  //"2-line menus", reverse y
-      //   reverse_y = true;
-
-      // some pages do x/y navigation using ENC[R]for y and ENC[L] for x movement - depending on that and the edit state of the field, this needs special handling for gamepad usage
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker))
+      else
       {
-
-        if (seq.edit_state)
-        {
-          ;
-        }
-        else
-        {
-          xy_navigation = true;
-        }
+        xy_navigation = true;
       }
+    }
 
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song))
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song))
+    {
+      if (seq.edit_state == false && seq.cycle_touch_element == 0)
       {
-        if (seq.edit_state == false && seq.cycle_touch_element == 0)
-        {
-          reverse_y = false;
-        }
-        else if (seq.edit_state && seq.cycle_touch_element == 5)
-        {
-          reverse_y = true;
-        }
-        else if (seq.edit_state && seq.cycle_touch_element == 6)
-        {
-          reverse_y = false;
-        }
-        else if (seq.edit_state && seq.cycle_touch_element == 7)
-        {
-          reverse_y = true;
-        }
-        else if (seq.edit_state && seq.cycle_touch_element == 8)
-        {
-          reverse_y = false;
-        }
-        else if (seq.edit_state && seq.cycle_touch_element == 9)
-        {
-          reverse_y = true;
-        }
+        reverse_y = false;
       }
-
-      //Volume control by button interface or USB Gamepad
-
-      else if ((buttons == GAMEPAD_SELECT && key_down()) || (buttons == GAMEPAD_SELECT && key_up()))
+      else if (seq.edit_state && seq.cycle_touch_element == 5)
       {
-        if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_volume))
-        {
-          if (key_up())
-          {
-            g_LCDML_CONTROL_Encoder_position[ENC_L] = -4;
-            if (gamepad_last_dir == 1)
-              gamepad_accelerate = 1 + gamepad_accelerate * 1.4;
-            else
-              gamepad_accelerate = 0;
-            gamepad_millis = 0;
-            gamepad_last_dir = 1;
-          }
-          else if (key_down())
-          {
-            g_LCDML_CONTROL_Encoder_position[ENC_L] = 4;
-            if (gamepad_last_dir == 2)
-              gamepad_accelerate = 1 + gamepad_accelerate * 1.4;
-            else
-              gamepad_accelerate = 0;
-            gamepad_millis = 0;
-            gamepad_last_dir = 2;
-          }
-        }
-        else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) &&
-        //  LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad) &&
-          LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) &&
-          LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) &&
-          LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
-          LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) &&
-          LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song))
-        {
-          LCDML.OTHER_jumpToFunc(UI_func_volume);
-        }
+        reverse_y = true;
       }
-      // start gamepad cases
+      else if (seq.edit_state && seq.cycle_touch_element == 6)
+      {
+        reverse_y = false;
+      }
+      else if (seq.edit_state && seq.cycle_touch_element == 7)
+      {
+        reverse_y = true;
+      }
+      else if (seq.edit_state && seq.cycle_touch_element == 8)
+      {
+        reverse_y = false;
+      }
+      else if (seq.edit_state && seq.cycle_touch_element == 9)
+      {
+        reverse_y = true;
+      }
+    }
 
-      if (buttons == gamepad_buttons_neutral)
+    //Volume control by button interface or USB Gamepad
+
+    else if ((buttons == GAMEPAD_SELECT && key_down()) || (buttons == GAMEPAD_SELECT && key_up()))
+    {
+      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_volume))
       {
         if (key_up())
         {
-          if (reverse_y)
-            g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
-          else
-            g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
+          g_LCDML_CONTROL_Encoder_position[ENC_L] = -4;
           if (gamepad_last_dir == 1)
             gamepad_accelerate = 1 + gamepad_accelerate * 1.4;
           else
@@ -4349,10 +4310,7 @@ FLASHMEM void lcdml_menu_control(void)
         }
         else if (key_down())
         {
-          if (reverse_y)
-            g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
-          else
-            g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
+          g_LCDML_CONTROL_Encoder_position[ENC_L] = 4;
           if (gamepad_last_dir == 2)
             gamepad_accelerate = 1 + gamepad_accelerate * 1.4;
           else
@@ -4360,30 +4318,72 @@ FLASHMEM void lcdml_menu_control(void)
           gamepad_millis = 0;
           gamepad_last_dir = 2;
         }
-        else if (key_right())
-        {
-          if (xy_navigation)
-            g_LCDML_CONTROL_Encoder_position[ENC_L] = -4;
-          else
-            g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
-          gamepad_accelerate = 0;
-          gamepad_millis = 0;
-        }
-        else if (key_left())
-        {
-          if (xy_navigation)
-            g_LCDML_CONTROL_Encoder_position[ENC_L] = 4;
-          else
-            g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
-          gamepad_millis = 0;
-          gamepad_accelerate = 0;
-        }
+      }
+      else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) &&
+        //  LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad) &&
+        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) &&
+        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) &&
+        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
+        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) &&
+        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song))
+      {
+        LCDML.OTHER_jumpToFunc(UI_func_volume);
+      }
+    }
+    // start gamepad cases
+
+    if (buttons == gamepad_buttons_neutral)
+    {
+      if (key_up())
+      {
+        if (reverse_y)
+          g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
+        else
+          g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
+        if (gamepad_last_dir == 1)
+          gamepad_accelerate = 1 + gamepad_accelerate * 1.4;
         else
           gamepad_accelerate = 0;
+        gamepad_millis = 0;
+        gamepad_last_dir = 1;
       }
+      else if (key_down())
+      {
+        if (reverse_y)
+          g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
+        else
+          g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
+        if (gamepad_last_dir == 2)
+          gamepad_accelerate = 1 + gamepad_accelerate * 1.4;
+        else
+          gamepad_accelerate = 0;
+        gamepad_millis = 0;
+        gamepad_last_dir = 2;
+      }
+      else if (key_right())
+      {
+        if (xy_navigation)
+          g_LCDML_CONTROL_Encoder_position[ENC_L] = -4;
+        else
+          g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
+        gamepad_accelerate = 0;
+        gamepad_millis = 0;
+      }
+      else if (key_left())
+      {
+        if (xy_navigation)
+          g_LCDML_CONTROL_Encoder_position[ENC_L] = 4;
+        else
+          g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
+        gamepad_millis = 0;
+        gamepad_accelerate = 0;
+      }
+      else
+        gamepad_accelerate = 0;
+    }
 
-      // end gamepad cases
-   // }
+    // end gamepad cases
+ // }
     if (gamepad_accelerate > configuration.sys.gamepad_speed / 1.1)
       gamepad_accelerate = configuration.sys.gamepad_speed / 1.1;
 
@@ -4391,27 +4391,27 @@ FLASHMEM void lcdml_menu_control(void)
 
    // if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad))
    // {
-      if (buttons == GAMEPAD_BUTTON_B)
-      {
-        button[ENC_L] = 0;
-        gamepad_accelerate = 0;
-      }
-      else if (buttons == GAMEPAD_BUTTON_A)
-      {
-        button[ENC_R] = 0;
-        gamepad_accelerate = 0;
-      }
-      else if (buttons == GAMEPAD_START && gamepad_millis >= configuration.sys.gamepad_speed * 3)
-      {
-        gamepad_millis = 0;
-        gamepad_accelerate = 0;
+    if (buttons == GAMEPAD_BUTTON_B)
+    {
+      button[ENC_L] = 0;
+      gamepad_accelerate = 0;
+    }
+    else if (buttons == GAMEPAD_BUTTON_A)
+    {
+      button[ENC_R] = 0;
+      gamepad_accelerate = 0;
+    }
+    else if (buttons == GAMEPAD_START && gamepad_millis >= configuration.sys.gamepad_speed * 3)
+    {
+      gamepad_millis = 0;
+      gamepad_accelerate = 0;
 
-        if (!seq.running)
-          handleStart();
-        else
-          handleStop();
-      }
-  //  }
+      if (!seq.running)
+        handleStart();
+      else
+        handleStop();
+    }
+    //  }
 #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
     All_Button_LEDS(false);
 #endif
@@ -10400,16 +10400,23 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
 
     if (seq.content_type[seq.active_pattern] == 0)
     {
-      if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] < 210) // normal sample
+
+      if (activeSample == NUM_DRUMSET_CONFIG - 1) // empty
       {
-        display.print(basename(drum_config[activeSample].name));  //phtodo
+        display.print(F("EMPTY"));
         fill_up_with_spaces_right_window();
       }
-      else if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] > 209) // pitched sample
-      {
-        display.print(basename(drum_config[seq.vel[seq.active_pattern][seq.menu - 3] - 210].name));
-        fill_up_with_spaces_right_window();
-      }
+      else
+        if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] < 210) // normal sample
+        {
+          display.print(basename(drum_config[activeSample].name));  //phtodo
+          fill_up_with_spaces_right_window();
+        }
+        else if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] > 209) // pitched sample
+        {
+          display.print(basename(drum_config[seq.vel[seq.active_pattern][seq.menu - 3] - 210].name));
+          fill_up_with_spaces_right_window();
+        }
     }
     else  if ((seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99) || (seq.content_type[seq.active_pattern] == 3 && selected_slice_sample[0] != 99))
     {
@@ -10435,9 +10442,16 @@ FLASHMEM void print_current_sample_and_pitch_buffer()
     display.setCursor(36 * CHAR_width_small, 8 * (CHAR_height_small + 2) + 10);
     display.print(F("NOTE BUFFER: "));
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.print(noteNames[temp_int % 12]);
-    display.print((temp_int / 12) - 1);
-    display.print(" ");
+    if (temp_int <= MIDI_C8)
+    {
+      display.print(noteNames[temp_int % 12]);
+      display.print((temp_int / 12) - 1);
+      display.print(" ");
+    }
+    else if (temp_int == MIDI_C8 + 1)
+      display.print(F("---"));
+    else
+      display.print(F("   "));
 
     display.setTextSize(1);
     print_performance_name(CHAR_width_small * 36, 10 * (CHAR_height_small + 2) + 10);
@@ -11354,10 +11368,9 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           {
             if (activeSample < NUM_DRUMSET_CONFIG - 1 && seq.vel[seq.active_pattern][seq.menu - 3] > 209 && seq.content_type[seq.active_pattern] != 3) // pitched sample
             {
+               display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
               show(0, 1, 9, basename(drum_config[seq.vel[seq.active_pattern][seq.menu - 3] - 210].name));
 
-              if (seq.vel[seq.active_pattern][seq.menu - 3] == drum_config[activeSample].midinote) // pitched sample is idential, ask to edit pitch/delete
-              {
                 display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
                 display.setCursor(0, 3 * CHAR_height + 17);
                 display.setTextSize(1);
@@ -11365,34 +11378,16 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
                 display.print(F("EDIT/"));
                 display.setTextColor(RED, COLOR_BACKGROUND);
                 display.print(F("DELETE "));
-                set_sample_type_color();
-                display.print(basename(drum_config[activeSample].name));
-                display.setTextColor(GREEN, COLOR_BACKGROUND);
-                display.print(F(" IN STEP "));
-                display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-                display.print(seq.menu - 2);
-                display.setTextColor(GREEN, COLOR_BACKGROUND);
-                display.print(F(" ?"));
-                display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-              }
-              else if (seq.vel[seq.active_pattern][seq.menu - 3] != drum_config[activeSample].midinote) // pitched sample is different, ask to replace
-              {
-                display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-                display.setCursor(0, 3 * CHAR_height + 17);
-                display.setTextSize(1);
-                display.setTextColor(GREEN, COLOR_BACKGROUND);
-                display.print(F("REPLACE "));
                 set_sample_type_color_of(seq.vel[seq.active_pattern][seq.menu - 3]);
                 display.print(basename(drum_config[seq.vel[seq.active_pattern][seq.menu - 3] - 210].name));
                 display.setTextColor(GREEN, COLOR_BACKGROUND);
-                display.print(F(" WITH "));
-                set_sample_type_color();
-                display.print(basename(drum_config[activeSample].name));
-
-                display.setTextColor(GREEN, COLOR_BACKGROUND);
-                display.print(" ?");
+                display.print(F(" IN "));
                 display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-              }
+                display.print(seq.menu - 2);
+                display.setTextColor(GREEN, COLOR_BACKGROUND);
+                display.print(F("/16 ?"));
+                 fill_up_with_spaces_left_window();
+                display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
             }
           }
         }
@@ -11411,13 +11406,13 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           if (seq.content_type[seq.active_pattern] == 0)
             display.print(basename(drum_config[activeSample].name));
           else
-            //seq_sub_pattern_editor_print_slicename_textonly();phtodo
-            display.setTextColor(GREEN, COLOR_BACKGROUND);
-          display.print(F(" IN STEP "));
+              display.print(F("SLICE"));
+          display.setTextColor(GREEN, COLOR_BACKGROUND);
+          display.print(F(" IN "));
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
           display.print(seq.menu - 2);
           display.setTextColor(GREEN, COLOR_BACKGROUND);
-          display.print(F(" ?"));
+          display.print(F("/16 ?"));
           fill_up_with_spaces_left_window();
           display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         }
@@ -16469,7 +16464,7 @@ FLASHMEM void UI_func_set_braids_name(uint8_t param)
       setCursor_textGrid(3, 2);
       helptext_r(F("USE ENC[R] OR TOUCH TO EDIT"));
       ui_select_name_state = UI_select_name(2, 4, BRAIDS_NAME_LEN, true); //changed it to global input with combined touch
-     setCursor_textGrid(24, 2);
+      setCursor_textGrid(24, 2);
       virtual_typewriter_init(0);
       virtual_typewriter_active = true;
     }
@@ -18976,16 +18971,16 @@ FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
   }
 }
 
-FLASHMEM void _show_midi_channel(const __FlashStringHelper* _txt, uint8_t line, uint8_t midi_channel, uint8_t instance=0)
+FLASHMEM void _show_midi_channel(const __FlashStringHelper* _txt, uint8_t line, uint8_t midi_channel, uint8_t instance = 0)
 {
   char text[21];
-  const char* txt = (const char*) _txt;
+  const char* txt = (const char*)_txt;
 
   if (0 == instance)
-      snprintf_P(text, sizeof(text), PSTR("%s"), txt);
-  else      
-      snprintf_P(text, sizeof(text), PSTR("%s%d"), txt, instance);
-    
+    snprintf_P(text, sizeof(text), PSTR("%s"), txt);
+  else
+    snprintf_P(text, sizeof(text), PSTR("%s%d"), txt, instance);
+
   setCursor_textGrid_small(2, line);
   display.setTextColor(GREY1);
   display.print(text);
@@ -19081,21 +19076,21 @@ extern void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t leng
 
 static FLASHMEM void check_midi_channel(uint8_t item, uint8_t pos_x, uint8_t pos_y, uint8_t midi_channel)
 {
-    if (menu_item_check(item))
+  if (menu_item_check(item))
+  {
+    setModeColor(item);
+    setCursor_textGrid_small(pos_x, pos_y);
+    if (MIDI_CHANNEL_ABSENT != midi_channel)
     {
-      setModeColor(item);
-      setCursor_textGrid_small(pos_x, pos_y);
-      if (MIDI_CHANNEL_ABSENT != midi_channel)
-      {
-        _print_midi_channel(midi_channel);
+      _print_midi_channel(midi_channel);
 #if defined GLOW
-        if (generic_temp_select_menu == item)
-          set_glow_show_text_no_grid(pos_x * CHAR_width_small, pos_y * (CHAR_height_small + 2), 4, get_midi_channel_name(midi_channel), item, 1);
+      if (generic_temp_select_menu == item)
+        set_glow_show_text_no_grid(pos_x * CHAR_width_small, pos_y * (CHAR_height_small + 2), 4, get_midi_channel_name(midi_channel), item, 1);
 #endif
-      }
-      else
-        _print_midi_channel(MIDI_CHANNEL_OFF);
     }
+    else
+      _print_midi_channel(MIDI_CHANNEL_OFF);
+  }
 }
 
 FLASHMEM void UI_func_midi_channels(uint8_t param)
@@ -19116,9 +19111,9 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     for (uint8_t i = 0; i < 4; i++)
     {
 #if (NUM_DEXED>2)
-      _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, configuration.dexed[i].midi_channel, i+1);
+      _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, configuration.dexed[i].midi_channel, i + 1);
 #else
-      _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, MIDI_CHANNEL_OFF, i+1);
+      _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, MIDI_CHANNEL_OFF, i + 1);
 #endif
     }
 
@@ -19129,14 +19124,14 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 
     for (uint8_t i = 0; i < 2; i++)
     {
-      _show_midi_channel(F("MICROSYNTH #"), 12 + i, microsynth[i].midi_channel, i+1);
+      _show_midi_channel(F("MICROSYNTH #"), 12 + i, microsynth[i].midi_channel, i + 1);
     }
 
     _show_midi_channel(F("BRAIDS"), 14, braids_osc.midi_channel);
 
     for (uint8_t i = 0; i < 2; i++)
     {
-      _show_midi_channel(F("MULTISAMPLE (MSP) #"), 15 + i, msp[i].midi_channel, i+1);
+      _show_midi_channel(F("MULTISAMPLE (MSP) #"), 15 + i, msp[i].midi_channel, i + 1);
     }
 
     _show_midi_channel(F("DRUMS/SAMPLES"), 17, drum_midi_channel);
@@ -19151,17 +19146,17 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       {
         uint32_t valid = 0x1FFF
 #if (NUM_DEXED<=2)
-                & ~(3<<2) // eliminate two Dexed instances as valid selections
+          & ~(3 << 2) // eliminate two Dexed instances as valid selections
 #endif // (NUM_DEXED<=2)
 #if !defined(GRANULAR)
-                & ~(1<<4)// eliminate granular instance as valid selection
+          & ~(1 << 4)// eliminate granular instance as valid selection
 #endif // !defined(GRANULAR)
-              ;
+          ;
 
-        uint8_t new_menu = generic_temp_select_menu;              
+        uint8_t new_menu = generic_temp_select_menu;
 
         new_menu = constrain(generic_temp_select_menu + e.dir, 0, 12);
-        while (0 == (valid & (1<<new_menu))) // invalid selection?
+        while (0 == (valid & (1 << new_menu))) // invalid selection?
         {
           new_menu = constrain(new_menu + e.dir, 0, 12); // keep going: 0 and 12 better be valid!
         }
@@ -19213,29 +19208,29 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 
     display.setTextSize(1);
 
-    check_midi_channel(0,40,5,configuration.dexed[0].midi_channel);
-    check_midi_channel(1,40,6,configuration.dexed[1].midi_channel);
+    check_midi_channel(0, 40, 5, configuration.dexed[0].midi_channel);
+    check_midi_channel(1, 40, 6, configuration.dexed[1].midi_channel);
 #if (NUM_DEXED>2)
-    check_midi_channel(2,40,7,configuration.dexed[2].midi_channel);
-    check_midi_channel(3,40,8,configuration.dexed[3].midi_channel);
+    check_midi_channel(2, 40, 7, configuration.dexed[2].midi_channel);
+    check_midi_channel(3, 40, 8, configuration.dexed[3].midi_channel);
 #else
-    check_midi_channel(2,40,7,MIDI_CHANNEL_ABSENT);
-    check_midi_channel(3,40,8,MIDI_CHANNEL_ABSENT);
+    check_midi_channel(2, 40, 7, MIDI_CHANNEL_ABSENT);
+    check_midi_channel(3, 40, 8, MIDI_CHANNEL_ABSENT);
 #endif // (NUM_DEXED>2)
 
 #if defined(GRANULAR)
-    check_midi_channel(4,40,9,granular_params.midi_channel);
+    check_midi_channel(4, 40, 9, granular_params.midi_channel);
 #endif // defined(GRANULAR)
 
-    check_midi_channel(5,40,10,configuration.epiano.midi_channel);
+    check_midi_channel(5, 40, 10, configuration.epiano.midi_channel);
     //------- row break ------------------------------------------
-    check_midi_channel( 6,40,12,microsynth[0].midi_channel);
-    check_midi_channel( 7,40,13,microsynth[1].midi_channel);
-    check_midi_channel( 8,40,14,braids_osc.midi_channel);
-    check_midi_channel( 9,40,15,msp[0].midi_channel);
-    check_midi_channel(10,40,16,msp[1].midi_channel);
-    check_midi_channel(11,40,17,drum_midi_channel);
-    check_midi_channel(12,40,18,slices_midi_channel);
+    check_midi_channel(6, 40, 12, microsynth[0].midi_channel);
+    check_midi_channel(7, 40, 13, microsynth[1].midi_channel);
+    check_midi_channel(8, 40, 14, braids_osc.midi_channel);
+    check_midi_channel(9, 40, 15, msp[0].midi_channel);
+    check_midi_channel(10, 40, 16, msp[1].midi_channel);
+    check_midi_channel(11, 40, 17, drum_midi_channel);
+    check_midi_channel(12, 40, 18, slices_midi_channel);
 
     if (count_omni() != 0)
     {
@@ -20936,8 +20931,8 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
 }
 
 FLASHMEM void drawVoiceNameButton() {
- if (seq.cycle_touch_element != 1)
-  TouchButton::drawButton(GRID.X[4], GRID.Y[5]-23, "VOICE", "NAME", TouchButton::BUTTON_NORMAL);
+  if (seq.cycle_touch_element != 1)
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5] - 23, "VOICE", "NAME", TouchButton::BUTTON_NORMAL);
 }
 
 // Helper function to save voice name and exit naming mode
@@ -20947,20 +20942,20 @@ FLASHMEM void save_voice_name_and_exit() {
 
   // Now save to SD card
   save_sd_voice(configuration.dexed[selected_instance_id].pool,
-                configuration.dexed[selected_instance_id].bank,
-                configuration.dexed[selected_instance_id].voice,
-                selected_instance_id);
+    configuration.dexed[selected_instance_id].bank,
+    configuration.dexed[selected_instance_id].voice,
+    selected_instance_id);
 
   load_sd_voice(configuration.dexed[selected_instance_id].pool,
-                configuration.dexed[selected_instance_id].bank,
-                configuration.dexed[selected_instance_id].voice,
-                selected_instance_id);
+    configuration.dexed[selected_instance_id].bank,
+    configuration.dexed[selected_instance_id].voice,
+    selected_instance_id);
 
   // Exit naming mode
   seq.cycle_touch_element = 0;
   edit_mode_global = false;
-   unregisterTouchHandler();
-   virtual_typewriter_active = false;
+  unregisterTouchHandler();
+  virtual_typewriter_active = false;
   LCDML.OTHER_jumpToFunc(UI_func_voice_select);
 }
 
@@ -20968,7 +20963,7 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
 {
   static uint8_t mode;
   static uint8_t ui_select_name_state;
-  
+
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     display.setTextSize(2);
@@ -20980,12 +20975,12 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
     setCursor_textGrid(1, 1);
     display.print(F("VOICE NAME"));
   }
-  
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     display.setTextSize(2);
     const EncoderEvents e = getEncoderEvents(ENC_R);
-    
+
     if (e.turned) {
       if (mode == 1) {
         ui_select_name_state = UI_select_name(2, 2, 10, false);
@@ -20997,8 +20992,8 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
         if (ui_select_name_state == true)
         {
           mode = 0xff;
-          
-        save_voice_name_and_exit();
+
+          save_voice_name_and_exit();
         }
       }
     }
@@ -21013,10 +21008,10 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
       virtual_typewriter_active = true;
     }
   }
-  
+
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-     seq.cycle_touch_element=0;
+    seq.cycle_touch_element = 0;
     unregisterTouchHandler();
     virtual_typewriter_active = false;
     encoderDir[ENC_R].reset();
@@ -21044,7 +21039,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     print_voice_settings_in_dexed_voice_select(true, true);
     print_voice_select_default_help();
     printLiveModButtons();
-drawVoiceNameButton(); 
+    drawVoiceNameButton();
     UI_update_instance_icons();
     draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
@@ -21068,11 +21063,11 @@ drawVoiceNameButton();
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
 
-if (seq.cycle_touch_element == 2)  //voice name editor
-{
-;
-}
-else  if (dexed_live_mod.active_button != 0) { // handle live modify buttons
+    if (seq.cycle_touch_element == 2)  //voice name editor
+    {
+      ;
+    }
+    else  if (dexed_live_mod.active_button != 0) { // handle live modify buttons
       UI_func_voice_select_touch_loop(e);
     }
 
@@ -21200,68 +21195,68 @@ else  if (dexed_live_mod.active_button != 0) { // handle live modify buttons
     }
 
 
-if (seq.cycle_touch_element !=2){ // not in voice name editor
+    if (seq.cycle_touch_element != 2) { // not in voice name editor
 
-    if (e.longPressed && dexed_live_mod.active_button != 99)
-    {
-      increment_dexed_instance_in_voice_select_round_robin();
-      if (seq.cycle_touch_element == 0) {
-        virtual_keyboard_smart_preselect_mode();
+      if (e.longPressed && dexed_live_mod.active_button != 99)
+      {
+        increment_dexed_instance_in_voice_select_round_robin();
+        if (seq.cycle_touch_element == 0) {
+          virtual_keyboard_smart_preselect_mode();
+        }
+        draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+        printLiveModButtons();
       }
-      draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-      printLiveModButtons();
-    }
 
-    if (seq.cycle_touch_element == 1 && generic_temp_select_menu > 5) {
-      generic_temp_select_menu = 5;
-    }
-
-    if (menu_item_check(0))
-    {
-      setModeColor(0);
-      display.setTextSize(1);
-      display.setCursor(CHAR_width_small * 2, 6);
-      display.print(F("POOL"));
-    }
-
-    if (menu_item_check(1))
-    {
-      setModeColor(1);
-      display.setTextSize(1);
-      // display.setCursor(CHAR_width_small * 22, 6);
-      // display.print(F("DEXED"));
-      show_no_grid(6, CHAR_width_small * 22, 5, "DEXED", 1, 1);
-    }
-
-    if (generic_temp_select_menu != 1)
-    {
-      draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
-    }
-    display.setTextSize(2);
-    display.setTextColor(GREY2, COLOR_BACKGROUND);
-    display.setCursor(5 * CHAR_width_small, 2 * CHAR_height_small + 3);
-    print_formatted_number(configuration.dexed[selected_instance_id].bank, 2);
-    display.setCursor(5 * CHAR_width_small, 4 * CHAR_height_small + 5);
-    print_formatted_number(configuration.dexed[selected_instance_id].voice + 1, 2);
-
-    setModeColor(2);
-    show_no_grid(2 * CHAR_height_small + 3, 11 * CHAR_width_small, 8, g_bank_name[selected_instance_id], 2, 2);
-
-    setModeColor(3);
-    show_no_grid(4 * CHAR_height_small + 5, 11 * CHAR_width_small, 10, g_voice_name[selected_instance_id], 3, 2);
-
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-    if (seq.cycle_touch_element != 1)
-    {
-      if (dexed_live_mod.active_button == 0) {
-        draw_algo();
+      if (seq.cycle_touch_element == 1 && generic_temp_select_menu > 5) {
+        generic_temp_select_menu = 5;
       }
+
+      if (menu_item_check(0))
+      {
+        setModeColor(0);
+        display.setTextSize(1);
+        display.setCursor(CHAR_width_small * 2, 6);
+        display.print(F("POOL"));
+      }
+
+      if (menu_item_check(1))
+      {
+        setModeColor(1);
+        display.setTextSize(1);
+        // display.setCursor(CHAR_width_small * 22, 6);
+        // display.print(F("DEXED"));
+        show_no_grid(6, CHAR_width_small * 22, 5, "DEXED", 1, 1);
+      }
+
+      if (generic_temp_select_menu != 1)
+      {
+        draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+      }
+      display.setTextSize(2);
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.setCursor(5 * CHAR_width_small, 2 * CHAR_height_small + 3);
+      print_formatted_number(configuration.dexed[selected_instance_id].bank, 2);
+      display.setCursor(5 * CHAR_width_small, 4 * CHAR_height_small + 5);
+      print_formatted_number(configuration.dexed[selected_instance_id].voice + 1, 2);
+
+      setModeColor(2);
+      show_no_grid(2 * CHAR_height_small + 3, 11 * CHAR_width_small, 8, g_bank_name[selected_instance_id], 2, 2);
+
+      setModeColor(3);
+      show_no_grid(4 * CHAR_height_small + 5, 11 * CHAR_width_small, 10, g_voice_name[selected_instance_id], 3, 2);
+
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+      if (seq.cycle_touch_element != 1)
+      {
+        if (dexed_live_mod.active_button == 0) {
+          draw_algo();
+        }
+      }
+
+      print_voice_settings_in_dexed_voice_select(false, false);
+
     }
-
-    print_voice_settings_in_dexed_voice_select(false, false);
-
-  }
   }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -22058,14 +22053,14 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
         seq.active_multisample = constrain(seq.active_multisample + e.dir * e.speed, 0, NUM_MULTISAMPLES - 1);
       }
       else if (mode == 2) {
-        ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN-1, false);
+        ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN - 1, false);
       }
     }
 
     else if (e.pressed) {
       if (mode == 2)
       {
-        ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN-1, false);
+        ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN - 1, false);
         if (ui_select_name_state == true)
         {
           mode = 0xff;
@@ -22094,8 +22089,8 @@ FLASHMEM void UI_func_set_multisample_name(uint8_t param)
       mode = 2;
       strcpy(edit_string_global, msp[seq.active_multisample].name);
       setCursor_textGrid(3, 2);
-      ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN-1, true);
- setCursor_textGrid(15, 2);
+      ui_select_name_state = UI_select_name(2, 4, BANK_NAME_LEN - 1, true);
+      setCursor_textGrid(15, 2);
       display.print(F("]"));
       virtual_typewriter_init(0);
       virtual_typewriter_active = true;

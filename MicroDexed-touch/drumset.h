@@ -125,7 +125,7 @@ drum_config_t drum_config[NUM_DRUMSET_CONFIG] =
   {
     DRUM_POLY,
     214,
-    "Female Voice G2",
+    "FemaleVoiceG2",
     "I_FVoicG2",
     CHECK_PROGMEM_SAMPLE(DRUM_FVoice),
     "V",
