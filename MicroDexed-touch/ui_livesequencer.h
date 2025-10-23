@@ -167,8 +167,6 @@ private:
   void fillGridCell(void);
   void copyFromAbove(void);
   void scrollToTop(void);
-  void scrollUp(void);
-  void scrollDown(void);
   void slow_rect(uint16_t x, uint8_t y, uint16_t color);
 
   bool inGridEditor = false; // Track if we're in grid editor mode

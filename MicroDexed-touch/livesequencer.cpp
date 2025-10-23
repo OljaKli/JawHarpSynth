@@ -52,6 +52,7 @@ FLASHMEM LiveSequencer::LiveSequencer() {
   data.currentGridStep = 0;
   data.selectedGridStep = 0;
   data.selectedGridTrack = 0;
+  data.gridPlaybackStartStep = 0;
   data.gridPlaybackEndStep = LiveSequencer::LiveSeqData::GRIDSONGLEN - 1;
 
   // Allocate gridSongSteps in PSRAM

@@ -5045,10 +5045,11 @@ FLASHMEM void handleStart(void)
       data->currentGridStep = 0;
     }
     else {
-      const uint8_t startStep = (data->selectedGridStep < data->GRIDSONGLEN) ? data->selectedGridStep : data->GRIDSONGLEN - 1;
+      const uint8_t startStep = (data->gridPlaybackStartStep < data->GRIDSONGLEN) ? data->gridPlaybackStartStep : data->GRIDSONGLEN - 1;
+      data->gridPlaybackStartStep = startStep;
       data->currentGridStep = startStep;
-      if (data->gridPlaybackEndStep < data->currentGridStep) {
-        data->gridPlaybackEndStep = data->currentGridStep;
+      if (data->gridPlaybackEndStep < startStep) {
+        data->gridPlaybackEndStep = startStep;
         data->redraw_grid_buttons = true;
       }
     }

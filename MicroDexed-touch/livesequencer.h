@@ -236,6 +236,7 @@ public:
 #endif
   bool useGridSongMode = false;  // false = live recording mode, true = grid mode
   bool seq_started_from_pattern_mode = false;
+  uint8_t gridPlaybackStartStep = 0;           // first grid row to play (0-indexed)
   uint8_t gridPlaybackEndStep = GRIDSONGLEN - 1; // last grid row to play (0-indexed)
     //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // GRIDSONGLEN song steps, 12 tracks, 4 layers
   uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
