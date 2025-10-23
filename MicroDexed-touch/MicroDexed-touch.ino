@@ -5047,6 +5047,10 @@ FLASHMEM void handleStart(void)
     else {
       const uint8_t startStep = (data->selectedGridStep < data->GRIDSONGLEN) ? data->selectedGridStep : data->GRIDSONGLEN - 1;
       data->currentGridStep = startStep;
+      if (data->gridPlaybackEndStep < data->currentGridStep) {
+        data->gridPlaybackEndStep = data->currentGridStep;
+        data->redraw_grid_buttons = true;
+      }
     }
   }
 

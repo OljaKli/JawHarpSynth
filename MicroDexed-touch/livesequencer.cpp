@@ -52,6 +52,7 @@ FLASHMEM LiveSequencer::LiveSequencer() {
   data.currentGridStep = 0;
   data.selectedGridStep = 0;
   data.selectedGridTrack = 0;
+  data.gridPlaybackEndStep = LiveSequencer::LiveSeqData::GRIDSONGLEN - 1;
 
   // Allocate gridSongSteps in PSRAM
 #ifdef PSRAM
@@ -1038,12 +1039,15 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       data.currentPattern = 0;
 
       if (data.useGridSongMode && !data.seq_started_from_pattern_mode) {
-        // Grid song mode: advance grid step after completing pattern cycle
-        data.currentGridStep = (data.currentGridStep + 1) % data.GRIDSONGLEN;
+        if (data.currentGridStep >= data.gridPlaybackEndStep) {
+          stop();
+          return;
+        }
+
+        data.currentGridStep++;
         ui_liveSeq->onGridStepChanged();
 
         // Trigger UI redraw 
-       // data.redraw_grid_header = true;
         ui_liveSeq->gridNeedsRedraw = true;
       }
       else  if (data.isSongMode && !data.useGridSongMode) {

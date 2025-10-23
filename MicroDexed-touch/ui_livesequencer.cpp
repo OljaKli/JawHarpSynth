@@ -644,11 +644,18 @@ FLASHMEM void UI_LiveSequencer::init(void) {
 
 
   gridControlButtons.push_back(new TouchButton(GRID.X[5], GRID.Y[4],
-    [](auto* b) { // drawHandler
-      b->draw("SCROLL", "DOWN", TouchButton::BUTTON_ACTIVE);
+    [this](auto* b) { // drawHandler
+      char endLabel[5];
+      snprintf(endLabel, sizeof(endLabel), "%02u", static_cast<unsigned>(data.gridPlaybackEndStep) + 1);
+      const bool isSelectedEnd = (data.selectedGridStep == data.gridPlaybackEndStep);
+      b->draw("END", endLabel, isSelectedEnd ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
     },
     [this](auto* b) { // clickedHandler
-      instance->scrollDown();
+      if (data.selectedGridStep < LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+        data.gridPlaybackEndStep = data.selectedGridStep;
+        data.redraw_grid_buttons = true;
+        gridNeedsRedraw = true;
+      }
     }));
 }
 
@@ -1520,10 +1527,18 @@ FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
 
     const bool isCurrentStep = (actualStep == data.currentGridStep) && data.isRunning;
     const bool isSelectedStep = (actualStep == data.selectedGridStep);
+    const bool isEndStep = (actualStep == data.gridPlaybackEndStep);
 
     // Draw step number
     display.setCursor(1, gridStartY + (step * (GRID_SONG_CELL_HEIGHT)) + GRID_SONG_CELL_HEIGHT / 2 - 4);
-    display.setTextColor(isCurrentStep ? RED : COLOR_SYSTEXT, COLOR_BACKGROUND);
+    uint16_t stepColor = COLOR_SYSTEXT;
+    if (isCurrentStep) {
+      stepColor = RED;
+    }
+    else if (isEndStep) {
+      stepColor = YELLOW;
+    }
+    display.setTextColor(stepColor, COLOR_BACKGROUND);
     display.printf("%02i", actualStep + 1);
 
     for (uint8_t track = 0; track < GRID_SONG_COLS; track++) {
