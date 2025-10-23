@@ -803,7 +803,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
 
     if (e.down && inGridEditor)
     {
-      if (data.gridStepOffset < data.GRIDSONGLEN - 6)
+      if (data.gridStepOffset < data.GRIDSONGLEN - GRID_SONG_ROWS)
       {
         data.gridStepOffset++;
         gridNeedsRedraw = true;
@@ -1749,7 +1749,7 @@ FLASHMEM void UI_LiveSequencer::scrollUp(void) {
 }
 
 FLASHMEM void UI_LiveSequencer::scrollDown(void) {
-  if (data.gridStepOffset < data.GRIDSONGLEN - 6) { // Assuming 32 steps total, showing 6 at a time
+  if (data.gridStepOffset < data.GRIDSONGLEN - GRID_SONG_ROWS) { // Keep room for the visible rows when scrolling down
     data.gridStepOffset++;
     gridNeedsRedraw = true;
   }
