@@ -54,6 +54,7 @@ FLASHMEM LiveSequencer::LiveSequencer() {
   data.selectedGridTrack = 0;
   data.gridPlaybackStartStep = 0;
   data.gridPlaybackEndStep = LiveSequencer::LiveSeqData::GRIDSONGLEN - 1;
+  data.gridLoopEnabled = true;
 
   // Allocate gridSongSteps in PSRAM
 #ifdef PSRAM
@@ -1041,11 +1042,18 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
 
       if (data.useGridSongMode && !data.seq_started_from_pattern_mode) {
         if (data.currentGridStep >= data.gridPlaybackEndStep) {
-          stop();
-          return;
+          if (data.gridLoopEnabled) {
+            data.currentGridStep = data.gridPlaybackStartStep;
+          }
+          else {
+            stop();
+            return;
+          }
+        }
+        else {
+          data.currentGridStep++;
         }
 
-        data.currentGridStep++;
         ui_liveSeq->onGridStepChanged();
 
         // Trigger UI redraw 

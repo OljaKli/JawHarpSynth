@@ -648,14 +648,24 @@ FLASHMEM void UI_LiveSequencer::init(void) {
 
   gridControlButtons.push_back(new TouchButton(GRID.X[5], GRID.Y[4],
     [this](auto* b) { // drawHandler
-  char endLabel[5];
+      char endLabel[5];
       snprintf(endLabel, sizeof(endLabel), "%02u", static_cast<unsigned>(data.gridPlaybackEndStep) + 1);
       const bool isSelectedEnd = (data.selectedGridStep == data.gridPlaybackEndStep);
-      b->draw("END", endLabel, isSelectedEnd ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
+  const char* topLabel = data.gridLoopEnabled ? "LOOP" : "END";
+  const bool emphasize = isSelectedEnd || data.gridLoopEnabled;
+      b->draw(topLabel, endLabel, emphasize ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
     },
     [this](auto* b) { // clickedHandler
       if (data.selectedGridStep < LiveSequencer::LiveSeqData::GRIDSONGLEN) {
-        data.gridPlaybackEndStep = data.selectedGridStep;
+        if (data.gridPlaybackEndStep != data.selectedGridStep) {
+          data.gridPlaybackEndStep = data.selectedGridStep;
+          if (data.gridPlaybackEndStep < data.gridPlaybackStartStep) {
+            data.gridPlaybackStartStep = data.gridPlaybackEndStep;
+          }
+        }
+        else {
+          data.gridLoopEnabled = !data.gridLoopEnabled;
+        }
         data.redraw_grid_buttons = true;
         gridNeedsRedraw = true;
       }
