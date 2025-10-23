@@ -1670,7 +1670,7 @@ FLASHMEM void UI_LiveSequencer::handleGridSongTouch(void) {
     }
     else {
       data.seq_started_from_pattern_mode = false;
-      data.currentGridStep = 0;
+      data.currentGridStep = (data.selectedGridStep < data.GRIDSONGLEN) ? data.selectedGridStep : data.GRIDSONGLEN - 1;
       data.redraw_grid_header = true; //strange but it is required to update the play indicator at step 1
       liveSeq.start();
     }
