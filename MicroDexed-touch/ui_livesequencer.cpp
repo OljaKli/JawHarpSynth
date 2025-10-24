@@ -1648,8 +1648,9 @@ FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
 
     // Draw back button
     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BACK", "EDIT", TouchButton::BUTTON_NORMAL);
-    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", data.isRunning ? "STOP" : "START",
-      data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+    const bool playingNow = data.isRunning || data.isStarting || seq.running;
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", playingNow ? "STOP" : "START",
+      playingNow ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
     data.redraw_grid_buttons = false;
   }
 
@@ -1695,7 +1696,8 @@ FLASHMEM void UI_LiveSequencer::handleGridSongTouch(void) {
 
   // Check if play button was pressed
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
-    if (data.isRunning) {
+    const bool playingNow = data.isRunning || data.isStarting || seq.running;
+    if (playingNow) {
       data.seq_started_from_pattern_mode = false;
       liveSeq.stop();
     }

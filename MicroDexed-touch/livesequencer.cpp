@@ -139,6 +139,7 @@ FLASHMEM void LiveSequencer::stop(void) {
 }
 
 FLASHMEM void LiveSequencer::onStopped(void) {
+  data.isStarting = false;
   data.isRunning = false;
   DBG_LOG(printf("onStopped\n"));
 
@@ -280,7 +281,7 @@ FLASHMEM void LiveSequencer::refreshSongLength(void) {
 FLASHMEM void LiveSequencer::onSongStopped(void) {
   // Reset grid step when song stops
   if (data.useGridSongMode) {
-    data.currentGridStep = 0;
+    data.currentGridStep = data.gridPlaybackStartStep;
     // data.redraw_grid_header = true;
     ui_liveSeq->gridNeedsRedraw = true;
   }
