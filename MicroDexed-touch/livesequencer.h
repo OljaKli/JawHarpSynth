@@ -228,7 +228,7 @@ public:
     uint8_t songMuteQuantizeDenom = 1;
 
     // Grid-based song mode
-    static const uint8_t GRIDSONGLEN = 32;
+    static const uint8_t GRIDSONGLEN = 64;
     bool useGridSongMode = false;  // false = live recording mode, true = grid mode
     bool seq_started_from_pattern_mode = false;
     //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // 32 song steps, 12 tracks, 4 layers

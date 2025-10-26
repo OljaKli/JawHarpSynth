@@ -197,6 +197,39 @@ FLASHMEM void helptext_c(const __FlashStringHelper* str) {
 
 extern void clear_bottom_half_screen_without_backbutton();
 
+ #ifdef TOUCH_UI
+FLASHMEM void back_touchbutton()
+{
+  if (ts.keyb_in_menu_activated == false)
+  {
+    // back text can be drawn as a touch button
+    if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
+    {
+      draw_button_on_grid(2, 25, "GO", back_text, 1);
+    }
+    else
+      if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
+      {
+        draw_button_on_grid(2, 25, "", "", 98);//clear
+      }
+  }
+  if (legacy_touch_button_back_page())
+  {
+    //remove unusable touch buttons from screen
+    display.console = true;
+    display.fillRect(270, 87, CHAR_width_small * button_size_x, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
+    display.fillRect(12, 144, 300, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
+    display.fillRect(78, 200, 234, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
+    display.console = false;
+    //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
+  }
+  else if (touch_button_back_page() && seq.cycle_touch_element != 1)
+  {
+    draw_button_on_grid(2, 25, "GO", back_text, 1);
+  }
+}
+#endif
+
 FLASHMEM void draw_back_touchbutton()
 {
   if (ts.keyb_in_menu_activated == false)
@@ -1426,6 +1459,22 @@ FLASHMEM void handle_touchscreen_chord_arranger()
 
 FLASHMEM void draw_menu_ui_icons()
 {
+   #ifdef TOUCH_UI
+  // do touch_ui stuff
+
+    draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
+
+  if (seq.running)
+    draw_button_on_grid(45, 7, "SEQ.", "STOP", 2);
+  else
+    draw_button_on_grid(45, 7, "SEQ.", "START", 1);
+
+ draw_button_on_grid(45, 19, "UP", "", 0); 
+  draw_button_on_grid(45, 25, "DOWN", "", 0); 
+
+  #else
+
+
   TouchButton::drawButton(GRID.X[0], GRID.Y[3], "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SONG", "EDITOR", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[2], GRID.Y[3], "PATT", "EDITOR", TouchButton::BUTTON_NORMAL);
@@ -1449,6 +1498,7 @@ FLASHMEM void draw_menu_ui_icons()
   TouchButton::drawButton(GRID.X[5], GRID.Y[5], "MAIN", "MIXER", TouchButton::BUTTON_NORMAL);
 
   TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
+  #endif
 }
 extern elapsedMillis save_sys;
 extern bool  is_offline_mode;
