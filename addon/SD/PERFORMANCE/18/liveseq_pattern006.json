@@ -324,10 +324,10 @@
     "source": 1,
     "patternMs": 1932,
     "patternNumber": 1,
-    "track": 5,
+    "track": 11,
     "layer": 0,
     "event": 144,
-    "note_in": 75,
+    "note_in": 90,
     "note_in_velocity": 127
   },
   "33": {
@@ -344,10 +344,10 @@
     "source": 1,
     "patternMs": 1932,
     "patternNumber": 1,
-    "track": 11,
+    "track": 5,
     "layer": 0,
     "event": 144,
-    "note_in": 90,
+    "note_in": 75,
     "note_in_velocity": 127
   },
   "35": {

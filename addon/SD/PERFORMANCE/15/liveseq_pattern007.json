@@ -1,26 +1,6 @@
 {
-  "number_of_events": 15,
+  "number_of_events": 13,
   "0": {
-    "source": 1,
-    "patternMs": 15627,
-    "patternNumber": 3,
-    "track": 0,
-    "layer": 0,
-    "event": 176,
-    "note_in": 1,
-    "note_in_velocity": 68
-  },
-  "1": {
-    "source": 1,
-    "patternMs": 15653,
-    "patternNumber": 3,
-    "track": 0,
-    "layer": 0,
-    "event": 176,
-    "note_in": 1,
-    "note_in_velocity": 66
-  },
-  "2": {
     "source": 1,
     "patternMs": 15679,
     "patternNumber": 3,
@@ -30,7 +10,7 @@
     "note_in": 1,
     "note_in_velocity": 65
   },
-  "3": {
+  "1": {
     "source": 1,
     "patternMs": 15755,
     "patternNumber": 3,
@@ -40,7 +20,7 @@
     "note_in": 1,
     "note_in_velocity": 67
   },
-  "4": {
+  "2": {
     "source": 1,
     "patternMs": 15781,
     "patternNumber": 3,
@@ -50,7 +30,7 @@
     "note_in": 1,
     "note_in_velocity": 71
   },
-  "5": {
+  "3": {
     "source": 1,
     "patternMs": 15807,
     "patternNumber": 3,
@@ -60,7 +40,7 @@
     "note_in": 1,
     "note_in_velocity": 77
   },
-  "6": {
+  "4": {
     "source": 1,
     "patternMs": 15833,
     "patternNumber": 3,
@@ -70,7 +50,7 @@
     "note_in": 1,
     "note_in_velocity": 81
   },
-  "7": {
+  "5": {
     "source": 1,
     "patternMs": 15858,
     "patternNumber": 3,
@@ -80,7 +60,7 @@
     "note_in": 1,
     "note_in_velocity": 83
   },
-  "8": {
+  "6": {
     "source": 1,
     "patternMs": 15909,
     "patternNumber": 3,
@@ -90,7 +70,7 @@
     "note_in": 1,
     "note_in_velocity": 80
   },
-  "9": {
+  "7": {
     "source": 1,
     "patternMs": 15936,
     "patternNumber": 3,
@@ -100,7 +80,7 @@
     "note_in": 1,
     "note_in_velocity": 74
   },
-  "10": {
+  "8": {
     "source": 1,
     "patternMs": 15961,
     "patternNumber": 3,
@@ -110,7 +90,7 @@
     "note_in": 1,
     "note_in_velocity": 68
   },
-  "11": {
+  "9": {
     "source": 1,
     "patternMs": 15987,
     "patternNumber": 3,
@@ -120,7 +100,7 @@
     "note_in": 1,
     "note_in_velocity": 65
   },
-  "12": {
+  "10": {
     "source": 1,
     "patternMs": 16011,
     "patternNumber": 3,
@@ -130,7 +110,7 @@
     "note_in": 1,
     "note_in_velocity": 66
   },
-  "13": {
+  "11": {
     "source": 1,
     "patternMs": 16037,
     "patternNumber": 3,
@@ -140,7 +120,7 @@
     "note_in": 1,
     "note_in_velocity": 69
   },
-  "14": {
+  "12": {
     "source": 1,
     "patternMs": 16063,
     "patternNumber": 3,

@@ -4,10 +4,10 @@
     "source": 1,
     "patternMs": 1248,
     "patternNumber": 0,
-    "track": 0,
+    "track": 2,
     "layer": 0,
     "event": 144,
-    "note_in": 80,
+    "note_in": 60,
     "note_in_velocity": 127
   },
   "1": {
@@ -334,23 +334,13 @@
     "source": 1,
     "patternMs": 2496,
     "patternNumber": 0,
-    "track": 6,
-    "layer": 0,
+    "track": 0,
+    "layer": 1,
     "event": 144,
-    "note_in": 55,
-    "note_in_velocity": 126
-  },
-  "34": {
-    "source": 1,
-    "patternMs": 2496,
-    "patternNumber": 0,
-    "track": 1,
-    "layer": 0,
-    "event": 144,
-    "note_in": 48,
+    "note_in": 80,
     "note_in_velocity": 127
   },
-  "35": {
+  "34": {
     "source": 1,
     "patternMs": 2496,
     "patternNumber": 0,
@@ -360,7 +350,7 @@
     "note_in": 32,
     "note_in_velocity": 127
   },
-  "36": {
+  "35": {
     "source": 1,
     "patternMs": 2496,
     "patternNumber": 0,
@@ -370,27 +360,27 @@
     "note_in": 60,
     "note_in_velocity": 126
   },
+  "36": {
+    "source": 1,
+    "patternMs": 2496,
+    "patternNumber": 0,
+    "track": 6,
+    "layer": 0,
+    "event": 144,
+    "note_in": 55,
+    "note_in_velocity": 126
+  },
   "37": {
     "source": 1,
     "patternMs": 2496,
     "patternNumber": 0,
-    "track": 0,
-    "layer": 1,
+    "track": 1,
+    "layer": 0,
     "event": 144,
-    "note_in": 80,
+    "note_in": 48,
     "note_in_velocity": 127
   },
   "38": {
-    "source": 1,
-    "patternMs": 0,
-    "patternNumber": 1,
-    "track": 7,
-    "layer": 0,
-    "event": 144,
-    "note_in": 46,
-    "note_in_velocity": 121
-  },
-  "39": {
     "source": 1,
     "patternMs": 0,
     "patternNumber": 1,
@@ -400,7 +390,7 @@
     "note_in": 49,
     "note_in_velocity": 127
   },
-  "40": {
+  "39": {
     "source": 1,
     "patternMs": 0,
     "patternNumber": 1,
@@ -409,6 +399,16 @@
     "event": 144,
     "note_in": 24,
     "note_in_velocity": 126
+  },
+  "40": {
+    "source": 1,
+    "patternMs": 0,
+    "patternNumber": 1,
+    "track": 7,
+    "layer": 0,
+    "event": 144,
+    "note_in": 46,
+    "note_in_velocity": 121
   },
   "41": {
     "source": 1,

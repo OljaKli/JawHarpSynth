@@ -295,6 +295,7 @@ public:
   static const std::string getEventName(midi::MidiType event);
   static const std::string getEventSource(EventSource source);
   void checkBpmChanged(void);
+  void AddMetronome(void);
 
 private:
   LiveSeqData data;
@@ -322,7 +323,7 @@ private:
   void playNextArpNote(void);
   void playArp(const midi::MidiType type, const ArpNote arp);
   bool timeQuantization(MidiEvent& e, uint8_t denom);
-  void checkAddMetronome(void);
+
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
   void sortEvents(void);
 

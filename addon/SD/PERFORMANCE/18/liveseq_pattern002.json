@@ -284,63 +284,33 @@
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
-    "track": 4,
-    "layer": 3,
+    "track": 9,
+    "layer": 0,
     "event": 144,
-    "note_in": 77,
-    "note_in_velocity": 118
+    "note_in": 45,
+    "note_in_velocity": 126
   },
   "29": {
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
-    "track": 4,
-    "layer": 2,
+    "track": 9,
+    "layer": 1,
     "event": 144,
     "note_in": 72,
-    "note_in_velocity": 126
+    "note_in_velocity": 127
   },
   "30": {
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
     "track": 1,
-    "layer": 0,
+    "layer": 1,
     "event": 144,
-    "note_in": 69,
+    "note_in": 72,
     "note_in_velocity": 127
   },
   "31": {
-    "source": 1,
-    "patternMs": 1656,
-    "patternNumber": 0,
-    "track": 4,
-    "layer": 1,
-    "event": 144,
-    "note_in": 65,
-    "note_in_velocity": 119
-  },
-  "32": {
-    "source": 1,
-    "patternMs": 1656,
-    "patternNumber": 0,
-    "track": 5,
-    "layer": 0,
-    "event": 144,
-    "note_in": 75,
-    "note_in_velocity": 127
-  },
-  "33": {
-    "source": 1,
-    "patternMs": 1656,
-    "patternNumber": 0,
-    "track": 0,
-    "layer": 0,
-    "event": 144,
-    "note_in": 69,
-    "note_in_velocity": 125
-  },
-  "34": {
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
@@ -350,34 +320,64 @@
     "note_in": 74,
     "note_in_velocity": 127
   },
+  "32": {
+    "source": 1,
+    "patternMs": 1656,
+    "patternNumber": 0,
+    "track": 0,
+    "layer": 0,
+    "event": 144,
+    "note_in": 69,
+    "note_in_velocity": 125
+  },
+  "33": {
+    "source": 1,
+    "patternMs": 1656,
+    "patternNumber": 0,
+    "track": 4,
+    "layer": 1,
+    "event": 144,
+    "note_in": 65,
+    "note_in_velocity": 119
+  },
+  "34": {
+    "source": 1,
+    "patternMs": 1656,
+    "patternNumber": 0,
+    "track": 5,
+    "layer": 0,
+    "event": 144,
+    "note_in": 75,
+    "note_in_velocity": 127
+  },
   "35": {
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
-    "track": 1,
-    "layer": 1,
+    "track": 4,
+    "layer": 3,
     "event": 144,
-    "note_in": 72,
-    "note_in_velocity": 127
+    "note_in": 77,
+    "note_in_velocity": 118
   },
   "36": {
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
-    "track": 9,
-    "layer": 1,
+    "track": 1,
+    "layer": 0,
     "event": 144,
-    "note_in": 72,
+    "note_in": 69,
     "note_in_velocity": 127
   },
   "37": {
     "source": 1,
     "patternMs": 1656,
     "patternNumber": 0,
-    "track": 9,
-    "layer": 0,
+    "track": 4,
+    "layer": 2,
     "event": 144,
-    "note_in": 45,
+    "note_in": 72,
     "note_in_velocity": 126
   },
   "38": {

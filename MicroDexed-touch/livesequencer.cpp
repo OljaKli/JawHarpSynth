@@ -939,7 +939,8 @@ FLASHMEM void LiveSequencer::init(void) {
 
 FLASHMEM void LiveSequencer::onGuiInit(void) {
   init();
-  checkAddMetronome();
+  //AddMetronome(); //moved to a button in pattern tools since this creates the metronome just by entering liveseq while recording is running 
+  //and the user probably does not know where the sound is coming from after leaving the liveseq page 
 }
 
 FLASHMEM void LiveSequencer::checkBpmChanged(void) {
@@ -1194,9 +1195,10 @@ FLASHMEM void LiveSequencer::setActiveTrack(uint8_t track) {
   ui_liveSeq->updateTrackChannelSetupButtons(track);
 }
 
-FLASHMEM void LiveSequencer::checkAddMetronome(void) {
+FLASHMEM void LiveSequencer::AddMetronome(void) {
   // always assure we have a drum track with some tempo to begin
-  if (data.eventsList.empty()) {
+
+  if (data.eventsList.empty() && !seq.running) {
     const uint8_t activeTrack = data.activeTrack;
 
     uint8_t fillNumOld = data.fillNotes.number;
@@ -1222,10 +1224,10 @@ FLASHMEM void LiveSequencer::checkAddMetronome(void) {
         data.fillNotes.number = fillNumOld;
         data.fillNotes.offset = fillOffOld;
         data.activeTrack = activeTrack;
-        return;
+        return ;
       }
     }
-  }
+  } 
 }
 
 FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel) {

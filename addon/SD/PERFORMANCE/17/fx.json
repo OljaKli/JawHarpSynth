@@ -6,7 +6,7 @@
     0
   ],
   "filter_resonance": [
-    1,
+    0,
     0,
     0,
     0
@@ -85,9 +85,9 @@
   ],
   "reverb_send": [
     38,
-    60,
+    74,
     50,
-    35
+    28
   ],
   "delay_to_reverb": [
     0,

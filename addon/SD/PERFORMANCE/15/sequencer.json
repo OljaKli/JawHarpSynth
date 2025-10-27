@@ -17,6 +17,7 @@
   "euclidean_offset": 4,
   "hihat_randomizer": 15,
   "grid_song_mode": false,
+  "isSongMode": true,
   "arr_type": [
     0,
     0,

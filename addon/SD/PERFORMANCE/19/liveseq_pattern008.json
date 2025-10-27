@@ -4,20 +4,20 @@
     "source": 1,
     "patternMs": 414,
     "patternNumber": 1,
-    "track": 3,
-    "layer": 1,
+    "track": 4,
+    "layer": 0,
     "event": 144,
-    "note_in": 39,
+    "note_in": 78,
     "note_in_velocity": 127
   },
   "1": {
     "source": 1,
     "patternMs": 414,
     "patternNumber": 1,
-    "track": 10,
-    "layer": 2,
+    "track": 4,
+    "layer": 1,
     "event": 144,
-    "note_in": 88,
+    "note_in": 78,
     "note_in_velocity": 127
   },
   "2": {
@@ -34,30 +34,30 @@
     "source": 1,
     "patternMs": 414,
     "patternNumber": 1,
-    "track": 4,
-    "layer": 1,
+    "track": 10,
+    "layer": 2,
     "event": 144,
-    "note_in": 78,
+    "note_in": 88,
     "note_in_velocity": 127
   },
   "4": {
     "source": 1,
     "patternMs": 414,
     "patternNumber": 1,
-    "track": 4,
+    "track": 7,
     "layer": 0,
     "event": 144,
-    "note_in": 78,
-    "note_in_velocity": 127
+    "note_in": 53,
+    "note_in_velocity": 116
   },
   "5": {
     "source": 1,
     "patternMs": 414,
     "patternNumber": 1,
-    "track": 3,
-    "layer": 0,
+    "track": 6,
+    "layer": 2,
     "event": 144,
-    "note_in": 27,
+    "note_in": 63,
     "note_in_velocity": 127
   },
   "6": {
@@ -334,10 +334,10 @@
     "source": 1,
     "patternMs": 701,
     "patternNumber": 1,
-    "track": 10,
+    "track": 6,
     "layer": 2,
     "event": 128,
-    "note_in": 88,
+    "note_in": 63,
     "note_in_velocity": 122
   },
   "34": {
@@ -354,10 +354,10 @@
     "source": 1,
     "patternMs": 701,
     "patternNumber": 1,
-    "track": 6,
+    "track": 10,
     "layer": 2,
     "event": 128,
-    "note_in": 63,
+    "note_in": 88,
     "note_in_velocity": 122
   },
   "36": {
@@ -484,10 +484,10 @@
     "source": 1,
     "patternMs": 828,
     "patternNumber": 1,
-    "track": 4,
-    "layer": 0,
+    "track": 6,
+    "layer": 2,
     "event": 144,
-    "note_in": 75,
+    "note_in": 66,
     "note_in_velocity": 127
   },
   "49": {
@@ -495,9 +495,9 @@
     "patternMs": 828,
     "patternNumber": 1,
     "track": 7,
-    "layer": 0,
+    "layer": 1,
     "event": 144,
-    "note_in": 56,
+    "note_in": 53,
     "note_in_velocity": 127
   }
 }

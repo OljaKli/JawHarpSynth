@@ -8,8 +8,8 @@
   "filter_resonance": [
     0,
     0,
-    0,
-    0
+    1,
+    1
   ],
   "chorus_frequency": [
     0,

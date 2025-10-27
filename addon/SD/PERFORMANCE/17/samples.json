@@ -1,11 +1,11 @@
 [
   {
     "name": "NM-BD-01",
-    "filename": "//CUSTOM/NM-MONTY/NM-BD-01.wav",
+    "filename": "/CUSTOM/BD/NM-BD-01.wav",
     "start": 0,
     "end": 1000,
     "loop": 0,
-    "class": 11
+    "class": 1
   },
   {
     "name": "NM-SNARE-01",
