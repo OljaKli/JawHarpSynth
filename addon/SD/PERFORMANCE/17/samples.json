@@ -1,11 +1,11 @@
 [
   {
-    "name": "NM-BD-01",
-    "filename": "/CUSTOM/BD/NM-BD-01.wav",
+    "name": "AnalogKick",
+    "filename": "/CUSTOM/NM-MONTY/AnalogKick.wav",
     "start": 0,
-    "end": 1000,
+    "end": 778,
     "loop": 0,
-    "class": 1
+    "class": 11
   },
   {
     "name": "NM-SNARE-01",
