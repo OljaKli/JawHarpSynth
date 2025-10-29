@@ -82,7 +82,6 @@ FLASHMEM void metronome_text_pos()
 FLASHMEM void UI_LiveSequencer::init(void) {
   // TRACK BUTTONS
   for (uint8_t trackIndex = 0; trackIndex < LiveSequencer::LIVESEQUENCER_TRACKS_PER_SCREEN; trackIndex++) {
-    // TODO: track = trackOffset + trackIndex not working as wrongly captured by lambda
     trackButtons.push_back(new TouchButton(GRID.X[trackIndex], GRID.Y[1],
       [this, trackIndex](auto* b) { // drawHandler
         const bool isActiveTrack = ((trackOffset + trackIndex) == data.activeTrack);
