@@ -279,7 +279,13 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define DISPLAY_HEIGHT 240
 
 #define display_cols 20
+
+#ifdef TOUCH_UI
+#define display_rows 16
+#else
 #define display_rows 6
+#endif
+
 #define CHAR_width 12
 #define CHAR_height 17
 #define CHAR_width_small 6

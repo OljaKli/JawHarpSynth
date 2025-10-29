@@ -37,7 +37,6 @@ using namespace TeensyTimerTool;
 #include "braids.h"
 #include "touch.h"
 #include "noisemaker.h"
-//#include "livesequencer.h"
 
 #if NUM_DRUMS > 0
 #include "drums.h"
@@ -4157,6 +4156,10 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["hihat_randomizer"] = seq.hihat_randomizer;
       data_json["grid_song_mode"] = data->LiveSequencer::LiveSeqData::useGridSongMode;
 
+      if (  data->LiveSequencer::LiveSeqData::songLayerCount > 0) 
+        data_json["isSongMode"] = data->LiveSequencer::LiveSeqData::isSongMode;
+
+
       for (uint8_t track = 0; track < NUM_SEQ_TRACKS; track++)
       {
         data_json["arr_type"][track] = seq.arr_type[track];
@@ -4598,8 +4601,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           slices_midi_channel = data_json["slices_midi_channel"];
 
         data->LiveSequencer::LiveSeqData::useGridSongMode = data_json["grid_song_mode"];
-
-
+        data->LiveSequencer::LiveSeqData::isSongMode = data_json["isSongMode"];
 
         AudioNoInterrupts();
 

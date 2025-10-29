@@ -201,7 +201,7 @@ private:
   static constexpr uint16_t LINE_HEIGHT = 1;
   static constexpr uint16_t HEADER_HEIGHT = DISPLAY_HEIGHT - CONTENT_HEIGHT - TouchButton::BUTTON_SIZE_Y - LINE_HEIGHT;
 
-  static constexpr uint8_t STEPS_MAX = 32;
+  static constexpr uint8_t STEPS_MAX = 64;
   int8_t stepRecordLayer = 0;
   uint8_t stepRecordSteps = 16;
   float stepRecordStepSizeMs = 0.0f;

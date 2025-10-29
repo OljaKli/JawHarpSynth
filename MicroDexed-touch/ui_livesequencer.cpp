@@ -28,12 +28,12 @@ FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
 
   uint8_t newInstrument = selectedTrackSetup.instrument;
 
-// For external MIDI devices, we need to handle the instrument parameter differently
-  // // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
-  // if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
-  //   // For external MIDI, use the selectedInstrument directly as MIDI channel
-  //   newInstrument = selectedInstrument+ 1;
-  // }
+  // For external MIDI devices, we need to handle the instrument parameter differently
+    // // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
+    // if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
+    //   // For external MIDI, use the selectedInstrument directly as MIDI channel
+    //   newInstrument = selectedInstrument+ 1;
+    // }
 
   const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) ||
     (trackSettings.instrument != newInstrument);
@@ -69,6 +69,14 @@ FLASHMEM void UI_LiveSequencer::drawTrackSubtext(uint8_t track) {
   else {
     display.printf("%i%%", velocity);
   }
+}
+
+
+FLASHMEM void metronome_text_pos()
+{
+  display.setTextSize(1);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setCursor(CHAR_width_small * 18, CHAR_height_small * 27);
 }
 
 FLASHMEM void UI_LiveSequencer::init(void) {
@@ -335,6 +343,34 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [](auto* b) { // drawHandler
       b->draw("FILL", "NOTES", TouchButton::BUTTON_LABEL);
     }));
+
+  toolsPages[TOOLS_PATTERN].push_back(new TouchButton(GRID.X[0], GRID.Y[5],
+    [](auto* b) { // drawHandler
+      b->draw("COUNT", "IN", TouchButton::BUTTON_LABEL);
+    }));
+
+  toolsPages[TOOLS_PATTERN].push_back(new TouchButton(GRID.X[1], GRID.Y[5],
+    [](auto* b) { // drawHandler
+   
+ b->draw("ADD", "METRONM", TouchButton::BUTTON_ACTIVE);
+      metronome_text_pos();
+      display.print(F("TOUCH TO ADD METRONOME"));
+    },
+    [this](auto* b) { // clickedHandler
+
+ liveSeq.start();
+ delay(50);
+ liveSeq.stop();
+ delay(20);
+ metronome_text_pos();
+
+ if (seq.running==false ) {
+  liveSeq.AddMetronome();
+        display.print(F("METRONOME TRACK ADDED  ")); 
+        delay(50);
+      }
+    }));
+
   lastNoteLabel = new TouchButton(GRID.X[1], GRID.Y[4],
     [this](auto* b) { // drawHandler
       char temp_char[4];

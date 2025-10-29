@@ -230,17 +230,17 @@ public:
     // Grid-based song mode
 #ifdef PSRAM
     // Extra song slots for PSRAM builds allow deeper arrangements in the grid editor
-    static constexpr uint8_t GRIDSONGLEN = 64;
+    static const uint8_t GRIDSONGLEN = 64;
 #else
-    static constexpr uint8_t GRIDSONGLEN = 32;
+    static const uint8_t GRIDSONGLEN = 32;
 #endif
   bool useGridSongMode = false;  // false = live recording mode, true = grid mode
   bool seq_started_from_pattern_mode = false;
+  //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // GRIDSONGLEN song steps, 12 tracks, 4 layers
+  uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
   uint8_t gridPlaybackStartStep = 0;           // first grid row to play (0-indexed)
   uint8_t gridPlaybackEndStep = GRIDSONGLEN - 1; // last grid row to play (0-indexed)
   bool gridLoopEnabled = false;
-    //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // GRIDSONGLEN song steps, 12 tracks, 4 layers
-  uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
     uint8_t currentGridStep = 0;
     uint8_t gridStepOffset = 0;  // for scrolling through steps
     uint8_t selectedGridStep = 0;
@@ -303,6 +303,7 @@ public:
   static const std::string getEventName(midi::MidiType event);
   static const std::string getEventSource(EventSource source);
   void checkBpmChanged(void);
+  void AddMetronome(void);
 
 private:
   LiveSeqData data;
@@ -330,7 +331,7 @@ private:
   void playNextArpNote(void);
   void playArp(const midi::MidiType type, const ArpNote arp);
   bool timeQuantization(MidiEvent& e, uint8_t denom);
-  void checkAddMetronome(void);
+
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
   void sortEvents(void);
 

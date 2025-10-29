@@ -1048,8 +1048,6 @@ FLASHMEM void check_remote()
 
 FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color)
 {
-
-
   check_remote();
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
@@ -1135,6 +1133,79 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
     // display.setTextColor(COLOR_SYSTEXT,COLOR_BACKGROUND);
   }
 }
+
+#ifdef TOUCH_UI
+FLASHMEM void draw_button_on_grid_smarttext(uint8_t x, uint8_t y, const char* t1, uint8_t color)
+{
+
+  uint8_t c = 0;
+  uint8_t len = strlen(t1);
+  char out1[8] = { 0,0,0,0,0,0,0 };
+  char out2[8] = { 0,0,0,0,0,0,0 };
+  uint8_t c_out1 = 0;
+  uint8_t c_out2 = 0;
+  uint8_t line = 1;
+
+  if (color == 98) // special case, clear button to background color
+  {
+    display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, GREY4);
+  }
+  else do {
+     
+      if (t1[c] == 32 && line == 1) // space triggers new line
+      {
+        line = 2;
+        c++;
+      }
+      else
+        if (c_out1 > 5) // if line 1 full, continue on line 2
+        {
+          line = 2;
+        }
+
+      if (line == 1)
+      {
+        out1[c_out1] = t1[c];
+        c_out1++;
+      }
+
+      else if (line == 2)
+      {
+        out2[c_out2] = t1[c];
+        c_out2++;
+      }
+
+      c++;
+
+    } while (c < len && c_out2 < 6);
+
+    if (remote_active)
+      display.console = true;
+
+    display.setTextSize(1);
+    if (color == 0) // standard grey
+    {
+      display.setTextColor(GREY1, GREY2);
+      display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, GREY2);
+    }
+    else if (color == 1) // button has active color
+    {
+      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+      display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, DX_DARKCYAN);
+    }
+    else if (color == 2) // button has RED color
+    {
+      display.setTextColor(COLOR_SYSTEXT, RED);
+      display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, RED);
+    }
+    display.setCursor(x * CHAR_width_small + CHAR_width_small / 2, y * CHAR_height_small + 6);
+    display.print(out1);
+    display.setCursor(x * CHAR_width_small + CHAR_width_small / 2, y * CHAR_height_small + 10 + CHAR_height_small);
+    display.print(out2);
+    display.setTextSize(1);
+}
+#endif
+
 
 FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str)
 {
@@ -4876,20 +4947,34 @@ FLASHMEM void lcdml_menu_control(void)
 extern int glow_menu_item;
 #endif
 
+
+
+ #ifdef TOUCH_UI
+extern void back_touchbutton();
+#endif
+
 /***********************************************************************
    MENU DISPLAY
  ***********************************************************************/
 FLASHMEM void lcdml_menu_clear(void)
 {
+
+ #ifdef TOUCH_UI
+ //
+  #else
   if (seq.menu_status == 0)
     border1_clear();
+  #endif
+
   ts.touch_ui_drawn_in_menu = false;
   back_button_touch_page_check_and_init_done = false;
+
 #if defined GLOW
   glow_menu_item = 9999;
 #endif
 }
 
+#ifndef TOUCH_UI  //begin regular menu
 FLASHMEM void lcdml_menu_display(void)
 {
   // update content
@@ -4987,6 +5072,128 @@ FLASHMEM void lcdml_menu_display(void)
     drawScrollbar((_LCDML_DISP_cols - 2) * CHAR_width + CHAR_width_small, CHAR_height, 6, LCDML.MENU_getChilds(), LCDML.MENU_getCursorPosAbs(), CHAR_height);
   }
 }
+
+#else  // begin touch_ui 
+
+FLASHMEM void lcdml_menu_display(void)
+{
+
+if (seq.menu_status == 0)
+{
+ display.fillScreen(COLOR_BACKGROUND);
+  seq.menu_status = 1;
+}
+
+  // update content
+  // ***************
+  if (LCDML.DISP_checkMenuUpdate())
+  {
+    // declaration of some variables
+    // ***************
+    // content variable
+    char content_text[_LCDML_DISP_cols]; // save the content text of current menu element
+    // menu element object
+    LCDMenuLib2_menu* tmp;
+    // some limit values
+    uint8_t i = LCDML.MENU_getScroll();
+    //uint8_t maxi = _LCDML_DISP_rows + i;
+    uint8_t maxi = 16;
+    uint8_t n = 0;
+    uint8_t xpos = 0, ypos = 0;
+    uint8_t count_num_buttons = 0;
+
+
+    // check if this element has children
+    if ((tmp = LCDML.MENU_getDisplayedObj()) != NULL)
+    {
+      // Display a header with the parent element name
+      display.setTextSize(1);
+      display.setTextColor(GREY1, COLOR_BACKGROUND);
+
+      if (LCDML.MENU_getLayer() == 0)
+      {
+        // this is displayed when no header is available
+       // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width + CHAR_width_small*4;
+        x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
+        last_menu_depth = LCDML.MENU_getLayer();
+        display.console = true;
+        //display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()] + CHAR_width, 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
+        display.console = false;
+        //if (ts.keyb_in_menu_activated == false)
+        //{
+          //display.setCursor(0, DISPLAY_HEIGHT - CHAR_height_small);
+          //display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          //display.print(back_clear);
+        //}
+      }
+      else if (LCDML.MENU_getLayer() > last_menu_depth)
+      {
+        // display.setCursor(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7);
+        // display.setTextColor(RED, COLOR_BACKGROUND);
+        // display.print(">");
+        // display.setTextColor(GREY1, COLOR_BACKGROUND);
+        // LCDML_getContent(content_text, LCDML.MENU_getParentID());
+        // show_uppercase_no_grid(7, display.getCursorX(), strlen(content_text), content_text);
+        // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = display.getCursorX();
+       // if (ts.keyb_in_menu_activated == false)
+        //  helptext_l(back_text);//xxxyyy
+      }
+      back_touchbutton();
+      display.setTextSize(2);
+      seq.edit_state = false;
+      generic_active_function = 0;
+      // loop to display lines
+      do
+      {
+        // check if a menu element has a condition and if the condition be true
+        if (tmp->checkCondition())
+        {
+          // check the type off a menu element
+          if (tmp->checkType_menu() == true)
+          {
+            // display normal content
+            LCDML_getContent(content_text, tmp->getID());
+              if (n == LCDML.MENU_getCursorPos())
+                draw_button_on_grid_smarttext(xpos * 11 + 2, ypos * 6 + 1, content_text, 1);
+              else
+                draw_button_on_grid_smarttext(xpos * 11 + 2, ypos * 6 + 1, content_text, 0);
+            xpos++;
+            if (xpos > 3)
+            {
+              ypos++;
+              xpos = 0;
+            }
+            count_num_buttons++;
+          }
+          else
+          {
+            if (tmp->checkType_dynParam())
+            {
+              tmp->callback(n);
+            }
+          }
+          i++;
+          n++;
+        }
+        // try to go to the next sibling and check the number of displayed rows
+     } while (((tmp = tmp->getSibling(1)) != NULL) && (i < maxi-1));
+
+   // clear menu buttons if menu content < number touch buttons
+      do
+      {
+        draw_button_on_grid_smarttext(xpos * 11 + 2, ypos * 6 + 1, "", 98); //empty touch button slot
+        xpos++;
+        if (xpos > 3)
+        {
+          ypos++;
+          xpos = 0;
+        }
+        count_num_buttons++;
+      } while (count_num_buttons < maxi);
+    }
+  }
+}
+#endif
 
 FLASHMEM void draw_instance_editor(Editor* editor, bool refresh)
 {
