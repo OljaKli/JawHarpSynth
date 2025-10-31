@@ -1161,32 +1161,33 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
     case MODE_VIEW:
       switch (viewMode) {
       case VIEW_ZOOM_Y:
-        if (hasConstrainedChanged(view.numOctaves, -2 * e.dir, int8_t(1), int8_t(5))) {
-          setNumOctaves(view.numOctaves);
-          drawFlags |= DRAW_CONTENT_FULL;
-        }
-        break;
+   if (hasConstrainedChanged(view.numOctaves, -2 * e.dir, int8_t(1), int8_t(5))) {
+    view.startOctave += e.dir; // zoom octave-centered
+    setNumOctaves(view.numOctaves);
+    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL; // Include piano roll in redraw
+  }
+  break;
 
       case VIEW_SCROLL_Y:
       {
-        int8_t newStartOctave = view.startOctave + e.dir;
-        int8_t maxStartOctave = TOTAL_OCTAVES - view.numOctaves;
-        if (maxStartOctave < 0) maxStartOctave = 0;
+       int8_t newStartOctave = view.startOctave + e.dir;
+  int8_t maxStartOctave = TOTAL_OCTAVES - view.numOctaves;
+  if (maxStartOctave < 0) maxStartOctave = 0;
 
-        if (newStartOctave < 0) newStartOctave = 0;
-        if (newStartOctave > maxStartOctave) newStartOctave = maxStartOctave;
+  if (newStartOctave < 0) newStartOctave = 0;
+  if (newStartOctave > maxStartOctave) newStartOctave = maxStartOctave;
 
-        if (newStartOctave != view.startOctave) {
-          view.startOctave = newStartOctave;
-          view.lowestNote = 24 + view.startOctave * 12;
-          view.highestNote = (view.lowestNote + view.numNotes);
+  if (newStartOctave != view.startOctave) {
+    view.startOctave = newStartOctave;
+    view.lowestNote = 24 + view.startOctave * 12;
+    view.highestNote = (view.lowestNote + view.numNotes);
 
-          // Force full content redraw
-          drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
-          drawAreaIndicator();
-        }
-      }
-      break;
+    // Force full content redraw including piano roll
+    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
+    drawAreaIndicator();
+  }
+}
+break;
 
       case VIEW_ZOOM_X:
         if ((data.isSongMode && !data.useGridSongMode) || data.activeTrack == SONG_MODE_MUTE_TRACK) {
@@ -2136,6 +2137,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setStartOctave(int8_t num) {
   view.highestNote = (view.lowestNote + view.numNotes);
   reloadNotes();
   drawAreaIndicator();
+  drawFlags |= DRAW_PIANOROLL; // Force piano roll redraw when start octave changes
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
@@ -2144,8 +2146,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
   view.noteHeight = CONTENT_HEIGHT / float(view.numNotes);
   view.lowestNote = 24 + view.startOctave * 12;
   view.highestNote = (view.lowestNote + view.numNotes);
-  // reloadNotes();
+  reloadNotes();
   drawAreaIndicator();
+  drawFlags |= DRAW_PIANOROLL; // Force piano roll redraw when octaves change
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent& e, uint32_t time) {
@@ -2356,27 +2359,29 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setIsHighlighted(bool isHighlighted) {
 FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   const uint16_t numWhiteKeys = view.numOctaves * 7;
   const float keyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
-
+  
   display.console = true;
   display.fillRect(0, 0, ROLL_WIDTH, CONTENT_HEIGHT, COLOR_SYSTEXT);
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
 
+  // Draw white key separators - these scale with zoom Y
   for (uint8_t i = 1; i < numWhiteKeys; i++) {
     const uint16_t y = round(i * keyHeight);
     display.console = true;
     display.drawLine(0, y, ROLL_WIDTH, y, COLOR_BACKGROUND);
   }
 
+  // Draw black keys - these scale with zoom Y
   for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
     const uint8_t noteIndex = view.highestNote - note - 1;
     const uint16_t y = ceil(noteIndex * view.noteHeight); // ceil looks best rounded
     switch (note % 12) {
-    case 1:
-    case 3:
-    case 6:
-    case 8:
-    case 10:
+    case 1:  // C#
+    case 3:  // D#
+    case 6:  // F#
+    case 8:  // G#
+    case 10: // A#
       display.console = true;
       display.fillRect(0, y, 12, view.noteHeight, COLOR_BACKGROUND);
       break;
@@ -2402,26 +2407,39 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
   // Draw vertical lines (full height)
   for (uint8_t step = 0; step < view.numBars * substeps; step++) {
     const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
-    const uint16_t lineColor = (step % substeps == 0) ? GREY3 : GREY4;
+    const uint16_t lineColor = (step % substeps == 0) ? GREY2 : GREY3;
 
     for (auto& u : drawRegionsX) {
       const bool drawLine = ((x >= u.fromX) && (x <= u.toX));
       if (drawLine) {
-        display.console = true;
-        display.drawFastVLine(x, 0, CONTENT_HEIGHT, lineColor);
+        if (u.notes.empty()) {
+          // Full height lines for background updates
+          display.console = true;
+          display.drawFastVLine(x, 0, CONTENT_HEIGHT, lineColor);
+        }
+        else {
+          // Only draw lines where single note update is needed and key *not* pressed
+          for (uint8_t note : u.notes) {
+            if (keysPressed.find(note) == keysPressed.end()) {
+              const uint8_t noteIndex = view.highestNote - note - 1;
+              const uint16_t y = round(noteIndex * view.noteHeight);
+              display.console = true;
+              display.drawFastVLine(x, y, view.noteHeight, lineColor);
+            }
+          }
+        }
         break; // Only draw once per line
       }
     }
   }
 
-  // Calculate white key height to match the keyboard
+  // Draw horizontal lines - respect note filter for horizontal lines
   const uint16_t numWhiteKeys = view.numOctaves * 7;
   const float whiteKeyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
-
-  // Draw horizontal lines - respect note filter for horizontal lines
+  
   for (uint8_t whiteKey = 0; whiteKey <= numWhiteKeys; whiteKey++) {
     const uint16_t y = (uint16_t)(whiteKey * whiteKeyHeight + 0.5f);
-    const uint16_t lineColor = (whiteKey % 7 == 0) ? GREY3 : GREY4;
+    const uint16_t lineColor = (whiteKey % 7 == 0) ? GREY2 : GREY3;
 
     // Check if any update region wants this line drawn
     bool shouldDraw = false;
@@ -2554,9 +2572,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNoteAtPosition(LiveSequencer::NotePair n
     return;
   }
 
-  // Calculate Y position
+  // Calculate Y position - use the same calculation as old file
   const uint8_t noteIndex = view.highestNote - note.noteOn.note_in - 1;
-  const int16_t y = (int16_t)(noteIndex * view.noteHeight);
+  const uint16_t y = round(noteIndex * view.noteHeight);
   const uint8_t h = view.noteHeight;
 
   // Ensure note is fully within content area

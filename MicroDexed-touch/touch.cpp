@@ -475,6 +475,7 @@ FLASHMEM void handle_touchscreen_voice_select()
       TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
       print_voice_settings_in_dexed_voice_select(true, true);
       printLiveModButtons();
+      drawVoiceNameButton();
       print_voice_select_default_help();
       draw_algo(true); // force redraw
     }
@@ -489,14 +490,14 @@ FLASHMEM void handle_touchscreen_voice_select()
     save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
   }
   // VOICE NAME BUTTON HANDLER - Enter naming mode
-  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23)) {
+  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
     // Enter voice naming mode
     seq.cycle_touch_element = 2;
     remove_glow();
     unregisterTouchHandler();
     LCDML.OTHER_jumpToFunc(UI_func_set_voice_name);
   }
-  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2])) {
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]) && seq.cycle_touch_element == 0) {
     if (++configuration.sys.favorites > 3) {
       configuration.sys.favorites = 0;
     }
