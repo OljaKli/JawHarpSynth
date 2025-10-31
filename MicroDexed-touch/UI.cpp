@@ -21305,6 +21305,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
               print_voice_settings_in_dexed_voice_select(false, true);
               UI_update_instance_icons();
               printLiveModButtons();
+              drawVoiceNameButton();
               draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
               load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
             }
@@ -21412,6 +21413,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
         }
         draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
         printLiveModButtons();
+        drawVoiceNameButton();
       }
 
       if (seq.cycle_touch_element == 1 && generic_temp_select_menu > 5) {

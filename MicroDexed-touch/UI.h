@@ -156,6 +156,7 @@ void microsynth_refresh_lower_screen_dynamic_text();
 void panic_dexed_current_instance();
 void printLiveModButtons(void);
 void printLiveModButton(int8_t button); // 0 - 3 ADSR
+void drawVoiceNameButton();
 void reset_live_modifiers();
 void reset_live_modifier(uint8_t step);
 const bool isCustomSample(const uint8_t index);
