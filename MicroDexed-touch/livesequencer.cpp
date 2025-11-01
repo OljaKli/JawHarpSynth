@@ -2,6 +2,7 @@
 #include "config.h"
 #include "sequencer.h"
 #include <algorithm>
+#include <cstring>
 #include "TeensyTimerTool.h"
 #include "ui_livesequencer.h"
 #include "ui_liveseq_pianoroll.h"
@@ -1588,6 +1589,164 @@ FLASHMEM void LiveSequencer::printNotePairs(std::vector<NotePair> notePairs) {
     LiveSequencer::printEvent(pairNum, p.noteOn);
     LiveSequencer::printEvent(pairNum, p.noteOff);
     pairNum++;
+  }
+}
+
+FLASHMEM bool LiveSequencer::canInsertGridRow(uint8_t step) const {
+  if (data.gridSongSteps == nullptr) {
+    return false;
+  }
+  if (step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+  const int lastOccupied = lastOccupiedGridRow();
+  return lastOccupied < (static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1);
+}
+
+FLASHMEM bool LiveSequencer::canRemoveGridRow(uint8_t step) const {
+  if (data.gridSongSteps == nullptr) {
+    return false;
+  }
+  if (step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+  return isGridRowEmpty(step);
+}
+
+FLASHMEM bool LiveSequencer::insertGridRow(uint8_t step) {
+  if (!data.gridSongSteps || step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  const int lastOccupied = lastOccupiedGridRow();
+  if (lastOccupied >= (static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1)) {
+    return false;
+  }
+
+  const size_t stride = GRID_ROW_STRIDE;
+  uint8_t* const rowPtr = data.gridSongSteps + static_cast<size_t>(step) * stride;
+  const bool shiftedContent = lastOccupied >= static_cast<int>(step);
+
+  if (shiftedContent) {
+    const size_t rowsToMove = static_cast<size_t>(lastOccupied - static_cast<int>(step) + 1);
+    memmove(rowPtr + stride, rowPtr, rowsToMove * stride);
+  }
+
+  memset(rowPtr, 0, stride);
+
+  adjustGridMarkersAfterInsert(step, shiftedContent);
+  clampGridMarkers();
+  return true;
+}
+
+FLASHMEM bool LiveSequencer::removeGridRow(uint8_t step) {
+  if (!data.gridSongSteps || step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  if (!isGridRowEmpty(step)) {
+    return false;
+  }
+
+  const int lastOccupied = lastOccupiedGridRow();
+  const size_t stride = GRID_ROW_STRIDE;
+  uint8_t* const dest = data.gridSongSteps + static_cast<size_t>(step) * stride;
+
+  if (lastOccupied > static_cast<int>(step)) {
+    const size_t rowsToMove = static_cast<size_t>(lastOccupied - static_cast<int>(step));
+    memmove(dest, dest + stride, rowsToMove * stride);
+    uint8_t* const zeroRow = dest + rowsToMove * stride;
+    memset(zeroRow, 0, stride);
+  }
+  else {
+    memset(dest, 0, stride);
+  }
+
+  adjustGridMarkersAfterRemove(step);
+  clampGridMarkers();
+  return true;
+}
+
+FLASHMEM bool LiveSequencer::isGridRowEmpty(uint8_t step) const {
+  if (!data.gridSongSteps || step >= LiveSeqData::GRIDSONGLEN) {
+    return true;
+  }
+
+  const uint8_t* const rowPtr = data.gridSongSteps + static_cast<size_t>(step) * GRID_ROW_STRIDE;
+  for (size_t i = 0; i < GRID_ROW_STRIDE; ++i) {
+    if (rowPtr[i] != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+FLASHMEM int LiveSequencer::lastOccupiedGridRow() const {
+  if (!data.gridSongSteps) {
+    return -1;
+  }
+
+  for (int step = static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1; step >= 0; --step) {
+    if (!isGridRowEmpty(static_cast<uint8_t>(step))) {
+      return step;
+    }
+  }
+  return -1;
+}
+
+FLASHMEM void LiveSequencer::adjustGridMarkersAfterInsert(uint8_t step, bool shiftedContent) {
+  if (!shiftedContent) {
+    return;
+  }
+
+  auto incrementIfNeeded = [&](uint8_t& marker) {
+    if (marker >= step && marker < (LiveSeqData::GRIDSONGLEN - 1)) {
+      marker++;
+    }
+  };
+
+  incrementIfNeeded(data.gridPlaybackStartStep);
+  incrementIfNeeded(data.gridPlaybackEndStep);
+  incrementIfNeeded(data.currentGridStep);
+
+  if (data.gridStepOffset >= step && data.gridStepOffset < (LiveSeqData::GRIDSONGLEN - 1)) {
+    data.gridStepOffset++;
+  }
+}
+
+FLASHMEM void LiveSequencer::adjustGridMarkersAfterRemove(uint8_t step) {
+  auto decrementIfNeeded = [&](uint8_t& marker) {
+    if (marker > step) {
+      marker--;
+    }
+  };
+
+  decrementIfNeeded(data.gridPlaybackStartStep);
+  decrementIfNeeded(data.gridPlaybackEndStep);
+  if (data.gridPlaybackEndStep < data.gridPlaybackStartStep) {
+    data.gridPlaybackStartStep = data.gridPlaybackEndStep;
+  }
+  decrementIfNeeded(data.currentGridStep);
+  if (data.gridStepOffset > 0 && data.gridStepOffset > step) {
+    data.gridStepOffset--;
+  }
+}
+
+FLASHMEM void LiveSequencer::clampGridMarkers() {
+  auto clampMarker = [&](uint8_t& marker) {
+    if (marker >= LiveSeqData::GRIDSONGLEN) {
+      marker = LiveSeqData::GRIDSONGLEN - 1;
+    }
+  };
+
+  clampMarker(data.gridPlaybackStartStep);
+  clampMarker(data.gridPlaybackEndStep);
+  clampMarker(data.currentGridStep);
+  clampMarker(data.gridStepOffset);
+  clampMarker(data.selectedGridStep);
+
+  if (data.gridPlaybackEndStep < data.gridPlaybackStartStep) {
+    data.gridPlaybackStartStep = data.gridPlaybackEndStep;
   }
 }
 

@@ -617,22 +617,37 @@ FLASHMEM void UI_LiveSequencer::init(void) {
 
   // Grid song editor control buttons
   gridControlButtons.push_back(new TouchButton(GRID.X[0], GRID.Y[4],
-    [](auto* b) { // drawHandler
-      b->draw("CLEAR", "CELL", TouchButton::BUTTON_ACTIVE);
+    [this](auto* b) { // drawHandler
+      bool hasContent = false;
+      for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; ++layer) {
+        if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
+          hasContent = true;
+          break;
+        }
+      }
+
+      const char* const topLabel = hasContent ? "CLEAR" : "FILL";
+      const TouchButton::Color color = hasContent ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
+      b->draw(topLabel, "CELL", color);
     },
-    [this](auto* b) { // clickedHandler
-      instance->clearGridCell();
+    [this](auto* /*b*/) { // clickedHandler
+      bool hasContent = false;
+      for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; ++layer) {
+        if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
+          hasContent = true;
+          break;
+        }
+      }
+
+      if (hasContent) {
+        instance->clearGridCell();
+      }
+      else {
+        instance->fillGridCell();
+      }
     }));
 
   gridControlButtons.push_back(new TouchButton(GRID.X[1], GRID.Y[4],
-    [](auto* b) { // drawHandler
-      b->draw("FILL", "CELL", TouchButton::BUTTON_ACTIVE);
-    },
-    [this](auto* b) { // clickedHandler
-      instance->fillGridCell();
-    }));
-
-  gridControlButtons.push_back(new TouchButton(GRID.X[2], GRID.Y[4],
     [this](auto* b) { // drawHandler
       if (data.selectedGridStep > 0) {
         b->draw("FROM", "ABOVE", TouchButton::BUTTON_ACTIVE);
@@ -641,25 +656,28 @@ FLASHMEM void UI_LiveSequencer::init(void) {
         b->draw("FROM", "ABOVE", TouchButton::BUTTON_NORMAL);
       }
     },
-    [this](auto* b) { // clickedHandler
+    [this](auto* /*b*/) { // clickedHandler
       if (data.selectedGridStep > 0) {
         instance->copyFromAbove();
       }
     }));
 
+  gridControlButtons.push_back(new TouchButton(GRID.X[2], GRID.Y[4],
+    [this](auto* b) { // drawHandler
+      const bool enabled = liveSeq.canInsertGridRow(data.selectedGridStep);
+      b->draw("INSERT", "ROW", enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
+    },
+    [this](auto* /*b*/) { // clickedHandler
+      instance->insertGridRow();
+    }));
+
   gridControlButtons.push_back(new TouchButton(GRID.X[3], GRID.Y[4],
     [this](auto* b) { // drawHandler
-      if (data.selectedGridStep > 0) {
-        b->draw("SCROLL", "TOP", TouchButton::BUTTON_ACTIVE);
-      }
-      else {
-        b->draw("SCROLL", "TOP", TouchButton::BUTTON_NORMAL);
-      }
+      const bool enabled = liveSeq.canRemoveGridRow(data.selectedGridStep);
+      b->draw("REMOVE", "ROW", enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE);
     },
-    [this](auto* b) { // clickedHandler
-      if (data.selectedGridStep > 0) {
-        instance->scrollToTop();
-      }
+    [this](auto* /*b*/) { // clickedHandler
+      instance->removeGridRow();
     }));
 
   gridControlButtons.push_back(new TouchButton(GRID.X[4], GRID.Y[4],
@@ -1810,10 +1828,20 @@ FLASHMEM void UI_LiveSequencer::copyFromAbove(void) {
   }
 }
 
-FLASHMEM void UI_LiveSequencer::scrollToTop(void) {
-  data.gridStepOffset = 0;
-  gridNeedsRedraw = true;
-  data.redraw_grid_buttons = true;
+FLASHMEM void UI_LiveSequencer::insertGridRow(void) {
+  if (liveSeq.insertGridRow(data.selectedGridStep)) {
+    gridNeedsRedraw = true;
+    data.redraw_grid_buttons = true;
+    data.redraw_grid_header = true;
+  }
+}
+
+FLASHMEM void UI_LiveSequencer::removeGridRow(void) {
+  if (liveSeq.removeGridRow(data.selectedGridStep)) {
+    gridNeedsRedraw = true;
+    data.redraw_grid_buttons = true;
+    data.redraw_grid_header = true;
+  }
 }
 
 FLASHMEM void UI_LiveSequencer::toggleGridSongLayer(uint8_t layer) {

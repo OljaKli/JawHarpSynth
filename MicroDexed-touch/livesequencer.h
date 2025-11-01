@@ -288,6 +288,10 @@ public:
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
   void requestSortEvents(void);
   void setActiveTrack(uint8_t track);
+  bool insertGridRow(uint8_t step);
+  bool removeGridRow(uint8_t step);
+  bool canInsertGridRow(uint8_t step) const;
+  bool canRemoveGridRow(uint8_t step) const;
 
   struct NotePair {
     MidiEvent& noteOn;
@@ -306,6 +310,7 @@ public:
   void AddMetronome(void);
 
 private:
+  static constexpr size_t GRID_ROW_STRIDE = LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS;
   LiveSeqData data;
   std::set<uint8_t> activeArpKeys;
   std::set<uint8_t> pressedKeys;
@@ -334,6 +339,11 @@ private:
 
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
   void sortEvents(void);
+  bool isGridRowEmpty(uint8_t step) const;
+  int lastOccupiedGridRow() const;
+  void adjustGridMarkersAfterInsert(uint8_t step, bool shiftedContent);
+  void adjustGridMarkersAfterRemove(uint8_t step);
+  void clampGridMarkers();
 
   static bool sortMidiEvent(MidiEvent& a, MidiEvent& b) {
     // + a.source is a hack to sort song events before pattern events if the have same time
