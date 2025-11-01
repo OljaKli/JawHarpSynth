@@ -28,6 +28,16 @@ public:
   FLASHMEM void drawBarNumbers(void);
   FLASHMEM uint16_t getSongPatternForNote(const LiveSequencer::NotePair& note) const;
   uint16_t stepCursorPositionPrev = ROLL_WIDTH;
+FLASHMEM void removeNoteFromSongEvents(LiveSequencer::MidiEvent& noteOn, LiveSequencer::MidiEvent& noteOff);
+
+
+FLASHMEM uint16_t UI_LiveSeq_PianoRoll::findSongPatternForEvent(const LiveSequencer::MidiEvent& e) ;
+
+FLASHMEM void UI_LiveSeq_PianoRoll::moveEventToSongPattern(LiveSequencer::MidiEvent& e, uint16_t targetSongPattern);
+FLASHMEM void UI_LiveSeq_PianoRoll::removeEventFromSongEvents(LiveSequencer::MidiEvent& event);
+FLASHMEM void UI_LiveSeq_PianoRoll::removeEventFromSpecificPattern(LiveSequencer::MidiEvent& event, uint16_t patternIndex) ;
+FLASHMEM void UI_LiveSeq_PianoRoll::removeEventByContent(const LiveSequencer::MidiEvent& event);
+FLASHMEM uint16_t UI_LiveSeq_PianoRoll::findSongPatternByEvent(const LiveSequencer::MidiEvent& e);
 
 private:
  uint32_t getPatternRelativeTime(const LiveSequencer::MidiEvent& e) const;
