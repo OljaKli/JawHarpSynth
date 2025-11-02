@@ -98,6 +98,49 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       }));
   }
 
+  // MODE BUTTON with long press support
+  modeButton = new TouchButton(GRID.X[5], GRID.Y[0],
+    [this](auto* b) { // drawHandler
+      if (data.isSongMode) {
+        b->draw("SONG", data.useGridSongMode ? "GRID" : "LIVE", TouchButton::BUTTON_HIGHLIGHTED);
+      } else {
+        b->draw("PATT", "MODE", TouchButton::BUTTON_HIGHLIGHTED);
+      }
+    },
+    [this](auto* b) { // clickedHandler (short press)
+      const bool newIsSongMode = !data.isSongMode;
+      currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
+
+      if (data.useGridSongMode && !newIsSongMode) {
+        inGridEditor = false;
+        showingGridSongEditor = false;
+      }
+
+      if (isModeToolActive()) {
+        currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
+      }
+      data.isSongMode = newIsSongMode;
+      instance->redrawScreen();
+    },
+    [this](auto* b) { // longPressHandler
+      if (data.isSongMode) {
+        if (data.useGridSongMode) {
+          // Enter grid editor for grid song mode
+          inGridEditor = true;
+          showingGridSongEditor = true;
+          gridNeedsRedraw = true;
+          display.fillScreen(COLOR_BACKGROUND);
+        } else {
+          // Open piano roll editor for linear song mode on active track
+          openScreen(UI_func_liveseq_graphic, SONG_MODE_NOTES_TRACK);
+        }
+      } 
+      // else {
+      //   // Open piano roll editor for pattern mode on active track
+      //   openScreen(UI_func_liveseq_graphic, data.activeTrack);
+      // }
+    });
+
   // TOOL MENU
   buttonsToolSelect.push_back(new TouchButton(GRID.X[0], GRID.Y[2],
     [this](auto* b) { // drawHandler
@@ -350,22 +393,22 @@ FLASHMEM void UI_LiveSequencer::init(void) {
 
   toolsPages[TOOLS_PATTERN].push_back(new TouchButton(GRID.X[1], GRID.Y[5],
     [](auto* b) { // drawHandler
-   
- b->draw("ADD", "METRONM", TouchButton::BUTTON_ACTIVE);
+
+      b->draw("ADD", "METRONM", TouchButton::BUTTON_ACTIVE);
       metronome_text_pos();
       display.print(F("TOUCH TO ADD METRONOME"));
     },
     [this](auto* b) { // clickedHandler
 
- liveSeq.start();
- delay(50);
- liveSeq.stop();
- delay(20);
- metronome_text_pos();
+      liveSeq.start();
+      delay(50);
+      liveSeq.stop();
+      delay(20);
+      metronome_text_pos();
 
- if (seq.running==false ) {
-  liveSeq.AddMetronome();
-        display.print(F("METRONOME TRACK ADDED  ")); 
+      if (seq.running == false) {
+        liveSeq.AddMetronome();
+        display.print(F("METRONOME TRACK ADDED  "));
         delay(50);
       }
     }));
@@ -1075,7 +1118,6 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
     return;
   }
 
-
   // Handle grid song editor touch
   if (showingGridSongEditor) {
     handleGridSongTouch();
@@ -1147,25 +1189,8 @@ FLASHMEM void UI_LiveSequencer::handleTouchscreen(void) {
     redrawScreen();
   }
 
-  const bool modePressed = TouchButton::isPressed(GRID.X[5], GRID.Y[0]);
-  if (modePressed) {
-    const bool newIsSongMode = !data.isSongMode;
-    currentPage = newIsSongMode ? PAGE_SONG : PAGE_PATTERN;
-
-
-    // When switching from grid mode back to pattern mode, reset grid flags
-    if (data.useGridSongMode && !newIsSongMode) {
-      inGridEditor = false;
-      showingGridSongEditor = false;
-    }
-
-    if (isModeToolActive()) { // switch pattern / song tools if selected
-      currentTools = newIsSongMode ? TOOLS_SONG : TOOLS_PATTERN;
-    }
-    data.isSongMode = newIsSongMode;
-    redrawScreen();
-  }
-
+  // Process the mode button with long press support
+  modeButton->processPressed();
 
   for (TouchButton* b : trackButtons) {
     b->processPressed();
@@ -1274,7 +1299,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     display.drawLine(GRID.X[2] + barWidth, 0, GRID.X[4] - TouchButton::BUTTON_SPACING, 0, GREY2);
   }
 
-  if (guiFlags & drawTopButtons && !inGridEditor) {
+if (guiFlags & drawTopButtons && !inGridEditor) {
     TouchButton::Color playColor = runningHere ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
     if (data.remainingCountIns > 0) {
       playColor = (data.remainingCountIns) % 2 ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_HIGHLIGHTED;
@@ -1283,14 +1308,8 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     TouchButton::drawButton(GRID.X[1], GRID.Y[0], "REC", "", data.isRecording ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
     TouchButton::drawButton(GRID.X[4], GRID.Y[0], isLayerViewActive ? "LAYERS" : "TOOLS", "VIEW", TouchButton::BUTTON_NORMAL);
 
-
-    // Update mode button label - show "PATT" when not in song mode
-    if (data.isSongMode) {
-      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", data.useGridSongMode ? "GRID" : "LIVE", TouchButton::BUTTON_HIGHLIGHTED);
-    }
-    else {
-      TouchButton::drawButton(GRID.X[5], GRID.Y[0], "PATT", "MODE", TouchButton::BUTTON_HIGHLIGHTED);
-    }
+    // Use the mode button instead of manual drawing
+    modeButton->drawNow();
   }
 
   if (guiFlags & drawActiveTrackSubLabel && !inGridEditor) {
@@ -1471,34 +1490,37 @@ FLASHMEM std::string UI_LiveSequencer::getArpModeName(uint8_t mode) {
 }
 
 FLASHMEM void UI_LiveSequencer::drawLayerButton(const bool horizontal, uint8_t layerMode, int layer, const bool layerEditActive, TouchButton::Color color, uint16_t x, uint16_t y) {
-  char temp_char[4];
-  std::string label = "LAYER";
-  std::string labelSub = itoa(layer + 1, temp_char, 10);
-  if (layerEditActive) {
-    switch (layerMode) {
-    case LiveSequencer::LayerMode::LAYER_MERGE:
-      if (layer > 0) {
-        label = "MERGE";
-        labelSub = horizontal ? "<" : "^";
+  if (currentTools != TOOLS_KEYBOARD)
+  {
+    char temp_char[4];
+    std::string label = "LAYER";
+    std::string labelSub = itoa(layer + 1, temp_char, 10);
+    if (layerEditActive) {
+      switch (layerMode) {
+      case LiveSequencer::LayerMode::LAYER_MERGE:
+        if (layer > 0) {
+          label = "MERGE";
+          labelSub = horizontal ? "<" : "^";
+        }
+        break;
+      case LiveSequencer::LayerMode::LAYER_DELETE:
+        label = "DELETE";
+        labelSub = "x";
+        break;
+
+      case LiveSequencer::LayerMode::LAYER_CLEAR_CC:
+        label = "CLEAR";
+        labelSub = "CC";
+        break;
+
+      case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
+        label = "CLEAR";
+        labelSub = "PB";
+        break;
       }
-      break;
-    case LiveSequencer::LayerMode::LAYER_DELETE:
-      label = "DELETE";
-      labelSub = "x";
-      break;
-
-    case LiveSequencer::LayerMode::LAYER_CLEAR_CC:
-      label = "CLEAR";
-      labelSub = "CC";
-      break;
-
-    case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
-      label = "CLEAR";
-      labelSub = "PB";
-      break;
     }
+    TouchButton::drawButton(x, y, label.c_str(), labelSub.c_str(), color);
   }
-  TouchButton::drawButton(x, y, label.c_str(), labelSub.c_str(), color);
 }
 
 FLASHMEM void UI_LiveSequencer::handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color& color) {
