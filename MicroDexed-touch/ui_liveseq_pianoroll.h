@@ -114,6 +114,23 @@ private:
   };
   uint16_t drawFlags = 0;
 
+   enum QuantizeLevel {
+        QUANTIZE_OFF,
+        QUANTIZE_64,
+        QUANTIZE_32, 
+        QUANTIZE_16,
+        QUANTIZE_8,
+        QUANTIZE_4,    // 1/4 note
+        QUANTIZE_NUM   // Remove QUANTIZE_1
+    };
+    uint8_t quantizeLevel = QUANTIZE_16; // Default to 1/16
+     FLASHMEM uint32_t getQuantizationGridStep() const;
+    
+    // Add this method declaration
+    FLASHMEM void quantizeSelectedNote(void);
+
+TouchButton* buttonQuant = nullptr; // Add this
+
   struct UpdateRange {
     uint16_t fromX;
     uint16_t toX;
