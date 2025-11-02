@@ -93,7 +93,8 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getSongPatternForEvent(const LiveSequenc
 FLASHMEM UI_LiveSeq_PianoRoll::UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d) :
   liveSeq(sequencer),
   data(d),
-  isRunningHere(d.isRunning) {
+  isRunningHere(d.isRunning),
+  selectedLayer(0) {
   ui_pianoroll = this;
   layerColors.push_back(COLOR_ARP); // layer 0
   layerColors.push_back(COLOR_CHORDS);
@@ -169,35 +170,46 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
   static constexpr uint16_t layerViewSizeX = ROLL_WIDTH / 2;
   static constexpr uint16_t layerViewY = CONTENT_HEIGHT + LINE_HEIGHT;
 
-  // Handle both pattern mode and song mode
+
   if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
-    // Pattern mode: show layers for current pattern track
-    for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
-      const uint16_t x = GRID.X[0] + (l % 2) * (layerViewSizeX);
-      const uint16_t y = layerViewY + (l / 2) * (HEADER_HEIGHT / 2);
-      const bool isMuted = data.tracks[data.activeTrack].layerMutes & (1 << l);
-      const bool hasNotes = data.trackSettings[data.activeTrack].layerCount > l;
-      display.console = true;
-      if (hasNotes) {
-        if (isMuted) {
-          display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
-          display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
-          display.setTextColor(layerColors[l], COLOR_BACKGROUND);
-        }
-        else {
-          display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
-          display.setTextColor(COLOR_BACKGROUND, layerColors[l]);
-        }
+  // Pattern mode: show layers for current pattern track
+  for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
+    const uint16_t x = GRID.X[0] + (l % 2) * (layerViewSizeX);
+    const uint16_t y = layerViewY + (l / 2) * (HEADER_HEIGHT / 2);
+    const bool isMuted = data.tracks[data.activeTrack].layerMutes & (1 << l);
+    const bool hasNotes = data.trackSettings[data.activeTrack].layerCount > l;
+    
+    // ADD THIS: Check if this is the active layer (for filtering)
+    bool isActiveLayer = (l == selectedLayer);
+    
+    display.console = true;
+    if (hasNotes) {
+      if (isMuted) {
+        display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
+        display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
+        display.setTextColor(layerColors[l], COLOR_BACKGROUND);
+      }
+      else if (isActiveLayer) {
+        // Active layer: filled with color
+        display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
+        display.setTextColor(COLOR_BACKGROUND, layerColors[l]);
       }
       else {
+        // Non-active layer: outline only
         display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
-        display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), GREY2);
-        display.setTextColor(GREY3, COLOR_BACKGROUND); // no text
+        display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), layerColors[l]);
+        display.setTextColor(layerColors[l], COLOR_BACKGROUND);
       }
-      display.setCursor(x + 2, y + 2);
-      display.print(l + 1);
     }
+    else {
+      display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
+      display.drawRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), GREY2);
+      display.setTextColor(GREY3, COLOR_BACKGROUND); // no text
+    }
+    display.setCursor(x + 2, y + 2);
+    display.print(l + 1);
   }
+}
   else if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
     // Song mode: show song tracks (layers) instead of pattern layers
     for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
@@ -214,10 +226,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
       }
 
       // Check if this is the active layer (for filtering)
-      bool isActiveLayer = false;
-      if (selectedNote > -1) {
-        isActiveLayer = (notePairs.at(selectedNote).noteOn.layer == l);
-      }
+     bool isActiveLayer = (l == selectedLayer);
+      // if (selectedNote > -1) {
+      //   isActiveLayer = (notePairs.at(selectedNote).noteOn.layer == l);
+      // }
 
       display.console = true;
       if (hasNotes) {
@@ -283,34 +295,44 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(UpdateRange coords) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool isSelected, bool drawInGrey) const {
   uint32_t timeOn, timeOff;
+  uint16_t x;
+  int w;
 
   if (data.isSongMode && !data.useGridSongMode) {
-    // Use absolute bar for time calculation
-    uint16_t absoluteBarOn = getActualBarForNote(note);
-    timeOn = absoluteBarOn * data.patternLengthMs + note.noteOn.patternMs;
-
-    // Note: noteOff will be in the same or later absolute bar
-    uint16_t absoluteBarOff = absoluteBarOn; // Start with same bar
-
-    // If noteOff has a different cyclic patternNumber, it might wrap to next cycle
-    if (note.noteOff.patternNumber < note.noteOn.patternNumber) {
-      // Wrapped to next 4-bar cycle
-      absoluteBarOff = absoluteBarOn + (data.numberOfBars - note.noteOn.patternNumber) + note.noteOff.patternNumber;
+    // SONG MODE: Handle boundary crossings properly
+    // Use the existing getAbsoluteEventTime function which should handle this correctly
+    timeOn = getAbsoluteEventTime(note.noteOn);
+    timeOff = getAbsoluteEventTime(note.noteOff);
+    
+    // Ensure timeOff is always after timeOn
+    if (timeOff <= timeOn) {
+      timeOff = timeOn + data.patternLengthMs / 16; // Default to 1/16 note length
     }
-    else {
-      absoluteBarOff = absoluteBarOn + (note.noteOff.patternNumber - note.noteOn.patternNumber);
+    
+    x = getNoteCoord(timeOn);
+    
+    // Calculate note length in viewport pixels
+    uint32_t lenMs = timeOff - timeOn;
+    w = std::max(1, int(roundf(lenMs * view.msToPix)));
+    
+    // Clamp the end position to prevent drawing beyond the display
+    uint16_t endX = x + w;
+    if (endX > DISPLAY_WIDTH) {
+      w = DISPLAY_WIDTH - x;
     }
-
-    timeOff = absoluteBarOff * data.patternLengthMs + note.noteOff.patternMs;
+    
+    // Ensure minimum visible width for very short notes
+    if (w < 1) w = 1;
   }
   else {
+    // PATTERN MODE: Original working calculation
     timeOn = getEventTime(note.noteOn);
     timeOff = getEventTime(note.noteOff);
-  }
 
-  const uint16_t x = getNoteCoord(timeOn);
-  const uint32_t lenMs = (timeOff > timeOn) ? (timeOff - timeOn) : 1;
-  const int w = std::max(1, int(roundf(lenMs * view.msToPix)));
+    x = getNoteCoord(timeOn);
+    const uint32_t lenMs = (timeOff > timeOn) ? (timeOff - timeOn) : 1;
+    w = std::max(1, int(roundf(lenMs * view.msToPix)));
+  }
 
   if (!drawRegionsX.empty()) {
     for (auto& u : drawRegionsX) {
@@ -444,23 +466,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   // Use the same timing calculation as drawNote
   uint32_t timeOn, timeOff;
   if (data.isSongMode && !data.useGridSongMode) {
-    // For song mode, use absolute bar calculation
-    uint16_t absoluteBarOn = getActualBarForNote(note);
-    timeOn = absoluteBarOn * data.patternLengthMs + note.noteOn.patternMs;
-
-    // Calculate timeOff using the same logic as drawNote
-    uint16_t absoluteBarOff = absoluteBarOn; // Start with same bar
-    if (note.noteOff.patternNumber < note.noteOn.patternNumber) {
-      // Wrapped to next 4-bar cycle
-      absoluteBarOff = absoluteBarOn + (data.numberOfBars - note.noteOn.patternNumber) + note.noteOff.patternNumber;
+    // SONG MODE: Use getAbsoluteEventTime for consistent boundary handling
+    timeOn = getAbsoluteEventTime(note.noteOn);
+    timeOff = getAbsoluteEventTime(note.noteOff);
+    
+    if (timeOff <= timeOn) {
+      timeOff = timeOn + data.patternLengthMs / 16;
     }
-    else {
-      absoluteBarOff = absoluteBarOn + (note.noteOff.patternNumber - note.noteOn.patternNumber);
-    }
-    timeOff = absoluteBarOff * data.patternLengthMs + note.noteOff.patternMs;
   }
   else {
-    // Pattern mode - use original calculation
+    // PATTERN MODE: Use original working calculation
     timeOn = getEventTime(note.noteOn);
     timeOff = getEventTime(note.noteOff);
   }
@@ -469,6 +484,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   coords.toX = getNoteCoord(timeOff);
   coords.notes = { note.noteOn.note_in };
 
+  // Add padding for redraw regions, ensuring we don't go out of bounds
   coords.fromX = (coords.fromX < 2 + ROLL_WIDTH) ? ROLL_WIDTH : (coords.fromX - 2);
   coords.toX = (coords.toX > DISPLAY_WIDTH - 2) ? DISPLAY_WIDTH : (coords.toX + 2);
 
@@ -662,67 +678,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
-// FLASHMEM std::vector<LiveSequencer::NotePair>
-// UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
-//   uint8_t track, uint8_t& lowestNote, uint8_t& highestNote,
-//   uint8_t patternFrom, uint8_t patternTo) {
 
-//   std::vector<LiveSequencer::NotePair> result;
-//   uint8_t lowestFound = 0xFF;
-//   uint8_t highestFound = 0x00;
-
-//   const uint8_t viewLowestNote = view.lowestNote;
-//   const uint8_t viewHighestNote = view.highestNote;
-
-//   if (data.songEvents.empty()) {
-//     lowestNote = viewLowestNote;
-//     highestNote = viewHighestNote;
-//     return result;
-//   }
-
-//   for (const auto& patternEntry : data.songEvents) {
-//     const uint16_t songPatternIndex = patternEntry.first;
-//     const auto& events = patternEntry.second;
-
-//     for (auto itOn = events.begin(); itOn != events.end(); ++itOn) {
-//       if ((track == 0xFF || itOn->track == track) && itOn->event == midi::NoteOn) {
-
-//         if (itOn->note_in < viewLowestNote || itOn->note_in >= viewHighestNote) {
-//           continue;
-//         }
-
-//         // Calculate absolute bar for filtering
-//         uint16_t absoluteBar = (songPatternIndex * data.numberOfBars) + itOn->patternNumber;
-
-//         if (absoluteBar >= patternFrom && absoluteBar <= patternTo) {
-//           for (auto itOff = itOn; itOff != events.end(); ++itOff) {
-//             if (itOff->track == itOn->track &&
-//               itOff->layer == itOn->layer &&
-//               itOff->note_in == itOn->note_in &&
-//               itOff->event == midi::NoteOff) {
-
-//               LiveSequencer::NotePair p = {
-//                 const_cast<LiveSequencer::MidiEvent&>(*itOn),
-//                 const_cast<LiveSequencer::MidiEvent&>(*itOff),
-//                 false
-//               };
-
-//               result.emplace_back(p);
-
-//               highestFound = std::max(highestFound, itOn->note_in);
-//               lowestFound = std::min(lowestFound, itOn->note_in);
-//               break;
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   lowestNote = (lowestFound == 0xFF) ? viewLowestNote : lowestFound;
-//   highestNote = (highestFound == 0x00) ? viewHighestNote : highestFound;
-//   return result;
-// }
 
 
 FLASHMEM void UI_LiveSeq_PianoRoll::removeEventByContent(const LiveSequencer::MidiEvent& event) {
@@ -745,6 +701,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::removeEventByContent(const LiveSequencer::Mi
     }
 }
 
+
 FLASHMEM std::vector<LiveSequencer::NotePair>
 UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
   uint8_t track, uint8_t& lowestNote, uint8_t& highestNote,
@@ -754,92 +711,120 @@ UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
 
-  const uint8_t viewLowestNote = view.lowestNote;
-  const uint8_t viewHighestNote = view.highestNote;
-
   if (data.songEvents.empty()) {
-    lowestNote = viewLowestNote;
-    highestNote = viewHighestNote;
+    lowestNote = view.lowestNote;
+    highestNote = view.highestNote;
     return result;
   }
 
-  // Track which events we've already used to avoid double-matching
-  std::set<std::tuple<uint16_t, size_t>> usedEvents; // (songPatternIndex, eventIndex)
+  // Create a list of all note on events first
+  std::vector<std::tuple<uint16_t, size_t, LiveSequencer::MidiEvent>> noteOnEvents;
+  
+  // Create a list of all note off events  
+  std::vector<std::tuple<uint16_t, size_t, LiveSequencer::MidiEvent>> noteOffEvents;
 
-  // First pass: collect all NoteOn events and try to find their NoteOff pairs
-  for (auto& patternEntry : data.songEvents) {
+  // First pass: collect all note on and note off events
+  for (const auto& patternEntry : data.songEvents) {
     const uint16_t songPatternIndex = patternEntry.first;
-    auto& events = patternEntry.second;
+    const auto& events = patternEntry.second;
 
     for (size_t i = 0; i < events.size(); i++) {
-      auto& event = events[i];
+      const auto& event = events[i];
       
-      // Skip if already used
-      if (usedEvents.count({songPatternIndex, i}) > 0) {
-        continue;
-      }
-
-      if ((track == 0xFF || event.track == track) && event.event == midi::NoteOn) {
-        if (event.note_in < viewLowestNote || event.note_in >= viewHighestNote) {
-          continue;
-        }
-
-        // Calculate absolute bar for filtering
-        uint16_t absoluteBar = (songPatternIndex * data.numberOfBars) + event.patternNumber;
-
-        if (absoluteBar >= patternFrom && absoluteBar <= patternTo) {
-          bool foundNoteOff = false;
-          
-          // Search through ALL song patterns for the matching NoteOff
-          for (auto& patternEntry2 : data.songEvents) {
-            const uint16_t songPatternIndex2 = patternEntry2.first;
-            auto& events2 = patternEntry2.second;
-
-            for (size_t j = 0; j < events2.size(); j++) {
-              auto& event2 = events2[j];
-              
-              // Skip if already used
-              if (usedEvents.count({songPatternIndex2, j}) > 0) {
-                continue;
-              }
-
-              // Match criteria: same track, layer, note, and it's a NoteOff
-              // Also ensure we don't match the same event as NoteOn
-              if (event2.track == event.track &&
-                  event2.layer == event.layer &&
-                  event2.note_in == event.note_in &&
-                  event2.event == midi::NoteOff &&
-                  !(songPatternIndex2 == songPatternIndex && j == i)) {
-                
-                LiveSequencer::NotePair p = {
-                  event,   // NoteOn reference
-                  event2,  // NoteOff reference  
-                  false
-                };
-
-                result.emplace_back(p);
-                highestFound = std::max(highestFound, event.note_in);
-                lowestFound = std::min(lowestFound, event.note_in);
-                
-                // Mark both events as used
-                usedEvents.insert({songPatternIndex, i});
-                usedEvents.insert({songPatternIndex2, j});
-                foundNoteOff = true;
-                break;
-              }
-            }
-            if (foundNoteOff) break;
-          }
+      if ((track == 0xFF || event.track == track) && 
+          event.note_in >= view.lowestNote && event.note_in < view.highestNote) {
+        
+        if (event.event == midi::NoteOn) {
+          noteOnEvents.emplace_back(songPatternIndex, i, event);
+        } else if (event.event == midi::NoteOff) {
+          noteOffEvents.emplace_back(songPatternIndex, i, event);
         }
       }
     }
   }
 
-  lowestNote = (lowestFound == 0xFF) ? viewLowestNote : lowestFound;
-  highestNote = (highestFound == 0x00) ? viewHighestNote : highestFound;
+  // Sort both lists by absolute time
+  auto getAbsoluteTime = [this](const auto& eventTuple) {
+    uint16_t songPatternIndex = std::get<0>(eventTuple);
+    const auto& event = std::get<2>(eventTuple);
+    return (songPatternIndex * data.numberOfBars * data.patternLengthMs) + 
+           (event.patternNumber * data.patternLengthMs) + event.patternMs;
+  };
+
+  std::sort(noteOnEvents.begin(), noteOnEvents.end(), 
+    [&](const auto& a, const auto& b) { return getAbsoluteTime(a) < getAbsoluteTime(b); });
+
+  std::sort(noteOffEvents.begin(), noteOffEvents.end(), 
+    [&](const auto& a, const auto& b) { return getAbsoluteTime(a) < getAbsoluteTime(b); });
+
+  // Pair note on events with their corresponding note off events
+  std::set<std::tuple<uint16_t, size_t>> usedNoteOffs;
+
+  for (const auto& noteOnTuple : noteOnEvents) {
+    uint16_t onSongPattern = std::get<0>(noteOnTuple);
+    size_t onIndex = std::get<1>(noteOnTuple);
+    const auto& noteOnEvent = std::get<2>(noteOnTuple);
+
+    uint32_t onAbsoluteTime = getAbsoluteTime(noteOnTuple);
+
+    // Find the earliest note off event with same pitch that occurs after note on
+    int bestOffIndex = -1;
+    uint32_t bestOffTime = UINT32_MAX;
+
+    for (size_t i = 0; i < noteOffEvents.size(); i++) {
+      const auto& noteOffTuple = noteOffEvents[i];
+      
+      if (usedNoteOffs.count({std::get<0>(noteOffTuple), std::get<1>(noteOffTuple)})) {
+        continue; // Already used
+      }
+
+      const auto& noteOffEvent = std::get<2>(noteOffTuple);
+      
+      if (noteOffEvent.track == noteOnEvent.track &&
+          noteOffEvent.layer == noteOnEvent.layer &&
+          noteOffEvent.note_in == noteOnEvent.note_in) {
+        
+        uint32_t offAbsoluteTime = getAbsoluteTime(noteOffTuple);
+        
+        // Note off must be after note on
+        if (offAbsoluteTime > onAbsoluteTime && offAbsoluteTime < bestOffTime) {
+          bestOffIndex = i;
+          bestOffTime = offAbsoluteTime;
+        }
+      }
+    }
+
+    if (bestOffIndex != -1) {
+      const auto& noteOffTuple = noteOffEvents[bestOffIndex];
+      uint16_t offSongPattern = std::get<0>(noteOffTuple);
+      size_t offIndex = std::get<1>(noteOffTuple);
+      const auto& noteOffEvent = std::get<2>(noteOffTuple);
+
+      // Check if this pair is within our view time range
+      uint32_t viewStartTime = uint32_t(patternFrom) * uint32_t(data.patternLengthMs);
+      uint32_t viewEndTime = uint32_t(patternTo + 1) * uint32_t(data.patternLengthMs);
+
+      // Include note if either start or end is within view, or if it spans the view
+      if ((onAbsoluteTime < viewEndTime && bestOffTime > viewStartTime)) {
+        LiveSequencer::NotePair p = {
+          const_cast<LiveSequencer::MidiEvent&>(noteOnEvent),
+          const_cast<LiveSequencer::MidiEvent&>(noteOffEvent),
+          false
+        };
+
+        result.emplace_back(p);
+        usedNoteOffs.insert({offSongPattern, offIndex});
+        
+        highestFound = std::max(highestFound, noteOnEvent.note_in);
+        lowestFound = std::min(lowestFound, noteOnEvent.note_in);
+      }
+    }
+  }
+
+  lowestNote = (lowestFound == 0xFF) ? view.lowestNote : lowestFound;
+  highestNote = (highestFound == 0x00) ? view.highestNote : highestFound;
   return result;
 }
-
 
 FLASHMEM std::vector<LiveSequencer::MidiEvent>
 UI_LiveSeq_PianoRoll::getMuteAutomationEvents(
@@ -1129,48 +1114,35 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
     drawPianoRoll();
   }
 
-
 //debug
-if (selectedNote > -1 && data.isSongMode && !data.useGridSongMode) {
-    char s[32] = { "\0" }; 
-    LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+// if (selectedNote > -1 && data.isSongMode && !data.useGridSongMode) {
+//     char s[32] = { "\0" }; 
+//     LiveSequencer::NotePair& p = notePairs.at(selectedNote);
     
-    // Calculate song patterns in real-time
-    uint16_t debugSongPatternOn = findSongPatternByEvent(p.noteOn);
-    uint16_t debugSongPatternOff = findSongPatternByEvent(p.noteOff);
+//     // Calculate song patterns in real-time
+//     uint16_t debugSongPatternOn = findSongPatternByEvent(p.noteOn);
+//     uint16_t debugSongPatternOff = findSongPatternByEvent(p.noteOff);
     
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(1);
-    display.setCursor(100, 33);
+//     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//     display.setTextSize(1);
+//     display.setCursor(100, 33);
     
-    sprintf(s, "On:P%u S%u", p.noteOn.patternNumber, debugSongPatternOn);
-    display.print(s);
-     display.print(" ");
-    display.setCursor(100, 43);
-    sprintf(s, "Off:P%u S%u", p.noteOff.patternNumber, debugSongPatternOff);
-    display.print(s);
-       display.print(" ");
+//     sprintf(s, "On:P%u S%u", p.noteOn.patternNumber, debugSongPatternOn);
+//     display.print(s);
+//      display.print(" ");
+//     display.setCursor(100, 43);
+//     sprintf(s, "Off:P%u S%u", p.noteOff.patternNumber, debugSongPatternOff);
+//     display.print(s);
+//        display.print(" ");
     
-    // Also show absolute times for debugging
-    display.setCursor(100, 53);
-    uint32_t timeOn = getEventTime(p.noteOn);
-    uint32_t timeOff = getEventTime(p.noteOff);
-    sprintf(s, "T:%lu->%lu", timeOn, timeOff);
-    display.print(s);
-       display.print(" ");
-}
-
-
-
-
-
-
-
-
-
-
-
-
+//     // Also show absolute times for debugging
+//     display.setCursor(100, 53);
+//     uint32_t timeOn = getEventTime(p.noteOn);
+//     uint32_t timeOff = getEventTime(p.noteOff);
+//     sprintf(s, "T:%lu->%lu", timeOn, timeOff);
+//     display.print(s);
+//        display.print(" ");
+// }
 
   // Draw bar information on top of everything
   // Only draw when we're actually drawing content, not just UI elements
@@ -1463,6 +1435,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::updateSongEvent(LiveSequencer::MidiEvent& up
   }
 }
 
+
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
   if (isSettingActivated) {
     uint16_t headerFlags = 0;
@@ -1470,33 +1443,33 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
     case MODE_VIEW:
       switch (viewMode) {
       case VIEW_ZOOM_Y:
-   if (hasConstrainedChanged(view.numOctaves, -2 * e.dir, int8_t(1), int8_t(5))) {
-    view.startOctave += e.dir; // zoom octave-centered
-    setNumOctaves(view.numOctaves);
-    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL; // Include piano roll in redraw
-  }
-  break;
+        if (hasConstrainedChanged(view.numOctaves, -2 * e.dir, int8_t(1), int8_t(5))) {
+          view.startOctave += e.dir; // zoom octave-centered
+          setNumOctaves(view.numOctaves);
+          drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL; // Include piano roll in redraw
+        }
+        break;
 
       case VIEW_SCROLL_Y:
-      {
-       int8_t newStartOctave = view.startOctave + e.dir;
-  int8_t maxStartOctave = TOTAL_OCTAVES - view.numOctaves;
-  if (maxStartOctave < 0) maxStartOctave = 0;
+        {
+          int8_t newStartOctave = view.startOctave + e.dir;
+          int8_t maxStartOctave = TOTAL_OCTAVES - view.numOctaves;
+          if (maxStartOctave < 0) maxStartOctave = 0;
 
-  if (newStartOctave < 0) newStartOctave = 0;
-  if (newStartOctave > maxStartOctave) newStartOctave = maxStartOctave;
+          if (newStartOctave < 0) newStartOctave = 0;
+          if (newStartOctave > maxStartOctave) newStartOctave = maxStartOctave;
 
-  if (newStartOctave != view.startOctave) {
-    view.startOctave = newStartOctave;
-    view.lowestNote = 24 + view.startOctave * 12;
-    view.highestNote = (view.lowestNote + view.numNotes);
+          if (newStartOctave != view.startOctave) {
+            view.startOctave = newStartOctave;
+            view.lowestNote = 24 + view.startOctave * 12;
+            view.highestNote = (view.lowestNote + view.numNotes);
 
-    // Force full content redraw including piano roll
-    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
-    drawAreaIndicator();
-  }
-}
-break;
+            // Force full content redraw including piano roll
+            drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
+            drawAreaIndicator();
+          }
+        }
+        break;
 
       case VIEW_ZOOM_X:
         if ((data.isSongMode && !data.useGridSongMode) || data.activeTrack == SONG_MODE_MUTE_TRACK) {
@@ -1673,7 +1646,6 @@ break;
                 drawRegionsX.push_back(oldRegion);
 
                 selectedMuteEvent = -1;
-                //drawFlags |= DRAW_MUTE_AUTOMATION | DRAW_BACKGROUND;
                 drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_MUTE_AUTOMATION;
               }
             }
@@ -1682,103 +1654,108 @@ break;
         }
         else {
           if (!notePairs.empty()) {
-            // Get the current track/layer for filtering
-            int8_t currentTrackLayer = 0;
-            if (selectedNote > -1) {
-              currentTrackLayer = notePairs.at(selectedNote).noteOn.layer;
-            }
+      // First, check if the selectedLayer actually has any notes
+      bool selectedLayerHasNotes = false;
+      for (const auto& note : notePairs) {
+        if (note.noteOn.layer == selectedLayer) {
+          selectedLayerHasNotes = true;
+          break;
+        }
+      }
 
-            // Build list of notes with their screen positions
-            std::vector<std::pair<int16_t, uint16_t>> notesWithPos; // (index, screenX)
-
-            for (size_t i = 0; i < notePairs.size(); i++) {
-              auto& note = notePairs[i];
-
-              // Filter by track/layer
-              if (note.noteOn.layer != currentTrackLayer) {
-                continue;
-              }
-
-              // Calculate screen position
-              uint32_t timeOn;
-              if (data.isSongMode && !data.useGridSongMode) {
-                uint16_t absoluteBarOn = getActualBarForNote(note);
-                timeOn = absoluteBarOn * data.patternLengthMs + note.noteOn.patternMs;
-              }
-              else {
-                timeOn = getEventTime(note.noteOn);
-              }
-
-              const uint16_t screenX = getNoteCoord(timeOn);
-
-              // Only include notes that are actually visible on screen
-              if (screenX >= ROLL_WIDTH && screenX < DISPLAY_WIDTH) {
-                notesWithPos.push_back({ (int16_t)i, screenX });
-              }
-            }
-
-            // Sort by screen position
-            std::sort(notesWithPos.begin(), notesWithPos.end(),
-              [](const auto& a, const auto& b) {
-                return a.second < b.second;
-              });
-
-            // Create the final sorted list
-            std::vector<int16_t> sortedNotes;
-            for (const auto& pair : notesWithPos) {
-              sortedNotes.push_back(pair.first);
-            }
-
-            if (!sortedNotes.empty()) {
-              int16_t newSelection;
-
-              if (selectedNote == -1) {
-                // Start with leftmost note on screen
-                newSelection = sortedNotes[0];
-              }
-              else {
-                // Find current position in sorted list
-                int16_t currentPos = -1;
-                for (size_t i = 0; i < sortedNotes.size(); i++) {
-                  if (sortedNotes[i] == selectedNote) {
-                    currentPos = i;
-                    break;
-                  }
-                }
-
-                if (currentPos == -1) {
-                  // Current selection not visible - start with leftmost
-                  newSelection = sortedNotes[0];
-                }
-                else {
-                  // Move within sorted list
-                  int16_t newPos = currentPos + e.dir;
-                  if (newPos < 0) newPos = sortedNotes.size() - 1;
-                  else if (newPos >= static_cast<int16_t>(sortedNotes.size())) newPos = 0;
-
-                  newSelection = sortedNotes[newPos];
-                }
-              }
-
-              if (newSelection != selectedNote) {
-                if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-                selectedNote = newSelection;
-                if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-                drawFlags |= DRAW_NOTES;
-                headerFlags = (1 << EDIT_SELECT_NOTE);
-              }
-            }
-            else {
-              // No visible notes in current track - clear selection
-              if (selectedNote > -1) {
-                queueDrawNote(notePairs.at(selectedNote));
-                selectedNote = -1;
-                drawFlags |= DRAW_NOTES;
-              }
+      // If selected layer has no notes, find the first layer that does
+      if (!selectedLayerHasNotes) {
+        for (int8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; layer++) {
+          for (const auto& note : notePairs) {
+            if (note.noteOn.layer == layer) {
+              selectedLayer = layer;
+              selectedLayerHasNotes = true;
+              break;
             }
           }
+          if (selectedLayerHasNotes) break;
         }
-        break;
+      }
+
+      // Build list of notes with their screen positions - ONLY FROM SELECTED LAYER
+      std::vector<std::pair<int16_t, uint16_t>> notesWithPos;
+
+      for (size_t i = 0; i < notePairs.size(); i++) {
+        auto& note = notePairs[i];
+
+        // Only include notes from the selected layer
+        if (note.noteOn.layer != selectedLayer) {
+          continue;
+        }
+
+        // Calculate screen position
+        uint32_t timeOn;
+        if (data.isSongMode && !data.useGridSongMode) {
+          uint16_t absoluteBarOn = getActualBarForNote(note);
+          timeOn = absoluteBarOn * data.patternLengthMs + note.noteOn.patternMs;
+        }
+        else {
+          timeOn = getEventTime(note.noteOn);
+        }
+
+        const uint16_t screenX = getNoteCoord(timeOn);
+
+        // Only include notes that are actually visible on screen
+        if (screenX >= ROLL_WIDTH && screenX < DISPLAY_WIDTH) {
+          notesWithPos.push_back({ (int16_t)i, screenX });
+        }
+      }
+
+      if (!notesWithPos.empty()) {
+        int16_t newSelection;
+
+        if (selectedNote == -1) {
+          // Start with leftmost note on screen from SELECTED LAYER
+          newSelection = notesWithPos[0].first;
+        }
+        else {
+          // Find current position in sorted list
+          int16_t currentPos = -1;
+          for (size_t i = 0; i < notesWithPos.size(); i++) {
+            if (notesWithPos[i].first == selectedNote) {
+              currentPos = i;
+              break;
+            }
+          }
+
+          if (currentPos == -1) {
+            // Current selection not in selected layer - start with leftmost
+            newSelection = notesWithPos[0].first;
+          }
+          else {
+            // Move within sorted list
+            int16_t newPos = currentPos + e.dir;
+            if (newPos < 0) newPos = notesWithPos.size() - 1;
+            else if (newPos >= static_cast<int16_t>(notesWithPos.size())) newPos = 0;
+
+            newSelection = notesWithPos[newPos].first;
+          }
+        }
+
+        if (newSelection != selectedNote) {
+          if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+          selectedNote = newSelection;
+          if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+          drawFlags |= DRAW_NOTES;
+          headerFlags = (1 << EDIT_SELECT_NOTE);
+        }
+      }
+      else {
+        // No visible notes in selected layer - clear selection
+        if (selectedNote > -1) {
+          queueDrawNote(notePairs.at(selectedNote));
+          selectedNote = -1;
+          drawFlags |= DRAW_NOTES;
+        }
+      }
+    }
+  }
+  break;
 
       case EDIT_LAYER:
         if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
@@ -1809,66 +1786,60 @@ break;
         }
         else {
           // Layer editing for both pattern mode AND song mode
-          if (selectedNote > -1) {
-            int8_t layer = notePairs.at(selectedNote).noteOn.layer;
+    
+    // Find available layers with notes
+    std::set<int8_t> availableLayers;
+    for (const auto& note : notePairs) {
+      availableLayers.insert(note.noteOn.layer);
+    }
+    
+    // If no layers have notes, use all layers
+    if (availableLayers.empty()) {
+      for (int8_t i = 0; i < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; i++) {
+        availableLayers.insert(i);
+      }
+    }
 
-            // Find available layers with notes
-            std::set<int8_t> availableLayers;
-            for (const auto& note : notePairs) {
-              availableLayers.insert(note.noteOn.layer);
-            }
+    // Find next/previous available layer
+    int8_t newSelectedLayer = selectedLayer;
+    if (e.dir > 0) {
+      // Move to next available layer
+      auto it = availableLayers.upper_bound(selectedLayer);
+      if (it == availableLayers.end()) {
+        newSelectedLayer = *availableLayers.begin(); // Wrap around to first
+      }
+      else {
+        newSelectedLayer = *it;
+      }
+    }
+    else if (e.dir < 0) {
+      // Move to previous available layer
+      auto it = availableLayers.lower_bound(selectedLayer);
+      if (it == availableLayers.begin()) {
+        newSelectedLayer = *availableLayers.rbegin(); // Wrap around to last
+      }
+      else {
+        --it;
+        newSelectedLayer = *it;
+      }
+    }
 
-            // If current layer is not in available layers (shouldn't happen), add it
-            if (availableLayers.empty()) {
-              availableLayers.insert(layer);
-            }
-
-            // Find next/previous available layer
-            int8_t newLayer = layer;
-            if (e.dir > 0) {
-              // Move to next available layer
-              auto it = availableLayers.upper_bound(layer);
-              if (it == availableLayers.end()) {
-                newLayer = *availableLayers.begin(); // Wrap around to first
-              }
-              else {
-                newLayer = *it;
-              }
-            }
-            else if (e.dir < 0) {
-              // Move to previous available layer
-              auto it = availableLayers.lower_bound(layer);
-              if (it == availableLayers.begin()) {
-                newLayer = *availableLayers.rbegin(); // Wrap around to last
-              }
-              else {
-                --it;
-                newLayer = *it;
-              }
-            }
-
-            if (newLayer != layer) {
-              // Update both noteOn and noteOff
-              notePairs.at(selectedNote).noteOn.layer = newLayer;
-              notePairs.at(selectedNote).noteOff.layer = newLayer;
-
-              if (data.isSongMode && !data.useGridSongMode) {
-                // Update in songEvents for song mode
-                updateSongEvent(notePairs.at(selectedNote).noteOn);
-                updateSongEvent(notePairs.at(selectedNote).noteOff);
-              }
-
-              // Reload to reflect changes
-              reloadNotes();
-              headerFlags |= (1 << EDIT_LAYER);
-              drawFlags |= DRAW_CONTENT_FULL;
-              drawLayersIndicator();
-
-              DBG_LOG(printf("Changed layer to %i\n", newLayer));
-            }
-          }
-        }
-        break;
+    if (newSelectedLayer != selectedLayer) {
+      // Clear note selection when changing layers
+      if (selectedNote > -1) {
+        queueDrawNote(notePairs.at(selectedNote));
+        selectedNote = -1;
+      }
+      
+      selectedLayer = newSelectedLayer;
+      reloadNotes();
+      headerFlags |= (1 << EDIT_LAYER);
+      drawFlags |= DRAW_NOTES;
+     queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, {} }); 
+      drawLayersIndicator();
+    }
+  }
+  break;
 
       case EDIT_NOTEON:
         if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
@@ -2512,7 +2483,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
             patternRelativeTime % data.patternLengthMs);
         }
         else {
-          sprintf(s, "--.----");
+          sprintf(s, "-.----");
         }
         drawHeaderSetting(GRID.X[4], "POS", s, false, (editMode == EDIT_NOTEON));
       }
@@ -2527,90 +2498,100 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
         drawHeaderSetting(GRID.X[5], "MUTE", s, false, (editMode == EDIT_NOTE));
       }
     }
-    else if (selectedNote > -1) {
-      LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-      std::string noteString = getNoteString(p.noteOn.note_in);
-      if (noteString.length() == 2) {
-        noteString.append(" ");
+    if (selectedNote > -1 || modeFlags & (1 << EDIT_LAYER)) {
+      
+      // For pattern mode, show values even when no note is selected
+      std::string noteString = "";
+      if (selectedNote > -1) {
+        LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+        noteString = getNoteString(p.noteOn.note_in);
+        if (noteString.length() == 2) {
+          noteString.append(" ");
+        }
       }
-
-      if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
-        // Count only notes in the current layer (both song mode and pattern mode)
-        int8_t currentLayer = p.noteOn.layer;
-        int16_t layerNoteIndex = 1;
+    }
+     if (modeFlags & (1 << EDIT_SELECT_NOTE)) {
+        // Count only notes in the selected layer
+        int16_t layerNoteIndex = 0;
         int16_t totalLayerNotes = 0;
 
         for (size_t i = 0; i < notePairs.size(); i++) {
-          if (notePairs[i].noteOn.layer == currentLayer) {
+          if (notePairs[i].noteOn.layer == selectedLayer) {
             totalLayerNotes++;
-            if (i < static_cast<size_t>(selectedNote)) {
+            if (selectedNote > -1 && i < static_cast<size_t>(selectedNote)) {
               layerNoteIndex++;
             }
           }
         }
-        sprintf(s, "%03i/%03i", layerNoteIndex, totalLayerNotes);
+        
+        if (selectedNote > -1) {
+          layerNoteIndex++; // Current selection is also counted
+          sprintf(s, "%03i/%03i", layerNoteIndex, totalLayerNotes);
+        } else {
+          sprintf(s, "---/%03i", totalLayerNotes);
+        }
         drawHeaderSetting(GRID.X[3], "SELECT", s, false, (editMode == EDIT_SELECT_NOTE));
       }
+      
       if (modeFlags & (1 << EDIT_LAYER)) {
-        sprintf(s, "%i", p.noteOn.layer + 1);
+        sprintf(s, "%i", selectedLayer + 1);
         drawHeaderSetting(GRID.X[2] + 25, "LAYR", s, false, (editMode == EDIT_LAYER));
       }
-      if (modeFlags & (1 << EDIT_NOTEON)) {
-        if (selectedNote > -1) {
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          if (data.isSongMode && !data.useGridSongMode) {
-            // Show pattern-relative timing (like note-off does)
-            uint32_t patternRelativeTime = getPatternRelativeTime(p.noteOn);
-            sprintf(s, "/ %lu.%04lu",
-              patternRelativeTime / data.patternLengthMs,
-              patternRelativeTime % data.patternLengthMs);
-          }
-          else {
-            sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
-          }
-        }
-        else {
-          sprintf(s, "/ --.----");
-        }
-        drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
-      }
-      if (modeFlags & (1 << EDIT_NOTEOFF)) {
-        if (data.isSongMode && !data.useGridSongMode && selectedNote > -1) {
-          // Show pattern-relative timing for editing
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          uint32_t patternRelativeTime = getPatternRelativeTime(p.noteOff);
-          sprintf(s, "\\ %lu.%04lu",
-            patternRelativeTime / data.patternLengthMs,
-            patternRelativeTime % data.patternLengthMs);
-        }
-        else if (selectedNote > -1) {
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
-        }
-        drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_NOTEOFF));
-      }
-      if (modeFlags & (1 << EDIT_VELOCITY)) {
-        if (selectedNote > -1) {
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          sprintf(s, "%i", p.noteOn.note_in_velocity);
-        }
-        else {
-          sprintf(s, "---");
-        }
-        drawHeaderSetting(GRID.X[5], "VEL", s, false, (editMode == EDIT_VELOCITY));
-      }
-      if (modeFlags & (1 << EDIT_NOTE)) {
-        if (selectedNote > -1) {
-          LiveSequencer::NotePair& p = notePairs.at(selectedNote);
-          std::string noteString = getNoteString(p.noteOn.note_in);
-          sprintf(s, "%s", noteString.c_str());
-        }
-        else {
-          sprintf(s, "---");
-        }
-        drawHeaderSetting(GRID.X[5] + 4 * CHAR_width_small, "NOTE", s, false, (editMode == EDIT_NOTE));
-      }
+
+     if (modeFlags & (1 << EDIT_NOTEON)) {
+  if (selectedNote > -1) {
+    LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+    if (data.isSongMode && !data.useGridSongMode) {
+      uint32_t patternRelativeTime = getPatternRelativeTime(p.noteOn);
+      sprintf(s, "/ %lu.%04lu",
+        patternRelativeTime / data.patternLengthMs,
+        patternRelativeTime % data.patternLengthMs);
     }
+    else {
+      sprintf(s, "/ %i.%04i", p.noteOn.patternNumber, p.noteOn.patternMs);
+    }
+  } else {
+    sprintf(s, "/ --.----");
+  }
+  drawHeaderSetting(GRID.X[4], s, "", (editMode == EDIT_NOTEON), false);
+}
+if (modeFlags & (1 << EDIT_NOTEOFF)) {
+  if (selectedNote > -1) {
+    LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+    if (data.isSongMode && !data.useGridSongMode) {
+      uint32_t patternRelativeTime = getPatternRelativeTime(p.noteOff);
+      sprintf(s, "\\ %lu.%04lu",
+        patternRelativeTime / data.patternLengthMs,
+        patternRelativeTime % data.patternLengthMs);
+    }
+    else {
+      sprintf(s, "\\ %i.%04i", p.noteOff.patternNumber, p.noteOff.patternMs);
+    }
+  } else {
+    sprintf(s, "\\ --.----");
+  }
+  drawHeaderSetting(GRID.X[4], "", s, false, (editMode == EDIT_NOTEOFF));
+}
+if (modeFlags & (1 << EDIT_VELOCITY)) {
+  if (selectedNote > -1) {
+    LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+    sprintf(s, "%i", p.noteOn.note_in_velocity);
+  } else {
+    sprintf(s, "---");
+  }
+  drawHeaderSetting(GRID.X[5], "VEL", s, false, (editMode == EDIT_VELOCITY));
+}
+if (modeFlags & (1 << EDIT_NOTE)) {
+  if (selectedNote > -1) {
+    LiveSequencer::NotePair& p = notePairs.at(selectedNote);
+    std::string noteString = getNoteString(p.noteOn.note_in);
+    sprintf(s, "%s", noteString.c_str());
+  } else {
+    sprintf(s, "---");
+  }
+  drawHeaderSetting(GRID.X[5] + 4 * CHAR_width_small, "NOTE", s, false, (editMode == EDIT_NOTE));
+}
+    
     break;
 
   case MODE_STEP:
@@ -2817,23 +2798,7 @@ FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawNotes(void) {
   // Always determine active layer for both song mode and pattern mode
-  int8_t activeLayer = -1;
-
-  if (data.activeTrack == SONG_MODE_NOTES_TRACK || data.activeTrack < SONG_MODE_NOTES_TRACK) {
-    // For both song mode and pattern mode, filter by layer
-    // Use the selected note's layer if available, regardless of mode
-    if (selectedNote > -1 && selectedNote < int16_t(notePairs.size())) {
-      activeLayer = notePairs.at(selectedNote).noteOn.layer;
-    }
-    else if (!notePairs.empty()) {
-      // If no note selected but we have notes, use the first note's layer
-      activeLayer = notePairs.at(0).noteOn.layer;
-    }
-    else {
-      // Only default to 0 if there are no notes at all
-      activeLayer = 0;
-    }
-  }
+  int8_t activeLayer = selectedLayer; // Use the selectedLayer variable
 
   // Early return if there are no notes to draw
   if (notePairs.empty()) {
@@ -2974,6 +2939,11 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
         for (size_t i = 0; i < notePairs.size(); i++) {
           auto& note = notePairs[i];
 
+          // ONLY consider notes from the selectedLayer
+          if (note.noteOn.layer != selectedLayer) {
+            continue;
+          }
+
           // Calculate screen position
           uint32_t timeOn;
           if (data.isSongMode && !data.useGridSongMode) {
@@ -2991,16 +2961,24 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
           }
         }
 
-        // If we found a visible note, select it; otherwise fall back to first note
+        // If we found a visible note in selectedLayer, select it
         if (leftmostNote != -1) {
           selectedNote = leftmostNote;
         }
         else {
-          selectedNote = 0;
+          // Fallback: find first note in selectedLayer (even if not visible)
+          for (size_t i = 0; i < notePairs.size(); i++) {
+            if (notePairs[i].noteOn.layer == selectedLayer) {
+              selectedNote = i;
+              break;
+            }
+          }
         }
 
-        queueDrawNote(notePairs.at(selectedNote));
-        drawFlags |= DRAW_NOTES;
+        if (selectedNote > -1) {
+          queueDrawNote(notePairs.at(selectedNote));
+          drawFlags |= DRAW_NOTES;
+        }
       }
       break;
 
@@ -3019,104 +2997,82 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
-  // For mute automation track, delete works for any mute automation parameter
-  bool isMuteAutomationMode = (data.activeTrack == SONG_MODE_MUTE_TRACK) &&
-    (editMode == EDIT_SELECT_NOTE || editMode == EDIT_LAYER ||
-      editMode == EDIT_NOTEON || editMode == EDIT_NOTE);
-
-  if (isMuteAutomationMode && selectedMuteEvent > -1 && muteAutomationEvents.size() > 0) {
+  // For mute automation track
+  if (data.activeTrack == SONG_MODE_MUTE_TRACK && selectedMuteEvent > -1 && 
+      selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
+    
     LiveSequencer::MidiEvent eventToRemove = muteAutomationEvents.at(selectedMuteEvent);
 
-    // Remove from songEvents
     for (auto& patternEntry : data.songEvents) {
-      patternEntry.second.erase(
-        std::remove_if(patternEntry.second.begin(), patternEntry.second.end(),
-          [&eventToRemove](const LiveSequencer::MidiEvent& e) {
-            return e.track == eventToRemove.track &&
-              e.layer == eventToRemove.layer &&
-              e.patternNumber == eventToRemove.patternNumber &&
-              e.patternMs == eventToRemove.patternMs &&
-              e.note_in == eventToRemove.note_in;
-          }),
-        patternEntry.second.end()
-      );
-    }
-
-    // Remove from local list
-    muteAutomationEvents.erase(muteAutomationEvents.begin() + selectedMuteEvent);
-
-    // Update selection
-    if (muteAutomationEvents.size() == 0) {
-      selectedMuteEvent = -1;
-      isSettingActivated = false;
-      buttonEdit->drawNow();
-    }
-    else {
-      selectedMuteEvent = std::min(selectedMuteEvent, (int16_t)(muteAutomationEvents.size() - 1));
-    }
-
-    // Use the same draw flags that were working before
-    drawFlags |= DRAW_CONTENT_FULL | DRAW_MUTE_AUTOMATION;
-
-
-  }
-  else if (selectedNote > -1) {
-    // Get the events to delete
-    LiveSequencer::MidiEvent noteOnToDelete = notePairs.at(selectedNote).noteOn;
-    LiveSequencer::MidiEvent noteOffToDelete = notePairs.at(selectedNote).noteOff;
-
-    // Delete from songEvents for song mode
-    if (data.isSongMode && !data.useGridSongMode) {
-      for (auto& patternEntry : data.songEvents) {
-        patternEntry.second.erase(
-          std::remove_if(patternEntry.second.begin(), patternEntry.second.end(),
-            [&noteOnToDelete, &noteOffToDelete](const LiveSequencer::MidiEvent& e) {
-              // Match the specific note on and note off events
-              bool isNoteOn = (e.track == noteOnToDelete.track &&
-                e.layer == noteOnToDelete.layer &&
-                e.patternNumber == noteOnToDelete.patternNumber &&
-                e.patternMs == noteOnToDelete.patternMs &&
-                e.note_in == noteOnToDelete.note_in &&
-                e.event == midi::NoteOn);
-
-              bool isNoteOff = (e.track == noteOffToDelete.track &&
-                e.layer == noteOffToDelete.layer &&
-                e.patternNumber == noteOffToDelete.patternNumber &&
-                e.patternMs == noteOffToDelete.patternMs &&
-                e.note_in == noteOffToDelete.note_in &&
-                e.event == midi::NoteOff);
-
-              return isNoteOn || isNoteOff;
-            }),
-          patternEntry.second.end()
-        );
+      auto& events = patternEntry.second;
+      for (auto it = events.begin(); it != events.end(); ) {
+        if (it->track == eventToRemove.track &&
+            it->layer == eventToRemove.layer &&
+            it->patternNumber == eventToRemove.patternNumber &&
+            it->patternMs == eventToRemove.patternMs &&
+            it->note_in == eventToRemove.note_in &&
+            it->event == eventToRemove.event) {
+          it = events.erase(it);
+        } else {
+          ++it;
+        }
       }
     }
-    else {
-      // Pattern mode - mark as invalid
-      notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
-      notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
+
+    muteAutomationEvents.erase(muteAutomationEvents.begin() + selectedMuteEvent);
+
+    if (muteAutomationEvents.empty()) {
+      selectedMuteEvent = -1;
+    } else {
+      selectedMuteEvent = std::min(selectedMuteEvent, static_cast<int16_t>(muteAutomationEvents.size() - 1));
     }
 
-    // Store previous selection
-    int16_t prevSelectedNote = selectedNote;
-
-    // Reload notes from songEvents (or pattern events)
-    reloadNotes();
-
-    const int16_t notesCount = notePairs.size();
-    if (notesCount == 0) {
-      selectedNote = -1;
-      isSettingActivated = false;
-      buttonEdit->drawNow();
-    }
-    else {
-      selectedNote = std::min(prevSelectedNote, int16_t(notesCount - 1));
-    }
-
-    // Only set draw flags, don't call drawGUI() - let the main loop handle it
-    drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
+    drawFlags |= DRAW_CONTENT_FULL | DRAW_MUTE_AUTOMATION;
+    drawHeader(HEADER_DRAW_ALL);
+    return;
   }
+  
+  // For note deletion
+  if (selectedNote < 0 || selectedNote >= static_cast<int16_t>(notePairs.size())) {
+    return;
+  }
+
+  // Get the event info
+  LiveSequencer::MidiEvent noteOnInfo = notePairs.at(selectedNote).noteOn;
+  LiveSequencer::MidiEvent noteOffInfo = notePairs.at(selectedNote).noteOff;
+
+  if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
+    // Song mode - mark as invalid (soft delete)
+    // The references in notePairs point to actual events in data.songEvents
+    notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
+    notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
+  } else {
+    // Pattern mode - mark as invalid (soft delete)
+    // This works because notePairs contains references to actual events in data.eventsList
+    // When reloadNotes() is called, getNotePairsFromTrack() will skip InvalidType events
+    notePairs.at(selectedNote).noteOn.event = midi::InvalidType;
+    notePairs.at(selectedNote).noteOff.event = midi::InvalidType;
+  }
+
+  // Store previous selection
+  int16_t prevSelectedNote = selectedNote;
+
+  // Reload notes
+  reloadNotes();
+
+  // Update selection
+  if (notePairs.empty()) {
+    selectedNote = -1;
+  } else {
+    selectedNote = std::min(prevSelectedNote, static_cast<int16_t>(notePairs.size() - 1));
+  }
+
+  // Reset setting activation
+  isSettingActivated = false;
+  buttonEdit->drawNow();
+
+  drawFlags |= DRAW_CONTENT_FULL | DRAW_PIANOROLL;
+  drawHeader(HEADER_DRAW_ALL);
 }
 
 FLASHMEM uint8_t UI_LiveSeq_PianoRoll::getMaxTrackForCurrentMode() const {

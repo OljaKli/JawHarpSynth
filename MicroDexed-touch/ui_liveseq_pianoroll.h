@@ -19,6 +19,7 @@ void UI_func_liveseq_graphic(uint8_t param);
 class UI_LiveSeq_PianoRoll {
 public:
 
+int8_t selectedLayer; // The currently selected layer for editing
   uint32_t getCurrentPlaybackTime() const;
   UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d);
   void processLCDM(uint8_t param);

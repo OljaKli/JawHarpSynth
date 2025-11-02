@@ -35,6 +35,7 @@ public:
   void updateTrackChannelSetupButtons(uint8_t track);
   bool gridNeedsRedraw = true; // Track if grid needs redrawing
   void onGridStepChanged(void);  // Called when grid step changes to trigger redraw
+  TouchButton* modeButton;
 
 private:
   uint16_t msCount = 0;
