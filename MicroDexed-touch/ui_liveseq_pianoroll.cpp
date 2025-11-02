@@ -170,7 +170,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
   static constexpr uint16_t layerViewSizeX = ROLL_WIDTH / 2;
   static constexpr uint16_t layerViewY = CONTENT_HEIGHT + LINE_HEIGHT;
 
-
   if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
   // Pattern mode: show layers for current pattern track
   for (uint8_t l = 0; l < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; l++) {
@@ -179,7 +178,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
     const bool isMuted = data.tracks[data.activeTrack].layerMutes & (1 << l);
     const bool hasNotes = data.trackSettings[data.activeTrack].layerCount > l;
     
-    // ADD THIS: Check if this is the active layer (for filtering)
     bool isActiveLayer = (l == selectedLayer);
     
     display.console = true;
@@ -761,8 +759,8 @@ UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
   std::set<std::tuple<uint16_t, size_t>> usedNoteOffs;
 
   for (const auto& noteOnTuple : noteOnEvents) {
-    uint16_t onSongPattern = std::get<0>(noteOnTuple);
-    size_t onIndex = std::get<1>(noteOnTuple);
+   // uint16_t onSongPattern = std::get<0>(noteOnTuple);
+   // size_t onIndex = std::get<1>(noteOnTuple);
     const auto& noteOnEvent = std::get<2>(noteOnTuple);
 
     uint32_t onAbsoluteTime = getAbsoluteTime(noteOnTuple);
@@ -1256,26 +1254,6 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::findSongPatternForEvent(const LiveSequen
     
     return 0;
 }
-
-FLASHMEM void UI_LiveSeq_PianoRoll::removeEventFromSongEvents(LiveSequencer::MidiEvent& event) {
-    // Remove by content matching
-    for (auto& patternEntry : data.songEvents) {
-        auto& events = patternEntry.second;
-        events.erase(
-            std::remove_if(events.begin(), events.end(),
-                [&event](const LiveSequencer::MidiEvent& e) {
-                    return e.track == event.track && 
-                           e.layer == event.layer &&
-                           e.note_in == event.note_in && 
-                           e.event == event.event &&
-                           e.patternNumber == event.patternNumber && 
-                           e.patternMs == event.patternMs;
-                }),
-            events.end()
-        );
-    }
-}
-
 
 FLASHMEM void UI_LiveSeq_PianoRoll::moveEventToSongPattern(LiveSequencer::MidiEvent& e, uint16_t targetSongPattern) {
     uint16_t currentSongPattern = findSongPatternForEvent(e);
@@ -3038,8 +3016,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
   }
 
   // Get the event info
-  LiveSequencer::MidiEvent noteOnInfo = notePairs.at(selectedNote).noteOn;
-  LiveSequencer::MidiEvent noteOffInfo = notePairs.at(selectedNote).noteOff;
+  //LiveSequencer::MidiEvent noteOnInfo = notePairs.at(selectedNote).noteOn;
+  //LiveSequencer::MidiEvent noteOffInfo = notePairs.at(selectedNote).noteOff;
 
   if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
     // Song mode - mark as invalid (soft delete)
