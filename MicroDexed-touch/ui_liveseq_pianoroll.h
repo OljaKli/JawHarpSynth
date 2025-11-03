@@ -19,7 +19,6 @@ void UI_func_liveseq_graphic(uint8_t param);
 class UI_LiveSeq_PianoRoll {
 public:
 
-int8_t selectedLayer; // The currently selected layer for editing
   uint32_t getCurrentPlaybackTime() const;
   UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d);
   void processLCDM(uint8_t param);
@@ -29,19 +28,15 @@ int8_t selectedLayer; // The currently selected layer for editing
   FLASHMEM void drawBarNumbers(void);
   FLASHMEM uint16_t getSongPatternForNote(const LiveSequencer::NotePair& note) const;
   uint16_t stepCursorPositionPrev = ROLL_WIDTH;
-FLASHMEM void removeNoteFromSongEvents(LiveSequencer::MidiEvent& noteOn, LiveSequencer::MidiEvent& noteOff);
-
-
-FLASHMEM uint16_t UI_LiveSeq_PianoRoll::findSongPatternForEvent(const LiveSequencer::MidiEvent& e) ;
-
-FLASHMEM void UI_LiveSeq_PianoRoll::moveEventToSongPattern(LiveSequencer::MidiEvent& e, uint16_t targetSongPattern);
-FLASHMEM void UI_LiveSeq_PianoRoll::removeEventFromSongEvents(LiveSequencer::MidiEvent& event);
-FLASHMEM void UI_LiveSeq_PianoRoll::removeEventFromSpecificPattern(LiveSequencer::MidiEvent& event, uint16_t patternIndex) ;
-FLASHMEM void UI_LiveSeq_PianoRoll::removeEventByContent(const LiveSequencer::MidiEvent& event);
-FLASHMEM uint16_t UI_LiveSeq_PianoRoll::findSongPatternByEvent(const LiveSequencer::MidiEvent& e);
+  FLASHMEM void removeNoteFromSongEvents(LiveSequencer::MidiEvent& noteOn, LiveSequencer::MidiEvent& noteOff);
+  FLASHMEM uint16_t findSongPatternForEvent(const LiveSequencer::MidiEvent& e);
+  FLASHMEM void moveEventToSongPattern(LiveSequencer::MidiEvent& e, uint16_t targetSongPattern);
+  FLASHMEM void removeEventFromSpecificPattern(LiveSequencer::MidiEvent& event, uint16_t patternIndex);
+  FLASHMEM void removeEventByContent(const LiveSequencer::MidiEvent& event);
+  FLASHMEM uint16_t findSongPatternByEvent(const LiveSequencer::MidiEvent& e);
 
 private:
- uint32_t getPatternRelativeTime(const LiveSequencer::MidiEvent& e) const;
+  uint32_t getPatternRelativeTime(const LiveSequencer::MidiEvent& e) const;
   void setPatternRelativeTime(LiveSequencer::MidiEvent& e, uint32_t time, uint16_t songPatternIndex = 0);
   uint16_t getSongPatternForEvent(const LiveSequencer::MidiEvent& e) const;
   void drawBarInfoOnTop(void);
@@ -50,7 +45,7 @@ private:
   uint16_t getActualBarForNote(const LiveSequencer::NotePair& note) const;
   void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w, bool drawInGrey = false) const;
   void updateSongEvent(LiveSequencer::MidiEvent& updatedEvent);
-  
+
   bool step(int8_t diff);
   std::set<uint8_t> keysPressed;
 
@@ -119,6 +114,23 @@ private:
   };
   uint16_t drawFlags = 0;
 
+   enum QuantizeLevel {
+        QUANTIZE_OFF,
+        QUANTIZE_64,
+        QUANTIZE_32, 
+        QUANTIZE_16,
+        QUANTIZE_8,
+        QUANTIZE_4,    // 1/4 note
+        QUANTIZE_NUM   // Remove QUANTIZE_1
+    };
+    uint8_t quantizeLevel = QUANTIZE_16; // Default to 1/16
+     FLASHMEM uint32_t getQuantizationGridStep() const;
+    
+    // Add this method declaration
+    FLASHMEM void quantizeSelectedNote(void);
+
+TouchButton* buttonQuant = nullptr; // Add this
+
   struct UpdateRange {
     uint16_t fromX;
     uint16_t toX;
@@ -185,6 +197,7 @@ private:
   LiveSequencer& liveSeq;
   LiveSequencer::LiveSeqData& data;
   bool isRunningHere;
+  int8_t selectedLayer; // The currently selected layer for editing
   bool isVisible = false;
   bool openendFromLiveSequencer = false;
 
