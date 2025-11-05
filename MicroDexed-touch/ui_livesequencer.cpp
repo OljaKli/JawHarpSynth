@@ -661,21 +661,34 @@ FLASHMEM void UI_LiveSequencer::init(void) {
   // Grid song editor control buttons
   gridControlButtons.push_back(new TouchButton(GRID.X[0], GRID.Y[4],
     [this](auto* b) { // drawHandler
+      const uint8_t layerLimit = std::min<uint8_t>(data.trackSettings[data.selectedGridTrack].layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+      const bool hasLayers = layerLimit > 0;
+
       bool hasContent = false;
-      for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; ++layer) {
+      for (uint8_t layer = 0; layer < layerLimit; ++layer) {
         if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
           hasContent = true;
           break;
         }
       }
 
-      const char* const topLabel = hasContent ? "CLEAR" : "FILL";
-      const TouchButton::Color color = hasContent ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
+      const char* topLabel = hasContent ? "CLEAR" : "FILL";
+      TouchButton::Color color = hasContent ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
+      if (!hasLayers) {
+        topLabel = "FILL";
+        color = TouchButton::BUTTON_INACTIVE;
+      }
+
       b->draw(topLabel, "CELL", color);
     },
     [this](auto* /*b*/) { // clickedHandler
+      const uint8_t layerLimit = std::min<uint8_t>(data.trackSettings[data.selectedGridTrack].layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+      if (layerLimit == 0) {
+        return;
+      }
+
       bool hasContent = false;
-      for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; ++layer) {
+      for (uint8_t layer = 0; layer < layerLimit; ++layer) {
         if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
           hasContent = true;
           break;
