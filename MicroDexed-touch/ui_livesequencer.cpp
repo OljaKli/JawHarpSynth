@@ -705,15 +705,16 @@ FLASHMEM void UI_LiveSequencer::init(void) {
 
   gridControlButtons.push_back(new TouchButton(GRID.X[1], GRID.Y[4],
     [this](auto* b) { // drawHandler
-      if (data.selectedGridStep > 0) {
+      const bool hasLayers = data.trackSettings[data.selectedGridTrack].layerCount > 0;
+      if (hasLayers && data.selectedGridStep > 0) {
         b->draw("FROM", "ABOVE", TouchButton::BUTTON_ACTIVE);
       }
       else {
-        b->draw("FROM", "ABOVE", TouchButton::BUTTON_NORMAL);
+        b->draw("FROM", "ABOVE", TouchButton::BUTTON_INACTIVE);
       }
     },
     [this](auto* /*b*/) { // clickedHandler
-      if (data.selectedGridStep > 0) {
+      if (data.trackSettings[data.selectedGridTrack].layerCount > 0 && data.selectedGridStep > 0) {
         instance->copyFromAbove();
       }
     }));
