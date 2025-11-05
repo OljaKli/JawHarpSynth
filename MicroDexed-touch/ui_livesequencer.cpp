@@ -876,10 +876,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
 
     // currentPage = PAGE_PATTERN;  //phtodo
 
-    display.setTextSize(1);
-    display.setCursor(GRID.X[2], 6);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.print(data.performanceName.c_str());
+    drawPerformanceName();
 
     // Reset grid editor state
     inGridEditor = false;
@@ -1298,6 +1295,23 @@ FLASHMEM void UI_LiveSequencer::processBar(const float progress, const uint16_t 
   }
 }
 
+FLASHMEM void UI_LiveSequencer::drawPerformanceName(void) {
+  if (remote_active) {
+    display.console = true;
+  }
+
+  const uint16_t textX = GRID.X[2];
+  const uint16_t textY = GRID.Y[0] + 6;
+  const uint16_t textWidth = (2 * TouchButton::BUTTON_SIZE_X) + TouchButton::BUTTON_SPACING;
+  const uint16_t textHeight = CHAR_height_small + 2;
+
+  display.fillRect(textX, textY, textWidth, textHeight, COLOR_BACKGROUND);
+  display.setCursor(textX, textY);
+  display.setTextSize(1);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.print(data.performanceName.c_str());
+}
+
 FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
   if (remote_active) {
     display.console = true;
@@ -1335,6 +1349,7 @@ if (guiFlags & drawTopButtons && !inGridEditor) {
 
     // Use the mode button instead of manual drawing
     modeButton->drawNow();
+    drawPerformanceName();
   }
 
   if (guiFlags & drawActiveTrackSubLabel && !inGridEditor) {
@@ -1790,6 +1805,8 @@ FLASHMEM void UI_LiveSequencer::handleGridSongTouch(void) {
 
     currentPage = PAGE_PATTERN;
     display.fillScreen(COLOR_BACKGROUND);
+    resetProgressBars();
+    drawUpdates(drawTime);
     redrawScreen();
     return;
   }

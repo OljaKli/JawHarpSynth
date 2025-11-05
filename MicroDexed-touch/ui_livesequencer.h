@@ -137,6 +137,7 @@ private:
   bool isModeToolActive(void);
   void redrawScreen(void);
   void drawGUI(uint16_t& guiFlags);
+  void drawPerformanceName(void);
   void processBar(const float progressTotal, const uint16_t y, ProgressBar& bar, const uint16_t color);
   static std::string getArpModeName(uint8_t mode);
   void drawLayerButton(const bool horizontal, uint8_t layerMode, int layer, const bool layerEditActive, TouchButton::Color color, uint16_t x, uint16_t y);
