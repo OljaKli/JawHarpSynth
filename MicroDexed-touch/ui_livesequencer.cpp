@@ -6,6 +6,7 @@
 #include "touch.h"
 #include "ui_liveseq_pianoroll.h"
 #include "virtualkeyboard.h"
+#include <algorithm>
 
 
 extern sequencer_t seq;
@@ -1004,6 +1005,18 @@ FLASHMEM void UI_LiveSequencer::onGridStepChanged(void) {
   }
 }
 
+FLASHMEM void UI_LiveSequencer::onGridPlaybackEnded(void) {
+  const bool playingNow = data.isRunning || data.isStarting || seq.running;
+  if (playingNow) {
+    data.seq_started_from_pattern_mode = false;
+    liveSeq.stop();
+  }
+
+  gridNeedsRedraw = true;
+  data.redraw_grid_buttons = true;
+  data.redraw_grid_header = true;
+}
+
 FLASHMEM void UI_LiveSequencer::drawUpdates(uint16_t flags) {
   guiUpdateFlags |= flags;
 }
@@ -1784,9 +1797,13 @@ FLASHMEM void UI_LiveSequencer::handleGridSongTouch(void) {
   // Check if play button was pressed
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
     const bool playingNow = data.isRunning || data.isStarting || seq.running;
-    if (playingNow) {
+    auto stopPlayback = [&]() {
       data.seq_started_from_pattern_mode = false;
       liveSeq.stop();
+    };
+
+    if (playingNow) {
+      stopPlayback();
     }
     else {
       data.seq_started_from_pattern_mode = false;

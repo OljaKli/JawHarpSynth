@@ -1044,14 +1044,14 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       data.currentPattern = 0;
 
       if (data.useGridSongMode && !data.seq_started_from_pattern_mode) {
-        if (data.currentGridStep >= data.gridPlaybackEndStep) {
-          if (data.gridLoopEnabled) {
-            data.currentGridStep = data.gridPlaybackStartStep;
-          }
-          else {
-            stop();
-            return;
-          }
+        const bool atEnd = data.currentGridStep >= data.gridPlaybackEndStep;
+        if (atEnd && !data.gridLoopEnabled) {
+          ui_liveSeq->onGridPlaybackEnded();
+          return;
+        }
+
+        if (atEnd && data.gridLoopEnabled) {
+          data.currentGridStep = data.gridPlaybackStartStep;
         }
         else {
           data.currentGridStep++;
