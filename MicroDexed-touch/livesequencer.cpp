@@ -1722,7 +1722,9 @@ FLASHMEM void LiveSequencer::adjustGridMarkersAfterInsert(uint8_t step, bool shi
 
   incrementIfNeeded(data.currentGridStep);
 
-  if (data.gridStepOffset >= step && data.gridStepOffset < (LiveSeqData::GRIDSONGLEN - 1)) {
+  // Keep the viewport anchored only when we inserted above it; inserting at the first
+  // visible row should reveal the new empty row instead of scrolling past it.
+  if (data.gridStepOffset > step && data.gridStepOffset < (LiveSeqData::GRIDSONGLEN - 1)) {
     data.gridStepOffset++;
   }
 }
