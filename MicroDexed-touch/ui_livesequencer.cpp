@@ -727,8 +727,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b) { // drawHandler
       char startLabel[5];
       snprintf(startLabel, sizeof(startLabel), "%02u", static_cast<unsigned>(data.gridPlaybackStartStep) + 1);
-      const bool isSelectedStart = (data.selectedGridStep == data.gridPlaybackStartStep);
-      b->draw("START", startLabel, isSelectedStart ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
+      b->draw("START", startLabel, TouchButton::BUTTON_ACTIVE);
     },
     [this](auto* b) { // clickedHandler
       if (data.selectedGridStep < LiveSequencer::LiveSeqData::GRIDSONGLEN) {
@@ -746,9 +745,8 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b) { // drawHandler
       char endLabel[5];
       snprintf(endLabel, sizeof(endLabel), "%02u", static_cast<unsigned>(data.gridPlaybackEndStep) + 1);
-      const bool isSelectedEnd = (data.selectedGridStep == data.gridPlaybackEndStep);
-  const char* topLabel = data.gridLoopEnabled ? "LOOP" : "END";
-  const bool emphasize = isSelectedEnd || data.gridLoopEnabled;
+      const char* topLabel = data.gridLoopEnabled ? "LOOP" : "END";
+      const bool emphasize = data.gridLoopEnabled;
       b->draw(topLabel, endLabel, emphasize ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_ACTIVE);
     },
     [this](auto* b) { // clickedHandler
