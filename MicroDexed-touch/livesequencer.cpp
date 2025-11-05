@@ -1758,6 +1758,17 @@ FLASHMEM void LiveSequencer::clampGridMarkers() {
   }
 }
 
+FLASHMEM void LiveSequencer::resetGridEditorDefaults(void) {
+  data.gridPlaybackStartStep = 0;
+  data.gridPlaybackEndStep = LiveSeqData::GRIDSONGLEN - 1;
+  data.gridLoopEnabled = true;
+  data.gridStepOffset = 0;
+  data.currentGridStep = data.gridPlaybackStartStep;
+  data.selectedGridStep = data.gridPlaybackStartStep;
+  data.selectedGridTrack = 0;
+  clampGridMarkers();
+}
+
 FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
   // Check if the track and layer are valid
   if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS) {

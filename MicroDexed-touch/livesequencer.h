@@ -277,6 +277,7 @@ public:
   void setLayerMuted(uint8_t track, uint8_t layer, bool isMuted, bool recordToSong = false);
   void changeNumberOfBars(uint8_t num);
   void deleteAllSongEvents(void);
+  void resetGridEditorDefaults(void);
   void fillTrackLayer();
   void deleteLiveSequencerData(void);
   void setArpEnabled(bool enabled);
