@@ -296,14 +296,17 @@ void arp_track(uint8_t d)
   bool process_arp = false;
   if (seq.arp_speed == 0 && seq.ticks == 0) {
     process_arp = true;
-  } else if (seq.arp_speed == 1 && seq.ticks == 0 && seq.arp_counter == 0) {
+  }
+  else if (seq.arp_speed == 1 && seq.ticks == 0 && seq.arp_counter == 0) {
     process_arp = true;
-  } else if (seq.arp_speed == 2) {
-    if ((seq.instrument[d] == 3 || seq.instrument[d] == 4) && 
-        (seq.ticks == 0 || seq.ticks == 2 || seq.ticks == 4 || seq.ticks == 6)) {
+  }
+  else if (seq.arp_speed == 2) {
+    if ((seq.instrument[d] == 3 || seq.instrument[d] == 4) &&
+      (seq.ticks == 0 || seq.ticks == 2 || seq.ticks == 4 || seq.ticks == 6)) {
       process_arp = true;
     }
-  } else if (seq.arp_speed == 3) {
+  }
+  else if (seq.arp_speed == 3) {
     if ((seq.instrument[d] == 3 || seq.instrument[d] == 4) && seq.ticks != seq.ticks_max) {
       process_arp = true;
     }
@@ -319,48 +322,51 @@ void arp_track(uint8_t d)
   uint8_t velocity;
 
   switch (seq.arp_style) {
-    case 0: // arp up
-      transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step + seq.element_shift], d);
-      velocity = (seq.instrument[d] == 3 || seq.instrument[d] == 4) ? 
-                 seq.arp_volume_base - (seq.arp_num_notes_count * (seq.arp_volume_base / seq.arp_num_notes_max)) :
-                 check_vel_variation(seq.current_pattern[d], seq.chord_vel);
-      break;
+  case 0: // arp up
+    transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step + seq.element_shift], d);
+    velocity = (seq.instrument[d] == 3 || seq.instrument[d] == 4) ?
+      seq.arp_volume_base - (seq.arp_num_notes_count * (seq.arp_volume_base / seq.arp_num_notes_max)) :
+      check_vel_variation(seq.current_pattern[d], seq.chord_vel);
+    break;
 
-    case 1: // arp down  
-      transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length - seq.arp_step + seq.element_shift], d);
-      velocity = (seq.instrument[d] == 3 || seq.instrument[d] == 4) ?
-                 seq.arp_volume_base - (seq.arp_num_notes_count * (seq.arp_volume_base / seq.arp_num_notes_max)) :
-                 check_vel_variation(seq.current_pattern[d], seq.chord_vel);
-      break;
+  case 1: // arp down  
+    transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length - seq.arp_step + seq.element_shift], d);
+    velocity = (seq.instrument[d] == 3 || seq.instrument[d] == 4) ?
+      seq.arp_volume_base - (seq.arp_num_notes_count * (seq.arp_volume_base / seq.arp_num_notes_max)) :
+      check_vel_variation(seq.current_pattern[d], seq.chord_vel);
+    break;
 
-    case 2: // arp up & down
-      if (seq.arp_step <= seq.arp_length) {
-        transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step], d);
-      } else {
-        transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length * 2 - seq.arp_step], d);
-      }
-      velocity = (seq.instrument[d] == 3 || seq.instrument[d] == 4) ?
-                 check_vel_variation(seq.current_pattern[d], 90) :
-                 check_vel_variation(seq.current_pattern[d], seq.chord_vel);
-      break;
+  case 2: // arp up & down
+    if (seq.arp_step <= seq.arp_length) {
+      transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_step], d);
+    }
+    else {
+      transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][seq.arp_length * 2 - seq.arp_step], d);
+    }
+    velocity = (seq.instrument[d] == 3 || seq.instrument[d] == 4) ?
+      check_vel_variation(seq.current_pattern[d], 90) :
+      check_vel_variation(seq.current_pattern[d], seq.chord_vel);
+    break;
 
-    case 3: // arp random
-      transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][random(seq.arp_length) + seq.element_shift] + (seq.oct_shift * 12), d);
-      velocity = check_vel_variation(seq.current_pattern[d], 
-                   (seq.instrument[d] == 3 || seq.instrument[d] == 4) ? 90 : seq.chord_vel);
-      break;
+  case 3: // arp random
+    transformedNote = harmonize(seq.arp_note + seq.arps[seq.arp_chord][random(seq.arp_length) + seq.element_shift] + (seq.oct_shift * 12), d);
+    velocity = check_vel_variation(seq.current_pattern[d],
+      (seq.instrument[d] == 3 || seq.instrument[d] == 4) ? 90 : seq.chord_vel);
+    break;
 
-    default:
-      return;
+  default:
+    return;
   }
 
   // Send note (preserving all original instrument routing)
   if (check_probability(seq.current_pattern[d])) {
     if (seq.instrument[d] == 3 || seq.instrument[d] == 4) {
       handleNoteOn(microsynth[seq.instrument[d] - 3].midi_channel, transformedNote, velocity, 0);
-    } else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) {
+    }
+    else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) {
       handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, transformedNote, velocity, 0);
-    } else if (seq.instrument[d] == 2) {
+    }
+    else if (seq.instrument[d] == 2) {
       handleNoteOn(configuration.epiano.midi_channel, transformedNote, velocity, 0);
     }
 #ifdef GRANULAR
@@ -380,7 +386,8 @@ void arp_track(uint8_t d)
 #endif
     else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) {
       handleNoteOn(seq.instrument[d] - 47, transformedNote, velocity, 3);
-    } else if (seq.instrument[d] == 5) {
+    }
+    else if (seq.instrument[d] == 5) {
       handleNoteOn(braids_osc.midi_channel, transformedNote, velocity, 4);
     }
   }
@@ -396,10 +403,11 @@ void arp_track(uint8_t d)
 
   // Global arp step management (preserving original logic exactly)
   seq.arp_counter++;
-  
+
   if (seq.arp_speed == 0) {
     seq.arp_step++;
-  } else if (seq.arp_speed == 1) {
+  }
+  else if (seq.arp_speed == 1) {
     if (seq.arp_counter > 1) {
       seq.arp_counter = 0;
       seq.arp_step++;
@@ -411,7 +419,8 @@ void arp_track(uint8_t d)
     if ((seq.arp_step > 1 && seq.arps[seq.arp_chord][seq.arp_step] == 0) || seq.arp_step == seq.arp_length) {
       seq.arp_step = 0;
     }
-  } else {
+  }
+  else {
     if ((seq.arp_step > 1 && seq.arps[seq.arp_chord][seq.arp_step] == 0) || seq.arp_step == seq.arp_length * 2) {
       seq.arp_step = 0;
     }
@@ -433,14 +442,16 @@ void process_drum_track(uint8_t d, int tr)
     current_played_pitched_sample = seq.vel[seq.current_pattern[d]][seq.step] - 210;
     if (seq.arr_type[d] == 0) {
       set_sample_pitch(current_played_pitched_sample, (float)pow(2, (seq.note_data[seq.current_pattern[d]][seq.step] - 72 + tr) / 12.00) * get_sample_p_offset(current_played_pitched_sample));
-    } else {
+    }
+    else {
       uint8_t transformed_note = harmonize(seq.note_data[seq.current_pattern[d]][seq.step] - 72, d);
       set_sample_pitch(current_played_pitched_sample, (float)pow(2, transformed_note / 12.00) * get_sample_p_offset(current_played_pitched_sample));
     }
     if (check_probability(seq.current_pattern[d])) {
       handleNoteOn(drum_midi_channel, seq.vel[seq.current_pattern[d]][seq.step], check_vel_variation(seq.current_pattern[d], 90), 0);
     }
-  } else if (check_probability(seq.current_pattern[d])) {
+  }
+  else if (check_probability(seq.current_pattern[d])) {
     handleNoteOn(drum_midi_channel, seq.note_data[seq.current_pattern[d]][seq.step], check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
   }
 #endif
@@ -455,41 +466,50 @@ void process_instrument_track(uint8_t d, int tr)
 
   if (check_probability(seq.current_pattern[d])) {
     if (seq.instrument[d] == 5) {
-      handleNoteOn(braids_osc.midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 4);
-    } else if (seq.instrument[d] > 5 && seq.instrument[d] < 16) {
-      handleNoteOn(msp[seq.instrument[d] - 6].midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
-    } else if (seq.instrument[d] > 15 && seq.instrument[d] < 32) {
+      handleNoteOn(braids_osc.midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 4);
+    }
+    else if (seq.instrument[d] > 5 && seq.instrument[d] < 16) {
+      handleNoteOn(msp[seq.instrument[d] - 6].midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    }
+    else if (seq.instrument[d] > 15 && seq.instrument[d] < 32) {
 #ifdef MIDI_DEVICE_USB_HOST
-      handleNoteOn(seq.instrument[d] - 15, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 1);
+      handleNoteOn(seq.instrument[d] - 15, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 1);
 #endif
-    } else if (seq.instrument[d] > 31 && seq.instrument[d] < 48) {
+    }
+    else if (seq.instrument[d] > 31 && seq.instrument[d] < 48) {
 #ifdef MIDI_DEVICE_DIN
-      handleNoteOn(seq.instrument[d] - 31, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 2);
+      handleNoteOn(seq.instrument[d] - 31, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 2);
 #endif
-    } else if (seq.instrument[d] == 64) {
-      handleNoteOn(21, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
-    } else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) {
-      handleNoteOn(seq.instrument[d] - 47, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 3);
-    } else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) {
-      handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
-    } else if (seq.instrument[d] == 2) {
-      handleNoteOn(configuration.epiano.midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    }
+    else if (seq.instrument[d] == 64) {
+      handleNoteOn(21, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    }
+    else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) {
+      handleNoteOn(seq.instrument[d] - 47, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 3);
+    }
+    else if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) {
+      handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    }
+    else if (seq.instrument[d] == 2) {
+      handleNoteOn(configuration.epiano.midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
 #ifdef GRANULAR
-    } else if (seq.instrument[d] == 72) {
-      handleNoteOn(granular_params.midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    }
+    else if (seq.instrument[d] == 72) {
+      handleNoteOn(granular_params.midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
 #endif
-    } else if ((seq.instrument[d] == 3 || seq.instrument[d] == 4) && seq.track_type[d] != 3) {
-      handleNoteOn(microsynth[seq.instrument[d] - 3].midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote, 
-                   check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    }
+    else if ((seq.instrument[d] == 3 || seq.instrument[d] == 4) && seq.track_type[d] != 3) {
+      handleNoteOn(microsynth[seq.instrument[d] - 3].midi_channel, isNoise ? seq.note_data[seq.current_pattern[d]][seq.step] : transformedNote,
+        check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
     }
   }
 
@@ -503,27 +523,33 @@ void process_chord_track(uint8_t d, int tr)
 
   for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++) {
     uint8_t note = harmonize(seq.note_data[seq.current_pattern[d]][seq.step] + tr + (seq.oct_shift * 12) + seq.arps[seq.vel[seq.current_pattern[d]][seq.step] - 200][x], d);
-    
+
     if (check_probability(seq.current_pattern[d])) {
       if (seq.instrument[d] < 2 || seq.instrument[d] == 70 || seq.instrument[d] == 71) {
         handleNoteOn(configuration.dexed[map_to_dexed_instance(seq.instrument[d])].midi_channel, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
 #ifdef GRANULAR
-      } else if (seq.instrument[d] == 72) {
+      }
+      else if (seq.instrument[d] == 72) {
         handleNoteOn(granular_params.midi_channel, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
 #endif
-      } else if (seq.instrument[d] == 2) {
+      }
+      else if (seq.instrument[d] == 2) {
         handleNoteOn(configuration.epiano.midi_channel, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 0);
-      } else if (seq.instrument[d] == 5) {
+      }
+      else if (seq.instrument[d] == 5) {
         handleNoteOn(braids_osc.midi_channel, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 4);
 #ifdef MIDI_DEVICE_USB_HOST
-      } else if (seq.instrument[d] > 15 && seq.instrument[d] < 32) {
+      }
+      else if (seq.instrument[d] > 15 && seq.instrument[d] < 32) {
         handleNoteOn(seq.instrument[d] - 15, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 1);
 #endif
 #ifdef MIDI_DEVICE_DIN
-      } else if (seq.instrument[d] > 31 && seq.instrument[d] < 48) {
+      }
+      else if (seq.instrument[d] > 31 && seq.instrument[d] < 48) {
         handleNoteOn(seq.instrument[d] - 31, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 2);
 #endif
-      } else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) {
+      }
+      else if (seq.instrument[d] > 47 && seq.instrument[d] < 64) {
         handleNoteOn(seq.instrument[d] - 47, note, check_vel_variation(seq.current_pattern[d], seq.chord_vel), 3);
       }
     }
@@ -549,8 +575,8 @@ void process_sliced_drums(uint8_t d)
 {
 #if NUM_DRUMS > 0
   if (check_probability(seq.current_pattern[d])) {
-    handleNoteOn(slices_midi_channel, seq.note_data[seq.current_pattern[d]][seq.step], 
-                 check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
+    handleNoteOn(slices_midi_channel, seq.note_data[seq.current_pattern[d]][seq.step],
+      check_vel_variation(seq.current_pattern[d], seq.vel[seq.current_pattern[d]][seq.step]), 0);
   }
 #endif
 }
@@ -561,21 +587,24 @@ void sequencer_part1(void)
   for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
   {
     int tr = 0;
-    
+
     // Pattern selection logic (identical to original)
     if (!seq.play_mode) {
       seq.current_chain[d] = seq.song[d][seq.current_song_step];
       seq.current_pattern[d] = seq.chain[seq.current_chain[d]][seq.chain_counter[d]];
-    } else if (seq.hunt_pattern) {
+    }
+    else if (seq.hunt_pattern) {
       seq.current_song_step = find_first_song_step_with_pattern(seq.active_pattern);
       if (get_chain_length_from_current_track(d) >= find_first_chain_step_with_pattern(seq.active_pattern)) {
         seq.chain_counter[d] = find_first_chain_step_with_pattern(seq.active_pattern);
-      } else if (get_chain_length_from_current_track(d) == 1) {
+      }
+      else if (get_chain_length_from_current_track(d) == 1) {
         seq.chain_counter[d] = 0;
       }
       seq.current_chain[d] = seq.song[d][seq.current_song_step];
       seq.current_pattern[d] = seq.chain[seq.current_chain[d]][seq.chain_counter[d]];
-    } else {
+    }
+    else {
       seq.current_chain[d] = seq.song[d][seq.current_song_step];
       seq.current_pattern[d] = seq.chain[seq.current_chain[d]][seq.chain_counter[d]];
     }
@@ -583,7 +612,8 @@ void sequencer_part1(void)
     // Transpose calculation (identical to original)
     if (seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]] < NUM_CHAINS) {
       tr = seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]];
-    } else if (seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]] < NUM_CHAINS * 2) {
+    }
+    else if (seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]] < NUM_CHAINS * 2) {
       tr = NUM_CHAINS - seq.chain_transpose[seq.current_chain[d]][seq.chain_counter[d]];
     }
 
@@ -592,14 +622,18 @@ void sequencer_part1(void)
       if (seq.note_data[seq.current_pattern[d]][seq.step] > 0) {
         if (seq.track_type[d] == 0) {
           process_drum_track(d, tr);
-        } else {
+        }
+        else {
           if (seq.track_type[d] == 1) {
             process_instrument_track(d, tr);
-          } else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) {
+          }
+          else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) {
             process_chord_track(d, tr);
-          } else if (seq.track_type[d] == 3 && seq.ticks == 0) {
+          }
+          else if (seq.track_type[d] == 3 && seq.ticks == 0) {
             process_arp_track(d, tr);
-          } else if (seq.track_type[d] == 4) {
+          }
+          else if (seq.track_type[d] == 4) {
             process_sliced_drums(d);
           }
         }
@@ -612,103 +646,103 @@ void sequencer_part1(void)
 // Helper to route NoteOff correctly for any instrument
 static inline void sendNoteOff(uint8_t instrument, uint8_t note, uint8_t ticks, uint8_t ticks_max, bool force)
 {
-    // Dexed group (0,1,70,71)
-    if (instrument < 2 || instrument == 70 || instrument == 71)
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(configuration.dexed[map_to_dexed_instance(instrument)].midi_channel, note, 0, 0);
-    }
-    else if (instrument == 2) // Epiano
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(configuration.epiano.midi_channel, note, 0, 0);
-    }
+  // Dexed group (0,1,70,71)
+  if (instrument < 2 || instrument == 70 || instrument == 71)
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(configuration.dexed[map_to_dexed_instance(instrument)].midi_channel, note, 0, 0);
+  }
+  else if (instrument == 2) // Epiano
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(configuration.epiano.midi_channel, note, 0, 0);
+  }
 #ifdef GRANULAR
-    else if (instrument == 72) // Granular synth
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(granular_params.midi_channel, note, 0, 0);
-    }
+  else if (instrument == 72) // Granular synth
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(granular_params.midi_channel, note, 0, 0);
+  }
 #endif
-    else if (instrument > 2 && instrument < 5) // Microsynth
-    {
-        // Microsynth has no tick condition in original
-        handleNoteOff(microsynth[instrument - 3].midi_channel, note, 0, 0);
-    }
-    else if (instrument == 5) // Braids osc
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(braids_osc.midi_channel, note, 0, 4);
-    }
-    else if (instrument > 5 && instrument < 16) // MultiSampler
-    {
-        // no tick condition in original
-        handleNoteOff(msp[instrument - 6].midi_channel, note, 0, 0);
-    }
+  else if (instrument > 2 && instrument < 5) // Microsynth
+  {
+    // Microsynth has no tick condition in original
+    handleNoteOff(microsynth[instrument - 3].midi_channel, note, 0, 0);
+  }
+  else if (instrument == 5) // Braids osc
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(braids_osc.midi_channel, note, 0, 4);
+  }
+  else if (instrument > 5 && instrument < 16) // MultiSampler
+  {
+    // no tick condition in original
+    handleNoteOff(msp[instrument - 6].midi_channel, note, 0, 0);
+  }
 #ifdef MIDI_DEVICE_USB_HOST
-    else if (instrument > 15 && instrument < 32) // USB MIDI
-    {
-        // no tick condition in original
-        handleNoteOff(instrument - 15, note, 0, 1);
-    }
+  else if (instrument > 15 && instrument < 32) // USB MIDI
+  {
+    // no tick condition in original
+    handleNoteOff(instrument - 15, note, 0, 1);
+  }
 #endif
 #ifdef MIDI_DEVICE_DIN
-    else if (instrument > 31 && instrument < 48) // DIN MIDI
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(instrument - 31, note, 0, 2);
-    }
+  else if (instrument > 31 && instrument < 48) // DIN MIDI
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(instrument - 31, note, 0, 2);
+  }
 #endif
-    else if (instrument > 47 && instrument < 64) // Internal Micro MIDI
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(instrument - 47, note, 0, 3);
-    }
-    else if (instrument == 64) // CV out
-    {
-        if (force || ticks == ticks_max)
-            handleNoteOff(21, note, 0, 0);
-    }
+  else if (instrument > 47 && instrument < 64) // Internal Micro MIDI
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(instrument - 47, note, 0, 3);
+  }
+  else if (instrument == 64) // CV out
+  {
+    if (force || ticks == ticks_max)
+      handleNoteOff(21, note, 0, 0);
+  }
 }
 
 void sequencer_part2(void)
 {
-    for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
+  for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
+  {
+    if (seq.noteoffsent[d]) continue;
+    if (seq.prev_note[d] == 0 || seq.track_type[d] == 0) continue;
+
+    uint8_t curNote = seq.prev_note[d];
+    uint8_t instr = seq.instrument[d];
+
+    // Normal note case
+    if (seq.note_data[seq.current_pattern[d]][seq.step] != 130)
     {
-        if (seq.noteoffsent[d]) continue;
-        if (seq.prev_note[d] == 0 || seq.track_type[d] == 0) continue;
-
-        uint8_t curNote = seq.prev_note[d];
-        uint8_t instr   = seq.instrument[d];
-
-        // Normal note case
-        if (seq.note_data[seq.current_pattern[d]][seq.step] != 130)
-        {
-            sendNoteOff(instr, curNote, seq.ticks, seq.ticks_max, false);
-            seq.noteoffsent[d] = true;
-        }
-
-        // Chords
-        if (seq.track_type[d] == 2 && seq.note_data[seq.current_pattern[d]][seq.step] != 130)
-        {
-            if (seq.prev_vel[d] > 199)
-            {
-                for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++)
-                {
-                    uint8_t chordNote = harmonize(curNote + seq.arps[seq.prev_vel[d] - 200][x], d);
-                    sendNoteOff(instr, chordNote, seq.ticks, seq.ticks_max, true); // force noteoff (no tick check)
-                    seq.noteoffsent[d] = true;
-                }
-            }
-        }
-
-        // Arpeggiator
-        if (seq.track_type[d] == 3)
-        {
-            sendNoteOff(instr, seq.arp_note_prev, seq.ticks, seq.ticks_max, true); // force noteoff (no tick check)
-            seq.noteoffsent[d] = true;
-        }
+      sendNoteOff(instr, curNote, seq.ticks, seq.ticks_max, false);
+      seq.noteoffsent[d] = true;
     }
+
+    // Chords
+    if (seq.track_type[d] == 2 && seq.note_data[seq.current_pattern[d]][seq.step] != 130)
+    {
+      if (seq.prev_vel[d] > 199)
+      {
+        for (uint8_t x = seq.element_shift; x < seq.element_shift + seq.chord_key_ammount; x++)
+        {
+          uint8_t chordNote = harmonize(curNote + seq.arps[seq.prev_vel[d] - 200][x], d);
+          sendNoteOff(instr, chordNote, seq.ticks, seq.ticks_max, true); // force noteoff (no tick check)
+          seq.noteoffsent[d] = true;
+        }
+      }
+    }
+
+    // Arpeggiator
+    if (seq.track_type[d] == 3)
+    {
+      sendNoteOff(instr, seq.arp_note_prev, seq.ticks, seq.ticks_max, true); // force noteoff (no tick check)
+      seq.noteoffsent[d] = true;
+    }
+  }
 }
 
 

@@ -94,6 +94,7 @@ public:
     uint8_t songStartLayerMutes;
   };
 
+
   /**
    * Automation types for Live Sequencer
    * General-purpose high CC number from 102..119 range should be safe.
@@ -226,6 +227,8 @@ public:
     int currentBpm = 90;
     uint8_t performanceID = 0;
     uint8_t songMuteQuantizeDenom = 1;
+
+    uint8_t stepRecordTargetTrack;  //select target instrument for step recorder in song mode
 
     // Grid-based song mode
     static const uint8_t GRIDSONGLEN = 64;
