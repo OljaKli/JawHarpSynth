@@ -1900,7 +1900,6 @@ FLASHMEM void UI_LiveSequencer::insertGridRow(void) {
   if (liveSeq.insertGridRow(data.selectedGridStep)) {
     gridNeedsRedraw = true;
     data.redraw_grid_buttons = true;
-    data.redraw_grid_header = true;
   }
 }
 
@@ -1908,7 +1907,6 @@ FLASHMEM void UI_LiveSequencer::removeGridRow(void) {
   if (liveSeq.removeGridRow(data.selectedGridStep)) {
     gridNeedsRedraw = true;
     data.redraw_grid_buttons = true;
-    data.redraw_grid_header = true;
   }
 }
 
