@@ -3200,7 +3200,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       }
       else {
         itoa(data.activeTrack + 1, temp_char, 10);
-        b->draw("PATTERN", temp_char, TouchButton::BUTTON_ACTIVE);
+        b->draw("TRACK", temp_char, TouchButton::BUTTON_ACTIVE);
       }
     }, [this](auto* b) {
       uint8_t newTrack = data.activeTrack + 1;
