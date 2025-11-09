@@ -1771,6 +1771,33 @@ FLASHMEM void LiveSequencer::resetGridEditorDefaults(void) {
   clampGridMarkers();
 }
 
+FLASHMEM void LiveSequencer::sanitizeGridSongSteps() {
+	if (!data.gridSongSteps) {
+		return;
+	}
+
+	const size_t stride = GRID_ROW_STRIDE;
+	const size_t trackStride = LIVESEQUENCER_NUM_LAYERS;
+
+	for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; ++track) {
+		uint8_t validLayers = data.trackSettings[track].layerCount;
+		if (validLayers > LIVESEQUENCER_NUM_LAYERS) {
+			validLayers = LIVESEQUENCER_NUM_LAYERS;
+		}
+
+		if (validLayers >= LIVESEQUENCER_NUM_LAYERS) {
+			continue;
+		}
+
+		for (uint8_t step = 0; step < LiveSeqData::GRIDSONGLEN; ++step) {
+			uint8_t* const rowTrack = data.gridSongSteps + static_cast<size_t>(step) * stride + track * trackStride;
+			for (uint8_t layer = validLayers; layer < LIVESEQUENCER_NUM_LAYERS; ++layer) {
+				rowTrack[layer] = 0;
+			}
+		}
+	}
+}
+
 FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
   // Check if the track and layer are valid
   if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS) {

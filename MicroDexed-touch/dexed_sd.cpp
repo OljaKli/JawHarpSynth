@@ -2248,6 +2248,7 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
 
 #undef GRID_STEP
   }
+  liveSeq.sanitizeGridSongSteps();
   return true;
 }
 

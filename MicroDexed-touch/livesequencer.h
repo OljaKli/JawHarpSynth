@@ -278,6 +278,7 @@ public:
   void changeNumberOfBars(uint8_t num);
   void deleteAllSongEvents(void);
   void resetGridEditorDefaults(void);
+  void sanitizeGridSongSteps();
   void fillTrackLayer();
   void deleteLiveSequencerData(void);
   void setArpEnabled(bool enabled);
