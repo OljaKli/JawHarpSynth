@@ -13,11 +13,37 @@
 static constexpr uint8_t SONG_MODE_NOTES_TRACK = 12;
 static constexpr uint8_t SONG_MODE_MUTE_TRACK = 13;
 static constexpr uint8_t MAX_TRACKS = 14; // 12 patterns + 2 song mode tracks
+extern bool openendFromLiveSequencer;
 
 void UI_func_liveseq_graphic(uint8_t param);
+// extern uint8_t stepRecordTargetTrack;  //select target instrument for step recorder in song mode
 
 class UI_LiveSeq_PianoRoll {
 public:
+
+  struct TentativeEdit {
+    bool active = false;
+
+    // Store indices instead of pointers (safe against reallocation)
+    uint16_t originalSongPatternOn = UINT16_MAX;
+    uint16_t originalSongPatternOff = UINT16_MAX;
+    size_t originalNoteOnIndex = 0;
+    size_t originalNoteOffIndex = 0;
+
+    // Store copies of the events being edited
+    LiveSequencer::MidiEvent tentativeNoteOn;
+    LiveSequencer::MidiEvent tentativeNoteOff;
+
+    // Track the CURRENT absolute times during editing
+    uint32_t currentAbsTimeOn = 0;
+    uint32_t currentAbsTimeOff = 0;
+  } tentativeEdit;
+
+  FLASHMEM void startTentativeEdit(int16_t noteIndex);
+  FLASHMEM void updateTentativeEdit(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff);
+  FLASHMEM void commitTentativeEdit();
+  FLASHMEM void cancelTentativeEdit();
+  FLASHMEM uint32_t getMaxSongTime() const;
 
   uint32_t getCurrentPlaybackTime() const;
   UI_LiveSeq_PianoRoll(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d);
@@ -28,12 +54,6 @@ public:
   FLASHMEM void drawBarNumbers(void);
   FLASHMEM uint16_t getSongPatternForNote(const LiveSequencer::NotePair& note) const;
   uint16_t stepCursorPositionPrev = ROLL_WIDTH;
-  FLASHMEM void removeNoteFromSongEvents(LiveSequencer::MidiEvent& noteOn, LiveSequencer::MidiEvent& noteOff);
-  FLASHMEM uint16_t findSongPatternForEvent(const LiveSequencer::MidiEvent& e);
-  FLASHMEM void moveEventToSongPattern(LiveSequencer::MidiEvent& e, uint16_t targetSongPattern);
-  FLASHMEM void removeEventFromSpecificPattern(LiveSequencer::MidiEvent& event, uint16_t patternIndex);
-  FLASHMEM void removeEventByContent(const LiveSequencer::MidiEvent& event);
-  FLASHMEM uint16_t findSongPatternByEvent(const LiveSequencer::MidiEvent& e);
 
 private:
   uint32_t getPatternRelativeTime(const LiveSequencer::MidiEvent& e) const;
@@ -46,7 +66,58 @@ private:
   void drawNoteAtPosition(LiveSequencer::NotePair note, bool isSelected, uint16_t x, uint16_t w, bool drawInGrey = false) const;
   void updateSongEvent(LiveSequencer::MidiEvent& updatedEvent);
 
+  void handleEncoderRight(EncoderEvents e);
+  void handleSettingActivatedEncoder(EncoderEvents e);
+  void handleNormalEncoder(EncoderEvents e);
+
+  uint16_t handleViewModeSettingActivated(EncoderEvents e);
+  void handleViewScrollY(EncoderEvents e);
+  void handleViewZoomX(EncoderEvents e);
+  void handleViewScrollX(EncoderEvents e);
+
+  uint16_t handleEditModeSettingActivated(EncoderEvents e);
+  uint16_t handleEditSelectNote(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleMuteAutomationSelection(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleNoteSelection(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleEditLayer(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleEditNoteOn(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleEditNoteOff(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleEditVelocity(EncoderEvents e, uint16_t headerFlags);
+  uint16_t handleEditNote(EncoderEvents e, uint16_t headerFlags);
+
+  uint16_t handleStepModeSettingActivated(EncoderEvents e);
+
+  void handleViewModeNormal(EncoderEvents e, uint8_t& oldMode, uint8_t& newMode);
+  void handleEditModeNormal(EncoderEvents e, uint8_t& oldMode, uint8_t& newMode);
+  void handleStepModeNormal(EncoderEvents e, uint8_t& oldMode, uint8_t& newMode);
+
+  struct SongEventLocation {
+    uint16_t noteOnPattern;
+    size_t noteOnIndex;
+    uint16_t noteOffPattern;
+    size_t noteOffIndex;
+  };
+
+  std::vector<SongEventLocation> eventLocations;
+
+  FLASHMEM size_t findEventIndex(const std::vector<LiveSequencer::MidiEvent>& events, const LiveSequencer::MidiEvent& target) {
+    for (size_t i = 0; i < events.size(); i++) {
+      const auto& event = events[i];
+      if (event.track == target.track &&
+        event.layer == target.layer &&
+        event.note_in == target.note_in &&
+        event.event == target.event &&
+        event.patternNumber == target.patternNumber &&
+        event.patternMs == target.patternMs &&
+        event.note_in_velocity == target.note_in_velocity) {
+        return i;
+      }
+    }
+    return SIZE_MAX;
+  }
+
   bool step(int8_t diff);
+
   std::set<uint8_t> keysPressed;
 
   enum ViewMode {
@@ -71,6 +142,7 @@ private:
   uint8_t editMode = EDIT_LAYER;
 
   enum StepMode {
+    STEP_TARGET_TRACK = 0,  //  Only shown in song mode
     STEP_RECORD,
     STEP_SIZE,
     STEP_LAYER,
@@ -114,22 +186,20 @@ private:
   };
   uint16_t drawFlags = 0;
 
-   enum QuantizeLevel {
-        QUANTIZE_OFF,
-        QUANTIZE_64,
-        QUANTIZE_32, 
-        QUANTIZE_16,
-        QUANTIZE_8,
-        QUANTIZE_4,    // 1/4 note
-        QUANTIZE_NUM   // Remove QUANTIZE_1
-    };
-    uint8_t quantizeLevel = QUANTIZE_16; // Default to 1/16
-     FLASHMEM uint32_t getQuantizationGridStep() const;
-    
-    // Add this method declaration
-    FLASHMEM void quantizeSelectedNote(void);
+  enum QuantizeLevel {
+    QUANTIZE_OFF,
+    QUANTIZE_64,
+    QUANTIZE_32,
+    QUANTIZE_16,
+    QUANTIZE_8,
+    QUANTIZE_4,    // 1/4 note
+    QUANTIZE_NUM   // Remove QUANTIZE_1
+  };
+  uint8_t quantizeLevel = QUANTIZE_16; // Default to 1/16
+  FLASHMEM uint32_t getQuantizationGridStep() const;
 
-TouchButton* buttonQuant = nullptr; // Add this
+  // Add this method declaration
+  FLASHMEM void quantizeSelectedNote(void);
 
   struct UpdateRange {
     uint16_t fromX;
@@ -145,7 +215,6 @@ TouchButton* buttonQuant = nullptr; // Add this
 
   void initGUI(void);
   void drawPianoRoll(void);
-  void handleEncoderRight(EncoderEvents e);
   template <class T> bool hasConstrainedChanged(T& value, int16_t diff, T min, T max);
 
   void queueDrawNote(LiveSequencer::NotePair note);
@@ -186,6 +255,7 @@ TouchButton* buttonQuant = nullptr; // Add this
   const uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
   void setEventTime(LiveSequencer::MidiEvent& e, uint32_t time);
 
+
   // New methods for song mode support
   std::vector<LiveSequencer::NotePair> getNotePairsFromSongTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo);
   std::vector<LiveSequencer::MidiEvent> getMuteAutomationEvents(uint8_t track, uint8_t patternFrom, uint8_t patternTo);
@@ -199,7 +269,6 @@ TouchButton* buttonQuant = nullptr; // Add this
   bool isRunningHere;
   int8_t selectedLayer; // The currently selected layer for editing
   bool isVisible = false;
-  bool openendFromLiveSequencer = false;
 
   std::vector<LiveSequencer::NotePair> notePairs;
 
@@ -210,10 +279,10 @@ TouchButton* buttonQuant = nullptr; // Add this
   EditableValueVector<uint8_t>* recordSteps;
 
   TouchButton* buttonPlay;
-  TouchButton* buttonInst;
   TouchButton* buttonView;
   TouchButton* buttonEdit;
   TouchButton* buttonStep;
+  TouchButton* buttonInstQuant;  // Combined instrument/quantization button
 
   static constexpr uint8_t TOTAL_OCTAVES = 8;
   static constexpr uint16_t HEADER_DRAW_ALL = 0xFFFF;

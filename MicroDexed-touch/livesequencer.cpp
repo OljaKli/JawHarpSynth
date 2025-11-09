@@ -23,7 +23,7 @@ extern multisample_s msp[NUM_MULTISAMPLES];
 extern braids_t braids_osc;
 extern uint8_t microsynth_selected_instance;
 extern uint8_t selected_instance_id; // dexed
-
+bool openendFromLiveSequencer;
 extern void handleNoteOnInput(byte, byte, byte, byte);
 extern void handleNoteOn(byte, byte, byte, byte);
 extern void handleNoteOff(byte, byte, byte, byte);
@@ -420,8 +420,8 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         }
       }
       else {
-        const midi::Channel ch = data.tracks[data.activeTrack].channel;
-        const uint8_t device = data.trackSettings[data.activeTrack].device;
+        midi::Channel ch = data.tracks[data.activeTrack].channel;
+        uint8_t device = data.trackSettings[data.activeTrack].device;
         switch (event) {
         case midi::ControlChange:
           midiControlChange(note, velocity, ch, device); // note is controller number, velocity is value
@@ -438,6 +438,12 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         case midi::NoteOn:
           pressedKeys.insert(note);
           DBG_LOG(printf("noteOn on ch%i of device %i\n", ch, device));
+
+          if (data.activeTrack == SONG_MODE_NOTES_TRACK && openendFromLiveSequencer) {
+            ch = data.tracks[data.stepRecordTargetTrack].channel;
+            device = data.trackSettings[data.stepRecordTargetTrack].device;
+          }
+
           handleNoteOnInput(ch, note, velocityActive, device);
 
           if (data.lastPlayedNote != note) {
@@ -450,6 +456,12 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           if (pressedKeys.count(note) > 0) {
             DBG_LOG(printf("noteOff on ch%i of device %i\n", ch, device));
             pressedKeys.erase(note);
+
+            if (data.activeTrack == SONG_MODE_NOTES_TRACK && openendFromLiveSequencer) {
+              ch = data.tracks[data.stepRecordTargetTrack].channel;
+              device = data.trackSettings[data.stepRecordTargetTrack].device;
+            }
+
             handleNoteOff(ch, note, velocityActive, device);
           }
           break;
@@ -1239,10 +1251,10 @@ FLASHMEM void LiveSequencer::AddMetronome(void) {
         data.fillNotes.number = fillNumOld;
         data.fillNotes.offset = fillOffOld;
         data.activeTrack = activeTrack;
-        return ;
+        return;
       }
     }
-  } 
+  }
 }
 
 FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel) {
@@ -1252,7 +1264,7 @@ FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDev
 
   // if (data.trackSettings[track].device == LiveSequencer::DEVICE_INTERNAL)
   // {
-    data.trackSettings[track].instrument = newInstrumentOrChannel;
+  data.trackSettings[track].instrument = newInstrumentOrChannel;
   //}
   // else
   // { // For external MIDI, convert 0-15 to 1-16 for MIDI channel
@@ -1400,7 +1412,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
     case DEVICE_MIDI_USB:
     case DEVICE_MIDI_DIN:
     case DEVICE_MIDI_INT:
-       data.tracks[i].channel = static_cast<midi::Channel>((instrument % 16) + 1);
+      data.tracks[i].channel = static_cast<midi::Channel>((instrument % 16) + 1);
       break;
 
     default:
@@ -1493,17 +1505,17 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrumen
 
   case DEVICE_MIDI_USB:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "USB %02i", instrument +1);
+    sprintf(sub, "USB %02i", instrument + 1);
     break;
 
   case DEVICE_MIDI_DIN:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "DIN %02i", instrument+1 );
+    sprintf(sub, "DIN %02i", instrument + 1);
     break;
 
   case DEVICE_MIDI_INT:
     sprintf(name, "CHANNEL");
-    sprintf(sub, "INT %02i", instrument +1);
+    sprintf(sub, "INT %02i", instrument + 1);
     break;
 
   default:
@@ -1813,17 +1825,6 @@ FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
     }
   }
 
-  // // Check song events for this track and layer
-  // for (const auto& songEventPair : data.songEvents) {
-  //     for (const auto& event : songEventPair.second) {
-  //         if (event.track == track && 
-  //             event.layer == layer && 
-  //             event.event != midi::InvalidType) {
-  //             return false; // Found at least one valid song event for this track-layer
-  //         }
-  //     }
-  // }
-
   // Also check if there are any active notes in this track-layer (for real-time playing)
   if (!data.tracks[track].activeNotes[layer].empty()) {
     return false;
@@ -1831,4 +1832,6 @@ FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
 
   return true; // No events found for this track-layer combination
 }
+
+
 
