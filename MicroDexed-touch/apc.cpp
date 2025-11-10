@@ -282,7 +282,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
   }
 }
 
-void  apc_insert_pattern_step(uint8_t inData1)
+FLASHMEM void apc_insert_pattern_step(uint8_t inData1)
 {
   uint8_t input_step = 0;
   if (inData1 >= 64 - 8)
@@ -360,25 +360,7 @@ void  apc_insert_pattern_step(uint8_t inData1)
   apc_print_right_buttons();
 }
 
-// void apc_drawString()
-// {
-//   uint8_t len = strlen(apc_scrolltext);
-//   apc_clear_grid();
-//   delay(50);
-//   for (apc_scroll_counter = 0; apc_scroll_counter < len * 6 + 8; apc_scroll_counter++)
-//   {
-//     for (uint8_t i = 0; i < len; i++)
-//     {
-//       apc_drawChar(8 + i * 6 - apc_scroll_counter, apc_scrolltext[i]);
-//     }
-//     delay(90);
-//   }
-//   apc_scroll_counter = 0;
-//   delay(50);
-//   apc_clear_grid();
-// }
-
-void apc_drawString_Background()
+FLASHMEM void apc_drawString_Background()
 {
   uint8_t len = strlen(apc_scrolltext);
   if (apc_scroll_counter == 0)
@@ -470,7 +452,7 @@ FLASHMEM void apc_pattern_change(uint8_t inData1)
 }
 extern void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color);
 
-void apc_mute_matrix()
+FLASHMEM void apc_mute_matrix()
 {
   if (APC_MODE == APC_MUTE_MATRIX)
   {
@@ -558,7 +540,7 @@ FLASHMEM void apc_song()
   }
 }
 
-void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
+FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 {
 
   if (inData1 == APC_MINI_BUTTON_RIGHT_SEQ_START_STOP && !apc_shift_key) //start/stop LUC 114 or 84

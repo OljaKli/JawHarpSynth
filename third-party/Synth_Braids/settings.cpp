@@ -25,13 +25,9 @@
 // -----------------------------------------------------------------------------
 //
 // Settings
-
+#include "Arduino.h"
 #include "settings.h"
-
 #include <cstring>
-
-// #include "stmlib/system/storage.h"
-//#include <murmurhash3.h>
 
 namespace braids {
 
@@ -42,15 +38,12 @@ namespace braids {
 
     RESOLUTION_16_BIT,
     SAMPLE_RATE_44K,
-
     PITCH_RANGE_440,
     2,
    
   };
 
-  // Storage<0x8020000, 4> storage;
-
-  void Settings::Init() {
+  FLASHMEM void Settings::Init() {
 
     bool settings_within_range = true;
     for (int32_t i = 0; i <= SETTING_LAST_EDITABLE_SETTING; ++i) {
@@ -68,38 +61,10 @@ namespace braids {
     }
   }
 
-  void Settings::Reset() {
+  FLASHMEM void Settings::Reset() {
     memcpy(&data_, &kInitSettings, sizeof(SettingsData));
     data_.magic_byte = 'M';
   }
-
-  const char* const boolean_values[] = { "OFF ", "ON " };
-  const char* const intensity_values[] = {
-      // "OFF ",
-      // "   1",
-      // "   2",
-      // "   3",
-      // "FULL" 
-      };
-
-  const char* const zero_to_fifteen_values[] = {
-      // "   0",
-      // "   1",
-      // "   2",
-      // "   3",
-      // "   4",
-      // "   5",
-      // "   6",
-      // "   7",
-      // "   8",
-      // "   9",
-      // "  10",
-      // "  11",
-      // "  12",
-      // "  13",
-      // "  14",
-      // "  15" 
-      };
 
   const char* const algo_values[] = {
       "CSAW",

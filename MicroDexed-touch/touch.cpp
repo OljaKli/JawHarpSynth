@@ -197,7 +197,7 @@ FLASHMEM void helptext_c(const __FlashStringHelper* str) {
 
 extern void clear_bottom_half_screen_without_backbutton();
 
- #ifdef TOUCH_UI
+#ifdef TOUCH_UI
 FLASHMEM void back_touchbutton()
 {
   if (ts.keyb_in_menu_activated == false)
@@ -745,7 +745,7 @@ extern SDClass SD_EXTERNAL;
 
 uint8_t previous_delete_item_type = 99;
 
-bool isSelectedItemFolder() {
+FLASHMEM bool isSelectedItemFolder() {
 
   String fullPath = fm.sd_new_name + "/" + fm.sd_temp_name;
 
@@ -770,7 +770,7 @@ bool isSelectedItemFolder() {
   return false;
 }
 
-void print_file_manager_delete_button() {
+FLASHMEM void print_file_manager_delete_button() {
   bool isFolder = isSelectedItemFolder();
 
   if (previous_delete_item_type != isFolder || menuhelper_previous_val != fm.sd_mode) {
@@ -826,8 +826,6 @@ FLASHMEM void print_file_manager_buttons()
     }
 #endif
 
-
-
 #ifdef COMPILE_FOR_PSRAM
     if (fm.SD_CARD_READER_EXT == false && fm.active_window == 1) {
       // Show DELETE PSRAM only for PSRAM window
@@ -866,7 +864,7 @@ extern uint8_t current_played_pitched_sample;
 #include "granular.h"
 extern granular_params_t granular_params;
 
-FLASHMEM  void handle_touchscreen_granular() {
+FLASHMEM void handle_touchscreen_granular() {
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
   {
     TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_RED);
@@ -1152,7 +1150,6 @@ FLASHMEM void handle_touchscreen_custom_mappings()
   }
 }
 
-
 #ifdef COMPILE_FOR_PSRAM
 extern void PlayOnly();
 extern FLASHMEM void trimSample();
@@ -1418,7 +1415,6 @@ FLASHMEM void handle_touchscreen_braids()
   }
 }
 
-
 FLASHMEM void handle_touchscreen_cv_screen()
 {
   if (numTouchPoints > 0)
@@ -1460,21 +1456,20 @@ FLASHMEM void handle_touchscreen_chord_arranger()
 
 FLASHMEM void draw_menu_ui_icons()
 {
-   #ifdef TOUCH_UI
+#ifdef TOUCH_UI
   // do touch_ui stuff
 
-    draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
+  draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
 
   if (seq.running)
     draw_button_on_grid(45, 7, "SEQ.", "STOP", 2);
   else
     draw_button_on_grid(45, 7, "SEQ.", "START", 1);
 
- draw_button_on_grid(45, 19, "UP", "", 0); 
-  draw_button_on_grid(45, 25, "DOWN", "", 0); 
+  draw_button_on_grid(45, 19, "UP", "", 0);
+  draw_button_on_grid(45, 25, "DOWN", "", 0);
 
-  #else
-
+#else
 
   TouchButton::drawButton(GRID.X[0], GRID.Y[3], "DEXED", "VOICE", TouchButton::BUTTON_NORMAL);
   TouchButton::drawButton(GRID.X[1], GRID.Y[3], "SONG", "EDITOR", TouchButton::BUTTON_NORMAL);
@@ -1499,7 +1494,7 @@ FLASHMEM void draw_menu_ui_icons()
   TouchButton::drawButton(GRID.X[5], GRID.Y[5], "MAIN", "MIXER", TouchButton::BUTTON_NORMAL);
 
   TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
-  #endif
+#endif
 }
 extern elapsedMillis save_sys;
 extern bool  is_offline_mode;
@@ -1508,8 +1503,6 @@ extern void  toggleOutputMode();
 
 FLASHMEM void _multiband_button(uint8_t x, uint8_t y, uint8_t offset_y)
 {
-  //  if ( TouchButton::isPressed(GRID.X[x], GRID.Y[y]))
-  //   {
   if (multiband_active == false && multiband_confirm == true)
   {
     multiband_active = true;
@@ -1528,7 +1521,6 @@ FLASHMEM void _multiband_button(uint8_t x, uint8_t y, uint8_t offset_y)
     TouchButton::drawButton(GRID.X[x], GRID.Y[y] + offset_y, "CONFIRM", "?", TouchButton::BUTTON_ACTIVE);
   }
   mb_set_master();
-  // }
 }
 
 FLASHMEM void handle_touchscreen_menu()
@@ -1688,25 +1680,16 @@ FLASHMEM void handle_touchscreen_multiband()
     const int band4_x_start_px = 28 * CHAR_width_small - 4;
     const int band4_y_start_px = 17 * CHAR_height_small - 5;
 
-    if (x > band1_x_start_px && x < (band1_x_start_px + solo_button_width_px) &&
-      y > band1_y_start_px && y < (band1_y_start_px + solo_button_height_px)) {
-      solo_mask ^= (1 << 0);
-      isButtonTouched = true;
-    }
-    else if (x > band2_x_start_px && x < (band2_x_start_px + solo_button_width_px) &&
-      y > band2_y_start_px && y < (band2_y_start_px + solo_button_height_px)) {
-      solo_mask ^= (1 << 1);
-      isButtonTouched = true;
-    }
-    else if (x > band3_x_start_px && x < (band3_x_start_px + solo_button_width_px) &&
-      y > band3_y_start_px && y < (band3_y_start_px + solo_button_height_px)) {
-      solo_mask ^= (1 << 2);
-      isButtonTouched = true;
-    }
-    else if (x > band4_x_start_px && x < (band4_x_start_px + solo_button_width_px) &&
-      y > band4_y_start_px && y < (band4_y_start_px + solo_button_height_px)) {
-      solo_mask ^= (1 << 3);
-      isButtonTouched = true;
+    const int band_x_starts[] = { band1_x_start_px, band2_x_start_px, band3_x_start_px, band4_x_start_px };
+    const int band_y_starts[] = { band1_y_start_px, band2_y_start_px, band3_y_start_px, band4_y_start_px };
+
+    for (uint8_t i = 0; i < 4; i++) {
+      if (x > band_x_starts[i] && x < (band_x_starts[i] + solo_button_width_px) &&
+        y > band_y_starts[i] && y < (band_y_starts[i] + solo_button_height_px)) {
+        solo_mask ^= (1 << i);
+        isButtonTouched = true;
+        break; // Found the button, no need to check others
+      }
     }
 
     // Check if all bands are soloed (all 4 bits are 1)
@@ -1977,73 +1960,3 @@ FLASHMEM void handle_load_performance()
     TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
   }
 }
-
-// bool redrawNeededChainEditor = false;
-
-// FLASHMEM void handle_touchscreen_chain_editor() {
-//   // Check if there is a valid touch point.
-//   // The TouchButton::isPressed() function will handle the single-press logic.
-
-//       // Use a local flag to check if any UI state was changed.
-//   bool state_changed = false;
-//   // Button presses using the defined GRID and TouchButton class
-//   if (TouchButton::isPressed(GRID.X[0], GRID.Y[4])) {
-//     chain_editor_state.current_ui_state = 2;
-//     seq.temp_active_menu = 0;
-//     show_smallfont_noGrid(0, 0, 16, "Choose new chain template");
-//     state_changed = true;
-//   }
-//   else if (TouchButton::isPressed(GRID.X[1], GRID.Y[4])) {
-//     chain_editor_state.current_ui_state = 1;
-//     show_smallfont_noGrid(0, 0, 16, "Editing chain slot ");
-//     state_changed = true;
-//   }
-//   else if (TouchButton::isPressed(GRID.X[2], GRID.Y[4])) {
-//     chain_editor_state.recording_active = !chain_editor_state.recording_active;
-//     if (chain_editor_state.recording_active) {
-//       chain_editor_state.midi_record_chain_step = 0;
-//       chain_editor_state.midi_record_pattern_step = 0;
-//       show_smallfont_noGrid(0, 0, 16, "MIDI recording started!");
-//     }
-//     else {
-//       show_smallfont_noGrid(0, 0, 16, "MIDI recording stopped.");
-//     }
-//     state_changed = true;
-//   }
-//   else if (TouchButton::isPressed(GRID.X[3], GRID.Y[4])) {
-//     chain_editor_state.current_ui_state = 2;
-//     seq.temp_active_menu = 0;
-//     show_smallfont_noGrid(0, 0, 16, "Choose new chain template");
-//     state_changed = true;
-//   }
-//   else if (TouchButton::isPressed(GRID.X[4], GRID.Y[4])) {
-//     LCDML.OTHER_jumpToFunc(UI_func_song);
-//     state_changed = true;
-//   }
-
-//   if (numTouchPoints > 0) {
-//     int x = ts.p.x;
-//     int y = ts.p.y;
-//     // Pattern selection on the top part of the screen
-//     if (y > 3 * CHAR_height && y < 5 * CHAR_height) {
-//       int step = (x / (CHAR_width * 2));
-//       if (step < 16) {
-//         chain_editor_state.chain_cursor = step;
-//         state_changed = true;
-//       }
-//     }
-
-
-
-//     // If any state was changed by a touch, set the global redraw flag.
-//     if (state_changed) {
-//       redrawNeededChainEditor = true;
-//     }
-//   }
-
-//   // Only redraw the screen if a state change has occurred.
-//   if (redrawNeededChainEditor) {
-//     chain_editor_draw_ui();
-//     redrawNeededChainEditor = false; // Reset the flag after drawing.
-//   }
-// }

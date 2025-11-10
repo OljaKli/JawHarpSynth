@@ -18,7 +18,7 @@ PitchSamplePlayer::PitchSamplePlayer() :
     loopingEnabled = false;
 }
 
-void PitchSamplePlayer::play(int16_t* data, uint32_t numFrames, uint8_t channels) {
+FLASHMEM void PitchSamplePlayer::play(int16_t* data, uint32_t numFrames, uint8_t channels) {
     if (playing) stop();
 
     sampleData = data;
@@ -28,7 +28,7 @@ void PitchSamplePlayer::play(int16_t* data, uint32_t numFrames, uint8_t channels
     playing = true;
 }
 
-void PitchSamplePlayer::playRaw(int16_t* data, uint32_t totalLength, uint8_t channels) {
+FLASHMEM void PitchSamplePlayer::playRaw(int16_t* data, uint32_t totalLength, uint8_t channels) {
     if (playing) stop();
 
     sampleData = data;
@@ -38,22 +38,22 @@ void PitchSamplePlayer::playRaw(int16_t* data, uint32_t totalLength, uint8_t cha
     playing = true;
 }
 
-void PitchSamplePlayer::stop() {
+FLASHMEM void PitchSamplePlayer::stop() {
     playing = false;
     phase = 0.0f;
 }
 
-bool PitchSamplePlayer::isPlaying() {
+FLASHMEM bool PitchSamplePlayer::isPlaying() {
     return playing;
 }
 
-void PitchSamplePlayer::setPlaybackRate(float multiplier) {
+FLASHMEM void PitchSamplePlayer::setPlaybackRate(float multiplier) {
     if (multiplier < 0.01f) multiplier = 0.01f;
     if (multiplier > 4.0f) multiplier = 4.0f;
     pitchMultiplier = multiplier;
 }
 
-bool PitchSamplePlayer::enableInterpolation(bool enable) {
+FLASHMEM bool PitchSamplePlayer::enableInterpolation(bool enable) {
     interpolationEnabled = enable;
     if (!enable) {
         setPlaybackRate(1.0f); // force normal speed when disabled
@@ -61,20 +61,20 @@ bool PitchSamplePlayer::enableInterpolation(bool enable) {
     return interpolationEnabled;
 }
 
-void PitchSamplePlayer::setLoopType(loop_type t) {
+FLASHMEM void PitchSamplePlayer::setLoopType(loop_type t) {
     loop_type_ = t;
     loopingEnabled = (t != looptype_none);
 }
 
-void PitchSamplePlayer::setLoopStart(uint32_t loop_start) {
+FLASHMEM void PitchSamplePlayer::setLoopStart(uint32_t loop_start) {
     loop_start_ = loop_start;
 }
 
-void PitchSamplePlayer::setLoopFinish(uint32_t loop_finish) {
+FLASHMEM void PitchSamplePlayer::setLoopFinish(uint32_t loop_finish) {
     loop_finish_ = loop_finish;
 }
 
-void PitchSamplePlayer::setLooping(bool enable) {
+FLASHMEM void PitchSamplePlayer::setLooping(bool enable) {
     //loopingEnabled = enable;
     if (!enable) {
       loop_type_ = looptype_none;
@@ -165,70 +165,3 @@ void PitchSamplePlayer::update(void) {
     release(blockR);
 }
 
-
-// void PitchSamplePlayer::update(void) {
-//     if (!playing || sampleData == NULL) {
-//         return;
-//     }
-
-//     audio_block_t* blockL = allocate();
-//     audio_block_t* blockR = allocate();
-
-//     if (!(blockL && blockR)) {
-//         if (blockL) release(blockL);
-//         if (blockR) release(blockR);
-//         return;
-//     }
-
-//     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
-//         if (phase >= (float)(totalFrames - 1)) {
-//             if (loopingEnabled) {
-//                 phase = 0.0f;
-//             } else {
-//                 stop();
-//                 release(blockL);
-//                 release(blockR);
-//                 return;
-//             }
-//         }
-
-//         int idx = (int)phase;
-//         float frac = phase - idx;
-
-//         int16_t left = 0, right = 0;
-
-//         if (numChannels == 1) {
-//             // Mono → duplicate to both L and R
-//             int16_t s1 = sampleData[idx];
-//             int16_t s2 = sampleData[min(idx + 1, (int)totalFrames - 1)];
-//             float interp = interpolationEnabled ? 
-//                 ((1.0f - frac) * s1 + frac * s2) : s1;
-
-//             left = right = (int16_t)interp;
-//         } else if (numChannels == 2) {
-//             // Stereo → interleaved
-//             int16_t s1L = sampleData[idx * 2];
-//             int16_t s1R = sampleData[idx * 2 + 1];
-//             int16_t s2L = sampleData[min(idx + 1, (int)totalFrames - 1) * 2];
-//             int16_t s2R = sampleData[min(idx + 1, (int)totalFrames - 1) * 2 + 1];
-
-//             if (interpolationEnabled) {
-//                 left  = (int16_t)((1.0f - frac) * s1L + frac * s2L);
-//                 right = (int16_t)((1.0f - frac) * s1R + frac * s2R);
-//             } else {
-//                 left  = s1L;
-//                 right = s1R;
-//             }
-//         }
-
-//         blockL->data[i] = left;
-//         blockR->data[i] = right;
-
-//         phase += pitchMultiplier;
-//     }
-
-//     transmit(blockL, 0);
-//     transmit(blockR, 1);
-//     release(blockL);
-//     release(blockR);
-// }

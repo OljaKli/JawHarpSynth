@@ -446,7 +446,6 @@ float b8x_old, b8y_old;
 
 float scaler = 2;
 float x_rot, y_rot, z_rot;
-bool cube_dir;
 
 FLASHMEM void InitializeCube(void)
 {
@@ -694,20 +693,11 @@ FLASHMEM void cube_screensaver()
 {
   cube_frame();
 
-  if (scaler < 7 && cube_dir)
-  {
-    scaler = scaler + 0.03;
-  }
-  else if (cube_dir)
-  {
-    cube_dir = false;
-  }
-  if (scaler > 2 && cube_dir == false)
-  {
-    scaler = scaler - 0.03;
-  }
-  else
-    cube_dir = true;
+  static float time = 0.0f;
+  time += 0.05f; // Adjust this value to control animation speed
+  
+  // Smooth oscillation between 2 and 7 using sine wave
+  scaler = 4.5f + 2.5f * sinf(time); // 4.5 ± 2.5 = range [2, 7]
 }
 
 /*
@@ -871,7 +861,7 @@ public:
   }
 };
 
-Terrain  terrain;
+DMAMEM Terrain terrain;
 int yTerrainOffset = 0;
 
 FLASHMEM void terrain_init()
@@ -957,7 +947,7 @@ public:
     return 50;
   }
 };
-PatternFlock flock_instance;
+DMAMEM PatternFlock flock_instance;
 
 FLASHMEM void flock_init()
 {
@@ -1151,7 +1141,7 @@ private:
     }
   }
 
-  FLASHMEM  uint8_t countNeighbors(uint16_t x, uint16_t y) {
+  FLASHMEM uint8_t countNeighbors(uint16_t x, uint16_t y) {
     uint8_t count = 0;
     for (int8_t i = -1; i <= 1; i++) {
       for (int8_t j = -1; j <= 1; j++) {
@@ -1178,7 +1168,7 @@ private:
 };
 
 // Global instance
-GameOfLife life;
+DMAMEM GameOfLife life;
 
 FLASHMEM void gol_setup() {
   // Initialize your display here
@@ -1298,7 +1288,7 @@ FLASHMEM void paintCM5_II(int x, int y) {
   uint8_t i, j;
   uint8_t ledsize = 6;
 
-  for (i = 0; i < w + 1; i++) {
+  for (i = 0; i < w ; i++) {
     for (j = 0; j < 32; j++) {
       bool pixel = get_pixel(i, j);
       if (j % 2 == 0) {
@@ -2084,7 +2074,7 @@ FLASHMEM void AsteroidsScreensaver::fireShot() {
   ship.cooldown = 10;  // Short cooldown between shots in burst
 }
 
-void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
+FLASHMEM void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
   // Calculate ship points
   float noseX = ship.x + cos(ship.angle) * ship.size;
   float noseY = ship.y + sin(ship.angle) * ship.size;

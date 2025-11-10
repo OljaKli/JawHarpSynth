@@ -26,12 +26,10 @@
 //
 // Oscillator - digital style waveforms.
 
+#include "Arduino.h"
 #include "digital_oscillator.h"
 
 #include <algorithm>
-//#include <cstdio>
-//#include <stmlib.h>
-//#include <dsp.h>
 #include <random.h>
 
 #include "parameter_interpolation.h"
@@ -48,7 +46,7 @@ static const uint16_t kOctave = 12 * 128;
 static const uint32_t kFIR4Coefficients[4] = { 10530, 14751, 16384, 14751 };
 static const uint32_t kFIR4DcOffset = 28208;
 
-uint32_t DigitalOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
+FLASHMEM uint32_t DigitalOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
   if (midi_pitch >= kPitchTableStart) {
     midi_pitch = kPitchTableStart - 1;
   }
@@ -70,7 +68,7 @@ uint32_t DigitalOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
   return phase_increment;
 }
 
-uint32_t DigitalOscillator::ComputeDelay(int16_t midi_pitch) {
+FLASHMEM uint32_t DigitalOscillator::ComputeDelay(int16_t midi_pitch) {
   if (midi_pitch >= kHighestNote - kOctave) {
     midi_pitch = kHighestNote - kOctave;
   }
@@ -91,7 +89,7 @@ uint32_t DigitalOscillator::ComputeDelay(int16_t midi_pitch) {
   return delay;
 }
 
-void DigitalOscillator::Render(
+FLASHMEM void DigitalOscillator::Render(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -126,7 +124,7 @@ void DigitalOscillator::Render(
   (this->*fn)(sync, buffer, size);
 }
 
-void DigitalOscillator::RenderTripleRingMod(
+FLASHMEM void DigitalOscillator::RenderTripleRingMod(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -161,7 +159,7 @@ void DigitalOscillator::RenderTripleRingMod(
   state_.vow.formant_phase[1] = modulator_phase_2;
 }
 
-void DigitalOscillator::RenderSawSwarm(
+FLASHMEM void DigitalOscillator::RenderSawSwarm(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -241,7 +239,7 @@ void DigitalOscillator::RenderSawSwarm(
   state_.saw.bp = bp;
 }
 
-void DigitalOscillator::RenderComb(
+FLASHMEM void DigitalOscillator::RenderComb(
     const uint8_t* sync,
      int16_t* buffer,
      size_t size) {
@@ -282,7 +280,7 @@ void DigitalOscillator::RenderComb(
   phase_ = delay_ptr;
 }
 
-void DigitalOscillator::RenderToy(
+FLASHMEM void DigitalOscillator::RenderToy(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -325,7 +323,7 @@ const uint32_t kPhaseReset[] = {
   0x80000000
 };
 
-void DigitalOscillator::RenderDigitalFilter(
+FLASHMEM void DigitalOscillator::RenderDigitalFilter(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -407,7 +405,7 @@ void DigitalOscillator::RenderDigitalFilter(
   state_.res.modulator_phase_increment = modulator_phase_increment;
 }
 
-void DigitalOscillator::RenderVosim(
+FLASHMEM void DigitalOscillator::RenderVosim(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -466,7 +464,7 @@ static const PhonemeDefinition consonant_data[8] = {
 };
 
 
-void DigitalOscillator::RenderVowel(
+FLASHMEM void DigitalOscillator::RenderVowel(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -617,7 +615,7 @@ static const int16_t formant_a_data[kNumFormants][kNumFormants][kNumFormants] = 
   }
 };
 
-int16_t DigitalOscillator::InterpolateFormantParameter(
+FLASHMEM int16_t DigitalOscillator::InterpolateFormantParameter(
     const int16_t table[][kNumFormants][kNumFormants],
     int16_t x,
     int16_t y,
@@ -635,7 +633,7 @@ int16_t DigitalOscillator::InterpolateFormantParameter(
   return a + ((c - a) * y_mix >> 16);
 }
 
-void DigitalOscillator::RenderVowelFof(
+FLASHMEM void DigitalOscillator::RenderVowelFof(
   const uint8_t* sync,
   int16_t* buffer,
   size_t size) {
@@ -717,7 +715,7 @@ void DigitalOscillator::RenderVowelFof(
   }
 }
 
-void DigitalOscillator::RenderFm(
+FLASHMEM void DigitalOscillator::RenderFm(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -747,7 +745,7 @@ void DigitalOscillator::RenderFm(
   state_.modulator_phase = modulator_phase;
 }
 
-void DigitalOscillator::RenderFeedbackFm(
+FLASHMEM void DigitalOscillator::RenderFeedbackFm(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -789,7 +787,7 @@ void DigitalOscillator::RenderFeedbackFm(
   state_.ffm.modulator_phase = modulator_phase;
 }
 
-void DigitalOscillator::RenderChaoticFeedbackFm(
+FLASHMEM void DigitalOscillator::RenderChaoticFeedbackFm(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -855,7 +853,7 @@ static const uint16_t kDrumPartialDecayShort[] = {
   65083, 64715, 64715, 64715, 64715, 62312
 };
 
-void DigitalOscillator::RenderStruckBell(
+FLASHMEM void DigitalOscillator::RenderStruckBell(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -920,7 +918,7 @@ void DigitalOscillator::RenderStruckBell(
   state_.add.previous_sample = previous_sample;
 }
 
-void DigitalOscillator::RenderHarmonics(
+FLASHMEM void DigitalOscillator::RenderHarmonics(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -987,7 +985,7 @@ void DigitalOscillator::RenderHarmonics(
   }
 }
 
-void DigitalOscillator::RenderStruckDrum(
+FLASHMEM void DigitalOscillator::RenderStruckDrum(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -1085,7 +1083,7 @@ void DigitalOscillator::RenderStruckDrum(
   }
 }
 
-void DigitalOscillator::RenderPlucked(
+FLASHMEM void DigitalOscillator::RenderPlucked(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -1194,7 +1192,7 @@ static const int32_t kBiquadGain = 6553;
 static const int32_t kBiquadPole1 = 6948;
 static const int32_t kBiquadPole2 = -2959;
 
-void DigitalOscillator::RenderBowed(
+FLASHMEM void DigitalOscillator::RenderBowed(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -1301,7 +1299,7 @@ static const int16_t kReflectionCoefficient = -3891;
 static const int16_t kReedSlope = -1229;
 static const int16_t kReedOffset = 22938;
 
-void DigitalOscillator::RenderBlown(
+FLASHMEM void DigitalOscillator::RenderBlown(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -1365,7 +1363,7 @@ void DigitalOscillator::RenderBlown(
 static const uint16_t kRandomPressure = 0.22 * 4096;
 static const uint16_t kDCBlockingPole = 0.99 * 4096;
 
-void DigitalOscillator::RenderFluted(
+FLASHMEM void DigitalOscillator::RenderFluted(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -1464,64 +1462,64 @@ void DigitalOscillator::RenderFluted(
   state_.phy.filter_state[1] = dc_blocking_y0;
 }
 
-struct WavetableDefinition {
-  uint8_t num_steps;
-  uint8_t wave_index[17];
-};
+// struct WavetableDefinition {
+//   uint8_t num_steps;
+//   uint8_t wave_index[17];
+// };
 
-static const WavetableDefinition wavetable_definitions[] = {
-// 01 male
-{ 16 , { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 15 } },
-// 02 female
-{ 16 , { 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31 } },
-// 03 choir
-{ 16 , { 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 47 } },
-// 04 space_voice
-{ 16 , { 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 63 } },
-// 05 tampura
-{ 16 , { 64, 65, 66, 67, 68, 68, 69, 70, 71, 72, 73, 73, 74, 75, 75, 76, 76 } },
-// 06 shamus
-{ 16 , { 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 92 } },
-// 07 swept_string
-{ 16 , { 93, 94, 95, 96, 97, 98, 99, 100, 101,
-         102, 103, 104, 105, 106, 107, 108, 108 } },
-// 08 bowed
-{ 16 , { 109, 110, 111, 112, 113, 114, 115, 116,
-         117, 118, 119, 120, 121, 122, 123, 124, 124 } },
-// 09 cello
-{ 16 , { 125, 126, 127, 128, 129, 130, 131, 132,
-         132, 132, 132, 132, 132, 132, 132, 132, 132 } },
-// 10 vibes
-{ 16 , { 133, 134, 135, 136, 137, 138, 139, 140,
-         141, 142, 143, 144, 144, 144, 145, 145, 145 } },
-// 11 slap
-{ 16 , { 146, 147, 148, 149, 150, 151, 151, 151,
-         152, 152, 152, 152, 153, 153, 153, 153, 153 } },
-// 12 piano
-{ 8 , { 154, 154, 154, 154, 154, 154, 155, 156, 156 } },
-// 13 organ!
-{ 16 , { 176, 157, 158, 159, 160, 161, 162, 163,
-         164, 165, 166, 167, 168, 169, 170, 171, 171 } },
-// 14 waves!
-{ 16 , { 172, 173, 174, 175, 176, 177, 178, 179,
-         180, 181, 182, 183, 184, 185, 186, 187, 187 } },
-// 15 digital
-{ 16 , { 176, 188, 189, 190, 191, 192, 193, 194,
-         195, 196, 197, 198, 199, 200, 201, 202, 202 } },
-// 16 drone 1
-{ 16 , { 203, 205, 204, 205, 212, 206, 207, 208,
-         208, 209, 210, 210, 211, 211, 212, 212, 212 } },
-// 17 drone 2
-{ 8 , { 213, 213, 213, 214, 215, 216, 217, 218, 219 } },
-// 18 metallic
-{ 16 , { 220, 221, 222, 223, 224, 225, 226, 227,
-         228, 229, 230, 231, 232, 233, 234, 235, 235 } },
-// 19 fantasy
-{ 16 , { 236, 237, 238, 239, 240, 241, 242, 243,
-         244, 245, 246, 247, 248, 249, 250, 251, 251 } },
-// 20 bell
-{ 4 , { 252, 253, 254, 255, 254 } },
-};
+// static const WavetableDefinition wavetable_definitions[] = {
+// // 01 male
+// { 16 , { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 15 } },
+// // 02 female
+// { 16 , { 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 31 } },
+// // 03 choir
+// { 16 , { 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 47 } },
+// // 04 space_voice
+// { 16 , { 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 63 } },
+// // 05 tampura
+// { 16 , { 64, 65, 66, 67, 68, 68, 69, 70, 71, 72, 73, 73, 74, 75, 75, 76, 76 } },
+// // 06 shamus
+// { 16 , { 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 92 } },
+// // 07 swept_string
+// { 16 , { 93, 94, 95, 96, 97, 98, 99, 100, 101,
+//          102, 103, 104, 105, 106, 107, 108, 108 } },
+// // 08 bowed
+// { 16 , { 109, 110, 111, 112, 113, 114, 115, 116,
+//          117, 118, 119, 120, 121, 122, 123, 124, 124 } },
+// // 09 cello
+// { 16 , { 125, 126, 127, 128, 129, 130, 131, 132,
+//          132, 132, 132, 132, 132, 132, 132, 132, 132 } },
+// // 10 vibes
+// { 16 , { 133, 134, 135, 136, 137, 138, 139, 140,
+//          141, 142, 143, 144, 144, 144, 145, 145, 145 } },
+// // 11 slap
+// { 16 , { 146, 147, 148, 149, 150, 151, 151, 151,
+//          152, 152, 152, 152, 153, 153, 153, 153, 153 } },
+// // 12 piano
+// { 8 , { 154, 154, 154, 154, 154, 154, 155, 156, 156 } },
+// // 13 organ!
+// { 16 , { 176, 157, 158, 159, 160, 161, 162, 163,
+//          164, 165, 166, 167, 168, 169, 170, 171, 171 } },
+// // 14 waves!
+// { 16 , { 172, 173, 174, 175, 176, 177, 178, 179,
+//          180, 181, 182, 183, 184, 185, 186, 187, 187 } },
+// // 15 digital
+// { 16 , { 176, 188, 189, 190, 191, 192, 193, 194,
+//          195, 196, 197, 198, 199, 200, 201, 202, 202 } },
+// // 16 drone 1
+// { 16 , { 203, 205, 204, 205, 212, 206, 207, 208,
+//          208, 209, 210, 210, 211, 211, 212, 212, 212 } },
+// // 17 drone 2
+// { 8 , { 213, 213, 213, 214, 215, 216, 217, 218, 219 } },
+// // 18 metallic
+// { 16 , { 220, 221, 222, 223, 224, 225, 226, 227,
+//          228, 229, 230, 231, 232, 233, 234, 235, 235 } },
+// // 19 fantasy
+// { 16 , { 236, 237, 238, 239, 240, 241, 242, 243,
+//          244, 245, 246, 247, 248, 249, 250, 251, 251 } },
+// // 20 bell
+// { 4 , { 252, 253, 254, 255, 254 } },
+// };
 
 //void DigitalOscillator::RenderWavetables(
 //    const uint8_t* sync,
@@ -1732,25 +1730,25 @@ static const WavetableDefinition wavetable_definitions[] = {
 
 #define SEMI * 128
 
-static const uint16_t chords[17][3] = {
-  { 2, 4, 6 },
-  { 16, 32, 48 },
-  { 2 SEMI, 7 SEMI, 12 SEMI },
-  { 3 SEMI, 7 SEMI, 10 SEMI },
-  { 3 SEMI, 7 SEMI, 12 SEMI },
-  { 3 SEMI, 7 SEMI, 14 SEMI },
-  { 3 SEMI, 7 SEMI, 17 SEMI },
-  { 7 SEMI, 12 SEMI, 19 SEMI },
-  { 7 SEMI, 3 + 12 SEMI, 5 + 19 SEMI },
-  { 4 SEMI, 7 SEMI, 17 SEMI },
-  { 4 SEMI, 7 SEMI, 14 SEMI },
-  { 4 SEMI, 7 SEMI, 12 SEMI },
-  { 4 SEMI, 7 SEMI, 11 SEMI },
-  { 5 SEMI, 7 SEMI, 12 SEMI },
-  { 4, 7 SEMI, 12 SEMI },
-  { 4, 4 + 12 SEMI, 12 SEMI },
-  { 4, 4 + 12 SEMI, 12 SEMI },
-};
+// static const uint16_t chords[17][3] = {
+//   { 2, 4, 6 },
+//   { 16, 32, 48 },
+//   { 2 SEMI, 7 SEMI, 12 SEMI },
+//   { 3 SEMI, 7 SEMI, 10 SEMI },
+//   { 3 SEMI, 7 SEMI, 12 SEMI },
+//   { 3 SEMI, 7 SEMI, 14 SEMI },
+//   { 3 SEMI, 7 SEMI, 17 SEMI },
+//   { 7 SEMI, 12 SEMI, 19 SEMI },
+//   { 7 SEMI, 3 + 12 SEMI, 5 + 19 SEMI },
+//   { 4 SEMI, 7 SEMI, 17 SEMI },
+//   { 4 SEMI, 7 SEMI, 14 SEMI },
+//   { 4 SEMI, 7 SEMI, 12 SEMI },
+//   { 4 SEMI, 7 SEMI, 11 SEMI },
+//   { 5 SEMI, 7 SEMI, 12 SEMI },
+//   { 4, 7 SEMI, 12 SEMI },
+//   { 4, 4 + 12 SEMI, 12 SEMI },
+//   { 4, 4 + 12 SEMI, 12 SEMI },
+// };
 
 //void DigitalOscillator::RenderWaveParaphonic(
 //    const uint8_t* sync,
@@ -1830,7 +1828,7 @@ static const uint16_t chords[17][3] = {
 //
 //}
 
-void DigitalOscillator::RenderFilteredNoise(
+FLASHMEM void DigitalOscillator::RenderFilteredNoise(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -1875,7 +1873,7 @@ void DigitalOscillator::RenderFilteredNoise(
   state_.svf.bp = bp;
 }
 
-void DigitalOscillator::RenderTwinPeaksNoise(
+FLASHMEM void DigitalOscillator::RenderTwinPeaksNoise(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -2012,7 +2010,7 @@ void DigitalOscillator::RenderClockedNoise(
   phase_ = phase;
 }
 
-void DigitalOscillator::RenderGranularCloud(
+FLASHMEM void DigitalOscillator::RenderGranularCloud(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -2077,7 +2075,7 @@ static const uint16_t kParticleNoiseDecay = 64763;
 static const int32_t kResonanceSquared = 32768 * 0.996 * 0.996;
 static const int32_t kResonanceFactor = 32768 * 0.996;
 
-void DigitalOscillator::RenderParticleNoise(
+FLASHMEM void DigitalOscillator::RenderParticleNoise(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -2181,7 +2179,7 @@ void DigitalOscillator::RenderParticleNoise(
 static const int32_t kConstellationQ[] = { 23100, -23100, -23100, 23100 };
 static const int32_t kConstellationI[] = { 23100, 23100, -23100, -23100 };
 
-void DigitalOscillator::RenderDigitalModulation(
+FLASHMEM void DigitalOscillator::RenderDigitalModulation(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -2300,7 +2298,7 @@ void DigitalOscillator::RenderDigitalModulation(
 //  phase_ = phase;
 //}
 
-void DigitalOscillator::RenderKick(
+FLASHMEM void DigitalOscillator::RenderKick(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -2365,7 +2363,7 @@ void DigitalOscillator::RenderKick(
   state_.svf.lp = lp_state;
 }
 
-void DigitalOscillator::RenderSnare(
+FLASHMEM void DigitalOscillator::RenderSnare(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -2448,7 +2446,7 @@ void DigitalOscillator::RenderSnare(
   }
 }
 
-void DigitalOscillator::RenderCymbal(
+FLASHMEM void DigitalOscillator::RenderCymbal(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {

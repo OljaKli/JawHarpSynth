@@ -27,7 +27,7 @@
 // Oscillator - analog style waveforms.
 
 #include "analog_oscillator.h"
-
+#include "Arduino.h"
 #include <dsp.h>
 
 #include "resources.h"
@@ -43,7 +43,7 @@ static const uint16_t kHighestNote = 128 * 128;
 static const uint16_t kPitchTableStart = 128 * 128;
 static const uint16_t kOctave = 12 * 128;
 
-uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
+FLASHMEM uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
   if (midi_pitch >= kHighestNote) {
     midi_pitch = kHighestNote - 1;
   }
@@ -65,7 +65,7 @@ uint32_t AnalogOscillator::ComputePhaseIncrement(int16_t midi_pitch) {
   return phase_increment;
 }
 
-void AnalogOscillator::Render(
+FLASHMEM void AnalogOscillator::Render(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -88,7 +88,7 @@ void AnalogOscillator::Render(
   (this->*fn)(sync_in, buffer, sync_out, size);
 }
 
-void AnalogOscillator::RenderCSaw(
+FLASHMEM void AnalogOscillator::RenderCSaw(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -185,7 +185,7 @@ void AnalogOscillator::RenderCSaw(
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderSquare(
+FLASHMEM void AnalogOscillator::RenderSquare(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -271,7 +271,7 @@ void AnalogOscillator::RenderSquare(
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderSaw(
+FLASHMEM void AnalogOscillator::RenderSaw(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -334,7 +334,7 @@ void AnalogOscillator::RenderSaw(
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderVariableSaw(
+FLASHMEM void AnalogOscillator::RenderVariableSaw(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -421,7 +421,7 @@ void AnalogOscillator::RenderVariableSaw(
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderTriangle(
+FLASHMEM void AnalogOscillator::RenderTriangle(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -454,7 +454,7 @@ void AnalogOscillator::RenderTriangle(
   END_INTERPOLATE_PHASE_INCREMENT
 }
 
-void AnalogOscillator::RenderSine(
+FLASHMEM void AnalogOscillator::RenderSine(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -473,7 +473,7 @@ void AnalogOscillator::RenderSine(
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderTriangleFold(
+FLASHMEM void AnalogOscillator::RenderTriangleFold(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -519,7 +519,7 @@ void AnalogOscillator::RenderTriangleFold(
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderSineFold(
+FLASHMEM void AnalogOscillator::RenderSineFold(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,
@@ -560,7 +560,7 @@ void AnalogOscillator::RenderSineFold(
   phase_ = phase;
 }
 
-void AnalogOscillator::RenderBuzz(
+FLASHMEM void AnalogOscillator::RenderBuzz(
     const uint8_t* sync_in,
     int16_t* buffer,
     uint8_t* sync_out,

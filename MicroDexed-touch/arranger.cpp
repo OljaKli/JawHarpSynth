@@ -4,7 +4,7 @@
 ChordInfo currentChord = { 0 };
 
 // Simple sort function (bubble sort)
-void sortArray(uint8_t arr[], uint8_t size) {
+FLASHMEM void sortArray(uint8_t arr[], uint8_t size) {
     for (uint8_t i = 0; i < size - 1; ++i) {
         for (uint8_t j = i + 1; j < size; ++j) {
             if (arr[i] > arr[j]) {
@@ -86,11 +86,6 @@ FLASHMEM void updateCurrentChord(const uint8_t midiNotes[], uint8_t size) {
     uint8_t sortedNotes[size];
     memcpy(sortedNotes, midiNotes, size * sizeof(uint8_t));
     sortArray(sortedNotes, size);
-
-    // uint8_t pitchClasses[size];
-    // for (uint8_t i = 0; i < size; i++) {
-    //     pitchClasses[i] = sortedNotes[i] % 12;
-    // }
 
     uint8_t intervals[size];
     const char* chordType = NULL;
@@ -319,7 +314,7 @@ FLASHMEM uint8_t transformNoteToChordMelody(uint8_t inputNote) {
 }
 
 // Call this when starting a new chord transformation
-void resetChordTransformation() {
+FLASHMEM void resetChordTransformation() {
     voiceIndex = 0;
 }
 
@@ -478,7 +473,7 @@ FLASHMEM uint8_t transformBassNote(uint8_t inputNote) {
     }
 }
 
-uint8_t getChordRootNote(uint8_t inputNote)
+FLASHMEM uint8_t getChordRootNote(uint8_t inputNote)
 {
     if (!currentChord.active) return inputNote;
 

@@ -25,7 +25,7 @@
 // -----------------------------------------------------------------------------
 //
 // Macro-oscillator.
-
+#include "Arduino.h"
 #include "macro_oscillator.h"
 
 #include <algorithm>
@@ -39,7 +39,7 @@ namespace braids {
 
 using namespace stmlib;
 
-void MacroOscillator::Render(
+FLASHMEM void MacroOscillator::Render(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -47,7 +47,7 @@ void MacroOscillator::Render(
   (this->*fn)(sync, buffer, size);
 }
 
-void MacroOscillator::RenderCSaw(
+FLASHMEM void MacroOscillator::RenderCSaw(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -63,7 +63,7 @@ void MacroOscillator::RenderCSaw(
   }
 }
 
-void MacroOscillator::RenderMorph(
+FLASHMEM void MacroOscillator::RenderMorph(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -126,7 +126,7 @@ void MacroOscillator::RenderMorph(
   lp_state_ = lp_state;
 }
 
-void MacroOscillator::RenderSawSquare(
+FLASHMEM void MacroOscillator::RenderSawSquare(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -177,7 +177,7 @@ const int16_t intervals[65] = {
   24 SEMI - 4, 24 SEMI, 24 SEMI
 };
 
-void MacroOscillator::RenderTriple(
+FLASHMEM void MacroOscillator::RenderTriple(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -223,7 +223,7 @@ void MacroOscillator::RenderTriple(
   }
 }
 
-void MacroOscillator::RenderSub(
+FLASHMEM void MacroOscillator::RenderSub(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -256,7 +256,7 @@ void MacroOscillator::RenderSub(
   END_INTERPOLATE_PARAMETER_1
 }
 
-void MacroOscillator::RenderDualSync(
+FLASHMEM void MacroOscillator::RenderDualSync(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -288,7 +288,7 @@ void MacroOscillator::RenderDualSync(
   END_INTERPOLATE_PARAMETER_1
 }
 
-void MacroOscillator::RenderSineTriangle(
+FLASHMEM void MacroOscillator::RenderSineTriangle(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -328,7 +328,7 @@ void MacroOscillator::RenderSineTriangle(
   END_INTERPOLATE_PARAMETER_1
 }
 
-void MacroOscillator::RenderBuzz(
+FLASHMEM void MacroOscillator::RenderBuzz(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -351,7 +351,7 @@ void MacroOscillator::RenderBuzz(
   }
 }
 
-void MacroOscillator::RenderDigital(
+FLASHMEM void MacroOscillator::RenderDigital(
     const uint8_t* sync,
     int16_t* buffer,
     size_t size) {
@@ -362,7 +362,7 @@ void MacroOscillator::RenderDigital(
   digital_oscillator_.Render(sync, buffer, size);
 }
 
-void MacroOscillator::RenderSawComb(
+FLASHMEM void MacroOscillator::RenderSawComb(
   const uint8_t* sync,
   int16_t* buffer,
   size_t size) {

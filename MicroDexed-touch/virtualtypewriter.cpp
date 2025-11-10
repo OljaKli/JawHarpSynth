@@ -38,14 +38,14 @@ static bool shift_active = false;
 uint8_t vtw_x;
 
 // Case conversion helper
-char get_display_char(char c) {
+FLASHMEM char get_display_char(char c) {
     if (isalpha(c)) {
         return shift_active ? c : tolower(c);
     }
     return c;
 }
 
-void virtual_typewriter_init(int8_t pos) {
+FLASHMEM void virtual_typewriter_init(int8_t pos) {
     uint8_t current_len = strlen(edit_string_global);
     shift_active = false;
     
@@ -63,7 +63,7 @@ void virtual_typewriter_init(int8_t pos) {
     virtual_typewriter_update_display();
 }
 
-void draw_key(uint16_t px, uint8_t py, const char *label, bool pressed, uint8_t key_w = VK_KEY_W) {
+FLASHMEM void draw_key(uint16_t px, uint8_t py, const char *label, bool pressed, uint8_t key_w = VK_KEY_W) {
       display.console = true;
     display.fillRect(px, py, key_w, VK_KEY_H, pressed ? RED : DX_DARKCYAN);
     uint16_t textX = px + (key_w - strlen(label)*CHAR_width)/2;
@@ -73,7 +73,7 @@ void draw_key(uint16_t px, uint8_t py, const char *label, bool pressed, uint8_t 
 }
 
 // Optimized keyboard drawing with proper case handling
-void draw_keyboard() {
+FLASHMEM void draw_keyboard() {
     uint8_t current_y = KEY_START_Y;
     
     // First 3 rows
@@ -125,7 +125,7 @@ void draw_keyboard() {
 }
 
 // return pressed key via out_key
-bool virtual_typewriter_touchloop(char* out_key) {
+FLASHMEM bool virtual_typewriter_touchloop(char* out_key) {
     if (numTouchPoints == 0) return false;
 
     uint8_t y = KEY_START_Y;
@@ -273,7 +273,7 @@ bool virtual_typewriter_touchloop(char* out_key) {
     return false;
 }
 
-void virtual_typewriter_update_display() {
+FLASHMEM void virtual_typewriter_update_display() {
     // Draw the entire string at fixed position
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);

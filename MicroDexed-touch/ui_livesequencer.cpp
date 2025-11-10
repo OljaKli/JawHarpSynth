@@ -29,13 +29,6 @@ FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
 
   uint8_t newInstrument = selectedTrackSetup.instrument;
 
-  // For external MIDI devices, we need to handle the instrument parameter differently
-    // // If it's an external MIDI device, the instrument parameter should be the MIDI channel (0-15)
-    // if (selectedTrackSetup.device != LiveSequencer::DEVICE_INTERNAL) {
-    //   // For external MIDI, use the selectedInstrument directly as MIDI channel
-    //   newInstrument = selectedInstrument+ 1;
-    // }
-
   const bool hasChanged = (trackSettings.device != selectedTrackSetup.device) ||
     (trackSettings.instrument != newInstrument);
 
@@ -817,7 +810,7 @@ FLASHMEM void UI_LiveSequencer::showDirectMappingWarning(uint8_t inChannel) {
     display.setTextSize(2);
     display.setTextColor(RED);
     setCursor_textGrid(1, 1);
-    display.printf("ADAPT MIDI MAPPING");
+    display.print(F("ADAPT MIDI MAPPING"));
     display.setTextSize(1);
     display.setTextColor(GREY1);
     setCursor_textGrid_small(2, 6);
@@ -874,7 +867,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     updateTrackChannelSetupButtons(data.activeTrack); // update GUI for the case a new perf was loaded
 
 
-    // currentPage = PAGE_PATTERN;  //phtodo
+    // currentPage = PAGE_PATTERN;
 
     drawPerformanceName();
 
@@ -1124,7 +1117,7 @@ FLASHMEM void UI_LiveSequencer::updateTrackChannelSetupButtons(uint8_t track) {
   }
 }
 
-void UI_LiveSequencer::drawKeyboard(uint8_t flags) {
+FLASHMEM void UI_LiveSequencer::drawKeyboard(uint8_t flags) {
   const bool isDrumsActive = data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM;
   ts.current_virtual_keyboard_display_mode = isDrumsActive ? 1 : 0;
   ts.virtual_keyboard_instrument = VK_LIVESEQUENCER;
@@ -1734,7 +1727,6 @@ FLASHMEM void UI_LiveSequencer::drawGridSongEditor(void) {
         if (!liveSeq.isTrackLayerEmpty(track, layer))
           display.printf("%i", layer + 1);
       }
-
     }
   }
 

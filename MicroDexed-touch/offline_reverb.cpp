@@ -85,7 +85,7 @@ FLASHMEM void OfflineReverb::AllpassFilter::clear() {
 }
 
 // Tapped Delay Line for early reflections
-void OfflineReverb::TappedDelayLine::init(uint32_t size) {
+FLASHMEM void OfflineReverb::TappedDelayLine::init(uint32_t size) {
     if (buffer) {
         extmem_free(buffer);
         buffer = nullptr;

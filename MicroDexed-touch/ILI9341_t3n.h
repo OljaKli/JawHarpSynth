@@ -288,14 +288,6 @@ public:
   void drawFontChar(unsigned int c);
   void drawGFXFontChar(unsigned int c);
 
-  //    void getTextBounds(const uint8_t *buffer, uint16_t len, int16_t x, int16_t y,
-  //                       int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
-  //    void getTextBounds(const char *string, int16_t x, int16_t y, int16_t *x1,
-  //                       int16_t *y1, uint16_t *w, uint16_t *h);
-  //    void getTextBounds(const String &str, int16_t x, int16_t y, int16_t *x1,
-  //                       int16_t *y1, uint16_t *w, uint16_t *h);
-  // int16_t strPixelLen(const char *str, uint16_t cb = 0xffff); // optional number of characters...
-
   // added support for drawing strings/numbers/floats with centering
   // modified from tft_ili9341_ESP github library
 

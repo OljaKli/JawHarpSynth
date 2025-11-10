@@ -97,25 +97,12 @@ namespace braids {
   };
 
   enum Resolution {
-    RESOLUTION_2_BIT,
-    RESOLUTION_3_BIT,
-    RESOLUTION_4_BIT,
-    RESOLUTION_6_BIT,
-    RESOLUTION_8_BIT,
-    RESOLUTION_12_BIT,
     RESOLUTION_16_BIT,
     RESOLUTION_LAST
   };
 
   enum SampleRate {
-    SAMPLE_RATE_4K,
-    SAMPLE_RATE_8K,
-    SAMPLE_RATE_16K,
-    SAMPLE_RATE_24k,
-    SAMPLE_RATE_32k,
     SAMPLE_RATE_44K,
-    SAMPLE_RATE_48K,
-    SAMPLE_RATE_96K,
     SAMPLE_RATE_LAST
   };
 

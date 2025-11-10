@@ -254,10 +254,6 @@ FLASHMEM void MD_MFTrack::parseEvent(MD_MIDIFile *mf)
     mev.size = mLen;
     mev.type = eType;
 
-    // DUMPX("[META] Type: 0x", eType);
-    // DUMP("\tLen: ", mLen);
-    // DUMPS("\t");
-
     switch (eType)
     {
       case 0x2f:  // End of track

@@ -38,32 +38,43 @@ static constexpr short wave_type[9] = {
   WAVEFORM_SAMPLE_HOLD
 };
 
+FLASHMEM void clear_filter_mixer_gains(uint8_t instance_id) {
+    for (uint8_t i = 0; i < 4; i++) {
+        microsynth_mixer_filter_osc[instance_id].gain(i, 0.0);
+        microsynth_mixer_filter_noise[instance_id].gain(i, 0.0);
+    }
+}
+
+FLASHMEM void set_filter_modes(uint8_t instance_id) {
+    microsynth_t& synth = microsynth[instance_id];
+    
+    // Set oscillator filter mode
+    if (synth.filter_osc_mode == 0)
+        microsynth_mixer_filter_osc[instance_id].gain(3, 1.0);
+    else if (synth.filter_osc_mode == 1)
+        microsynth_mixer_filter_osc[instance_id].gain(0, 1.0);
+    else if (synth.filter_osc_mode == 2)
+        microsynth_mixer_filter_osc[instance_id].gain(1, 1.0);
+    else if (synth.filter_osc_mode == 3)
+        microsynth_mixer_filter_osc[instance_id].gain(2, 1.0);
+    
+    // Set noise filter mode  
+    if (synth.filter_noise_mode == 0)
+        microsynth_mixer_filter_noise[instance_id].gain(3, 1.0);
+    else if (synth.filter_noise_mode == 1)
+        microsynth_mixer_filter_noise[instance_id].gain(0, 1.0);
+    else if (synth.filter_noise_mode == 2)
+        microsynth_mixer_filter_noise[instance_id].gain(1, 1.0);
+    else if (synth.filter_noise_mode == 3)
+        microsynth_mixer_filter_noise[instance_id].gain(2, 1.0);
+}
+
 FLASHMEM void microsynth_update_all_settings(uint8_t instance_id)
 {
-  microsynth_mixer_filter_osc[instance_id].gain(0, 0.0);
-  microsynth_mixer_filter_osc[instance_id].gain(1, 0.0);
-  microsynth_mixer_filter_osc[instance_id].gain(2, 0.0);
-  microsynth_mixer_filter_osc[instance_id].gain(3, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(0, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(1, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(2, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(3, 0.0);
-  if (microsynth[instance_id].filter_osc_mode == 0)
-    microsynth_mixer_filter_osc[instance_id].gain(3, 1.0);
-  else if (microsynth[instance_id].filter_osc_mode == 1)
-    microsynth_mixer_filter_osc[instance_id].gain(0, 1.0);
-  else if (microsynth[instance_id].filter_osc_mode == 2)
-    microsynth_mixer_filter_osc[instance_id].gain(1, 1.0);
-  else if (microsynth[instance_id].filter_osc_mode == 3)
-    microsynth_mixer_filter_osc[instance_id].gain(2, 1.0);
-  if (microsynth[instance_id].filter_noise_mode == 0)
-    microsynth_mixer_filter_noise[instance_id].gain(3, 1.0);
-  else if (microsynth[instance_id].filter_noise_mode == 1)
-    microsynth_mixer_filter_noise[instance_id].gain(0, 1.0);
-  else if (microsynth[instance_id].filter_noise_mode == 2)
-    microsynth_mixer_filter_noise[instance_id].gain(1, 1.0);
-  else if (microsynth[instance_id].filter_noise_mode == 3)
-    microsynth_mixer_filter_noise[instance_id].gain(2, 1.0);
+  
+clear_filter_mixer_gains(instance_id);
+set_filter_modes(instance_id);
+ 
   microsynth_envelope_osc[instance_id].attack(microsynth[instance_id].env_attack * 4);
   microsynth_envelope_osc[instance_id].decay(microsynth[instance_id].env_decay * 4);
   microsynth_envelope_osc[instance_id].sustain(microsynth[instance_id].env_sustain / 50.1);
@@ -217,31 +228,8 @@ FLASHMEM void update_microsynth_params()
 
 FLASHMEM void microsynth_update_single_setting(uint8_t instance_id)
 {
-  microsynth_mixer_filter_osc[instance_id].gain(0, 0.0);
-  microsynth_mixer_filter_osc[instance_id].gain(1, 0.0);
-  microsynth_mixer_filter_osc[instance_id].gain(2, 0.0);
-  microsynth_mixer_filter_osc[instance_id].gain(3, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(0, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(1, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(2, 0.0);
-  microsynth_mixer_filter_noise[instance_id].gain(3, 0.0);
-  if (microsynth[instance_id].filter_osc_mode == 0)
-    microsynth_mixer_filter_osc[instance_id].gain(3, 1.0);
-  else if (microsynth[instance_id].filter_osc_mode == 1)
-    microsynth_mixer_filter_osc[instance_id].gain(0, 1.0);
-  else if (microsynth[instance_id].filter_osc_mode == 2)
-    microsynth_mixer_filter_osc[instance_id].gain(1, 1.0);
-  else if (microsynth[instance_id].filter_osc_mode == 3)
-    microsynth_mixer_filter_osc[instance_id].gain(2, 1.0);
-
-  if (microsynth[instance_id].filter_noise_mode == 0)
-    microsynth_mixer_filter_noise[instance_id].gain(3, 1.0);
-  else if (microsynth[instance_id].filter_noise_mode == 1)
-    microsynth_mixer_filter_noise[instance_id].gain(0, 1.0);
-  else if (microsynth[instance_id].filter_noise_mode == 2)
-    microsynth_mixer_filter_noise[instance_id].gain(1, 1.0);
-  else if (microsynth[instance_id].filter_noise_mode == 3)
-    microsynth_mixer_filter_noise[instance_id].gain(2, 1.0);
+clear_filter_mixer_gains(instance_id);
+set_filter_modes(instance_id);
 
   if (generic_temp_select_menu == 4)
     microsynth_envelope_osc[instance_id].attack(microsynth[instance_id].env_attack * 4);

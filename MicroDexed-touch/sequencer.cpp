@@ -51,7 +51,7 @@ extern LiveSequencer liveSeq;
 
 sequencer_t seq;
 
-void seq_live_recording(void)
+FLASHMEM void seq_live_recording(void)
 {
   // record to sequencer if sequencer menu is active and recording is active
   if (seq.note_in > 0 && seq.recording == true && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
@@ -69,7 +69,7 @@ void seq_live_recording(void)
   }
 }
 
-uint8_t get_song_length()
+FLASHMEM uint8_t get_song_length()
 {
   uint8_t best = 254;
   uint8_t stepcounter = 0;
@@ -90,7 +90,7 @@ uint8_t get_song_length()
   return SONG_LENGTH - best;
 }
 
-uint8_t get_chain_length_from_current_track(uint8_t tr)
+FLASHMEM uint8_t get_chain_length_from_current_track(uint8_t tr)
 {
   uint8_t stepcounter = 0;
 
@@ -107,7 +107,7 @@ uint8_t get_chain_length_from_current_track(uint8_t tr)
   return stepcounter;
 }
 
-uint8_t find_longest_chain()
+FLASHMEM uint8_t find_longest_chain()
 {
   uint8_t longest = 0;
   uint8_t stepcounter = 0;
@@ -131,7 +131,7 @@ uint8_t find_longest_chain()
   return longest;
 }
 
-bool check_probability(uint8_t patt)
+FLASHMEM bool check_probability(uint8_t patt)
 {
   if (seq.pat_chance[patt] == 100)
     return true;
@@ -146,7 +146,7 @@ bool check_probability(uint8_t patt)
   }
 }
 
-int check_vel_variation(uint8_t patt, uint8_t in_velocity)
+FLASHMEM int check_vel_variation(uint8_t patt, uint8_t in_velocity)
 {
   if (seq.pat_vel_variation[patt] == 0)
     return in_velocity;
@@ -170,7 +170,7 @@ int check_vel_variation(uint8_t patt, uint8_t in_velocity)
   }
 }
 
-void handle_pattern_end_in_song_mode()
+FLASHMEM void handle_pattern_end_in_song_mode()
 {
   //if (seq.step > 15)  // change to vari length
   if (seq.step > 15 - seq.pattern_len_dec)  // change to vari length
@@ -244,7 +244,7 @@ void handle_pattern_end_in_song_mode()
   }
 }
 
-uint8_t map_to_dexed_instance(uint8_t input)
+FLASHMEM uint8_t map_to_dexed_instance(uint8_t input)
 {
   if (input < 2)
     return input;
@@ -259,7 +259,7 @@ extern uint8_t getChordRootNote(uint8_t inputNote);
 extern uint8_t transformBassNote(uint8_t inputNote);
 extern uint8_t  transformNoteToChordMelody(uint8_t inputNote);
 
-uint8_t harmonize(uint8_t inputNote, uint8_t track)
+FLASHMEM uint8_t harmonize(uint8_t inputNote, uint8_t track)
 {
   if (!currentChord.active) return inputNote;
 
@@ -286,7 +286,7 @@ uint8_t harmonize(uint8_t inputNote, uint8_t track)
 extern granular_params_t granular_params;
 #endif
 
-void arp_track(uint8_t d)
+FLASHMEM void arp_track(uint8_t d)
 {
   if (seq.track_type[d] != 3) return;
   if (seq.arp_num_notes_count >= seq.arp_num_notes_max) return;
@@ -435,7 +435,7 @@ void arp_track(uint8_t d)
 uint8_t current_played_pitched_sample = 0;
 
 
-void process_drum_track(uint8_t d, int tr)
+FLASHMEM void process_drum_track(uint8_t d, int tr)
 {
 #if NUM_DRUMS > 0
   if (seq.vel[seq.current_pattern[d]][seq.step] > 209) {
@@ -457,7 +457,7 @@ void process_drum_track(uint8_t d, int tr)
 #endif
 }
 
-void process_instrument_track(uint8_t d, int tr)
+FLASHMEM void process_instrument_track(uint8_t d, int tr)
 {
   if (seq.note_data[seq.current_pattern[d]][seq.step] == 130) return;
 
@@ -517,7 +517,7 @@ void process_instrument_track(uint8_t d, int tr)
   seq.prev_vel[d] = seq.vel[seq.current_pattern[d]][seq.step];
 }
 
-void process_chord_track(uint8_t d, int tr)
+FLASHMEM void process_chord_track(uint8_t d, int tr)
 {
   if (seq.vel[seq.current_pattern[d]][seq.step] <= 199) return;
 
@@ -559,7 +559,7 @@ void process_chord_track(uint8_t d, int tr)
   seq.prev_vel[d] = seq.vel[seq.current_pattern[d]][seq.step];
 }
 
-void process_arp_track(uint8_t d, int tr)
+FLASHMEM void process_arp_track(uint8_t d, int tr)
 {
   seq.arp_step = 0;
   seq.arp_num_notes_count = 0;
@@ -571,7 +571,7 @@ void process_arp_track(uint8_t d, int tr)
   seq.arp_chord = seq.vel[seq.current_pattern[d]][seq.step] - 200;
 }
 
-void process_sliced_drums(uint8_t d)
+FLASHMEM void process_sliced_drums(uint8_t d)
 {
 #if NUM_DRUMS > 0
   if (check_probability(seq.current_pattern[d])) {
@@ -582,7 +582,7 @@ void process_sliced_drums(uint8_t d)
 }
 
 
-void sequencer_part1(void)
+FLASHMEM void sequencer_part1(void)
 {
   for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
   {
@@ -644,7 +644,7 @@ void sequencer_part1(void)
 }
 
 // Helper to route NoteOff correctly for any instrument
-static inline void sendNoteOff(uint8_t instrument, uint8_t note, uint8_t ticks, uint8_t ticks_max, bool force)
+FLASHMEM static inline void sendNoteOff(uint8_t instrument, uint8_t note, uint8_t ticks, uint8_t ticks_max, bool force)
 {
   // Dexed group (0,1,70,71)
   if (instrument < 2 || instrument == 70 || instrument == 71)
@@ -761,8 +761,6 @@ void sequencer(void)
     if (seq.ticks == 0 && seq.step == 0) {
       liveSeq.handlePatternBegin();
     }
-
-
 
     if (seq.clock == 2) // MDT is MIDI MASTER
     {
@@ -935,7 +933,7 @@ FLASHMEM void print_chord_name(uint8_t currentstep)
   }
 }
 
-void update_keyboard_current_step(int ypos, uint8_t octave, uint8_t current_step)
+FLASHMEM void update_keyboard_current_step(int ypos, uint8_t octave, uint8_t current_step)
 {
   // draw grid
   for (uint8_t y = 0; y < 34; y++)
@@ -1010,7 +1008,7 @@ FLASHMEM void print_keyboard(int ypos, uint8_t octave)
   }
 }
 
-void seq_print_current_note_from_step(uint8_t step)
+FLASHMEM void seq_print_current_note_from_step(uint8_t step)
 {
   if (seq.note_data[seq.active_pattern][step] == 130) // it is a latched note
   {

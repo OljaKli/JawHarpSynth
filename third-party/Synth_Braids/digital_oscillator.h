@@ -84,10 +84,10 @@ enum DigitalOscillatorShape {
   OSC_SHAPE_BLOWN,
   OSC_SHAPE_FLUTED,
 
-  OSC_SHAPE_WAVETABLES,
-  OSC_SHAPE_WAVE_MAP,
-  OSC_SHAPE_WAVE_LINE,
-  OSC_SHAPE_WAVE_PARAPHONIC,
+  // OSC_SHAPE_WAVETABLES,
+  // OSC_SHAPE_WAVE_MAP,
+  // OSC_SHAPE_WAVE_LINE,
+  // OSC_SHAPE_WAVE_PARAPHONIC,
 
   OSC_SHAPE_FILTERED_NOISE,
   OSC_SHAPE_TWIN_PEAKS_NOISE,
@@ -326,9 +326,9 @@ class DigitalOscillator {
   void RenderKick(const uint8_t*, int16_t*, size_t);
   void RenderSnare(const uint8_t*, int16_t*, size_t);
   void RenderCymbal(const uint8_t*, int16_t*, size_t);
-//  void RenderQuestionMark(const uint8_t*, int16_t*, size_t);
 
-  // void RenderYourAlgo(const uint8_t*, int16_t*, size_t);
+// void RenderQuestionMark(const uint8_t*, int16_t*, size_t);
+// void RenderYourAlgo(const uint8_t*, int16_t*, size_t);
 
   uint32_t ComputePhaseIncrement(int16_t midi_pitch);
   uint32_t ComputeDelay(int16_t midi_pitch);

@@ -56,7 +56,7 @@ Adafruit_FT6206::Adafruit_FT6206()
     @returns True if an FT6206 is found, false on any failure
 */
 /**************************************************************************/
-boolean Adafruit_FT6206::begin(uint8_t thresh)
+FLASHMEM boolean Adafruit_FT6206::begin(uint8_t thresh)
 {
 #if defined RGB_ENCODERS
 ;
@@ -125,7 +125,7 @@ TS_Point Adafruit_FT6206::getPoint(uint8_t n)
    {@link touchX}, {@link touchY} and {@link touchID} with results
 */
 /**************************************************************************/
-void Adafruit_FT6206::readData(void)
+FLASHMEM void Adafruit_FT6206::readData(void)
 {
   Wire.beginTransmission(FT62XX_ADDR);
   Wire.write((byte)0x02); // start from address 0x02: number of touch points
@@ -164,7 +164,7 @@ void Adafruit_FT6206::readData(void)
   }
 }
 
-uint8_t Adafruit_FT6206::readRegister8(uint8_t reg)
+FLASHMEM uint8_t Adafruit_FT6206::readRegister8(uint8_t reg)
 {
   uint8_t x;
   // use i2c
@@ -178,7 +178,7 @@ uint8_t Adafruit_FT6206::readRegister8(uint8_t reg)
   return x;
 }
 
-void Adafruit_FT6206::writeRegister8(uint8_t reg, uint8_t val)
+FLASHMEM void Adafruit_FT6206::writeRegister8(uint8_t reg, uint8_t val)
 {
   // use i2c
   Wire.beginTransmission(FT62XX_ADDR);

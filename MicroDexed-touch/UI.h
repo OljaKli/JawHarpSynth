@@ -28,7 +28,7 @@
 #define _LCDML_DISP_cnt 70 // max number of menu items (must match)
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
-#define SCREENSAVER_STAY_TIME 1500  // 60s @ 25Hz rate
+#define SCREENSAVER_STAY_TIME 1200  
 #define SCREENSAVER_FADE_TIME 25    // 1s @ 25Hz rate
 #define SCREENSAVER_BRIGHTNESS_STEP (255/SCREENSAVER_FADE_TIME)
 #define SCREENSAVER_MAX_COUNTHUE 359
@@ -189,8 +189,6 @@ enum {
 };
 
 PROGMEM static const uint8_t cc_dest_values_UI_mapping[8] = { 20, 21, 22, 23, 24, 25, 26, 27 };
-
-
 
 // Define a new global state for the Chain Editor
 #define UI_FUNC_CHAIN_EDITOR_ID 10

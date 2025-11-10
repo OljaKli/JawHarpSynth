@@ -57,22 +57,4 @@ FLASHMEM uint32_t readVarLen(SdFile* f)
   return(value);
 }
 
-// #if DUMP_DATA
-// void dumpBuffer(uint8_t *p, int len)
-// // Formatted dump of a buffer of data
-// {
-//   for (int i=0; i<len; i++, p++)
-//   {
-//     if ((i!=0) && ((i & 0x0f) == 0)) // every 16 characters
-//       DUMPS("\n");
-
-//     DUMPS(" ");
-//     if (*p<=0xf)
-//       DUMPX("0", *p)
-//     else
-//       DUMPX("", *p);
-//   }
-// }
-// #endif
-
 #endif

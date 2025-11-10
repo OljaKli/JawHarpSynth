@@ -161,7 +161,7 @@ FLASHMEM void mdaEPiano::stopVoices(void)  // all keys off, but no reset for sus
   update();
 }
 
-void mdaEPiano::update()  //parameter change
+FLASHMEM void mdaEPiano::update()  //parameter change
 {
   float * param = programs[curProgram].param;
   size = (int32_t)(12.0f * param[2] - 6.0f);
@@ -186,7 +186,7 @@ void mdaEPiano::update()  //parameter change
 }
 
 
-void mdaEPiano::resumeVoices()
+FLASHMEM void mdaEPiano::resumeVoices()
 {
   Fs = AUDIO_SAMPLE_RATE;
   iFs = 1.0f / Fs;
@@ -423,7 +423,7 @@ FLASHMEM void mdaEPiano::process(int16_t* outputs_r, int16_t* outputs_l)
       voice[v] = voice[--activevoices];
 }
 
-void mdaEPiano::noteOn(int32_t note, int32_t velocity)
+FLASHMEM void mdaEPiano::noteOn(int32_t note, int32_t velocity)
 {
   float * param = programs[ 0].param;
   float l = 99.0f;
@@ -500,12 +500,12 @@ void mdaEPiano::noteOn(int32_t note, int32_t velocity)
   }
 }
 
-void mdaEPiano::noteOff(int32_t note)
+FLASHMEM void mdaEPiano::noteOff(int32_t note)
 {
 	noteOn(note,0);
 }
 
-bool mdaEPiano::processMidiController(uint8_t data1, uint8_t data2)
+FLASHMEM bool mdaEPiano::processMidiController(uint8_t data1, uint8_t data2)
 {
   float* param = programs[ 0].param;
 
@@ -552,7 +552,7 @@ bool mdaEPiano::processMidiController(uint8_t data1, uint8_t data2)
   return (true);
 }
 
-void mdaEPiano::setProgram(uint8_t program)
+FLASHMEM void mdaEPiano::setProgram(uint8_t program)
 {
     curProgram = program;
     update();

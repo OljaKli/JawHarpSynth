@@ -398,7 +398,7 @@ FLASHMEM void AudioChromaticGranularPoly::setSampleDataBytes(const int16_t* data
     }
 }
 
-void AudioChromaticGranularPoly::triggerNote(uint8_t note, uint8_t velocity) {
+FLASHMEM void AudioChromaticGranularPoly::triggerNote(uint8_t note, uint8_t velocity) {
     ChromaticGranularVoice* target = nullptr;
 
     for (int i = 0; i < MAX_POLY_VOICES; i++) {

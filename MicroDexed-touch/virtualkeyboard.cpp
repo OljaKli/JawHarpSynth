@@ -253,12 +253,10 @@ FLASHMEM void touch_check_all_keyboard_buttons()
   }
 }
 
-
 #ifdef GRANULAR
 #include "granular.h"
 extern granular_params_t granular_params;
 #endif
-
 
 FLASHMEM void virtual_keyboard_print_current_instrument()
 {

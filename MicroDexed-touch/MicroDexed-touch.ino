@@ -161,7 +161,6 @@ extern Adafruit_FT6206 touch;
 int menuhelper_previous_val;
 
 AudioMultiBandCompressor MultiBandCompressor;
-
 Realtime_Scope scope;
 
 // Audio engines
@@ -971,7 +970,7 @@ bool touch_ic_found = false;
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
-FLASHMEM void setled(uint8_t pin, bool state)
+void setled(uint8_t pin, bool state)
 {
   mcp.write1(pin, state);
 }
@@ -1087,7 +1086,7 @@ FLASHMEM void All_Button_LEDS(bool state)
 #endif
 
 #ifdef  MCP_CV
-void initMCP4728() {
+FLASHMEM void initMCP4728() {
   dac.attach(Wire, 14);
   //dac.readRegisters();
   dac.selectVref(MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V, MCP4728::VREF::INTERNAL_2_8V);
@@ -2100,7 +2099,7 @@ FLASHMEM void set_sidechain_levels()
 
 }
 
-void update_sidechain()
+FLASHMEM void update_sidechain()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_sidechain))
   {
@@ -2406,7 +2405,7 @@ FLASHMEM void setRGBencoderColor()
 #endif
 
 #if defined MIDI_ACTIVITY_LIGHTS
-void midi_activity_leds()
+FLASHMEM void midi_activity_leds()
 {
   if (LED_MIDI_OUT_counter != 0)
   {
@@ -2478,7 +2477,7 @@ extern  void show(uint8_t pos_y, uint8_t pos_x, uint8_t field_size, const char* 
 extern bool getChordName(const uint8_t midiNotes[], uint8_t size, char* output);
 extern const char* midiToNote(uint8_t midiNote);
 
-uint8_t count_chord_notes() {
+FLASHMEM uint8_t count_chord_notes() {
   uint8_t  count = 0;
   for (uint8_t i = 0; i < 4; i++) {
     if (chord_input[i] != 0) {
@@ -2490,7 +2489,7 @@ uint8_t count_chord_notes() {
 
 SuggestedChord suggestions[6];
 
-void resetCurrentChord() {
+FLASHMEM void resetCurrentChord() {
   memset(&currentChord, 0, sizeof(ChordInfo));
 }
 
@@ -6202,10 +6201,6 @@ FLASHMEM void check_and_create_directories(void)
     }
     else
     {
-#ifdef DEBUG
-      LOG.print(F("Creating directory "));
-      LOG.println(tmp);
-#endif
       SD.mkdir(tmp);
 
       // Create all Dexed bank directories
@@ -6214,10 +6209,6 @@ FLASHMEM void check_and_create_directories(void)
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d"), DEXED_CONFIG_PATH, i);
         if (!SD.exists(tmp))
         {
-#ifdef DEBUG
-          LOG.print(F("Creating directory "));
-          LOG.println(tmp);
-#endif
           SD.mkdir(tmp);
         }
       }
@@ -6226,16 +6217,9 @@ FLASHMEM void check_and_create_directories(void)
     snprintf_P(tmp, sizeof(tmp), PSTR("/%s"), PERFORMANCE_CONFIG_PATH);
     if (!SD.exists(tmp))
     {
-#ifdef DEBUG
-      LOG.print(F("Creating directory "));
-      LOG.println(tmp);
-#endif
       SD.mkdir(tmp);
     }
   }
-#ifdef DEBUG
-  LOG.println(F("SD card check end"));
-#endif
 }
 
 /******************************************************************************

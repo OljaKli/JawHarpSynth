@@ -2061,7 +2061,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::startTentativeEdit(int16_t noteIndex) {
     tentativeEdit.tentativeNoteOff.patternMs;
 }
 
-
 FLASHMEM void UI_LiveSeq_PianoRoll::updateTentativeEdit(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff) {
   if (!tentativeEdit.active) return;
 
@@ -2848,7 +2847,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::onEventsChanged(void) {
     }
   }
 }
-
 
 FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getRelativeNoteTime(uint32_t time) const {
   if (data.isSongMode && !data.useGridSongMode) {

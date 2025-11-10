@@ -249,7 +249,7 @@ PATTERNS
 
 */
 
-
+#include <Arduino.h>
 #include <setjmp.h>
 #include <ctype.h>
 #include <string.h>
@@ -267,21 +267,21 @@ static byte error (const char err)
   return 0;  // keep compiler happy
 }  // end of error
 
-static int check_capture (MatchState *ms, int l) {
+FLASHMEM static int check_capture (MatchState *ms, int l) {
   l -= '1';
   if (l < 0 || l >= ms->level || ms->capture[l].len == CAP_UNFINISHED)
     return error(ERR_INVALID_CAPTURE_INDEX);
   return l;
 } // end of check_capture
 
-static int capture_to_close (MatchState *ms) {
+FLASHMEM static int capture_to_close (MatchState *ms) {
   int level = ms->level;
   for (level--; level>=0; level--)
     if (ms->capture[level].len == CAP_UNFINISHED) return level;
   return error(ERR_INVALID_PATTERN_CAPTURE);
 } // end of capture_to_close
 
-static const char *classend (MatchState *ms, const char *p) {
+FLASHMEM static const char *classend (MatchState *ms, const char *p) {
   switch (*p++) {
     case REGEXP_ESC: {
       if (*p == '\0')
@@ -305,7 +305,7 @@ static const char *classend (MatchState *ms, const char *p) {
 } // end of classend
 
 
-static int match_class (int c, int cl) {
+FLASHMEM static int match_class (int c, int cl) {
   int res;
   switch (tolower(cl)) {
     case 'a' : res = isalpha(c); break;
@@ -324,7 +324,7 @@ static int match_class (int c, int cl) {
 } // end of match_class
 
 
-static int matchbracketclass (int c, const char *p, const char *ec) {
+FLASHMEM static int matchbracketclass (int c, const char *p, const char *ec) {
   int sig = 1;
   if (*(p+1) == '^') {
     sig = 0;
@@ -347,7 +347,7 @@ static int matchbracketclass (int c, const char *p, const char *ec) {
 } // end of matchbracketclass
 
 
-static int singlematch (int c, const char *p, const char *ep) {
+FLASHMEM static int singlematch (int c, const char *p, const char *ep) {
   switch (*p) {
     case '.': return 1;  /* matches any char */
     case REGEXP_ESC: return match_class(c, uchar(*(p+1)));
@@ -360,7 +360,7 @@ static int singlematch (int c, const char *p, const char *ep) {
 static const char *match (MatchState *ms, const char *s, const char *p);
 
 
-static const char *matchbalance (MatchState *ms, const char *s,
+FLASHMEM static const char *matchbalance (MatchState *ms, const char *s,
                                  const char *p) {
   if (*p == 0 || *(p+1) == 0)
     error(ERR_UNBALANCED_PATTERN);
@@ -395,7 +395,7 @@ static const char *max_expand (MatchState *ms, const char *s,
 } // end of max_expand
 
 
-static const char *min_expand (MatchState *ms, const char *s,
+FLASHMEM static const char *min_expand (MatchState *ms, const char *s,
                                const char *p, const char *ep) {
   for (;;) {
     const char *res = match(ms, s, ep+1);
@@ -408,7 +408,7 @@ static const char *min_expand (MatchState *ms, const char *s,
 } // end of min_expand
 
 
-static const char *start_capture (MatchState *ms, const char *s,
+FLASHMEM static const char *start_capture (MatchState *ms, const char *s,
                                   const char *p, int what) {
   const char *res;
   int level = ms->level;
@@ -422,7 +422,7 @@ static const char *start_capture (MatchState *ms, const char *s,
 } // end of start_capture
 
 
-static const char *end_capture (MatchState *ms, const char *s,
+FLASHMEM static const char *end_capture (MatchState *ms, const char *s,
                                 const char *p) {
   int l = capture_to_close(ms);
   const char *res;
@@ -433,7 +433,7 @@ static const char *end_capture (MatchState *ms, const char *s,
 } // end of end_capture
 
 
-static const char *match_capture (MatchState *ms, const char *s, int l) {
+FLASHMEM static const char *match_capture (MatchState *ms, const char *s, int l) {
   size_t len;
   l = check_capture(ms, l);
   len = ms->capture[l].len;
@@ -444,7 +444,7 @@ static const char *match_capture (MatchState *ms, const char *s, int l) {
 } // end of match_capture
 
 
-static const char *match (MatchState *ms, const char *s, const char *p) {
+FLASHMEM static const char *match (MatchState *ms, const char *s, const char *p) {
 init: /* using goto's to optimize tail recursion */
   switch (*p) {
     case '(': {  /* start capture */
@@ -523,7 +523,7 @@ init: /* using goto's to optimize tail recursion */
 
 // functions below written by Nick Gammon ...
 
-char MatchState::Match (const char * pattern, unsigned int index)
+FLASHMEM char MatchState::Match (const char * pattern, unsigned int index)
 {
   // set up for throwing errors
   char rtn = setjmp (regexp_error_return);
@@ -559,12 +559,12 @@ char MatchState::Match (const char * pattern, unsigned int index)
 } // end of regexp
 
 // set up the target string
-void MatchState::Target (char * s)
+FLASHMEM void MatchState::Target (char * s)
   {
   Target (s, strlen (s));
   }  // end of MatchState::Target
 
-void MatchState::Target (char * s, const unsigned int len)
+FLASHMEM void MatchState::Target (char * s, const unsigned int len)
   {
   src = s;
   src_len = len;
@@ -573,7 +573,7 @@ void MatchState::Target (char * s, const unsigned int len)
 
 // copy the match string to user-supplied buffer
 // buffer must be large enough to hold it
-char * MatchState::GetMatch (char * s) const
+FLASHMEM char * MatchState::GetMatch (char * s) const
 {
   if (result != REGEXP_MATCHED)
     s [0] = 0;
@@ -600,7 +600,7 @@ char * MatchState::GetCapture (char * s, const int n) const
 } // end of MatchState::GetCapture
 
 // match repeatedly on a string, return count of matches
-unsigned int MatchState::MatchCount (const char * pattern)
+FLASHMEM unsigned int MatchState::MatchCount (const char * pattern)
 {
   unsigned int count = 0;
 
@@ -617,7 +617,7 @@ unsigned int MatchState::MatchCount (const char * pattern)
 } // end of MatchState::MatchCount
 
 // match repeatedly on a string, call function f for each match
-unsigned int MatchState::GlobalMatch (const char * pattern, GlobalMatchCallback f)
+FLASHMEM unsigned int MatchState::GlobalMatch (const char * pattern, GlobalMatchCallback f)
 {
   unsigned int count = 0;
 
@@ -638,7 +638,7 @@ unsigned int MatchState::GlobalMatch (const char * pattern, GlobalMatchCallback 
 //  f sets replacement string, incorporate replacement and continue
 // maximum of max_count replacements if max_count > 0
 // replacement string in GlobalReplaceCallback must stay in scope (eg. static string or literal)
-unsigned int MatchState::GlobalReplace (const char * pattern, GlobalReplaceCallback f, const unsigned int max_count)
+FLASHMEM unsigned int MatchState::GlobalReplace (const char * pattern, GlobalReplaceCallback f, const unsigned int max_count)
 {
   unsigned int count = 0;
 
@@ -689,7 +689,7 @@ unsigned int MatchState::GlobalReplace (const char * pattern, GlobalReplaceCallb
 // match repeatedly on a string, replaces with replacement string for each match
 // maximum of max_count replacements if max_count > 0
 // replacement string in GlobalReplaceCallback must stay in scope (eg. static string or literal)
-unsigned int MatchState::GlobalReplace (const char * pattern, const char * replacement, const unsigned int max_count)
+FLASHMEM unsigned int MatchState::GlobalReplace (const char * pattern, const char * replacement, const unsigned int max_count)
 {
   unsigned int count = 0;
   unsigned int replacement_length = strlen (replacement);

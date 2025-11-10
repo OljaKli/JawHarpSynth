@@ -11,8 +11,6 @@ void AudioSynthBraids::update(void)
 	const uint8_t sync_buffer[AUDIO_BLOCK_SAMPLES] = { 0 };
 	uint8_t buffer_index = 0;
 
-	//if (magnitude) 
-	//{
 		block = allocate();
 		if (block) {
 			osc.Render(sync_buffer, buffer, AUDIO_BLOCK_SAMPLES);
@@ -35,5 +33,4 @@ void AudioSynthBraids::update(void)
 			release(block);
 			return;
 		}
-//	}
 }
