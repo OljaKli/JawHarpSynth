@@ -231,11 +231,19 @@ public:
     uint8_t stepRecordTargetTrack;  //select target instrument for step recorder in song mode
 
     // Grid-based song mode
+#ifdef PSRAM
+    // Extra song slots for PSRAM builds allow deeper arrangements in the grid editor
     static const uint8_t GRIDSONGLEN = 64;
-    bool useGridSongMode = false;  // false = live recording mode, true = grid mode
-    bool seq_started_from_pattern_mode = false;
-    //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // 32 song steps, 12 tracks, 4 layers
-    uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
+#else
+    static const uint8_t GRIDSONGLEN = 32;
+#endif
+  bool useGridSongMode = false;  // false = live recording mode, true = grid mode
+  bool seq_started_from_pattern_mode = false;
+  //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // GRIDSONGLEN song steps, 12 tracks, 4 layers
+  uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
+  uint8_t gridPlaybackStartStep = 0;           // first grid row to play (0-indexed)
+  uint8_t gridPlaybackEndStep = GRIDSONGLEN - 1; // last grid row to play (0-indexed)
+  bool gridLoopEnabled = false;
     uint8_t currentGridStep = 0;
     uint8_t gridStepOffset = 0;  // for scrolling through steps
     uint8_t selectedGridStep = 0;
@@ -272,6 +280,8 @@ public:
   void setLayerMuted(uint8_t track, uint8_t layer, bool isMuted, bool recordToSong = false);
   void changeNumberOfBars(uint8_t num);
   void deleteAllSongEvents(void);
+  void resetGridEditorDefaults(void);
+  void sanitizeGridSongSteps();
   void fillTrackLayer();
   void deleteLiveSequencerData(void);
   void setArpEnabled(bool enabled);
@@ -283,6 +293,10 @@ public:
   void loadOldTrackInstruments(void); // load track instruments from normal sequencer
   void requestSortEvents(void);
   void setActiveTrack(uint8_t track);
+  bool insertGridRow(uint8_t step);
+  bool removeGridRow(uint8_t step);
+  bool canInsertGridRow(uint8_t step) const;
+  bool canRemoveGridRow(uint8_t step) const;
 
   struct NotePair {
     MidiEvent& noteOn;
@@ -301,6 +315,7 @@ public:
   void AddMetronome(void);
 
 private:
+  static constexpr size_t GRID_ROW_STRIDE = LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS;
   LiveSeqData data;
   std::set<uint8_t> activeArpKeys;
   std::set<uint8_t> pressedKeys;
@@ -329,6 +344,11 @@ private:
 
   void performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer);
   void sortEvents(void);
+  bool isGridRowEmpty(uint8_t step) const;
+  int lastOccupiedGridRow() const;
+  void adjustGridMarkersAfterInsert(uint8_t step, bool shiftedContent);
+  void adjustGridMarkersAfterRemove(uint8_t step);
+  void clampGridMarkers();
 
   static bool sortMidiEvent(MidiEvent& a, MidiEvent& b) {
     // + a.source is a hack to sort song events before pattern events if the have same time

@@ -2194,6 +2194,8 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
       LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
   }
 
+  liveSeq.resetGridEditorDefaults();
+
   if (sd_card_internal > 0) {
     number = constrain(number, 0, 99);
 
@@ -2246,6 +2248,7 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
 
 #undef GRID_STEP
   }
+  liveSeq.sanitizeGridSongSteps();
   return true;
 }
 

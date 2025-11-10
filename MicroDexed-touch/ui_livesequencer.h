@@ -35,6 +35,7 @@ public:
   void updateTrackChannelSetupButtons(uint8_t track);
   bool gridNeedsRedraw = true; // Track if grid needs redrawing
   void onGridStepChanged(void);  // Called when grid step changes to trigger redraw
+  void onGridPlaybackEnded(void);
   TouchButton* modeButton;
 
 private:
@@ -136,6 +137,7 @@ private:
   bool isModeToolActive(void);
   void redrawScreen(void);
   void drawGUI(uint16_t& guiFlags);
+  void drawPerformanceName(void);
   void processBar(const float progressTotal, const uint16_t y, ProgressBar& bar, const uint16_t color);
   static std::string getArpModeName(uint8_t mode);
   void drawLayerButton(const bool horizontal, uint8_t layerMode, int layer, const bool layerEditActive, TouchButton::Color color, uint16_t x, uint16_t y);
@@ -167,9 +169,8 @@ private:
   void clearGridCell(void);
   void fillGridCell(void);
   void copyFromAbove(void);
-  void scrollToTop(void);
-  void scrollUp(void);
-  void scrollDown(void);
+  void insertGridRow(void);
+  void removeGridRow(void);
   void slow_rect(uint16_t x, uint8_t y, uint16_t color);
 
   bool inGridEditor = false; // Track if we're in grid editor mode

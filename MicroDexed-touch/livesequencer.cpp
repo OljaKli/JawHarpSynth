@@ -2,6 +2,7 @@
 #include "config.h"
 #include "sequencer.h"
 #include <algorithm>
+#include <cstring>
 #include "TeensyTimerTool.h"
 #include "ui_livesequencer.h"
 #include "ui_liveseq_pianoroll.h"
@@ -52,6 +53,9 @@ FLASHMEM LiveSequencer::LiveSequencer() {
   data.currentGridStep = 0;
   data.selectedGridStep = 0;
   data.selectedGridTrack = 0;
+  data.gridPlaybackStartStep = 0;
+  data.gridPlaybackEndStep = LiveSequencer::LiveSeqData::GRIDSONGLEN - 1;
+  data.gridLoopEnabled = true;
 
   // Allocate gridSongSteps in PSRAM
 #ifdef PSRAM
@@ -136,6 +140,7 @@ FLASHMEM void LiveSequencer::stop(void) {
 }
 
 FLASHMEM void LiveSequencer::onStopped(void) {
+  data.isStarting = false;
   data.isRunning = false;
   DBG_LOG(printf("onStopped\n"));
 
@@ -277,7 +282,7 @@ FLASHMEM void LiveSequencer::refreshSongLength(void) {
 FLASHMEM void LiveSequencer::onSongStopped(void) {
   // Reset grid step when song stops
   if (data.useGridSongMode) {
-    data.currentGridStep = 0;
+    data.currentGridStep = data.gridPlaybackStartStep;
     // data.redraw_grid_header = true;
     ui_liveSeq->gridNeedsRedraw = true;
   }
@@ -1051,12 +1056,22 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       data.currentPattern = 0;
 
       if (data.useGridSongMode && !data.seq_started_from_pattern_mode) {
-        // Grid song mode: advance grid step after completing pattern cycle
-        data.currentGridStep = (data.currentGridStep + 1) % data.GRIDSONGLEN;
+        const bool atEnd = data.currentGridStep >= data.gridPlaybackEndStep;
+        if (atEnd && !data.gridLoopEnabled) {
+          ui_liveSeq->onGridPlaybackEnded();
+          return;
+        }
+
+        if (atEnd && data.gridLoopEnabled) {
+          data.currentGridStep = data.gridPlaybackStartStep;
+        }
+        else {
+          data.currentGridStep++;
+        }
+
         ui_liveSeq->onGridStepChanged();
 
         // Trigger UI redraw 
-       // data.redraw_grid_header = true;
         ui_liveSeq->gridNeedsRedraw = true;
       }
       else  if (data.isSongMode && !data.useGridSongMode) {
@@ -1587,6 +1602,212 @@ FLASHMEM void LiveSequencer::printNotePairs(std::vector<NotePair> notePairs) {
     LiveSequencer::printEvent(pairNum, p.noteOff);
     pairNum++;
   }
+}
+
+FLASHMEM bool LiveSequencer::canInsertGridRow(uint8_t step) const {
+  if (data.gridSongSteps == nullptr) {
+    return false;
+  }
+  if (step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+  const int lastOccupied = lastOccupiedGridRow();
+  if (lastOccupied < 0) {
+    return false;
+  }
+  if (lastOccupied < static_cast<int>(step)) {
+    return false;
+  }
+  return lastOccupied < (static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1);
+}
+
+FLASHMEM bool LiveSequencer::canRemoveGridRow(uint8_t step) const {
+  if (data.gridSongSteps == nullptr) {
+    return false;
+  }
+  if (step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+  if (!isGridRowEmpty(step)) {
+    return false;
+  }
+
+  const int lastOccupied = lastOccupiedGridRow();
+  if (lastOccupied <= static_cast<int>(step)) {
+    return false;
+  }
+
+  return true;
+}
+
+FLASHMEM bool LiveSequencer::insertGridRow(uint8_t step) {
+  if (!data.gridSongSteps || step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  const int lastOccupied = lastOccupiedGridRow();
+  if (lastOccupied >= (static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1)) {
+    return false;
+  }
+
+  const size_t stride = GRID_ROW_STRIDE;
+  uint8_t* const rowPtr = data.gridSongSteps + static_cast<size_t>(step) * stride;
+  const bool shiftedContent = lastOccupied >= static_cast<int>(step);
+
+  if (shiftedContent) {
+    const size_t rowsToMove = static_cast<size_t>(lastOccupied - static_cast<int>(step) + 1);
+    memmove(rowPtr + stride, rowPtr, rowsToMove * stride);
+  }
+
+  memset(rowPtr, 0, stride);
+
+  adjustGridMarkersAfterInsert(step, shiftedContent);
+  clampGridMarkers();
+  return true;
+}
+
+FLASHMEM bool LiveSequencer::removeGridRow(uint8_t step) {
+  if (!data.gridSongSteps || step >= LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  if (!isGridRowEmpty(step)) {
+    return false;
+  }
+
+  const int lastOccupied = lastOccupiedGridRow();
+  const size_t stride = GRID_ROW_STRIDE;
+  uint8_t* const dest = data.gridSongSteps + static_cast<size_t>(step) * stride;
+
+  if (lastOccupied > static_cast<int>(step)) {
+    const size_t rowsToMove = static_cast<size_t>(lastOccupied - static_cast<int>(step));
+    memmove(dest, dest + stride, rowsToMove * stride);
+    uint8_t* const zeroRow = dest + rowsToMove * stride;
+    memset(zeroRow, 0, stride);
+  }
+  else {
+    memset(dest, 0, stride);
+  }
+
+  adjustGridMarkersAfterRemove(step);
+  clampGridMarkers();
+  return true;
+}
+
+FLASHMEM bool LiveSequencer::isGridRowEmpty(uint8_t step) const {
+  if (!data.gridSongSteps || step >= LiveSeqData::GRIDSONGLEN) {
+    return true;
+  }
+
+  const uint8_t* const rowPtr = data.gridSongSteps + static_cast<size_t>(step) * GRID_ROW_STRIDE;
+  for (size_t i = 0; i < GRID_ROW_STRIDE; ++i) {
+    if (rowPtr[i] != 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+FLASHMEM int LiveSequencer::lastOccupiedGridRow() const {
+  if (!data.gridSongSteps) {
+    return -1;
+  }
+
+  for (int step = static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1; step >= 0; --step) {
+    if (!isGridRowEmpty(static_cast<uint8_t>(step))) {
+      return step;
+    }
+  }
+  return -1;
+}
+
+FLASHMEM void LiveSequencer::adjustGridMarkersAfterInsert(uint8_t step, bool shiftedContent) {
+  if (!shiftedContent) {
+    return;
+  }
+
+  auto incrementIfNeeded = [&](uint8_t& marker) {
+    if (marker >= step && marker < (LiveSeqData::GRIDSONGLEN - 1)) {
+      marker++;
+    }
+  };
+
+  incrementIfNeeded(data.currentGridStep);
+
+  // Keep the viewport anchored only when we inserted above it; inserting at the first
+  // visible row should reveal the new empty row instead of scrolling past it.
+  if (data.gridStepOffset > step && data.gridStepOffset < (LiveSeqData::GRIDSONGLEN - 1)) {
+    data.gridStepOffset++;
+  }
+}
+
+FLASHMEM void LiveSequencer::adjustGridMarkersAfterRemove(uint8_t step) {
+  auto decrementIfNeeded = [&](uint8_t& marker) {
+    if (marker > step) {
+      marker--;
+    }
+  };
+
+  decrementIfNeeded(data.currentGridStep);
+  if (data.gridStepOffset > 0 && data.gridStepOffset > step) {
+    data.gridStepOffset--;
+  }
+}
+
+FLASHMEM void LiveSequencer::clampGridMarkers() {
+  auto clampMarker = [&](uint8_t& marker) {
+    if (marker >= LiveSeqData::GRIDSONGLEN) {
+      marker = LiveSeqData::GRIDSONGLEN - 1;
+    }
+  };
+
+  clampMarker(data.gridPlaybackStartStep);
+  clampMarker(data.gridPlaybackEndStep);
+  clampMarker(data.currentGridStep);
+  clampMarker(data.gridStepOffset);
+  clampMarker(data.selectedGridStep);
+
+  if (data.gridPlaybackEndStep < data.gridPlaybackStartStep) {
+    data.gridPlaybackStartStep = data.gridPlaybackEndStep;
+  }
+}
+
+FLASHMEM void LiveSequencer::resetGridEditorDefaults(void) {
+  data.gridPlaybackStartStep = 0;
+  data.gridPlaybackEndStep = LiveSeqData::GRIDSONGLEN - 1;
+  data.gridLoopEnabled = true;
+  data.gridStepOffset = 0;
+  data.currentGridStep = data.gridPlaybackStartStep;
+  data.selectedGridStep = data.gridPlaybackStartStep;
+  data.selectedGridTrack = 0;
+  clampGridMarkers();
+}
+
+FLASHMEM void LiveSequencer::sanitizeGridSongSteps() {
+	if (!data.gridSongSteps) {
+		return;
+	}
+
+	const size_t stride = GRID_ROW_STRIDE;
+	const size_t trackStride = LIVESEQUENCER_NUM_LAYERS;
+
+	for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; ++track) {
+		uint8_t validLayers = data.trackSettings[track].layerCount;
+		if (validLayers > LIVESEQUENCER_NUM_LAYERS) {
+			validLayers = LIVESEQUENCER_NUM_LAYERS;
+		}
+
+		if (validLayers >= LIVESEQUENCER_NUM_LAYERS) {
+			continue;
+		}
+
+		for (uint8_t step = 0; step < LiveSeqData::GRIDSONGLEN; ++step) {
+			uint8_t* const rowTrack = data.gridSongSteps + static_cast<size_t>(step) * stride + track * trackStride;
+			for (uint8_t layer = validLayers; layer < LIVESEQUENCER_NUM_LAYERS; ++layer) {
+				rowTrack[layer] = 0;
+			}
+		}
+	}
 }
 
 FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {

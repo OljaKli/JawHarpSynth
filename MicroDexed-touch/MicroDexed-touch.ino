@@ -5040,9 +5040,19 @@ FLASHMEM void handleStart(void)
 {
 
   LiveSequencer::LiveSeqData* data = liveSeq.getData();
-  // Reset grid step to 0 when starting song mode
   if (data->useGridSongMode) {
-    data->currentGridStep = 0;
+    if (data->seq_started_from_pattern_mode) {
+      data->currentGridStep = 0;
+    }
+    else {
+      const uint8_t startStep = (data->gridPlaybackStartStep < data->GRIDSONGLEN) ? data->gridPlaybackStartStep : data->GRIDSONGLEN - 1;
+      data->gridPlaybackStartStep = startStep;
+      data->currentGridStep = startStep;
+      if (data->gridPlaybackEndStep < startStep) {
+        data->gridPlaybackEndStep = startStep;
+        data->redraw_grid_buttons = true;
+      }
+    }
   }
 
   if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_information))
