@@ -29,9 +29,9 @@
 #ifndef BRAIDS_MACRO_OSCILLATOR_H_
 #define BRAIDS_MACRO_OSCILLATOR_H_
 
-#include <stmlib.h>
+//#include <stmlib.h>
 
-#include <cstring>
+//#include <cstring>
 
 #include "analog_oscillator.h"
 #include "digital_oscillator.h"

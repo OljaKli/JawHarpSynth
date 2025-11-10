@@ -136,10 +136,7 @@ uint8_t count_midi_channel_duplicates(bool find_first);
 void print_smf_parameters();
 void selectSample(uint8_t sample);
 void update_seq_speed();
-//swap multiband test
-// void mb_set_mutes();
 void mb_set_master();
-// void mb_set_compressor();
 void clear_song_playhead();
 void sub_song_print_tracknumbers();
 bool load_performance_and_check_midi(uint8_t perf);

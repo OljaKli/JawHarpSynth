@@ -29,14 +29,10 @@
 // Automatically generated with:
 // make resources
 
-
 #ifndef BRAIDS_RESOURCES_H_
 #define BRAIDS_RESOURCES_H_
 
-
 #include <stmlib.h>
-
-
 
 namespace braids {
 
@@ -80,28 +76,28 @@ extern const uint32_t lut_env_portamento_increments[];
 extern const int16_t wav_formant_sine[];
 extern const int16_t wav_formant_square[];
 extern const int16_t wav_sine[];
-extern const int16_t wav_bandlimited_comb_0[];
-extern const int16_t wav_bandlimited_comb_1[];
-extern const int16_t wav_bandlimited_comb_2[];
-extern const int16_t wav_bandlimited_comb_3[];
-extern const int16_t wav_bandlimited_comb_4[];
-extern const int16_t wav_bandlimited_comb_5[];
-extern const int16_t wav_bandlimited_comb_6[];
-extern const int16_t wav_bandlimited_comb_7[];
-extern const int16_t wav_bandlimited_comb_8[];
-extern const int16_t wav_bandlimited_comb_9[];
-extern const int16_t wav_bandlimited_comb_10[];
-extern const int16_t wav_bandlimited_comb_11[];
-extern const int16_t wav_bandlimited_comb_12[];
-extern const int16_t wav_bandlimited_comb_13[];
-extern const int16_t wav_bandlimited_comb_14[];
+// extern const int16_t wav_bandlimited_comb_0[];
+// extern const int16_t wav_bandlimited_comb_1[];
+// extern const int16_t wav_bandlimited_comb_2[];
+// extern const int16_t wav_bandlimited_comb_3[];
+// extern const int16_t wav_bandlimited_comb_4[];
+// extern const int16_t wav_bandlimited_comb_5[];
+// extern const int16_t wav_bandlimited_comb_6[];
+// extern const int16_t wav_bandlimited_comb_7[];
+// extern const int16_t wav_bandlimited_comb_8[];
+// extern const int16_t wav_bandlimited_comb_9[];
+// extern const int16_t wav_bandlimited_comb_10[];
+// extern const int16_t wav_bandlimited_comb_11[];
+// extern const int16_t wav_bandlimited_comb_12[];
+// extern const int16_t wav_bandlimited_comb_13[];
+// extern const int16_t wav_bandlimited_comb_14[];
 extern const int16_t ws_moderate_overdrive[];
 extern const int16_t ws_violent_overdrive[];
 extern const int16_t ws_sine_fold[];
 extern const int16_t ws_tri_fold[];
-extern const uint8_t wt_waves[];
-extern const uint8_t wt_map[];
-extern const uint8_t wt_code[];
+// extern const uint8_t wt_waves[];
+// extern const uint8_t wt_map[];
+// extern const uint8_t wt_code[];
 extern const uint16_t chr_characters[];
 #define STR_DUMMY 0  // dummy
 #define LUT_RESONATOR_COEFFICIENT 0
@@ -114,10 +110,10 @@ extern const uint16_t chr_characters[];
 #define LUT_SVF_DAMP_SIZE 257
 #define LUT_SVF_SCALE 4
 #define LUT_SVF_SCALE_SIZE 257
-#define LUT_GRANULAR_ENVELOPE 5
-#define LUT_GRANULAR_ENVELOPE_SIZE 513
-#define LUT_GRANULAR_ENVELOPE_RATE 6
-#define LUT_GRANULAR_ENVELOPE_RATE_SIZE 257
+// #define LUT_GRANULAR_ENVELOPE 5
+// #define LUT_GRANULAR_ENVELOPE_SIZE 513
+// #define LUT_GRANULAR_ENVELOPE_RATE 6
+// #define LUT_GRANULAR_ENVELOPE_RATE_SIZE 257
 #define LUT_BOWING_ENVELOPE 7
 #define LUT_BOWING_ENVELOPE_SIZE 362
 #define LUT_BOWING_FRICTION 8
@@ -136,12 +132,12 @@ extern const uint16_t chr_characters[];
 #define LUT_ENV_EXPO_SIZE 257
 #define LUT_BLOWING_JET 0
 #define LUT_BLOWING_JET_SIZE 257
-#define LUT_OSCILLATOR_INCREMENTS 0
-#define LUT_OSCILLATOR_INCREMENTS_SIZE 97
-#define LUT_OSCILLATOR_DELAYS 1
-#define LUT_OSCILLATOR_DELAYS_SIZE 97
-#define LUT_ENV_PORTAMENTO_INCREMENTS 2
-#define LUT_ENV_PORTAMENTO_INCREMENTS_SIZE 128
+// #define LUT_OSCILLATOR_INCREMENTS 0
+// #define LUT_OSCILLATOR_INCREMENTS_SIZE 97
+// #define LUT_OSCILLATOR_DELAYS 1
+// #define LUT_OSCILLATOR_DELAYS_SIZE 97
+// #define LUT_ENV_PORTAMENTO_INCREMENTS 2
+// #define LUT_ENV_PORTAMENTO_INCREMENTS_SIZE 128
 #define WAV_FORMANT_SINE 0
 #define WAV_FORMANT_SINE_SIZE 256
 #define WAV_FORMANT_SQUARE 1
@@ -149,51 +145,51 @@ extern const uint16_t chr_characters[];
 #define WAV_SINE 2
 #define WAV_SINE_SIZE 257
 #define WAV_BANDLIMITED_COMB_0 3
-#define WAV_BANDLIMITED_COMB_0_SIZE 257
-#define WAV_BANDLIMITED_COMB_1 4
-#define WAV_BANDLIMITED_COMB_1_SIZE 257
-#define WAV_BANDLIMITED_COMB_2 5
-#define WAV_BANDLIMITED_COMB_2_SIZE 257
-#define WAV_BANDLIMITED_COMB_3 6
-#define WAV_BANDLIMITED_COMB_3_SIZE 257
-#define WAV_BANDLIMITED_COMB_4 7
-#define WAV_BANDLIMITED_COMB_4_SIZE 257
-#define WAV_BANDLIMITED_COMB_5 8
-#define WAV_BANDLIMITED_COMB_5_SIZE 257
-#define WAV_BANDLIMITED_COMB_6 9
-#define WAV_BANDLIMITED_COMB_6_SIZE 257
-#define WAV_BANDLIMITED_COMB_7 10
-#define WAV_BANDLIMITED_COMB_7_SIZE 257
-#define WAV_BANDLIMITED_COMB_8 11
-#define WAV_BANDLIMITED_COMB_8_SIZE 257
-#define WAV_BANDLIMITED_COMB_9 12
-#define WAV_BANDLIMITED_COMB_9_SIZE 257
-#define WAV_BANDLIMITED_COMB_10 13
-#define WAV_BANDLIMITED_COMB_10_SIZE 257
-#define WAV_BANDLIMITED_COMB_11 14
-#define WAV_BANDLIMITED_COMB_11_SIZE 257
-#define WAV_BANDLIMITED_COMB_12 15
-#define WAV_BANDLIMITED_COMB_12_SIZE 257
-#define WAV_BANDLIMITED_COMB_13 16
-#define WAV_BANDLIMITED_COMB_13_SIZE 257
-#define WAV_BANDLIMITED_COMB_14 17
-#define WAV_BANDLIMITED_COMB_14_SIZE 257
-#define WS_MODERATE_OVERDRIVE 0
-#define WS_MODERATE_OVERDRIVE_SIZE 257
-#define WS_VIOLENT_OVERDRIVE 1
-#define WS_VIOLENT_OVERDRIVE_SIZE 257
-#define WS_SINE_FOLD 2
-#define WS_SINE_FOLD_SIZE 257
-#define WS_TRI_FOLD 3
-#define WS_TRI_FOLD_SIZE 257
-#define WT_WAVES 0
-#define WT_WAVES_SIZE 33024
-#define WT_MAP 1
-#define WT_MAP_SIZE 256
-#define WT_CODE 2
-#define WT_CODE_SIZE 1064
-#define CHR_CHARACTERS 0
-#define CHR_CHARACTERS_SIZE 256
+// #define WAV_BANDLIMITED_COMB_0_SIZE 257
+// #define WAV_BANDLIMITED_COMB_1 4
+// #define WAV_BANDLIMITED_COMB_1_SIZE 257
+// #define WAV_BANDLIMITED_COMB_2 5
+// #define WAV_BANDLIMITED_COMB_2_SIZE 257
+// #define WAV_BANDLIMITED_COMB_3 6
+// #define WAV_BANDLIMITED_COMB_3_SIZE 257
+// #define WAV_BANDLIMITED_COMB_4 7
+// #define WAV_BANDLIMITED_COMB_4_SIZE 257
+// #define WAV_BANDLIMITED_COMB_5 8
+// #define WAV_BANDLIMITED_COMB_5_SIZE 257
+// #define WAV_BANDLIMITED_COMB_6 9
+// #define WAV_BANDLIMITED_COMB_6_SIZE 257
+// #define WAV_BANDLIMITED_COMB_7 10
+// #define WAV_BANDLIMITED_COMB_7_SIZE 257
+// #define WAV_BANDLIMITED_COMB_8 11
+// #define WAV_BANDLIMITED_COMB_8_SIZE 257
+// #define WAV_BANDLIMITED_COMB_9 12
+// #define WAV_BANDLIMITED_COMB_9_SIZE 257
+// #define WAV_BANDLIMITED_COMB_10 13
+// #define WAV_BANDLIMITED_COMB_10_SIZE 257
+// #define WAV_BANDLIMITED_COMB_11 14
+// #define WAV_BANDLIMITED_COMB_11_SIZE 257
+// #define WAV_BANDLIMITED_COMB_12 15
+// #define WAV_BANDLIMITED_COMB_12_SIZE 257
+// #define WAV_BANDLIMITED_COMB_13 16
+// #define WAV_BANDLIMITED_COMB_13_SIZE 257
+// #define WAV_BANDLIMITED_COMB_14 17
+// #define WAV_BANDLIMITED_COMB_14_SIZE 257
+// #define WS_MODERATE_OVERDRIVE 0
+// #define WS_MODERATE_OVERDRIVE_SIZE 257
+// #define WS_VIOLENT_OVERDRIVE 1
+// #define WS_VIOLENT_OVERDRIVE_SIZE 257
+// #define WS_SINE_FOLD 2
+// #define WS_SINE_FOLD_SIZE 257
+// #define WS_TRI_FOLD 3
+// #define WS_TRI_FOLD_SIZE 257
+// #define WT_WAVES 0
+// #define WT_WAVES_SIZE 33024
+// #define WT_MAP 1
+// #define WT_MAP_SIZE 256
+// #define WT_CODE 2
+// #define WT_CODE_SIZE 1064
+// #define CHR_CHARACTERS 0
+// #define CHR_CHARACTERS_SIZE 256
 
 }  // namespace braids
 

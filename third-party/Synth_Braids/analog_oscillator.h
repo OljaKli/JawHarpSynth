@@ -29,10 +29,10 @@
 #ifndef BRAIDS_ANALOG_OSCILLATOR_H_
 #define BRAIDS_ANALOG_OSCILLATOR_H_
 
-#include <stmlib.h>
+//#include <stmlib.h>
 
-#include <cstring>
-#include <cstdio>
+//#include <cstring>
+//#include <cstdio>
 
 #include "resources.h"
 

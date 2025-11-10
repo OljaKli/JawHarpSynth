@@ -24710,6 +24710,7 @@ FLASHMEM void splash_screen1()
   display.print(F("(c) 2024-2025 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
 }
 
+
 FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
 {
   if (progress > 10) { // progress 0-10

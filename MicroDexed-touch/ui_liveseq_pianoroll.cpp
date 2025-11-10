@@ -2028,7 +2028,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::startTentativeEdit(int16_t noteIndex) {
     return;
   }
 
-  if (noteIndex >= eventLocations.size()) {
+  if (static_cast<size_t>(noteIndex) >= eventLocations.size()) {
     return; // No location stored for this note
   }
 
@@ -2062,8 +2062,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::startTentativeEdit(int16_t noteIndex) {
 }
 
 
-
-
 FLASHMEM void UI_LiveSeq_PianoRoll::updateTentativeEdit(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff) {
   if (!tentativeEdit.active) return;
 
@@ -2075,13 +2073,11 @@ FLASHMEM void UI_LiveSeq_PianoRoll::updateTentativeEdit(uint32_t newAbsTimeOn, u
     const uint32_t chunkLengthMs = data.numberOfBars * data.patternLengthMs;
 
     // Update note-on display
-    uint16_t displaySongPatternOn = newAbsTimeOn / chunkLengthMs;
     uint32_t timeInChunkOn = newAbsTimeOn % chunkLengthMs;
     notePairs[selectedNote].noteOn.patternNumber = (timeInChunkOn / data.patternLengthMs) % data.numberOfBars;
     notePairs[selectedNote].noteOn.patternMs = timeInChunkOn % data.patternLengthMs;
 
     // Update note-off display
-    uint16_t displaySongPatternOff = newAbsTimeOff / chunkLengthMs;
     uint32_t timeInChunkOff = newAbsTimeOff % chunkLengthMs;
     notePairs[selectedNote].noteOff.patternNumber = (timeInChunkOff / data.patternLengthMs) % data.numberOfBars;
     notePairs[selectedNote].noteOff.patternMs = timeInChunkOff % data.patternLengthMs;

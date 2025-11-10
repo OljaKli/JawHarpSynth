@@ -29,7 +29,7 @@
 #ifndef BRAIDS_DIGITAL_OSCILLATOR_H_
 #define BRAIDS_DIGITAL_OSCILLATOR_H_
 
-#include <stmlib.h>
+//#include <stmlib.h>
 
 #include "excitation.h"
 #include "svf.h"

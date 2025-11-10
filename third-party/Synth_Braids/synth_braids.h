@@ -38,10 +38,12 @@ public:
     			}
       		osc.Strike();
       	}
+
     const char* get_name(uint8_t n)
        {
          return (settings.metadata(SETTING_OSCILLATOR_SHAPE).strings[n]);
        }
+       
         inline void init_braids(){
             // Initializes the objects
             osc.Init();
