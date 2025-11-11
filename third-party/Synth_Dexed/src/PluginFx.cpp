@@ -26,17 +26,17 @@
 #include <math.h>
 #include "PluginFx.h"
 #include "synth.h"
-
+#include <Arduino.h>
 const float dc = 1e-18;
 
-inline static float tptpc(float& state, float inp, float cutoff) {
+FLASHMEM inline static float tptpc(float& state, float inp, float cutoff) {
   float v = (inp - state) * cutoff / (1 + cutoff);
   float res = v + state;
   state = res + v;
   return res;
 }
 
-inline static float tptlpupw(float & state , float inp , float cutoff , float srInv) {
+FLASHMEM inline static float tptlpupw(float & state , float inp , float cutoff , float srInv) {
   cutoff = (cutoff * srInv) * M_PI;
   float v = (inp - state) * cutoff / (1 + cutoff);
   float res = v + state;
@@ -58,7 +58,7 @@ PluginFx::PluginFx() {
   Gain = 1.0;
 }
 
-void PluginFx::init(uint16_t sr) {
+FLASHMEM void PluginFx::init(uint16_t sr) {
   mm = 0;
   s1 = s2 = s3 = s4 = c = d = 0;
   R24 = 0;
@@ -91,7 +91,7 @@ void PluginFx::init(uint16_t sr) {
   dc_od = 0;
 }
 
-inline float PluginFx::NR24(float sample, float g, float lpc) {
+FLASHMEM inline float PluginFx::NR24(float sample, float g, float lpc) {
   float ml = 1 / (1 + g);
   float S = (lpc * (lpc * (lpc * s1 + s2) + s3) + s4) * ml;
   float G = lpc * lpc * lpc * lpc;
@@ -99,12 +99,12 @@ inline float PluginFx::NR24(float sample, float g, float lpc) {
   return y + 1e-8;
 };
 
-inline float PluginFx::NR(float sample, float g) {
+FLASHMEM inline float PluginFx::NR(float sample, float g) {
   float y = ((sample - R * s1 * 2 - g * s1  - s2) / (1 + g * (2 * R + g))) + dc;
   return y;
 }
 
-void PluginFx::process(float *work, uint16_t sampleSize) {
+FLASHMEM void PluginFx::process(float *work, uint16_t sampleSize) {
   // very basic DC filter
   float t_fd = work[0];
   work[0] = work[0] - dc_id + dc_r * dc_od;

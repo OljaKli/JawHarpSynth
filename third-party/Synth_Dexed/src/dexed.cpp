@@ -104,7 +104,7 @@ Dexed::~Dexed()
   delete[] voices;
 }
 
-void Dexed::setEngineType(uint8_t engine)
+FLASHMEM void Dexed::setEngineType(uint8_t engine)
 {
   panic();
 
@@ -131,7 +131,7 @@ void Dexed::setEngineType(uint8_t engine)
   controllers.refresh();
 }
 
-uint8_t Dexed::getEngineType(void)
+FLASHMEM uint8_t Dexed::getEngineType(void)
 {
   return(engineType);
 }
@@ -141,7 +141,7 @@ FmCore* Dexed::getEngineAddress(void)
   return(controllers.core);
 }
 
-void Dexed::setMaxNotes(uint8_t new_max_notes)
+FLASHMEM void Dexed::setMaxNotes(uint8_t new_max_notes)
 {
   panic();
   used_notes = constrain(new_max_notes, 0, max_notes);
@@ -212,7 +212,7 @@ void Dexed::getSamples(int16_t* buffer, uint16_t n_samples)
   arm_float_to_q15(tmp, (q15_t*)buffer, n_samples);
 }
 
-void Dexed::keydown(uint8_t pitch, uint8_t velo) {
+FLASHMEM void Dexed::keydown(uint8_t pitch, uint8_t velo) {
   if (velo == 0) {
     keyup(pitch);
     return;
@@ -323,7 +323,7 @@ void Dexed::keydown(uint8_t pitch, uint8_t velo) {
   voices[note].live = true;
 }
 
-void Dexed::keyup(uint8_t pitch) {
+FLASHMEM void Dexed::keyup(uint8_t pitch) {
   uint8_t note;
 
   pitch = constrain(pitch, 0, 127);
@@ -380,11 +380,11 @@ void Dexed::setOPAll(uint8_t ops)
   controllers.opSwitch = ops;
 }
 
-bool Dexed::getMonoMode(void) {
+FLASHMEM bool Dexed::getMonoMode(void) {
   return monoMode;
 }
 
-void Dexed::setMonoMode(bool mode) {
+FLASHMEM void Dexed::setMonoMode(bool mode) {
   if (monoMode == mode)
     return;
 
@@ -396,7 +396,7 @@ void Dexed::setNoteRefreshMode(bool mode) {
   noteRefreshMode = mode;
 }
 
-void Dexed::setSustain(bool s)
+FLASHMEM void Dexed::setSustain(bool s)
 {
   if (sustain == s)
     return;
@@ -416,7 +416,7 @@ void Dexed::setSustain(bool s)
   }
 }
 
-bool Dexed::getSustain(void)
+FLASHMEM bool Dexed::getSustain(void)
 {
   return sustain;
 }
@@ -438,7 +438,7 @@ void Dexed::panic(void)
   setSustain(0);
 }
 
-void Dexed::resetControllers(void)
+FLASHMEM void Dexed::resetControllers(void)
 {
   controllers.values_[kControllerPitch] = 0x2000;
   controllers.values_[kControllerPitchRange] = 0;
@@ -454,7 +454,7 @@ void Dexed::resetControllers(void)
   controllers.refresh();
 }
 
-void Dexed::notesOff(void) {
+FLASHMEM void Dexed::notesOff(void) {
   for (uint8_t i = 0; i < max_notes; i++) {
     if (voices[i].live == true) {
       voices[i].keydown = false;
@@ -468,7 +468,7 @@ uint8_t Dexed::getMaxNotes(void)
   return used_notes;
 }
 
-uint8_t Dexed::getNumNotesPlaying(void)
+FLASHMEM uint8_t Dexed::getNumNotesPlaying(void)
 {
   uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
   uint8_t i;
@@ -516,7 +516,7 @@ uint8_t Dexed::getNumNotesPlaying(void)
   return (count_playing_voices);
 }
 
-bool Dexed::decodeVoice(uint8_t* new_data, uint8_t* encoded_data)
+FLASHMEM bool Dexed::decodeVoice(uint8_t* new_data, uint8_t* encoded_data)
 {
   uint8_t* p_data = new_data;
   uint8_t op;
@@ -592,7 +592,7 @@ bool Dexed::decodeVoice(uint8_t* new_data, uint8_t* encoded_data)
   return (true);
 }
 
-bool Dexed::encodeVoice(uint8_t* encoded_data)
+FLASHMEM bool Dexed::encodeVoice(uint8_t* encoded_data)
 {
   uint8_t* p_data = data;
   uint8_t op;
@@ -642,26 +642,26 @@ bool Dexed::encodeVoice(uint8_t* encoded_data)
   return (true);
 }
 
-bool Dexed::getVoiceData(uint8_t* data_copy)
+FLASHMEM bool Dexed::getVoiceData(uint8_t* data_copy)
 {
   memcpy(data_copy, data, sizeof(data));
   return (true);
 }
 
-void Dexed::setVoiceDataElement(uint8_t address, uint8_t value)
+FLASHMEM void Dexed::setVoiceDataElement(uint8_t address, uint8_t value)
 {
   address = constrain(address, 0, NUM_VOICE_PARAMETERS);
   data[address] = value;
   doRefreshVoice();
 }
 
-uint8_t Dexed::getVoiceDataElement(uint8_t address)
+FLASHMEM uint8_t Dexed::getVoiceDataElement(uint8_t address)
 {
   address = constrain(address, 0, NUM_VOICE_PARAMETERS);
   return (data[address]);
 }
 
-void Dexed::loadVoiceParameters(uint8_t* new_data)
+FLASHMEM void Dexed::loadVoiceParameters(uint8_t* new_data)
 {
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   char dexed_voice_name[11];
@@ -684,7 +684,7 @@ void Dexed::loadInitVoice(void)
   loadVoiceParameters(init_voice);
 }
 
-void Dexed::setPBController(uint8_t pb_range, uint8_t pb_step)
+FLASHMEM void Dexed::setPBController(uint8_t pb_range, uint8_t pb_step)
 {
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   Serial.println(F("Dexed::setPBController"));
@@ -699,7 +699,7 @@ void Dexed::setPBController(uint8_t pb_range, uint8_t pb_step)
   controllers.refresh();
 }
 
-void Dexed::setMWController(uint8_t mw_range, uint8_t mw_assign, uint8_t mw_mode)
+FLASHMEM void Dexed::setMWController(uint8_t mw_range, uint8_t mw_assign, uint8_t mw_mode)
 {
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   Serial.println(F("Dexed::setMWController"));
@@ -716,7 +716,7 @@ void Dexed::setMWController(uint8_t mw_range, uint8_t mw_assign, uint8_t mw_mode
   controllers.refresh();
 }
 
-void Dexed::setFCController(uint8_t fc_range, uint8_t fc_assign, uint8_t fc_mode)
+FLASHMEM void Dexed::setFCController(uint8_t fc_range, uint8_t fc_assign, uint8_t fc_mode)
 {
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   Serial.println(F("Dexed::setFCController"));
@@ -733,7 +733,7 @@ void Dexed::setFCController(uint8_t fc_range, uint8_t fc_assign, uint8_t fc_mode
   controllers.refresh();
 }
 
-void Dexed::setBCController(uint8_t bc_range, uint8_t bc_assign, uint8_t bc_mode)
+FLASHMEM void Dexed::setBCController(uint8_t bc_range, uint8_t bc_assign, uint8_t bc_mode)
 {
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   Serial.println(F("Dexed::setBCController"));
@@ -750,7 +750,7 @@ void Dexed::setBCController(uint8_t bc_range, uint8_t bc_assign, uint8_t bc_mode
   controllers.refresh();
 }
 
-void Dexed::setATController(uint8_t at_range, uint8_t at_assign, uint8_t at_mode)
+FLASHMEM void Dexed::setATController(uint8_t at_range, uint8_t at_assign, uint8_t at_mode)
 {
 #if defined(MICRODEXED_VERSION) && defined(DEBUG)
   Serial.println(F("Dexed::setATController"));
@@ -767,7 +767,7 @@ void Dexed::setATController(uint8_t at_range, uint8_t at_assign, uint8_t at_mode
   controllers.refresh();
 }
 
-void Dexed::setPortamento(uint8_t portamento_mode, uint8_t portamento_glissando, uint8_t portamento_time)
+FLASHMEM void Dexed::setPortamento(uint8_t portamento_mode, uint8_t portamento_glissando, uint8_t portamento_time)
 {
   portamento_mode = constrain(portamento_mode, 0, 1);
   portamento_glissando = constrain(portamento_glissando, 0, 1);
@@ -786,7 +786,7 @@ void Dexed::setPortamento(uint8_t portamento_mode, uint8_t portamento_glissando,
   controllers.refresh();
 }
 
-void Dexed::setPortamentoMode(uint8_t portamento_mode)
+FLASHMEM void Dexed::setPortamentoMode(uint8_t portamento_mode)
 {
   portamento_mode = constrain(portamento_mode, 0, 1);
   controllers.portamento_enable_cc = portamento_mode > 63;
@@ -794,12 +794,12 @@ void Dexed::setPortamentoMode(uint8_t portamento_mode)
   controllers.refresh();
 }
 
-uint8_t Dexed::getPortamentoMode(void)
+FLASHMEM uint8_t Dexed::getPortamentoMode(void)
 {
   return(controllers.portamento_enable_cc);
 }
 
-void Dexed::setPortamentoGlissando(uint8_t portamento_glissando)
+FLASHMEM void Dexed::setPortamentoGlissando(uint8_t portamento_glissando)
 {
   portamento_glissando = constrain(portamento_glissando, 0, 1);
   controllers.values_[kControllerPortamentoGlissando] = portamento_glissando;
@@ -807,12 +807,12 @@ void Dexed::setPortamentoGlissando(uint8_t portamento_glissando)
   controllers.refresh();
 }
 
-uint8_t Dexed::getPortamentoGlissando(void)
+FLASHMEM uint8_t Dexed::getPortamentoGlissando(void)
 {
   return(controllers.values_[kControllerPortamentoGlissando]);
 }
 
-void Dexed::setPortamentoTime(uint8_t portamento_time)
+FLASHMEM void Dexed::setPortamentoTime(uint8_t portamento_time)
 {
   portamento_time = constrain(portamento_time, 0, 99);
   controllers.portamento_cc = portamento_time;
@@ -825,12 +825,12 @@ void Dexed::setPortamentoTime(uint8_t portamento_time)
   controllers.refresh();
 }
 
-uint8_t Dexed::getPortamentoTime(void)
+FLASHMEM uint8_t Dexed::getPortamentoTime(void)
 {
   return(controllers.portamento_cc);
 }
 
-int16_t Dexed::checkSystemExclusive(const uint8_t* sysex, const uint16_t len)
+FLASHMEM int16_t Dexed::checkSystemExclusive(const uint8_t* sysex, const uint16_t len)
 /*
         -1:     SysEx end status byte not detected.
         -2:     SysEx vendor not Yamaha.
@@ -1213,7 +1213,7 @@ void Dexed::setOPRateAllModulator(uint8_t step, uint8_t rate)
   doRefreshVoice();
 }
 
-void Dexed::setOPLevelAllModulator(uint8_t step, uint8_t level)
+FLASHMEM void Dexed::setOPLevelAllModulator(uint8_t step, uint8_t level)
 {
   uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
 
@@ -1228,7 +1228,7 @@ void Dexed::setOPLevelAllModulator(uint8_t step, uint8_t level)
   doRefreshVoice();
 }
 
-void Dexed::setOPRateAllCarrier(uint8_t step, uint8_t rate)
+FLASHMEM void Dexed::setOPRateAllCarrier(uint8_t step, uint8_t rate)
 {
   uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
 
@@ -1243,7 +1243,7 @@ void Dexed::setOPRateAllCarrier(uint8_t step, uint8_t rate)
   doRefreshVoice();
 }
 
-void Dexed::setOPLevelAllCarrier(uint8_t step, uint8_t level)
+FLASHMEM void Dexed::setOPLevelAllCarrier(uint8_t step, uint8_t level)
 {
   uint8_t op_carrier = controllers.core->get_carrier_operators(data[134]); // look for carriers
 
@@ -1258,7 +1258,7 @@ void Dexed::setOPLevelAllCarrier(uint8_t step, uint8_t level)
   doRefreshVoice();
 }
 
-void Dexed::setOPRate(uint8_t op, uint8_t step, uint8_t rate)
+FLASHMEM void Dexed::setOPRate(uint8_t op, uint8_t step, uint8_t rate)
 {
   op = constrain(op, 0, 5);
   step = constrain(step, 0, 3);
@@ -1268,7 +1268,7 @@ void Dexed::setOPRate(uint8_t op, uint8_t step, uint8_t rate)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPRate(uint8_t op, uint8_t step)
+FLASHMEM uint8_t Dexed::getOPRate(uint8_t op, uint8_t step)
 {
   op = constrain(op, 0, 5);
   step = constrain(step, 0, 3);
@@ -1276,7 +1276,7 @@ uint8_t Dexed::getOPRate(uint8_t op, uint8_t step)
   return (data[(op * 21) + DEXED_OP_EG_R1 + step]);
 }
 
-void Dexed::setOPLevel(uint8_t op, uint8_t step, uint8_t level)
+FLASHMEM void Dexed::setOPLevel(uint8_t op, uint8_t step, uint8_t level)
 {
   op = constrain(op, 0, 5);
   step = constrain(step, 0, 3);
@@ -1286,7 +1286,7 @@ void Dexed::setOPLevel(uint8_t op, uint8_t step, uint8_t level)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPLevel(uint8_t op, uint8_t step)
+FLASHMEM uint8_t Dexed::getOPLevel(uint8_t op, uint8_t step)
 {
   op = constrain(op, 0, 5);
   step = constrain(step, 0, 3);
@@ -1294,7 +1294,7 @@ uint8_t Dexed::getOPLevel(uint8_t op, uint8_t step)
   return (data[(op * 21) + DEXED_OP_EG_L1 + step]);
 }
 
-void Dexed::setOPKeyboardLevelScalingBreakPoint(uint8_t op, uint8_t level)
+FLASHMEM void Dexed::setOPKeyboardLevelScalingBreakPoint(uint8_t op, uint8_t level)
 {
   op = constrain(op, 0, 5);
   level = constrain(level, 0, 99);
@@ -1303,14 +1303,14 @@ void Dexed::setOPKeyboardLevelScalingBreakPoint(uint8_t op, uint8_t level)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardLevelScalingBreakPoint(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardLevelScalingBreakPoint(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_LEV_SCL_BRK_PT]);
 }
 
-void Dexed::setOPKeyboardLevelScalingDepthLeft(uint8_t op, uint8_t depth)
+FLASHMEM void Dexed::setOPKeyboardLevelScalingDepthLeft(uint8_t op, uint8_t depth)
 {
   op = constrain(op, 0, 5);
   depth = constrain(depth, 0, 99);
@@ -1319,14 +1319,14 @@ void Dexed::setOPKeyboardLevelScalingDepthLeft(uint8_t op, uint8_t depth)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardLevelScalingDepthLeft(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardLevelScalingDepthLeft(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_SCL_LEFT_DEPTH]);
 }
 
-void Dexed::setOPKeyboardLevelScalingDepthRight(uint8_t op, uint8_t depth)
+FLASHMEM void Dexed::setOPKeyboardLevelScalingDepthRight(uint8_t op, uint8_t depth)
 {
   op = constrain(op, 0, 5);
   depth = constrain(depth, 0, 99);
@@ -1335,14 +1335,14 @@ void Dexed::setOPKeyboardLevelScalingDepthRight(uint8_t op, uint8_t depth)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardLevelScalingDepthRight(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardLevelScalingDepthRight(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_SCL_RGHT_DEPTH]);
 }
 
-void Dexed::setOPKeyboardLevelScalingCurveLeft(uint8_t op, uint8_t curve)
+FLASHMEM void Dexed::setOPKeyboardLevelScalingCurveLeft(uint8_t op, uint8_t curve)
 {
   op = constrain(op, 0, 5);
   curve = constrain(curve, 0, 3);
@@ -1351,14 +1351,14 @@ void Dexed::setOPKeyboardLevelScalingCurveLeft(uint8_t op, uint8_t curve)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardLevelScalingCurveLeft(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardLevelScalingCurveLeft(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_SCL_LEFT_CURVE]);
 }
 
-void Dexed::setOPKeyboardLevelScalingCurveRight(uint8_t op, uint8_t curve)
+FLASHMEM void Dexed::setOPKeyboardLevelScalingCurveRight(uint8_t op, uint8_t curve)
 {
   op = constrain(op, 0, 5);
   curve = constrain(curve, 0, 3);
@@ -1367,14 +1367,14 @@ void Dexed::setOPKeyboardLevelScalingCurveRight(uint8_t op, uint8_t curve)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardLevelScalingCurveRight(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardLevelScalingCurveRight(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_SCL_RGHT_CURVE]);
 }
 
-void Dexed::setOPKeyboardRateScale(uint8_t op, uint8_t scale)
+FLASHMEM void Dexed::setOPKeyboardRateScale(uint8_t op, uint8_t scale)
 {
   op = constrain(op, 0, 5);
   scale = constrain(scale, 0, 7);
@@ -1383,14 +1383,14 @@ void Dexed::setOPKeyboardRateScale(uint8_t op, uint8_t scale)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardRateScale(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardRateScale(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_OSC_RATE_SCALE]);
 }
 
-void Dexed::setOPAmpModulationSensity(uint8_t op, uint8_t sensitivity)
+FLASHMEM void Dexed::setOPAmpModulationSensity(uint8_t op, uint8_t sensitivity)
 {
   op = constrain(op, 0, 5);
   sensitivity = constrain(sensitivity, 0, 3);
@@ -1399,14 +1399,14 @@ void Dexed::setOPAmpModulationSensity(uint8_t op, uint8_t sensitivity)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPAmpModulationSensity(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPAmpModulationSensity(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_AMP_MOD_SENS]);
 }
 
-void Dexed::setOPKeyboardVelocitySensity(uint8_t op, uint8_t sensitivity)
+FLASHMEM void Dexed::setOPKeyboardVelocitySensity(uint8_t op, uint8_t sensitivity)
 {
   op = constrain(op, 0, 5);
   sensitivity = constrain(sensitivity, 0, 7);
@@ -1415,14 +1415,14 @@ void Dexed::setOPKeyboardVelocitySensity(uint8_t op, uint8_t sensitivity)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPKeyboardVelocitySensity(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPKeyboardVelocitySensity(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_KEY_VEL_SENS]);
 }
 
-void Dexed::setOPOutputLevel(uint8_t op, uint8_t level)
+FLASHMEM void Dexed::setOPOutputLevel(uint8_t op, uint8_t level)
 {
   op = constrain(op, 0, 5);
   level = constrain(level, 0, 99);
@@ -1431,14 +1431,14 @@ void Dexed::setOPOutputLevel(uint8_t op, uint8_t level)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPOutputLevel(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPOutputLevel(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_OUTPUT_LEV]);
 }
 
-void Dexed::setOPMode(uint8_t op, uint8_t mode)
+FLASHMEM void Dexed::setOPMode(uint8_t op, uint8_t mode)
 {
   op = constrain(op, 0, 5);
   mode = constrain(mode, 0, 1);
@@ -1447,14 +1447,14 @@ void Dexed::setOPMode(uint8_t op, uint8_t mode)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPMode(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPMode(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_OSC_MODE]);
 }
 
-void Dexed::setOPFrequencyCoarse(uint8_t op, uint8_t frq_coarse)
+FLASHMEM void Dexed::setOPFrequencyCoarse(uint8_t op, uint8_t frq_coarse)
 {
   op = constrain(op, 0, 5);
   frq_coarse = constrain(frq_coarse, 0, 31);
@@ -1463,14 +1463,14 @@ void Dexed::setOPFrequencyCoarse(uint8_t op, uint8_t frq_coarse)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPFrequencyCoarse(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPFrequencyCoarse(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_FREQ_COARSE]);
 }
 
-void Dexed::setOPFrequencyFine(uint8_t op, uint8_t frq_fine)
+FLASHMEM void Dexed::setOPFrequencyFine(uint8_t op, uint8_t frq_fine)
 {
   op = constrain(op, 0, 5);
   frq_fine = constrain(frq_fine, 0, 99);
@@ -1479,14 +1479,14 @@ void Dexed::setOPFrequencyFine(uint8_t op, uint8_t frq_fine)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPFrequencyFine(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPFrequencyFine(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_FREQ_FINE]);
 }
 
-void Dexed::setOPDetune(uint8_t op, uint8_t detune)
+FLASHMEM void Dexed::setOPDetune(uint8_t op, uint8_t detune)
 {
   op = constrain(op, 0, 5);
   detune = constrain(detune, 0, 14);
@@ -1495,14 +1495,14 @@ void Dexed::setOPDetune(uint8_t op, uint8_t detune)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getOPDetune(uint8_t op)
+FLASHMEM uint8_t Dexed::getOPDetune(uint8_t op)
 {
   op = constrain(op, 0, 5);
 
   return (data[(op * 21) + DEXED_OP_OSC_DETUNE]);
 }
 
-void Dexed::setPitchRate(uint8_t step, uint8_t rate)
+FLASHMEM void Dexed::setPitchRate(uint8_t step, uint8_t rate)
 {
   step = constrain(step, 0, 3);
   rate = constrain(rate, 0, 99);
@@ -1511,14 +1511,14 @@ void Dexed::setPitchRate(uint8_t step, uint8_t rate)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getPitchRate(uint8_t step)
+FLASHMEM uint8_t Dexed::getPitchRate(uint8_t step)
 {
   step = constrain(step, 0, 3);
 
   return (data[DEXED_VOICE_OFFSET + DEXED_PITCH_EG_R1 + step]);
 }
 
-void Dexed::setPitchLevel(uint8_t step, uint8_t level)
+FLASHMEM void Dexed::setPitchLevel(uint8_t step, uint8_t level)
 {
   step = constrain(step, 0, 3);
   level = constrain(level, 0, 99);
@@ -1527,14 +1527,14 @@ void Dexed::setPitchLevel(uint8_t step, uint8_t level)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getPitchLevel(uint8_t step)
+FLASHMEM uint8_t Dexed::getPitchLevel(uint8_t step)
 {
   step = constrain(step, 0, 3);
 
   return (data[DEXED_VOICE_OFFSET + DEXED_PITCH_EG_L1 + step]);
 }
 
-void Dexed::setAlgorithm(uint8_t algorithm)
+FLASHMEM void Dexed::setAlgorithm(uint8_t algorithm)
 {
   algorithm = constrain(algorithm, 0, 31);
 
@@ -1542,12 +1542,12 @@ void Dexed::setAlgorithm(uint8_t algorithm)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getAlgorithm(void)
+FLASHMEM uint8_t Dexed::getAlgorithm(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_ALGORITHM]);
 }
 
-void Dexed::setFeedback(uint8_t feedback)
+FLASHMEM void Dexed::setFeedback(uint8_t feedback)
 {
   feedback = constrain(feedback, 0, 31);
 
@@ -1555,23 +1555,23 @@ void Dexed::setFeedback(uint8_t feedback)
   doRefreshVoice();
 }
 
-uint8_t Dexed::getFeedback(void)
+FLASHMEM uint8_t Dexed::getFeedback(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_FEEDBACK]);
 }
 
-void Dexed::setOscillatorSync(bool sync)
+FLASHMEM void Dexed::setOscillatorSync(bool sync)
 {
   data[DEXED_VOICE_OFFSET + DEXED_OSC_KEY_SYNC] = sync;
   doRefreshVoice();
 }
 
-bool Dexed::getOscillatorSync(void)
+FLASHMEM bool Dexed::getOscillatorSync(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_OSC_KEY_SYNC]);
 }
 
-void Dexed::setLFOSpeed(uint8_t speed)
+FLASHMEM void Dexed::setLFOSpeed(uint8_t speed)
 {
   speed = constrain(speed, 0, 99);
 
@@ -1579,12 +1579,12 @@ void Dexed::setLFOSpeed(uint8_t speed)
   lfo.reset(data + 137);
 }
 
-uint8_t Dexed::getLFOSpeed(void)
+FLASHMEM uint8_t Dexed::getLFOSpeed(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_SPEED]);
 }
 
-void Dexed::setLFODelay(uint8_t delay)
+FLASHMEM void Dexed::setLFODelay(uint8_t delay)
 {
   delay = constrain(delay, 0, 99);
 
@@ -1592,12 +1592,12 @@ void Dexed::setLFODelay(uint8_t delay)
   lfo.reset(data + 137);
 }
 
-uint8_t Dexed::getLFODelay(void)
+FLASHMEM uint8_t Dexed::getLFODelay(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_DELAY]);
 }
 
-void Dexed::setLFOPitchModulationDepth(uint8_t depth)
+FLASHMEM void Dexed::setLFOPitchModulationDepth(uint8_t depth)
 {
   depth = constrain(depth, 0, 99);
 
@@ -1605,12 +1605,12 @@ void Dexed::setLFOPitchModulationDepth(uint8_t depth)
   lfo.reset(data + 137);
 }
 
-uint8_t Dexed::getLFOPitchModulationDepth(void)
+FLASHMEM uint8_t Dexed::getLFOPitchModulationDepth(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_DEP]);
 }
 
-void Dexed::setLFOAmpModulationDepth(uint8_t depth)
+FLASHMEM void Dexed::setLFOAmpModulationDepth(uint8_t depth)
 {
   depth = constrain(depth, 0, 99);
 
@@ -1618,23 +1618,23 @@ void Dexed::setLFOAmpModulationDepth(uint8_t depth)
   lfo.reset(data + 137);
 }
 
-uint8_t Dexed::getLFOAmpModulationDepth(void)
+FLASHMEM uint8_t Dexed::getLFOAmpModulationDepth(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_AMP_MOD_DEP]);
 }
 
-void Dexed::setLFOSync(bool sync)
+FLASHMEM void Dexed::setLFOSync(bool sync)
 {
   data[DEXED_VOICE_OFFSET + DEXED_LFO_SYNC] = sync;
 }
 
-bool Dexed::getLFOSync(void)
+FLASHMEM bool Dexed::getLFOSync(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_SYNC]);
   lfo.reset(data + 137);
 }
 
-void Dexed::setLFOWaveform(uint8_t waveform)
+FLASHMEM void Dexed::setLFOWaveform(uint8_t waveform)
 {
   waveform = constrain(waveform, 0, 5);
 
@@ -1642,12 +1642,12 @@ void Dexed::setLFOWaveform(uint8_t waveform)
   lfo.reset(data + 137);
 }
 
-uint8_t Dexed::getLFOWaveform(void)
+FLASHMEM uint8_t Dexed::getLFOWaveform(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_WAVE]);
 }
 
-void Dexed::setLFOPitchModulationSensitivity(uint8_t sensitivity)
+FLASHMEM void Dexed::setLFOPitchModulationSensitivity(uint8_t sensitivity)
 {
   sensitivity = constrain(sensitivity, 0, 5);
 
@@ -1655,47 +1655,47 @@ void Dexed::setLFOPitchModulationSensitivity(uint8_t sensitivity)
   lfo.reset(data + 137);
 }
 
-uint8_t Dexed::getLFOPitchModulationSensitivity(void)
+FLASHMEM uint8_t Dexed::getLFOPitchModulationSensitivity(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_LFO_PITCH_MOD_SENS]);
 }
 
-void Dexed::setTranspose(uint8_t transpose)
+FLASHMEM void Dexed::setTranspose(uint8_t transpose)
 {
   transpose = constrain(transpose, 0, 48);
 
   data[DEXED_VOICE_OFFSET + DEXED_TRANSPOSE] = transpose;
 }
 
-uint8_t Dexed::getTranspose(void)
+FLASHMEM uint8_t Dexed::getTranspose(void)
 {
   return (data[DEXED_VOICE_OFFSET + DEXED_TRANSPOSE]);
 }
 
-void Dexed::setName(char* name)
+FLASHMEM void Dexed::setName(char* name)
 {
   strncpy(name, (char*)&data[DEXED_VOICE_OFFSET + DEXED_NAME], 10);
 }
 
-void Dexed::getName(char* buffer)
+FLASHMEM void Dexed::getName(char* buffer)
 {
   strncpy((char*)&data[DEXED_VOICE_OFFSET + DEXED_NAME], buffer, 10);
 }
 
-void Dexed::setVelocityScale(uint8_t offset, uint8_t max)
+FLASHMEM void Dexed::setVelocityScale(uint8_t offset, uint8_t max)
 {
   velocity_offset = offset & 0x7f;
   velocity_max = max & 0x7f;
   velocity_diff = velocity_max - velocity_offset;
 }
 
-void Dexed::getVelocityScale(uint8_t* offset, uint8_t* max)
+FLASHMEM void Dexed::getVelocityScale(uint8_t* offset, uint8_t* max)
 {
   *offset = velocity_offset;
   *max = velocity_max;
 }
 
-void Dexed::setVelocityScale(uint8_t setup = MIDI_VELOCITY_SCALING_OFF)
+FLASHMEM void Dexed::setVelocityScale(uint8_t setup = MIDI_VELOCITY_SCALING_OFF)
 {
   switch (setup)
   {

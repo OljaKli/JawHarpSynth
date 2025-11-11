@@ -147,6 +147,7 @@ uint8_t gamepad_0_neutral;
 uint8_t gamepad_1_neutral;
 
 uint8_t previous_scroll_position = 255;
+uint8_t fade_text = 255;
 
 bool lastWasCustomSample = false;
 bool drumScreenActive = false;
@@ -2874,21 +2875,17 @@ uint8_t screensaver_mode_active;
 int screensaver_switcher_timer;
 extern uint8_t screensaver_brightness;
 extern uint16_t screensaver_counthue;
-
 bool flock_running = false;
-
 extern void terrain_init();
 extern void terrain_frame();
-
+extern AsteroidsScreensaver asteroidsSaver;
 extern void flock_init();
 extern void flock_frame();
 extern void CM5_init();
 extern void CM5_frame_I();
 extern void CM5_frame_II();
-
 extern void gol_setup();
 extern void gol_loop();
-
 extern bool wakeScreenFlag;
 
 FLASHMEM void resetScreenTimer() {
@@ -2936,7 +2933,7 @@ FLASHMEM void print_screensaver_mode()
 
 FLASHMEM void print_screensaver_mode_active()
 {
-  if (screensaver_switcher_timer < 260)
+  if (fade_text > 1)
   {
     if (screensaver_mode_active == ScreenSaver::QIX)
       display.print(F("QIX"));
@@ -2964,13 +2961,9 @@ FLASHMEM void print_screensaver_mode_active()
     display.print(F("       "));
 }
 
-uint8_t fade_text = 255;
-
 FLASHMEM void sc_name_fade()
 {
-  if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
-  {
-    if (screensaver_switcher_timer < 270)
+  if (fade_text > 1)
     {
       display.setTextSize(0);
       display.setCursor(10, DISPLAY_HEIGHT - CHAR_height_small * 2);
@@ -2979,40 +2972,9 @@ FLASHMEM void sc_name_fade()
       int col = ColorHSV(0, 0, fade_text);
       display.setTextColor(col, COLOR_BACKGROUND);
       print_screensaver_mode_active();
-
       if (fade_text > 1)
-        fade_text = fade_text / 1.01;
+        fade_text = fade_text / 1.02;
     }
-  }
-}
-
-FLASHMEM void asteroids()
-{
-  screensaver_switcher_timer = 0;
-  extern int numTouchPoints;
-  // Create instance inside the function
-  AsteroidsScreensaver asteroidsSaver;
-  // Initialize
-  asteroidsSaver.begin();
-
-  while (true) {
-    asteroidsSaver.update();
-    delay(20);
-    check_midi_devices();
-    updateTouchScreen();
-    lcdml_menu_control();
-    sc_name_fade();
-
-    if (screensaver_switcher_timer > SCREENSAVER_STAY_TIME)
-      break;
-
-    if (LCDML.BT_checkAny() || numTouchPoints != 0)
-    {
-      LCDML.FUNC_goBackToMenu();
-      break;
-    }
-    screensaver_switcher_timer++;
-  }
 }
 
 // *********************************************************************
@@ -3052,8 +3014,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
       CM5_init();
     }
     if (screensaver_mode_active == ScreenSaver::ASTERO) {
-      //  asteroids();
-
+  asteroidsSaver.begin();
     }
 
     // setup function
@@ -3073,6 +3034,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
     if (++screensaver_counthue > SCREENSAVER_MAX_COUNTHUE) {
       screensaver_counthue = 0;
     }
+
     if (screensaver_mode_active == ScreenSaver::QIX)
       qix_screensaver();
     else if (screensaver_mode_active == ScreenSaver::CUBE)
@@ -3113,7 +3075,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
     }
     else if (screensaver_mode_active == ScreenSaver::ASTERO)
     {
-      asteroids();
+      asteroidsSaver.update();
     }
 
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
@@ -3190,7 +3152,7 @@ FLASHMEM void setup_screensaver(void)
   {
     // Enable Screensaver (screensaver menu function, time to activate in ms)
     LCDML.SCREEN_enable(mFunc_screensaver, configuration.sys.screen_saver_start * 60000); // from parameter in minutes
-    //LCDML.SCREEN_enable(mFunc_screensaver, 5000); // quick screensaver test time
+   // LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
   }
 }
 

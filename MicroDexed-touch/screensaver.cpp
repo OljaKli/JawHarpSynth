@@ -2283,3 +2283,5 @@ FLASHMEM void AsteroidsScreensaver::erasePreviousState() {
     }
   }
 }
+
+ DMAMEM AsteroidsScreensaver asteroidsSaver;

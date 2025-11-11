@@ -278,7 +278,7 @@ AudioMixer<3> finalized_mixer_r;
 AudioMixer<3> finalized_mixer_l;
 
 AudioSynthWaveformDc dc1;
-microsynth_t microsynth[NUM_MICROSYNTH];
+DMAMEM microsynth_t microsynth[NUM_MICROSYNTH];
 
 // Drumset
 #if NUM_DRUMS > 0
@@ -2487,7 +2487,7 @@ FLASHMEM uint8_t count_chord_notes() {
   return count;
 }
 
-SuggestedChord suggestions[6];
+DMAMEM SuggestedChord suggestions[6];
 
 FLASHMEM void resetCurrentChord() {
   memset(&currentChord, 0, sizeof(ChordInfo));

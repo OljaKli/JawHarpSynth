@@ -16,14 +16,14 @@
 
 #include "synth.h"
 #include "pitchenv.h"
-
+#include <Arduino.h>
 int32_t PitchEnv::unit_;
 
 void PitchEnv::init(FRAC_NUM sample_rate) {
   unit_ = _N_ * (1 << 24) / (21.3 * sample_rate) + 0.5;
 }
 
-const uint8_t pitchenv_rate[] = {
+PROGMEM const uint8_t pitchenv_rate[] = {
   1, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12,
   12, 13, 13, 14, 14, 15, 16, 16, 17, 18, 18, 19, 20, 21, 22, 23, 24,
   25, 26, 27, 28, 30, 31, 33, 34, 36, 37, 38, 39, 41, 42, 44, 46, 47,
@@ -32,7 +32,7 @@ const uint8_t pitchenv_rate[] = {
   153, 159, 165, 171, 178, 185, 193, 202, 211, 232, 243, 254, 255
 };
 
-const int8_t pitchenv_tab[] = {
+PROGMEM const int8_t pitchenv_tab[] = {
   -128, -116, -104, -95, -85, -76, -68, -61, -56, -52, -49, -46, -43,
   -41, -39, -37, -35, -33, -32, -31, -30, -29, -28, -27, -26, -25, -24,
   -23, -22, -21, -20, -19, -18, -17, -16, -15, -14, -13, -12, -11, -10,
@@ -42,7 +42,7 @@ const int8_t pitchenv_tab[] = {
   82, 92, 103, 115, 127
 };
 
-void PitchEnv::set(const int32_t r[4], const int32_t l[4]) {
+FLASHMEM void PitchEnv::set(const int32_t r[4], const int32_t l[4]) {
   for (int i = 0; i < 4; i++) {
     rates_[i] = r[i];
     levels_[i] = l[i];
@@ -52,7 +52,7 @@ void PitchEnv::set(const int32_t r[4], const int32_t l[4]) {
   advance(0);
 }
 
-int32_t PitchEnv::getsample() {
+FLASHMEM int32_t PitchEnv::getsample() {
   if (ix_ < 3 || ((ix_ < 4) && !down_)) {
     if (rising_) {
       level_ += inc_;
@@ -71,14 +71,14 @@ int32_t PitchEnv::getsample() {
   return level_;
 }
 
-void PitchEnv::keydown(bool d) {
+FLASHMEM void PitchEnv::keydown(bool d) {
   if (down_ != d) {
     down_ = d;
     advance(d ? 0 : 3);
   }
 }
 
-void PitchEnv::advance(int newix) {
+FLASHMEM void PitchEnv::advance(int newix) {
   ix_ = newix;
   if (ix_ < 4) {
     int32_t newlevel = levels_[ix_];
@@ -88,6 +88,6 @@ void PitchEnv::advance(int newix) {
   }
 }
 
-void PitchEnv::getPosition(char *step) {
+FLASHMEM void PitchEnv::getPosition(char *step) {
   *step = ix_;
 }

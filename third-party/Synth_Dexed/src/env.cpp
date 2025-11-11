@@ -16,7 +16,7 @@
 */
 
 //using namespace std;
-
+#include <Arduino.h>
 #include <math.h>
 
 #include "synth.h"
@@ -48,7 +48,7 @@ void Env::init_sr(double sampleRate) {
   sr_multiplier = (44100.0 / sampleRate) * (1 << 24);
 }
 
-void Env::init(const int32_t r[4], const int32_t l[4], int32_t ol, int32_t rate_scaling) {
+FLASHMEM void Env::init(const int32_t r[4], const int32_t l[4], int32_t ol, int32_t rate_scaling) {
   for (int i = 0; i < 4; i++) {
     rates_[i] = r[i];
     levels_[i] = l[i];
@@ -60,7 +60,7 @@ void Env::init(const int32_t r[4], const int32_t l[4], int32_t ol, int32_t rate_
   advance(0);
 }
 
-int32_t Env::getsample() {
+FLASHMEM int32_t Env::getsample() {
 #ifdef ACCURATE_ENVELOPE
   if (staticcount_) {
     staticcount_ -= _N_;
@@ -110,7 +110,7 @@ int32_t Env::scaleoutlevel(int32_t outlevel) {
   return outlevel >= 20 ? 28 + outlevel : levellut[outlevel];
 }
 
-void Env::advance(int newix) {
+FLASHMEM void Env::advance(int newix) {
   ix_ = newix;
   if (ix_ < 4) {
     int32_t newlevel = levels_[ix_];
@@ -150,7 +150,7 @@ void Env::advance(int newix) {
   }
 }
 
-void Env::update(const int32_t r[4], const int32_t l[4], int32_t ol, int32_t rate_scaling) {
+FLASHMEM void Env::update(const int32_t r[4], const int32_t l[4], int32_t ol, int32_t rate_scaling) {
   for (int i = 0; i < 4; i++) {
     rates_[i] = r[i];
     levels_[i] = l[i];
@@ -168,7 +168,7 @@ void Env::update(const int32_t r[4], const int32_t l[4], int32_t ol, int32_t rat
   }
 }
 
-void Env::getPosition(char *step) {
+FLASHMEM void Env::getPosition(char *step) {
   *step = ix_;
 }
 
