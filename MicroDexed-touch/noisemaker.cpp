@@ -22,11 +22,11 @@ extern bool drumScreenActive;
 extern uint8_t activeSample;
 extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 
-DMAMEM const char* noisemaker_category_names[] = {
+ const char* noisemaker_category_names[] = {
    "BASSDRUM" , "SNARE", "TOM", "CONGA", "RIMSHOT", "CLAP", "HIHAT", "CRASH", "RIDE", "COWBELL", "CLAVES", "MARACAS", "ZAP", "SNAP", "SYNTH"
 };
 
-DMAMEM const char* noisemaker_short_category_names[] = {
+ const char* noisemaker_short_category_names[] = {
    "BD" , "SNARE", "TOM", "CONGA", "RIM", "CLAP", "HH", "CRASH", "RIDE", "COW", "CLAV", "MARA", "ZAP", "SNAP", "SYNTH"
 };
 
@@ -35,7 +35,7 @@ enum SynthWaveform { SINE, SAW, SQUARE, SQ80_BASS };
 FLASHMEM void addAutoUpdateParameterEditor_uint8_t(const char* name, uint8_t minv, uint8_t maxv, uint8_t* value);
 FLASHMEM void addAutoUpdateParameterEditor_uint16_t(const char* name, uint16_t minv, uint16_t maxv, uint16_t* value);
 
-DMAMEM NoiseMakerParams nm_params = { NM_BD };
+NoiseMakerParams nm_params = { NM_BD };
 uint8_t noisemaker_custom_slot = 0;
 int16_t* nm_preview_data = nullptr;
 uint32_t nm_preview_len = 0;
