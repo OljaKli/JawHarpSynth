@@ -861,7 +861,7 @@ public:
   }
 };
 
-DMAMEM Terrain terrain;
+Terrain terrain;
 int yTerrainOffset = 0;
 
 FLASHMEM void terrain_init()
@@ -947,7 +947,7 @@ public:
     return 50;
   }
 };
-DMAMEM PatternFlock flock_instance;
+PatternFlock flock_instance;
 
 FLASHMEM void flock_init()
 {
@@ -1168,7 +1168,7 @@ private:
 };
 
 // Global instance
-DMAMEM GameOfLife life;
+GameOfLife life;
 
 FLASHMEM void gol_setup() {
   // Initialize your display here
@@ -2284,4 +2284,4 @@ FLASHMEM void AsteroidsScreensaver::erasePreviousState() {
   }
 }
 
- DMAMEM AsteroidsScreensaver asteroidsSaver;
+AsteroidsScreensaver asteroidsSaver;

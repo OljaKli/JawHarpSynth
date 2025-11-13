@@ -21,28 +21,60 @@ void UI_func_liveseq_graphic(uint8_t param);
 class UI_LiveSeq_PianoRoll {
 public:
 
-  struct TentativeEdit {
+ struct EditingNote {
     bool active = false;
-
-    // Store indices instead of pointers (safe against reallocation)
+    bool committed = false;
+    
+    LiveSequencer::MidiEvent originalNoteOn;
+    LiveSequencer::MidiEvent originalNoteOff;
+    LiveSequencer::MidiEvent editingNoteOn;
+    LiveSequencer::MidiEvent editingNoteOff;
+    
+    // Store both original and target chunks
     uint16_t originalSongPatternOn = UINT16_MAX;
     uint16_t originalSongPatternOff = UINT16_MAX;
+    uint16_t targetSongPatternOn = UINT16_MAX;  // ADD THIS
+    uint16_t targetSongPatternOff = UINT16_MAX; // ADD THIS
+    
     size_t originalNoteOnIndex = 0;
     size_t originalNoteOffIndex = 0;
+    int16_t originalNoteIndex = -1;
+    
+    EditingNote() { reset(); }
+    
+    void reset() {
+        active = false;
+        committed = false;
+        originalSongPatternOn = UINT16_MAX;
+        originalSongPatternOff = UINT16_MAX;
+        targetSongPatternOn = UINT16_MAX;       // INITIALIZE
+        targetSongPatternOff = UINT16_MAX;      // INITIALIZE
+        originalNoteOnIndex = 0;
+        originalNoteOffIndex = 0;
+        originalNoteIndex = -1;
+        
+        // Properly initialize MidiEvent objects
+        originalNoteOn = LiveSequencer::MidiEvent{};
+        originalNoteOff = LiveSequencer::MidiEvent{};
+        editingNoteOn = LiveSequencer::MidiEvent{};
+        editingNoteOff = LiveSequencer::MidiEvent{};
+        originalNoteOn.event = midi::InvalidType;
+        originalNoteOff.event = midi::InvalidType;
+        editingNoteOn.event = midi::InvalidType;
+        editingNoteOff.event = midi::InvalidType;
+    }
+} editingNote;
 
-    // Store copies of the events being edited
-    LiveSequencer::MidiEvent tentativeNoteOn;
-    LiveSequencer::MidiEvent tentativeNoteOff;
+FLASHMEM void startEditingNote(int16_t noteIndex);
+FLASHMEM void updateEditingNotePosition(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff);
+FLASHMEM void updateEditingNotePitch(uint8_t newPitch);
+FLASHMEM void commitEditingNote();
+FLASHMEM void cancelEditingNote();
 
-    // Track the CURRENT absolute times during editing
-    uint32_t currentAbsTimeOn = 0;
-    uint32_t currentAbsTimeOff = 0;
-  } tentativeEdit;
+// Add this helper method declaration
+FLASHMEM uint16_t calculateNoteWidth(const LiveSequencer::MidiEvent& noteOn, const LiveSequencer::MidiEvent& noteOff) const;
+FLASHMEM void drawEditingNote();
 
-  FLASHMEM void startTentativeEdit(int16_t noteIndex);
-  FLASHMEM void updateTentativeEdit(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff);
-  FLASHMEM void commitTentativeEdit();
-  FLASHMEM void cancelTentativeEdit();
   FLASHMEM uint32_t getMaxSongTime() const;
 
   uint32_t getCurrentPlaybackTime() const;
