@@ -1065,12 +1065,23 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBarNumbers(void) {
     if (bar < view.numBars) {
       const uint16_t displayBar = view.startBar + bar;
       char barInfo[16];
+      
       if (data.isSongMode && !data.useGridSongMode) {
+        // Song mode: show absolute bar numbers
         snprintf(barInfo, sizeof(barInfo), "%d", displayBar + 1);
       }
       else {
-        snprintf(barInfo, sizeof(barInfo), "%d", (displayBar % data.numberOfBars) + 1);
+        // Pattern mode: check if we're viewing beyond the actual pattern length
+        if (view.numBars > data.numberOfBars || view.startBar > 0) {
+          // Extended view: show absolute bar numbers
+          snprintf(barInfo, sizeof(barInfo), "%d", displayBar + 1);
+        }
+        else {
+          // Normal pattern view: show relative bar numbers
+          snprintf(barInfo, sizeof(barInfo), "%d", (displayBar % data.numberOfBars) + 1);
+        }
       }
+      
       display.setCursor(x - 4, 5);
       display.print(barInfo);
     }
@@ -1265,6 +1276,12 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
   if (num == view.numBars) return;
 
   uint16_t maxBars = getMaxBarsForCurrentMode();
+  
+  // For pattern mode, ensure we can zoom out to at least 4 bars
+  if (!data.isSongMode && data.activeTrack < SONG_MODE_NOTES_TRACK) {
+    maxBars = std::max(maxBars, uint16_t(4));
+  }
+  
   uint16_t newNumBars = constrain(num, 1, maxBars);
 
   if (newNumBars != view.numBars) {
@@ -1505,9 +1522,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleViewZoomX(EncoderEvents e) {
     }
   }
   else {
+     // PATTERN MODE: Allow zooming out to at least 4 bars, or more if available
     int16_t newNumBars = view.numBars + e.dir;
-    if (newNumBars < 1) newNumBars = 1;
-    if (newNumBars > int16_t(data.numberOfBars)) newNumBars = data.numberOfBars;
+    
+    // Set minimum to 1 bar, maximum to at least 4 bars or the actual number of bars if larger
+    uint16_t minBars = 1;
+    uint16_t maxBars = std::max(uint16_t(4), uint16_t(data.numberOfBars));
+    
+    if (newNumBars < minBars) newNumBars = minBars;
+    if (newNumBars > int16_t(maxBars)) newNumBars = int16_t(maxBars);
+
     if (newNumBars != view.numBars) {
       setNumBars(newNumBars);
       drawFlags |= DRAW_CONTENT_FULL;
@@ -1535,11 +1559,17 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleViewScrollX(EncoderEvents e) {
     }
   }
   else {
+    // PATTERN MODE: Allow scrolling with extended bar range
     int16_t newStartBar = view.startBar + e.dir;
-    int16_t maxStartBar = int16_t(data.numberOfBars) - view.numBars;
+    
+    // Calculate maximum start bar based on extended range (at least 4 bars total)
+    uint16_t totalAvailableBars = std::max(uint16_t(4), uint16_t(data.numberOfBars));
+    int16_t maxStartBar = int16_t(totalAvailableBars) - view.numBars;
     if (maxStartBar < 0) maxStartBar = 0;
+    
     if (newStartBar < 0) newStartBar = 0;
     if (newStartBar > maxStartBar) newStartBar = maxStartBar;
+    
     if (newStartBar != view.startBar) {
       setBarStart(newStartBar);
       drawFlags |= DRAW_CONTENT_FULL;
@@ -3422,9 +3452,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       }
       else {
         data.isSongMode = false;
-        view.startBar = 0;
-        view.numBars = data.numberOfBars;
-        view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
+      view.startBar = 0;
+      // ALWAYS DEFAULT TO 4 BARS FOR PATTERN TRACKS
+      view.numBars = 4;
+      view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
       }
 
       view.startOctave = 1;
