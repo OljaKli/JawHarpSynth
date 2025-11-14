@@ -14013,6 +14013,11 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
     display.print(F("MUTE"));
     display.setCursor(1 + 5 * CHAR_width_small, 2);
     display.print(F("MATRIX"));
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid_small(0, 4);
+    display.print(F("MUTE/UNMUTE"));
+    setCursor_textGrid_small(0, 5);
+    display.print(F("AT/IN:"));
     helptext_l(back_text);
     helptext_r(F("TOUCH SCREEN TO MUTE/UNMUTE"));
   }
@@ -14021,12 +14026,6 @@ FLASHMEM void UI_func_seq_mute_matrix(uint8_t param)
     uint8_t button_count = 0;
     char buf[4];
     uint8_t spacerx = 90;
-
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    setCursor_textGrid_small(0, 4);
-    display.print(F("MUTE/UNMUTE"));
-    setCursor_textGrid_small(0, 5);
-    display.print(F("AT/IN:"));
 
     for (uint8_t y = 0; y < 3; y++)
     {
