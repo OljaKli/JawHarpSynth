@@ -3076,6 +3076,8 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
     else if (screensaver_mode_active == ScreenSaver::ASTERO)
     {
       asteroidsSaver.update();
+       if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
+        screensaver_switcher_timer = screensaver_switcher_timer + 5; //since the framerate is slower on purpose
     }
 
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)

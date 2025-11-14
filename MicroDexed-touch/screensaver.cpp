@@ -1380,6 +1380,13 @@ FLASHMEM void AsteroidsScreensaver::begin() {
 }
 
 FLASHMEM void AsteroidsScreensaver::update() {
+   // Ensure ship is initialized
+  if (ship.x == 0 && ship.y == 0) {
+    ship.x = DISPLAY_WIDTH / 2;
+    ship.y = DISPLAY_HEIGHT / 2;
+    ship.prevX = ship.x;
+    ship.prevY = ship.y;
+  }
   // Reset asteroid flash states
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
     if (asteroids[i].active) {
