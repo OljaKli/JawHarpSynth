@@ -358,22 +358,34 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
 
     // Ensure timeOff is always after timeOn
     if (timeOff <= timeOn) {
-      timeOff = timeOn + data.patternLengthMs / 16; // Default to 1/16 note length
+      timeOff = timeOn + data.patternLengthMs / 16;
     }
 
-    x = getNoteCoord(timeOn);
+    // Calculate viewport boundaries
+    const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
+    const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
 
-    // Calculate note length in viewport pixels
-    uint32_t lenMs = timeOff - timeOn;
-    w = std::max(1, int(roundf(lenMs * view.msToPix)));
+    // If note starts before viewport, clamp start to viewport
+    uint32_t visibleTimeOn = std::max(timeOn, viewStartMs);
+    uint32_t visibleTimeOff = std::min(timeOff, viewEndMs);
+    
+    // Only draw if there's a visible portion
+    if (visibleTimeOn >= visibleTimeOff) {
+      return;
+    }
 
-    // Clamp the end position to prevent drawing beyond the display
+    x = getNoteCoord(visibleTimeOn);  // Use clamped start time
+    
+    // Calculate width based on VISIBLE portion only
+    uint32_t visibleLenMs = visibleTimeOff - visibleTimeOn;
+    w = std::max(1, int(roundf(visibleLenMs * view.msToPix)));
+
+    // Additional clamp to prevent drawing beyond display
     uint16_t endX = x + w;
     if (endX > DISPLAY_WIDTH) {
       w = DISPLAY_WIDTH - x;
     }
 
-    // Ensure minimum visible width for very short notes
     if (w < 1) w = 1;
   }
   else {
