@@ -573,21 +573,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
     }
 
-
     // RESET TO LAYER 0 WHEN OPENING WITH SPECIFIC TRACK
     selectedLayer = 0;
 
-    // FIX: Set the actual mode based on track type
-    if (param >= SONG_MODE_NOTES_TRACK) {
-      data.isSongMode = true;
-    }
-    else {
-      data.isSongMode = false;  // <-- SET TO PATTERN MODE
-    }
-
     liveSeq.setActiveTrack(data.activeTrack);
-
-
     isVisible = true;
     registerTouchHandler(handle_touchscreen_pianoroll);
 
@@ -1195,20 +1184,26 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 
         // Create note on event
         LiveSequencer::MidiEvent on;
-        on.source = data.isSongMode ? LiveSequencer::EVENT_SONG : LiveSequencer::EVENT_PATTERN;
         on.event = midi::NoteOn;
         on.note_in = key;
         on.note_in_velocity = velocity;
 
+        // FIX: Determine the correct track based on what's being displayed
+        bool recordingToSongTrack = false;
+        
         if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
-          // Song mode editing - record to song track
+          // We're viewing the song notes track - record to song track
           on.track = data.stepRecordTargetTrack;
           on.source = LiveSequencer::EVENT_SONG;
-        }
-        else {
-          // Pattern mode editing - record to the currently selected pattern track
+          recordingToSongTrack = true;
+        } else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+          // We're viewing mute automation - shouldn't record notes here
+          return;
+        } else {
+          // We're viewing a pattern track - record to that pattern track
           on.track = data.activeTrack;
           on.source = LiveSequencer::EVENT_PATTERN;
+          recordingToSongTrack = false;
         }
 
         on.layer = stepRecordLayer;
@@ -1217,8 +1212,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
         LiveSequencer::MidiEvent off = on;
         off.event = midi::NoteOff;
 
-        if (data.isSongMode && !data.useGridSongMode) {
-          // ====== SONG MODE: Convert absolute time to chunk-relative storage ======
+        // Use recordingToSongTrack instead of data.isSongMode for the storage logic
+        if (recordingToSongTrack) {
+          // ====== SONG TRACK RECORDING: Convert absolute time to chunk-relative storage ======
           const uint32_t chunkLengthMs = data.numberOfBars * data.patternLengthMs;
 
           // Calculate note ON position
@@ -1263,9 +1259,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
           // Request event sorting for proper playback order
           liveSeq.requestSortEvents();
 
-        }
-        else {
-          // ====== PATTERN MODE: Simple relative time calculation ======
+        } else {
+          // ====== PATTERN TRACK RECORDING: Simple relative time calculation ======
           on.patternNumber = absoluteTimeMs / data.patternLengthMs;
           on.patternMs = absoluteTimeMs % data.patternLengthMs;
 
@@ -1281,17 +1276,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
           drawFlags |= DRAW_CONTENT_FULL;
         }
 
-        // Update layer count if needed (use the actual instrument track, not SONG_MODE_NOTES_TRACK)
+        // Update layer count if needed
         uint8_t targetTrack = on.track; // Use the track we actually assigned to the event
-        if (stepRecordLayer + 1 > data.trackSettings[targetTrack].layerCount) {
+        if (targetTrack < MAX_TRACKS && stepRecordLayer + 1 > data.trackSettings[targetTrack].layerCount) {
           data.trackSettings[targetTrack].layerCount++;
           drawLayersIndicator();
         }
 
         // Reload notes to show the newly added note
         reloadNotes();
-      }
-      else if (keysPressed.empty()) {
+      } else if (keysPressed.empty()) {
         // Advance to next step when all keys released
         step(+1);
       }
@@ -2550,7 +2544,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleStepModeSettingActivated(EncoderEv
   switch (stepMode) {
   case STEP_TARGET_TRACK:
     // Only used in song mode
-    if (data.isSongMode && !data.useGridSongMode) {
+    if (data.isSongMode && !data.useGridSongMode && data.activeTrack==SONG_MODE_NOTES_TRACK) {
       if (hasConstrainedChanged(data.stepRecordTargetTrack, e.dir,
         uint8_t(0), uint8_t(11))) { // 0-11 for tracks 1-12
         headerFlags |= (1 << STEP_TARGET_TRACK);
@@ -2639,7 +2633,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleStepModeNormal(EncoderEvents e, uint8_
   if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
     return;
   }
-  if (data.isSongMode && !data.useGridSongMode) {
+  if (data.isSongMode && !data.useGridSongMode && data.activeTrack == SONG_MODE_NOTES_TRACK) {
     // Song mode: cycle through all step modes including target track
     stepMode = constrain(stepMode + e.dir, 0, STEP_NUM - 1);
   }
@@ -2896,7 +2890,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
       break;
     }
     // Show target track field ONLY in song mode
-    if (data.isSongMode && !data.useGridSongMode) {
+    if (data.isSongMode && !data.useGridSongMode && data.activeTrack == SONG_MODE_NOTES_TRACK) {
       if (modeFlags & (1 << STEP_TARGET_TRACK)) {
         sprintf(s, "TRACK %02i", data.stepRecordTargetTrack + 1); // Display as 1-12
         drawHeaderSetting(GRID.X[2], "PLAY BY", s, false, (stepMode == STEP_TARGET_TRACK));
@@ -3467,14 +3461,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       }
 
       if (newTrack >= SONG_MODE_NOTES_TRACK) {
-        data.isSongMode = true;
+        //data.isSongMode = true;
         uint16_t maxBars = getMaxBarsForCurrentMode();
         view.startBar = 0;
         view.numBars = maxBars;
         view.msToPix = CONTENT_WIDTH / float(view.numBars * data.patternLengthMs);
       }
       else {
-        data.isSongMode = false;
+        //data.isSongMode = false;
         view.startBar = 0;
         // ALWAYS DEFAULT TO 4 BARS FOR PATTERN TRACKS
         view.numBars = 4;
@@ -3665,7 +3659,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
-  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps - 1));
+  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps ));
 
   if (stepCursorChanged) {
     if (stepCursorPositionIndex == view.numBars * stepRecordSteps) {

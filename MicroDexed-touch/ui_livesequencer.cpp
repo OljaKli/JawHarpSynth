@@ -14,7 +14,6 @@ extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
 extern ts_t ts;
 extern bool remote_active;
-
 bool openingScreen = false;
 
 static constexpr int DRAW_INTERVAL = 25; //ms
@@ -125,14 +124,11 @@ FLASHMEM void UI_LiveSequencer::init(void) {
           gridNeedsRedraw = true;
           display.fillScreen(COLOR_BACKGROUND);
         } else {
+          data.stepRecordTargetTrack = data.activeTrack;
           // Open piano roll editor for linear song mode on active track
           openScreen(UI_func_liveseq_graphic, SONG_MODE_NOTES_TRACK);
         }
       } 
-      // else {
-      //   // Open piano roll editor for pattern mode on active track
-      //   openScreen(UI_func_liveseq_graphic, data.activeTrack);
-      // }
     });
 
   // TOOL MENU

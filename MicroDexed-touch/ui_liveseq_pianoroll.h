@@ -16,7 +16,7 @@ static constexpr uint8_t MAX_TRACKS = 14; // 12 patterns + 2 song mode tracks
 extern bool openendFromLiveSequencer;
 
 void UI_func_liveseq_graphic(uint8_t param);
-// extern uint8_t stepRecordTargetTrack;  //select target instrument for step recorder in song mode
+extern uint8_t stepRecordTargetTrack;  //select target instrument for step recorder in song mode
 
 class UI_LiveSeq_PianoRoll {
 public:
