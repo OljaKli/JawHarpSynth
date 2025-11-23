@@ -5367,6 +5367,7 @@ FLASHMEM void set_volume(uint8_t v, uint8_t m)
 FLASHMEM void initial_values(bool init)
 {
   init_configuration();
+  microsynth_reset_all();
 
   load_sd_sys_json();
   if (bootup_performance_loading)
