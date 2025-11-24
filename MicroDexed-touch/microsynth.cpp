@@ -38,6 +38,87 @@ static constexpr short wave_type[9] = {
   WAVEFORM_SAMPLE_HOLD
 };
 
+static uint8_t default_microsynth_midi_channel(uint8_t instance_id)
+{
+  switch (instance_id)
+  {
+  case 0:
+    return DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST0;
+#if NUM_MICROSYNTH > 1
+  case 1:
+    return DEFAULT_MICROSYNTH_MIDI_CHANNEL_INST1;
+#endif
+  default:
+    return MIDI_CHANNEL_OFF;
+  }
+}
+
+FLASHMEM void microsynth_reset_instance(uint8_t instance_id)
+{
+  if (instance_id >= NUM_MICROSYNTH)
+    return;
+
+  microsynth_t& synth = microsynth[instance_id];
+
+  synth.coarse = 0;
+  synth.detune = 0;
+  synth.lfo_intensity = 0;
+  synth.lfo_delay = 0;
+  synth.lfo_mode = 0;
+  synth.lfo_speed = 0;
+  synth.lfo_direction = false;
+  synth.lfo_value = 0;
+  synth.lfo_fade = 0;
+  synth.trigger_noise_with_osc = false;
+  synth.pan = PANORAMA_DEFAULT;
+  synth.wave = 0;
+  synth.midi_channel = default_microsynth_midi_channel(instance_id);
+  synth.sound_intensity = SOUND_INTENSITY_DEFAULT;
+  synth.env_attack = 0;
+  synth.env_decay = 0;
+  synth.env_sustain = 0;
+  synth.env_release = 0;
+  synth.filter_osc_mode = 0;
+  synth.osc_freq_current = 0;
+  synth.filter_osc_freq_from = 0;
+  synth.filter_osc_freq_to = 0;
+  synth.filter_osc_freq_current = synth.filter_osc_freq_from;
+  synth.filter_osc_freq_last_displayed = 99;
+  synth.filter_osc_speed = 0;
+  synth.filter_osc_resonance = 0;
+  synth.noise_vol = 0;
+  synth.noise_decay = 0;
+  synth.filter_noise_mode = 0;
+  synth.filter_noise_freq_from = 0;
+  synth.filter_noise_freq_to = 0;
+  synth.filter_noise_freq_current = synth.filter_noise_freq_from;
+  synth.filter_noise_speed = 0;
+  synth.filter_noise_resonance = 0;
+  synth.pwm_from = 0;
+  synth.pwm_to = 0;
+  synth.pwm_speed = 0;
+  synth.pwm_current = 0;
+  synth.pwm_last_displayed = 0xFFFF;
+  synth.rev_send = 0;
+  synth.chorus_send = 0;
+  for (uint8_t i = 0; i < NUM_MICROSYNTH; i++)
+  {
+    synth.delay_send[i] = 0;
+  }
+  synth.vel_mod_filter_osc = 0;
+  synth.vel_mod_filter_noise = 0;
+  synth.sidechain_send = 0;
+
+  microsynth_delay_timer[instance_id] = 0;
+  microsynth_update_all_settings(instance_id);
+}
+
+FLASHMEM void microsynth_reset_all()
+{
+  for (uint8_t instance_id = 0; instance_id < NUM_MICROSYNTH; instance_id++)
+    microsynth_reset_instance(instance_id);
+}
+
 FLASHMEM void clear_filter_mixer_gains(uint8_t instance_id) {
     for (uint8_t i = 0; i < 4; i++) {
         microsynth_mixer_filter_osc[instance_id].gain(i, 0.0);

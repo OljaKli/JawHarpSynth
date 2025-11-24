@@ -1281,6 +1281,8 @@ FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
     ms = constrain(ms, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s%d.json"), PERFORMANCE_CONFIG_PATH, ms, MICROSYNTH_CONFIG_NAME, instance_id + 1);
 
+    microsynth_reset_instance(instance_id);
+
     // first check if file exists...
     AudioNoInterrupts();
     if (SD.exists(filename))
@@ -1325,11 +1327,11 @@ FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
         microsynth[instance_id].filter_noise_freq_to = data_json["filter_noise_freq_to"];
         microsynth[instance_id].filter_noise_speed = data_json["filter_noise_speed"];
         microsynth[instance_id].filter_noise_mode = data_json["filter_noise_mode"];
-        microsynth[instance_id].filter_noise_resonance = data_json["filter_noise_resonance"] | microsynth[instance_id].filter_noise_resonance;
-        microsynth[instance_id].lfo_intensity = data_json["lfo_intensity"] | microsynth[instance_id].lfo_intensity;
-        microsynth[instance_id].lfo_mode = data_json["lfo_mode"] | microsynth[instance_id].lfo_mode;
-        microsynth[instance_id].lfo_delay = data_json["lfo_delay"] | microsynth[instance_id].lfo_delay;
-        microsynth[instance_id].lfo_speed = data_json["lfo_speed"] | microsynth[instance_id].lfo_speed;
+        microsynth[instance_id].filter_noise_resonance = data_json["filter_noise_resonance"];
+        microsynth[instance_id].lfo_intensity = data_json["lfo_intensity"];
+        microsynth[instance_id].lfo_mode = data_json["lfo_mode"];
+        microsynth[instance_id].lfo_delay = data_json["lfo_delay"];
+        microsynth[instance_id].lfo_speed = data_json["lfo_speed"];
         microsynth[instance_id].pwm_from = data_json["pwm_from"];
         microsynth[instance_id].pwm_to = data_json["pwm_to"];
         microsynth[instance_id].pwm_speed = data_json["pwm_speed"];
