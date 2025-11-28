@@ -108,6 +108,7 @@ extern uint8_t LED_MIDI_IN_counter;
 extern LiveSequencer liveSeq;
 extern config_t configuration;
 extern sequencer_t seq;
+extern bool disableDirectMIDIinput;
 
 extern void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleAfterTouch(byte inChannel, byte inPressure);
@@ -356,7 +357,12 @@ extern bool chord_autostart;
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
+
+ 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
+
+if (disableDirectMIDIinput)
+return;
 
 #ifdef DEBUG
   char text[10];

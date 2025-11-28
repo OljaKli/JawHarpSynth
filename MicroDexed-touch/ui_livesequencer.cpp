@@ -96,7 +96,8 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     [this](auto* b) { // drawHandler
       if (data.isSongMode) {
         b->draw("SONG", data.useGridSongMode ? "GRID" : "LIVE", TouchButton::BUTTON_HIGHLIGHTED);
-      } else {
+      }
+      else {
         b->draw("PATT", "MODE", TouchButton::BUTTON_HIGHLIGHTED);
       }
     },
@@ -123,12 +124,13 @@ FLASHMEM void UI_LiveSequencer::init(void) {
           showingGridSongEditor = true;
           gridNeedsRedraw = true;
           display.fillScreen(COLOR_BACKGROUND);
-        } else {
+        }
+        else {
           data.stepRecordTargetTrack = data.activeTrack;
           // Open piano roll editor for linear song mode on active track
           openScreen(UI_func_liveseq_graphic, SONG_MODE_NOTES_TRACK);
         }
-      } 
+      }
     });
 
   // TOOL MENU
@@ -799,43 +801,6 @@ FLASHMEM bool UI_LiveSequencer::isModeToolActive(void) {
   return result;
 }
 
-FLASHMEM void UI_LiveSequencer::showDirectMappingWarning(uint8_t inChannel) {
-  if (showingHowTo == false) {
-    showingHowTo = true;
-    display.fillScreen(COLOR_BACKGROUND);
-    display.setTextSize(2);
-    display.setTextColor(RED);
-    setCursor_textGrid(1, 1);
-    display.print(F("ADAPT MIDI MAPPING"));
-    display.setTextSize(1);
-    display.setTextColor(GREY1);
-    setCursor_textGrid_small(2, 6);
-    display.print(F("LIVESEQUENCER FORWARDS MIDI EVENTS TO SELECTED"));
-    setCursor_textGrid_small(2, 7);
-    display.print(F("INSTRUMENT CHANNELS AND DOES NOT WORK CORRECTLY"));
-    setCursor_textGrid_small(2, 8);
-    display.print(F("ON DIRECTLY MAPPED CHANNELS AS MIDI INPUT"));
-    setCursor_textGrid_small(2, 10);
-    display.setTextColor(COLOR_SYSTEXT);
-    display.print(F("PLEASE MAP ALL INSTRUMENTS TO CHANNELS"));
-    setCursor_textGrid_small(2, 11);
-    display.print(F("OTHER THAN MIDI INPUT CHANNEL"));
-    display.setTextColor(RED);
-    setCursor_textGrid_small(32, 11);
-    display.printf("%02i", inChannel);
-    setCursor_textGrid_small(2, 13);
-    display.setTextColor(COLOR_SYSTEXT);
-    display.print(F("OR"));
-    display.setTextColor(GREY1);
-    setCursor_textGrid_small(5, 13);
-    display.print(F("CHANGE THE MIDI CHANNEL ON YOUR"));
-    setCursor_textGrid_small(2, 14);
-    display.print(F("EXTERNAL INPUT DEVICE TO AN UNUSED CHANNEL"));
-    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "REMAP", "MIDI", TouchButton::BUTTON_ACTIVE);
-    helptext_l(back_text);
-  }
-}
-
 FLASHMEM void UI_LiveSequencer::resetProgressBars(void) {
   barPattern.currentPhase = 0;
   barPattern.drawnLength = 0;
@@ -851,6 +816,8 @@ FLASHMEM void UI_LiveSequencer::onStopped(void) {
   }
 }
 
+bool disableDirectMIDIinput;
+
 FLASHMEM void UI_LiveSequencer::processLCDM(void) {
   // ****** SETUP *********
   if (LCDML.FUNC_setup()) {
@@ -861,7 +828,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     numberOfBarsTemp = data.numberOfBars;
     liveSeq.onGuiInit();
     updateTrackChannelSetupButtons(data.activeTrack); // update GUI for the case a new perf was loaded
-
+    disableDirectMIDIinput = true;
 
     // currentPage = PAGE_PATTERN;
 
@@ -977,9 +944,10 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     gridNeedsRedraw = true;
     data.redraw_grid_buttons = true;
     //data.isSongMode = false; //phtodo
-    inGridEditor = false;
-    showingGridSongEditor = false;
     gridNeedsRedraw = true;
+
+    // disableDirectMIDIinput=false;
+
 
     display.fillScreen(COLOR_BACKGROUND);
   }
@@ -1036,7 +1004,9 @@ FLASHMEM void UI_LiveSequencer::redrawScreen(void) {
 FLASHMEM void UI_LiveSequencer::openScreen(LCDML_FuncPtr_pu8 screen, uint8_t param) {
   // stay active in background and keep processing midi inputs for screens opened in LiveSequencer
   openingScreen = true;
+
   LCDML.FUNC_setGBAToLastFunc();
+  disableDirectMIDIinput = true;
   LCDML.OTHER_jumpToFunc(screen, param);
 }
 
@@ -1327,7 +1297,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     display.drawLine(GRID.X[2] + barWidth, 0, GRID.X[4] - TouchButton::BUTTON_SPACING, 0, GREY2);
   }
 
-if (guiFlags & drawTopButtons && !inGridEditor) {
+  if (guiFlags & drawTopButtons && !inGridEditor) {
     TouchButton::Color playColor = runningHere ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
     if (data.remainingCountIns > 0) {
       playColor = (data.remainingCountIns) % 2 ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_HIGHLIGHTED;
@@ -1805,7 +1775,7 @@ FLASHMEM void UI_LiveSequencer::handleGridSongTouch(void) {
     auto stopPlayback = [&]() {
       data.seq_started_from_pattern_mode = false;
       liveSeq.stop();
-    };
+      };
 
     if (playingNow) {
       stopPlayback();

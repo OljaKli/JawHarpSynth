@@ -559,12 +559,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::queueDrawNote(LiveSequencer::NotePair note) 
   drawFlags |= DRAW_NOTES | DRAW_VERTICAL_BARS;
 }
 
+extern bool disableDirectMIDIinput;
+
 FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
   if (LCDML.FUNC_setup()) { // ****** SETUP *********
     openendFromLiveSequencer = data.processMidiIn;
     if (openendFromLiveSequencer == false) {
       data.processMidiIn = true;
     }
+
+ disableDirectMIDIinput = true;
 
     if (param != 0xFF) {
       data.activeTrack = param;
@@ -2366,7 +2370,6 @@ FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getMaxSongTime() const {
   // Return time at the end of the highest chunk
   return (maxChunk + 1) * data.numberOfBars * data.patternLengthMs;
 }
-
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditVelocity(EncoderEvents e, uint16_t headerFlags) {
   if (selectedNote > -1) {

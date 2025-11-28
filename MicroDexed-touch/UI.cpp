@@ -5011,6 +5011,8 @@ extern int glow_menu_item;
 extern void back_touchbutton();
 #endif
 
+extern bool disableDirectMIDIinput;
+
 /***********************************************************************
    MENU DISPLAY
  ***********************************************************************/
@@ -5035,6 +5037,8 @@ FLASHMEM void lcdml_menu_clear(void)
 #ifndef TOUCH_UI  //begin regular menu
 FLASHMEM void lcdml_menu_display(void)
 {
+  disableDirectMIDIinput=false;
+  
   // update content
   // ***************
   if (LCDML.DISP_checkMenuUpdate())
@@ -16642,7 +16646,6 @@ FLASHMEM void UI_func_set_braids_name(uint8_t param)
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-
 
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
