@@ -387,6 +387,10 @@ void GridSongEditorUI::draw() {
 }
 
 void GridSongEditorUI::processBackButton() {
+  exitToLiveSequencer();
+}
+
+void GridSongEditorUI::exitToLiveSequencer() {
   exit();
   data.isSongMode = false;
   data.redraw_grid_header = true;

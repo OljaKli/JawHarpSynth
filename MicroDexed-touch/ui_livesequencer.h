@@ -40,6 +40,8 @@ public:
   void onGridPlaybackEnded(void);
   TouchButton* modeButton;
   void requestGridEditorRedraw() { gridEditor.requestRedraw(); }
+  bool isGridEditorActive() const;
+  void notifyLeftEncoderShort();
 
 private:
   uint16_t msCount = 0;

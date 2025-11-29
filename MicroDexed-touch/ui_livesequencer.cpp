@@ -718,6 +718,11 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
   if (LCDML.FUNC_loop()) {
 
     const EncoderEvents e = getEncoderEvents(ENC_R);
+    const EncoderEvents e_left = getEncoderEvents(ENC_L);
+
+    if (gridEditor.isActive() && e_left.pressed) {
+      gridEditor.exitToLiveSequencer();
+    }
 
     msCount += DRAW_INTERVAL;
     if (msCount >= 200) {
@@ -798,6 +803,16 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
 
 
     display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+
+bool UI_LiveSequencer::isGridEditorActive() const {
+  return gridEditor.isActive();
+}
+
+FLASHMEM void UI_LiveSequencer::notifyLeftEncoderShort() {
+  if (gridEditor.isActive()) {
+    gridEditor.exitToLiveSequencer();
   }
 }
 

@@ -28,6 +28,7 @@ public:
   void requestRedraw();
   void handleStepChanged();
   void handlePlaybackEnded();
+  void exitToLiveSequencer();
 
 private:
   void initButtons();
