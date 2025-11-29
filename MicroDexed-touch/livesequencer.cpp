@@ -285,7 +285,7 @@ FLASHMEM void LiveSequencer::onSongStopped(void) {
   if (data.useGridSongMode) {
     data.currentGridStep = data.gridPlaybackStartStep;
     // data.redraw_grid_header = true;
-    ui_liveSeq->gridNeedsRedraw = true;
+    ui_liveSeq->requestGridEditorRedraw();
   }
   else
     if (data.recordedToSong) {
@@ -1233,7 +1233,7 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
         ui_liveSeq->onGridStepChanged();
 
         // Trigger UI redraw 
-        ui_liveSeq->gridNeedsRedraw = true;
+        ui_liveSeq->requestGridEditorRedraw();
       }
       else  if (data.isSongMode && !data.useGridSongMode) {
         // Traditional song mode
