@@ -544,14 +544,24 @@ void GridSongEditorUI::setControlBank(ControlBank bank) {
 }
 
 void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
-  (void)index;
-  // Placeholder for upcoming secondary functions.
+  switch (index) {
+    case 0:
+      copySelectedBlock();
+      break;
+    default:
+      break;
+  }
 }
 
 void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t index) {
+  const bool enabled = isSecondaryFunctionEnabled(index);
+  if (index == 0) {
+    button->draw("COPY", "BLOCK", enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
+    return;
+  }
+
   char subLabel[4];
   snprintf(subLabel, sizeof(subLabel), "%u", static_cast<unsigned>(index + 1));
-  const bool enabled = isSecondaryFunctionEnabled(index);
   button->draw("FUNC", subLabel, enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
 }
 
@@ -562,8 +572,92 @@ void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t
   TouchButton::drawButton(x, y, "FUNC", subLabel, enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
 }
 
-bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t) const {
-  return false;
+bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t index) const {
+  switch (index) {
+    case 0:
+      return canCopyBlock();
+    default:
+      return false;
+  }
+}
+
+bool GridSongEditorUI::canCopyBlock() const {
+  if (data.gridPlaybackStartStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN ||
+    data.gridPlaybackEndStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  if (data.gridPlaybackStartStep > data.gridPlaybackEndStep) {
+    return false;
+  }
+
+  const uint8_t srcStart = data.gridPlaybackStartStep;
+  const uint8_t srcEnd = data.gridPlaybackEndStep;
+  const uint8_t blockLength = static_cast<uint8_t>(srcEnd - srcStart + 1);
+  if (blockLength == 0) {
+    return false;
+  }
+
+  const uint8_t destStart = data.selectedGridStep;
+  if (destStart >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  if (destStart >= srcStart && destStart <= srcEnd) {
+    return false;
+  }
+
+  const uint16_t destEndExclusive = static_cast<uint16_t>(destStart) + blockLength;
+  if (destEndExclusive > LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  return destinationRangeIsEmpty(destStart, blockLength);
+}
+
+bool GridSongEditorUI::destinationRangeIsEmpty(uint8_t destStart, uint8_t blockLength) const {
+  const uint16_t destEndExclusive = static_cast<uint16_t>(destStart) + blockLength;
+  if (destEndExclusive > LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  for (uint8_t offset = 0; offset < blockLength; ++offset) {
+    const uint8_t step = destStart + offset;
+    for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
+      for (uint8_t layer = 0; layer < 4; ++layer) {
+        if (data.gridStep(step, track, layer)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+void GridSongEditorUI::copySelectedBlock() {
+  if (!canCopyBlock()) {
+    return;
+  }
+
+  const uint8_t srcStart = data.gridPlaybackStartStep;
+  const uint8_t srcEnd = data.gridPlaybackEndStep;
+  const uint8_t blockLength = static_cast<uint8_t>(srcEnd - srcStart + 1);
+  const uint8_t destStart = data.selectedGridStep;
+
+  for (uint8_t offset = 0; offset < blockLength; ++offset) {
+    const uint8_t srcStep = srcStart + offset;
+    const uint8_t destStep = destStart + offset;
+    for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
+      for (uint8_t layer = 0; layer < 4; ++layer) {
+        data.gridStep(destStep, track, layer) = data.gridStep(srcStep, track, layer);
+      }
+    }
+  }
+
+  needsRedraw = true;
+  data.redraw_grid_buttons = true;
+  data.redraw_grid_header = true;
 }
 
 void GridSongEditorUI::toggleLayer(uint8_t layer) {

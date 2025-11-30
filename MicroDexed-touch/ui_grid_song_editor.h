@@ -47,6 +47,9 @@ private:
   void drawSecondaryControlButton(TouchButton* button, uint8_t index);
   void drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index);
   bool isSecondaryFunctionEnabled(uint8_t index) const;
+  bool canCopyBlock() const;
+  bool destinationRangeIsEmpty(uint8_t destStart, uint8_t blockLength) const;
+  void copySelectedBlock();
   void toggleLayer(uint8_t layer);
   void clearGridCell();
   void fillGridCell();
