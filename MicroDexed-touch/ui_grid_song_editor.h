@@ -11,6 +11,11 @@ struct EncoderEvents;
 
 class GridSongEditorUI {
 public:
+  enum class ControlBank : uint8_t {
+    Primary = 0,
+    Secondary
+  };
+
   struct Callbacks {
     std::function<void()> onExitRequested;
   };
@@ -33,10 +38,15 @@ public:
 private:
   void initButtons();
   void draw();
-  void processBackButton();
   void processPlayButton();
   void processGridTouch();
   void processControlButtons();
+  void toggleControlBank();
+  void setControlBank(ControlBank bank);
+  void handleSecondaryButton(uint8_t index);
+  void drawSecondaryControlButton(TouchButton* button, uint8_t index);
+  void drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index);
+  bool isSecondaryFunctionEnabled(uint8_t index) const;
   void toggleLayer(uint8_t layer);
   void clearGridCell();
   void fillGridCell();
@@ -53,6 +63,7 @@ private:
 
   bool active = false;
   bool needsRedraw = true;
+  ControlBank controlBank = ControlBank::Primary;
 
   static constexpr uint8_t GRID_SONG_COLS = 12;
   static constexpr uint8_t GRID_SONG_ROWS = 6;

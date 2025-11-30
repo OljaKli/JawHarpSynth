@@ -30,6 +30,7 @@ void GridSongEditorUI::enter() {
   needsRedraw = true;
   data.redraw_grid_header = true;
   data.redraw_grid_buttons = true;
+  controlBank = ControlBank::Primary;
   display.fillScreen(COLOR_BACKGROUND);
 }
 
@@ -41,6 +42,7 @@ void GridSongEditorUI::exit() {
   needsRedraw = true;
   data.redraw_grid_header = true;
   data.redraw_grid_buttons = true;
+  controlBank = ControlBank::Primary;
 }
 
 bool GridSongEditorUI::isActive() const {
@@ -78,14 +80,22 @@ void GridSongEditorUI::handleTouch() {
   }
 
   for (uint8_t layer = 0; layer < 4; layer++) {
-    if (TouchButton::isPressed(GRID.X[layer + 1], GRID.Y[5])) {
-      toggleLayer(layer);
+    if (TouchButton::isPressed(GRID.X[layer], GRID.Y[5])) {
+      if (controlBank == ControlBank::Primary) {
+        toggleLayer(layer);
+      }
+      else {
+        const uint8_t funcIndex = layer + 4;
+        if (isSecondaryFunctionEnabled(funcIndex)) {
+          handleSecondaryButton(funcIndex);
+        }
+      }
       return;
     }
   }
 
-  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
-    processBackButton();
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
+    toggleControlBank();
     return;
   }
 
@@ -123,6 +133,11 @@ void GridSongEditorUI::initButtons() {
   gridControlButtons.reserve(6);
   gridControlButtons.push_back(new TouchButton(GRID.X[0], GRID.Y[4],
     [this](auto* b) {
+      if (controlBank == ControlBank::Secondary) {
+        drawSecondaryControlButton(b, 0);
+        return;
+      }
+
       const uint8_t layerLimit = std::min<uint8_t>(data.trackSettings[data.selectedGridTrack].layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
       const bool hasLayers = layerLimit > 0;
 
@@ -144,6 +159,13 @@ void GridSongEditorUI::initButtons() {
       b->draw(topLabel, "CELL", color);
     },
     [this](auto*) {
+      if (controlBank == ControlBank::Secondary) {
+        if (isSecondaryFunctionEnabled(0)) {
+          handleSecondaryButton(0);
+        }
+        return;
+      }
+
       const uint8_t layerLimit = std::min<uint8_t>(data.trackSettings[data.selectedGridTrack].layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
       if (layerLimit == 0) {
         return;
@@ -167,6 +189,11 @@ void GridSongEditorUI::initButtons() {
 
   gridControlButtons.push_back(new TouchButton(GRID.X[1], GRID.Y[4],
     [this](auto* b) {
+      if (controlBank == ControlBank::Secondary) {
+        drawSecondaryControlButton(b, 1);
+        return;
+      }
+
       const bool hasLayers = data.trackSettings[data.selectedGridTrack].layerCount > 0;
       if (hasLayers && data.selectedGridStep > 0) {
         b->draw("FROM", "ABOVE", TouchButton::BUTTON_ACTIVE);
@@ -176,6 +203,13 @@ void GridSongEditorUI::initButtons() {
       }
     },
     [this](auto*) {
+      if (controlBank == ControlBank::Secondary) {
+        if (isSecondaryFunctionEnabled(1)) {
+          handleSecondaryButton(1);
+        }
+        return;
+      }
+
       if (data.trackSettings[data.selectedGridTrack].layerCount > 0 && data.selectedGridStep > 0) {
         copyFromAbove();
       }
@@ -183,19 +217,41 @@ void GridSongEditorUI::initButtons() {
 
   gridControlButtons.push_back(new TouchButton(GRID.X[2], GRID.Y[4],
     [this](auto* b) {
+      if (controlBank == ControlBank::Secondary) {
+        drawSecondaryControlButton(b, 2);
+        return;
+      }
+
       const bool enabled = liveSeq.canInsertGridRow(data.selectedGridStep);
       b->draw("INSERT", "ROW", enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
     },
     [this](auto*) {
+      if (controlBank == ControlBank::Secondary) {
+        if (isSecondaryFunctionEnabled(2)) {
+          handleSecondaryButton(2);
+        }
+        return;
+      }
       insertGridRow();
     }));
 
   gridControlButtons.push_back(new TouchButton(GRID.X[3], GRID.Y[4],
     [this](auto* b) {
+      if (controlBank == ControlBank::Secondary) {
+        drawSecondaryControlButton(b, 3);
+        return;
+      }
+
       const bool enabled = liveSeq.canRemoveGridRow(data.selectedGridStep);
       b->draw("REMOVE", "ROW", enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE);
     },
     [this](auto*) {
+      if (controlBank == ControlBank::Secondary) {
+        if (isSecondaryFunctionEnabled(3)) {
+          handleSecondaryButton(3);
+        }
+        return;
+      }
       removeGridRow();
     }));
 
@@ -363,8 +419,14 @@ void GridSongEditorUI::draw() {
     }
 
     for (uint8_t layer = 0; layer < 4; layer++) {
-      const uint16_t x = GRID.X[layer + 1];
+      const uint16_t x = GRID.X[layer];
       const uint16_t y = GRID.Y[5];
+
+      if (controlBank == ControlBank::Secondary) {
+        const uint8_t funcIndex = layer + 4;
+        drawSecondaryBottomButton(x, y, funcIndex);
+        continue;
+      }
 
       if (liveSeq.isTrackLayerEmpty(data.selectedGridTrack, layer)) {
         TouchButton::drawButton(x, y, "LAYER", std::to_string(layer + 1).c_str(), TouchButton::BUTTON_INACTIVE);
@@ -376,7 +438,9 @@ void GridSongEditorUI::draw() {
       }
     }
 
-    TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BACK", "EDIT", TouchButton::BUTTON_NORMAL);
+    const bool secondaryBankActive = (controlBank == ControlBank::Secondary);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SHIFT", secondaryBankActive ? "2ND" : "1ST",
+      secondaryBankActive ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     const bool playingNow = data.isRunning || data.isStarting || seq.running;
     TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", playingNow ? "STOP" : "START",
       playingNow ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
@@ -384,10 +448,6 @@ void GridSongEditorUI::draw() {
   }
 
   needsRedraw = false;
-}
-
-void GridSongEditorUI::processBackButton() {
-  exitToLiveSequencer();
 }
 
 void GridSongEditorUI::exitToLiveSequencer() {
@@ -467,6 +527,43 @@ void GridSongEditorUI::processControlButtons() {
   for (auto* button : gridControlButtons) {
     button->processPressed();
   }
+}
+
+void GridSongEditorUI::toggleControlBank() {
+  const ControlBank next = (controlBank == ControlBank::Primary) ? ControlBank::Secondary : ControlBank::Primary;
+  setControlBank(next);
+}
+
+void GridSongEditorUI::setControlBank(ControlBank bank) {
+  if (controlBank == bank) {
+    return;
+  }
+  controlBank = bank;
+  needsRedraw = true;
+  data.redraw_grid_buttons = true;
+}
+
+void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
+  (void)index;
+  // Placeholder for upcoming secondary functions.
+}
+
+void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t index) {
+  char subLabel[4];
+  snprintf(subLabel, sizeof(subLabel), "%u", static_cast<unsigned>(index + 1));
+  const bool enabled = isSecondaryFunctionEnabled(index);
+  button->draw("FUNC", subLabel, enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
+}
+
+void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index) {
+  char subLabel[4];
+  snprintf(subLabel, sizeof(subLabel), "%u", static_cast<unsigned>(index + 1));
+  const bool enabled = isSecondaryFunctionEnabled(index);
+  TouchButton::drawButton(x, y, "FUNC", subLabel, enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
+}
+
+bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t) const {
+  return false;
 }
 
 void GridSongEditorUI::toggleLayer(uint8_t layer) {
