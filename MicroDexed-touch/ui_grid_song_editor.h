@@ -48,8 +48,15 @@ private:
   void drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index);
   bool isSecondaryFunctionEnabled(uint8_t index) const;
   bool canCopyBlock() const;
+  bool canClearBlock() const;
+  bool playbackBlockIsValid() const;
+  bool blockHasContent() const;
   bool destinationRangeIsEmpty(uint8_t destStart, uint8_t blockLength) const;
   void copySelectedBlock();
+  void clearSelectedBlock();
+  void armClearBlockConfirmation();
+  void cancelClearBlockConfirmation();
+  void updateClearBlockConfirmation();
   void toggleLayer(uint8_t layer);
   void clearGridCell();
   void fillGridCell();
@@ -67,6 +74,8 @@ private:
   bool active = false;
   bool needsRedraw = true;
   ControlBank controlBank = ControlBank::Primary;
+  bool clearBlockConfirmPending = false;
+  uint32_t clearBlockConfirmDeadlineMs = 0;
 
   static constexpr uint8_t GRID_SONG_COLS = 12;
   static constexpr uint8_t GRID_SONG_ROWS = 6;
@@ -74,6 +83,7 @@ private:
   static constexpr uint8_t GRID_SONG_CELL_HEIGHT = (154 - (GRID_SONG_ROWS - 1)) / GRID_SONG_ROWS;
   static constexpr uint8_t gridStartX = 19;
   static constexpr uint8_t gridStartY = 12;
+  static constexpr uint32_t CLEAR_BLOCK_CONFIRM_TIMEOUT_MS = 2000;
 
   std::vector<TouchButton*> gridControlButtons;
 };

@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <string>
 
+#include <Arduino.h>
+
 #include "ILI9341_t3n.h"
 #include "touch.h"
 #include "sequencer.h"
@@ -31,6 +33,7 @@ void GridSongEditorUI::enter() {
   data.redraw_grid_header = true;
   data.redraw_grid_buttons = true;
   controlBank = ControlBank::Primary;
+  cancelClearBlockConfirmation();
   display.fillScreen(COLOR_BACKGROUND);
 }
 
@@ -43,6 +46,7 @@ void GridSongEditorUI::exit() {
   data.redraw_grid_header = true;
   data.redraw_grid_buttons = true;
   controlBank = ControlBank::Primary;
+  cancelClearBlockConfirmation();
 }
 
 bool GridSongEditorUI::isActive() const {
@@ -50,7 +54,13 @@ bool GridSongEditorUI::isActive() const {
 }
 
 void GridSongEditorUI::tick() {
-  if (active && needsRedraw) {
+  if (!active) {
+    return;
+  }
+
+  updateClearBlockConfirmation();
+
+  if (needsRedraw) {
     draw();
   }
 }
@@ -539,14 +549,31 @@ void GridSongEditorUI::setControlBank(ControlBank bank) {
     return;
   }
   controlBank = bank;
+  cancelClearBlockConfirmation();
   needsRedraw = true;
   data.redraw_grid_buttons = true;
 }
 
 void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
+  if (index != 1) {
+    cancelClearBlockConfirmation();
+  }
+
   switch (index) {
     case 0:
       copySelectedBlock();
+      break;
+    case 1:
+      if (!canClearBlock()) {
+        return;
+      }
+
+      if (!clearBlockConfirmPending) {
+        armClearBlockConfirmation();
+      }
+      else {
+        clearSelectedBlock();
+      }
       break;
     default:
       break;
@@ -557,6 +584,18 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
   const bool enabled = isSecondaryFunctionEnabled(index);
   if (index == 0) {
     button->draw("COPY", "BLOCK", enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
+    return;
+  }
+
+  if (index == 1) {
+    if (!enabled && clearBlockConfirmPending) {
+      cancelClearBlockConfirmation();
+    }
+    const bool confirming = clearBlockConfirmPending && enabled;
+    const char* topLabel = confirming ? "CONFIRM" : "CLEAR";
+    const char* subLabel = confirming ? "?" : "BLOCK";
+    const TouchButton::Color color = enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE;
+    button->draw(topLabel, subLabel, color);
     return;
   }
 
@@ -576,18 +615,15 @@ bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t index) const {
   switch (index) {
     case 0:
       return canCopyBlock();
+    case 1:
+      return canClearBlock();
     default:
       return false;
   }
 }
 
 bool GridSongEditorUI::canCopyBlock() const {
-  if (data.gridPlaybackStartStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN ||
-    data.gridPlaybackEndStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
-    return false;
-  }
-
-  if (data.gridPlaybackStartStep > data.gridPlaybackEndStep) {
+  if (!playbackBlockIsValid()) {
     return false;
   }
 
@@ -615,6 +651,36 @@ bool GridSongEditorUI::canCopyBlock() const {
   return destinationRangeIsEmpty(destStart, blockLength);
 }
 
+bool GridSongEditorUI::canClearBlock() const {
+  return playbackBlockIsValid() && blockHasContent();
+}
+
+bool GridSongEditorUI::playbackBlockIsValid() const {
+  if (data.gridPlaybackStartStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN ||
+    data.gridPlaybackEndStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+  return data.gridPlaybackStartStep <= data.gridPlaybackEndStep;
+}
+
+bool GridSongEditorUI::blockHasContent() const {
+  if (!playbackBlockIsValid()) {
+    return false;
+  }
+
+  for (uint8_t step = data.gridPlaybackStartStep; step <= data.gridPlaybackEndStep; ++step) {
+    for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
+      for (uint8_t layer = 0; layer < 4; ++layer) {
+        if (data.gridStep(step, track, layer)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 bool GridSongEditorUI::destinationRangeIsEmpty(uint8_t destStart, uint8_t blockLength) const {
   const uint16_t destEndExclusive = static_cast<uint16_t>(destStart) + blockLength;
   if (destEndExclusive > LiveSequencer::LiveSeqData::GRIDSONGLEN) {
@@ -640,6 +706,8 @@ void GridSongEditorUI::copySelectedBlock() {
     return;
   }
 
+  cancelClearBlockConfirmation();
+
   const uint8_t srcStart = data.gridPlaybackStartStep;
   const uint8_t srcEnd = data.gridPlaybackEndStep;
   const uint8_t blockLength = static_cast<uint8_t>(srcEnd - srcStart + 1);
@@ -658,6 +726,58 @@ void GridSongEditorUI::copySelectedBlock() {
   needsRedraw = true;
   data.redraw_grid_buttons = true;
   data.redraw_grid_header = true;
+}
+
+void GridSongEditorUI::clearSelectedBlock() {
+  if (!playbackBlockIsValid()) {
+    cancelClearBlockConfirmation();
+    return;
+  }
+
+  for (uint8_t step = data.gridPlaybackStartStep; step <= data.gridPlaybackEndStep; ++step) {
+    for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
+      for (uint8_t layer = 0; layer < 4; ++layer) {
+        data.gridStep(step, track, layer) = false;
+      }
+    }
+  }
+
+  cancelClearBlockConfirmation();
+  needsRedraw = true;
+  data.redraw_grid_buttons = true;
+  data.redraw_grid_header = true;
+}
+
+void GridSongEditorUI::armClearBlockConfirmation() {
+  clearBlockConfirmPending = true;
+  clearBlockConfirmDeadlineMs = millis() + CLEAR_BLOCK_CONFIRM_TIMEOUT_MS;
+  data.redraw_grid_buttons = true;
+  needsRedraw = true;
+}
+
+void GridSongEditorUI::cancelClearBlockConfirmation() {
+  if (!clearBlockConfirmPending) {
+    return;
+  }
+  clearBlockConfirmPending = false;
+  data.redraw_grid_buttons = true;
+  needsRedraw = true;
+}
+
+void GridSongEditorUI::updateClearBlockConfirmation() {
+  if (!clearBlockConfirmPending) {
+    return;
+  }
+
+  if (controlBank != ControlBank::Secondary || !canClearBlock()) {
+    cancelClearBlockConfirmation();
+    return;
+  }
+
+  const uint32_t now = millis();
+  if (static_cast<int32_t>(now - clearBlockConfirmDeadlineMs) >= 0) {
+    cancelClearBlockConfirmation();
+  }
 }
 
 void GridSongEditorUI::toggleLayer(uint8_t layer) {
