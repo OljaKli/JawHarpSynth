@@ -50,6 +50,7 @@ private:
   bool canCopyBlock() const;
   bool canClearBlock() const;
   bool canClearRow() const;
+  bool canCopyFromPattern() const;
   bool playbackBlockIsValid() const;
   bool blockHasContent() const;
   bool rowHasContent(uint8_t step) const;
@@ -57,12 +58,16 @@ private:
   void copySelectedBlock();
   void clearSelectedBlock();
   void clearSelectedRow();
+  void copyRowFromPattern();
   void armClearBlockConfirmation();
   void cancelClearBlockConfirmation();
   void updateClearBlockConfirmation();
   void armClearRowConfirmation();
   void cancelClearRowConfirmation();
   void updateClearRowConfirmation();
+  void armFromPatternConfirmation();
+  void cancelFromPatternConfirmation();
+  void updateFromPatternConfirmation();
   void toggleLayer(uint8_t layer);
   void clearGridCell();
   void fillGridCell();
@@ -84,6 +89,8 @@ private:
   uint32_t clearBlockConfirmDeadlineMs = 0;
   bool clearRowConfirmPending = false;
   uint32_t clearRowConfirmDeadlineMs = 0;
+  bool fromPatternConfirmPending = false;
+  uint32_t fromPatternConfirmDeadlineMs = 0;
 
   static constexpr uint8_t GRID_SONG_COLS = 12;
   static constexpr uint8_t GRID_SONG_ROWS = 6;

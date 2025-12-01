@@ -34,6 +34,8 @@ void GridSongEditorUI::enter() {
   data.redraw_grid_buttons = true;
   controlBank = ControlBank::Primary;
   cancelClearBlockConfirmation();
+  cancelClearRowConfirmation();
+  cancelFromPatternConfirmation();
   display.fillScreen(COLOR_BACKGROUND);
 }
 
@@ -47,6 +49,8 @@ void GridSongEditorUI::exit() {
   data.redraw_grid_buttons = true;
   controlBank = ControlBank::Primary;
   cancelClearBlockConfirmation();
+  cancelClearRowConfirmation();
+  cancelFromPatternConfirmation();
 }
 
 bool GridSongEditorUI::isActive() const {
@@ -60,6 +64,7 @@ void GridSongEditorUI::tick() {
 
   updateClearBlockConfirmation();
   updateClearRowConfirmation();
+  updateFromPatternConfirmation();
 
   if (needsRedraw) {
     draw();
@@ -552,6 +557,7 @@ void GridSongEditorUI::setControlBank(ControlBank bank) {
   controlBank = bank;
   cancelClearBlockConfirmation();
   cancelClearRowConfirmation();
+  cancelFromPatternConfirmation();
   needsRedraw = true;
   data.redraw_grid_buttons = true;
 }
@@ -562,6 +568,9 @@ void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
   }
   if (index != 2) {
     cancelClearRowConfirmation();
+  }
+  if (index != 4) {
+    cancelFromPatternConfirmation();
   }
 
   switch (index) {
@@ -590,6 +599,18 @@ void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
       }
       else {
         clearSelectedRow();
+      }
+      break;
+    case 4:
+      if (!canCopyFromPattern()) {
+        return;
+      }
+
+      if (!fromPatternConfirmPending) {
+        armFromPatternConfirmation();
+      }
+      else {
+        copyRowFromPattern();
       }
       break;
     default:
@@ -634,6 +655,19 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
 }
 
 void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index) {
+  if (index == 4) {
+    const bool enabled = isSecondaryFunctionEnabled(index);
+    if (!enabled && fromPatternConfirmPending) {
+      cancelFromPatternConfirmation();
+    }
+    const bool confirming = fromPatternConfirmPending && enabled;
+    const char* topLabel = confirming ? "CONFIRM" : "FROM";
+    const char* subLabel = confirming ? "?" : "PAT";
+    const TouchButton::Color color = enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE;
+    TouchButton::drawButton(x, y, topLabel, subLabel, color);
+    return;
+  }
+
   char subLabel[4];
   snprintf(subLabel, sizeof(subLabel), "%u", static_cast<unsigned>(index + 1));
   const bool enabled = isSecondaryFunctionEnabled(index);
@@ -648,6 +682,8 @@ bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t index) const {
       return canClearBlock();
     case 2:
       return canClearRow();
+    case 4:
+      return canCopyFromPattern();
     default:
       return false;
   }
@@ -691,6 +727,28 @@ bool GridSongEditorUI::canClearRow() const {
     return false;
   }
   return rowHasContent(data.selectedGridStep);
+}
+
+bool GridSongEditorUI::canCopyFromPattern() const {
+  if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    return false;
+  }
+
+  for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
+    const uint8_t layerCount = (track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS) ? data.trackSettings[track].layerCount : 0;
+    const uint8_t layerLimit = std::min<uint8_t>(layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+    const uint8_t patternLayerMutes = (track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS) ? data.tracks[track].layerMutes : 0;
+
+    for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; ++layer) {
+      const bool patternEnabled = (layer < layerLimit) && ((patternLayerMutes & (1 << layer)) == 0);
+      const bool rowEnabled = data.gridStep(data.selectedGridStep, track, layer);
+      if (patternEnabled != rowEnabled) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 bool GridSongEditorUI::playbackBlockIsValid() const {
@@ -843,6 +901,29 @@ void GridSongEditorUI::clearSelectedRow() {
   data.redraw_grid_header = true;
 }
 
+void GridSongEditorUI::copyRowFromPattern() {
+  if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
+    cancelFromPatternConfirmation();
+    return;
+  }
+
+  for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
+    const uint8_t layerCount = (track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS) ? data.trackSettings[track].layerCount : 0;
+    const uint8_t layerLimit = std::min<uint8_t>(layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+    const uint8_t patternLayerMutes = (track < LiveSequencer::LIVESEQUENCER_NUM_TRACKS) ? data.tracks[track].layerMutes : 0;
+
+    for (uint8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; ++layer) {
+      const bool enabled = (layer < layerLimit) && ((patternLayerMutes & (1 << layer)) == 0);
+      data.gridStep(data.selectedGridStep, track, layer) = enabled;
+    }
+  }
+
+  cancelFromPatternConfirmation();
+  needsRedraw = true;
+  data.redraw_grid_buttons = true;
+  data.redraw_grid_header = true;
+}
+
 void GridSongEditorUI::armClearRowConfirmation() {
   clearRowConfirmPending = true;
   clearRowConfirmDeadlineMs = millis() + CONFIRM_TIMEOUT_MS;
@@ -872,6 +953,38 @@ void GridSongEditorUI::updateClearRowConfirmation() {
   const uint32_t now = millis();
   if (static_cast<int32_t>(now - clearRowConfirmDeadlineMs) >= 0) {
     cancelClearRowConfirmation();
+  }
+}
+
+void GridSongEditorUI::armFromPatternConfirmation() {
+  fromPatternConfirmPending = true;
+  fromPatternConfirmDeadlineMs = millis() + CONFIRM_TIMEOUT_MS;
+  data.redraw_grid_buttons = true;
+  needsRedraw = true;
+}
+
+void GridSongEditorUI::cancelFromPatternConfirmation() {
+  if (!fromPatternConfirmPending) {
+    return;
+  }
+  fromPatternConfirmPending = false;
+  data.redraw_grid_buttons = true;
+  needsRedraw = true;
+}
+
+void GridSongEditorUI::updateFromPatternConfirmation() {
+  if (!fromPatternConfirmPending) {
+    return;
+  }
+
+  if (controlBank != ControlBank::Secondary || !canCopyFromPattern()) {
+    cancelFromPatternConfirmation();
+    return;
+  }
+
+  const uint32_t now = millis();
+  if (static_cast<int32_t>(now - fromPatternConfirmDeadlineMs) >= 0) {
+    cancelFromPatternConfirmation();
   }
 }
 
