@@ -458,7 +458,7 @@ void GridSongEditorUI::draw() {
     }
 
     const bool secondaryBankActive = (controlBank == ControlBank::Secondary);
-    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SHIFT", secondaryBankActive ? "2ND" : "1ST",
+    TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SHIFT", "",
       secondaryBankActive ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL);
     const bool playingNow = data.isRunning || data.isStarting || seq.running;
     TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", playingNow ? "STOP" : "START",
@@ -651,7 +651,7 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
     const bool confirming = clearBlockConfirmPending && enabled;
     const char* topLabel = confirming ? "CONFIRM" : "CLEAR";
     const char* subLabel = confirming ? "?" : "BLOCK";
-    const TouchButton::Color color = enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE;
+    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
     button->draw(topLabel, subLabel, color);
     return;
   }
@@ -663,7 +663,7 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
     const bool confirming = clearRowConfirmPending && enabled;
     const char* topLabel = confirming ? "CONFIRM" : "CLEAR";
     const char* subLabel = confirming ? "?" : "ROW";
-    const TouchButton::Color color = enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE;
+    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
     button->draw(topLabel, subLabel, color);
     return;
   }
@@ -682,7 +682,7 @@ void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t
     const bool confirming = fromPatternConfirmPending && enabled;
     const char* topLabel = confirming ? "CONFIRM" : "FROM";
     const char* subLabel = confirming ? "?" : "PAT";
-    const TouchButton::Color color = enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE;
+    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
     TouchButton::drawButton(x, y, topLabel, subLabel, color);
     return;
   }
@@ -695,7 +695,7 @@ void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t
     const bool confirming = toPatternConfirmPending && enabled;
     const char* topLabel = confirming ? "CONFIRM" : "TO";
     const char* subLabel = confirming ? "?" : "PAT";
-    const TouchButton::Color color = enabled ? TouchButton::BUTTON_RED : TouchButton::BUTTON_INACTIVE;
+    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
     TouchButton::drawButton(x, y, topLabel, subLabel, color);
     return;
   }
