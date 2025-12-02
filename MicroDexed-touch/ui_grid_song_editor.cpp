@@ -148,7 +148,7 @@ void GridSongEditorUI::handlePlaybackEnded() {
   data.redraw_grid_header = true;
 }
 
-void GridSongEditorUI::initButtons() {
+FLASHMEM void GridSongEditorUI::initButtons() {
   gridControlButtons.reserve(6);
   gridControlButtons.push_back(new TouchButton(GRID.X[0], GRID.Y[4],
     [this](auto* b) {
@@ -300,7 +300,7 @@ void GridSongEditorUI::initButtons() {
     }));
 }
 
-void GridSongEditorUI::draw() {
+FLASHMEM void GridSongEditorUI::draw() {
   if (!active || !needsRedraw) {
     return;
   }
@@ -470,7 +470,7 @@ void GridSongEditorUI::exitToLiveSequencer() {
   }
 }
 
-void GridSongEditorUI::processPlayButton() {
+FLASHMEM void GridSongEditorUI::processPlayButton() {
   const bool playingNow = data.isRunning || data.isStarting || seq.running;
   auto stopPlayback = [&]() {
     data.seq_started_from_pattern_mode = false;
@@ -497,7 +497,7 @@ void GridSongEditorUI::processPlayButton() {
   data.redraw_grid_buttons = true;
 }
 
-void GridSongEditorUI::processGridTouch() {
+FLASHMEM void GridSongEditorUI::processGridTouch() {
   if (numTouchPoints == 0) {
     return;
   }
@@ -527,18 +527,18 @@ void GridSongEditorUI::processGridTouch() {
   }
 }
 
-void GridSongEditorUI::processControlButtons() {
+FLASHMEM void GridSongEditorUI::processControlButtons() {
   for (auto* button : gridControlButtons) {
     button->processPressed();
   }
 }
 
-void GridSongEditorUI::toggleControlBank() {
+FLASHMEM void GridSongEditorUI::toggleControlBank() {
   const ControlBank next = (controlBank == ControlBank::Primary) ? ControlBank::Secondary : ControlBank::Primary;
   setControlBank(next);
 }
 
-void GridSongEditorUI::setControlBank(ControlBank bank) {
+FLASHMEM void GridSongEditorUI::setControlBank(ControlBank bank) {
   if (controlBank == bank) {
     return;
   }
@@ -551,7 +551,7 @@ void GridSongEditorUI::setControlBank(ControlBank bank) {
   data.redraw_grid_buttons = true;
 }
 
-void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
+FLASHMEM void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
   if (index != 1) {
     cancelClearBlockConfirmation();
   }
@@ -590,7 +590,7 @@ void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
   }
 }
 
-void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t index) {
+FLASHMEM void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t index) {
   const bool enabled = isSecondaryFunctionEnabled(index);
   if (index == 0) {
     button->draw("COPY", "BLOCK", enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
@@ -620,7 +620,7 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
   button->draw("FUNC", subLabel, enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
 }
 
-void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index) {
+FLASHMEM void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t index) {
   if (index == 4) {
     const bool enabled = isSecondaryFunctionEnabled(index);
     if (!enabled && fromPatternConfirmPending) {
@@ -647,7 +647,7 @@ void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t
   TouchButton::drawButton(x, y, "FUNC", subLabel, enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
 }
 
-bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t index) const {
+FLASHMEM bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t index) const {
   switch (index) {
     case 0:
       return canCopyBlock();
@@ -664,7 +664,7 @@ bool GridSongEditorUI::isSecondaryFunctionEnabled(uint8_t index) const {
   }
 }
 
-bool GridSongEditorUI::canCopyBlock() const {
+FLASHMEM bool GridSongEditorUI::canCopyBlock() const {
   if (!playbackBlockIsValid()) {
     return false;
   }
@@ -693,18 +693,18 @@ bool GridSongEditorUI::canCopyBlock() const {
   return destinationRangeIsEmpty(destStart, blockLength);
 }
 
-bool GridSongEditorUI::canClearBlock() const {
+FLASHMEM bool GridSongEditorUI::canClearBlock() const {
   return playbackBlockIsValid() && blockHasContent();
 }
 
-bool GridSongEditorUI::canClearRow() const {
+FLASHMEM bool GridSongEditorUI::canClearRow() const {
   if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     return false;
   }
   return rowHasContent(data.selectedGridStep);
 }
 
-bool GridSongEditorUI::canCopyFromPattern() const {
+FLASHMEM bool GridSongEditorUI::canCopyFromPattern() const {
   if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     return false;
   }
@@ -726,7 +726,7 @@ bool GridSongEditorUI::canCopyFromPattern() const {
   return false;
 }
 
-bool GridSongEditorUI::canCopyToPattern() const {
+FLASHMEM bool GridSongEditorUI::canCopyToPattern() const {
   if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     return false;
   }
@@ -751,7 +751,7 @@ bool GridSongEditorUI::canCopyToPattern() const {
 
   return false;
 }
-bool GridSongEditorUI::playbackBlockIsValid() const {
+FLASHMEM bool GridSongEditorUI::playbackBlockIsValid() const {
   if (data.gridPlaybackStartStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN ||
     data.gridPlaybackEndStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     return false;
@@ -759,7 +759,7 @@ bool GridSongEditorUI::playbackBlockIsValid() const {
   return data.gridPlaybackStartStep <= data.gridPlaybackEndStep;
 }
 
-bool GridSongEditorUI::blockHasContent() const {
+FLASHMEM bool GridSongEditorUI::blockHasContent() const {
   if (!playbackBlockIsValid()) {
     return false;
   }
@@ -773,7 +773,7 @@ bool GridSongEditorUI::blockHasContent() const {
   return false;
 }
 
-bool GridSongEditorUI::rowHasContent(uint8_t step) const {
+FLASHMEM bool GridSongEditorUI::rowHasContent(uint8_t step) const {
   for (uint8_t track = 0; track < GRID_SONG_COLS; ++track) {
     for (uint8_t layer = 0; layer < 4; ++layer) {
       if (data.gridStep(step, track, layer)) {
@@ -784,7 +784,7 @@ bool GridSongEditorUI::rowHasContent(uint8_t step) const {
   return false;
 }
 
-bool GridSongEditorUI::destinationRangeIsEmpty(uint8_t destStart, uint8_t blockLength) const {
+FLASHMEM bool GridSongEditorUI::destinationRangeIsEmpty(uint8_t destStart, uint8_t blockLength) const {
   const uint16_t destEndExclusive = static_cast<uint16_t>(destStart) + blockLength;
   if (destEndExclusive > LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     return false;
@@ -804,7 +804,7 @@ bool GridSongEditorUI::destinationRangeIsEmpty(uint8_t destStart, uint8_t blockL
   return true;
 }
 
-void GridSongEditorUI::copySelectedBlock() {
+FLASHMEM void GridSongEditorUI::copySelectedBlock() {
   if (!canCopyBlock()) {
     return;
   }
@@ -831,7 +831,7 @@ void GridSongEditorUI::copySelectedBlock() {
   data.redraw_grid_header = true;
 }
 
-void GridSongEditorUI::clearSelectedBlock() {
+FLASHMEM void GridSongEditorUI::clearSelectedBlock() {
   if (!playbackBlockIsValid()) {
     cancelClearBlockConfirmation();
     return;
@@ -851,14 +851,14 @@ void GridSongEditorUI::clearSelectedBlock() {
   data.redraw_grid_header = true;
 }
 
-void GridSongEditorUI::armClearBlockConfirmation() {
+FLASHMEM void GridSongEditorUI::armClearBlockConfirmation() {
   clearBlockConfirmPending = true;
   clearBlockConfirmDeadlineMs = millis() + CONFIRM_TIMEOUT_MS;
   data.redraw_grid_buttons = true;
   needsRedraw = true;
 }
 
-void GridSongEditorUI::cancelClearBlockConfirmation() {
+FLASHMEM void GridSongEditorUI::cancelClearBlockConfirmation() {
   if (!clearBlockConfirmPending) {
     return;
   }
@@ -867,7 +867,7 @@ void GridSongEditorUI::cancelClearBlockConfirmation() {
   needsRedraw = true;
 }
 
-void GridSongEditorUI::updateClearBlockConfirmation() {
+FLASHMEM void GridSongEditorUI::updateClearBlockConfirmation() {
   if (!clearBlockConfirmPending) {
     return;
   }
@@ -883,7 +883,7 @@ void GridSongEditorUI::updateClearBlockConfirmation() {
   }
 }
 
-void GridSongEditorUI::clearSelectedRow() {
+FLASHMEM void GridSongEditorUI::clearSelectedRow() {
   if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     cancelClearRowConfirmation();
     return;
@@ -901,7 +901,7 @@ void GridSongEditorUI::clearSelectedRow() {
   data.redraw_grid_header = true;
 }
 
-void GridSongEditorUI::copyRowFromPattern() {
+FLASHMEM void GridSongEditorUI::copyRowFromPattern() {
   if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     cancelFromPatternConfirmation();
     return;
@@ -924,7 +924,7 @@ void GridSongEditorUI::copyRowFromPattern() {
   data.redraw_grid_header = true;
 }
 
-void GridSongEditorUI::copyRowToPattern() {
+FLASHMEM void GridSongEditorUI::copyRowToPattern() {
   if (data.selectedGridStep >= LiveSequencer::LiveSeqData::GRIDSONGLEN) {
     cancelToPatternConfirmation();
     return;
@@ -968,14 +968,14 @@ void GridSongEditorUI::copyRowToPattern() {
   }
 }
 
-void GridSongEditorUI::armClearRowConfirmation() {
+FLASHMEM void GridSongEditorUI::armClearRowConfirmation() {
   clearRowConfirmPending = true;
   clearRowConfirmDeadlineMs = millis() + CONFIRM_TIMEOUT_MS;
   data.redraw_grid_buttons = true;
   needsRedraw = true;
 }
 
-void GridSongEditorUI::cancelClearRowConfirmation() {
+FLASHMEM void GridSongEditorUI::cancelClearRowConfirmation() {
   if (!clearRowConfirmPending) {
     return;
   }
@@ -984,7 +984,7 @@ void GridSongEditorUI::cancelClearRowConfirmation() {
   needsRedraw = true;
 }
 
-void GridSongEditorUI::updateClearRowConfirmation() {
+FLASHMEM void GridSongEditorUI::updateClearRowConfirmation() {
   if (!clearRowConfirmPending) {
     return;
   }
@@ -1000,14 +1000,14 @@ void GridSongEditorUI::updateClearRowConfirmation() {
   }
 }
 
-void GridSongEditorUI::armFromPatternConfirmation() {
+FLASHMEM void GridSongEditorUI::armFromPatternConfirmation() {
   fromPatternConfirmPending = true;
   fromPatternConfirmDeadlineMs = millis() + CONFIRM_TIMEOUT_MS;
   data.redraw_grid_buttons = true;
   needsRedraw = true;
 }
 
-void GridSongEditorUI::cancelFromPatternConfirmation() {
+FLASHMEM void GridSongEditorUI::cancelFromPatternConfirmation() {
   if (!fromPatternConfirmPending) {
     return;
   }
@@ -1016,7 +1016,7 @@ void GridSongEditorUI::cancelFromPatternConfirmation() {
   needsRedraw = true;
 }
 
-void GridSongEditorUI::updateFromPatternConfirmation() {
+FLASHMEM void GridSongEditorUI::updateFromPatternConfirmation() {
   if (!fromPatternConfirmPending) {
     return;
   }
@@ -1032,14 +1032,14 @@ void GridSongEditorUI::updateFromPatternConfirmation() {
   }
 }
 
-void GridSongEditorUI::armToPatternConfirmation() {
+FLASHMEM void GridSongEditorUI::armToPatternConfirmation() {
   toPatternConfirmPending = true;
   toPatternConfirmDeadlineMs = millis() + CONFIRM_TIMEOUT_MS;
   data.redraw_grid_buttons = true;
   needsRedraw = true;
 }
 
-void GridSongEditorUI::cancelToPatternConfirmation() {
+FLASHMEM void GridSongEditorUI::cancelToPatternConfirmation() {
   if (!toPatternConfirmPending) {
     return;
   }
@@ -1048,7 +1048,7 @@ void GridSongEditorUI::cancelToPatternConfirmation() {
   needsRedraw = true;
 }
 
-void GridSongEditorUI::updateToPatternConfirmation() {
+FLASHMEM void GridSongEditorUI::updateToPatternConfirmation() {
   if (!toPatternConfirmPending) {
     return;
   }
@@ -1064,14 +1064,14 @@ void GridSongEditorUI::updateToPatternConfirmation() {
   }
 }
 
-void GridSongEditorUI::toggleLayer(uint8_t layer) {
+FLASHMEM void GridSongEditorUI::toggleLayer(uint8_t layer) {
   data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) =
     !data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
   needsRedraw = true;
   data.redraw_grid_buttons = true;
 }
 
-void GridSongEditorUI::clearGridCell() {
+FLASHMEM void GridSongEditorUI::clearGridCell() {
   for (uint8_t layer = 0; layer < 4; layer++) {
     data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) = false;
   }
@@ -1079,7 +1079,7 @@ void GridSongEditorUI::clearGridCell() {
   data.redraw_grid_buttons = true;
 }
 
-void GridSongEditorUI::fillGridCell() {
+FLASHMEM void GridSongEditorUI::fillGridCell() {
   for (uint8_t layer = 0; layer < 4; layer++) {
     data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer) = true;
   }
@@ -1087,7 +1087,7 @@ void GridSongEditorUI::fillGridCell() {
   data.redraw_grid_buttons = true;
 }
 
-void GridSongEditorUI::copyFromAbove() {
+FLASHMEM void GridSongEditorUI::copyFromAbove() {
   if (data.selectedGridStep == 0) {
     return;
   }
@@ -1100,39 +1100,39 @@ void GridSongEditorUI::copyFromAbove() {
   data.redraw_grid_buttons = true;
 }
 
-void GridSongEditorUI::insertGridRow() {
+FLASHMEM void GridSongEditorUI::insertGridRow() {
   if (liveSeq.insertGridRow(data.selectedGridStep)) {
     needsRedraw = true;
     data.redraw_grid_buttons = true;
   }
 }
 
-void GridSongEditorUI::removeGridRow() {
+FLASHMEM void GridSongEditorUI::removeGridRow() {
   if (liveSeq.removeGridRow(data.selectedGridStep)) {
     needsRedraw = true;
     data.redraw_grid_buttons = true;
   }
 }
 
-void GridSongEditorUI::slowRect(uint16_t x, uint8_t y, uint16_t color) {
+FLASHMEM void GridSongEditorUI::slowRect(uint16_t x, uint8_t y, uint16_t color) {
   display.drawLine(x, y, x + GRID_SONG_CELL_WIDTH + 1, y, color);
   display.drawLine(x, y, x, y + GRID_SONG_CELL_HEIGHT - 1, color);
   display.drawLine(x, y + GRID_SONG_CELL_HEIGHT, x + GRID_SONG_CELL_WIDTH + 1, y + GRID_SONG_CELL_HEIGHT, color);
   display.drawLine(x + GRID_SONG_CELL_WIDTH, y, x + GRID_SONG_CELL_WIDTH, y + GRID_SONG_CELL_HEIGHT - 1, color);
 }
 
-void GridSongEditorUI::checkWebRemote() {
+FLASHMEM void GridSongEditorUI::checkWebRemote() {
   if (remote_active) {
     display.console = true;
   }
 }
 
-uint8_t GridSongEditorUI::selectedTrackLayerLimit() const {
+FLASHMEM uint8_t GridSongEditorUI::selectedTrackLayerLimit() const {
   const uint8_t layerCount = data.trackSettings[data.selectedGridTrack].layerCount;
   return std::min<uint8_t>(layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
 }
 
-bool GridSongEditorUI::selectedCellHasContent() const {
+FLASHMEM bool GridSongEditorUI::selectedCellHasContent() const {
   const uint8_t layerLimit = selectedTrackLayerLimit();
   for (uint8_t layer = 0; layer < layerLimit; ++layer) {
     if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
@@ -1142,14 +1142,14 @@ bool GridSongEditorUI::selectedCellHasContent() const {
   return false;
 }
 
-bool GridSongEditorUI::layerIsActive(uint8_t layer) const {
+FLASHMEM bool GridSongEditorUI::layerIsActive(uint8_t layer) const {
   if (layer >= selectedTrackLayerLimit()) {
     return false;
   }
   return data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
 }
 
-GridSongEditorUI::ConfirmButtonView GridSongEditorUI::buildConfirmButtonView(const char* idleTop, const char* idleSub,
+FLASHMEM GridSongEditorUI::ConfirmButtonView GridSongEditorUI::buildConfirmButtonView(const char* idleTop, const char* idleSub,
   bool enabled, bool confirming) const {
   ConfirmButtonView view{ idleTop, idleSub, TouchButton::BUTTON_INACTIVE };
   if (!enabled) {
@@ -1162,19 +1162,19 @@ GridSongEditorUI::ConfirmButtonView GridSongEditorUI::buildConfirmButtonView(con
   return view;
 }
 
-void GridSongEditorUI::drawConfirmableButton(TouchButton* button, const char* idleTop, const char* idleSub, bool enabled,
+FLASHMEM void GridSongEditorUI::drawConfirmableButton(TouchButton* button, const char* idleTop, const char* idleSub, bool enabled,
   bool confirming) {
   const auto view = buildConfirmButtonView(idleTop, idleSub, enabled, confirming);
   button->draw(view.topLabel, view.subLabel, view.color);
 }
 
-void GridSongEditorUI::drawConfirmableBottomButton(uint16_t x, uint16_t y, const char* idleTop, const char* idleSub,
+FLASHMEM void GridSongEditorUI::drawConfirmableBottomButton(uint16_t x, uint16_t y, const char* idleTop, const char* idleSub,
   bool enabled, bool confirming) {
   const auto view = buildConfirmButtonView(idleTop, idleSub, enabled, confirming);
   TouchButton::drawButton(x, y, view.topLabel, view.subLabel, view.color);
 }
 
-bool GridSongEditorUI::processConfirmableAction(bool enabled, bool& pendingFlag,
+FLASHMEM bool GridSongEditorUI::processConfirmableAction(bool enabled, bool& pendingFlag,
   void (GridSongEditorUI::*armFn)(), void (GridSongEditorUI::*executeFn)()) {
   if (!enabled) {
     return false;
