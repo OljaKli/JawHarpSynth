@@ -81,6 +81,20 @@ private:
   void removeGridRow();
   void slowRect(uint16_t x, uint8_t y, uint16_t color);
   void checkWebRemote();
+  uint8_t selectedTrackLayerLimit() const;
+  bool selectedCellHasContent() const;
+  bool layerIsActive(uint8_t layer) const;
+
+  struct ConfirmButtonView {
+    const char* topLabel;
+    const char* subLabel;
+    TouchButton::Color color;
+  };
+
+  ConfirmButtonView buildConfirmButtonView(const char* idleTop, const char* idleSub, bool enabled, bool confirming) const;
+  void drawConfirmableButton(TouchButton* button, const char* idleTop, const char* idleSub, bool enabled, bool confirming);
+  void drawConfirmableBottomButton(uint16_t x, uint16_t y, const char* idleTop, const char* idleSub, bool enabled, bool confirming);
+  bool processConfirmableAction(bool enabled, bool& pendingFlag, void (GridSongEditorUI::*armFn)(), void (GridSongEditorUI::*executeFn)());
 
   LiveSequencer& liveSeq;
   LiveSequencer::LiveSeqData& data;

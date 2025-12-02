@@ -157,22 +157,14 @@ void GridSongEditorUI::initButtons() {
         return;
       }
 
-      const uint8_t layerLimit = std::min<uint8_t>(data.trackSettings[data.selectedGridTrack].layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+      const uint8_t layerLimit = selectedTrackLayerLimit();
       const bool hasLayers = layerLimit > 0;
-
-      bool hasContent = false;
-      for (uint8_t layer = 0; layer < layerLimit; ++layer) {
-        if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
-          hasContent = true;
-          break;
-        }
-      }
+      const bool hasContent = hasLayers && selectedCellHasContent();
 
       const char* topLabel = hasContent ? "CLEAR" : "FILL";
-      TouchButton::Color color = hasContent ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
-      if (!hasLayers) {
-        topLabel = "FILL";
-        color = TouchButton::BUTTON_INACTIVE;
+      TouchButton::Color color = TouchButton::BUTTON_INACTIVE;
+      if (hasLayers) {
+        color = hasContent ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
       }
 
       b->draw(topLabel, "CELL", color);
@@ -185,20 +177,12 @@ void GridSongEditorUI::initButtons() {
         return;
       }
 
-      const uint8_t layerLimit = std::min<uint8_t>(data.trackSettings[data.selectedGridTrack].layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+      const uint8_t layerLimit = selectedTrackLayerLimit();
       if (layerLimit == 0) {
         return;
       }
 
-      bool hasContent = false;
-      for (uint8_t layer = 0; layer < layerLimit; ++layer) {
-        if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
-          hasContent = true;
-          break;
-        }
-      }
-
-      if (hasContent) {
+      if (selectedCellHasContent()) {
         clearGridCell();
       }
       else {
@@ -213,7 +197,7 @@ void GridSongEditorUI::initButtons() {
         return;
       }
 
-      const bool hasLayers = data.trackSettings[data.selectedGridTrack].layerCount > 0;
+      const bool hasLayers = selectedTrackLayerLimit() > 0;
       if (hasLayers && data.selectedGridStep > 0) {
         b->draw("FROM", "ABOVE", TouchButton::BUTTON_ACTIVE);
       }
@@ -229,7 +213,7 @@ void GridSongEditorUI::initButtons() {
         return;
       }
 
-      if (data.trackSettings[data.selectedGridTrack].layerCount > 0 && data.selectedGridStep > 0) {
+      if (selectedTrackLayerLimit() > 0 && data.selectedGridStep > 0) {
         copyFromAbove();
       }
     }));
@@ -447,11 +431,12 @@ void GridSongEditorUI::draw() {
         continue;
       }
 
-      if (liveSeq.isTrackLayerEmpty(data.selectedGridTrack, layer)) {
+      const bool layerAvailable = !liveSeq.isTrackLayerEmpty(data.selectedGridTrack, layer);
+      if (!layerAvailable) {
         TouchButton::drawButton(x, y, "LAYER", std::to_string(layer + 1).c_str(), TouchButton::BUTTON_INACTIVE);
       }
       else {
-        const bool isActiveLayer = data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
+        const bool isActiveLayer = layerIsActive(layer);
         TouchButton::drawButton(x, y, "LAYER", std::to_string(layer + 1).c_str(),
           isActiveLayer ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
       }
@@ -585,52 +570,20 @@ void GridSongEditorUI::handleSecondaryButton(uint8_t index) {
       copySelectedBlock();
       break;
     case 1:
-      if (!canClearBlock()) {
-        return;
-      }
-
-      if (!clearBlockConfirmPending) {
-        armClearBlockConfirmation();
-      }
-      else {
-        clearSelectedBlock();
-      }
+      processConfirmableAction(canClearBlock(), clearBlockConfirmPending,
+        &GridSongEditorUI::armClearBlockConfirmation, &GridSongEditorUI::clearSelectedBlock);
       break;
     case 2:
-      if (!canClearRow()) {
-        return;
-      }
-
-      if (!clearRowConfirmPending) {
-        armClearRowConfirmation();
-      }
-      else {
-        clearSelectedRow();
-      }
+      processConfirmableAction(canClearRow(), clearRowConfirmPending,
+        &GridSongEditorUI::armClearRowConfirmation, &GridSongEditorUI::clearSelectedRow);
       break;
     case 4:
-      if (!canCopyFromPattern()) {
-        return;
-      }
-
-      if (!fromPatternConfirmPending) {
-        armFromPatternConfirmation();
-      }
-      else {
-        copyRowFromPattern();
-      }
+      processConfirmableAction(canCopyFromPattern(), fromPatternConfirmPending,
+        &GridSongEditorUI::armFromPatternConfirmation, &GridSongEditorUI::copyRowFromPattern);
       break;
     case 5:
-      if (!canCopyToPattern()) {
-        return;
-      }
-
-      if (!toPatternConfirmPending) {
-        armToPatternConfirmation();
-      }
-      else {
-        copyRowToPattern();
-      }
+      processConfirmableAction(canCopyToPattern(), toPatternConfirmPending,
+        &GridSongEditorUI::armToPatternConfirmation, &GridSongEditorUI::copyRowToPattern);
       break;
     default:
       break;
@@ -649,10 +602,7 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
       cancelClearBlockConfirmation();
     }
     const bool confirming = clearBlockConfirmPending && enabled;
-    const char* topLabel = confirming ? "CONFIRM" : "CLEAR";
-    const char* subLabel = confirming ? "?" : "BLOCK";
-    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
-    button->draw(topLabel, subLabel, color);
+    drawConfirmableButton(button, "CLEAR", "BLOCK", enabled, confirming);
     return;
   }
 
@@ -661,10 +611,7 @@ void GridSongEditorUI::drawSecondaryControlButton(TouchButton* button, uint8_t i
       cancelClearRowConfirmation();
     }
     const bool confirming = clearRowConfirmPending && enabled;
-    const char* topLabel = confirming ? "CONFIRM" : "CLEAR";
-    const char* subLabel = confirming ? "?" : "ROW";
-    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
-    button->draw(topLabel, subLabel, color);
+    drawConfirmableButton(button, "CLEAR", "ROW", enabled, confirming);
     return;
   }
 
@@ -680,10 +627,7 @@ void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t
       cancelFromPatternConfirmation();
     }
     const bool confirming = fromPatternConfirmPending && enabled;
-    const char* topLabel = confirming ? "CONFIRM" : "FROM";
-    const char* subLabel = confirming ? "?" : "PAT";
-    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
-    TouchButton::drawButton(x, y, topLabel, subLabel, color);
+    drawConfirmableBottomButton(x, y, "FROM", "PAT", enabled, confirming);
     return;
   }
 
@@ -693,10 +637,7 @@ void GridSongEditorUI::drawSecondaryBottomButton(uint16_t x, uint16_t y, uint8_t
       cancelToPatternConfirmation();
     }
     const bool confirming = toPatternConfirmPending && enabled;
-    const char* topLabel = confirming ? "CONFIRM" : "TO";
-    const char* subLabel = confirming ? "?" : "PAT";
-    const TouchButton::Color color = confirming ? TouchButton::BUTTON_RED : (enabled ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_INACTIVE);
-    TouchButton::drawButton(x, y, topLabel, subLabel, color);
+    drawConfirmableBottomButton(x, y, "TO", "PAT", enabled, confirming);
     return;
   }
 
@@ -1184,4 +1125,66 @@ void GridSongEditorUI::checkWebRemote() {
   if (remote_active) {
     display.console = true;
   }
+}
+
+uint8_t GridSongEditorUI::selectedTrackLayerLimit() const {
+  const uint8_t layerCount = data.trackSettings[data.selectedGridTrack].layerCount;
+  return std::min<uint8_t>(layerCount, LiveSequencer::LIVESEQUENCER_NUM_LAYERS);
+}
+
+bool GridSongEditorUI::selectedCellHasContent() const {
+  const uint8_t layerLimit = selectedTrackLayerLimit();
+  for (uint8_t layer = 0; layer < layerLimit; ++layer) {
+    if (data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool GridSongEditorUI::layerIsActive(uint8_t layer) const {
+  if (layer >= selectedTrackLayerLimit()) {
+    return false;
+  }
+  return data.gridStep(data.selectedGridStep, data.selectedGridTrack, layer);
+}
+
+GridSongEditorUI::ConfirmButtonView GridSongEditorUI::buildConfirmButtonView(const char* idleTop, const char* idleSub,
+  bool enabled, bool confirming) const {
+  ConfirmButtonView view{ idleTop, idleSub, TouchButton::BUTTON_INACTIVE };
+  if (!enabled) {
+    return view;
+  }
+
+  view.topLabel = confirming ? "CONFIRM" : idleTop;
+  view.subLabel = confirming ? "?" : idleSub;
+  view.color = confirming ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
+  return view;
+}
+
+void GridSongEditorUI::drawConfirmableButton(TouchButton* button, const char* idleTop, const char* idleSub, bool enabled,
+  bool confirming) {
+  const auto view = buildConfirmButtonView(idleTop, idleSub, enabled, confirming);
+  button->draw(view.topLabel, view.subLabel, view.color);
+}
+
+void GridSongEditorUI::drawConfirmableBottomButton(uint16_t x, uint16_t y, const char* idleTop, const char* idleSub,
+  bool enabled, bool confirming) {
+  const auto view = buildConfirmButtonView(idleTop, idleSub, enabled, confirming);
+  TouchButton::drawButton(x, y, view.topLabel, view.subLabel, view.color);
+}
+
+bool GridSongEditorUI::processConfirmableAction(bool enabled, bool& pendingFlag,
+  void (GridSongEditorUI::*armFn)(), void (GridSongEditorUI::*executeFn)()) {
+  if (!enabled) {
+    return false;
+  }
+
+  if (!pendingFlag) {
+    (this->*armFn)();
+  }
+  else {
+    (this->*executeFn)();
+  }
+  return true;
 }
