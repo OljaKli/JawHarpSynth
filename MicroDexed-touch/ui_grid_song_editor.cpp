@@ -15,16 +15,16 @@ extern int numTouchPoints;
 extern bool remote_active;
 extern sequencer_t seq;
 
-GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, ILI9341_t3n& disp)
+FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, ILI9341_t3n& disp)
   : liveSeq(sequencer), data(d), display(disp) {
   initButtons();
 }
 
-void GridSongEditorUI::setCallbacks(const Callbacks& cb) {
+FLASHMEM void GridSongEditorUI::setCallbacks(const Callbacks& cb) {
   callbacks = cb;
 }
 
-void GridSongEditorUI::enter() {
+FLASHMEM void GridSongEditorUI::enter() {
   if (active) {
     return;
   }
@@ -40,7 +40,7 @@ void GridSongEditorUI::enter() {
   display.fillScreen(COLOR_BACKGROUND);
 }
 
-void GridSongEditorUI::exit() {
+FLASHMEM void GridSongEditorUI::exit() {
   if (!active) {
     return;
   }
@@ -55,11 +55,11 @@ void GridSongEditorUI::exit() {
   cancelToPatternConfirmation();
 }
 
-bool GridSongEditorUI::isActive() const {
+FLASHMEM bool GridSongEditorUI::isActive() const {
   return active;
 }
 
-void GridSongEditorUI::tick() {
+FLASHMEM void GridSongEditorUI::tick() {
   if (!active) {
     return;
   }
@@ -74,7 +74,7 @@ void GridSongEditorUI::tick() {
   }
 }
 
-void GridSongEditorUI::handleEncoder(const EncoderEvents& events) {
+FLASHMEM void GridSongEditorUI::handleEncoder(const EncoderEvents& events) {
   if (!active) {
     return;
   }
@@ -93,7 +93,7 @@ void GridSongEditorUI::handleEncoder(const EncoderEvents& events) {
   }
 }
 
-void GridSongEditorUI::handleTouch() {
+FLASHMEM void GridSongEditorUI::handleTouch() {
   if (!active) {
     return;
   }
@@ -137,7 +137,7 @@ void GridSongEditorUI::handleStepChanged() {
   }
 }
 
-void GridSongEditorUI::handlePlaybackEnded() {
+FLASHMEM void GridSongEditorUI::handlePlaybackEnded() {
   const bool playingNow = data.isRunning || data.isStarting || seq.running;
   if (playingNow) {
     data.seq_started_from_pattern_mode = false;
@@ -454,7 +454,7 @@ FLASHMEM void GridSongEditorUI::draw() {
   needsRedraw = false;
 }
 
-void GridSongEditorUI::exitToLiveSequencer() {
+FLASHMEM void GridSongEditorUI::exitToLiveSequencer() {
   exit();
   data.isSongMode = false;
   data.redraw_grid_header = true;
