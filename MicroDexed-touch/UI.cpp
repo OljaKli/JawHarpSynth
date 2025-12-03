@@ -53,6 +53,7 @@
 #include "MultiBandCompressor.h" 
 
 #include "ui_liveseq_pianoroll.h"
+#include "ui_livesequencer.h"
 #include "livesequencer.h"
 #include "virtualkeyboard.h"
 #include <synth_braids.h>
@@ -99,6 +100,7 @@ extern bool apc_scroll_message;
 #endif
 
 extern LiveSequencer liveSeq;
+extern UI_LiveSequencer* ui_liveSeq;
 extern bool touch_ic_found;
 extern AudioSynthEPiano ep;
 extern JoystickController joysticks[];
@@ -4965,8 +4967,18 @@ FLASHMEM void lcdml_menu_control(void)
             LCDML.OTHER_setCursorToID(LCDML.MENU_getLastCursorPositionID());
         }
         else {
-          LCDML.BT_quit();
-          LCDML.SCREEN_resetTimer(); // reset timer on exiting screensaver through back key
+          const bool liveSeqGridConsumesBack =
+            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer)) &&
+            (ui_liveSeq != nullptr) &&
+            ui_liveSeq->isGridEditorActive();
+
+          if (liveSeqGridConsumesBack) {
+            ui_liveSeq->notifyLeftEncoderShort();
+          }
+          else {
+            LCDML.BT_quit();
+            LCDML.SCREEN_resetTimer(); // reset timer on exiting screensaver through back key
+          }
         }
       }
     }
