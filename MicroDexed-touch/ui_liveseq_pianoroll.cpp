@@ -13,6 +13,59 @@ extern MD_REncoder ENCODER[NUM_ENCODER];
 
 UI_LiveSeq_PianoRoll* ui_pianoroll;
 
+void UI_LiveSeq_PianoRoll::drawBackgroundForNote(uint8_t note, uint16_t fromX, uint16_t toX) const {
+  const uint8_t noteIndex = view.highestNote - note - 1;
+  const uint16_t y = round(noteIndex * view.noteHeight);
+  uint16_t bgColor = (note % 2) ? GREY4 : COLOR_BACKGROUND;
+
+  display.console = true;
+  const uint16_t width = toX - fromX;
+  const uint16_t xFrom = std::max(ROLL_WIDTH, fromX);
+
+  if (width > 1) {
+    display.fillRect(xFrom, y, toX - fromX, ceil(view.noteHeight), bgColor);
+  }
+  else {
+    display.drawLine(xFrom, y, xFrom, y + ceil(view.noteHeight) - 1, bgColor);
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::addNoteUpdateRegion(uint32_t timeOn, uint32_t timeOff, uint8_t notePitch, bool includeBars) {
+  uint16_t x = getNoteCoord(timeOn);
+
+  // Calculate width
+  uint32_t lenMs = (timeOff > timeOn) ? (timeOff - timeOn) : 1;
+  uint16_t w = std::max(1, int(roundf(lenMs * view.msToPix)));
+
+  UpdateRange region;
+  region.fromX = std::max(ROLL_WIDTH, (uint16_t)(x - 3));
+  region.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(x + w + 3));
+  region.notes = { notePitch };
+  drawRegionsX.push_back(region);
+
+  if (includeBars) {
+    UpdateRange barRegion = region;
+    barRegion.notes = {};
+    drawRegionsX.push_back(barRegion);
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::addFullUpdateRegion(uint32_t timeOn1, uint32_t timeOff1, uint32_t timeOn2, uint32_t timeOff2) {
+  uint16_t x1 = getNoteCoord(timeOn1);
+  uint16_t x2 = getNoteCoord(timeOn2);
+
+  // Calculate widths
+  uint32_t lenMs1 = (timeOff1 > timeOn1) ? (timeOff1 - timeOn1) : 1;
+  uint32_t lenMs2 = (timeOff2 > timeOn2) ? (timeOff2 - timeOn2) : 1;
+  uint16_t w1 = std::max(1, int(roundf(lenMs1 * view.msToPix)));
+  uint16_t w2 = std::max(1, int(roundf(lenMs2 * view.msToPix)));
+
+  UpdateRange region;
+  region.fromX = std::min(x1, x2) - 5;
+  region.toX = std::max(x1 + w1, x2 + w2) + 5;
+  region.notes = {};
+  drawRegionsX.push_back(region);
+}
 
 FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getQuantizationGridStep() const {
   switch (quantizeLevel) {
@@ -368,14 +421,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
     // If note starts before viewport, clamp start to viewport
     uint32_t visibleTimeOn = std::max(timeOn, viewStartMs);
     uint32_t visibleTimeOff = std::min(timeOff, viewEndMs);
-    
+
     // Only draw if there's a visible portion
     if (visibleTimeOn >= visibleTimeOff) {
       return;
     }
 
     x = getNoteCoord(visibleTimeOn);  // Use clamped start time
-    
+
     // Calculate width based on VISIBLE portion only
     uint32_t visibleLenMs = visibleTimeOff - visibleTimeOn;
     w = std::max(1, int(roundf(visibleLenMs * view.msToPix)));
@@ -398,19 +451,25 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
     w = std::max(1, int(roundf(lenMs * view.msToPix)));
   }
 
+  // Simplified region checking
   if (!drawRegionsX.empty()) {
+    bool shouldDraw = false;
+    uint8_t notePitch = note.noteOn.note_in;
+
     for (auto& u : drawRegionsX) {
-      const bool isInsideX = (int32_t(x) <= int32_t(u.toX)) && (int32_t(x + w) >= int32_t(u.fromX));
-      const bool isInsideY = u.notes.count(note.noteOn.note_in) || u.notes.empty();
-      if (isInsideX && isInsideY) {
-        drawNoteAtPosition(note, isSelected, x, uint16_t(w), drawInGrey);
+      bool inX = (x <= u.toX) && ((x + w) >= u.fromX);
+      bool inNotes = u.notes.empty() || u.notes.count(notePitch);
+
+      if (inX && inNotes) {
+        shouldDraw = true;
         break;
       }
     }
+
+    if (!shouldDraw) return;
   }
-  else {
-    drawNoteAtPosition(note, isSelected, x, uint16_t(w), drawInGrey);
-  }
+
+  drawNoteAtPosition(note, isSelected, x, uint16_t(w), drawInGrey);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
@@ -500,27 +559,19 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawBackground(void) {
+  // Process all regions in one pass
   for (auto& u : drawRegionsX) {
-    for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
-      if (u.notes.count(note) || u.notes.empty()) {
-        // Use the same calculation as piano roll
-        const uint8_t noteIndex = view.highestNote - note - 1;
-        const uint16_t y = round(noteIndex * view.noteHeight);
-
-        // alternating pattern: every other note gets gray background
-        uint16_t bgColor = (note % 2) ? GREY4 : COLOR_BACKGROUND;
-
-        display.console = true;
-
-        const uint16_t width = u.toX - u.fromX;
-        const uint16_t xFrom = std::max(ROLL_WIDTH, u.fromX);
-
-        // Draw background with same height as piano key
-        if (width > 1) {
-          display.fillRect(xFrom, y, u.toX - u.fromX, ceil(view.noteHeight), bgColor);
-        }
-        else {
-          display.drawLine(xFrom, y, xFrom, y + ceil(view.noteHeight) - 1, bgColor);
+    if (u.notes.empty()) {
+      // Full region - process all notes
+      for (uint8_t note = view.lowestNote; note < view.highestNote; note++) {
+        drawBackgroundForNote(note, u.fromX, u.toX);
+      }
+    }
+    else {
+      // Partial region - only specific notes
+      for (uint8_t note : u.notes) {
+        if (note >= view.lowestNote && note < view.highestNote) {
+          drawBackgroundForNote(note, u.fromX, u.toX);
         }
       }
     }
@@ -568,7 +619,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
       data.processMidiIn = true;
     }
 
- disableDirectMIDIinput = true;
+    disableDirectMIDIinput = true;
 
     if (param != 0xFF) {
       data.activeTrack = param;
@@ -1194,16 +1245,18 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 
         // FIX: Determine the correct track based on what's being displayed
         bool recordingToSongTrack = false;
-        
+
         if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
           // We're viewing the song notes track - record to song track
           on.track = data.stepRecordTargetTrack;
           on.source = LiveSequencer::EVENT_SONG;
           recordingToSongTrack = true;
-        } else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
+        }
+        else if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
           // We're viewing mute automation - shouldn't record notes here
           return;
-        } else {
+        }
+        else {
           // We're viewing a pattern track - record to that pattern track
           on.track = data.activeTrack;
           on.source = LiveSequencer::EVENT_PATTERN;
@@ -1263,7 +1316,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
           // Request event sorting for proper playback order
           liveSeq.requestSortEvents();
 
-        } else {
+        }
+        else {
           // ====== PATTERN TRACK RECORDING: Simple relative time calculation ======
           on.patternNumber = absoluteTimeMs / data.patternLengthMs;
           on.patternMs = absoluteTimeMs % data.patternLengthMs;
@@ -1289,7 +1343,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
 
         // Reload notes to show the newly added note
         reloadNotes();
-      } else if (keysPressed.empty()) {
+      }
+      else if (keysPressed.empty()) {
         // Advance to next step when all keys released
         step(+1);
       }
@@ -1370,8 +1425,20 @@ FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
   else if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
     // PATTERN MODE (not mute editor): Handle the selected note redraw
     if (selectedNote > -1) {
-      queueDrawNote(notePairs.at(selectedNote));
-      drawFlags |= DRAW_NOTES;
+      // Create a region that covers the note area with EMPTY notes
+      // This ensures everything in that area gets redrawn properly
+      uint32_t timeOn = getEventTime(notePairs.at(selectedNote).noteOn);
+      uint32_t timeOff = getEventTime(notePairs.at(selectedNote).noteOff);
+      uint16_t fromX = getNoteCoord(timeOn);
+      uint16_t toX = getNoteCoord(timeOff);
+
+      UpdateRange fullRegion;
+      fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(fromX - 5));
+      fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(toX + 5));
+      fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
+      drawRegionsX.push_back(fullRegion);
+
+      drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
     }
   }
 
@@ -1820,20 +1887,73 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
       }
 
       if (newSelection != selectedNote) {
-        if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
+        // Handle old selection
+        if (selectedNote > -1) {
+          const auto& oldNote = notePairs.at(selectedNote);
+          uint32_t oldTimeOn, oldTimeOff;
+
+          if (data.isSongMode && !data.useGridSongMode) {
+            uint16_t absoluteBarOn = getActualBarForNote(oldNote);
+            oldTimeOn = absoluteBarOn * data.patternLengthMs + oldNote.noteOn.patternMs;
+            uint16_t absoluteBarOff = getActualBarForNote(oldNote);
+            oldTimeOff = absoluteBarOff * data.patternLengthMs + oldNote.noteOff.patternMs;
+          }
+          else {
+            oldTimeOn = getEventTime(oldNote.noteOn);
+            oldTimeOff = getEventTime(oldNote.noteOff);
+          }
+
+          // Create update region for old selection
+          addSelectionUpdateRegion(oldTimeOn, oldTimeOff, oldNote.noteOn.note_in);
+        }
+
         selectedNote = newSelection;
-        if (selectedNote > -1) queueDrawNote(notePairs.at(selectedNote));
-        drawFlags |= DRAW_NOTES;
-        // headerFlags = (1 << EDIT_SELECT_NOTE);
+
+        if (selectedNote > -1) {
+          const auto& newNote = notePairs.at(selectedNote);
+          uint32_t newTimeOn, newTimeOff;
+
+          if (data.isSongMode && !data.useGridSongMode) {
+            uint16_t absoluteBarOn = getActualBarForNote(newNote);
+            newTimeOn = absoluteBarOn * data.patternLengthMs + newNote.noteOn.patternMs;
+            uint16_t absoluteBarOff = getActualBarForNote(newNote);
+            newTimeOff = absoluteBarOff * data.patternLengthMs + newNote.noteOff.patternMs;
+          }
+          else {
+            newTimeOn = getEventTime(newNote.noteOn);
+            newTimeOff = getEventTime(newNote.noteOff);
+          }
+
+          // Create update region for new selection
+          addSelectionUpdateRegion(newTimeOn, newTimeOff, newNote.noteOn.note_in);
+        }
+
+        drawFlags |= DRAW_BACKGROUND | DRAW_NOTES;
         headerFlags = HEADER_DRAW_ALL;
       }
     }
     else {
       if (selectedNote > -1) {
-        queueDrawNote(notePairs.at(selectedNote));
+        const auto& oldNote = notePairs.at(selectedNote);
+        uint32_t oldTimeOn, oldTimeOff;
+
+        if (data.isSongMode && !data.useGridSongMode) {
+          uint16_t absoluteBarOn = getActualBarForNote(oldNote);
+          oldTimeOn = absoluteBarOn * data.patternLengthMs + oldNote.noteOn.patternMs;
+          uint16_t absoluteBarOff = getActualBarForNote(oldNote);
+          oldTimeOff = absoluteBarOff * data.patternLengthMs + oldNote.noteOff.patternMs;
+        }
+        else {
+          oldTimeOn = getEventTime(oldNote.noteOn);
+          oldTimeOff = getEventTime(oldNote.noteOff);
+        }
+
+        // Create update region for old selection
+        addSelectionUpdateRegion(oldTimeOn, oldTimeOff, oldNote.noteOn.note_in);
+
         selectedNote = -1;
-        // drawFlags |= DRAW_NOTES;
         headerFlags = HEADER_DRAW_ALL;
+        drawFlags |= DRAW_BACKGROUND | DRAW_NOTES;
       }
     }
   }
@@ -1923,24 +2043,11 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOn(EncoderEvents e, uint16
     uint32_t finalAbsTimeOff = finalAbsTimeOn + noteLength;
 
     if (finalAbsTimeOn != currentAbsTimeOn) {
-      // MANUAL REDRAW: Create regions for old and new positions without using queueDrawNote
-      uint16_t oldX = getNoteCoord(currentAbsTimeOn);
-      uint16_t oldW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
-      uint16_t newX = getNoteCoord(finalAbsTimeOn);
-      uint16_t newW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
-
-      // Create regions for background and vertical bars redraw
-      UpdateRange oldRegion;
-      oldRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(oldX - 3));
-      oldRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(oldX + oldW + 3));
-      oldRegion.notes = {}; // Empty = redraw all notes in this X range
-      drawRegionsX.push_back(oldRegion);
-
-      UpdateRange newRegion;
-      newRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(newX - 3));
-      newRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(newX + newW + 3));
-      newRegion.notes = {}; // Empty = redraw all notes in this X range
-      drawRegionsX.push_back(newRegion);
+      // Use helper for clean region creation
+      addNoteUpdateRegion(currentAbsTimeOn, currentAbsTimeOff,
+        editingNote.editingNoteOn.note_in, true);
+      addNoteUpdateRegion(finalAbsTimeOn, finalAbsTimeOff,
+        editingNote.editingNoteOn.note_in, false);
 
       // Update editing note position
       updateEditingNotePosition(finalAbsTimeOn, finalAbsTimeOff);
@@ -1949,7 +2056,6 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOn(EncoderEvents e, uint16
       drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
     }
   }
-
   //pattern mode
   else if (selectedNote > -1) {
     // FIXED PATTERN MODE NOTE-ON EDITING
@@ -2095,6 +2201,33 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOff(EncoderEvents e, uint1
   return headerFlags;
 }
 
+FLASHMEM void UI_LiveSeq_PianoRoll::addSelectionUpdateRegion(uint32_t timeOn, uint32_t timeOff, uint8_t notePitch) {
+  uint16_t x = getNoteCoord(timeOn);
+
+  // Calculate width
+  uint32_t lenMs = (timeOff > timeOn) ? (timeOff - timeOn) : 1;
+  uint16_t w = std::max(1, int(roundf(lenMs * view.msToPix)));
+
+  // Region: Specific note (for selection highlight) - NO vertical bar region
+  UpdateRange noteRegion;
+  noteRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(x - 3));
+  noteRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(x + w + 3));
+  noteRegion.notes = { notePitch };
+  drawRegionsX.push_back(noteRegion);
+
+  // DON'T add vertical bar region for selection changes
+  // Selection changes don't need to redraw grid lines
+  // UpdateRange barRegion;
+  // barRegion.fromX = noteRegion.fromX - 2;
+  // barRegion.toX = noteRegion.toX + 2;
+  // barRegion.notes = {};
+  // drawRegionsX.push_back(barRegion);
+
+  // But we DO need to ensure background is redrawn for this note
+  // The background will handle the alternating colors
+  drawFlags |= DRAW_BACKGROUND;
+}
+
 FLASHMEM void UI_LiveSeq_PianoRoll::startEditingNote(int16_t noteIndex) {
   if (noteIndex < 0 || noteIndex >= static_cast<int16_t>(notePairs.size())) {
     return;
@@ -2133,8 +2266,19 @@ FLASHMEM void UI_LiveSeq_PianoRoll::startEditingNote(int16_t noteIndex) {
 
   editingNote.active = true;
 
-  // Just redraw, don't reload notes
-  drawFlags |= DRAW_CONTENT_FULL;
+  // Create update region for where the note currently is
+  uint32_t currentAbsTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
+  uint16_t currentX = getNoteCoord(currentAbsTimeOn);
+  uint16_t currentW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
+
+  // Create a region with EMPTY notes to redraw everything in this area
+  UpdateRange fullRegion;
+  fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(currentX - 5));
+  fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(currentX + currentW + 5));
+  fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
+  drawRegionsX.push_back(fullRegion);
+
+  drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::updateEditingNotePosition(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff) {
@@ -2240,6 +2384,27 @@ FLASHMEM void UI_LiveSeq_PianoRoll::commitEditingNote() {
 
   editingNote.active = false;
 
+  // Create update regions for OLD and NEW positions
+  // OLD position: where the note used to be
+  uint32_t oldAbsTimeOn = getAbsoluteEventTime(editingNote.originalNoteOn);
+  uint16_t oldX = getNoteCoord(oldAbsTimeOn);
+  uint16_t oldW = calculateNoteWidth(editingNote.originalNoteOn, editingNote.originalNoteOff);
+
+  // NEW position: where the note is now
+  uint16_t newX = getNoteCoord(absTimeOn);
+  uint16_t newW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
+
+  // Create a SINGLE region that covers BOTH old and new positions with EMPTY notes
+  // This ensures ALL notes in this area get redrawn
+  UpdateRange fullRegion;
+  fullRegion.fromX = std::min(oldX, newX) - 5;
+  fullRegion.toX = std::max(oldX + oldW, newX + newW) + 5;
+  fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
+  drawRegionsX.push_back(fullRegion);
+
+  // Also need to redraw vertical bars
+  drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+
   // Force complete reload
   reloadNotes(true);
 
@@ -2266,8 +2431,19 @@ FLASHMEM void UI_LiveSeq_PianoRoll::commitEditingNote() {
 FLASHMEM void UI_LiveSeq_PianoRoll::cancelEditingNote() {
   if (!editingNote.active) return;
 
-  editingNote.active = false;
+  // Create update region for where the editing note currently is
+  uint32_t currentAbsTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
+  uint16_t currentX = getNoteCoord(currentAbsTimeOn);
+  uint16_t currentW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
 
+  // Create a region with EMPTY notes to redraw everything in this area
+  UpdateRange fullRegion;
+  fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(currentX - 5));
+  fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(currentX + currentW + 5));
+  fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
+  drawRegionsX.push_back(fullRegion);
+
+  editingNote.active = false;
 
   // For cancel, we should be able to keep the same index since we're restoring the original
   // Just make sure the note is valid again
@@ -2278,9 +2454,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::cancelEditingNote() {
     selectedNote = editingNote.originalNoteIndex;
   }
 
-  // Still need to redraw
-  drawFlags |= DRAW_CONTENT_FULL;
-
+  // Set flags for redraw
+  drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
 }
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::calculateNoteWidth(const LiveSequencer::MidiEvent& noteOn, const LiveSequencer::MidiEvent& noteOff) const {
@@ -2477,42 +2652,45 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNote(EncoderEvents e, uint16_t
     );
 
     if (newPitch != oldPitch) {
-      // MANUAL REDRAW: Pitch change affects vertical position - use same approach as noteon
+      // Get position info
       uint32_t timeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
       uint16_t x = getNoteCoord(timeOn);
       uint16_t w = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
 
-      // Create update regions for both old and new pitch positions
-      // Use empty notes set to redraw ALL notes in these vertical ranges (background + grid)
+      // Create region for OLD pitch - ONLY that specific note
       UpdateRange oldPitchRegion;
       oldPitchRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(x - 3));
       oldPitchRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(x + w + 3));
-      oldPitchRegion.notes = {}; // EMPTY = redraw all notes (background + grid)
+      oldPitchRegion.notes = { oldPitch }; // ONLY old pitch
       drawRegionsX.push_back(oldPitchRegion);
 
       // Update editing note pitch
       updateEditingNotePitch(newPitch);
 
-      // Create region for new pitch position
+      // Create region for NEW pitch - ONLY that specific note
       UpdateRange newPitchRegion;
       newPitchRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(x - 3));
       newPitchRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(x + w + 3));
-      newPitchRegion.notes = {}; // EMPTY = redraw all notes (background + grid)
+      newPitchRegion.notes = { newPitch }; // ONLY new pitch
       drawRegionsX.push_back(newPitchRegion);
+
+      // Also redraw vertical bars in the area
+      UpdateRange barRegion;
+      barRegion.fromX = std::min(oldPitchRegion.fromX, newPitchRegion.fromX);
+      barRegion.toX = std::max(oldPitchRegion.toX, newPitchRegion.toX);
+      barRegion.notes = {}; // Empty = redraw bars
+      drawRegionsX.push_back(barRegion);
 
       drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
       headerFlags |= (1 << EDIT_NOTE);
     }
   }
-
   //pattern mode  
   else if (selectedNote > -1) {
-    // BEST FIX - USE EMPTY NOTES FOR COMPLETE REDRAW
     LiveSequencer::NotePair& thisNote = notePairs.at(selectedNote);
     int8_t note = thisNote.noteOn.note_in;
 
     if (hasConstrainedChanged(note, e.dir, int8_t(view.lowestNote), int8_t(view.highestNote))) {
-
       // Store the current time position
       uint32_t timeOn = getEventTime(thisNote.noteOn);
       uint32_t timeOff = getEventTime(thisNote.noteOff);
@@ -2521,18 +2699,8 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNote(EncoderEvents e, uint16_t
       thisNote.noteOn.note_in = note;
       thisNote.noteOff.note_in = note;
 
-      // Calculate the X range
-      uint16_t fromX = getNoteCoord(timeOn);
-      uint16_t toX = getNoteCoord(timeOff);
-      fromX = (fromX < 5 + ROLL_WIDTH) ? ROLL_WIDTH : (fromX - 5);
-      toX = (toX > DISPLAY_WIDTH - 5) ? DISPLAY_WIDTH : (toX + 5);
-
-      // Use EMPTY notes to ensure complete redraw of background, grid, and all notes in this area
-      UpdateRange updateRange;
-      updateRange.fromX = fromX;
-      updateRange.toX = toX;
-      updateRange.notes = {}; // EMPTY = redraw everything in this X range
-      drawRegionsX.push_back(updateRange);
+      // Use helper for full update region
+      addFullUpdateRegion(timeOn, timeOff, timeOn, timeOff);
 
       headerFlags |= (1 << EDIT_NOTE);
       drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
@@ -2547,7 +2715,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleStepModeSettingActivated(EncoderEv
   switch (stepMode) {
   case STEP_TARGET_TRACK:
     // Only used in song mode
-    if (data.isSongMode && !data.useGridSongMode && data.activeTrack==SONG_MODE_NOTES_TRACK) {
+    if (data.isSongMode && !data.useGridSongMode && data.activeTrack == SONG_MODE_NOTES_TRACK) {
       if (hasConstrainedChanged(data.stepRecordTargetTrack, e.dir,
         uint8_t(0), uint8_t(11))) { // 0-11 for tracks 1-12
         headerFlags |= (1 << STEP_TARGET_TRACK);
@@ -2983,32 +3151,43 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getNoteString(uint8_t note) {
 FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
   display.console = true;
 
-  // Only draw background when no specific notes are specified
-  bool drawBackground = false;
+  // Find the combined X range that needs bar updates
+  uint16_t minX = DISPLAY_WIDTH;
+  uint16_t maxX = 0;
+  bool hasRegions = false;
+
   for (auto& u : drawRegionsX) {
-    if (u.notes.empty()) {
-      drawBackground = true;
-      break;
+    if (u.notes.empty() || (drawFlags & DRAW_VERTICAL_BARS)) {
+      minX = std::min(minX, u.fromX);
+      maxX = std::max(maxX, u.toX);
+      hasRegions = true;
     }
   }
-  if (!drawBackground) return;
+
+  if (!hasRegions) return;
+
+  // Clamp to display bounds
+  minX = std::max(minX, ROLL_WIDTH);
+  maxX = std::min(maxX, (uint16_t)DISPLAY_WIDTH);
 
   static constexpr uint8_t substeps = 4;
   const float stepWidth = CONTENT_WIDTH / float(view.numBars * substeps);
 
-  // Draw vertical grid lines
+  // Draw VERTICAL grid lines
   for (uint8_t step = 0; step <= view.numBars * substeps; step++) {
     const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
-    uint16_t color = (step % substeps == 0) ? GREY2 : GREY3;
-    display.drawLine(x, 0, x, CONTENT_HEIGHT, color);
+    if (x >= minX && x <= maxX) {
+      uint16_t color = (step % substeps == 0) ? GREY2 : GREY3;
+      display.drawLine(x, 0, x, CONTENT_HEIGHT, color);
+    }
   }
 
-  // Draw horizontal grid lines (only at octave boundaries)
+  // Draw HORIZONTAL grid lines (octave boundaries)
   for (uint8_t note = view.lowestNote; note <= view.highestNote; note++) {
-    if (note % 12 == 0) { // Only every C (octave boundaries)
+    if (note % 12 == 0) {
       const uint8_t noteIndex = view.highestNote - note;
       const uint16_t y = round(noteIndex * view.noteHeight);
-      display.drawLine(ROLL_WIDTH, y, DISPLAY_WIDTH, y, GREY2);
+      display.drawLine(minX, y, maxX, y, GREY2);
     }
   }
 }
@@ -3662,7 +3841,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
 }
 
 FLASHMEM bool UI_LiveSeq_PianoRoll::step(int8_t diff) {
-  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps ));
+  const bool stepCursorChanged = hasConstrainedChanged(stepCursorPositionIndex, diff, uint16_t(0), uint16_t(view.numBars * stepRecordSteps));
 
   if (stepCursorChanged) {
     if (stepCursorPositionIndex == view.numBars * stepRecordSteps) {

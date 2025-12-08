@@ -21,59 +21,59 @@ extern uint8_t stepRecordTargetTrack;  //select target instrument for step recor
 class UI_LiveSeq_PianoRoll {
 public:
 
- struct EditingNote {
+  struct EditingNote {
     bool active = false;
     bool committed = false;
-    
+
     LiveSequencer::MidiEvent originalNoteOn;
     LiveSequencer::MidiEvent originalNoteOff;
     LiveSequencer::MidiEvent editingNoteOn;
     LiveSequencer::MidiEvent editingNoteOff;
-    
+
     // Store both original and target chunks
     uint16_t originalSongPatternOn = UINT16_MAX;
     uint16_t originalSongPatternOff = UINT16_MAX;
     uint16_t targetSongPatternOn = UINT16_MAX;  // ADD THIS
     uint16_t targetSongPatternOff = UINT16_MAX; // ADD THIS
-    
+
     size_t originalNoteOnIndex = 0;
     size_t originalNoteOffIndex = 0;
     int16_t originalNoteIndex = -1;
-    
+
     EditingNote() { reset(); }
-    
+
     void reset() {
-        active = false;
-        committed = false;
-        originalSongPatternOn = UINT16_MAX;
-        originalSongPatternOff = UINT16_MAX;
-        targetSongPatternOn = UINT16_MAX;       // INITIALIZE
-        targetSongPatternOff = UINT16_MAX;      // INITIALIZE
-        originalNoteOnIndex = 0;
-        originalNoteOffIndex = 0;
-        originalNoteIndex = -1;
-        
-        // Properly initialize MidiEvent objects
-        originalNoteOn = LiveSequencer::MidiEvent{};
-        originalNoteOff = LiveSequencer::MidiEvent{};
-        editingNoteOn = LiveSequencer::MidiEvent{};
-        editingNoteOff = LiveSequencer::MidiEvent{};
-        originalNoteOn.event = midi::InvalidType;
-        originalNoteOff.event = midi::InvalidType;
-        editingNoteOn.event = midi::InvalidType;
-        editingNoteOff.event = midi::InvalidType;
+      active = false;
+      committed = false;
+      originalSongPatternOn = UINT16_MAX;
+      originalSongPatternOff = UINT16_MAX;
+      targetSongPatternOn = UINT16_MAX;       // INITIALIZE
+      targetSongPatternOff = UINT16_MAX;      // INITIALIZE
+      originalNoteOnIndex = 0;
+      originalNoteOffIndex = 0;
+      originalNoteIndex = -1;
+
+      // Properly initialize MidiEvent objects
+      originalNoteOn = LiveSequencer::MidiEvent{};
+      originalNoteOff = LiveSequencer::MidiEvent{};
+      editingNoteOn = LiveSequencer::MidiEvent{};
+      editingNoteOff = LiveSequencer::MidiEvent{};
+      originalNoteOn.event = midi::InvalidType;
+      originalNoteOff.event = midi::InvalidType;
+      editingNoteOn.event = midi::InvalidType;
+      editingNoteOff.event = midi::InvalidType;
     }
-} editingNote;
+  } editingNote;
 
-FLASHMEM void startEditingNote(int16_t noteIndex);
-FLASHMEM void updateEditingNotePosition(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff);
-FLASHMEM void updateEditingNotePitch(uint8_t newPitch);
-FLASHMEM void commitEditingNote();
-FLASHMEM void cancelEditingNote();
+  FLASHMEM void startEditingNote(int16_t noteIndex);
+  FLASHMEM void updateEditingNotePosition(uint32_t newAbsTimeOn, uint32_t newAbsTimeOff);
+  FLASHMEM void updateEditingNotePitch(uint8_t newPitch);
+  FLASHMEM void commitEditingNote();
+  FLASHMEM void cancelEditingNote();
 
-// Add this helper method declaration
-FLASHMEM uint16_t calculateNoteWidth(const LiveSequencer::MidiEvent& noteOn, const LiveSequencer::MidiEvent& noteOff) const;
-FLASHMEM void drawEditingNote();
+  // Add this helper method declaration
+  FLASHMEM uint16_t calculateNoteWidth(const LiveSequencer::MidiEvent& noteOn, const LiveSequencer::MidiEvent& noteOff) const;
+  FLASHMEM void drawEditingNote();
 
   FLASHMEM uint32_t getMaxSongTime() const;
 
@@ -88,6 +88,12 @@ FLASHMEM void drawEditingNote();
   uint16_t stepCursorPositionPrev = ROLL_WIDTH;
 
 private:
+  // Helper methods for drawing
+  void drawBackgroundForNote(uint8_t note, uint16_t fromX, uint16_t toX) const;
+  void addNoteUpdateRegion(uint32_t timeOn, uint32_t timeOff, uint8_t notePitch, bool includeBars = true);
+  void addFullUpdateRegion(uint32_t timeOn1, uint32_t timeOff1, uint32_t timeOn2, uint32_t timeOff2);
+  void addSelectionUpdateRegion(uint32_t timeOn, uint32_t timeOff, uint8_t notePitch);
+
   uint32_t getPatternRelativeTime(const LiveSequencer::MidiEvent& e) const;
   void setPatternRelativeTime(LiveSequencer::MidiEvent& e, uint32_t time, uint16_t songPatternIndex = 0);
   uint16_t getSongPatternForEvent(const LiveSequencer::MidiEvent& e) const;
