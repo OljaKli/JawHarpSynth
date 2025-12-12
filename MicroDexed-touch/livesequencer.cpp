@@ -223,11 +223,47 @@ FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent& e, uint8_t denom) {
   bool overflow = false; // overflow if event rounded to start of next pattern
 
   if (denom > 1) {
-    const uint16_t quantizeMs = data.patternLengthMs / denom;
+    uint16_t quantizeMs;
+    
+    // Calculate the correct quantization interval based on musical timing
+    switch (denom) {
+      case 2:  // 8th notes
+        quantizeMs = data.patternLengthMs / 8;
+        break;
+      case 3:  // 8th note triplets (3 per beat)
+        quantizeMs = data.patternLengthMs / 12;
+        break;
+      case 4:  // 16th notes
+        quantizeMs = data.patternLengthMs / 16;
+        break;
+      case 6:  // 16th note triplets (6 per beat)
+        quantizeMs = data.patternLengthMs / 24;
+        break;
+      case 8:  // 32nd notes
+        quantizeMs = data.patternLengthMs / 32;
+        break;
+      case 12: // 32nd note triplets (12 per beat)
+        quantizeMs = data.patternLengthMs / 48;
+        break;
+      case 16: // 64th notes
+        quantizeMs = data.patternLengthMs / 64;
+        break;
+      case 24: // 64th note triplets (24 per beat)
+        quantizeMs = data.patternLengthMs / 96;
+        break;
+      case 32: // 128th notes (if you have this)
+        quantizeMs = data.patternLengthMs / 128;
+        break;
+      default:
+        quantizeMs = data.patternLengthMs / denom; // fallback
+        break;
+    }
+    
     const uint16_t halfStep = quantizeMs / 2;
     uint8_t resultNumber = e.patternNumber;
     uint16_t resultMs = e.patternMs;
     resultMs = ((e.patternMs + halfStep) / quantizeMs) * quantizeMs;
+    
     if (resultMs == data.patternLengthMs) {
       resultMs = 0;
       if (++resultNumber == data.numberOfBars) {
@@ -235,7 +271,6 @@ FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent& e, uint8_t denom) {
         overflow = true;
       }
     }
-    DBG_LOG(printf("round %i.%i to %i.%i\n", e.patternNumber, e.patternMs, resultNumber, resultMs));
     e.patternNumber = resultNumber;
     e.patternMs = resultMs;
   }

@@ -1240,3 +1240,40 @@ typedef struct {
   char notenames[12];         // Chord name (e.g. "Cm7")
   uint8_t notes[4];      // MIDI note numbers (0 means unused)
 } SuggestedChord;
+
+
+// #define COLOR_HEADER 0xFFFF  // 白色
+// #define COLOR_TEXT 0xF7BE    // 浅灰色
+// #define COLOR_VALUE 0x07E0   // 绿色
+// #define COLOR_SELECTED 0xF800 // 红色
+
+
+// struct d50_config_s {
+//     uint8_t midi_channel;
+//     uint8_t volume;
+//     uint8_t pan;
+//     int8_t transpose;
+//     uint8_t preset;
+//     float balance;
+//     float pcm_level_a;
+//     float pcm_level_b;
+//     float synth_level_a;
+//     float synth_level_b;
+//     float pcm_attack_a;
+//     float pcm_decay_a;
+//     float pcm_release_a;
+//     float synth_attack_a;
+//     float synth_decay_a;
+//     float synth_sustain_a;
+//     float synth_release_a;
+//     float pcm_attack_b;
+//     float pcm_decay_b;
+//     float pcm_release_b;
+//     float synth_attack_b;
+//     float synth_decay_b;
+//     float synth_sustain_b;
+//     float synth_release_b;
+//     float reverb_send;
+//     float delay_send;
+// };
+

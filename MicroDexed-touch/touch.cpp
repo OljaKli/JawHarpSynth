@@ -853,7 +853,6 @@ FLASHMEM void print_file_manager_buttons()
 
 }
 
-
 extern void play_sample(uint8_t note);
 extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL);
 #include "drums.h"

@@ -20,6 +20,7 @@ extern uint8_t stepRecordTargetTrack;  //select target instrument for step recor
 
 class UI_LiveSeq_PianoRoll {
 public:
+  // using SongEventsMap = std::unordered_map<uint8_t, std::vector<LiveSequencer::MidiEvent, LiveSequencer::Alloc<LiveSequencer::MidiEvent>>>;
 
   struct EditingNote {
     bool active = false;
@@ -88,7 +89,14 @@ public:
   uint16_t stepCursorPositionPrev = ROLL_WIDTH;
 
 private:
-  // Helper methods for drawing
+
+  FLASHMEM void quantizeAllNotesInCurrentTrack();
+  FLASHMEM void quantizeAllSongNotes(uint32_t gridSize);
+  FLASHMEM void quantizeAllPatternNotes(uint32_t gridSize);
+  FLASHMEM void quantizeAllMuteEvents(uint32_t gridSize);
+  FLASHMEM void removeDuplicateNotesInLayer(uint8_t layer);
+  // FLASHMEM void quantizeAllMuteEvents(uint32_t gridSize);
+ // Helper methods for drawing
   void drawBackgroundForNote(uint8_t note, uint16_t fromX, uint16_t toX) const;
   void addNoteUpdateRegion(uint32_t timeOn, uint32_t timeOff, uint8_t notePitch, bool includeBars = true);
   void addFullUpdateRegion(uint32_t timeOn1, uint32_t timeOff1, uint32_t timeOn2, uint32_t timeOff2);
@@ -224,15 +232,18 @@ private:
   };
   uint16_t drawFlags = 0;
 
-  enum QuantizeLevel {
+  enum {
     QUANTIZE_OFF,
     QUANTIZE_64,
     QUANTIZE_32,
+    QUANTIZE_16T,
     QUANTIZE_16,
+    QUANTIZE_8T,
     QUANTIZE_8,
-    QUANTIZE_4,    // 1/4 note
-    QUANTIZE_NUM   // Remove QUANTIZE_1
+    QUANTIZE_4,
+    QUANTIZE_NUM
   };
+
   uint8_t quantizeLevel = QUANTIZE_16; // Default to 1/16
   FLASHMEM uint32_t getQuantizationGridStep() const;
 
@@ -274,22 +285,22 @@ private:
   void drawVerticalBars(void);
   void drawNote(LiveSequencer::NotePair note, bool isSelected = false, bool drawInGrey = false) const;
 
-  void setNumOctaves(int8_t num);
-  void setStartOctave(int8_t num);
-  void setNumBars(int8_t num);
-  void setBarStart(int8_t num);
-  void drawNotes(void);
-  void drawGUI(void);
-  void drawBackground(void);
-  void drawAreaIndicator(void);
-  void drawLayersIndicator(void);
-  void drawMuteAutomation(void);
+  FLASHMEM void setNumOctaves(int8_t num);
+  FLASHMEM void setStartOctave(int8_t num);
+  FLASHMEM void setNumBars(int8_t num);
+  FLASHMEM void setBarStart(int8_t num);
+  FLASHMEM void drawNotes(void);
+  FLASHMEM void drawGUI(void);
+  FLASHMEM void drawBackground(void);
+  FLASHMEM void drawAreaIndicator(void);
+  FLASHMEM void drawLayersIndicator(void);
+  FLASHMEM void drawMuteAutomation(void);
   bool setMode(uint8_t newMode);
-  void setIsHighlighted(bool isActiveMode);
+  FLASHMEM void setIsHighlighted(bool isActiveMode);
 
   std::string getNoteString(uint8_t note);
 
-  void reloadNotes(bool autoAdaptView = false);
+  FLASHMEM void reloadNotes(bool autoAdaptView = false);
   const uint32_t getEventTime(LiveSequencer::MidiEvent e) const;
   void setEventTime(LiveSequencer::MidiEvent& e, uint32_t time);
 

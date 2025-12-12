@@ -58,6 +58,27 @@ FLASHMEM void UI_LiveSequencer::drawTrackSubtext(uint8_t track) {
   if (denom == 1) {
     display.print("Q-");
   }
+  else if (denom == 64) {
+    display.print("Q64");
+  }
+  else if (denom == 32) {
+    display.print("Q32");
+  }
+  else if (denom == 24) {
+    display.print("Q16T");
+  }
+  else if (denom == 16) {
+    display.print("Q16");
+  }
+  else if (denom == 12) {
+    display.print("Q8T");
+  }
+  else if (denom == 8) {
+    display.print("Q8");
+  }
+  else if (denom == 4) {
+    display.print("Q4");
+  }
   else {
     display.printf("Q%i", denom);
   }
@@ -224,9 +245,41 @@ FLASHMEM void UI_LiveSequencer::init(void) {
     }));
 
   // track quantize
-  toolsPages[TOOLS_SEQ].push_back(new ValueButtonVector<uint8_t>(&currentValue, GRID.X[4], GRID.Y[3], selectedTrackSetup.quantizeDenom, { 1, 2, 4, 8, 16, 32 }, data.trackSettings[data.activeTrack].quantizeDenom,
+  toolsPages[TOOLS_SEQ].push_back(new ValueButtonVector<uint8_t>(&currentValue, GRID.X[4], GRID.Y[3],
+    selectedTrackSetup.quantizeDenom, { 1, 64, 32, 24, 16, 12, 8, 4 }, data.trackSettings[data.activeTrack].quantizeDenom,
     [this](auto* b, auto* v) { // drawHandler
-      b->draw("QUANT", (v->getValue() == 1) ? "NONE" : v->toString(), (v->getValue() == 1) ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE);
+      char quantText[10];
+      uint8_t value = v->getValue();
+
+      if (value == 1) {
+        strcpy(quantText, "NONE");
+      }
+      else if (value == 64) {
+        strcpy(quantText, "1/64");
+      }
+      else if (value == 32) {
+        strcpy(quantText, "1/32");
+      }
+      else if (value == 24) {
+        strcpy(quantText, "1/16T");
+      }
+      else if (value == 16) {
+        strcpy(quantText, "1/16");
+      }
+      else if (value == 12) {
+        strcpy(quantText, "1/8T");
+      }
+      else if (value == 8) {
+        strcpy(quantText, "1/8");
+      }
+      else if (value == 4) {
+        strcpy(quantText, "1/4");
+      }
+      else {
+        snprintf(quantText, sizeof(quantText), "%i", value);
+      }
+
+      b->draw("QUANT", quantText, (v->getValue() == 1) ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE);
       if (data.trackSettings[data.activeTrack].quantizeDenom != selectedTrackSetup.quantizeDenom) {
         data.trackSettings[data.activeTrack].quantizeDenom = selectedTrackSetup.quantizeDenom;
         instance->drawUpdates(drawActiveTrackSubLabel);

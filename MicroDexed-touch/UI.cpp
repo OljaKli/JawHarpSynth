@@ -378,6 +378,10 @@ void tracker_print_pattern(int xpos, int ypos, uint8_t track_number);
 void print_sample_type(bool dir);
 void draw_euclidean_circle();
 
+//#include "D50Synth.h"
+
+// extern struct d50_config_s d50;
+// extern D50Synth d50Synth;
 
 #ifdef SECOND_SD
 extern SDClass SD_EXTERNAL;
@@ -602,6 +606,11 @@ LCDML_add(63, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
 LCDML_add(64, LCDML_0_18, 3, "Test Touchscreen", UI_func_test_touchscreen);
 LCDML_add(65, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
 LCDML_add(66, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
+
+
+
+//LCDML_add(67, LCDML_0, 19, "D50", UI_func_d50_synth);
+
 LCDML_add(67, LCDML_0, 19, "Info", UI_func_information);
 LCDML_addAdvanced(68, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
@@ -25808,3 +25817,457 @@ FLASHMEM void UI_func_granular(uint8_t param)
 }
 
 #endif
+
+//D50
+
+// #include "D50SynthWrapper.h"
+
+
+// // Static text display for D50 - grid-based layout
+// FLASHMEM void print_d50_static_texts()
+// {
+//   display.setTextSize(1);
+//   helptext_l(back_text);
+//   helptext_r(F("< > SELECT PARAM"));
+  
+//   // Title
+//   setCursor_textGrid_small(1, 1);
+//   display.setTextColor(RED);
+//   display.print(F("ROLAND D-50 SYNTH"));
+//   display.setTextColor(COLOR_SYSTEXT);
+  
+//   // === LEFT COLUMN - VOICE ===
+//   display.setTextColor(GREY2);
+//   setCursor_textGrid_small(1, 3);
+//   display.print(F("VOICE"));
+  
+//   display.setTextColor(GREY1);
+//   setCursor_textGrid_small(1, 5);
+//   display.print(F("PRESET"));
+//   setCursor_textGrid_small(1, 6);
+//   display.print(F("MIDI CHANNEL"));
+//   setCursor_textGrid_small(1, 7);
+//   display.print(F("VOLUME"));
+//   setCursor_textGrid_small(1, 8);
+//   display.print(F("PANORAMA"));
+//   setCursor_textGrid_small(1, 9);
+//   display.print(F("TRANSPOSE"));
+//   setCursor_textGrid_small(1, 10);
+//   display.print(F("BALANCE A/B"));
+
+//   // === LEFT COLUMN - PARTIAL A ===
+//   display.setTextColor(GREY2);
+//   setCursor_textGrid_small(1, 12);
+//   display.print(F("PARTIAL A"));
+  
+//   display.setTextColor(GREY1);
+//   setCursor_textGrid_small(1, 14);
+//   display.print(F("PCM LEVEL"));
+//   setCursor_textGrid_small(1, 15);
+//   display.print(F("SYNTH LEVEL"));
+//   setCursor_textGrid_small(1, 16);
+//   display.print(F("PCM ATTACK"));
+//   setCursor_textGrid_small(1, 17);
+//   display.print(F("PCM DECAY"));
+//   setCursor_textGrid_small(1, 18);
+//   display.print(F("PCM RELEASE"));
+//   setCursor_textGrid_small(1, 19);
+//   display.print(F("SYNTH ATTACK"));
+//   setCursor_textGrid_small(1, 20);
+//   display.print(F("SYNTH DECAY"));
+//   setCursor_textGrid_small(1, 21);
+//   display.print(F("SYNTH SUSTAIN"));
+
+//   // === RIGHT COLUMN - PARTIAL B ===
+//   display.setTextColor(GREY2);
+//   setCursor_textGrid_small(24, 3);
+//   display.print(F("PARTIAL B"));
+  
+//   display.setTextColor(GREY1);
+//   setCursor_textGrid_small(24, 5);
+//   display.print(F("PCM LEVEL"));
+//   setCursor_textGrid_small(24, 6);
+//   display.print(F("SYNTH LEVEL"));
+//   setCursor_textGrid_small(24, 7);
+//   display.print(F("PCM ATTACK"));
+//   setCursor_textGrid_small(24, 8);
+//   display.print(F("PCM DECAY"));
+//   setCursor_textGrid_small(24, 9);
+//   display.print(F("PCM RELEASE"));
+//   setCursor_textGrid_small(24, 10);
+//   display.print(F("SYNTH ATTACK"));
+//   setCursor_textGrid_small(24, 11);
+//   display.print(F("SYNTH DECAY"));
+//   setCursor_textGrid_small(24, 12);
+//   display.print(F("SYNTH SUSTAIN"));
+//   setCursor_textGrid_small(24, 13);
+//   display.print(F("SYNTH RELEASE"));
+
+//   // === RIGHT COLUMN - EFFECTS ===
+//   display.setTextColor(GREY2);
+//   setCursor_textGrid_small(24, 15);
+//   display.print(F("EFFECTS"));
+  
+//   display.setTextColor(GREY1);
+//   setCursor_textGrid_small(24, 17);
+//   display.print(F("REVERB SEND"));
+// }
+
+// // Update display values with conditional rendering
+// FLASHMEM void update_selective_values_d50()
+// {
+//   // Helper macro for menu item checking
+//   if (menu_item_check(0))
+//   {
+//     setModeColor(0);
+//     setCursor_textGrid_small(14, 5);
+//     print_formatted_number(d50.preset, 2, 0, 1);
+//     display.print(F(" "));
+//     display.print(d50Synth.getPresetName(d50.preset));
+//   }
+//   if (generic_temp_select_menu == 0 && seq.edit_state)
+//     d50Synth.setPreset(d50.preset);
+
+//   if (menu_item_check(1))
+//   {
+//     setModeColor(1);
+//     setCursor_textGrid_small(14, 6);
+//     _print_midi_channel(d50.midi_channel);
+//   }
+
+//   if (menu_item_check(2))
+//     print_small_intbar(14, 7, d50.volume, 2, 0, 1);
+//   if (generic_temp_select_menu == 2 && seq.edit_state)
+//     MD_sendControlChange(d50.midi_channel, 7, d50.volume);
+
+//   if (menu_item_check(3))
+//     print_small_panbar(14, 8, d50.pan, 3);
+//   if (generic_temp_select_menu == 3 && seq.edit_state)
+//     MD_sendControlChange(d50.midi_channel, 10, d50.pan);
+
+//   if (menu_item_check(4))
+//   {
+//     setModeColor(4);
+//     setCursor_textGrid_small(14, 9);
+//     print_formatted_number_signed(d50.transpose, 3, 4, 1);
+//   }
+
+//   if (menu_item_check(5))
+//     print_small_intbar(14, 10, (uint8_t)(d50.balance * 100), 5, 0, 1);
+//   if (generic_temp_select_menu == 5 && seq.edit_state)
+//     d50Synth.setBalance(d50.balance);
+
+//   // === PARTIAL A LEVELS ===
+//   if (menu_item_check(6))
+//     print_small_intbar(14, 14, (uint8_t)(d50.pcm_level_a * 100), 6, 0, 1);
+//   if (generic_temp_select_menu == 6 && seq.edit_state)
+//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+
+//   if (menu_item_check(7))
+//     print_small_intbar(14, 15, (uint8_t)(d50.synth_level_a * 100), 7, 0, 1);
+//   if (generic_temp_select_menu == 7 && seq.edit_state)
+//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+
+//   // === PARTIAL A PCM ENVELOPE ===
+//   if (menu_item_check(10))
+//   {
+//     setModeColor(10);
+//     setCursor_textGrid_small(14, 16);
+//     display.print(d50.pcm_attack_a, 2);
+//     display.print(F("s"));
+//   }
+//   if (generic_temp_select_menu == 10 && seq.edit_state)
+//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+
+//   if (menu_item_check(11))
+//   {
+//     setModeColor(11);
+//     setCursor_textGrid_small(14, 17);
+//     display.print(d50.pcm_decay_a, 2);
+//     display.print(F("s"));
+//   }
+//   if (generic_temp_select_menu == 11 && seq.edit_state)
+//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+
+//   if (menu_item_check(12))
+//   {
+//     setModeColor(12);
+//     setCursor_textGrid_small(14, 18);
+//     display.print(d50.pcm_release_a, 2);
+//     display.print(F("s"));
+//   }
+//   if (generic_temp_select_menu == 12 && seq.edit_state)
+//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+
+//   // === PARTIAL A SYNTH ENVELOPE ===
+//   if (menu_item_check(13))
+//   {
+//     setModeColor(13);
+//     setCursor_textGrid_small(14, 19);
+//     display.print(d50.synth_attack_a, 2);
+//     display.print(F("s"));
+//   }
+
+//   if (menu_item_check(14))
+//   {
+//     setModeColor(14);
+//     setCursor_textGrid_small(14, 20);
+//     display.print(d50.synth_decay_a, 2);
+//     display.print(F("s"));
+//   }
+
+//   if (menu_item_check(15))
+//     print_small_intbar(14, 21, (uint8_t)(d50.synth_sustain_a * 100), 15, 0, 1);
+
+//   // === PARTIAL B LEVELS ===
+//   if (menu_item_check(8))
+//     print_small_intbar(37, 5, (uint8_t)(d50.pcm_level_b * 100), 8, 0, 0);
+//   if (generic_temp_select_menu == 8 && seq.edit_state)
+//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+
+//   if (menu_item_check(9))
+//     print_small_intbar(37, 6, (uint8_t)(d50.synth_level_b * 100), 9, 0, 0);
+//   if (generic_temp_select_menu == 9 && seq.edit_state)
+//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+
+//   // === PARTIAL B PCM ENVELOPE ===
+//   if (menu_item_check(17))
+//   {
+//     setModeColor(17);
+//     setCursor_textGrid_small(37, 7);
+//     display.print(d50.pcm_attack_b, 2);
+//     display.print(F("s"));
+//   }
+//   if (generic_temp_select_menu == 17 && seq.edit_state)
+//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+
+//   if (menu_item_check(18))
+//   {
+//     setModeColor(18);
+//     setCursor_textGrid_small(37, 8);
+//     display.print(d50.pcm_decay_b, 2);
+//     display.print(F("s"));
+//   }
+//   if (generic_temp_select_menu == 18 && seq.edit_state)
+//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+
+//   if (menu_item_check(19))
+//   {
+//     setModeColor(19);
+//     setCursor_textGrid_small(37, 9);
+//     display.print(d50.pcm_release_b, 2);
+//     display.print(F("s"));
+//   }
+//   if (generic_temp_select_menu == 19 && seq.edit_state)
+//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+
+//   // === PARTIAL B SYNTH ENVELOPE ===
+//   if (menu_item_check(20))
+//   {
+//     setModeColor(20);
+//     setCursor_textGrid_small(37, 10);
+//     display.print(d50.synth_attack_b, 2);
+//     display.print(F("s"));
+//   }
+
+//   if (menu_item_check(21))
+//   {
+//     setModeColor(21);
+//     setCursor_textGrid_small(37, 11);
+//     display.print(d50.synth_decay_b, 2);
+//     display.print(F("s"));
+//   }
+
+//   if (menu_item_check(22))
+//     print_small_intbar(37, 12, (uint8_t)(d50.synth_sustain_b * 100), 22, 0, 0);
+
+//   if (menu_item_check(23))
+//   {
+//     setModeColor(23);
+//     setCursor_textGrid_small(37, 13);
+//     display.print(d50.synth_release_b, 2);
+//     display.print(F("s"));
+//   }
+
+//   // === EFFECTS ===
+//   if (menu_item_check(24))
+//     print_small_intbar(37, 17, (uint8_t)(d50.reverb_send * 100), 24, 0, 0);
+//   if (generic_temp_select_menu == 24 && seq.edit_state)
+//     MD_sendControlChange(d50.midi_channel, 91, (uint8_t)(d50.reverb_send * 127));
+// }
+// FLASHMEM void UI_func_d50_synth(uint8_t param)
+// {
+//   if (LCDML.FUNC_setup()) // ****** SETUP *********
+//   {
+//     encoderDir[ENC_R].reset();
+//     display.fillScreen(COLOR_BACKGROUND);
+//     print_d50_static_texts();
+    
+//     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && 
+//         LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
+//       generic_temp_select_menu = 0;
+//     }
+
+//     generic_full_draw_required = true;
+//     update_selective_values_d50();
+//     generic_full_draw_required = false;
+
+//     display.setTextSize(1);
+//   }
+  
+//   if (LCDML.FUNC_loop()) // ****** LOOP *********
+//   {
+//     const EncoderEvents e = getEncoderEvents(ENC_R);
+    
+//     if (e.turned) {
+//       if (seq.edit_state == 0) {
+//         // Navigation mode: 25 parameters total
+//         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 24);
+//       }
+//       else {
+//         // Edit mode: adjust selected parameter
+//         switch(generic_temp_select_menu) {
+//           case 0: // Preset
+//             d50.preset = constrain(d50.preset + e.dir, 0, 9);
+//             d50Synth.setPreset(d50.preset);
+//             break;
+            
+//           case 1: // MIDI Channel
+//             d50.midi_channel = constrain(d50.midi_channel + e.dir, 1, 16);
+//             break;
+            
+//           case 2: // Volume
+//             d50.volume = constrain(d50.volume + e.dir * e.speed, 0, 127);
+//             MD_sendControlChange(d50.midi_channel, 7, d50.volume);
+//             break;
+            
+//           case 3: // Pan
+//             d50.pan = constrain(d50.pan + e.dir * e.speed, 0, 127);
+//             MD_sendControlChange(d50.midi_channel, 10, d50.pan);
+//             break;
+            
+//           case 4: // Transpose
+//             d50.transpose = constrain(d50.transpose + e.dir * e.speed, -24, 24);
+//             break;
+            
+//           case 5: // Balance A/B
+//             d50.balance = constrain(d50.balance + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             d50Synth.setBalance(d50.balance);
+//             break;
+            
+//           case 6: // PCM Level A
+//             d50.pcm_level_a = constrain(d50.pcm_level_a + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+//             break;
+            
+//           case 7: // Synth Level A
+//             d50.synth_level_a = constrain(d50.synth_level_a + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+//             break;
+            
+//           case 8: // PCM Level B
+//             d50.pcm_level_b = constrain(d50.pcm_level_b + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+//             break;
+            
+//           case 9: // Synth Level B
+//             d50.synth_level_b = constrain(d50.synth_level_b + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
+//             break;
+            
+//           case 10: // PCM Attack A
+//             d50.pcm_attack_a = constrain(d50.pcm_attack_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+//             break;
+            
+//           case 11: // PCM Decay A
+//             d50.pcm_decay_a = constrain(d50.pcm_decay_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+//             break;
+            
+//           case 12: // PCM Release A
+//             d50.pcm_release_a = constrain(d50.pcm_release_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+//             break;
+            
+//           case 13: // Synth Attack A
+//             d50.synth_attack_a = constrain(d50.synth_attack_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             break;
+            
+//           case 14: // Synth Decay A
+//             d50.synth_decay_a = constrain(d50.synth_decay_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             break;
+            
+//           case 15: // Synth Sustain A
+//             d50.synth_sustain_a = constrain(d50.synth_sustain_a + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             break;
+            
+//           case 16: // Synth Release A
+//             d50.synth_release_a = constrain(d50.synth_release_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             break;
+            
+//           case 17: // PCM Attack B
+//             d50.pcm_attack_b = constrain(d50.pcm_attack_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+//             break;
+            
+//           case 18: // PCM Decay B
+//             d50.pcm_decay_b = constrain(d50.pcm_decay_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+//             break;
+            
+//           case 19: // PCM Release B
+//             d50.pcm_release_b = constrain(d50.pcm_release_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
+//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
+//             break;
+            
+//           case 20: // Synth Attack B
+//             d50.synth_attack_b = constrain(d50.synth_attack_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             break;
+            
+//           case 21: // Synth Decay B
+//             d50.synth_decay_b = constrain(d50.synth_decay_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             break;
+            
+//           case 22: // Synth Sustain B
+//             d50.synth_sustain_b = constrain(d50.synth_sustain_b + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             break;
+            
+//           case 23: // Synth Release B
+//             d50.synth_release_b = constrain(d50.synth_release_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
+//             break;
+            
+//           case 24: // Reverb Send
+//             d50.reverb_send = constrain(d50.reverb_send + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
+//             MD_sendControlChange(d50.midi_channel, 91, (uint8_t)(d50.reverb_send * 127));
+//             break;
+//         }
+//       }
+//     }
+    
+//     if (e.pressed) {
+//       seq.edit_state = !seq.edit_state;
+//     }
+    
+//     update_selective_values_d50();
+//   }
+  
+//   if (LCDML.FUNC_close()) // ****** STABLE END *********
+//   {
+//     generic_menu = 0;
+//     encoderDir[ENC_R].reset();
+//     display.fillScreen(COLOR_BACKGROUND);
+//   }
+// }

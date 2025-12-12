@@ -6,6 +6,7 @@
 #include "LCDMenuLib2.h"
 #include "ui_livesequencer.h"
 #include "MD_REncoder.h"
+#include <map>
 
 extern LCDMenuLib2 LCDML;
 extern ILI9341_t3n display;
@@ -13,7 +14,451 @@ extern MD_REncoder ENCODER[NUM_ENCODER];
 
 UI_LiveSeq_PianoRoll* ui_pianoroll;
 
-void UI_LiveSeq_PianoRoll::drawBackgroundForNote(uint8_t note, uint16_t fromX, uint16_t toX) const {
+FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllNotesInCurrentTrack() {
+  if (quantizeLevel == QUANTIZE_OFF) {
+    return; // No quantization selected
+  }
+
+  // Get grid size from current quantization level
+  uint32_t gridSize = getQuantizationGridStep();
+
+  // Check what type of track we're editing
+  if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
+    // Song mode: quantize all song notes in selected layer
+    quantizeAllSongNotes(gridSize);
+  }
+  else {
+    // Pattern mode: quantize notes in the active pattern track in selected layer
+    quantizeAllPatternNotes(gridSize);
+  }
+
+  // Force complete redraw
+  drawFlags |= DRAW_CONTENT_FULL | DRAW_NOTES | DRAW_VERTICAL_BARS | DRAW_BACKGROUND;
+
+  // Request event sorting for proper playback
+  liveSeq.requestSortEvents();
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllSongNotes(uint32_t gridSize) {
+  bool changed = false;
+
+  // Calculate minimum note length (1/16 note)
+  uint32_t minNoteLength = data.patternLengthMs / 16;
+
+  // Iterate through song patterns
+  auto patternIt = data.songEvents.begin();
+  while (patternIt != data.songEvents.end()) {
+    uint16_t songPatternIndex = patternIt->first;
+    auto& events = patternIt->second;
+
+    // First pass: collect all NoteOn events that need quantization
+    struct NoteOnToQuantize {
+      LiveSequencer::MidiEvent* eventPtr;
+      uint32_t originalTime;
+      uint32_t noteLength; // Store the original note length
+      uint16_t songPatternIndex;
+      size_t eventIndex;
+    };
+
+    std::vector<NoteOnToQuantize> noteOnsToQuantize;
+
+    // Collect NoteOn events first
+    for (size_t i = 0; i < events.size(); i++) {
+      auto& event = events[i];
+
+      // Only quantize note-on events in the SELECTED LAYER
+      if (event.event == midi::NoteOn && event.layer == selectedLayer) {
+        // Get current pattern-relative time
+        uint32_t patternRelativeTime = getPatternRelativeTime(event);
+
+        // Store note-on info for quantization
+        NoteOnToQuantize info;
+        info.eventPtr = &event;
+        info.originalTime = patternRelativeTime;
+        info.songPatternIndex = songPatternIndex;
+        info.eventIndex = i;
+        noteOnsToQuantize.push_back(info);
+      }
+    }
+
+    // Second pass: find matching NoteOff events and store their times
+    for (auto& noteOnInfo : noteOnsToQuantize) {
+      // Find matching NoteOff for this NoteOn
+      bool foundNoteOff = false;
+
+      for (size_t i = 0; i < events.size(); i++) {
+        auto& event = events[i];
+
+        if (event.event == midi::NoteOff &&
+          event.layer == noteOnInfo.eventPtr->layer &&
+          event.track == noteOnInfo.eventPtr->track &&
+          event.note_in == noteOnInfo.eventPtr->note_in &&
+          event.note_in_velocity == noteOnInfo.eventPtr->note_in_velocity) {
+
+          // Found the matching NoteOff
+          uint32_t noteOffTime = getPatternRelativeTime(event);
+          noteOnInfo.noteLength = noteOffTime - noteOnInfo.originalTime;
+
+          // Ensure minimum note length (at least 1/16 note)
+          if (noteOnInfo.noteLength < minNoteLength) {
+            noteOnInfo.noteLength = minNoteLength;
+          }
+          foundNoteOff = true;
+          break;
+        }
+      }
+
+      if (!foundNoteOff) {
+        // No NoteOff found, use minimum length
+        noteOnInfo.noteLength = minNoteLength;
+      }
+    }
+
+    // Third pass: actually quantize the NoteOn events
+    for (const auto& noteOnInfo : noteOnsToQuantize) {
+      uint32_t patternRelativeTime = noteOnInfo.originalTime;
+
+      // Quantize NoteOn time only
+      uint32_t quantizedTimeOn = (patternRelativeTime / gridSize) * gridSize;
+      uint32_t remainder = patternRelativeTime % gridSize;
+
+      if (remainder > gridSize / 2) {
+        quantizedTimeOn += gridSize;
+      }
+
+      // Ensure it stays within 4-bar cycle
+      uint32_t maxTime = data.numberOfBars * data.patternLengthMs;
+      if (quantizedTimeOn >= maxTime) {
+        quantizedTimeOn = maxTime - gridSize;
+      }
+
+      // Only update if changed
+      if (quantizedTimeOn != patternRelativeTime) {
+        // Calculate new NoteOff time = quantized NoteOn + original length
+        uint32_t quantizedTimeOff = quantizedTimeOn + noteOnInfo.noteLength;
+
+        // Ensure note-off is at least gridSize after note-on
+        if (quantizedTimeOff <= quantizedTimeOn + gridSize) {
+          quantizedTimeOff = quantizedTimeOn + gridSize;
+        }
+
+        // Update NoteOn event
+        setPatternRelativeTime(*noteOnInfo.eventPtr, quantizedTimeOn, noteOnInfo.songPatternIndex);
+
+        // Find and update matching NoteOff
+        bool foundNoteOff = false;
+        for (size_t i = 0; i < events.size(); i++) {
+          auto& event = events[i];
+
+          if (event.event == midi::NoteOff &&
+            event.layer == noteOnInfo.eventPtr->layer &&
+            event.track == noteOnInfo.eventPtr->track &&
+            event.note_in == noteOnInfo.eventPtr->note_in &&
+            event.note_in_velocity == noteOnInfo.eventPtr->note_in_velocity) {
+
+            // Update NoteOff to maintain original length
+            setPatternRelativeTime(event, quantizedTimeOff, noteOnInfo.songPatternIndex);
+            foundNoteOff = true;
+            changed = true;
+            break;
+          }
+        }
+
+        if (!foundNoteOff) {
+          // Create NoteOff if it doesn't exist (shouldn't happen)
+          changed = true;
+        }
+      }
+    }
+
+    ++patternIt;
+  }
+
+  // Remove duplicates after quantization (only in selected layer)
+  if (changed) {
+    removeDuplicateNotesInLayer(selectedLayer);
+
+    // Show feedback with layer info
+    display.console = true;
+    display.setTextSize(1);
+    display.setTextColor(GREEN, COLOR_BACKGROUND);
+    display.fillRect(GRID.X[2] - 8, CONTENT_HEIGHT - 40, 80, CHAR_height_small, HEADER_BG_COLOR);
+    display.setCursor(GRID.X[2] - 8, CONTENT_HEIGHT - 40);
+    display.printf("SONG L%d QUANTIZED!", selectedLayer + 1);
+    delay(1000);
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllPatternNotes(uint32_t gridSize) {
+  bool notesQuantized = false;
+
+  // Calculate minimum note length (1/16 note)
+  uint32_t minNoteLength = data.patternLengthMs / 16;
+
+  // First, collect all NoteOn events in SELECTED LAYER with their original lengths
+  struct NoteInfo {
+    LiveSequencer::MidiEvent* noteOnPtr;
+    LiveSequencer::MidiEvent* noteOffPtr;
+    uint32_t originalTimeOn;
+    uint32_t originalTimeOff;
+    uint32_t noteLength;
+    size_t index;
+  };
+
+  std::vector<NoteInfo> noteInfos;
+
+  // Iterate through notePairs using index
+  for (size_t i = 0; i < notePairs.size(); i++) {
+    LiveSequencer::NotePair& note = notePairs[i];
+
+    // Only process notes in the SELECTED LAYER
+    if (note.noteOn.event == midi::NoteOn && note.noteOn.layer == selectedLayer) {
+      // Calculate absolute times
+      uint32_t timeOn = getEventTime(note.noteOn);
+      uint32_t timeOff = getEventTime(note.noteOff);
+
+      // Ensure valid note length (at least 1/16 note)
+      uint32_t noteLength = (timeOff > timeOn) ? (timeOff - timeOn) : minNoteLength;
+
+      if (noteLength < minNoteLength) {
+        noteLength = minNoteLength;
+      }
+
+      // Store note information
+      NoteInfo info;
+      info.noteOnPtr = &note.noteOn;
+      info.noteOffPtr = &note.noteOff;
+      info.originalTimeOn = timeOn;
+      info.originalTimeOff = timeOn + noteLength; // Use adjusted note length
+      info.noteLength = noteLength;
+      info.index = i;
+      noteInfos.push_back(info);
+    }
+  }
+
+  // Find and keep only the highest velocity notes for each unique position in SELECTED LAYER
+  std::vector<bool> isBestNote(noteInfos.size(), false);
+
+  for (size_t i = 0; i < noteInfos.size(); i++) {
+    const NoteInfo& info1 = noteInfos[i];
+    bool isBest = true;
+
+    // Check if this is the best note for its position
+    for (size_t j = 0; j < noteInfos.size(); j++) {
+      if (i == j) continue;
+
+      const NoteInfo& info2 = noteInfos[j];
+
+      // Check if same quantized position (after quantization)
+      uint32_t quantizedTime1 = (info1.originalTimeOn / gridSize) * gridSize;
+      uint32_t remainder1 = info1.originalTimeOn % gridSize;
+      if (remainder1 > gridSize / 2) {
+        quantizedTime1 += gridSize;
+      }
+
+      uint32_t quantizedTime2 = (info2.originalTimeOn / gridSize) * gridSize;
+      uint32_t remainder2 = info2.originalTimeOn % gridSize;
+      if (remainder2 > gridSize / 2) {
+        quantizedTime2 += gridSize;
+      }
+
+      if (info1.noteOnPtr->layer == info2.noteOnPtr->layer &&
+        info1.noteOnPtr->note_in == info2.noteOnPtr->note_in &&
+        quantizedTime1 == quantizedTime2) {
+
+        // Compare velocities
+        if (info2.noteOnPtr->note_in_velocity > info1.noteOnPtr->note_in_velocity) {
+          isBest = false;
+          break;
+        }
+        else if (info2.noteOnPtr->note_in_velocity == info1.noteOnPtr->note_in_velocity && j < i) {
+          // Same velocity, keep the first one
+          isBest = false;
+          break;
+        }
+      }
+    }
+
+    isBestNote[i] = isBest;
+  }
+
+  // Now process the notes in SELECTED LAYER, keeping only the best ones
+  for (size_t i = 0; i < notePairs.size(); i++) {
+    LiveSequencer::NotePair& note = notePairs[i];
+
+    // Only process notes in the SELECTED LAYER
+    if (note.noteOn.event == midi::NoteOn && note.noteOn.layer == selectedLayer) {
+      // Find if this note is in our noteInfos list
+      bool foundInList = false;
+      size_t infoIndex = 0;
+      for (size_t j = 0; j < noteInfos.size(); j++) {
+        if (noteInfos[j].index == i) {
+          foundInList = true;
+          infoIndex = j;
+          break;
+        }
+      }
+
+      if (foundInList) {
+        const NoteInfo& info = noteInfos[infoIndex];
+
+        // Check if this is the best note for this position
+        if (isBestNote[infoIndex]) {
+          // This is the best note for this position - quantize only the NoteOn
+          uint32_t quantizedTimeOn = (info.originalTimeOn / gridSize) * gridSize;
+          uint32_t remainder = info.originalTimeOn % gridSize;
+
+          if (remainder > gridSize / 2) {
+            quantizedTimeOn += gridSize;
+          }
+
+          if (quantizedTimeOn != info.originalTimeOn) {
+            // Update NoteOn to quantized position
+            setEventTime(note.noteOn, quantizedTimeOn);
+
+            // Calculate new NoteOff time = quantized NoteOn + original length
+            uint32_t quantizedTimeOff = quantizedTimeOn + info.noteLength;
+
+            // Ensure note-off is at least gridSize after note-on
+            if (quantizedTimeOff <= quantizedTimeOn + gridSize) {
+              quantizedTimeOff = quantizedTimeOn + gridSize;
+            }
+
+            // Update NoteOff to maintain original length
+            setEventTime(note.noteOff, quantizedTimeOff);
+            notesQuantized = true;
+          }
+        }
+        else {
+          // This is a duplicate with lower velocity in SELECTED LAYER - mark for removal
+          note.noteOn.event = midi::InvalidType;
+          note.noteOff.event = midi::InvalidType;
+          notesQuantized = true;
+        }
+      }
+    }
+  }
+
+  // Clean up invalidated notes in SELECTED LAYER
+  if (notesQuantized) {
+    // Remove notes marked as invalid
+    std::vector<LiveSequencer::NotePair> validNotes;
+    for (size_t i = 0; i < notePairs.size(); i++) {
+      if (notePairs[i].noteOn.event != midi::InvalidType) {
+        validNotes.push_back(notePairs[i]);
+      }
+    }
+    notePairs.clear();
+    for (size_t i = 0; i < validNotes.size(); i++) {
+      notePairs.push_back(validNotes[i]);
+    }
+
+    // Show feedback with layer info
+    display.console = true;
+    display.setTextSize(1);
+    display.setTextColor(GREEN, COLOR_BACKGROUND);
+    display.fillRect(GRID.X[2] - 8, CONTENT_HEIGHT - 40, 80, CHAR_height_small, HEADER_BG_COLOR);
+    display.setCursor(GRID.X[2] - 8, CONTENT_HEIGHT - 40);
+    display.printf("TRACK%d LAYER%d QUANTIZED!", data.activeTrack + 1, selectedLayer + 1);
+    delay(1000);
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::removeDuplicateNotesInLayer(uint8_t layer) {
+  // Remove duplicate notes from songEvents in specific layer after quantization
+  // Keep the note with higher velocity when duplicates are found
+
+  // Iterate through song patterns
+  auto patternIt = data.songEvents.begin();
+  while (patternIt != data.songEvents.end()) {
+    auto& events = patternIt->second;
+
+    // Mark duplicates as invalid
+    for (size_t i = 0; i < events.size(); i++) {
+      auto& event1 = events[i];
+
+      // Only check note events in the specified layer
+      if (!((event1.event == midi::NoteOn || event1.event == midi::NoteOff) &&
+        event1.layer == layer)) {
+        continue;
+      }
+
+      // Skip if already invalid
+      if (event1.event == midi::InvalidType) continue;
+
+      for (size_t j = i + 1; j < events.size(); j++) {
+        auto& event2 = events[j];
+
+        // Only check note events in the specified layer
+        if (!((event2.event == midi::NoteOn || event2.event == midi::NoteOff) &&
+          event2.layer == layer)) {
+          continue;
+        }
+
+        // Skip if already invalid
+        if (event2.event == midi::InvalidType) continue;
+
+        // Check if these are the same note (same properties)
+        if (event1.track == event2.track &&
+          event1.layer == event2.layer &&
+          event1.note_in == event2.note_in &&
+          event1.event == event2.event &&
+          event1.patternNumber == event2.patternNumber &&
+          event1.patternMs == event2.patternMs) {
+
+          // Duplicate found! Compare velocities for NoteOn events
+          if (event1.event == midi::NoteOn) {
+            if (event1.note_in_velocity < event2.note_in_velocity) {
+              // event1 has lower velocity, mark it as invalid
+              event1.event = midi::InvalidType;
+              break; // No need to check further for event1
+            }
+            else {
+              // event2 has lower or equal velocity, mark it as invalid
+              event2.event = midi::InvalidType;
+            }
+          }
+          else {
+            // For NoteOff, mark the later one as invalid
+            event2.event = midi::InvalidType;
+          }
+        }
+      }
+    }
+
+    // Remove invalid events
+    size_t writeIdx = 0;
+    for (size_t readIdx = 0; readIdx < events.size(); readIdx++) {
+      if (events[readIdx].event != midi::InvalidType) {
+        if (writeIdx != readIdx) {
+          events[writeIdx] = events[readIdx];
+        }
+        writeIdx++;
+      }
+    }
+
+    // Trim vector to new size
+    if (writeIdx < events.size()) {
+      // Resize vector (should handle custom allocator correctly)
+      while (events.size() > writeIdx) {
+        events.pop_back();
+      }
+    }
+
+    // Check if pattern is now empty
+    if (events.empty()) {
+      // Remove empty pattern
+      auto emptyIt = patternIt;
+      ++patternIt;
+      data.songEvents.erase(emptyIt);
+    }
+    else {
+      ++patternIt;
+    }
+  }
+}
+
+FLASHMEM void UI_LiveSeq_PianoRoll::drawBackgroundForNote(uint8_t note, uint16_t fromX, uint16_t toX) const {
   const uint8_t noteIndex = view.highestNote - note - 1;
   const uint16_t y = round(noteIndex * view.noteHeight);
   uint16_t bgColor = (note % 2) ? GREY4 : COLOR_BACKGROUND;
@@ -75,12 +520,16 @@ FLASHMEM uint32_t UI_LiveSeq_PianoRoll::getQuantizationGridStep() const {
     return data.patternLengthMs / 64;
   case QUANTIZE_32:
     return data.patternLengthMs / 32;
+  case QUANTIZE_16T: // 16th note triplets (added before regular 16ths)
+    return data.patternLengthMs / 24; // 3 notes in time of 8th note = patternLength/8/3 = patternLength/24
   case QUANTIZE_16:
     return data.patternLengthMs / 16;
+  case QUANTIZE_8T:  // 8th note triplets
+    return data.patternLengthMs / 12; // 3 notes in time of quarter note = patternLength/4/3 = patternLength/12
   case QUANTIZE_8:
     return data.patternLengthMs / 8;
   case QUANTIZE_4:
-    return data.patternLengthMs / 4;  // 1/4 note
+    return data.patternLengthMs / 4;
   default:
     return 2; // Fallback to no quantization
   }
@@ -706,8 +1155,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
         static bool wasRunning = false;
         if (data.isRunning && !wasRunning) {
           currentSongPattern = 0;  // Reset when song starts
+
+          buttonPlay->drawNow(); // Update button
         }
         wasRunning = data.isRunning;
+
+        static uint8_t lastActiveTrack = data.activeTrack;
+        if (data.activeTrack != lastActiveTrack) {
+
+          lastActiveTrack = data.activeTrack;
+        }
 
         // Advance to next song pattern when we wrap around
         static uint8_t lastPattern = 0;
@@ -793,9 +1250,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   display.console = true;
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
-
-
-
 
 FLASHMEM std::vector<LiveSequencer::NotePair>
 UI_LiveSeq_PianoRoll::getNotePairsFromSongTrack(
@@ -972,8 +1426,6 @@ UI_LiveSeq_PianoRoll::getMuteAutomationEvents(
   return result;
 }
 
-
-
 FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
   // Clear previous locations
   eventLocations.clear();
@@ -1070,7 +1522,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::reloadNotes(bool autoAdaptView) {
   drawHeader(HEADER_DRAW_ALL);
   drawLayersIndicator();
 }
-
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawMuteAutomation(void) {
   if (!data.isSongMode || data.useGridSongMode) return;
@@ -1211,6 +1662,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::hasConstrainedChanged(T& value, int16_t diff
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType event, uint8_t velocity) {
+
   if (isVisible) {
     switch (event) {
     case midi::NoteOn:
@@ -1352,7 +1804,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleKeyChanged(uint8_t key, midi::MidiType
   }
 }
 
-
 FLASHMEM void UI_LiveSeq_PianoRoll::setNumBars(int8_t num) {
   if (num == view.numBars) return;
 
@@ -1460,8 +1911,6 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getSongPatternForNote(const LiveSequence
   return getSongPatternForEvent(note.noteOn);
 }
 
-
-
 FLASHMEM void UI_LiveSeq_PianoRoll::updateSongEvent(LiveSequencer::MidiEvent& updatedEvent) {
   // Find and update the event in songEvents
   for (auto& patternEntry : data.songEvents) {
@@ -1495,7 +1944,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::updateSongEvent(LiveSequencer::MidiEvent& up
     }
   }
 }
-
 
 FLASHMEM void UI_LiveSeq_PianoRoll::handleEncoderRight(EncoderEvents e) {
   if (isSettingActivated) {
@@ -2215,16 +2663,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::addSelectionUpdateRegion(uint32_t timeOn, ui
   noteRegion.notes = { notePitch };
   drawRegionsX.push_back(noteRegion);
 
-  // DON'T add vertical bar region for selection changes
-  // Selection changes don't need to redraw grid lines
-  // UpdateRange barRegion;
-  // barRegion.fromX = noteRegion.fromX - 2;
-  // barRegion.toX = noteRegion.toX + 2;
-  // barRegion.notes = {};
-  // drawRegionsX.push_back(barRegion);
-
-  // But we DO need to ensure background is redrawn for this note
-  // The background will handle the alternating colors
   drawFlags |= DRAW_BACKGROUND;
 }
 
@@ -2309,6 +2747,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::updateEditingNotePitch(uint8_t newPitch) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::commitEditingNote() {
+
   if (!editingNote.active) return;
 
   // First, restore the original events to valid state (undo the soft delete)
@@ -2477,8 +2916,6 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::calculateNoteWidth(const LiveSequencer::
   const uint32_t lenMs = (timeOff > timeOn) ? (timeOff - timeOn) : 1;
   return std::max(1, int(roundf(lenMs * view.msToPix)));
 }
-
-
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawEditingNote() {
   if (!editingNote.active) return;
@@ -2831,7 +3268,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleStepModeNormal(EncoderEvents e, uint8_
   }
 }
 
-
 FLASHMEM void UI_LiveSeq_PianoRoll::setStartOctave(int8_t num) {
   if (num == view.startOctave) return; // No change
 
@@ -2860,7 +3296,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent& e, ui
   e.patternNumber = absoluteBar % data.numberOfBars;
   e.patternMs = time % data.patternLengthMs;
 }
-
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   display.setTextSize(1);
@@ -3489,6 +3924,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 
 FLASHMEM void UI_LiveSeq_PianoRoll::deleteSelectedNote(void) {
   // For mute automation track
+
   if (data.activeTrack == SONG_MODE_MUTE_TRACK && selectedMuteEvent > -1 &&
     selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
 
@@ -3581,7 +4017,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
     [this](auto* b) {
       const TouchButton::Color playColor = data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
       b->draw((data.isRunning ? "STOP" : "START"), "", playColor);
-    }, [this](auto* b) {
+    },
+    [this](auto* b) {
       const bool isRunning = data.isRunning;
       if (isRunning) {
         liveSeq.stop();
@@ -3593,7 +4030,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
         drawFlags |= isRunning ? DRAW_STEP_CURSOR : DRAW_CONTENT_AREA;
         ui_pianoroll->queueDrawNote({ stepCursorPosition, stepCursorPosition, {} });
       }
-      });
+      b->drawNow();
+    });
   buttons.push_back(buttonPlay);
 
   // Track button
@@ -3730,7 +4168,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
           case QUANTIZE_OFF: quantText = "OFF"; break;
           case QUANTIZE_64: quantText = "1/64"; break;
           case QUANTIZE_32: quantText = "1/32"; break;
+          case QUANTIZE_16T: quantText = "1/16T"; break;
           case QUANTIZE_16: quantText = "1/16"; break;
+          case QUANTIZE_8T: quantText = "1/8T"; break;
           case QUANTIZE_8: quantText = "1/8"; break;
           case QUANTIZE_4: quantText = "1/4"; break;
           }
@@ -3740,7 +4180,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
           b->draw(" ", " ", TouchButton::BUTTON_INACTIVE);
       }
     },
-    [this](auto* b) {
+    [this](auto* b) { // clickedHandler (short press)
       if (mode == MODE_VIEW) {
         // Instrument button click - only in VIEW mode
         if (data.activeTrack != SONG_MODE_MUTE_TRACK && data.activeTrack != SONG_MODE_NOTES_TRACK) {
@@ -3760,6 +4200,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
           drawHeader(HEADER_DRAW_ALL);
         }
       }
+    },
+    [this](auto* b) { // ADDED: Long press handler to quantize all notes
+      quantizeAllNotesInCurrentTrack();
     });
   buttons.push_back(buttonInstQuant);
 
@@ -3874,43 +4317,47 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeSelectedNote(void) {
   case QUANTIZE_32: gridSize = data.patternLengthMs / 32; break;
   case QUANTIZE_16: gridSize = data.patternLengthMs / 16; break;
   case QUANTIZE_8: gridSize = data.patternLengthMs / 8; break;
+  case QUANTIZE_8T: gridSize = data.patternLengthMs / 12; break;   // 8th triplets
+  case QUANTIZE_16T: gridSize = data.patternLengthMs / 24; break; // 16th triplets
   default: return;
   }
+
+  // Calculate minimum note length (1/16 note)
+  uint32_t minNoteLength = data.patternLengthMs / 16;
 
   // Handle note quantization
   if (selectedNote > -1 && selectedNote < static_cast<int16_t>(notePairs.size())) {
     LiveSequencer::NotePair& note = notePairs.at(selectedNote);
 
-    // Store original positions for redraw
+    // Store original positions
     uint32_t oldTimeOn = getEventTime(note.noteOn);
     uint32_t oldTimeOff = getEventTime(note.noteOff);
-
-    // Quantize note on time
-    uint32_t quantizedTimeOn = (oldTimeOn / gridSize) * gridSize;
-
-    // Calculate note length and quantize note off time
-    uint32_t noteLength = oldTimeOff - oldTimeOn;
-    uint32_t quantizedTimeOff = quantizedTimeOn + noteLength;
-
-    // Snap note off to grid if it's close
-    uint32_t remainderOff = quantizedTimeOff % gridSize;
-    if (remainderOff > gridSize / 2) {
-      quantizedTimeOff += gridSize - remainderOff;
-    }
-    else {
-      quantizedTimeOff -= remainderOff;
-    }
+    uint32_t noteLength = (oldTimeOff > oldTimeOn) ? (oldTimeOff - oldTimeOn) : minNoteLength;
 
     // Ensure minimum note length
-    if (quantizedTimeOff <= quantizedTimeOn) {
+    if (noteLength < minNoteLength) {
+      noteLength = minNoteLength;
+    }
+
+    // Quantize note on time only
+    uint32_t quantizedTimeOn = (oldTimeOn / gridSize) * gridSize;
+    uint32_t remainder = oldTimeOn % gridSize;
+
+    if (remainder > gridSize / 2) {
+      quantizedTimeOn += gridSize;
+    }
+
+    // Calculate new note off time = quantized start + original length
+    uint32_t quantizedTimeOff = quantizedTimeOn + noteLength;
+
+    // Ensure note-off is at least gridSize after note-on
+    if (quantizedTimeOff <= quantizedTimeOn + gridSize) {
       quantizedTimeOff = quantizedTimeOn + gridSize;
     }
 
     // Update the note times
     setEventTime(note.noteOn, quantizedTimeOn);
     setEventTime(note.noteOff, quantizedTimeOff);
-
-
 
     // Queue redraw
     queueDrawNote(note);
@@ -3920,7 +4367,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeSelectedNote(void) {
     drawHeader((1 << EDIT_NOTEON) | (1 << EDIT_NOTEOFF));
   }
 
-  // Handle mute automation event quantization
+  // Handle mute automation event quantization (unchanged)
   if (selectedMuteEvent > -1 && selectedMuteEvent < static_cast<int16_t>(muteAutomationEvents.size())) {
     LiveSequencer::MidiEvent& event = muteAutomationEvents.at(selectedMuteEvent);
 
@@ -3952,14 +4399,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeSelectedNote(void) {
     uint32_t quantizedTime = (currentTime / gridSize) * gridSize;
 
     if (quantizedTime != currentTime) {
-      // Queue redraw for old position
-      uint32_t oldAbsoluteTime = (songPatternIndex * data.numberOfBars * data.patternLengthMs) +
-        (event.patternNumber * data.patternLengthMs) + event.patternMs;
-      UpdateRange oldRegion;
-      oldRegion.fromX = getNoteCoord(oldAbsoluteTime) - 5;
-      oldRegion.toX = getNoteCoord(oldAbsoluteTime) + 5;
-      drawRegionsX.push_back(oldRegion);
-
       // Update time
       setPatternRelativeTime(event, quantizedTime, songPatternIndex);
 
@@ -3971,16 +4410,6 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeSelectedNote(void) {
       else {
         updateSongEvent(event);
       }
-
-      // Queue redraw for new position
-      uint32_t newAbsoluteTime = (songPatternIndex * data.numberOfBars * data.patternLengthMs) +
-        (event.patternNumber * data.patternLengthMs) + event.patternMs;
-      UpdateRange newRegion;
-      newRegion.fromX = getNoteCoord(newAbsoluteTime) - 5;
-      newRegion.toX = getNoteCoord(newAbsoluteTime) + 5;
-      drawRegionsX.push_back(newRegion);
-
-      drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_MUTE_AUTOMATION;
     }
   }
 }

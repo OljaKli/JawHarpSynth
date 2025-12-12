@@ -30,7 +30,6 @@
 #include <MIDI.h>
 #include <SD.h>
 
-
 #ifdef  MCP_CV
 #include "MCP4728.h"  // 4-Channel DAC 12Bit mcp4728
 MCP4728 dac;
@@ -91,6 +90,8 @@ using namespace TeensyTimerTool;
 #include "livesequencer.h"
 #include <vector>
 
+//#include "D50Synth.h"
+
 #if defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 #endif
@@ -115,6 +116,9 @@ uint8_t APC_TONAL_SCROLL_OFFSET = 64;
 uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
+
+// D50Synth d50Synth; 
+// struct d50_config_s d50;
 
 
 // Allocate the delay lines for left and right channels
@@ -388,6 +392,10 @@ AudioAnalyzePeak mb_after_r;
 
 AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
 AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
+
+// Connect D50 to audio output
+// AudioConnection patchCorda1(*d50Synth.getOutputMixer(), 0, i2s1, 0);
+// AudioConnection patchCorda2(*d50Synth.getOutputMixer(), 1, i2s1, 1);
 
 // WAV/AUDIO Recording
 AudioRecordQueue record_queue_l;
@@ -1109,6 +1117,7 @@ extern void updateGranularFilters();
 FLASHMEM void setup()
 {
 
+
   //**************************
   //Reset QSPI clock from 88Mhz to 132 Mhz.
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
@@ -1131,6 +1140,10 @@ FLASHMEM void setup()
   //  granularPoly.setParams(params);
 
 #endif
+
+//d50Synth.begin();
+
+
 
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
   delay(60);
@@ -2736,9 +2749,7 @@ FLASHMEM void display_granular_status()
 
 void loop()
 {
-
   // Chords Detection
-
 // Handle chord timeout
   if (chord_note_count > 0 && since_last_note > CHORD_CAPTURE_WINDOW) {
     if (chord_note_count >= 3) {
@@ -3965,6 +3976,12 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         }
 #endif
 
+
+//if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
+   // d50Synth.noteOn(inNumber, inVelocity);
+//}
+
+
       }
     }
   }
@@ -4184,8 +4201,11 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     if (inChannel == granular_params.midi_channel) {
       granularPoly.noteOff(inNumber);
     }
-
 #endif
+
+//if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
+   // d50Synth.noteOff(inNumber);
+//}
 
   }
 }
