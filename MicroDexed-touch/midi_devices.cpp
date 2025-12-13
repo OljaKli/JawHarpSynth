@@ -344,7 +344,7 @@ elapsedMillis since_last_note;
 extern void printSuggestions();
 extern void  show_chord();
 
-void resetChordBuffer() {
+FLASHMEM void resetChordBuffer() {
   memset(chord_input, 0, sizeof(chord_input));
   chord_note_count = 0;
 }

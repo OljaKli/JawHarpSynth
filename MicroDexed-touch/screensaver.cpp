@@ -1114,7 +1114,7 @@ private:
     }
   }
 
-  void computeNextGeneration() {
+   void computeNextGeneration() {
     // Compute next generation
     for (uint16_t x = 0; x < GRID_WIDTH; x++) {
       for (uint16_t y = 0; y < GRID_HEIGHT; y++) {

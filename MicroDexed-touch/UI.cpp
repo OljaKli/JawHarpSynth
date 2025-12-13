@@ -678,7 +678,7 @@ FLASHMEM void clear_bottom_half_screen_without_backbutton()
 
 int favsearcher = 0;
 
-void update_seq_speed() {
+FLASHMEM void update_seq_speed() {
   seq.tempo_ms = 60000000 / seq.bpm / 4;
 
   liveSeq.checkBpmChanged();
@@ -7241,7 +7241,7 @@ void _draw_drum_page_dynamic_touch_buttons()
   }
 }
 
-void drum_page_drawButtonsOnStateChange() {
+FLASHMEM void drum_page_drawButtonsOnStateChange() {
   // A static variable to remember the previous state.
   // It's initialized only once.
   static bool lastIsCustomSample = false;

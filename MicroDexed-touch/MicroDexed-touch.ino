@@ -2533,7 +2533,7 @@ void preview_chord_suggestion(uint8_t input)
   }
 }
 
-void printSuggestions() {
+FLASHMEM void printSuggestions() {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
   {
     if (!currentChord.active) return;

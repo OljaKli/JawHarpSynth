@@ -22,6 +22,33 @@ class UI_LiveSeq_PianoRoll {
 public:
   // using SongEventsMap = std::unordered_map<uint8_t, std::vector<LiveSequencer::MidiEvent, LiveSequencer::Alloc<LiveSequencer::MidiEvent>>>;
 
+// Add undo structures
+  struct OriginalNoteState {
+    bool isSongMode;
+    uint16_t songPatternIndex; // Only used for song mode
+    LiveSequencer::MidiEvent noteOn;
+    LiveSequencer::MidiEvent noteOff;
+    size_t indexInData; // Index in data.eventsList or data.songEvents
+  };
+
+  struct QuantizationUndoState {
+    uint8_t track;
+    uint8_t layer;
+    std::vector<OriginalNoteState> originalNotes;
+    uint8_t quantizeLevel;
+    bool hasUndoData = false;
+    
+    void clear() {
+      originalNotes.clear();
+      hasUndoData = false;
+    }
+  } quantizationUndoState;
+
+  // Add undo method declarations
+  FLASHMEM void storeCurrentStateForUndo();
+  FLASHMEM void applyQuantizationUndo();
+  FLASHMEM void clearUndoState();
+
   struct EditingNote {
     bool active = false;
     bool committed = false;
@@ -41,9 +68,7 @@ public:
     size_t originalNoteOffIndex = 0;
     int16_t originalNoteIndex = -1;
 
-    EditingNote() { reset(); }
-
-    void reset() {
+  void reset() {
       active = false;
       committed = false;
       originalSongPatternOn = UINT16_MAX;
@@ -64,6 +89,10 @@ public:
       editingNoteOn.event = midi::InvalidType;
       editingNoteOff.event = midi::InvalidType;
     }
+    
+    EditingNote() { reset(); }
+
+  
   } editingNote;
 
   FLASHMEM void startEditingNote(int16_t noteIndex);
