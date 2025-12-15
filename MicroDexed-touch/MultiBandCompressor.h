@@ -16,7 +16,6 @@ struct MultiBandCompressor_UI_t {
     uint8_t crossover2 = 41;  // ~1 kHz (mid/high split)  
     uint8_t crossover3 = 18;  // ~5 kHz (high/very high split)
 
-    // UPDATED: More aggressive OTT-style defaults
     // Low band - gentle but present compression
     uint8_t band1_thresh = 60;   // -19.6dB threshold
     uint8_t band1_ratio = 45;    // ~8:1 ratio (was too high before)

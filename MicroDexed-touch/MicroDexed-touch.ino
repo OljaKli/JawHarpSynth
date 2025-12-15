@@ -3342,32 +3342,7 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         AudioNoInterrupts();
 
 #if defined DRUMS_FILTERS
-      // Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
-
     set_filter(msz[instance][y].psram_entry_number,slot);   
-
-  //  if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 0)
-  //           {
-  //             Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-  //             Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
-  //           }
-  //           else if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 1)
-  //           {
-  //             Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
-  //             Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
-  //           }
-  //           else if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 2)
-  //           {
-  //             Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
-  //             Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
-  //           }
-  //           else if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 3)
-  //           {
-  //             Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
-  //             Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
-  //           }
-
-
 #endif
         // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
         // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));

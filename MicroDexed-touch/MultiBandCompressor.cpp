@@ -99,7 +99,6 @@ void AudioMultiBandCompressor::updateParameterValues() {
     const float32_t band3_limit = 3.0f;  // 9.5dB max boost for mid-highs
     const float32_t band4_limit = 4.0f;  // 12dB max boost for highs (sparkle)
 
-    // IMPROVED: More aggressive ratio mapping for OTT-style compression
     // UI 0-100 now maps to ratios 1:1 to 100:1 (logarithmic curve)
     // Low values (0-30) give gentle compression (1:1 to 4:1)
     // Mid values (30-70) give moderate compression (4:1 to 20:1) 
@@ -114,9 +113,7 @@ void AudioMultiBandCompressor::updateParameterValues() {
     params.band3_inv_ratio = 1.0f / params.band3_ratio;
     params.band4_inv_ratio = 1.0f / params.band4_ratio;
 
-    // IMPROVED: Much faster attack times for OTT character
     // UI 0-100 now maps to 0.01ms - 5ms (exponential curve)
-    // This gives you the ultra-fast attacks needed for OTT-style pumping
     const float sample_rate_ms = AUDIO_SAMPLE_RATE_EXACT * 0.001f;
     
     params.band1_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band1_attack * 0.01f, 2.0f) * 4.99f)));
@@ -124,7 +121,6 @@ void AudioMultiBandCompressor::updateParameterValues() {
     params.band3_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band3_attack * 0.01f, 2.0f) * 4.99f)));
     params.band4_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band4_attack * 0.01f, 2.0f) * 4.99f)));
     
-    // IMPROVED: Better release time range for musical results
     // UI 0-100 now maps to 10ms - 500ms (logarithmic curve)
     // This gives you both snappy and smooth release options
     params.band1_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band1_release * 0.01f, 1.2f) * 490.0f)));
@@ -132,7 +128,6 @@ void AudioMultiBandCompressor::updateParameterValues() {
     params.band3_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band3_release * 0.01f, 1.2f) * 490.0f)));
     params.band4_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band4_release * 0.01f, 1.2f) * 490.0f)));
     
-    // IMPROVED: Ratio-dependent makeup gain for better level matching
     // Higher ratios need more makeup gain to compensate for level reduction
     params.band1_makeup = 1.0f + (params.band1_ratio - 1.0f) * 0.15f;
     params.band2_makeup = 1.0f + (params.band2_ratio - 1.0f) * 0.15f;
