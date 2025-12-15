@@ -74,19 +74,19 @@ void AudioMultiBandCompressor::updateParameterValues() {
     calculate_biquad_coeffs(&hp3_l, params.crossover3_freq_hz, false);
     calculate_biquad_coeffs(&hp3_r, params.crossover3_freq_hz, false);
 
-    // Band gains (these are fine)
+    // Band gains 
     params.band1_gain_lin = powf(10.0f, (params.ui_data.band1_gain - 50.0f) * 0.4f / 20.0f);
     params.band2_gain_lin = powf(10.0f, (params.ui_data.band2_gain - 50.0f) * 0.4f / 20.0f);
-    params.band3_gain_lin = powf(10.0f, (params.ui_data.band3_gain - 50.0f) * 0.4f / 20.0f);
-    params.band4_gain_lin = powf(10.0f, (params.ui_data.band4_gain - 50.0f) * 0.4f / 20.0f);
+    params.band3_gain_lin = powf(10.0f, (params.ui_data.band3_gain - 35.0f) * 0.4f / 20.0f);
+    params.band4_gain_lin = powf(10.0f, (params.ui_data.band4_gain - 40.0f) * 0.4f / 20.0f);
 
-    // Thresholds (these are fine)
+    // Thresholds 
     params.band1_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band1_thresh * 0.34f) / 20.0f);
     params.band2_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band2_thresh * 0.34f) / 20.0f);
     params.band3_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band3_thresh * 0.34f) / 20.0f);
     params.band4_thresh_lin = powf(10.0f, (-40.0f + params.ui_data.band4_thresh * 0.34f) / 20.0f);
 
-// Calculate band-specific noise gate thresholds
+    // Calculate band-specific noise gate thresholds
     // Lower frequencies need higher thresholds, higher frequencies can be more sensitive
     const float32_t band1_gate = params.band1_thresh_lin * 0.05f; // -26dB below threshold
     const float32_t band2_gate = params.band2_thresh_lin * 0.08f; // -22dB below threshold  
@@ -99,34 +99,30 @@ void AudioMultiBandCompressor::updateParameterValues() {
     const float32_t band3_limit = 3.0f;  // 9.5dB max boost for mid-highs
     const float32_t band4_limit = 4.0f;  // 12dB max boost for highs (sparkle)
 
-    // UI 0-100 now maps to ratios 1:1 to 100:1 (logarithmic curve)
-    // Low values (0-30) give gentle compression (1:1 to 4:1)
-    // Mid values (30-70) give moderate compression (4:1 to 20:1) 
-    // High values (70-100) give extreme compression (20:1 to 100:1)
-    params.band1_ratio = 1.0f + powf(params.ui_data.band1_ratio * 0.01f, 1.5f) * 99.0f;
-    params.band2_ratio = 1.0f + powf(params.ui_data.band2_ratio * 0.01f, 1.5f) * 99.0f;
-    params.band3_ratio = 1.0f + powf(params.ui_data.band3_ratio * 0.01f, 1.5f) * 99.0f;
-    params.band4_ratio = 1.0f + powf(params.ui_data.band4_ratio * 0.01f, 1.5f) * 99.0f;
+    // This gives more musical ratios instead of limiting
+    params.band1_ratio = 1.0f + powf(params.ui_data.band1_ratio * 0.01f, 2.0f) * 19.0f;
+    params.band2_ratio = 1.0f + powf(params.ui_data.band2_ratio * 0.01f, 2.0f) * 19.0f;
+    params.band3_ratio = 1.0f + powf(params.ui_data.band3_ratio * 0.01f, 2.0f) * 19.0f;
+    params.band4_ratio = 1.0f + powf(params.ui_data.band4_ratio * 0.01f, 2.0f) * 19.0f;
     
     params.band1_inv_ratio = 1.0f / params.band1_ratio;
     params.band2_inv_ratio = 1.0f / params.band2_ratio;
     params.band3_inv_ratio = 1.0f / params.band3_ratio;
     params.band4_inv_ratio = 1.0f / params.band4_ratio;
 
-    // UI 0-100 now maps to 0.01ms - 5ms (exponential curve)
+    // UI 0-100 now maps to 0.1ms - 20ms (prevents ultra-fast attack distortion)
     const float sample_rate_ms = AUDIO_SAMPLE_RATE_EXACT * 0.001f;
     
-    params.band1_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band1_attack * 0.01f, 2.0f) * 4.99f)));
-    params.band2_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band2_attack * 0.01f, 2.0f) * 4.99f)));
-    params.band3_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band3_attack * 0.01f, 2.0f) * 4.99f)));
-    params.band4_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.01f + powf(params.ui_data.band4_attack * 0.01f, 2.0f) * 4.99f)));
+    params.band1_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + powf(params.ui_data.band1_attack * 0.01f, 2.0f) * 19.9f)));
+    params.band2_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + powf(params.ui_data.band2_attack * 0.01f, 2.0f) * 19.9f)));
+    params.band3_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + powf(params.ui_data.band3_attack * 0.01f, 2.0f) * 19.9f)));
+    params.band4_attack_coeff = expf(-1.0f / (sample_rate_ms * (0.1f + powf(params.ui_data.band4_attack * 0.01f, 2.0f) * 19.9f)));
     
-    // UI 0-100 now maps to 10ms - 500ms (logarithmic curve)
-    // This gives you both snappy and smooth release options
-    params.band1_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band1_release * 0.01f, 1.2f) * 490.0f)));
-    params.band2_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band2_release * 0.01f, 1.2f) * 490.0f)));
-    params.band3_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band3_release * 0.01f, 1.2f) * 490.0f)));
-    params.band4_release_coeff = expf(-1.0f / (sample_rate_ms * (10.0f + powf(params.ui_data.band4_release * 0.01f, 1.2f) * 490.0f)));
+    // UI 0-100 now maps to 20ms - 500ms (prevents pumping on bass)
+    params.band1_release_coeff = expf(-1.0f / (sample_rate_ms * (20.0f + powf(params.ui_data.band1_release * 0.01f, 1.2f) * 480.0f)));
+    params.band2_release_coeff = expf(-1.0f / (sample_rate_ms * (20.0f + powf(params.ui_data.band2_release * 0.01f, 1.2f) * 480.0f)));
+    params.band3_release_coeff = expf(-1.0f / (sample_rate_ms * (20.0f + powf(params.ui_data.band3_release * 0.01f, 1.2f) * 480.0f)));
+    params.band4_release_coeff = expf(-1.0f / (sample_rate_ms * (20.0f + powf(params.ui_data.band4_release * 0.01f, 1.2f) * 480.0f)));
     
     // Higher ratios need more makeup gain to compensate for level reduction
     params.band1_makeup = 1.0f + (params.band1_ratio - 1.0f) * 0.15f;
@@ -135,7 +131,6 @@ void AudioMultiBandCompressor::updateParameterValues() {
     params.band4_makeup = 1.0f + (params.band4_ratio - 1.0f) * 0.15f;
 
     // Update band parameter structs
-    // Update band parameter structs with new fields
     band_params[0] = {params.band1_thresh_lin, 1.0f/params.band1_thresh_lin, params.band1_inv_ratio, 
                       params.band1_attack_coeff, params.band1_release_coeff, params.band1_makeup, 
                       params.band1_gain_lin, band1_gate, band1_limit};

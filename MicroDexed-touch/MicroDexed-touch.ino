@@ -3288,9 +3288,6 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
   sample_envelope[instance_id + NUM_DRUMS]->release(pow(drum_config[sample].env_release, 2.5f));
   AudioInterrupts();
 }
-#endif
-
-uint8_t msp_playmode_sample_slot[NUM_DRUMS];
 
 void set_filter(uint8_t d,uint8_t slot){
  if (drum_config[d].filter_mode == 0)
@@ -3314,6 +3311,9 @@ void set_filter(uint8_t d,uint8_t slot){
               Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
             }
 }
+#endif
+
+uint8_t msp_playmode_sample_slot[NUM_DRUMS];
 
 #if defined COMPILE_FOR_PSRAM
 
