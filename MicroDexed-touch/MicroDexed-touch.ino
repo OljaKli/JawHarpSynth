@@ -3292,6 +3292,29 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 
 uint8_t msp_playmode_sample_slot[NUM_DRUMS];
 
+void set_filter(uint8_t d,uint8_t slot){
+ if (drum_config[d].filter_mode == 0)
+            {
+              Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+            }
+            else if (drum_config[d].filter_mode == 1)
+            {
+              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+            }
+            else if (drum_config[d].filter_mode == 2)
+            {
+              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+            }
+            else if (drum_config[d].filter_mode == 3)
+            {
+              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+            }
+}
+
 #if defined COMPILE_FOR_PSRAM
 
 void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
@@ -3317,22 +3340,47 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
 
         AudioNoInterrupts();
+
 #if defined DRUMS_FILTERS
-        Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
+      // Drum_filter[slot]->setLowpass(0, (inVelocity * 110), 0.3);
+
+    set_filter(msz[instance][y].psram_entry_number,slot);   
+
+  //  if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 0)
+  //           {
+  //             Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+  //             Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+  //           }
+  //           else if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 1)
+  //           {
+  //             Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
+  //             Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
+  //           }
+  //           else if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 2)
+  //           {
+  //             Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
+  //             Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
+  //           }
+  //           else if (drum_config[msz[instance][y].psram_entry_number].filter_mode == 3)
+  //           {
+  //             Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
+  //             Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(msz[instance][y].psram_entry_number) * 14000, 0.5);
+  //           }
+
+
 #endif
         // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
         // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
 
         if (drum_config[y].numChannels == 1) //mono
         {
-          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
-          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
-
+           drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+           drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
         }
         else //stereo
         {
-          drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
-          drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.2, 0.9)));
+          drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+          drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
         }
 
         drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
@@ -3752,26 +3800,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           if (slot != 99)
           {
 #if defined(DRUMS_FILTERS) 
-            if (drum_config[d].filter_mode == 0)
-            {
-              Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
-            }
-            else if (drum_config[d].filter_mode == 1)
-            {
-              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-            }
-            else if (drum_config[d].filter_mode == 2)
-            {
-              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-            }
-            else if (drum_config[d].filter_mode == 3)
-            {
-              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-            }
+set_filter(d,slot);        
 #endif
             global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5);
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5);
