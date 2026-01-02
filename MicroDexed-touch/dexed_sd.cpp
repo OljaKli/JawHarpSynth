@@ -3266,6 +3266,61 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
   return (false);
 }
 
+// FLASHMEM bool save_sd_samples_json(uint8_t number)
+// {
+//   if (sd_card_internal > 0)
+//   {
+//     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, SAMPLES_CONFIG_NAME);
+// #ifdef DEBUG
+//     LOG.print(F("Saving custom samples"));
+//     LOG.print(number);
+//     LOG.print(F(" to "));
+//     LOG.println(filename);
+// #endif
+
+//     AudioNoInterrupts();
+//     SD.remove(filename);
+//     json = SD.open(filename, FILE_WRITE);
+//     if (json)
+//     {
+//       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+
+//       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
+//         data_json[i]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
+//         String fullpath = customSamples[i].filepath;
+//         fullpath += "/";
+//         fullpath += drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
+//         data_json[i]["filename"] = fullpath;
+//         data_json[i]["start"] = customSamples[i].start;
+//         data_json[i]["end"] = customSamples[i].end;
+//         data_json[i]["loop"] = customSamples[i].loopType;
+//         data_json[i]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
+//       }
+
+// #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
+//       LOG.println(F("Write JSON data:"));
+//       serializeJsonPretty(data_json, Serial);
+//       LOG.println();
+// #endif
+//       serializeJsonPretty(data_json, json);
+//       json.close();
+//       AudioInterrupts();
+//       return (true);
+//     }
+//     json.close();
+//   }
+//   else
+//   {
+// #ifdef DEBUG
+//     LOG.print(F("E : Cannot open "));
+//     LOG.print(filename);
+//     LOG.println(F(" on SD."));
+// #endif
+//   }
+//   AudioInterrupts();
+//   return (false);
+// }
+
 FLASHMEM bool save_sd_samples_json(uint8_t number)
 {
   if (sd_card_internal > 0)
@@ -3285,16 +3340,61 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
     {
       StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
 
+      int json_index = 0; // Separate index for JSON array
       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
-        data_json[i]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
-        String fullpath = customSamples[i].filepath;
-        fullpath += "/";
-        fullpath += drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
-        data_json[i]["filename"] = fullpath;
-        data_json[i]["start"] = customSamples[i].start;
-        data_json[i]["end"] = customSamples[i].end;
-        data_json[i]["loop"] = customSamples[i].loopType;
-        data_json[i]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
+        // Create the full path safely using character arrays
+        char fullpath[FULLPATH_MAX_LEN]; 
+        
+        // Check if the combined path will fit in the buffer
+        const char* filepath = customSamples[i].filepath;
+        const char* sample_filename = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
+        
+        // Safe length check - use strnlen with max length
+        size_t filepath_len = strnlen(filepath, FULLPATH_MAX_LEN);
+        size_t filename_len = strnlen(sample_filename, FULLPATH_MAX_LEN);
+        
+        // Total needed: filepath + '/' + filename + null terminator
+        if (filepath_len + filename_len + 2 > FULLPATH_MAX_LEN) {
+            // Path too long, skip this entire entry
+#ifdef DEBUG
+            LOG.print(F("Warning: Path too long for sample "));
+            LOG.print(i);
+            LOG.print(F(", skipping entry: "));
+            LOG.print(filepath);
+            LOG.print(F("/"));
+            LOG.println(sample_filename);
+#endif
+            continue; // Skip to next iteration
+        }
+        
+        // Path fits, create full path safely
+        // Build path manually to avoid snprintf warning
+        char* dest = fullpath;
+        
+        // Copy filepath
+        memcpy(dest, filepath, filepath_len);
+        dest += filepath_len;
+        
+        // Add separator
+        *dest = '/';
+        dest++;
+        
+        // Copy filename
+        memcpy(dest, sample_filename, filename_len);
+        dest += filename_len;
+        
+        // Add null terminator
+        *dest = '\0';
+        
+        // Only add entry if path was valid
+        data_json[json_index]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
+        data_json[json_index]["filename"] = fullpath;
+        data_json[json_index]["start"] = customSamples[i].start;
+        data_json[json_index]["end"] = customSamples[i].end;
+        data_json[json_index]["loop"] = customSamples[i].loopType;
+        data_json[json_index]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
+        
+        json_index++; // Only increment when we add an entry
       }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)

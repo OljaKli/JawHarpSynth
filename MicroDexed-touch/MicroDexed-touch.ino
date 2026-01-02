@@ -79,6 +79,11 @@ using namespace TeensyTimerTool;
 #include "effect_mono_stereo.h"
 #include "effect_platervbstereo.h"
 #include "effect_gate.h"
+
+#if defined DISTORTION
+#include "effect_distortion.h"
+#endif
+
 #include "template_mixer.hpp"
 #include "drums.h"
 #include "sequencer.h"
@@ -163,6 +168,11 @@ extern Adafruit_FT6206 touch;
 
 // Editor operations
 int menuhelper_previous_val;
+
+#if defined DISTORTION
+AudioEffectDistortion    distortion;
+AudioMixer<8> distortion_mixer;
+#endif
 
 AudioMultiBandCompressor MultiBandCompressor;
 Realtime_Scope scope;
@@ -390,8 +400,16 @@ AudioAnalyzePeak mb_before_r;
 AudioAnalyzePeak mb_after_l;
 AudioAnalyzePeak mb_after_r;
 
+
+
+#if defined DISTORTION
+AudioConnection patchCord_dist_in(finalized_mixer_l, 0, distortion, 0);
+AudioConnection patchCord_dist_out(distortion, 0, i2s1, 1);
+AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
+#else
 AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
 AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
+#endif
 
 // Connect D50 to audio output
 // AudioConnection patchCorda1(*d50Synth.getOutputMixer(), 0, i2s1, 0);
@@ -1117,6 +1135,9 @@ extern void updateGranularFilters();
 FLASHMEM void setup()
 {
 
+#if defined DISTORTION
+distortion.setDrive(0.9);
+#endif
 
   //**************************
   //Reset QSPI clock from 88Mhz to 132 Mhz.

@@ -17493,7 +17493,12 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     else
     {
       drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[23], 8, 8, COLOR_BACKGROUND);
-      if (f == fm.sd_selected_file && fm.sd_parent_folder == false)
+
+      if (sd_entry.name.length()>FILENAME_MAX_LEN-1 && f == fm.sd_selected_file)
+        display.setTextColor(COLOR_BACKGROUND,RED);
+      else if (sd_entry.name.length()>FILENAME_MAX_LEN-1 )
+        display.setTextColor(RED, COLOR_BACKGROUND);
+      else if (f == fm.sd_selected_file && fm.sd_parent_folder == false)
         display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
       else
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -19048,7 +19053,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
 #ifdef COMPILE_FOR_PSRAM
         case FM_COPY_TO_PSRAM:
-          if (fm.sd_temp_name.endsWith(".wav")) {
+          if (fm.sd_temp_name.endsWith(".wav") && fm.sd_temp_name.length()<=FILENAME_MAX_LEN-1 ) {
             fm.sd_full_name = fm.sd_new_name + "/" + fm.sd_temp_name;
             const uint8_t customSampleIndex = fm.psram_selected_file + fm.psram_skip_files;
             const uint8_t sampleIndex = customSampleIndex + NUM_STATIC_PITCHED_SAMPLES;
@@ -19064,7 +19069,11 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
               print_psram_stats_filemanager();
               psram_printCustomSamplesList();
             }
+          } else
+          { showError("FILENAME TOO LONG OR INVALID");
+          delay(1000);
           }
+             
           break;
 
 #endif
@@ -19165,7 +19174,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     file_manager_clear_text_line();
   }
 
-
+ print_file_manager_delete_button();
 
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********

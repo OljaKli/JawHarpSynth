@@ -8,7 +8,6 @@
 #include <LCDMenuLib2.h>
 #include "ILI9341_t3n.h"
 #include "UI.h"
-#include "ILI9341_t3n.h"
 
 extern void apc(uint8_t a, uint8_t b, uint8_t c);
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];

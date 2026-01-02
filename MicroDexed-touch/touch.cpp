@@ -915,7 +915,7 @@ FLASHMEM void print_destination_card_info()
 {
   if (fm.SD_CARD_READER_EXT)
   {
-    uint xoffset = 27;  //Destination Windows is reverse side
+    uint xoffset = 27;  //Destination Window is reverse side
     if (fm.SD_CARD_READER_EXT && fm.active_window == 1)
     {
       xoffset = 0;
@@ -978,7 +978,6 @@ FLASHMEM void filemanager_update_sdcards()
     fm.active_window = 0;
     load_sd_directory();
     sd_printDirectory(true);
-
 
     print_file_manager_active_border();
   }
