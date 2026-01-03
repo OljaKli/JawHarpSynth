@@ -18885,6 +18885,42 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
     if (e.pressed) {
 
+      // NEW: In File Manager browse mode, clicking a FILE goes to parent directory.
+      // Clicking a DIRECTORY must keep working (enter directory), so we trigger this only when NOT a folder.
+      if (fm.sd_mode == FM_BROWSE_FILES &&
+          (fm.active_window == 0 || fm.SD_CARD_READER_EXT) &&
+          !fm.sd_is_folder)
+      {
+        // If already at root, do nothing
+        if (fm.sd_folder_depth == 0 || fm.sd_new_name == "/") {
+          return; // consume click, avoids accidental file action
+        }
+
+        // Go to parent (same logic you already use for "..")
+        if (fm.sd_folder_depth < 2) {
+          fm.sd_folder_depth = 0;
+          fm.sd_new_name = "/";
+          fm.sd_parent_folder = false;
+        } else {
+          const int lastSlash = fm.sd_new_name.lastIndexOf("/");
+          fm.sd_new_name = fm.sd_new_name.substring(0, lastSlash);
+          fm.sd_folder_depth--;
+        }
+
+        // Reset selection and refresh listing
+        fm.sd_selected_file = 0;
+        fm.sd_skip_files = 0;
+        load_sd_directory();
+
+        // Optional UI refresh
+        sd_printDirectory(false); 
+        print_file_manager_buttons();
+        print_file_manager_delete_button();
+        file_manager_clear_text_line();
+        return; // IMPORTANT: do not continue with normal press handling
+      }
+
+
       if (fm.sd_mode == FM_DELETE_FROM_PSRAM) {
         const uint8_t customSampleIndex = fm.psram_selected_file + fm.psram_skip_files;
         const uint8_t sampleIndex = customSampleIndex + NUM_STATIC_PITCHED_SAMPLES;
