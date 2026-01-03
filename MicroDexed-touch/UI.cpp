@@ -18168,6 +18168,67 @@ FLASHMEM void previewWavFilemanager() {
 #endif
 }
 
+#ifdef COMPILE_FOR_PSRAM
+
+// Decide if a PSRAM custom slot is "free".
+// We require: no audio loaded + filepath empty + name equals the default "CUSTOMxx".
+static FLASHMEM bool fm_is_psram_slot_free(uint16_t customIdx)
+{
+  if (customIdx >= NUM_CUSTOM_SAMPLES) return false;
+
+  const uint16_t si = customIdx + NUM_STATIC_PITCHED_SAMPLES;
+
+  const bool noAudioLoaded = (drum_config[si].drum_data == nullptr) || (drum_config[si].len == 0);
+  const bool noFilePath    = (customSamples[customIdx].filepath[0] == '\0');
+
+  char expected[16];
+  snprintf(expected, sizeof(expected), "CUSTOM%02d", (int)customIdx + 1);
+
+  // Name must match default label OR be empty (some builds might leave it empty until first use)
+  const bool nameIsDefault = (strncmp(drum_config[si].name, expected, sizeof(drum_config[si].name)) == 0)
+                             || (drum_config[si].name[0] == '\0');
+
+  return noAudioLoaded && noFilePath && nameIsDefault;
+}
+
+// Returns next free custom slot index [0..NUM_CUSTOM_SAMPLES-1] starting AFTER startIdx.
+// Wraps around. Returns -1 if none is free.
+static FLASHMEM int16_t fm_find_next_free_psram_slot(int16_t startIdx)
+{
+  if (NUM_CUSTOM_SAMPLES == 0) return -1;
+
+  for (int16_t step = 1; step <= (int16_t)NUM_CUSTOM_SAMPLES; ++step)
+  {
+    const int16_t idx = (startIdx + step) % (int16_t)NUM_CUSTOM_SAMPLES;
+    if (fm_is_psram_slot_free((uint16_t)idx))
+      return idx;
+  }
+  return -1;
+}
+
+// Move selection (white bar) to an absolute custom slot index and keep it visible in the list.
+static FLASHMEM void fm_select_psram_slot(uint16_t absCustomIndex)
+{
+  if (absCustomIndex >= NUM_CUSTOM_SAMPLES) return;
+
+  if (absCustomIndex < (uint16_t)fm.psram_skip_files)
+  {
+    fm.psram_skip_files = absCustomIndex;
+  }
+  else if (absCustomIndex > (uint16_t)(fm.psram_skip_files + fm.psram_cap_rows))
+  {
+    fm.psram_skip_files = absCustomIndex - fm.psram_cap_rows;
+  }
+
+  fm.psram_selected_file = (int16_t)absCustomIndex - (int16_t)fm.psram_skip_files;
+
+  // clamps
+  const int16_t maxSkip = max(0, (int16_t)NUM_CUSTOM_SAMPLES - (int16_t)fm.psram_cap_rows - 1);
+  fm.psram_skip_files = constrain(fm.psram_skip_files, 0, maxSkip);
+  fm.psram_selected_file = constrain(fm.psram_selected_file, 0, fm.psram_cap_rows);
+}
+
+#endif
 
 
 
@@ -18742,6 +18803,25 @@ FLASHMEM void show_delete_info_psram()
   }
 }
 
+// -----------------------------------------------------------------------------
+// File Manager: force immediate refresh after directory changes.
+// This avoids needing a "dummy" encoder rotation to redraw the file list.
+// -----------------------------------------------------------------------------
+static FLASHMEM void fm_refresh_sd_view_after_nav()
+{
+  // Reload directory model
+  load_sd_directory();
+
+  // Redraw directory list
+  sd_printDirectory(false);
+
+  // Refresh UI elements that depend on mode/selection
+  print_file_manager_buttons();
+  print_file_manager_delete_button();
+  print_file_manager_active_border();
+  file_manager_clear_text_line();
+}
+
 FLASHMEM void UI_func_file_manager(uint8_t param)
 {
   static constexpr char CUSTOM_DIR[] = "CUSTOM";
@@ -19035,55 +19115,106 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
       }
 
-      if (fm.sd_is_folder) {
-        if (fm.SD_CARD_READER_EXT == false)
-          TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+      if (fm.sd_is_folder)
+      {
+        // ---------------------------------------------------------------------------
+        // FOLDER CLICK HANDLING (single source of truth)
+        // - ".." is NOT a real directory name and must NEVER be appended to the path.
+        // - In BROWSE mode: enter directory (or go parent if "..")
+        // - In COPY > PSRAM: allow directory navigation while keeping COPY > PSRAM active
+        // ---------------------------------------------------------------------------
 
-#ifdef  SECOND_SD
-        if (fm.SD_CARD_READER_EXT && fm.active_window == 0 && fm.sd_mode == FM_COPY_TO_EXTERNAL)
+        // Cache current mode because COPY modes must survive directory navigation
+        const uint8_t modeBeforeNav = fm.sd_mode;
+
+        // --- Handle ".." first (works in ANY mode) ---
+        if (fm.sd_temp_name == "..")
         {
-          // To copy from internal to external SD:
-          file_manager_copy(true);
-        }
-
-        else if (fm.SD_CARD_READER_EXT && fm.active_window == 1 && fm.sd_mode == FM_COPY_TO_INTERNAL)
-        {
-          file_manager_copy(false);  // External to internal folder copy
-
-
-        }
-#endif
-
-        if (fm.sd_temp_name == ".." && fm.sd_mode == FM_BROWSE_FILES)
-        {
-          if (fm.sd_folder_depth < 2) {
+          if (fm.sd_folder_depth < 2)
+          {
             fm.sd_folder_depth = 0;
             fm.sd_new_name = "/";
             fm.sd_parent_folder = false;
           }
-          else if (fm.sd_mode == FM_BROWSE_FILES) {
-            // path has at least one parent folder
+          else
+          {
             const int lastSlash = fm.sd_new_name.lastIndexOf("/");
             fm.sd_new_name = fm.sd_new_name.substring(0, lastSlash);
             fm.sd_folder_depth--;
           }
-        }
-        else if (fm.sd_mode == FM_BROWSE_FILES)
-        {
-          if (fm.sd_folder_depth > 0) {
-            fm.sd_new_name.append("/");
-          }
-          fm.sd_new_name.append(fm.sd_temp_name);
-          fm.sd_folder_depth++;
-        }
 
-        if (fm.sd_mode == FM_BROWSE_FILES)
-        {
           fm.sd_selected_file = 0;
           fm.sd_skip_files = 0;
+          fm.sd_parent_folder = false;
+
+          fm_refresh_sd_view_after_nav();
+
+
+          // Restore mode (important for COPY > PSRAM and other copy modes)
+          fm.sd_mode = modeBeforeNav;
+
+          // UI refresh (optional but keeps UX responsive)
+          print_file_manager_buttons();
+          print_file_manager_delete_button();
+          file_manager_clear_text_line();
+
+          return; // consume click
         }
 
+        // --- Copy actions that trigger on folder click (external/internal SD copy) ---
+      #ifdef SECOND_SD
+        if (fm.SD_CARD_READER_EXT && fm.active_window == 0 && fm.sd_mode == FM_COPY_TO_EXTERNAL)
+        {
+          file_manager_copy(true);   // internal -> external
+          return;
+        }
+        else if (fm.SD_CARD_READER_EXT && fm.active_window == 1 && fm.sd_mode == FM_COPY_TO_INTERNAL)
+        {
+          file_manager_copy(false);  // external -> internal
+          return;
+        }
+      #endif
+
+        // --- Directory navigation ---
+        // Enter a real directory when:
+        // - browsing, or
+        // - COPY > PSRAM is active (we allow navigation in this mode too)
+        if (fm.sd_mode == FM_BROWSE_FILES || fm.sd_mode == FM_COPY_TO_PSRAM)
+        {
+          if (fm.sd_folder_depth > 0)
+          {
+            fm.sd_new_name.append("/");
+          }
+
+          fm.sd_new_name.append(fm.sd_temp_name);
+          fm.sd_folder_depth++;
+
+          fm.sd_selected_file = 0;
+          fm.sd_skip_files = 0;
+          fm.sd_parent_folder = false;
+
+          fm_refresh_sd_view_after_nav();
+
+
+          // Keep previous mode (important for COPY > PSRAM)
+          fm.sd_mode = modeBeforeNav;
+
+          print_file_manager_buttons();
+          print_file_manager_delete_button();
+          file_manager_clear_text_line();
+
+          return; // consume click
+        }
+
+        // --- Optional UI button (kept from your original code) ---
+        if (fm.SD_CARD_READER_EXT == false)
+        {
+          TouchButton::drawButton(GRID.X[5], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_NORMAL);
+        }
+
+        return; // folder click handled
       }
+
       else { // is a file
         switch (fm.sd_mode) {
 
@@ -19102,6 +19233,16 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
               drum_config[sampleIndex].drum_class = DRUM_POLY; // default is poly
               strcpy(drum_config[sampleIndex].filename, fm.sd_temp_name.c_str());
               strip_extension(fm.sd_temp_name.c_str(), drum_config[sampleIndex].name, 14);
+              // NEW (refined): move selection to next truly free CUSTOM slot
+              const int16_t nextFree = fm_find_next_free_psram_slot((int16_t)customSampleIndex);
+              if (nextFree >= 0) {
+                fm_select_psram_slot((uint16_t)nextFree);
+              } else {
+                // NEW: PSRAM FULL
+                  showError("PSRAM FULL");
+                  delay(1000);
+                // keep selection on the slot just used
+              }
               print_psram_stats_filemanager();
               psram_printCustomSamplesList();
             }
