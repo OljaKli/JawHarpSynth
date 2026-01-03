@@ -9,6 +9,8 @@
 AudioEffectDistortion::AudioEffectDistortion() : AudioStream(1, inputQueueArray) {
   _drive = 0.5f;
   _outputGain = 1.0f;
+  _preEmph_z1 = 0.0f;
+  _deEmph_z1 = 0.0f;
 }
 
 void AudioEffectDistortion::update(void) {
@@ -20,18 +22,31 @@ void AudioEffectDistortion::update(void) {
   
   p = block->data;
   
+  // Pre-emphasis coefficient (emphasize mids like a guitar pedal)
+  const float preCoef = 0.8f;
+  // De-emphasis coefficient (smooth out harsh highs)
+  const float deCoef = 0.7f;
+  
   for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
     // Convert to float -1.0 to 1.0
     float sample = (float)(*p) / 32768.0f;
     
+    // Pre-emphasis filter (high-pass character - emphasizes pick attack)
+    float preEmph = sample - preCoef * _preEmph_z1;
+    _preEmph_z1 = sample;
+    
     // Process distortion
-    float distorted = processDistortion(sample);
+    float distorted = processDistortion(preEmph);
+    
+    // De-emphasis filter (low-pass character - smooths harsh highs)
+    float deEmph = deCoef * distorted + (1.0f - deCoef) * _deEmph_z1;
+    _deEmph_z1 = deEmph;
     
     // Apply output gain compensation
-    distorted *= _outputGain;
+    deEmph *= _outputGain;
     
     // Convert back to int16 with clipping
-    int32_t val = (int32_t)(distorted * 32767.0f);
+    int32_t val = (int32_t)(deEmph * 32767.0f);
     if (val > 32767) val = 32767;
     if (val < -32768) val = -32768;
     
@@ -42,21 +57,37 @@ void AudioEffectDistortion::update(void) {
   release(block);
 }
 
+// Fast tanh approximation optimized for Teensy 4.1 FPU
+float AudioEffectDistortion::fastTanh(float x) {
+  // Rational approximation: very accurate for |x| < 3
+  float x2 = x * x;
+  return x * (27.0f + x2) / (27.0f + 9.0f * x2);
+}
+
 float AudioEffectDistortion::processDistortion(float sample) {
-  // Apply distortion (soft clipping with adjustable drive)
-  float driven = sample * (1.0f + _drive * 9.0f); // drive range: 1x to 10x
+  // Apply drive (exponential scaling for more natural feel)
+  float gain = 1.0f + _drive * _drive * 19.0f; // 1x to 20x with exponential curve
+  float driven = sample * gain;
   
+  // Asymmetric soft clipping (tube-like: compresses positive more than negative)
+  // This gives the characteristic "sag" of tube amps
   float distorted;
   
-  // Soft clipping using tanh-like approximation (fast)
-  if (driven > 1.0f) {
-    distorted = 1.0f - (1.0f / (driven * driven + 1.0f));
-  } else if (driven < -1.0f) {
-    distorted = -1.0f + (1.0f / (driven * driven + 1.0f));
+  if (driven > 0.0f) {
+    // Positive: softer clipping (compressed)
+    distorted = fastTanh(driven * 0.9f) * 1.05f;
   } else {
-    // Cubic soft clip for moderate levels
-    distorted = driven - (driven * driven * driven) / 3.0f;
+    // Negative: slightly harder clipping (more edge)
+    distorted = fastTanh(driven * 1.1f) * 0.95f;
   }
+  
+  // Add subtle second-harmonic character (even harmonics like tubes)
+  float harmonic = distorted * distorted * (driven > 0.0f ? 0.05f : -0.05f);
+  distorted += harmonic;
+  
+  // Soft limit the output
+  if (distorted > 1.0f) distorted = 1.0f;
+  if (distorted < -1.0f) distorted = -1.0f;
   
   return distorted;
 }
@@ -65,8 +96,8 @@ void AudioEffectDistortion::setDrive(float drive) {
   if (drive < 0.0f) drive = 0.0f;
   if (drive > 1.0f) drive = 1.0f;
   _drive = drive;
-  // Compensate output level as drive increases
-  _outputGain = 1.0f / (1.0f + drive * 0.5f);
+  // Better gain compensation for exponential drive curve
+  _outputGain = 1.0f / (1.0f + drive * drive * 1.2f);
 }
 
 void AudioEffectDistortion::setOutputGain(float gain) {

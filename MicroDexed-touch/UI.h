@@ -84,8 +84,10 @@ void UI_func_dexed_audio(uint8_t param);
 void UI_func_dexed_controllers(uint8_t param);
 void UI_func_dexed_setup(uint8_t param);
 void UI_func_information(uint8_t param);
-
 void UI_func_cv_page(uint8_t param);
+
+void UI_func_distortion(uint8_t param);
+
 void UI_func_chord_arranger(uint8_t param);
 void UI_func_noisemaker(uint8_t param);
 void UI_func_master_effects(uint8_t param);

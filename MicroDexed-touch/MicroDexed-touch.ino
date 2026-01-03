@@ -170,7 +170,7 @@ extern Adafruit_FT6206 touch;
 int menuhelper_previous_val;
 
 #if defined DISTORTION
-AudioEffectDistortion    distortion;
+AudioEffectDistortion    distortion_effect;
 AudioMixer<8> distortion_mixer;
 #endif
 
@@ -235,7 +235,7 @@ AudioEffectModulatedDelay* dexed_chorus[NUM_DEXED];
 
 AudioEffectGate* Gate[2];  //noise gate for delay feedback channels A+B
 
-AudioMixer<2 * NUM_DRUMS + 3>* global_delay_in_mixer[2];
+AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
 
 AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
@@ -400,16 +400,8 @@ AudioAnalyzePeak mb_before_r;
 AudioAnalyzePeak mb_after_l;
 AudioAnalyzePeak mb_after_r;
 
-
-
-#if defined DISTORTION
-AudioConnection patchCord_dist_in(finalized_mixer_l, 0, distortion, 0);
-AudioConnection patchCord_dist_out(distortion, 0, i2s1, 1);
-AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
-#else
 AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
 AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
-#endif
 
 // Connect D50 to audio output
 // AudioConnection patchCorda1(*d50Synth.getOutputMixer(), 0, i2s1, 0);
@@ -500,6 +492,11 @@ const AudioConnection patchCord[] = {
           {granular_filter_r, 0, reverb_mixer_r, REVERB_MIX_CH_GRANULAR},
           {granular_filter_l, 0, reverb_mixer_l, REVERB_MIX_CH_GRANULAR},
 
+#endif
+
+#ifdef DISTORTION
+          {distortion_effect, 0, reverb_mixer_r, REVERB_MIX_CH_DISTORTION},
+          {distortion_effect, 0, reverb_mixer_l, REVERB_MIX_CH_DISTORTION},
 #endif
 
          {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
@@ -633,8 +630,8 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   // Allocate global delay mixer once for all instances
   if (instance_id == 0)
   {
-    global_delay_in_mixer[0] = new AudioMixer<2 * NUM_DRUMS + 3>();
-    global_delay_in_mixer[1] = new AudioMixer<2 * NUM_DRUMS + 3>();
+    global_delay_in_mixer[0] = new AudioMixer<2 * NUM_DRUMS + 4>();
+    global_delay_in_mixer[1] = new AudioMixer<2 * NUM_DRUMS + 4>();
   }
 
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
@@ -664,6 +661,13 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN));
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN));
 
+#ifdef DISTORTION
+    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, master_mixer_r,MASTER_MIX_CH_DISTORTION));
+    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, master_mixer_l,MASTER_MIX_CH_DISTORTION));
+
+     dynamicConnections.emplace_back(new AudioConnection(distortion_mixer, 0, distortion_effect,0));
+#endif
+
   }
   else
     if (instance_id == 1)
@@ -675,6 +679,10 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
       else
         if (instance_id == 3)
           dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_3, 0));
+#endif
+
+#ifdef DISTORTION
+    dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, distortion_mixer, instance_id));
 #endif
 
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[0], instance_id));
@@ -768,6 +776,11 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(granular_filter_l, 0, *global_delay_in_mixer[0], 18));
     dynamicConnections.emplace_back(new AudioConnection(granular_filter_r, 0, *global_delay_in_mixer[1], 18));
 #endif
+#ifdef DISTORTION
+    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, *global_delay_in_mixer[0], 19));
+    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, *global_delay_in_mixer[1], 19));
+#endif
+
 
   }
 
@@ -1134,10 +1147,6 @@ extern void updateGranularFilters();
 
 FLASHMEM void setup()
 {
-
-#if defined DISTORTION
-distortion.setDrive(0.9);
-#endif
 
   //**************************
   //Reset QSPI clock from 88Mhz to 132 Mhz.
@@ -1690,6 +1699,11 @@ distortion.setDrive(0.9);
 #ifdef GRANULAR
   master_mixer_r.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
   master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
+#endif
+
+#ifdef DISTORTION
+  master_mixer_r.gain(MASTER_MIX_CH_DISTORTION, 0.6);
+  master_mixer_l.gain(MASTER_MIX_CH_DISTORTION, 0.6);
 #endif
 
   master_mixer_r.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
@@ -5957,6 +5971,8 @@ FLASHMEM void set_fx_params(void)
   reverb_mixer_r.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
   reverb_mixer_l.gain(REVERB_MIX_CH_GRANULAR, volume_transform(mapfloat(granular_params.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
 #endif
+
+
 
   // REVERB
   reverb.size(mapfloat(configuration.fx.reverb_roomsize, REVERB_ROOMSIZE_MIN, REVERB_ROOMSIZE_MAX, 0.0, 1.0));

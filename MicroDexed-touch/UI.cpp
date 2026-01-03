@@ -281,7 +281,7 @@ extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
-extern AudioMixer<2 * NUM_DRUMS + 3>* global_delay_in_mixer[2];
+extern AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
 extern AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 #ifdef PSRAM
@@ -614,13 +614,13 @@ LCDML_add(65, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
 LCDML_add(66, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
 
 
-
 //LCDML_add(67, LCDML_0, 19, "D50", UI_func_d50_synth);
+LCDML_add(67, LCDML_0, 19, "DISTORTION", UI_func_distortion);
 
-LCDML_add(67, LCDML_0, 19, "Info", UI_func_information);
-LCDML_addAdvanced(68, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(70, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(68, LCDML_0, 20, "Info", UI_func_information);
+LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(70, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 
 //old/depreciated menus
 //LCDML_add(64, LCDML_0_18, 3, "Map Gamepad", UI_func_map_gamepad);
@@ -26761,3 +26761,305 @@ FLASHMEM void UI_func_granular(uint8_t param)
 //     display.fillScreen(COLOR_BACKGROUND);
 //   }
 // }
+
+
+//distortion
+
+#if defined DISTORTION
+#include "effect_distortion.h"
+extern AudioEffectDistortion    distortion_effect;
+extern AudioMixer<8> distortion_mixer;
+#endif
+
+// Define min/max values (add to defines.h)
+#define DISTORTION_DRIVE_MIN 0
+#define DISTORTION_DRIVE_MAX 255
+#define DISTORTION_GAIN_MIN 0
+#define DISTORTION_GAIN_MAX 255  // Maps to 0.0-2.0
+#define DEXED_INPUT_MIN 0
+#define DEXED_INPUT_MAX 255
+#define DISTORTION_FX_SEND_MIN 0
+#define DISTORTION_FX_SEND_MAX 255
+#define DISTORTION_SENSITIVITY_MIN 0
+#define DISTORTION_SENSITIVITY_MAX 255
+
+// Helper functions to convert between uint8_t and float
+FLASHMEM float map_uint8_to_float(uint8_t value, float min_val, float max_val) {
+    return mapfloat(value, 0, 255, min_val, max_val);
+}
+
+FLASHMEM uint8_t map_float_to_uint8(float value, float min_val, float max_val) {
+    return (uint8_t)mapfloat(value, min_val, max_val, 0, 255);
+}
+
+FLASHMEM void update_distortion_parameters()
+{
+  // Apply distortion effect parameters
+  float drive_float = map_uint8_to_float(configuration.fx.dist_drive, 0.0f, 1.0f);
+  distortion_effect.setDrive(drive_float);
+  
+  float gain_float = map_uint8_to_float(configuration.fx.dist_output_gain, 0.0f, 2.0f);
+  distortion_effect.setOutputGain(gain_float);
+  
+  // Apply DEXED input levels
+  float dexed1_input = map_uint8_to_float(configuration.fx.dist_dexed1_input, 0.0f, 1.0f);
+  distortion_mixer.gain(0, dexed1_input);
+  
+  float dexed2_input = map_uint8_to_float(configuration.fx.dist_dexed2_input, 0.0f, 1.0f);
+  distortion_mixer.gain(1, dexed2_input);
+  
+  float dexed3_input = map_uint8_to_float(configuration.fx.dist_dexed3_input, 0.0f, 1.0f);
+  distortion_mixer.gain(2, dexed3_input);
+  
+  float dexed4_input = map_uint8_to_float(configuration.fx.dist_dexed4_input, 0.0f, 1.0f);
+  distortion_mixer.gain(3, dexed4_input);
+  
+  // Apply FX send levels
+  float delay1_send = map_uint8_to_float(configuration.fx.dist_delay1_send, 0.0f, 1.0f);
+  float delay2_send = map_uint8_to_float(configuration.fx.dist_delay2_send, 0.0f, 1.0f);
+  float reverb_send = map_uint8_to_float(configuration.fx.dist_reverb_send, 0.0f, 1.0f);
+  
+  // Set FX sends (adjust mixer channel numbers if needed)
+  global_delay_in_mixer[0]->gain(19, delay1_send);
+  global_delay_in_mixer[1]->gain(19, delay2_send);
+  reverb_mixer_l.gain(REVERB_MIX_CH_DISTORTION, reverb_send);
+  reverb_mixer_r.gain(REVERB_MIX_CH_DISTORTION, reverb_send);
+}
+
+FLASHMEM void print_distortion_static_texts()
+{
+  display.setTextSize(1);
+  helptext_l(back_text);
+  helptext_r(F("< > SELECT PARAM"));
+  display.setTextSize(1);
+  generic_active_function = 0;
+  setCursor_textGrid_small(1, 1);
+  display.setTextColor(RED);
+  display.print(F("DISTORTION EFFECT"));
+  display.setTextColor(COLOR_SYSTEXT);
+  display.setTextColor(GREY1);
+  
+  // Basic parameters - added sensitivity
+  setCursor_textGrid_small(1, 3);
+  display.print(F("DRIVE"));
+  setCursor_textGrid_small(1, 4);
+  display.print(F("OUTPUT GAIN"));
+  setCursor_textGrid_small(1, 5);  // NEW: Sensitivity
+  display.print(F("SENSITIVITY"));
+  
+  display.setTextColor(GREY2);
+  setCursor_textGrid_small(1, 7);  // Changed from 6 to 7
+  display.print(F("DEXED INPUTS"));
+  display.setTextColor(GREY1);
+  
+  setCursor_textGrid_small(1, 9);   // Changed from 8 to 9
+  display.print(F("DEXED 1"));
+  setCursor_textGrid_small(1, 10);  // Changed from 9 to 10
+  display.print(F("DEXED 2"));
+  setCursor_textGrid_small(1, 11);  // Changed from 10 to 11
+  display.print(F("DEXED 3"));
+  setCursor_textGrid_small(1, 12);  // Changed from 11 to 12
+  display.print(F("DEXED 4"));
+
+  display.setTextColor(GREY2);
+  setCursor_textGrid_small(24, 1);
+  display.print(F("EFFECTS SENDS"));
+  display.setTextColor(GREY1);
+  
+  setCursor_textGrid_small(24, 3);
+  display.print(F("DELAY 1 SEND"));
+  setCursor_textGrid_small(24, 4);
+  display.print(F("DELAY 2 SEND"));
+  setCursor_textGrid_small(24, 5);
+  display.print(F("REVERB SEND"));
+}
+
+FLASHMEM void update_selective_values_distortion()
+{
+  // Drive gauge
+  if (menu_item_check(0))
+    print_small_intbar(13, 3, 
+                      map(configuration.fx.dist_drive, DISTORTION_DRIVE_MIN, DISTORTION_DRIVE_MAX, 0, 100), 
+                      0, 1, 0);
+  
+  // Apply drive parameter when editing
+  if (generic_temp_select_menu == 0 && seq.edit_state) {
+    float drive_float = map_uint8_to_float(configuration.fx.dist_drive, 0.0f, 1.0f);
+    distortion_effect.setDrive(drive_float);
+  }
+  
+  // Output Gain gauge
+  if (menu_item_check(1))
+    print_small_intbar(13, 4, 
+                      map(configuration.fx.dist_output_gain, DISTORTION_GAIN_MIN, DISTORTION_GAIN_MAX, 0, 100), 
+                      1, 1, 0);
+  
+  // Apply output gain parameter when editing
+  if (generic_temp_select_menu == 1 && seq.edit_state ) {
+    float gain_float = map_uint8_to_float(configuration.fx.dist_output_gain, 0.0f, 2.0f);
+    distortion_effect.setOutputGain(gain_float);
+  }
+  
+  
+  // DEXED 1 Input gauge
+  if (menu_item_check(3))
+    print_small_intbar(13, 9,   // Changed from 8 to 9
+                      map(configuration.fx.dist_dexed1_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      3, 1, 1);
+  
+  
+  
+  // DEXED 2 Input gauge
+  if (menu_item_check(4))
+    print_small_intbar(13, 10,  // Changed from 9 to 10
+                      map(configuration.fx.dist_dexed2_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      4, 1, 1);
+  
+  
+  
+  // DEXED 3 Input gauge
+  if (menu_item_check(5))
+    print_small_intbar(13, 11,  // Changed from 10 to 11
+                      map(configuration.fx.dist_dexed3_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      5, 1, 1);
+  
+  
+  
+  // DEXED 4 Input gauge
+  if (menu_item_check(6))
+    print_small_intbar(13, 12,  // Changed from 11 to 12
+                      map(configuration.fx.dist_dexed4_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      6, 1, 1);
+  
+
+  
+  // Delay 1 Send gauge
+  if (menu_item_check(7))
+    print_small_intbar(38, 3, 
+                      map(configuration.fx.dist_delay1_send, DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX, 0, 100), 
+                      7, 1, 0);
+  
+  
+  // Delay 2 Send gauge
+  if (menu_item_check(8))
+    print_small_intbar(38, 4, 
+                      map(configuration.fx.dist_delay2_send, DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX, 0, 100), 
+                      8, 1, 0);
+  
+  
+  // Reverb Send gauge
+  if (menu_item_check(9))
+    print_small_intbar(38, 5, 
+                      map(configuration.fx.dist_reverb_send, DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX, 0, 100), 
+                      9, 1, 0);
+  
+ 
+   update_distortion_parameters();
+}
+
+FLASHMEM void UI_func_distortion(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    // setup function
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+    print_distortion_static_texts();
+    
+    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && 
+        LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
+      generic_temp_select_menu = 0;
+
+    generic_full_draw_required = true;
+    update_selective_values_distortion(); // print all at init
+    generic_full_draw_required = false;
+
+    display.setTextSize(1);
+  }
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.turned) {
+      if (seq.edit_state == 0) {
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 9); // Changed to 9
+      }
+      else {
+        switch(generic_temp_select_menu) {
+          case 0: // Drive
+          {
+            configuration.fx.dist_drive = constrain(configuration.fx.dist_drive + (e.dir * e.speed), 
+                                                          DISTORTION_DRIVE_MIN, DISTORTION_DRIVE_MAX);
+            break;
+          }
+          
+          case 1: // Output Gain
+          {
+            configuration.fx.dist_output_gain = constrain(configuration.fx.dist_output_gain + (e.dir * e.speed), 
+                                                                DISTORTION_GAIN_MIN, DISTORTION_GAIN_MAX);
+            break;
+          }
+          
+          case 3: // DEXED 1 Input
+          {
+            configuration.fx.dist_dexed1_input = constrain(configuration.fx.dist_dexed1_input + (e.dir * e.speed), 
+                                                                DEXED_INPUT_MIN, DEXED_INPUT_MAX);
+            break;
+          }
+          
+          case 4: // DEXED 2 Input
+          {
+            configuration.fx.dist_dexed2_input = constrain(configuration.fx.dist_dexed2_input + (e.dir * e.speed), 
+                                                                DEXED_INPUT_MIN, DEXED_INPUT_MAX);
+            break;
+          }
+          
+          case 5: // DEXED 3 Input
+          {
+            configuration.fx.dist_dexed3_input = constrain(configuration.fx.dist_dexed3_input + (e.dir * e.speed), 
+                                                                DEXED_INPUT_MIN, DEXED_INPUT_MAX);
+            break;
+          }
+          
+          case 6: // DEXED 4 Input
+          {
+            configuration.fx.dist_dexed4_input = constrain(configuration.fx.dist_dexed4_input + (e.dir * e.speed), 
+                                                                DEXED_INPUT_MIN, DEXED_INPUT_MAX);
+            break;
+          }
+          
+          case 7: // Delay 1 Send
+          {
+            configuration.fx.dist_delay1_send = constrain(configuration.fx.dist_delay1_send + (e.dir * e.speed), 
+                                                               DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX);
+            break;
+          }
+          
+          case 8: // Delay 2 Send
+          {
+            configuration.fx.dist_delay2_send = constrain(configuration.fx.dist_delay2_send + (e.dir * e.speed), 
+                                                               DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX);
+            break;
+          }
+          
+          case 9: // Reverb Send
+          {
+            configuration.fx.dist_reverb_send = constrain(configuration.fx.dist_reverb_send + (e.dir * e.speed), 
+                                                               DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX);
+            break;
+          }
+        }
+      }
+    }
+    if (e.pressed) {
+      seq.edit_state = !seq.edit_state;
+    }
+    // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    update_selective_values_distortion();
+  }
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+    generic_menu = 0;
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}

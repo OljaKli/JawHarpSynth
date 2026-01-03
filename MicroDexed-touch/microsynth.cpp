@@ -21,7 +21,7 @@ extern AudioMixer<2> microsynth_mixer_reverb;
 
 extern microsynth_t microsynth[NUM_MICROSYNTH];
 extern uint8_t microsynth_selected_instance;
-extern AudioMixer<2 * NUM_DRUMS + 3>* global_delay_in_mixer[2];
+extern AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
 extern uint8_t generic_temp_select_menu;
 
 extern float volume_transform(float amp);

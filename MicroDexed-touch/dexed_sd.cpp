@@ -1458,6 +1458,11 @@ FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
 /******************************************************************************
    SD FX
  ******************************************************************************/
+#ifdef DISTORTION
+extern void update_distortion_parameters();
+#endif
+
+
 FLASHMEM bool load_sd_fx_json(uint8_t number)
 {
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
@@ -1538,6 +1543,22 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         configuration.fx.delay1_sidechain_send = data_json["delay1_sidechain_send"];
         configuration.fx.delay2_sidechain_send = data_json["delay2_sidechain_send"];
         configuration.fx.reverb_sidechain_send = data_json["reverb_sidechain_send"];
+
+#ifdef DISTORTION
+configuration.fx.dist_drive = data_json["dist_drive"];
+configuration.fx.dist_output_gain = data_json["dist_output_gain"];
+configuration.fx.dist_dexed1_input = data_json["dist_dexed1_input"];
+configuration.fx.dist_dexed2_input = data_json["dist_dexed2_input"];
+configuration.fx.dist_dexed3_input = data_json["dist_dexed3_input"];
+configuration.fx.dist_dexed4_input = data_json["dist_dexed4_input"];
+configuration.fx.dist_delay1_send = data_json["dist_delay1_send"];
+configuration.fx.dist_delay2_send = data_json["dist_delay2_send"];
+configuration.fx.dist_reverb_send = data_json["dist_reverb_send"];
+#endif
+
+#ifdef DISTORTION
+update_distortion_parameters();
+#endif
 
         check_configuration_fx();
         set_fx_params();
@@ -1628,6 +1649,20 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
       data_json["delay1_sidechain_send"] = configuration.fx.delay1_sidechain_send;
       data_json["delay2_sidechain_send"] = configuration.fx.delay2_sidechain_send;
       data_json["reverb_sidechain_send"] = configuration.fx.reverb_sidechain_send;
+
+      #ifdef DISTORTION
+// Distortion parameters
+data_json["dist_drive"] = configuration.fx.dist_drive;
+data_json["dist_output_gain"] = configuration.fx.dist_output_gain;
+data_json["dist_dexed1_input"] = configuration.fx.dist_dexed1_input;
+data_json["dist_dexed2_input"] = configuration.fx.dist_dexed2_input;
+data_json["dist_dexed3_input"] = configuration.fx.dist_dexed3_input;
+data_json["dist_dexed4_input"] = configuration.fx.dist_dexed4_input;
+data_json["dist_delay1_send"] = configuration.fx.dist_delay1_send;
+data_json["dist_delay2_send"] = configuration.fx.dist_delay2_send;
+data_json["dist_reverb_send"] = configuration.fx.dist_reverb_send;
+#endif
+
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
@@ -2269,6 +2304,7 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
 /******************************************************************************
    SD SYS
  ******************************************************************************/
+
 
 FLASHMEM bool load_sd_sys_json(void)
 {
