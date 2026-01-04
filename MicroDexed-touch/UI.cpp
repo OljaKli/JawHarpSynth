@@ -23852,29 +23852,61 @@ FLASHMEM void print_smf_parameters()
   if (smf_playing == false)
   {
     display.setTextColor(GREY2, COLOR_BACKGROUND);
+
+    // Format placeholder (1 char)
     setCursor_textGrid_small(33, 3);
     display.print(F("-"));
+
+    // Track count placeholder (2 chars)
     setCursor_textGrid_small(49, 3);
-    display.print(F("-"));
+    display.print(F("--"));
+
+    // Tempo placeholder (3 chars)
     setCursor_textGrid_small(33, 4);
-    display.print(F("-"));
+    display.print(F("---"));
+
+    // Time signature placeholder
     setCursor_textGrid_small(49, 4);
     display.print(F("-/-"));
+    return;
   }
-  else
-  {
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    setCursor_textGrid_small(33, 3);
-    display.print(SMF.getFormat());
-    setCursor_textGrid_small(49, 3);
-    display.print(SMF.getTrackCount());
-    setCursor_textGrid_small(33, 4);
-    display.print(SMF.getTempo());
-    setCursor_textGrid_small(49, 4);
-    display.print(SMF.getTimeSignature() >> 8);
-    display.print("/");
-    display.print(SMF.getTimeSignature() & 0xf);
-  }
+
+  // smf_playing == true
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+  // ---- Clear fields first (prevents leftover '-' when numbers are shorter) ----
+
+  // Format field width = 1
+  setCursor_textGrid_small(33, 3);
+  display.print(F(" "));
+
+  // Track count field width = 2
+  setCursor_textGrid_small(49, 3);
+  display.print(F("  "));
+
+  // Tempo field width = 3
+  setCursor_textGrid_small(33, 4);
+  display.print(F("   "));
+
+  // (Optional) clear time signature field width = 3 (e.g., "4/4")
+  setCursor_textGrid_small(49, 4);
+  display.print(F("   "));
+
+  // ---- Print actual values ----
+
+  setCursor_textGrid_small(33, 3);
+  display.print(SMF.getFormat());
+
+  setCursor_textGrid_small(49, 3);
+  display.print(SMF.getTrackCount());
+
+  setCursor_textGrid_small(33, 4);
+  display.print(SMF.getTempo());
+
+  setCursor_textGrid_small(49, 4);
+  display.print(SMF.getTimeSignature() >> 8);
+  display.print(F("/"));
+  display.print(SMF.getTimeSignature() & 0xf);
 }
 
 FLASHMEM void UI_func_midiplayer(uint8_t param)
