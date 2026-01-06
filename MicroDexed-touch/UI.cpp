@@ -23590,6 +23590,193 @@ uint8_t smf_line = 14;
 extern bool smf_playing;
 bool smf_track_state[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
 uint8_t smf_track_inst[16] = { 1,1,1,1,1,1,1,1,1,6,1,1,1,1,1,1 };
+static uint32_t smf_autoclear_last_check_ms = 0;
+
+// ---------- SMF note cascade UI ----------
+static const uint8_t  SMF_CASCADE_TOPLINE = 14;       // existing area (14..23)
+static const uint8_t  SMF_CASCADE_LINES   = 10;       // 14..23 inclusive
+static const uint8_t  SMF_CASCADE_ROWS    = 9;        // rows below top bar (line 15..23)
+static const uint16_t SMF_ROW_H           = 9;        // matches current usage (smf_line * 9)
+static const uint16_t SMF_COL_W           = (CHAR_width_small * 3);
+static const uint16_t SMF_X_OFFSET = (CHAR_width_small * 2);
+static const uint16_t SMF_TOPBAR_EXTRA_X = CHAR_width_small; // 1 char to the right
+// FLASHMEM static inline uint16_t _smf_bar_x(uint8_t ch) { return _smf_col_x(ch) + SMF_TOPBAR_EXTRA_X; }
+// FLASHMEM static inline uint16_t _smf_bar_w(void) { return SMF_COL_W - SMF_TOPBAR_EXTRA_X; }
+
+static char    smf_cascade[16][SMF_CASCADE_ROWS][3];  // 2 chars + '\0' (e.g. "C#")
+static uint8_t smf_last_active_note[16];              // 255 = none
+static bool    smf_note_active[16][128];              // per-channel note state
+
+FLASHMEM static inline uint16_t _smf_col_x(uint8_t ch) {
+  return SMF_X_OFFSET + (ch * SMF_COL_W);
+}
+
+
+// text X offset inside each 3-char column (keeps your original alignment)
+FLASHMEM static inline uint16_t _smf_text_x(uint8_t ch) {
+  return _smf_col_x(ch) + (CHAR_width_small * 1);
+}
+
+FLASHMEM static inline uint16_t _smf_line_y(uint8_t line) {
+  return line * SMF_ROW_H;
+}
+
+FLASHMEM static void smf_ui_clear_channel(uint8_t ch) {
+  display.console = true;
+
+  // Draw the continuous GREY3 topbar ONCE (avoid per-channel fragmented blocks)
+  if (ch == 0) {
+    const uint16_t bar_x = _smf_col_x(0) + CHAR_width_small;         // shift right by 1 char
+    const uint16_t bar_y = _smf_line_y(SMF_CASCADE_TOPLINE);
+    const uint16_t bar_right = _smf_col_x(15) + SMF_COL_W;           // last channel (0..15)
+    const uint16_t bar_w = bar_right - bar_x;
+
+    display.fillRect(bar_x, bar_y, bar_w, SMF_ROW_H, GREY3);
+  }
+
+  // Rows below: RESTORED (full width, black, original behavior)
+  display.fillRect(_smf_col_x(ch),
+                   _smf_line_y(SMF_CASCADE_TOPLINE + 1),
+                   SMF_COL_W,
+                   SMF_ROW_H * SMF_CASCADE_ROWS,
+                   COLOR_BACKGROUND);
+
+  display.console = false;
+
+  for (uint8_t r = 0; r < SMF_CASCADE_ROWS; r++) {
+    smf_cascade[ch][r][0] = '\0';
+  }
+  smf_last_active_note[ch] = 255;
+  for (uint8_t n = 0; n < 128; n++) {
+    smf_note_active[ch][n] = false;
+  }
+}
+
+FLASHMEM static void smf_ui_draw_topbar(uint8_t ch) {
+  // NOTE:
+  // The continuous GREY3 bar is drawn elsewhere (e.g. in smf_ui_clear_channel when ch==0).
+  // This function must NOT draw any GREY3 rectangles, otherwise the bar becomes fragmented.
+
+  display.setTextColor(GREY1, GREY3);
+  display.setCursor(_smf_text_x(ch), _smf_line_y(SMF_CASCADE_TOPLINE));
+
+  if (smf_last_active_note[ch] < 128) {
+    char tmp[3];
+    snprintf_P(tmp, sizeof(tmp), PSTR("%-2s"), noteNames[smf_last_active_note[ch] % 12]);
+    display.print(tmp);
+  } else {
+    // Clear the 2-char note field for this channel (keeps background GREY3)
+    display.print(F("  "));
+  }
+}
+
+FLASHMEM static void smf_ui_redraw_cascade(uint8_t ch) {
+  for (uint8_t r = 0; r < SMF_CASCADE_ROWS; r++) {
+    const uint8_t line = SMF_CASCADE_TOPLINE + 1 + r;
+
+    display.console = true;
+    display.fillRect(_smf_col_x(ch),
+                     _smf_line_y(line),
+                     SMF_COL_W,
+                     SMF_ROW_H,
+                     COLOR_BACKGROUND);
+    display.console = false;
+
+    display.setTextColor(GREEN, COLOR_BACKGROUND);
+    display.setCursor(_smf_text_x(ch), _smf_line_y(line));
+
+    if (smf_cascade[ch][r][0] != '\0') {
+      display.print(smf_cascade[ch][r]);
+    } else {
+      display.print(F("  "));
+    }
+  }
+}
+
+FLASHMEM static void smf_ui_push_note(uint8_t ch, const char* note2) {
+  // shift down: last row drops off
+  for (int r = SMF_CASCADE_ROWS - 1; r > 0; r--) {
+    smf_cascade[ch][r][0] = smf_cascade[ch][r - 1][0];
+    smf_cascade[ch][r][1] = smf_cascade[ch][r - 1][1];
+    smf_cascade[ch][r][2] = '\0';
+  }
+  smf_cascade[ch][0][0] = note2[0];
+  smf_cascade[ch][0][1] = note2[1];
+  smf_cascade[ch][0][2] = '\0';
+
+  smf_ui_redraw_cascade(ch);
+}
+
+FLASHMEM static void smf_ui_update_active(uint8_t ch, uint8_t note, bool on) {
+  if (note >= 128) return;
+  smf_note_active[ch][note] = on;
+
+  if (on) {
+    smf_last_active_note[ch] = note;  // show most recent active note
+  } else {
+    // if we just released the displayed note, pick another active one (if any)
+    if (smf_last_active_note[ch] == note) {
+      smf_last_active_note[ch] = 255;
+      for (int n = 127; n >= 0; n--) {
+        if (smf_note_active[ch][n]) {
+          smf_last_active_note[ch] = (uint8_t)n;
+          break;
+        }
+      }
+    }
+  }
+  smf_ui_draw_topbar(ch);
+}
+
+FLASHMEM static void smf_ui_reset_cascade_all(void)
+{
+  if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+    return;
+
+  for (uint8_t ch = 0; ch < 16; ch++)
+  {
+    smf_ui_clear_channel(ch);
+    smf_ui_draw_topbar(ch);
+    smf_ui_redraw_cascade(ch);
+  }
+}
+
+static uint32_t smf_last_activity_ms[16] = { 0 };
+static bool     smf_channel_has_history[16] = { false };
+
+FLASHMEM static bool smf_channel_has_active_notes(uint8_t ch)
+{
+  for (uint8_t n = 0; n < 128; n++) {
+    if (smf_note_active[ch][n]) return true;
+  }
+  return false;
+}
+
+FLASHMEM static void smf_ui_autoclear_inactive_channels_cb(uint32_t now_ms)
+{
+  // Only if we are on the SMF player page
+  if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+    return;
+
+  for (uint8_t ch = 0; ch < 16; ch++)
+  {
+    if (!smf_channel_has_history[ch])
+      continue;
+
+    // Do not clear if channel still holds notes
+    if (smf_channel_has_active_notes(ch))
+      continue;
+
+    if (now_ms - smf_last_activity_ms[ch] >= 1000)
+    {
+      smf_ui_clear_channel(ch);
+      smf_ui_draw_topbar(ch);
+      smf_ui_redraw_cascade(ch);
+      smf_channel_has_history[ch] = false;
+    }
+  }
+}
+
 
 // first note #35, B2, Acoustic BD
 uint8_t smf_gm_mapping[48] = {
@@ -23696,35 +23883,62 @@ FLASHMEM void midiCallback(midi_event* pev)
     else
       in_note = pev->data[1];
 
-    snprintf_P(tmp, sizeof(tmp), PSTR("%-2s"), noteNames[pev->data[1] % 12]);
-    if (pev->data[0] >= 0x90)
-    {
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
-      {
-        display.setTextColor(GREEN, COLOR_BACKGROUND);
-        display.setCursor(pev->channel * (CHAR_width_small * 3) + (CHAR_width_small * 1), smf_line * 9);
-        display.print(tmp);
-        smf_line++;
+snprintf_P(tmp, sizeof(tmp), PSTR("%-2s"), noteNames[pev->data[1] % 12]);
 
-      }
-      handleNoteOn(inst_channel, in_note, pev->data[2], 0);
-    }
-    else if (pev->data[0] >= 0x80 && pev->data[0] < 0x90)
-    {
-      if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
-      {
-        display.setTextColor(GREY2, COLOR_BACKGROUND);
-        display.setCursor(pev->channel * (CHAR_width_small * 3) + (CHAR_width_small * 1), smf_line * 9);
-        display.print(tmp);
-        smf_line++;
-      }
-      handleNoteOff(inst_channel, in_note, pev->data[2], 0);
-    }
+const uint8_t status = pev->data[0] & 0xF0;
+const uint8_t vel    = pev->data[2];
+
+// NOTE OFF can be either 0x80 or 0x90 with velocity 0
+const bool isNoteOn  = (status == 0x90) && (vel > 0);
+const bool isNoteOff = (status == 0x80) || ((status == 0x90) && (vel == 0));
+
+if (isNoteOn)
+{
+  smf_last_activity_ms[pev->channel] = millis();
+  smf_channel_has_history[pev->channel] = true;
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+  {
+    // Top bar shows active note(s) in GREY1 on GREY3
+    smf_ui_update_active(pev->channel, pev->data[1], true);
+
+    // Cascade below: GREEN on black, scrolls down
+    smf_ui_push_note(pev->channel, tmp);
+  }
+
+  handleNoteOn(inst_channel, in_note, vel, 0);
+}
+else if (isNoteOff)
+{
+  smf_last_activity_ms[pev->channel] = millis();
+  smf_channel_has_history[pev->channel] = true;
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
+  {
+    // Update active notes (top bar)
+    smf_ui_update_active(pev->channel, pev->data[1], false);
+
+    // Also push note-off into cascade (keeps your Patch 1 behavior: note-offs are shown)
+    // If you later want note-off not to appear in the cascade, we remove the next line.
+    smf_ui_push_note(pev->channel, tmp);
+  }
+
+  handleNoteOff(inst_channel, in_note, vel, 0);
+}
 
     flush_sysex();
 
-    if (smf_line > 23)
-      smf_line = 14;
+    // ---- Auto-clear inactive channels even during playback (throttled) ----
+    const uint32_t now_ms = millis();
+    if (now_ms - smf_autoclear_last_check_ms >= 50) // 20 Hz is enough
+    {
+      smf_autoclear_last_check_ms = now_ms;
+      smf_ui_autoclear_inactive_channels_cb(now_ms);
+    }
+
+
+    //    if (smf_line > 23)
+    //        smf_line = 14;
 
     //--------------------
        // usbMIDI.send(pev->data[0], pev->data[1],pev->data[2],pev->channel, 0);
@@ -23735,7 +23949,10 @@ FLASHMEM void _print_smf_track_state()
 {
   for (uint8_t f = 0; f < 16; f++)
   {
-    display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 11 * CHAR_height_small + 5);
+    display.setCursor(
+  SMF_X_OFFSET + f * (CHAR_width_small * 3) + (CHAR_width_small * 1),
+  11 * CHAR_height_small + 5
+    );
     if (generic_temp_select_menu == f + 2 && smf_track_state[f])
       display.setTextColor(COLOR_BACKGROUND, MIDDLEGREEN);
     else   if (generic_temp_select_menu == f + 2 && smf_track_state[f] == false)
@@ -23755,7 +23972,10 @@ FLASHMEM void _print_smf_track_instruments()
 {
   for (uint8_t f = 0; f < 16; f++)
   {
-    display.setCursor(f * (CHAR_width_small * 3) + (CHAR_width_small * 1), 12 * CHAR_height_small + 5);
+    display.setCursor(
+  SMF_X_OFFSET + f * (CHAR_width_small * 3) + (CHAR_width_small * 1),
+  12 * CHAR_height_small + 5
+    );
 
     if (generic_temp_select_menu == f + 2 + 16 && smf_track_inst[f] != 8)
     {
@@ -23967,6 +24187,13 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
     print_smf_parameters();
 
     load_sd_directory_files_only();
+        // init cascade UI area
+    for (uint8_t ch = 0; ch < 16; ch++) {
+      smf_ui_clear_channel(ch);
+      smf_ui_draw_topbar(ch);
+      smf_ui_redraw_cascade(ch);
+    }
+
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -24010,6 +24237,9 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
       else if (generic_temp_select_menu == 1 && smf_playing == false)
       {
+        // Clear old note history before starting playback again
+        smf_ui_reset_cascade_all();
+
         smf_playing = true;
         helptext_r(F("STOP PLAYING"));
         play_midi_file();
@@ -24118,7 +24348,7 @@ FLASHMEM void UI_func_midiplayer(uint8_t param)
 
       _print_smf_track_state();
       _print_smf_track_instruments();
-
+      
     }
   }
 
