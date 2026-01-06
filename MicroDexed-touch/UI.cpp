@@ -23589,7 +23589,7 @@ FLASHMEM void load_sd_directory_files_only()
 uint8_t smf_line = 14;
 extern bool smf_playing;
 bool smf_track_state[16] = { 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
-uint8_t smf_track_inst[16] = { 1,1,1,1,1,1,1,1,1,6,1,1,1,1,1,1 };
+uint8_t smf_track_inst[16] = { 1,1,1,1,1,1,1,1,1,8,1,1,1,1,1,1 };
 static uint32_t smf_autoclear_last_check_ms = 0;
 
 // ---------- SMF note cascade UI ----------
@@ -23918,9 +23918,8 @@ else if (isNoteOff)
     // Update active notes (top bar)
     smf_ui_update_active(pev->channel, pev->data[1], false);
 
-    // Also push note-off into cascade (keeps your Patch 1 behavior: note-offs are shown)
-    // If you later want note-off not to appear in the cascade, we remove the next line.
-    smf_ui_push_note(pev->channel, tmp);
+    // Do NOT push note-off into cascade
+    // smf_ui_push_note(pev->channel, tmp);
   }
 
   handleNoteOff(inst_channel, in_note, vel, 0);
