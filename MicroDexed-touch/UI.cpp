@@ -71,6 +71,9 @@
 using namespace TeensyTimerTool;
 extern bool virtual_typewriter_active;
 
+// File Manager: highlights the next PSRAM CUSTOM slot target during COPY > PSRAM
+static int16_t fm_psram_copy_target = -1; // -1 = none, otherwise 0..(customSlots-1)
+
 //globals for combined encoder text input and touch typewriter
 
 #include "virtualtypewriter.h"
@@ -17530,30 +17533,46 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 #if defined COMPILE_FOR_PSRAM
 FLASHMEM void psram_printCustomSamplesList()
 {
-  // if (seq.running == false)
-  // {
   fm.psram_cap_rows = 9;
 
   for (uint8_t i = 6; i < 16; i++)
   {
-    if (i == fm.psram_selected_file + 6 && fm.active_window == 1)
+    const int16_t slotIndex = (int16_t)(i - 6) + (int16_t)fm.psram_skip_files; // 0..N
+    const bool isSelected   = (i == (fm.psram_selected_file + 6));
+    const bool isFocused    = (fm.active_window == 1);
+    const bool isCopyTarget = (slotIndex == fm_psram_copy_target);
+
+    // --- Left index column ---
+    if (isFocused && isSelected) {
       display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
-    else
+    }
+    else if (isCopyTarget) {
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
+    else {
       display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+    }
 
     display.setCursor(CHAR_width_small * 29, i * 11);
     display.printf("%02d", i - 5 + fm.psram_skip_files);
 
-    if (i == fm.psram_selected_file + 6 && fm.active_window == 1)
+    // --- Sample name ---
+    if (isFocused && isSelected) {
       display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-    else
+    }
+    else if (isCopyTarget) {
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
+    else {
       if (drum_config[i + fm.psram_skip_files].len == 0 || drum_config[i + fm.psram_skip_files].len > 10000000)
         display.setTextColor(GREY2, COLOR_BACKGROUND);
       else
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
 
     show_smallfont_noGrid(i * 11, CHAR_width_small * 32, 12, drum_config[i + fm.psram_skip_files].name);
 
+    // --- Size column (unchanged) ---
     display.setTextColor(COLOR_DRUMS, COLOR_BACKGROUND);
     display.setCursor(CHAR_width_small * 45, i * 11);
 
@@ -19236,8 +19255,10 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
               // NEW (refined): move selection to next truly free CUSTOM slot
               const int16_t nextFree = fm_find_next_free_psram_slot((int16_t)customSampleIndex);
               if (nextFree >= 0) {
+                fm_psram_copy_target = nextFree;  // set this to highlight next free slot
                 fm_select_psram_slot((uint16_t)nextFree);
               } else {
+                fm_psram_copy_target = -1;
                 // NEW: PSRAM FULL
                   showError("PSRAM FULL");
                   delay(1000);
@@ -19276,6 +19297,10 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
       if (fm.sd_mode == 99) {
         fm.sd_mode = FM_BROWSE_FILES;
+
+        // NEW: leaving COPY/temporary modes -> clear PSRAM COPY target highlight
+        fm_psram_copy_target = -1;
+
         print_file_manager_buttons();
       }
     }
