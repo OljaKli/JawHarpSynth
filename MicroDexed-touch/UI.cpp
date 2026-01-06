@@ -73,6 +73,9 @@ extern bool virtual_typewriter_active;
 
 // File Manager: highlights the next PSRAM CUSTOM slot target during COPY > PSRAM
 static int16_t fm_psram_copy_target = -1; // -1 = none, otherwise 0..(customSlots-1)
+// SMF Player - to avoid duplicated notes
+static uint8_t smf_last_noteon_note[16] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255 };
+
 
 //globals for combined encoder text input and touch typewriter
 
@@ -23648,7 +23651,7 @@ FLASHMEM static inline uint16_t _smf_line_y(uint8_t line) {
 
 FLASHMEM static void smf_ui_clear_channel(uint8_t ch) {
   display.console = true;
-
+  smf_last_noteon_note[ch] = 255;
   // Draw the continuous GREY3 topbar ONCE (avoid per-channel fragmented blocks)
   if (ch == 0) {
     const uint16_t bar_x = _smf_col_x(0) + CHAR_width_small;         // shift right by 1 char
@@ -23862,6 +23865,10 @@ uint8_t smf_gm_mapping[48] = {
 //   //    display.print(filename);
 //   // display.print("   ");
 
+FLASHMEM static inline void smf_note_to_str(uint8_t note, char out3[3]) {
+  snprintf_P(out3, 3, PSTR("%-2s"), noteNames[note % 12]);
+}
+
 FLASHMEM void midiCallback(midi_event* pev)
 // Called by the MIDIFile library when a file event needs to be processed
 // thru the midi communications interface.
@@ -23923,13 +23930,16 @@ if (isNoteOn)
   smf_channel_has_history[pev->channel] = true;
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
-  {
-    // Top bar shows active note(s) in GREY1 on GREY3
-    smf_ui_update_active(pev->channel, pev->data[1], true);
+{
+  const uint8_t ch = pev->channel;
 
-    // Cascade below: GREEN on black, scrolls down
-    smf_ui_push_note(pev->channel, tmp);
-  }
+  // Remember this NOTE ON (will be pushed to cascade on NOTE OFF)
+  smf_last_noteon_note[ch] = pev->data[1];
+
+  // Topbar shows current active note
+  smf_ui_update_active(ch, pev->data[1], true);
+}
+
 
   handleNoteOn(inst_channel, in_note, vel, 0);
 }
@@ -23939,14 +23949,22 @@ else if (isNoteOff)
   smf_channel_has_history[pev->channel] = true;
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midiplayer))
-  {
-    // Update active notes (top bar)
-    smf_ui_update_active(pev->channel, pev->data[1], false);
+{
+  const uint8_t ch   = pev->channel;
+  const uint8_t note = pev->data[1];
 
-    // Do NOT push note-off into cascade
-    // smf_ui_push_note(pev->channel, tmp);
-  }
+  // Push to cascade when the note ends (so cascade advances even without new notes)
+  char tmp2[3];
+  snprintf_P(tmp2, sizeof(tmp2), PSTR("%-2s"), noteNames[note % 12]);
+  smf_ui_push_note(ch, tmp2);
 
+  // Update active-note tracking for topbar
+  smf_ui_update_active(ch, note, false);
+
+  // Optional: if you want, clear "last noteon" only when the same note ends
+  if (smf_last_noteon_note[ch] == note)
+    smf_last_noteon_note[ch] = 255;
+}
   handleNoteOff(inst_channel, in_note, vel, 0);
 }
 
