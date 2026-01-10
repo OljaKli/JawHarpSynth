@@ -282,6 +282,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       b->draw("QUANT", quantText, (v->getValue() == 1) ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE);
       if (data.trackSettings[data.activeTrack].quantizeDenom != selectedTrackSetup.quantizeDenom) {
         data.trackSettings[data.activeTrack].quantizeDenom = selectedTrackSetup.quantizeDenom;
+        data.trackSettings[data.activeTrack].quantizeGrid = LiveSequencer::mapQuantizeDenom(selectedTrackSetup.quantizeDenom);
         instance->drawUpdates(drawActiveTrackSubLabel);
       }
     }));

@@ -208,6 +208,20 @@ FLASHMEM void LiveSequencer::resetControllers() {
   }
 }
 
+FLASHMEM uint8_t LiveSequencer::mapQuantizeDenom(uint8_t denom) {
+  switch (denom) {
+    case 1:  return 0;   // NONE
+    case 4:  return 4;   // 1/4
+    case 8:  return 8;   // 1/8
+    case 12: return 12;  // 1/8T
+    case 16: return 16;  // 1/16
+    case 24: return 24;  // 1/16T
+    case 32: return 32;  // 1/32
+    case 64: return 64;  // 1/64
+    default: return 0;   // fallback: no quantize
+  }
+}
+
 FLASHMEM void LiveSequencer::allLayerNotesOff(const uint8_t track, const uint8_t layer) {
   for (auto note : data.tracks[track].activeNotes[layer]) {
     handleNoteOff(data.tracks[track].channel, note, 0, data.trackSettings[track].device);
@@ -223,41 +237,7 @@ FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent& e, uint8_t denom) {
   bool overflow = false; // overflow if event rounded to start of next pattern
 
   if (denom > 1) {
-    uint16_t quantizeMs;
-    
-    // Calculate the correct quantization interval based on musical timing
-    switch (denom) {
-      case 2:  // 8th notes
-        quantizeMs = data.patternLengthMs / 8;
-        break;
-      case 3:  // 8th note triplets (3 per beat)
-        quantizeMs = data.patternLengthMs / 12;
-        break;
-      case 4:  // 16th notes
-        quantizeMs = data.patternLengthMs / 16;
-        break;
-      case 6:  // 16th note triplets (6 per beat)
-        quantizeMs = data.patternLengthMs / 24;
-        break;
-      case 8:  // 32nd notes
-        quantizeMs = data.patternLengthMs / 32;
-        break;
-      case 12: // 32nd note triplets (12 per beat)
-        quantizeMs = data.patternLengthMs / 48;
-        break;
-      case 16: // 64th notes
-        quantizeMs = data.patternLengthMs / 64;
-        break;
-      case 24: // 64th note triplets (24 per beat)
-        quantizeMs = data.patternLengthMs / 96;
-        break;
-      case 32: // 128th notes (if you have this)
-        quantizeMs = data.patternLengthMs / 128;
-        break;
-      default:
-        quantizeMs = data.patternLengthMs / denom; // fallback
-        break;
-    }
+    const uint16_t quantizeMs = data.patternLengthMs / denom;
     
     const uint16_t halfStep = quantizeMs / 2;
     uint8_t resultNumber = e.patternNumber;
@@ -539,7 +519,7 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           newEvent.layer = data.songLayerCount;
           uint8_t patternCount = data.songPatternCount;
           if (newEvent.event == midi::NoteOn) {
-            if (timeQuantization(newEvent, data.trackSettings[data.activeTrack].quantizeDenom)) {
+            if (timeQuantization(newEvent, data.trackSettings[data.activeTrack].quantizeGrid)) {
               patternCount++; // event rounded up to start of next song pattern
             }
           }
@@ -584,7 +564,7 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
             // check if it has a corresponding NoteOn
             const auto on = data.notesOn.find(note);
             if (on != data.notesOn.end()) {
-              timeQuantization(on->second, data.trackSettings[data.activeTrack].quantizeDenom);
+              timeQuantization(on->second, data.trackSettings[data.activeTrack].quantizeGrid);
               // if so, insert NoteOn and this NoteOff to pending
               data.pendingEvents.emplace_back(on->second);
               data.pendingEvents.emplace_back(newEvent);
@@ -1400,7 +1380,7 @@ FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool is
       const AutomationType type = isMuted ? AutomationType::TYPE_MUTE_ON : AutomationType::TYPE_MUTE_OFF;
       MidiEvent e = { EVENT_SONG, uint16_t(data.patternTimer), data.currentPattern, track, data.songLayerCount, midi::MidiType::ControlChange, type, layer };
       uint8_t patternCount = data.songPatternCount;
-      if (timeQuantization(e, data.songMuteQuantizeDenom)) {
+      if (timeQuantization(e, mapQuantizeDenom(data.songMuteQuantizeDenom))) {
         patternCount++; // event rounded up to start of next song pattern
       }
       data.songEvents[patternCount].emplace_back(e);
@@ -1615,6 +1595,8 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
       data.tracks[i].channel = 99; // probably unused
       break;
     }
+
+      data.trackSettings[i].quantizeGrid = mapQuantizeDenom(data.trackSettings[i].quantizeDenom);
   }
 }
 
