@@ -92,6 +92,7 @@ public:
     uint8_t instrument;
     uint8_t layerCount;
     uint8_t quantizeDenom;
+    uint8_t quantizeGrid; // mapped grid value (0/1 disables quantization)
     uint8_t velocityLevel; // 0: original, 1 - 10: 10-100%
     uint8_t songStartLayerMutes;
   };
@@ -313,6 +314,7 @@ public:
   static void printEvent(int i, MidiEvent e);
   static const std::string getEventName(midi::MidiType event);
   static const std::string getEventSource(EventSource source);
+  static uint8_t mapQuantizeDenom(uint8_t denom);
   void checkBpmChanged(void);
   void AddMetronome(void);
 
