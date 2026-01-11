@@ -73,9 +73,11 @@ extern bool virtual_typewriter_active;
 
 // File Manager: highlights the next PSRAM CUSTOM slot target during COPY > PSRAM
 static int16_t fm_psram_copy_target = -1; // -1 = none, otherwise 0..(customSlots-1)
-// SMF Player - to avoid duplicated notes
-static uint8_t smf_last_noteon_note[16] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255 };
 
+// SMF Player - to avoid duplicated notes
+#if defined SMFPLAYER
+static uint8_t smf_last_noteon_note[16] = { 255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255 };
+#endif
 
 //globals for combined encoder text input and touch typewriter
 
@@ -615,12 +617,21 @@ LCDML_add(66, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
 
 
 //LCDML_add(67, LCDML_0, 19, "D50", UI_func_d50_synth);
-LCDML_add(67, LCDML_0, 19, "DISTORTION", UI_func_distortion);
 
+#if defined BITCRUSH
+LCDML_add(67, LCDML_0, 19, "Bitcrusher Test", UI_func_bitcrush);
 LCDML_add(68, LCDML_0, 20, "Info", UI_func_information);
 LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(70, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
 LCDML_addAdvanced(71, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+#else
+LCDML_add(67, LCDML_0, 19, "Info", UI_func_information);
+LCDML_addAdvanced(68, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(70, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+#endif
+
+
 
 //old/depreciated menus
 //LCDML_add(64, LCDML_0_18, 3, "Map Gamepad", UI_func_map_gamepad);
@@ -26308,480 +26319,23 @@ FLASHMEM void UI_func_granular(uint8_t param)
 
 #endif
 
-//D50
 
-// #include "D50SynthWrapper.h"
-
-
-// // Static text display for D50 - grid-based layout
-// FLASHMEM void print_d50_static_texts()
-// {
-//   display.setTextSize(1);
-//   helptext_l(back_text);
-//   helptext_r(F("< > SELECT PARAM"));
-  
-//   // Title
-//   setCursor_textGrid_small(1, 1);
-//   display.setTextColor(RED);
-//   display.print(F("ROLAND D-50 SYNTH"));
-//   display.setTextColor(COLOR_SYSTEXT);
-  
-//   // === LEFT COLUMN - VOICE ===
-//   display.setTextColor(GREY2);
-//   setCursor_textGrid_small(1, 3);
-//   display.print(F("VOICE"));
-  
-//   display.setTextColor(GREY1);
-//   setCursor_textGrid_small(1, 5);
-//   display.print(F("PRESET"));
-//   setCursor_textGrid_small(1, 6);
-//   display.print(F("MIDI CHANNEL"));
-//   setCursor_textGrid_small(1, 7);
-//   display.print(F("VOLUME"));
-//   setCursor_textGrid_small(1, 8);
-//   display.print(F("PANORAMA"));
-//   setCursor_textGrid_small(1, 9);
-//   display.print(F("TRANSPOSE"));
-//   setCursor_textGrid_small(1, 10);
-//   display.print(F("BALANCE A/B"));
-
-//   // === LEFT COLUMN - PARTIAL A ===
-//   display.setTextColor(GREY2);
-//   setCursor_textGrid_small(1, 12);
-//   display.print(F("PARTIAL A"));
-  
-//   display.setTextColor(GREY1);
-//   setCursor_textGrid_small(1, 14);
-//   display.print(F("PCM LEVEL"));
-//   setCursor_textGrid_small(1, 15);
-//   display.print(F("SYNTH LEVEL"));
-//   setCursor_textGrid_small(1, 16);
-//   display.print(F("PCM ATTACK"));
-//   setCursor_textGrid_small(1, 17);
-//   display.print(F("PCM DECAY"));
-//   setCursor_textGrid_small(1, 18);
-//   display.print(F("PCM RELEASE"));
-//   setCursor_textGrid_small(1, 19);
-//   display.print(F("SYNTH ATTACK"));
-//   setCursor_textGrid_small(1, 20);
-//   display.print(F("SYNTH DECAY"));
-//   setCursor_textGrid_small(1, 21);
-//   display.print(F("SYNTH SUSTAIN"));
-
-//   // === RIGHT COLUMN - PARTIAL B ===
-//   display.setTextColor(GREY2);
-//   setCursor_textGrid_small(24, 3);
-//   display.print(F("PARTIAL B"));
-  
-//   display.setTextColor(GREY1);
-//   setCursor_textGrid_small(24, 5);
-//   display.print(F("PCM LEVEL"));
-//   setCursor_textGrid_small(24, 6);
-//   display.print(F("SYNTH LEVEL"));
-//   setCursor_textGrid_small(24, 7);
-//   display.print(F("PCM ATTACK"));
-//   setCursor_textGrid_small(24, 8);
-//   display.print(F("PCM DECAY"));
-//   setCursor_textGrid_small(24, 9);
-//   display.print(F("PCM RELEASE"));
-//   setCursor_textGrid_small(24, 10);
-//   display.print(F("SYNTH ATTACK"));
-//   setCursor_textGrid_small(24, 11);
-//   display.print(F("SYNTH DECAY"));
-//   setCursor_textGrid_small(24, 12);
-//   display.print(F("SYNTH SUSTAIN"));
-//   setCursor_textGrid_small(24, 13);
-//   display.print(F("SYNTH RELEASE"));
-
-//   // === RIGHT COLUMN - EFFECTS ===
-//   display.setTextColor(GREY2);
-//   setCursor_textGrid_small(24, 15);
-//   display.print(F("EFFECTS"));
-  
-//   display.setTextColor(GREY1);
-//   setCursor_textGrid_small(24, 17);
-//   display.print(F("REVERB SEND"));
-// }
-
-// // Update display values with conditional rendering
-// FLASHMEM void update_selective_values_d50()
-// {
-//   // Helper macro for menu item checking
-//   if (menu_item_check(0))
-//   {
-//     setModeColor(0);
-//     setCursor_textGrid_small(14, 5);
-//     print_formatted_number(d50.preset, 2, 0, 1);
-//     display.print(F(" "));
-//     display.print(d50Synth.getPresetName(d50.preset));
-//   }
-//   if (generic_temp_select_menu == 0 && seq.edit_state)
-//     d50Synth.setPreset(d50.preset);
-
-//   if (menu_item_check(1))
-//   {
-//     setModeColor(1);
-//     setCursor_textGrid_small(14, 6);
-//     _print_midi_channel(d50.midi_channel);
-//   }
-
-//   if (menu_item_check(2))
-//     print_small_intbar(14, 7, d50.volume, 2, 0, 1);
-//   if (generic_temp_select_menu == 2 && seq.edit_state)
-//     MD_sendControlChange(d50.midi_channel, 7, d50.volume);
-
-//   if (menu_item_check(3))
-//     print_small_panbar(14, 8, d50.pan, 3);
-//   if (generic_temp_select_menu == 3 && seq.edit_state)
-//     MD_sendControlChange(d50.midi_channel, 10, d50.pan);
-
-//   if (menu_item_check(4))
-//   {
-//     setModeColor(4);
-//     setCursor_textGrid_small(14, 9);
-//     print_formatted_number_signed(d50.transpose, 3, 4, 1);
-//   }
-
-//   if (menu_item_check(5))
-//     print_small_intbar(14, 10, (uint8_t)(d50.balance * 100), 5, 0, 1);
-//   if (generic_temp_select_menu == 5 && seq.edit_state)
-//     d50Synth.setBalance(d50.balance);
-
-//   // === PARTIAL A LEVELS ===
-//   if (menu_item_check(6))
-//     print_small_intbar(14, 14, (uint8_t)(d50.pcm_level_a * 100), 6, 0, 1);
-//   if (generic_temp_select_menu == 6 && seq.edit_state)
-//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-
-//   if (menu_item_check(7))
-//     print_small_intbar(14, 15, (uint8_t)(d50.synth_level_a * 100), 7, 0, 1);
-//   if (generic_temp_select_menu == 7 && seq.edit_state)
-//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-
-//   // === PARTIAL A PCM ENVELOPE ===
-//   if (menu_item_check(10))
-//   {
-//     setModeColor(10);
-//     setCursor_textGrid_small(14, 16);
-//     display.print(d50.pcm_attack_a, 2);
-//     display.print(F("s"));
-//   }
-//   if (generic_temp_select_menu == 10 && seq.edit_state)
-//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-
-//   if (menu_item_check(11))
-//   {
-//     setModeColor(11);
-//     setCursor_textGrid_small(14, 17);
-//     display.print(d50.pcm_decay_a, 2);
-//     display.print(F("s"));
-//   }
-//   if (generic_temp_select_menu == 11 && seq.edit_state)
-//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-
-//   if (menu_item_check(12))
-//   {
-//     setModeColor(12);
-//     setCursor_textGrid_small(14, 18);
-//     display.print(d50.pcm_release_a, 2);
-//     display.print(F("s"));
-//   }
-//   if (generic_temp_select_menu == 12 && seq.edit_state)
-//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-
-//   // === PARTIAL A SYNTH ENVELOPE ===
-//   if (menu_item_check(13))
-//   {
-//     setModeColor(13);
-//     setCursor_textGrid_small(14, 19);
-//     display.print(d50.synth_attack_a, 2);
-//     display.print(F("s"));
-//   }
-
-//   if (menu_item_check(14))
-//   {
-//     setModeColor(14);
-//     setCursor_textGrid_small(14, 20);
-//     display.print(d50.synth_decay_a, 2);
-//     display.print(F("s"));
-//   }
-
-//   if (menu_item_check(15))
-//     print_small_intbar(14, 21, (uint8_t)(d50.synth_sustain_a * 100), 15, 0, 1);
-
-//   // === PARTIAL B LEVELS ===
-//   if (menu_item_check(8))
-//     print_small_intbar(37, 5, (uint8_t)(d50.pcm_level_b * 100), 8, 0, 0);
-//   if (generic_temp_select_menu == 8 && seq.edit_state)
-//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-
-//   if (menu_item_check(9))
-//     print_small_intbar(37, 6, (uint8_t)(d50.synth_level_b * 100), 9, 0, 0);
-//   if (generic_temp_select_menu == 9 && seq.edit_state)
-//     d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-
-//   // === PARTIAL B PCM ENVELOPE ===
-//   if (menu_item_check(17))
-//   {
-//     setModeColor(17);
-//     setCursor_textGrid_small(37, 7);
-//     display.print(d50.pcm_attack_b, 2);
-//     display.print(F("s"));
-//   }
-//   if (generic_temp_select_menu == 17 && seq.edit_state)
-//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-
-//   if (menu_item_check(18))
-//   {
-//     setModeColor(18);
-//     setCursor_textGrid_small(37, 8);
-//     display.print(d50.pcm_decay_b, 2);
-//     display.print(F("s"));
-//   }
-//   if (generic_temp_select_menu == 18 && seq.edit_state)
-//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-
-//   if (menu_item_check(19))
-//   {
-//     setModeColor(19);
-//     setCursor_textGrid_small(37, 9);
-//     display.print(d50.pcm_release_b, 2);
-//     display.print(F("s"));
-//   }
-//   if (generic_temp_select_menu == 19 && seq.edit_state)
-//     d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                              d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-
-//   // === PARTIAL B SYNTH ENVELOPE ===
-//   if (menu_item_check(20))
-//   {
-//     setModeColor(20);
-//     setCursor_textGrid_small(37, 10);
-//     display.print(d50.synth_attack_b, 2);
-//     display.print(F("s"));
-//   }
-
-//   if (menu_item_check(21))
-//   {
-//     setModeColor(21);
-//     setCursor_textGrid_small(37, 11);
-//     display.print(d50.synth_decay_b, 2);
-//     display.print(F("s"));
-//   }
-
-//   if (menu_item_check(22))
-//     print_small_intbar(37, 12, (uint8_t)(d50.synth_sustain_b * 100), 22, 0, 0);
-
-//   if (menu_item_check(23))
-//   {
-//     setModeColor(23);
-//     setCursor_textGrid_small(37, 13);
-//     display.print(d50.synth_release_b, 2);
-//     display.print(F("s"));
-//   }
-
-//   // === EFFECTS ===
-//   if (menu_item_check(24))
-//     print_small_intbar(37, 17, (uint8_t)(d50.reverb_send * 100), 24, 0, 0);
-//   if (generic_temp_select_menu == 24 && seq.edit_state)
-//     MD_sendControlChange(d50.midi_channel, 91, (uint8_t)(d50.reverb_send * 127));
-// }
-// FLASHMEM void UI_func_d50_synth(uint8_t param)
-// {
-//   if (LCDML.FUNC_setup()) // ****** SETUP *********
-//   {
-//     encoderDir[ENC_R].reset();
-//     display.fillScreen(COLOR_BACKGROUND);
-//     print_d50_static_texts();
-    
-//     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && 
-//         LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
-//       generic_temp_select_menu = 0;
-//     }
-
-//     generic_full_draw_required = true;
-//     update_selective_values_d50();
-//     generic_full_draw_required = false;
-
-//     display.setTextSize(1);
-//   }
-  
-//   if (LCDML.FUNC_loop()) // ****** LOOP *********
-//   {
-//     const EncoderEvents e = getEncoderEvents(ENC_R);
-    
-//     if (e.turned) {
-//       if (seq.edit_state == 0) {
-//         // Navigation mode: 25 parameters total
-//         generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 24);
-//       }
-//       else {
-//         // Edit mode: adjust selected parameter
-//         switch(generic_temp_select_menu) {
-//           case 0: // Preset
-//             d50.preset = constrain(d50.preset + e.dir, 0, 9);
-//             d50Synth.setPreset(d50.preset);
-//             break;
-            
-//           case 1: // MIDI Channel
-//             d50.midi_channel = constrain(d50.midi_channel + e.dir, 1, 16);
-//             break;
-            
-//           case 2: // Volume
-//             d50.volume = constrain(d50.volume + e.dir * e.speed, 0, 127);
-//             MD_sendControlChange(d50.midi_channel, 7, d50.volume);
-//             break;
-            
-//           case 3: // Pan
-//             d50.pan = constrain(d50.pan + e.dir * e.speed, 0, 127);
-//             MD_sendControlChange(d50.midi_channel, 10, d50.pan);
-//             break;
-            
-//           case 4: // Transpose
-//             d50.transpose = constrain(d50.transpose + e.dir * e.speed, -24, 24);
-//             break;
-            
-//           case 5: // Balance A/B
-//             d50.balance = constrain(d50.balance + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             d50Synth.setBalance(d50.balance);
-//             break;
-            
-//           case 6: // PCM Level A
-//             d50.pcm_level_a = constrain(d50.pcm_level_a + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-//             break;
-            
-//           case 7: // Synth Level A
-//             d50.synth_level_a = constrain(d50.synth_level_a + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-//             break;
-            
-//           case 8: // PCM Level B
-//             d50.pcm_level_b = constrain(d50.pcm_level_b + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-//             break;
-            
-//           case 9: // Synth Level B
-//             d50.synth_level_b = constrain(d50.synth_level_b + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             d50Synth.setPartialLevels(d50.pcm_level_a, d50.synth_level_a, d50.pcm_level_b, d50.synth_level_b);
-//             break;
-            
-//           case 10: // PCM Attack A
-//             d50.pcm_attack_a = constrain(d50.pcm_attack_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-//             break;
-            
-//           case 11: // PCM Decay A
-//             d50.pcm_decay_a = constrain(d50.pcm_decay_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-//             break;
-            
-//           case 12: // PCM Release A
-//             d50.pcm_release_a = constrain(d50.pcm_release_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-//             break;
-            
-//           case 13: // Synth Attack A
-//             d50.synth_attack_a = constrain(d50.synth_attack_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             break;
-            
-//           case 14: // Synth Decay A
-//             d50.synth_decay_a = constrain(d50.synth_decay_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             break;
-            
-//           case 15: // Synth Sustain A
-//             d50.synth_sustain_a = constrain(d50.synth_sustain_a + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             break;
-            
-//           case 16: // Synth Release A
-//             d50.synth_release_a = constrain(d50.synth_release_a + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             break;
-            
-//           case 17: // PCM Attack B
-//             d50.pcm_attack_b = constrain(d50.pcm_attack_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-//             break;
-            
-//           case 18: // PCM Decay B
-//             d50.pcm_decay_b = constrain(d50.pcm_decay_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-//             break;
-            
-//           case 19: // PCM Release B
-//             d50.pcm_release_b = constrain(d50.pcm_release_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             d50Synth.setEnvelopeTimes(d50.pcm_attack_a, d50.pcm_decay_a, d50.pcm_release_a,
-//                                      d50.pcm_attack_b, d50.pcm_decay_b, d50.pcm_release_b);
-//             break;
-            
-//           case 20: // Synth Attack B
-//             d50.synth_attack_b = constrain(d50.synth_attack_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             break;
-            
-//           case 21: // Synth Decay B
-//             d50.synth_decay_b = constrain(d50.synth_decay_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             break;
-            
-//           case 22: // Synth Sustain B
-//             d50.synth_sustain_b = constrain(d50.synth_sustain_b + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             break;
-            
-//           case 23: // Synth Release B
-//             d50.synth_release_b = constrain(d50.synth_release_b + e.dir * e.speed * 0.01f, 0.0f, 5.0f);
-//             break;
-            
-//           case 24: // Reverb Send
-//             d50.reverb_send = constrain(d50.reverb_send + e.dir * e.speed * 0.01f, 0.0f, 1.0f);
-//             MD_sendControlChange(d50.midi_channel, 91, (uint8_t)(d50.reverb_send * 127));
-//             break;
-//         }
-//       }
-//     }
-    
-//     if (e.pressed) {
-//       seq.edit_state = !seq.edit_state;
-//     }
-    
-//     update_selective_values_d50();
-//   }
-  
-//   if (LCDML.FUNC_close()) // ****** STABLE END *********
-//   {
-//     generic_menu = 0;
-//     encoderDir[ENC_R].reset();
-//     display.fillScreen(COLOR_BACKGROUND);
-//   }
-// }
-
-
-//distortion
-
-#if defined DISTORTION
-#include "effect_distortion.h"
-extern AudioEffectDistortion    distortion_effect;
-extern AudioMixer<8> distortion_mixer;
-#endif
+#if defined BITCRUSH
+#include "effect_bitcrush.h"
+extern AudioEffectBitcrush    bitcrush_effect;
+extern AudioMixer<8> bitcrush_mixer;
 
 // Define min/max values (add to defines.h)
-#define DISTORTION_DRIVE_MIN 0
-#define DISTORTION_DRIVE_MAX 255
-#define DISTORTION_GAIN_MIN 0
-#define DISTORTION_GAIN_MAX 255  // Maps to 0.0-2.0
+#define BITCRUSH_DRIVE_MIN 0
+#define BITCRUSH_DRIVE_MAX 255
+#define BITCRUSH_GAIN_MIN 0
+#define BITCRUSH_GAIN_MAX 255  // Maps to 0.0-2.0
 #define DEXED_INPUT_MIN 0
 #define DEXED_INPUT_MAX 255
-#define DISTORTION_FX_SEND_MIN 0
-#define DISTORTION_FX_SEND_MAX 255
-#define DISTORTION_SENSITIVITY_MIN 0
-#define DISTORTION_SENSITIVITY_MAX 255
+#define BITCRUSH_FX_SEND_MIN 0
+#define BITCRUSH_FX_SEND_MAX 255
+#define BITCRUSH_SENSITIVITY_MIN 0
+#define BITCRUSH_SENSITIVITY_MAX 255
 
 // Helper functions to convert between uint8_t and float
 FLASHMEM float map_uint8_to_float(uint8_t value, float min_val, float max_val) {
@@ -26792,41 +26346,46 @@ FLASHMEM uint8_t map_float_to_uint8(float value, float min_val, float max_val) {
     return (uint8_t)mapfloat(value, min_val, max_val, 0, 255);
 }
 
-FLASHMEM void update_distortion_parameters()
+FLASHMEM void update_bitcrush_parameters()
 {
-  // Apply distortion effect parameters
-  float drive_float = map_uint8_to_float(configuration.fx.dist_drive, 0.0f, 1.0f);
-  distortion_effect.setDrive(drive_float);
+  // Apply bitcrush effect parameters
+  float drive_float = map_uint8_to_float(configuration.fx.bitcrush_drive, 0.0f, 1.0f);
+  bitcrush_effect.setDrive(drive_float);
   
-  float gain_float = map_uint8_to_float(configuration.fx.dist_output_gain, 0.0f, 2.0f);
-  distortion_effect.setOutputGain(gain_float);
+  float gain_float = map_uint8_to_float(configuration.fx.bitcrush_output_gain, 0.0f, 2.0f);
+  bitcrush_effect.setOutputGain(gain_float);
   
   // Apply DEXED input levels
-  float dexed1_input = map_uint8_to_float(configuration.fx.dist_dexed1_input, 0.0f, 1.0f);
-  distortion_mixer.gain(0, dexed1_input);
+  float dexed1_input = map_uint8_to_float(configuration.fx.bitcrush_dexed1_input, 0.0f, 1.0f);
+  bitcrush_mixer.gain(0, dexed1_input);
   
-  float dexed2_input = map_uint8_to_float(configuration.fx.dist_dexed2_input, 0.0f, 1.0f);
-  distortion_mixer.gain(1, dexed2_input);
+  float dexed2_input = map_uint8_to_float(configuration.fx.bitcrush_dexed2_input, 0.0f, 1.0f);
+  bitcrush_mixer.gain(1, dexed2_input);
   
-  float dexed3_input = map_uint8_to_float(configuration.fx.dist_dexed3_input, 0.0f, 1.0f);
-  distortion_mixer.gain(2, dexed3_input);
+  float dexed3_input = map_uint8_to_float(configuration.fx.bitcrush_dexed3_input, 0.0f, 1.0f);
+  bitcrush_mixer.gain(2, dexed3_input);
   
-  float dexed4_input = map_uint8_to_float(configuration.fx.dist_dexed4_input, 0.0f, 1.0f);
-  distortion_mixer.gain(3, dexed4_input);
+  float dexed4_input = map_uint8_to_float(configuration.fx.bitcrush_dexed4_input, 0.0f, 1.0f);
+  bitcrush_mixer.gain(3, dexed4_input);
+
+  float samples_input_r = map_uint8_to_float(configuration.fx.bitcrush_samples_input_r, 0.0f, 1.0f);
+  bitcrush_mixer.gain(4, samples_input_r);
+  float samples_input_l = map_uint8_to_float(configuration.fx.bitcrush_samples_input_l, 0.0f, 1.0f);
+  bitcrush_mixer.gain(4, samples_input_l);
   
   // Apply FX send levels
-  float delay1_send = map_uint8_to_float(configuration.fx.dist_delay1_send, 0.0f, 1.0f);
-  float delay2_send = map_uint8_to_float(configuration.fx.dist_delay2_send, 0.0f, 1.0f);
-  float reverb_send = map_uint8_to_float(configuration.fx.dist_reverb_send, 0.0f, 1.0f);
+  float delay1_send = map_uint8_to_float(configuration.fx.bitcrush_delay1_send, 0.0f, 1.0f);
+  float delay2_send = map_uint8_to_float(configuration.fx.bitcrush_delay2_send, 0.0f, 1.0f);
+  float reverb_send = map_uint8_to_float(configuration.fx.bitcrush_reverb_send, 0.0f, 1.0f);
   
   // Set FX sends (adjust mixer channel numbers if needed)
   global_delay_in_mixer[0]->gain(19, delay1_send);
   global_delay_in_mixer[1]->gain(19, delay2_send);
-  reverb_mixer_l.gain(REVERB_MIX_CH_DISTORTION, reverb_send);
-  reverb_mixer_r.gain(REVERB_MIX_CH_DISTORTION, reverb_send);
+  reverb_mixer_l.gain(REVERB_MIX_CH_BITCRUSH, reverb_send);
+  reverb_mixer_r.gain(REVERB_MIX_CH_BITCRUSH, reverb_send);
 }
 
-FLASHMEM void print_distortion_static_texts()
+FLASHMEM void print_bitcrush_static_texts()
 {
   display.setTextSize(1);
   helptext_l(back_text);
@@ -26835,13 +26394,13 @@ FLASHMEM void print_distortion_static_texts()
   generic_active_function = 0;
   setCursor_textGrid_small(1, 1);
   display.setTextColor(RED);
-  display.print(F("DISTORTION EFFECT"));
+  display.print(F("BITCRUSHER EFFECT"));
   display.setTextColor(COLOR_SYSTEXT);
   display.setTextColor(GREY1);
   
   // Basic parameters - added sensitivity
   setCursor_textGrid_small(1, 3);
-  display.print(F("DRIVE"));
+  display.print(F("BIT REDUCTION"));
   setCursor_textGrid_small(1, 4);
   display.print(F("OUTPUT GAIN"));
   setCursor_textGrid_small(1, 5);  // NEW: Sensitivity
@@ -26861,6 +26420,11 @@ FLASHMEM void print_distortion_static_texts()
   setCursor_textGrid_small(1, 12);  // Changed from 11 to 12
   display.print(F("DEXED 4"));
 
+  setCursor_textGrid_small(1, 13);  
+  display.print(F("SAMPLES L"));
+  setCursor_textGrid_small(1, 14);  
+  display.print(F("SAMPLES R"));
+
   display.setTextColor(GREY2);
   setCursor_textGrid_small(24, 1);
   display.print(F("EFFECTS SENDS"));
@@ -26874,37 +26438,37 @@ FLASHMEM void print_distortion_static_texts()
   display.print(F("REVERB SEND"));
 }
 
-FLASHMEM void update_selective_values_distortion()
+FLASHMEM void update_selective_values_bitcrush()
 {
   // Drive gauge
   if (menu_item_check(0))
     print_small_intbar(13, 3, 
-                      map(configuration.fx.dist_drive, DISTORTION_DRIVE_MIN, DISTORTION_DRIVE_MAX, 0, 100), 
+                      map(configuration.fx.bitcrush_drive, BITCRUSH_DRIVE_MIN, BITCRUSH_DRIVE_MAX, 0, 100), 
                       0, 1, 0);
   
   // Apply drive parameter when editing
   if (generic_temp_select_menu == 0 && seq.edit_state) {
-    float drive_float = map_uint8_to_float(configuration.fx.dist_drive, 0.0f, 1.0f);
-    distortion_effect.setDrive(drive_float);
+    float drive_float = map_uint8_to_float(configuration.fx.bitcrush_drive, 0.0f, 1.0f);
+    bitcrush_effect.setDrive(drive_float);
   }
   
   // Output Gain gauge
   if (menu_item_check(1))
     print_small_intbar(13, 4, 
-                      map(configuration.fx.dist_output_gain, DISTORTION_GAIN_MIN, DISTORTION_GAIN_MAX, 0, 100), 
+                      map(configuration.fx.bitcrush_output_gain, BITCRUSH_GAIN_MIN, BITCRUSH_GAIN_MAX, 0, 100), 
                       1, 1, 0);
   
   // Apply output gain parameter when editing
   if (generic_temp_select_menu == 1 && seq.edit_state ) {
-    float gain_float = map_uint8_to_float(configuration.fx.dist_output_gain, 0.0f, 2.0f);
-    distortion_effect.setOutputGain(gain_float);
+    float gain_float = map_uint8_to_float(configuration.fx.bitcrush_output_gain, 0.0f, 2.0f);
+    bitcrush_effect.setOutputGain(gain_float);
   }
   
   
   // DEXED 1 Input gauge
   if (menu_item_check(3))
     print_small_intbar(13, 9,   // Changed from 8 to 9
-                      map(configuration.fx.dist_dexed1_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      map(configuration.fx.bitcrush_dexed1_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
                       3, 1, 1);
   
   
@@ -26912,7 +26476,7 @@ FLASHMEM void update_selective_values_distortion()
   // DEXED 2 Input gauge
   if (menu_item_check(4))
     print_small_intbar(13, 10,  // Changed from 9 to 10
-                      map(configuration.fx.dist_dexed2_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      map(configuration.fx.bitcrush_dexed2_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
                       4, 1, 1);
   
   
@@ -26920,7 +26484,7 @@ FLASHMEM void update_selective_values_distortion()
   // DEXED 3 Input gauge
   if (menu_item_check(5))
     print_small_intbar(13, 11,  // Changed from 10 to 11
-                      map(configuration.fx.dist_dexed3_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      map(configuration.fx.bitcrush_dexed3_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
                       5, 1, 1);
   
   
@@ -26928,50 +26492,61 @@ FLASHMEM void update_selective_values_distortion()
   // DEXED 4 Input gauge
   if (menu_item_check(6))
     print_small_intbar(13, 12,  // Changed from 11 to 12
-                      map(configuration.fx.dist_dexed4_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      map(configuration.fx.bitcrush_dexed4_input, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
                       6, 1, 1);
   
+if (menu_item_check(7))
+    print_small_intbar(13, 13,  
+                      map(configuration.fx.bitcrush_samples_input_r, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      7, 1, 1);
 
-  
+  if (menu_item_check(8))
+    print_small_intbar(13, 14,  
+                      map(configuration.fx.bitcrush_samples_input_l, DEXED_INPUT_MIN, DEXED_INPUT_MAX, 0, 100), 
+                      8, 1, 1);
+
+
+
+
   // Delay 1 Send gauge
-  if (menu_item_check(7))
+  if (menu_item_check(9))
     print_small_intbar(38, 3, 
-                      map(configuration.fx.dist_delay1_send, DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX, 0, 100), 
-                      7, 1, 0);
+                      map(configuration.fx.bitcrush_delay1_send, BITCRUSH_FX_SEND_MIN, BITCRUSH_FX_SEND_MAX, 0, 100), 
+                      9, 1, 0);
   
   
   // Delay 2 Send gauge
-  if (menu_item_check(8))
+  if (menu_item_check(10))
     print_small_intbar(38, 4, 
-                      map(configuration.fx.dist_delay2_send, DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX, 0, 100), 
-                      8, 1, 0);
+                      map(configuration.fx.bitcrush_delay2_send, BITCRUSH_FX_SEND_MIN, BITCRUSH_FX_SEND_MAX, 0, 100), 
+                      10, 1, 0);
   
   
   // Reverb Send gauge
-  if (menu_item_check(9))
+  if (menu_item_check(11))
     print_small_intbar(38, 5, 
-                      map(configuration.fx.dist_reverb_send, DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX, 0, 100), 
-                      9, 1, 0);
+                      map(configuration.fx.bitcrush_reverb_send, BITCRUSH_FX_SEND_MIN, BITCRUSH_FX_SEND_MAX, 0, 100), 
+                      11, 1, 0);
   
  
-   update_distortion_parameters();
+   update_bitcrush_parameters();
 }
 
-FLASHMEM void UI_func_distortion(uint8_t param)
+FLASHMEM void UI_func_bitcrush(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     // setup function
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
-    print_distortion_static_texts();
+    print_bitcrush_static_texts();
     
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && 
         LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
       generic_temp_select_menu = 0;
 
     generic_full_draw_required = true;
-    update_selective_values_distortion(); // print all at init
+    update_selective_values_bitcrush(); // print all at init
     generic_full_draw_required = false;
 
     display.setTextSize(1);
@@ -26981,70 +26556,84 @@ FLASHMEM void UI_func_distortion(uint8_t param)
     const EncoderEvents e = getEncoderEvents(ENC_R);
     if (e.turned) {
       if (seq.edit_state == 0) {
-        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 9); // Changed to 9
+        generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 11); 
       }
       else {
         switch(generic_temp_select_menu) {
           case 0: // Drive
           {
-            configuration.fx.dist_drive = constrain(configuration.fx.dist_drive + (e.dir * e.speed), 
-                                                          DISTORTION_DRIVE_MIN, DISTORTION_DRIVE_MAX);
+            configuration.fx.bitcrush_drive = constrain(configuration.fx.bitcrush_drive + (e.dir * e.speed), 
+                                                          BITCRUSH_DRIVE_MIN, BITCRUSH_DRIVE_MAX);
             break;
           }
           
           case 1: // Output Gain
           {
-            configuration.fx.dist_output_gain = constrain(configuration.fx.dist_output_gain + (e.dir * e.speed), 
-                                                                DISTORTION_GAIN_MIN, DISTORTION_GAIN_MAX);
+            configuration.fx.bitcrush_output_gain = constrain(configuration.fx.bitcrush_output_gain + (e.dir * e.speed), 
+                                                                BITCRUSH_GAIN_MIN, BITCRUSH_GAIN_MAX);
             break;
           }
           
           case 3: // DEXED 1 Input
           {
-            configuration.fx.dist_dexed1_input = constrain(configuration.fx.dist_dexed1_input + (e.dir * e.speed), 
+            configuration.fx.bitcrush_dexed1_input = constrain(configuration.fx.bitcrush_dexed1_input + (e.dir * e.speed), 
                                                                 DEXED_INPUT_MIN, DEXED_INPUT_MAX);
             break;
           }
           
           case 4: // DEXED 2 Input
           {
-            configuration.fx.dist_dexed2_input = constrain(configuration.fx.dist_dexed2_input + (e.dir * e.speed), 
+            configuration.fx.bitcrush_dexed2_input = constrain(configuration.fx.bitcrush_dexed2_input + (e.dir * e.speed), 
                                                                 DEXED_INPUT_MIN, DEXED_INPUT_MAX);
             break;
           }
           
           case 5: // DEXED 3 Input
           {
-            configuration.fx.dist_dexed3_input = constrain(configuration.fx.dist_dexed3_input + (e.dir * e.speed), 
+            configuration.fx.bitcrush_dexed3_input = constrain(configuration.fx.bitcrush_dexed3_input + (e.dir * e.speed), 
                                                                 DEXED_INPUT_MIN, DEXED_INPUT_MAX);
             break;
           }
           
           case 6: // DEXED 4 Input
           {
-            configuration.fx.dist_dexed4_input = constrain(configuration.fx.dist_dexed4_input + (e.dir * e.speed), 
+            configuration.fx.bitcrush_dexed4_input = constrain(configuration.fx.bitcrush_dexed4_input + (e.dir * e.speed), 
                                                                 DEXED_INPUT_MIN, DEXED_INPUT_MAX);
             break;
           }
-          
-          case 7: // Delay 1 Send
+
+ case 7: 
           {
-            configuration.fx.dist_delay1_send = constrain(configuration.fx.dist_delay1_send + (e.dir * e.speed), 
-                                                               DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX);
+            configuration.fx.bitcrush_samples_input_r = constrain(configuration.fx.bitcrush_samples_input_r + (e.dir * e.speed), 
+                                                                DEXED_INPUT_MIN, DEXED_INPUT_MAX);
+            break;
+          }
+
+           case 8: 
+          {
+            configuration.fx.bitcrush_samples_input_l = constrain(configuration.fx.bitcrush_samples_input_l + (e.dir * e.speed), 
+                                                                DEXED_INPUT_MIN, DEXED_INPUT_MAX);
+            break;
+          }
+
+          case 9: // Delay 1 Send
+          {
+            configuration.fx.bitcrush_delay1_send = constrain(configuration.fx.bitcrush_delay1_send + (e.dir * e.speed), 
+                                                               BITCRUSH_FX_SEND_MIN, BITCRUSH_FX_SEND_MAX);
             break;
           }
           
-          case 8: // Delay 2 Send
+          case 10: // Delay 2 Send
           {
-            configuration.fx.dist_delay2_send = constrain(configuration.fx.dist_delay2_send + (e.dir * e.speed), 
-                                                               DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX);
+            configuration.fx.bitcrush_delay2_send = constrain(configuration.fx.bitcrush_delay2_send + (e.dir * e.speed), 
+                                                               BITCRUSH_FX_SEND_MIN, BITCRUSH_FX_SEND_MAX);
             break;
           }
           
-          case 9: // Reverb Send
+          case 11: // Reverb Send
           {
-            configuration.fx.dist_reverb_send = constrain(configuration.fx.dist_reverb_send + (e.dir * e.speed), 
-                                                               DISTORTION_FX_SEND_MIN, DISTORTION_FX_SEND_MAX);
+            configuration.fx.bitcrush_reverb_send = constrain(configuration.fx.bitcrush_reverb_send + (e.dir * e.speed), 
+                                                               BITCRUSH_FX_SEND_MIN, BITCRUSH_FX_SEND_MAX);
             break;
           }
         }
@@ -27054,7 +26643,7 @@ FLASHMEM void UI_func_distortion(uint8_t param)
       seq.edit_state = !seq.edit_state;
     }
     // button check end <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    update_selective_values_distortion();
+    update_selective_values_bitcrush();
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -27063,3 +26652,4 @@ FLASHMEM void UI_func_distortion(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
   }
 }
+#endif

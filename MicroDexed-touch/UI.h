@@ -25,7 +25,11 @@
 #ifndef _UI_H_
 #define _UI_H_
 
+#if defined BITCRUSH
 #define _LCDML_DISP_cnt 70 // max number of menu items (must match)
+#else
+#define _LCDML_DISP_cnt 69 // max number of menu items (must match)
+#endif
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1200  
@@ -86,7 +90,7 @@ void UI_func_dexed_setup(uint8_t param);
 void UI_func_information(uint8_t param);
 void UI_func_cv_page(uint8_t param);
 
-void UI_func_distortion(uint8_t param);
+void UI_func_bitcrush(uint8_t param);
 
 void UI_func_chord_arranger(uint8_t param);
 void UI_func_noisemaker(uint8_t param);

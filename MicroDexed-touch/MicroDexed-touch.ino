@@ -5,7 +5,7 @@
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
    (c)2018-2021 H. Wirtz <wirtz@parasitstudio.de>
-   (c)2021      H. Wirtz <wirtz@parasitstudio.de>, M. Koslowski <positionhigh@gmx.de>
+   (c)2021-2026 H. Wirtz <wirtz@parasitstudio.de>, M. Koslowski <positionhigh@gmx.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -80,8 +80,8 @@ using namespace TeensyTimerTool;
 #include "effect_platervbstereo.h"
 #include "effect_gate.h"
 
-#if defined DISTORTION
-#include "effect_distortion.h"
+#if defined BITCRUSH
+#include "effect_bitcrush.h"
 #endif
 
 #include "template_mixer.hpp"
@@ -169,9 +169,9 @@ extern Adafruit_FT6206 touch;
 // Editor operations
 int menuhelper_previous_val;
 
-#if defined DISTORTION
-AudioEffectDistortion    distortion_effect;
-AudioMixer<8> distortion_mixer;
+#if defined BITCRUSH
+AudioEffectBitcrush    bitcrush_effect;
+AudioMixer<8> bitcrush_mixer;
 #endif
 
 AudioMultiBandCompressor MultiBandCompressor;
@@ -494,9 +494,9 @@ const AudioConnection patchCord[] = {
 
 #endif
 
-#ifdef DISTORTION
-          {distortion_effect, 0, reverb_mixer_r, REVERB_MIX_CH_DISTORTION},
-          {distortion_effect, 0, reverb_mixer_l, REVERB_MIX_CH_DISTORTION},
+#ifdef BITCRUSH
+          {bitcrush_effect, 0, reverb_mixer_r, REVERB_MIX_CH_BITCRUSH},
+          {bitcrush_effect, 0, reverb_mixer_l, REVERB_MIX_CH_BITCRUSH},
 #endif
 
          {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
@@ -661,11 +661,11 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN));
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN));
 
-#ifdef DISTORTION
-    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, master_mixer_r,MASTER_MIX_CH_DISTORTION));
-    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, master_mixer_l,MASTER_MIX_CH_DISTORTION));
+#ifdef BITCRUSH
+    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, master_mixer_r, MASTER_MIX_CH_BITCRUSH));
+    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, master_mixer_l, MASTER_MIX_CH_BITCRUSH));
 
-     dynamicConnections.emplace_back(new AudioConnection(distortion_mixer, 0, distortion_effect,0));
+    dynamicConnections.emplace_back(new AudioConnection(bitcrush_mixer, 0, bitcrush_effect, 0));
 #endif
 
   }
@@ -681,8 +681,13 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
           dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_3, 0));
 #endif
 
-#ifdef DISTORTION
-    dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, distortion_mixer, instance_id));
+#ifdef BITCRUSH
+  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, bitcrush_mixer, instance_id));
+  if (instance_id == 0)
+  {
+    dynamicConnections.emplace_back(new AudioConnection(drum_mixer_r, 0, bitcrush_mixer, 4));
+    dynamicConnections.emplace_back(new AudioConnection(drum_mixer_l, 0, bitcrush_mixer, 5));
+  }
 #endif
 
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[0], instance_id));
@@ -740,8 +745,8 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(ep, 1, *global_delay_in_mixer[instance_id], 8));
 
     // microsynth delays
-    dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[0], 0, *global_delay_in_mixer[instance_id], 4)); 
-    dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[1], 0, *global_delay_in_mixer[instance_id], 5)); 
+    dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[0], 0, *global_delay_in_mixer[instance_id], 4));
+    dynamicConnections.emplace_back(new AudioConnection(microsynth_mixer_filter_osc[1], 0, *global_delay_in_mixer[instance_id], 5));
 
   }
 
@@ -776,9 +781,9 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(granular_filter_l, 0, *global_delay_in_mixer[0], 18));
     dynamicConnections.emplace_back(new AudioConnection(granular_filter_r, 0, *global_delay_in_mixer[1], 18));
 #endif
-#ifdef DISTORTION
-    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, *global_delay_in_mixer[0], 19));
-    dynamicConnections.emplace_back(new AudioConnection(distortion_effect, 0, *global_delay_in_mixer[1], 19));
+#ifdef BITCRUSH
+    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, *global_delay_in_mixer[0], 19));
+    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, *global_delay_in_mixer[1], 19));
 #endif
 
 
@@ -1090,7 +1095,7 @@ FLASHMEM void All_Button_LEDS(bool state)
     setled(LED_BUT_A, HIGH);
 
 #ifdef MCP_CV       
-   // digitalWrite(GATE_OUT, HIGH);
+    // digitalWrite(GATE_OUT, HIGH);
     digitalWrite(CV_CLOCK_OUT, HIGH);
 #endif
 
@@ -1116,7 +1121,7 @@ FLASHMEM void All_Button_LEDS(bool state)
     setled(LED_BUT_A, LOW);
 
 #ifdef MCP_CV       
-   // digitalWrite(GATE_OUT, LOW);
+    // digitalWrite(GATE_OUT, LOW);
     digitalWrite(CV_CLOCK_OUT, LOW);
 #endif
 
@@ -1701,9 +1706,9 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
 #endif
 
-#ifdef DISTORTION
-  master_mixer_r.gain(MASTER_MIX_CH_DISTORTION, 0.6);
-  master_mixer_l.gain(MASTER_MIX_CH_DISTORTION, 0.6);
+#ifdef BITCRUSH
+  master_mixer_r.gain(MASTER_MIX_CH_BITCRUSH, 0.6);
+  master_mixer_l.gain(MASTER_MIX_CH_BITCRUSH, 0.6);
 #endif
 
   master_mixer_r.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
@@ -2206,7 +2211,7 @@ uint8_t  glow_textsize;
 const char* glow_zero_name;
 uint8_t glow_type;
 
-FLASHMEM static bool set_glow_params(uint8_t x, uint8_t y, uint8_t type, int menuitem, bool force=false)
+FLASHMEM static bool set_glow_params(uint8_t x, uint8_t y, uint8_t type, int menuitem, bool force = false)
 {
   bool result = menuitem == generic_temp_select_menu || force;
   if (result)
@@ -2223,7 +2228,7 @@ FLASHMEM static bool set_glow_params(uint8_t x, uint8_t y, uint8_t type, int men
 //song page only
 FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize, bool state)
 {
-  set_glow_params(x,y,state?5:6,menuitem,true);
+  set_glow_params(x, y, state ? 5 : 6, menuitem, true);
   glow_input_value = input;
   glow_len = length;
   glow_textsize = textsize;
@@ -2232,7 +2237,7 @@ FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t le
 
 FLASHMEM void set_glow_print_formatted_number_signed(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize)
 {
-  if (set_glow_params(x,y,4,menuitem))
+  if (set_glow_params(x, y, 4, menuitem))
   {
     glow_input_value = input;
     glow_len = length;
@@ -2241,7 +2246,7 @@ FLASHMEM void set_glow_print_formatted_number_signed(uint16_t x, uint8_t y, int 
 }
 FLASHMEM void set_glow_show_text_no_grid(uint16_t x, uint8_t y, uint8_t field_size, const char* str, uint8_t menuitem, uint8_t textsize)
 {
-  if (set_glow_params(x,y,3,menuitem))
+  if (set_glow_params(x, y, 3, menuitem))
   {
     glow_str = str;
     glow_len = field_size;
@@ -2251,7 +2256,7 @@ FLASHMEM void set_glow_show_text_no_grid(uint16_t x, uint8_t y, uint8_t field_si
 
 FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t length, uint8_t menuitem, uint8_t textsize)
 {
-  if (set_glow_params(x,y,2,menuitem))
+  if (set_glow_params(x, y, 2, menuitem))
   {
     glow_input_value = input;
     glow_len = length;
@@ -2261,7 +2266,7 @@ FLASHMEM void set_glow_print_number(uint16_t x, uint8_t y, int input, uint8_t le
 
 FLASHMEM void set_glow_panbar(uint8_t x, uint8_t y, int input, int menuitem)
 {
-  if (set_glow_params(x,y,1,menuitem))
+  if (set_glow_params(x, y, 1, menuitem))
   {
     glow_input_value = input;
   }
@@ -2269,7 +2274,7 @@ FLASHMEM void set_glow_panbar(uint8_t x, uint8_t y, int input, int menuitem)
 
 FLASHMEM void set_glow_bargraph(uint8_t x, uint8_t y, int input, int menuitem, int min, int max, const char* zero)
 {
-  if (set_glow_params(x,y,0,menuitem))
+  if (set_glow_params(x, y, 0, menuitem))
   {
     glow_input_value = input;
     glow_limit_min = min;
@@ -2284,7 +2289,7 @@ FLASHMEM void draw_glow()
   display.setTextSize(1);
   if (glow_bright > GLOW_OFF)
     display.setTextColor(COLOR_BACKGROUND, ColorHSV(0, 0, int(glow_bright)));
-  else    
+  else
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
   if (glow_type == 0)
@@ -3324,27 +3329,27 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
   AudioInterrupts();
 }
 
-void set_filter(uint8_t d,uint8_t slot){
- if (drum_config[d].filter_mode == 0)
-            {
-              Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
-            }
-            else if (drum_config[d].filter_mode == 1)
-            {
-              Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-            }
-            else if (drum_config[d].filter_mode == 2)
-            {
-              Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-            }
-            else if (drum_config[d].filter_mode == 3)
-            {
-              Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-              Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-            }
+void set_filter(uint8_t d, uint8_t slot) {
+  if (drum_config[d].filter_mode == 0)
+  {
+    Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+    Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+  }
+  else if (drum_config[d].filter_mode == 1)
+  {
+    Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+    Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+  }
+  else if (drum_config[d].filter_mode == 2)
+  {
+    Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+    Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+  }
+  else if (drum_config[d].filter_mode == 3)
+  {
+    Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+    Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+  }
 }
 #endif
 
@@ -3377,15 +3382,15 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         AudioNoInterrupts();
 
 #if defined DRUMS_FILTERS
-    set_filter(msz[instance][y].psram_entry_number,slot);   
+        set_filter(msz[instance][y].psram_entry_number, slot);
 #endif
         // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
         // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
 
         if (drum_config[y].numChannels == 1) //mono
         {
-           drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
-           drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
         }
         else //stereo
         {
@@ -3810,7 +3815,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           if (slot != 99)
           {
 #if defined(DRUMS_FILTERS) 
-set_filter(d,slot);        
+            set_filter(d, slot);
 #endif
             global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5);
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5);
@@ -3978,7 +3983,7 @@ set_filter(d,slot);
           }
         }
 
-         if (inChannel == configuration.sys.cv_midi_channel && seq.running == false) ///CV Output
+        if (inChannel == configuration.sys.cv_midi_channel && seq.running == false) ///CV Output
         {
           dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
           dac_cv_3 = inVelocity * 25.98f;
@@ -4016,9 +4021,9 @@ set_filter(d,slot);
 #endif
 
 
-//if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
-   // d50Synth.noteOn(inNumber, inVelocity);
-//}
+        //if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
+           // d50Synth.noteOn(inNumber, inVelocity);
+        //}
 
 
       }
@@ -4242,9 +4247,9 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     }
 #endif
 
-//if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
-   // d50Synth.noteOff(inNumber);
-//}
+    //if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
+       // d50Synth.noteOff(inNumber);
+    //}
 
   }
 }
@@ -5898,17 +5903,17 @@ FLASHMEM void set_fx_params(void)
     set_dexed_delay_level(0, instance_id, configuration.fx.delay_level1[instance_id]);
     set_dexed_delay_level(1, instance_id, configuration.fx.delay_level2[instance_id]);
 
-  
-   // delay_mixer[instance_id]->gain(1, mapfloat(configuration.fx.delay_level_global[instance_id], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
+
+    // delay_mixer[instance_id]->gain(1, mapfloat(configuration.fx.delay_level_global[instance_id], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
 
 
-//phtodo
-//    delay_mixer[instance_id]->gain(0, 1.0);
-//    delay_mixer[instance_id]->gain(1, 1.0);
-//       delay_mixer[instance_id]->gain(2, 1.0);
-//          delay_mixer[instance_id]->gain(0, 1.0);
-//  global_delay_in_mixer[0]->gain(0,1.0);
-//     global_delay_in_mixer[1]->gain(1,1.0);
+ //phtodo
+ //    delay_mixer[instance_id]->gain(0, 1.0);
+ //    delay_mixer[instance_id]->gain(1, 1.0);
+ //       delay_mixer[instance_id]->gain(2, 1.0);
+ //          delay_mixer[instance_id]->gain(0, 1.0);
+ //  global_delay_in_mixer[0]->gain(0,1.0);
+ //     global_delay_in_mixer[1]->gain(1,1.0);
 
 
     delay_mono2stereo[instance_id]->panorama(mapfloat(configuration.fx.delay_pan[instance_id], PANORAMA_MIN, PANORAMA_MAX, -1.0, 1.0));
@@ -5939,19 +5944,19 @@ FLASHMEM void set_fx_params(void)
     MicroDexed[instance_id]->doRefreshVoice();
   }
 
-    global_delay_in_mixer[0]->gain(4, mapfloat(microsynth[0].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
-    global_delay_in_mixer[0]->gain(5, mapfloat(microsynth[1].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+  global_delay_in_mixer[0]->gain(4, mapfloat(microsynth[0].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+  global_delay_in_mixer[0]->gain(5, mapfloat(microsynth[1].delay_send[0], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
 
-    global_delay_in_mixer[0]->gain(6, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
-    global_delay_in_mixer[1]->gain(6, mapfloat(braids_osc.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+  global_delay_in_mixer[0]->gain(6, mapfloat(braids_osc.delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
+  global_delay_in_mixer[1]->gain(6, mapfloat(braids_osc.delay_send_2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
 
-    global_delay_in_mixer[1]->gain(9, mapfloat(configuration.fx.delay1_to_delay2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
-    global_delay_in_mixer[0]->gain(9, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
+  global_delay_in_mixer[1]->gain(9, mapfloat(configuration.fx.delay1_to_delay2, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
+  global_delay_in_mixer[0]->gain(9, mapfloat(configuration.fx.delay2_to_delay1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
 
-    microsynth_mixer_reverb.gain(0, volume_transform(mapfloat(microsynth[0].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
-    microsynth_mixer_reverb.gain(1, volume_transform(mapfloat(microsynth[1].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
-    braids_mixer_reverb.gain(0, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
-    braids_mixer_reverb.gain(1, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+  microsynth_mixer_reverb.gain(0, volume_transform(mapfloat(microsynth[0].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+  microsynth_mixer_reverb.gain(1, volume_transform(mapfloat(microsynth[1].rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+  braids_mixer_reverb.gain(0, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
+  braids_mixer_reverb.gain(1, volume_transform(mapfloat(braids_osc.rev_send, REVERB_SEND_MIN, REVERB_SEND_MAX, 0.0, VOL_MAX_FLOAT)));
 
   global_delay_in_mixer[0]->gain(7, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
   global_delay_in_mixer[0]->gain(8, mapfloat(configuration.fx.ep_delay_send_1, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 1.0));
@@ -6156,7 +6161,7 @@ FLASHMEM uint8_t check_internal_sd_card(void)
 
   bool sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);
   // Sometimes fails after re-programming - try a few times if needed
-  for (int i=0;i<5 && !sdok;i++)
+  for (int i = 0;i < 5 && !sdok;i++)
   {
     delay(200);
     sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);

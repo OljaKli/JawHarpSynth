@@ -435,10 +435,10 @@ FLASHMEM bool put_sd_voice(File sysex, uint8_t voice_number, uint8_t* data)
 {
   int32_t bulk_checksum_calc = 0;
 
-if (!sysex) return false; // Check file is valid
-  
+  if (!sysex) return false; // Check file is valid
+
   AudioNoInterrupts();
-  
+
   // Check if file is writable
   if (sysex.size() != 4104) {
     AudioInterrupts();
@@ -1458,8 +1458,8 @@ FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
 /******************************************************************************
    SD FX
  ******************************************************************************/
-#ifdef DISTORTION
-extern void update_distortion_parameters();
+#ifdef BITCRUSH
+extern void update_bitcrush_parameters();
 #endif
 
 
@@ -1544,20 +1544,23 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         configuration.fx.delay2_sidechain_send = data_json["delay2_sidechain_send"];
         configuration.fx.reverb_sidechain_send = data_json["reverb_sidechain_send"];
 
-#ifdef DISTORTION
-configuration.fx.dist_drive = data_json["dist_drive"];
-configuration.fx.dist_output_gain = data_json["dist_output_gain"];
-configuration.fx.dist_dexed1_input = data_json["dist_dexed1_input"];
-configuration.fx.dist_dexed2_input = data_json["dist_dexed2_input"];
-configuration.fx.dist_dexed3_input = data_json["dist_dexed3_input"];
-configuration.fx.dist_dexed4_input = data_json["dist_dexed4_input"];
-configuration.fx.dist_delay1_send = data_json["dist_delay1_send"];
-configuration.fx.dist_delay2_send = data_json["dist_delay2_send"];
-configuration.fx.dist_reverb_send = data_json["dist_reverb_send"];
+#ifdef BITCRUSH
+        configuration.fx.bitcrush_drive = data_json["bitcrush_drive"];
+        configuration.fx.bitcrush_output_gain = data_json["bitcrush_output_gain"];
+        configuration.fx.bitcrush_dexed1_input = data_json["bitcrush_dexed1_input"];
+        configuration.fx.bitcrush_dexed2_input = data_json["bitcrush_dexed2_input"];
+        configuration.fx.bitcrush_dexed3_input = data_json["bitcrush_dexed3_input"];
+        configuration.fx.bitcrush_dexed4_input = data_json["bitcrush_dexed4_input"];
+        configuration.fx.bitcrush_samples_input_r = data_json["bitcrush_samples_input_r"];
+        configuration.fx.bitcrush_samples_input_l = data_json["bitcrush_samples_input_l"];
+
+        configuration.fx.bitcrush_delay1_send = data_json["bitcrush_delay1_send"];
+        configuration.fx.bitcrush_delay2_send = data_json["bitcrush_delay2_send"];
+        configuration.fx.bitcrush_reverb_send = data_json["bitcrush_reverb_send"];
 #endif
 
-#ifdef DISTORTION
-update_distortion_parameters();
+#ifdef BITCRUSH
+        update_bitcrush_parameters();
 #endif
 
         check_configuration_fx();
@@ -1650,17 +1653,18 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
       data_json["delay2_sidechain_send"] = configuration.fx.delay2_sidechain_send;
       data_json["reverb_sidechain_send"] = configuration.fx.reverb_sidechain_send;
 
-      #ifdef DISTORTION
-// Distortion parameters
-data_json["dist_drive"] = configuration.fx.dist_drive;
-data_json["dist_output_gain"] = configuration.fx.dist_output_gain;
-data_json["dist_dexed1_input"] = configuration.fx.dist_dexed1_input;
-data_json["dist_dexed2_input"] = configuration.fx.dist_dexed2_input;
-data_json["dist_dexed3_input"] = configuration.fx.dist_dexed3_input;
-data_json["dist_dexed4_input"] = configuration.fx.dist_dexed4_input;
-data_json["dist_delay1_send"] = configuration.fx.dist_delay1_send;
-data_json["dist_delay2_send"] = configuration.fx.dist_delay2_send;
-data_json["dist_reverb_send"] = configuration.fx.dist_reverb_send;
+#ifdef BITCRUSH
+      data_json["bitcrush_drive"] = configuration.fx.bitcrush_drive;
+      data_json["bitcrush_output_gain"] = configuration.fx.bitcrush_output_gain;
+      data_json["bitcrush_dexed1_input"] = configuration.fx.bitcrush_dexed1_input;
+      data_json["bitcrush_dexed2_input"] = configuration.fx.bitcrush_dexed2_input;
+      data_json["bitcrush_dexed3_input"] = configuration.fx.bitcrush_dexed3_input;
+      data_json["bitcrush_dexed4_input"] = configuration.fx.bitcrush_dexed4_input;
+      data_json["bitcrush_samples_input_r"] = configuration.fx.bitcrush_samples_input_r;
+      data_json["bitcrush_samples_input_l"] = configuration.fx.bitcrush_samples_input_l;
+      data_json["bitcrush_delay1_send"] = configuration.fx.bitcrush_delay1_send;
+      data_json["bitcrush_delay2_send"] = configuration.fx.bitcrush_delay2_send;
+      data_json["bitcrush_reverb_send"] = configuration.fx.bitcrush_reverb_send;
 #endif
 
 
@@ -1685,7 +1689,7 @@ data_json["dist_reverb_send"] = configuration.fx.dist_reverb_send;
 #endif
   }
   return (false);
-}
+  }
 
 /******************************************************************************
    SD EPIANO
@@ -1761,9 +1765,9 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_epiano_json(uint8_t number)
 {
@@ -1828,7 +1832,7 @@ FLASHMEM bool save_sd_epiano_json(uint8_t number)
 
   AudioInterrupts();
   return (false);
-}
+  }
 
 FLASHMEM void serializeEventToJSON(JsonObject& o, LiveSequencer::EventVector::iterator it) {
   o["source"] = it->source;
@@ -2157,10 +2161,10 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   AudioInterrupts();
   return (true);
-}
+    }
 
 FLASHMEM bool save_sd_gridsong_json(uint8_t number)
 {
@@ -2424,11 +2428,11 @@ FLASHMEM bool load_sd_sys_json(void)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
 
   AudioInterrupts();
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_sys_json(void)
 {
@@ -2520,7 +2524,7 @@ FLASHMEM bool save_sd_sys_json(void)
 
   AudioInterrupts();
   return (false);
-}
+  }
 
 /******************************************************************************
    SD NOISEMAKER
@@ -2968,11 +2972,11 @@ FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
 
   AudioInterrupts();
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 {
@@ -3048,7 +3052,7 @@ FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 
   AudioInterrupts();
   return (false);
-}
+  }
 
 /******************************************************************************
    SD MULTIBAND
@@ -3135,11 +3139,11 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
 
   AudioInterrupts();
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_multiband_json(uint8_t number)
 {
@@ -3209,7 +3213,7 @@ FLASHMEM bool save_sd_multiband_json(uint8_t number)
 
   AudioInterrupts();
   return (false);
-}
+  }
 
 
 /******************************************************************************
@@ -3297,11 +3301,11 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
 
   AudioInterrupts();
   return (false);
-}
+    }
 
 // FLASHMEM bool save_sd_samples_json(uint8_t number)
 // {
@@ -3380,49 +3384,49 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
       int json_index = 0; // Separate index for JSON array
       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
         // Create the full path safely using character arrays
-        char fullpath[FULLPATH_MAX_LEN]; 
-        
+        char fullpath[FULLPATH_MAX_LEN];
+
         // Check if the combined path will fit in the buffer
         const char* filepath = customSamples[i].filepath;
         const char* sample_filename = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].filename;
-        
+
         // Safe length check - use strnlen with max length
         size_t filepath_len = strnlen(filepath, FULLPATH_MAX_LEN);
         size_t filename_len = strnlen(sample_filename, FULLPATH_MAX_LEN);
-        
+
         // Total needed: filepath + '/' + filename + null terminator
         if (filepath_len + filename_len + 2 > FULLPATH_MAX_LEN) {
-            // Path too long, skip this entire entry
+          // Path too long, skip this entire entry
 #ifdef DEBUG
-            LOG.print(F("Warning: Path too long for sample "));
-            LOG.print(i);
-            LOG.print(F(", skipping entry: "));
-            LOG.print(filepath);
-            LOG.print(F("/"));
-            LOG.println(sample_filename);
+          LOG.print(F("Warning: Path too long for sample "));
+          LOG.print(i);
+          LOG.print(F(", skipping entry: "));
+          LOG.print(filepath);
+          LOG.print(F("/"));
+          LOG.println(sample_filename);
 #endif
-            continue; // Skip to next iteration
+          continue; // Skip to next iteration
         }
-        
+
         // Path fits, create full path safely
         // Build path manually to avoid snprintf warning
         char* dest = fullpath;
-        
+
         // Copy filepath
         memcpy(dest, filepath, filepath_len);
         dest += filepath_len;
-        
+
         // Add separator
         *dest = '/';
         dest++;
-        
+
         // Copy filename
         memcpy(dest, sample_filename, filename_len);
         dest += filename_len;
-        
+
         // Add null terminator
         *dest = '\0';
-        
+
         // Only add entry if path was valid
         data_json[json_index]["name"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name;
         data_json[json_index]["filename"] = fullpath;
@@ -3430,7 +3434,7 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
         data_json[json_index]["end"] = customSamples[i].end;
         data_json[json_index]["loop"] = customSamples[i].loopType;
         data_json[json_index]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
-        
+
         json_index++; // Only increment when we add an entry
       }
 
@@ -3456,7 +3460,7 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
   }
   AudioInterrupts();
   return (false);
-}
+  }
 
 #endif
 
@@ -3624,11 +3628,11 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
 
   AudioInterrupts();
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_sidechain_json(uint8_t number)
 {
@@ -3680,7 +3684,7 @@ FLASHMEM bool save_sd_sidechain_json(uint8_t number)
 
   AudioInterrupts();
   return (false);
-}
+  }
 
 /******************************************************************************
    SD GRANULAR
@@ -3860,9 +3864,9 @@ FLASHMEM bool load_sd_chain_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_chain_json(uint8_t number)
 {
@@ -3905,7 +3909,7 @@ FLASHMEM bool save_sd_chain_json(uint8_t number)
 #endif
   }
   return (false);
-}
+  }
 
 FLASHMEM bool load_sd_transpose_json(uint8_t number)
 {
@@ -3957,9 +3961,9 @@ FLASHMEM bool load_sd_transpose_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_transpose_json(uint8_t number)
 {
@@ -4002,7 +4006,7 @@ FLASHMEM bool save_sd_transpose_json(uint8_t number)
 #endif
   }
   return (false);
-}
+  }
 
 FLASHMEM bool load_sd_song_json(uint8_t number)
 {
@@ -4057,9 +4061,9 @@ FLASHMEM bool load_sd_song_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 FLASHMEM bool save_sd_song_json(uint8_t number)
 {
@@ -4102,7 +4106,7 @@ FLASHMEM bool save_sd_song_json(uint8_t number)
 #endif
   }
   return (false);
-}
+  }
 
 FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
 {
@@ -4156,7 +4160,7 @@ FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
 #endif
   }
   return (false);
-}
+  }
 
 FLASHMEM bool save_sd_seq_sub_patterns_json(uint8_t number)
 {
@@ -4210,7 +4214,7 @@ FLASHMEM bool save_sd_seq_sub_patterns_json(uint8_t number)
 #endif
   }
   return (false);
-}
+  }
 
 FLASHMEM bool save_sd_performance_json(uint8_t number)
 {
@@ -4308,7 +4312,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["hihat_randomizer"] = seq.hihat_randomizer;
       data_json["grid_song_mode"] = data->LiveSequencer::LiveSeqData::useGridSongMode;
 
-      if (  data->LiveSequencer::LiveSeqData::songLayerCount > 0) 
+      if (data->LiveSequencer::LiveSeqData::songLayerCount > 0)
         data_json["isSongMode"] = data->LiveSequencer::LiveSeqData::isSongMode;
 
 
@@ -4368,7 +4372,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
 #endif
 
   return (false);
-}
+  }
 
 FLASHMEM bool check_performance_directory(uint8_t number)
 {
@@ -4397,10 +4401,10 @@ FLASHMEM bool check_performance_directory(uint8_t number)
 #else
       SD.mkdir(dir);
 #endif
-    }
+      }
     AudioInterrupts();
     return (true);
-  }
+    }
 #ifdef DEBUG
   else
   {
@@ -4408,7 +4412,7 @@ FLASHMEM bool check_performance_directory(uint8_t number)
   }
 #endif
   return (false);
-}
+  }
 
 FLASHMEM void get_sd_performance_name_json(uint8_t number)
 {
@@ -4455,8 +4459,8 @@ FLASHMEM void get_sd_performance_name_json(uint8_t number)
       }
 #endif
     }
-  }
-}
+      }
+      }
 
 FLASHMEM bool load_sd_seq_sub_vel_json(uint8_t number)
 {
@@ -4521,9 +4525,9 @@ FLASHMEM bool load_sd_seq_sub_vel_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
 {
@@ -4590,9 +4594,9 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 extern void update_seq_speed();
 extern uint8_t perf_load_options;
@@ -4837,9 +4841,9 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 
 FLASHMEM bool check_sd_performance_exists(uint8_t number)
 {
@@ -5031,7 +5035,7 @@ FLASHMEM bool get_sd_data(File sysex, uint8_t format, uint8_t* conf)
 #endif
 
   return (true);
-}
+  }
 
 FLASHMEM bool write_sd_data(File sysex, uint8_t format, uint8_t* data, uint16_t len)
 {
@@ -5086,7 +5090,7 @@ FLASHMEM bool write_sd_data(File sysex, uint8_t format, uint8_t* data, uint16_t 
 #endif
 
   return (true);
-}
+  }
 
 FLASHMEM bool get_bank_name(uint8_t p, uint8_t b, char* bank_name)
 {
@@ -5336,9 +5340,9 @@ FLASHMEM bool save_sd_multisample_presets_json(uint8_t number)
     }
     AudioInterrupts();
     json.close();
-  }
+    }
   return (false);
-}
+  }
 
 FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
 {
@@ -5420,9 +5424,9 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-  }
+      }
   return (false);
-}
+    }
 #endif
 
 FLASHMEM int compare_files_by_name(storage_file_s fileA, storage_file_s fileB)
