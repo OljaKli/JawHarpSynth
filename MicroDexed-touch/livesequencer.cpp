@@ -2,6 +2,7 @@
 #include "config.h"
 #include "sequencer.h"
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include "TeensyTimerTool.h"
 #include "ui_livesequencer.h"
@@ -748,11 +749,18 @@ FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, Laye
   if (clearLayer == false) {
     // TODO: reset CC / PB for track?
     //resetTrackControllers(track);
-    const midi::MidiType targetEvent = (action == LayerMode::LAYER_CLEAR_CC) ? midi::ControlChange : midi::PitchBend;
-    for (auto& e : data.eventsList) {
-      if ((e.track == track) && (e.layer == layer) && (e.event == targetEvent)) {
-        e.event = midi::InvalidType; // mark as invalid
+    if (action == LayerMode::LAYER_CLEAR_CC || action == LayerMode::LAYER_CLEAR_PB) {
+      const midi::MidiType targetEvent = (action == LayerMode::LAYER_CLEAR_CC) ? midi::ControlChange : midi::PitchBend;
+      for (auto& e : data.eventsList) {
+        if ((e.track == track) && (e.layer == layer) && (e.event == targetEvent)) {
+          e.event = midi::InvalidType; // mark as invalid
+        }
       }
+      DBG_LOG(printf("Cleared %s on T%u L%u\n", action == LayerMode::LAYER_CLEAR_CC ? "CC" : "PB", track, layer));
+    } else if (action == LayerMode::LAYER_HEAL_NOTES) {
+      const uint16_t healed = healHungNotesInLayer(track, layer);
+      DBG_LOG(printf("Healed %u hung/orphan events on T%u L%u P%u\n", healed, track, layer, data.currentPattern));
+      (void)healed;
     }
   }
   else {
@@ -2011,5 +2019,238 @@ FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
   return true; // No events found for this track-layer combination
 }
 
+/**
+ * Detects Note On events inside the given pattern that never see a matching
+ * Note Off before the pattern ends. Returned entries originate in this
+ * pattern; notes that started in earlier patterns are not reported.
+ */
+FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLayer(uint8_t track, uint8_t layer, uint8_t patternNumber) {
+  std::vector<HungNote> hungNotes;
+  
+  if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS || patternNumber >= 255) {
+    return hungNotes;
+  }
+
+  hungNotes.reserve(4);
+
+  std::array<size_t, 128> noteOnIndices{};
+  std::array<uint8_t, 16> activeMask{};
+
+  // Track active notes and capture their metadata in a single pass.
+  for (size_t idx = 0; idx < data.eventsList.size(); ++idx) {
+    const MidiEvent& event = data.eventsList[idx];
+
+    if (event.track != track || event.layer != layer) {
+      continue;
+    }
+
+    if (event.patternNumber != patternNumber) {
+      continue;
+    }
+
+    const uint8_t note = event.note_in;
+    const bool isNoteOn = (event.event == midi::NoteOn && event.note_in_velocity > 0);
+    const bool isNoteOff = (event.event == midi::NoteOff) || (event.event == midi::NoteOn && event.note_in_velocity == 0);
+
+    if (isNoteOn) {
+      activeMask[note >> 3] |= (1u << (note & 7u));
+      noteOnIndices[note] = idx;
+    } else if (isNoteOff) {
+      activeMask[note >> 3] &= ~(1u << (note & 7u));
+    }
+  }
+
+  for (uint8_t note = 0; note < 128; ++note) {
+    const bool isActive = (activeMask[note >> 3] >> (note & 7u)) & 0x1u;
+    if (!isActive) {
+      continue;
+    }
+
+    HungNote hung{};
+    hung.note = note;
+    hung.noteOnIndex = noteOnIndices[note];
+
+    hungNotes.push_back(hung);
+  }
+
+  return hungNotes;
+}
+
+/**
+ * Detects orphan MIDI events (Note Offs without matching Note Ons, or vice versa)
+ * within a specific pattern, filtered to a specific track/layer.
+ * Returns vector of OrphanEvent structures.
+ * 
+ * Scope: Selected pattern, track, and layer only.
+ */
+FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t layer) {
+  uint16_t healedCount = 0;  // dropped + fixed
+  
+  // Find the pattern containing events for this track+layer
+  // In pattern mode, each track+layer has events in exactly one pattern
+  uint8_t pattern = 255;
+  for (const auto& event : data.eventsList) {
+    if (event.track == track && event.layer == layer) {
+      pattern = event.patternNumber;
+      break;
+    }
+  }
+  if (pattern == 255) {
+    return 0;  // No events for this track+layer
+  }
+
+  unsigned long patternEndMs = data.patternLengthMs;
+  uint16_t minGapMs = (uint16_t)((HUNG_NOTE_MIN_GAP_TICKS * 1000) / 480);
+  if (minGapMs == 0) minGapMs = 1;
+
+  std::vector<MidiEvent> noteOffsToAdd;
+
+  // First fix hung notes (missing NoteOffs)
+  std::vector<HungNote> hungNotes = detectHungNotesInLayer(track, layer, pattern);
+  for (const auto& hung : hungNotes) {
+    MidiEvent* noteOnEvent = nullptr;
+    const size_t eventsSize = data.eventsList.size();
+    if (hung.noteOnIndex < eventsSize) {
+      MidiEvent& candidate = data.eventsList[hung.noteOnIndex];
+      if (candidate.patternNumber == pattern &&
+          candidate.track == track &&
+          candidate.layer == layer &&
+          candidate.note_in == hung.note &&
+          candidate.event == midi::NoteOn &&
+          candidate.note_in_velocity > 0) {
+        noteOnEvent = &candidate;
+      }
+    }
+
+    if (!noteOnEvent) {
+      for (auto& event : data.eventsList) {
+        if (event.patternNumber == pattern &&
+            event.track == track &&
+            event.layer == layer &&
+            event.note_in == hung.note &&
+            event.event == midi::NoteOn &&
+            event.note_in_velocity > 0) {
+          noteOnEvent = &event;
+          break;
+        }
+      }
+    }
+    if (!noteOnEvent) continue;
+
+    const unsigned long lateBoundary = (patternEndMs > static_cast<unsigned long>(minGapMs + 1))
+      ? (patternEndMs - static_cast<unsigned long>(minGapMs) - 1u)
+      : 0u;
+    if (noteOnEvent->patternMs >= lateBoundary) {
+      noteOnEvent->patternMs = static_cast<uint16_t>(lateBoundary);
+    }
+
+    MidiEvent noteOff;
+    noteOff.source = noteOnEvent->source;
+    noteOff.patternNumber = pattern;
+    noteOff.patternMs = patternEndMs > 0 ? static_cast<uint16_t>(patternEndMs - 1u) : 0;
+    noteOff.track = track;
+    noteOff.layer = layer;
+    noteOff.event = midi::NoteOff;
+    noteOff.note_in = hung.note;
+    noteOff.note_in_velocity = 0;
+
+    noteOffsToAdd.push_back(noteOff);
+    healedCount++;
+  }
+
+  // Append synthesized NoteOffs before orphan sweep so stacks balance
+  for (const auto& noteOff : noteOffsToAdd) {
+    data.eventsList.push_back(noteOff);
+  }
+
+  // Build orphan set: stack model per note
+  std::vector<size_t> orphanIndices;
+  static constexpr size_t MAX_PENDING = 16;
+  std::array<uint8_t, 128> stackDepth{};
+  std::array<std::array<const MidiEvent*, MAX_PENDING>, 128> pendingNoteOns{};
+  std::vector<OrphanEvent> orphans;
+  orphans.reserve(4);
+
+  for (const auto& event : data.eventsList) {
+    if (event.patternNumber != pattern || event.track != track || event.layer != layer) {
+      continue;
+    }
+
+    const bool isNoteOn = (event.event == midi::NoteOn && event.note_in_velocity > 0);
+    const bool isNoteOff = (event.event == midi::NoteOff) || (event.event == midi::NoteOn && event.note_in_velocity == 0);
+    const uint8_t note = event.note_in;
+
+    if (isNoteOn) {
+      uint8_t& depth = stackDepth[note];
+      if (depth < MAX_PENDING) {
+        pendingNoteOns[note][depth] = &event;
+        depth++;
+      } else {
+        OrphanEvent orphan{};
+        orphan.note = note;
+        orphan.eventTime = event.patternMs;
+        orphan.isNoteOff = false;
+        orphans.push_back(orphan);
+      }
+    } else if (isNoteOff) {
+      uint8_t& depth = stackDepth[note];
+      if (depth > 0) {
+        depth--;
+        pendingNoteOns[note][depth] = nullptr;
+      } else {
+        OrphanEvent orphan{};
+        orphan.note = note;
+        orphan.eventTime = event.patternMs;
+        orphan.isNoteOff = true;
+        orphans.push_back(orphan);
+      }
+    }
+  }
+
+  for (uint8_t note = 0; note < 128; ++note) {
+    uint8_t depth = stackDepth[note];
+    for (uint8_t i = 0; i < depth; ++i) {
+      const MidiEvent* pending = pendingNoteOns[note][i];
+      if (!pending) continue;
+      OrphanEvent orphan{};
+      orphan.note = note;
+      orphan.eventTime = pending->patternMs;
+      orphan.isNoteOff = false;
+      orphans.push_back(orphan);
+    }
+  }
+
+  // Mark orphan indices for deletion
+  if (!orphans.empty()) {
+    orphanIndices.reserve(orphans.size());
+    const size_t eventsSize = data.eventsList.size();
+    for (size_t idx = 0; idx < eventsSize; ++idx) {
+      const auto& event = data.eventsList[idx];
+      if (event.patternNumber != pattern || event.track != track || event.layer != layer) continue;
+
+      const bool isNoteOff = (event.event == midi::NoteOff) || (event.event == midi::NoteOn && event.note_in_velocity == 0);
+      for (const auto& orphan : orphans) {
+        if (event.note_in == orphan.note && event.patternMs == orphan.eventTime && isNoteOff == orphan.isNoteOff) {
+          orphanIndices.push_back(idx);
+          healedCount++;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!orphanIndices.empty()) {
+    std::sort(orphanIndices.begin(), orphanIndices.end(), std::greater<size_t>());
+    for (size_t idx : orphanIndices) {
+      data.eventsList.erase(data.eventsList.begin() + idx);
+    }
+  }
+
+  if (healedCount) {
+    requestSortEvents();
+  }
+  DBG_LOG(printf("healHungNotesInLayer T%u L%u: healed %u events\n", track, layer, healedCount));
+  return healedCount;
+}
 
 

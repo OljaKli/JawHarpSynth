@@ -37,6 +37,7 @@ public:
     LAYER_DELETE,
     LAYER_CLEAR_CC,
     LAYER_CLEAR_PB,
+    LAYER_HEAL_NOTES,
     LAYER_MODE_NUM
   };
 
@@ -153,6 +154,19 @@ public:
     std::vector<uint8_t> arpNotesIn;
     std::vector<uint8_t> arpNotes;
     std::vector<uint8_t>::iterator arpIt;
+  };
+
+  static constexpr uint16_t HUNG_NOTE_MIN_GAP_TICKS = 1;
+
+  struct HungNote {
+    uint8_t note;
+    size_t noteOnIndex;
+  };
+
+  struct OrphanEvent {
+    uint8_t note;
+    uint16_t eventTime;
+    bool isNoteOff;
   };
 
 #ifdef PSRAM
@@ -300,6 +314,10 @@ public:
   bool removeGridRow(uint8_t step);
   bool canInsertGridRow(uint8_t step) const;
   bool canRemoveGridRow(uint8_t step) const;
+
+  // Hung notes detection and consolidated healing
+  FLASHMEM std::vector<HungNote> detectHungNotesInLayer(uint8_t track, uint8_t layer, uint8_t patternNumber);
+  FLASHMEM uint16_t healHungNotesInLayer(uint8_t track, uint8_t layer);
 
   struct NotePair {
     MidiEvent& noteOn;

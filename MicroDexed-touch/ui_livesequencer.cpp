@@ -1421,6 +1421,11 @@ FLASHMEM void UI_LiveSequencer::drawLayerButton(const bool horizontal, uint8_t l
         label = "CLEAR";
         labelSub = "PB";
         break;
+
+      case LiveSequencer::LayerMode::LAYER_HEAL_NOTES:
+        label = "HEAL";
+        labelSub = "NOTES";
+        break;
       }
     }
     TouchButton::drawButton(x, y, label.c_str(), labelSub.c_str(), color);
@@ -1444,6 +1449,9 @@ FLASHMEM void UI_LiveSequencer::handleLayerEditButtonColor(uint8_t layerMode, To
   case LiveSequencer::LayerMode::LAYER_CLEAR_PB:
     color = TouchButton::BUTTON_BLUE;
     break;
+
+  case LiveSequencer::LayerMode::LAYER_HEAL_NOTES:
+    color = TouchButton::BUTTON_HIGHLIGHTED;
+    break;
   }
 }
-
