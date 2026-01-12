@@ -7559,7 +7559,11 @@ FLASHMEM void drawNoiseMakerWaveform(bool slot_or_temp) {
     uint8_t targetSlot = NUM_STATIC_PITCHED_SAMPLES + noisemaker_custom_slot;
     if (drum_config[targetSlot].drum_data == nullptr && drum_config[targetSlot].len == 0) {
       // Draw empty waveform area
+       if (remote_active)
+      display.console = true;
       display.fillRect(plotX, plotY, plotW, plotH, COLOR_BACKGROUND);
+       if (remote_active)
+      display.console = true;
       display.drawRect(plotX, plotY, plotW, plotH, GREY3);
 
       // Display "No data" message
@@ -7721,7 +7725,7 @@ FLASHMEM void print_nm_style()
   else
     display.printf("SYN");
 
-  display.printf(")");
+  display.printf(") ");
 
 }
 
@@ -7997,6 +8001,24 @@ extern void draw_nm_monostereo();
 extern void draw_nm_reverb_OffOn();
 extern void save_sd_noisemaker_json(void);
 
+FLASHMEM void draw_nm_checkfreeslot()
+{
+  display.setTextSize(1);
+setCursor_textGrid_small(16, 3);
+
+if (drum_config[NUM_STATIC_PITCHED_SAMPLES+noisemaker_custom_slot].drum_data != nullptr && drum_config[NUM_STATIC_PITCHED_SAMPLES+noisemaker_custom_slot].len > 0)
+{
+display.setTextColor(RED, COLOR_BACKGROUND);
+display.print("USED ");
+}
+else
+{
+display.setTextColor(GREEN, COLOR_BACKGROUND);
+display.print("EMPTY");
+}
+display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+}
+
 FLASHMEM void UI_func_noisemaker(uint8_t param)
 {
   if (LCDML.FUNC_setup())
@@ -8051,6 +8073,7 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     ui.setCursor(0, 3);
     ui.addEditor("SLOT", 0, NUM_CUSTOM_SAMPLES - 1,
       [](Editor* editor) -> int16_t {
+         noisemaker_needs_refresh = true;
         return noisemaker_custom_slot;
       },
       [](Editor* editor, int16_t value) {
@@ -8065,7 +8088,6 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
         setModeColor(editor->select_id);
         display.printf("C%02d", noisemaker_custom_slot + 1);
         print_nm_style();
-        print_empty_spaces(2, 1);
       }
     );
 
@@ -8083,7 +8105,7 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
     addNoiseMakerParameterEditors(nm_params);
     print_noisemaker_synth_note();
     nm_print_note_text();
-
+   
     if (nm_params.category == NM_SYNTH)
       print_noisemaker_synth_wave();
   }
@@ -8091,7 +8113,7 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
   if (LCDML.FUNC_loop())
   {
     ui.handle_input();
-
+    draw_nm_checkfreeslot();
     // If category changed → refresh UI
     if (noisemaker_needs_refresh) {
 
@@ -8128,10 +8150,12 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
       ui.setCursor(0, 3);
       ui.addEditor("SLOT", 0, NUM_CUSTOM_SAMPLES - 1,
         [](Editor* editor) -> int16_t {
+           draw_nm_checkfreeslot();
           return noisemaker_custom_slot;
         },
         [](Editor* editor, int16_t value) {
           noisemaker_custom_slot = value;
+          
           drawNoiseMakerWaveform(false);
         },
         [](Editor* editor, bool refresh) {
@@ -8142,7 +8166,6 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
           setModeColor(editor->select_id);
           display.printf("C%02d", noisemaker_custom_slot + 1);
           print_nm_style();
-          print_empty_spaces(2, 1);
         }
       );
 
@@ -8162,6 +8185,8 @@ FLASHMEM void UI_func_noisemaker(uint8_t param)
       draw_nm_emulation_mode_button();
       draw_nm_monostereo();
       draw_nm_reverb_OffOn();
+      draw_nm_checkfreeslot();
+
       noisemaker_needs_refresh = false;
     }
   }

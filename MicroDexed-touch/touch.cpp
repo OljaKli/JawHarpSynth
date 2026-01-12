@@ -1231,6 +1231,7 @@ FLASHMEM void draw_nm_monostereo()
     TouchButton::drawButton(GRID.X[5], GRID.Y[3], "STEREO", "SAMPLE", TouchButton::BUTTON_ACTIVE);
 }
 
+extern void draw_nm_checkfreeslot();
 
 FLASHMEM void draw_nm_reverb_OffOn()
 {
@@ -1330,6 +1331,7 @@ FLASHMEM void handle_touchscreen_noisemaker() {
       display.flushSysEx();
     }
     saveNoiseToCustomSlot();
+    draw_nm_checkfreeslot();
     delay(60);
     TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SAVE", "SLOT", TouchButton::BUTTON_ACTIVE);
   }
