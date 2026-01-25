@@ -1189,6 +1189,15 @@ FLASHMEM void handle_touchscreen_drums()
   }
 #endif
 
+  // Handles the 'EDIT V. GROUPS' button
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
+  {
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "EDIT V.", "GROUPS", TouchButton::BUTTON_RED);
+    delay(60);
+    LCDML.FUNC_setGBAToLastFunc();
+    LCDML.OTHER_jumpToFunc(UI_func_voice_group_config);
+  }
+
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums) && activeSample == current_played_pitched_sample && seq.running)
     print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1, 1, NULL); // update pitched sample info when in drums page and played sample is on screen
 

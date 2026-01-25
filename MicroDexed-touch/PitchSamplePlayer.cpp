@@ -16,6 +16,8 @@ PitchSamplePlayer::PitchSamplePlayer() :
     playing = false;
     interpolationEnabled = true;
     loopingEnabled = false;
+    voiceGroup = 0;
+    playStartTime = 0;
 }
 
 FLASHMEM void PitchSamplePlayer::play(int16_t* data, uint32_t numFrames, uint8_t channels) {
@@ -26,6 +28,7 @@ FLASHMEM void PitchSamplePlayer::play(int16_t* data, uint32_t numFrames, uint8_t
     numChannels = channels;
     phase = 0.0f;
     playing = true;
+    playStartTime = millis();
 }
 
 FLASHMEM void PitchSamplePlayer::playRaw(int16_t* data, uint32_t totalLength, uint8_t channels) {
@@ -36,6 +39,7 @@ FLASHMEM void PitchSamplePlayer::playRaw(int16_t* data, uint32_t totalLength, ui
     totalFrames = (channels > 0) ? (totalLength / channels) : totalLength;
     phase = 0.0f;
     playing = true;
+    playStartTime = millis();
 }
 
 FLASHMEM void PitchSamplePlayer::stop() {
@@ -59,6 +63,18 @@ FLASHMEM bool PitchSamplePlayer::enableInterpolation(bool enable) {
         setPlaybackRate(1.0f); // force normal speed when disabled
     }
     return interpolationEnabled;
+}
+
+FLASHMEM void PitchSamplePlayer::setVoiceGroup(uint8_t group) {
+    voiceGroup = group;
+}
+
+FLASHMEM uint8_t PitchSamplePlayer::getVoiceGroup() const {
+    return voiceGroup;
+}
+
+FLASHMEM uint32_t PitchSamplePlayer::getPlayStartTime() const {
+    return playStartTime;
 }
 
 FLASHMEM void PitchSamplePlayer::setLoopType(loop_type t) {

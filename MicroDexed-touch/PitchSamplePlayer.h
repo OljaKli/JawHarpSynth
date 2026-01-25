@@ -49,6 +49,11 @@ public:
     // Enable or disable looping
     void setLooping(bool enable);
 
+    // Alt group helpers (used by voice allocation logic)
+    void setVoiceGroup(uint8_t group);
+    uint8_t getVoiceGroup() const;
+    uint32_t getPlayStartTime() const;
+
     // This is the main audio processing function called by the audio library
     virtual void update(void);
 
@@ -72,6 +77,10 @@ private:
     bool playing;
     bool interpolationEnabled;
     bool loopingEnabled;
+
+    // Voice allocation metadata (non-ISR critical)
+    uint8_t voiceGroup;
+    uint32_t playStartTime;
 };
 
 #endif

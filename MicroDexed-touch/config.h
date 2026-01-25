@@ -158,7 +158,9 @@
 #endif
 
 // NUMBER OF PARALLEL SAMPLEDRUMS
-#define NUM_DRUMS 8 // set 0 to disable Drums
+#define NUM_DRUMS 20  // set 0 to disable Drums
+#define NUM_VOICE_GROUPS 16 // Number of Voice Groups
+#define DEFAULT_DRUM_VOICES 8  // stable default
 
 // DEFAULT MIDI CHANNEL FOR DRUMSAMPLER
 #define DEFAULT_DRUM_MIDI_CHANNEL 10
@@ -1020,6 +1022,19 @@ typedef struct multisample_s
   uint8_t sound_intensity;
   uint8_t midi_channel;
 } multisample_t;
+
+// Voice group allocation strategies
+typedef enum {
+  ALLOCATION_ROUND_ROBIN = 0,          // Cycle fairly through voices
+  ALLOCATION_FIRST_NOTE_PRIORITY = 1,  // Preserve early notes, kill newest
+  ALLOCATION_LAST_NOTE_PRIORITY = 2    // Preserve recent notes, kill oldest
+} allocation_strategy_t;
+
+// Voice group configuration (per-group voice budget and strategy)
+typedef struct {
+  uint8_t max_voices;                  // 0 = disabled, 1-NUM_DRUMS = dedicated budget
+  allocation_strategy_t strategy;      // Voice stealing algorithm
+} voice_group_config_t;
 
 typedef struct multisample_zone_s
 {
