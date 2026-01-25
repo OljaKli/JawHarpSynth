@@ -896,19 +896,6 @@ typedef struct fx_s
   uint8_t reverb_sidechain_send;
   uint8_t delay1_sidechain_send;
   uint8_t delay2_sidechain_send;
-  #if defined BITCRUSH
-  uint8_t bitcrush_drive;            // 0-255 maps to 0.0-1.0
-  uint8_t bitcrush_output_gain;      // 0-255 maps to 0.0-2.0
-  uint8_t bitcrush_dexed1_input;     // 0-255 maps to 0.0-1.0 - DEXED 1 input level
-  uint8_t bitcrush_dexed2_input;     // 0-255 maps to 0.0-1.0 - DEXED 2 input level
-  uint8_t bitcrush_dexed3_input;     // 0-255 maps to 0.0-1.0 - DEXED 3 input level
-  uint8_t bitcrush_dexed4_input;     // 0-255 maps to 0.0-1.0 - DEXED 4 input level
-  uint8_t bitcrush_samples_input_r;   
-  uint8_t bitcrush_samples_input_l;    
-  uint8_t bitcrush_delay1_send;      // 0-255 maps to 0.0-1.0 - Send to delay 1
-  uint8_t bitcrush_delay2_send;      // 0-255 maps to 0.0-1.0 - Send to delay 2
-  uint8_t bitcrush_reverb_send;      // 0-255 maps to 0.0-1.0 - Send to reverb
-#endif
 } fx_t;
 
 typedef struct epiano_s

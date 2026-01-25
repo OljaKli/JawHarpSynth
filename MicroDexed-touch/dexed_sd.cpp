@@ -1460,10 +1460,6 @@ FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
 /******************************************************************************
    SD FX
  ******************************************************************************/
-#ifdef BITCRUSH
-extern void update_bitcrush_parameters();
-#endif
-
 
 FLASHMEM bool load_sd_fx_json(uint8_t number)
 {
@@ -1545,25 +1541,6 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
         configuration.fx.delay1_sidechain_send = data_json["delay1_sidechain_send"];
         configuration.fx.delay2_sidechain_send = data_json["delay2_sidechain_send"];
         configuration.fx.reverb_sidechain_send = data_json["reverb_sidechain_send"];
-
-#ifdef BITCRUSH
-        configuration.fx.bitcrush_drive = data_json["bitcrush_drive"];
-        configuration.fx.bitcrush_output_gain = data_json["bitcrush_output_gain"];
-        configuration.fx.bitcrush_dexed1_input = data_json["bitcrush_dexed1_input"];
-        configuration.fx.bitcrush_dexed2_input = data_json["bitcrush_dexed2_input"];
-        configuration.fx.bitcrush_dexed3_input = data_json["bitcrush_dexed3_input"];
-        configuration.fx.bitcrush_dexed4_input = data_json["bitcrush_dexed4_input"];
-        configuration.fx.bitcrush_samples_input_r = data_json["bitcrush_samples_input_r"];
-        configuration.fx.bitcrush_samples_input_l = data_json["bitcrush_samples_input_l"];
-
-        configuration.fx.bitcrush_delay1_send = data_json["bitcrush_delay1_send"];
-        configuration.fx.bitcrush_delay2_send = data_json["bitcrush_delay2_send"];
-        configuration.fx.bitcrush_reverb_send = data_json["bitcrush_reverb_send"];
-#endif
-
-#ifdef BITCRUSH
-        update_bitcrush_parameters();
-#endif
 
         check_configuration_fx();
         set_fx_params();
@@ -1654,21 +1631,6 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
       data_json["delay1_sidechain_send"] = configuration.fx.delay1_sidechain_send;
       data_json["delay2_sidechain_send"] = configuration.fx.delay2_sidechain_send;
       data_json["reverb_sidechain_send"] = configuration.fx.reverb_sidechain_send;
-
-#ifdef BITCRUSH
-      data_json["bitcrush_drive"] = configuration.fx.bitcrush_drive;
-      data_json["bitcrush_output_gain"] = configuration.fx.bitcrush_output_gain;
-      data_json["bitcrush_dexed1_input"] = configuration.fx.bitcrush_dexed1_input;
-      data_json["bitcrush_dexed2_input"] = configuration.fx.bitcrush_dexed2_input;
-      data_json["bitcrush_dexed3_input"] = configuration.fx.bitcrush_dexed3_input;
-      data_json["bitcrush_dexed4_input"] = configuration.fx.bitcrush_dexed4_input;
-      data_json["bitcrush_samples_input_r"] = configuration.fx.bitcrush_samples_input_r;
-      data_json["bitcrush_samples_input_l"] = configuration.fx.bitcrush_samples_input_l;
-      data_json["bitcrush_delay1_send"] = configuration.fx.bitcrush_delay1_send;
-      data_json["bitcrush_delay2_send"] = configuration.fx.bitcrush_delay2_send;
-      data_json["bitcrush_reverb_send"] = configuration.fx.bitcrush_reverb_send;
-#endif
-
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));

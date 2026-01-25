@@ -25,11 +25,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#if defined BITCRUSH
-#define _LCDML_DISP_cnt 72
-#else
 #define _LCDML_DISP_cnt 71
-#endif
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1200  
@@ -89,9 +85,6 @@ void UI_func_dexed_controllers(uint8_t param);
 void UI_func_dexed_setup(uint8_t param);
 void UI_func_information(uint8_t param);
 void UI_func_cv_page(uint8_t param);
-
-void UI_func_bitcrush(uint8_t param);
-
 void UI_func_chord_arranger(uint8_t param);
 void UI_func_noisemaker(uint8_t param);
 void UI_func_master_effects(uint8_t param);

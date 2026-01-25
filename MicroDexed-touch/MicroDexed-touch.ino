@@ -79,11 +79,6 @@ using namespace TeensyTimerTool;
 #include "effect_mono_stereo.h"
 #include "effect_platervbstereo.h"
 #include "effect_gate.h"
-
-#if defined BITCRUSH
-#include "effect_bitcrush.h"
-#endif
-
 #include "template_mixer.hpp"
 #include "drums.h"
 #include "sequencer.h"
@@ -168,11 +163,6 @@ extern Adafruit_FT6206 touch;
 
 // Editor operations
 int menuhelper_previous_val;
-
-#if defined BITCRUSH
-AudioEffectBitcrush    bitcrush_effect;
-AudioMixer<8> bitcrush_mixer;
-#endif
 
 AudioMultiBandCompressor MultiBandCompressor;
 Realtime_Scope scope;
@@ -497,11 +487,6 @@ const AudioConnection patchCord[] = {
 
 #endif
 
-#ifdef BITCRUSH
-          {bitcrush_effect, 0, reverb_mixer_r, REVERB_MIX_CH_BITCRUSH},
-          {bitcrush_effect, 0, reverb_mixer_l, REVERB_MIX_CH_BITCRUSH},
-#endif
-
          {drum_mixer_r, 0, master_mixer_r, MASTER_MIX_CH_DRUMS},
          {drum_mixer_l, 0, master_mixer_l, MASTER_MIX_CH_DRUMS},
          {drum_mixer_r, 0, drum_mixer_peak_r, 0},
@@ -663,14 +648,6 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
 
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_r, 0, master_mixer_r, MASTER_MIX_CH_SIDECHAIN));
     dynamicConnections.emplace_back(new AudioConnection(fade_sidechain_l, 0, master_mixer_l, MASTER_MIX_CH_SIDECHAIN));
-
-#ifdef BITCRUSH
-    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, master_mixer_r, MASTER_MIX_CH_BITCRUSH));
-    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, master_mixer_l, MASTER_MIX_CH_BITCRUSH));
-
-    dynamicConnections.emplace_back(new AudioConnection(bitcrush_mixer, 0, bitcrush_effect, 0));
-#endif
-
   }
   else
     if (instance_id == 1)
@@ -682,15 +659,6 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
       else
         if (instance_id == 3)
           dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, microdexed_peak_3, 0));
-#endif
-
-#ifdef BITCRUSH
-  dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, bitcrush_mixer, instance_id));
-  if (instance_id == 0)
-  {
-    dynamicConnections.emplace_back(new AudioConnection(drum_mixer_r, 0, bitcrush_mixer, 4));
-    dynamicConnections.emplace_back(new AudioConnection(drum_mixer_l, 0, bitcrush_mixer, 5));
-  }
 #endif
 
   dynamicConnections.emplace_back(new AudioConnection(*MicroDexed[instance_id], 0, *global_delay_in_mixer[0], instance_id));
@@ -784,12 +752,6 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
     dynamicConnections.emplace_back(new AudioConnection(granular_filter_l, 0, *global_delay_in_mixer[0], 18));
     dynamicConnections.emplace_back(new AudioConnection(granular_filter_r, 0, *global_delay_in_mixer[1], 18));
 #endif
-#ifdef BITCRUSH
-    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, *global_delay_in_mixer[0], 19));
-    dynamicConnections.emplace_back(new AudioConnection(bitcrush_effect, 0, *global_delay_in_mixer[1], 19));
-#endif
-
-
   }
 
 #ifdef DEBUG
@@ -2974,8 +2936,7 @@ void loop()
     {
       if (Drum[d]->isPlaying() != display_buffer_samples[d])
       {
-        //  setCursor_textGrid_small(24 + d * 2, 2);
-        display.setCursor(0 + (d * 2 * CHAR_width_small), 18);
+        display.setCursor(d * 2 * CHAR_width_small, 18);
         if (Drum[d]->isPlaying())
         {
           display.setTextColor(GREEN, COLOR_BACKGROUND);
