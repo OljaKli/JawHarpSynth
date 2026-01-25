@@ -56,6 +56,7 @@ typedef struct drum_config_s
   uint8_t env_decay;
   uint8_t env_sustain;
   uint8_t env_release;
+  uint8_t voice_group;   // 0 = shared pool, 1-15 = group voice stealing
 } drum_config_t;
 
 struct CustomSample {

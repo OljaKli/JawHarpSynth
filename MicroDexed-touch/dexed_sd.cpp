@@ -44,6 +44,8 @@ extern void set_drums_volume(float vol);
 extern drum_config_t drum_config[];
 extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
+extern voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+extern void init_default_sample_voice_group_config();
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -3281,6 +3283,13 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
             drumClass = DRUM_POLY;
           }
           drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = drumClass;
+          
+          // Load voice_group if present (default to 0)
+          if (data_json[i].containsKey("voice_group")) {
+            drum_config[i + NUM_STATIC_PITCHED_SAMPLES].voice_group = data_json[i]["voice_group"];
+          } else {
+            drum_config[i + NUM_STATIC_PITCHED_SAMPLES].voice_group = 0;  // Default to shared pool
+          }
         }
         load_custom_samples_to_psram();
 
@@ -3434,6 +3443,7 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
         data_json[json_index]["end"] = customSamples[i].end;
         data_json[json_index]["loop"] = customSamples[i].loopType;
         data_json[json_index]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
+        data_json[json_index]["voice_group"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].voice_group;
 
         json_index++; // Only increment when we add an entry
       }
@@ -4345,6 +4355,13 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["drum_midi_channel"] = drum_midi_channel;
       data_json["slices_midi_channel"] = slices_midi_channel;
 
+      // Save voice group configuration
+      for (uint8_t i = 0; i < NUM_DRUMS; i++)
+      {
+        data_json["sample_group_config"][i]["max_voices"] = sample_voice_group_config[i].max_voices;
+        data_json["sample_group_config"][i]["strategy"] = sample_voice_group_config[i].strategy;
+      }
+
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
       LOG.println(F("Write JSON data:"));
       serializeJsonPretty(data_json, Serial);
@@ -4686,6 +4703,9 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         LOG.println();
 #endif
 
+        // Reset voice group budgets/strategies before applying performance-specific overrides
+        init_default_sample_voice_group_config();
+
         if (bitRead(perf_load_options, perf_seq))
         {
           for (uint8_t i = 0; i < sizeof(seq.track_type); i++)
@@ -4755,6 +4775,36 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           drum_midi_channel = data_json["drum_midi_channel"];
         if (data_json["slices_midi_channel"] > 0) //same as above
           slices_midi_channel = data_json["slices_midi_channel"];
+
+        // Load voice group configuration with validation
+        if (data_json.containsKey("sample_group_config"))
+        {
+          for (uint8_t i = 0; i < NUM_DRUMS; i++)
+          {
+            if (data_json["sample_group_config"][i].containsKey("max_voices"))
+            {
+              uint8_t max_voices = data_json["sample_group_config"][i]["max_voices"];
+              sample_voice_group_config[i].max_voices = constrain(max_voices, 0, NUM_DRUMS);
+            }
+            
+            if (data_json["sample_group_config"][i].containsKey("strategy"))
+            {
+              uint8_t strategy = data_json["sample_group_config"][i]["strategy"];
+              if (strategy <= ALLOCATION_LAST_NOTE_PRIORITY)
+                sample_voice_group_config[i].strategy = (allocation_strategy_t)strategy;
+            }
+          }
+#ifdef DEBUG
+          LOG.println(F("Loaded voice group configuration from performance file"));
+#endif
+        }
+        else
+        {
+          // Legacy file without sample_group_config - keep current/default settings
+#ifdef DEBUG
+          LOG.println(F("Legacy performance file - using default voice group configuration"));
+#endif
+        }
 
         data->LiveSequencer::LiveSeqData::useGridSongMode = data_json["grid_song_mode"];
         data->LiveSequencer::LiveSeqData::isSongMode = data_json["isSongMode"];

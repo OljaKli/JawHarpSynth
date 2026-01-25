@@ -303,6 +303,9 @@ AudioPlaySdResmp* Drum[NUM_DRUMS];
 
 PitchSamplePlayer* Drum[NUM_DRUMS];
 
+// Voice group configuration: per-group voice budgets and allocation strategies
+voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
 #include "effect_delay_ext8.h"
 #endif
@@ -1150,6 +1153,19 @@ FLASHMEM void initMCP4728() {
 extern void updateGranularFilters();
 #endif
 
+// Initialize default voice group configuration
+FLASHMEM void init_default_sample_voice_group_config()
+{
+  for (uint8_t i = 0; i < NUM_DRUMS; i++)
+  {
+    sample_voice_group_config[i].max_voices = 0;                      // Disabled by default
+    sample_voice_group_config[i].strategy = ALLOCATION_ROUND_ROBIN;   // Default strategy
+  }
+  // Group 0: backward-compatible shared pool
+  sample_voice_group_config[0].max_voices = DEFAULT_DRUM_VOICES;// Enable with default number of voices
+  sample_voice_group_config[0].strategy = ALLOCATION_ROUND_ROBIN;
+}
+
 FLASHMEM void setup()
 {
 
@@ -1468,6 +1484,9 @@ FLASHMEM void setup()
   // Initially the flanger effect is off.
   braids_flanger_r.voices(FLANGE_DELAY_PASSTHRU, 0, 0);
   braids_flanger_l.voices(FLANGE_DELAY_PASSTHRU, 0, 0);
+
+  // Initialize voice group configuration with defaults
+  init_default_sample_voice_group_config();
 
   // Setup (PROGMEM) sample drums
   // create dynamic Drum instances
@@ -2956,7 +2975,7 @@ void loop()
       if (Drum[d]->isPlaying() != display_buffer_samples[d])
       {
         //  setCursor_textGrid_small(24 + d * 2, 2);
-        display.setCursor(122 + (d * 2 * CHAR_width_small), 18);
+        display.setCursor(0 + (d * 2 * CHAR_width_small), 18);
         if (Drum[d]->isPlaying())
         {
           display.setTextColor(GREEN, COLOR_BACKGROUND);
@@ -3138,6 +3157,9 @@ void loop()
 #if defined GLOW
     glow();
 #endif
+
+    // Check drum sample release completion: stop players when envelope finishes
+    check_drum_release_completion();
 
     // display.fillRect(10,10,30,30, ColorHSV(1, 0, int(led_bright)));
 
@@ -3364,20 +3386,22 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
 
   if (drum_counter >= NUM_DRUMS)
     drum_counter = 0;
-  uint8_t slot = drum_get_slot(DRUM_POLY);
 
-  if (slot != 99)
+  for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++)
   {
-
-    //drum_type[slot] = DRUM_POLY;
-    Drum[slot]->enableInterpolation(true);
-    for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++)
+    if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high)
     {
-      if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high)
+      const uint8_t zone_voice_group = drum_config[msz[instance][y].psram_entry_number].voice_group;
+      uint8_t slot = drum_get_slot(DRUM_POLY, zone_voice_group);
+      if (slot == 99)
       {
+        return;
+      }
 
-        ts.msp_peak[instance] = (inVelocity * msz[instance][y].vol * msp[instance].sound_intensity) / 900000;
-        float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
+      //drum_type[slot] = DRUM_POLY;
+      Drum[slot]->enableInterpolation(true);
+      ts.msp_peak[instance] = (inVelocity * msz[instance][y].vol * msp[instance].sound_intensity) / 900000;
+      float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
 
         AudioNoInterrupts();
 
@@ -3405,6 +3429,8 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
         global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5);
 
         msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
+
+        Drum[slot]->setVoiceGroup(zone_voice_group);
 
         if (msz[instance][y].loop_type == 0)
           Drum[slot]->setLoopType(loop_type::looptype_none);
@@ -3469,7 +3495,6 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
       }
     }
   }
-}
 #endif
 
 FLASHMEM void learn_key(byte inChannel, byte inNumber)
@@ -3810,7 +3835,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #ifdef COMPILE_FOR_SDCARD
           char temp_name[26];
 #endif
-          uint8_t slot = drum_get_slot(drum_config[d].drum_class);
+          const uint8_t sample_voice_group = drum_config[d].voice_group;
+          uint8_t slot = drum_get_slot(drum_config[d].drum_class, sample_voice_group);
 
           if (slot != 99)
           {
@@ -3832,6 +3858,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
               if ((d >= 0 && d < NUM_DRUMSET_CONFIG - 1) || (d >= 210 && d < 216)) {
 #endif
+                Drum[slot]->setVoiceGroup(sample_voice_group);
                 Drum[slot]->enableInterpolation(true);
                 Drum[slot]->setPlaybackRate(get_sample_pitch(d));
                 Drum[slot]->setLoopType(loop_type::looptype_none);
@@ -3906,7 +3933,8 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             d = d - num_slices[0];
           }
 
-          uint8_t slot = drum_get_slot(drum_config[d].drum_class);
+          const uint8_t sample_voice_group = drum_config[selected_slice_sample[s]].voice_group;
+          uint8_t slot = drum_get_slot(drum_config[d].drum_class, sample_voice_group);
 
           if (slot != 99 && selected_slice_sample[s] != 99)
           {
@@ -3933,6 +3961,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
             }
 #endif
 
+            Drum[slot]->setVoiceGroup(sample_voice_group);
             global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(selected_slice_sample[s]) / 5);
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(selected_slice_sample[s]) / 5);
 
@@ -4060,62 +4089,152 @@ FLASHMEM void stop_all_drum_slots()
   delay(30);
 }
 
-uint8_t drum_get_slot(uint8_t dt)
+// Check drum sample release completion and free voices when envelope finishes
+FLASHMEM void check_drum_release_completion()
 {
-  bool found = false;
+#if defined(DRUMS_FILTERS)
+  for (uint8_t i = 0; i < NUM_DRUMS; i++) {
+    if (Drum[i]->isPlaying() && !sample_envelope[i]->isActive()) {
+      Drum[i]->stop();  // Release phase complete, free voice for reuse
+    }
+  }
+#endif
+}
 
+// Voice group helper functions
+
+// Count active voices in a specific voice group
+FLASHMEM uint8_t count_active_voices_in_group(uint8_t voiceGroup)
+{
+  uint8_t count = 0;
   for (uint8_t i = 0; i < NUM_DRUMS; i++)
   {
-    if (Drum[i]->isPlaying() == false && found == false)
+    if (Drum[i]->isPlaying() && Drum[i]->getVoiceGroup() == voiceGroup)
     {
-      //drum_type[i] = DRUM_NONE;
+      count++;
+    }
+  }
+  return count;
+}
 
-      Drum[i]->enableInterpolation(false);
-      Drum[i]->setPlaybackRate(1.0);
+// Find voice with oldest playStartTime in voice group
+FLASHMEM int8_t find_oldest_voice_in_group(uint8_t voiceGroup)
+{
+  int8_t oldest_slot = -1;
+  uint32_t oldest_time = 0xFFFFFFFF;
+  
+  for (uint8_t i = 0; i < NUM_DRUMS; i++)
+  {
+    if (Drum[i]->isPlaying() && Drum[i]->getVoiceGroup() == voiceGroup)
+    {
+      uint32_t play_time = Drum[i]->getPlayStartTime();
+      if (play_time < oldest_time)
+      {
+        oldest_time = play_time;
+        oldest_slot = i;
+      }
+    }
+  }
+  return oldest_slot;
+}
 
-      // Drum[i]->setLoopType(loop_type::looptype_none);
+// Find voice with newest playStartTime in voice group
+FLASHMEM int8_t find_newest_voice_in_group(uint8_t voiceGroup)
+{
+  int8_t newest_slot = -1;
+  uint32_t newest_time = 0;
+  
+  for (uint8_t i = 0; i < NUM_DRUMS; i++)
+  {
+    if (Drum[i]->isPlaying() && Drum[i]->getVoiceGroup() == voiceGroup)
+    {
+      uint32_t play_time = Drum[i]->getPlayStartTime();
+      if (play_time > newest_time)
+      {
+        newest_time = play_time;
+        newest_slot = i;
+      }
+    }
+  }
+  return newest_slot;
+}
 
-        // sample_envelope[i]->noteOff();
-        // sample_envelope[i + NUM_DRUMS]->noteOff();
+// Apply allocation strategy to find voice to steal
+FLASHMEM int8_t apply_strategy(uint8_t voiceGroup, allocation_strategy_t strategy)
+{
+  switch (strategy)
+  {
+    case ALLOCATION_FIRST_NOTE_PRIORITY:
+      return find_newest_voice_in_group(voiceGroup);  // Kill newest to preserve first
+    
+    case ALLOCATION_LAST_NOTE_PRIORITY:
+      return find_oldest_voice_in_group(voiceGroup);  // Kill oldest to preserve last
+    
+    case ALLOCATION_ROUND_ROBIN:
+    default:
+      return -1;  // Round-robin handled separately
+  }
+}
 
-      found = true;
-      return (i);
+uint8_t drum_get_slot(uint8_t dt, uint8_t requiredVoiceGroup)
+{
+  (void)dt; // dt retained for future class-based policies
+  
+  // Check if voice group is disabled
+  if (sample_voice_group_config[requiredVoiceGroup].max_voices == 0)
+  {
+    return 99; // No voices allocated to this group
+  }
+
+  // 1. Count active voices in this voice group
+  uint8_t active_voices = count_active_voices_in_group(requiredVoiceGroup);
+  
+  // 2. If budget not exceeded, try to find any idle voice
+  if (active_voices < sample_voice_group_config[requiredVoiceGroup].max_voices)
+  {
+    for (uint8_t i = 0; i < NUM_DRUMS; i++)
+    {
+      if (!Drum[i]->isPlaying())
+      {
+        Drum[i]->enableInterpolation(false);
+        Drum[i]->setPlaybackRate(1.0);
+        return i; // Caller will call setVoiceGroup() to assign to requiredVoiceGroup
+      }
     }
   }
 
-  if (found == false && drum_counter < NUM_DRUMS)
+  // 3. Budget exceeded or no idle voices - apply strategy to find voice to steal
+  allocation_strategy_t strategy = sample_voice_group_config[requiredVoiceGroup].strategy;
+  
+  if (strategy == ALLOCATION_ROUND_ROBIN)
   {
-
-    // sample_envelope[drum_counter]->noteOff();
-    // sample_envelope[drum_counter + NUM_DRUMS]->noteOff();
-
-    Drum[drum_counter]->stop();
-
-    Drum[drum_counter]->enableInterpolation(false);
-    Drum[drum_counter]->setPlaybackRate(1.0);
-
-    // Drum[drum_counter]->setLoopType(loop_type::looptype_none);
-
-    //drum_type[drum_counter] = DRUM_NONE;
-    //drum_type[drum_counter % NUM_DRUMS] = dt;
-
-    // #ifdef DEBUG
-    //     LOG.print(F("Stopping sample "));
-    //     LOG.print(drum_counter);
-    //     LOG.print(F(" type "));
-    //     LOG.println(dt);
-    // #endif
-//delay(2);
-    drum_counter++;
-    return (drum_counter - 1 % NUM_DRUMS);
+    // Find any playing voice in this voice group and steal it
+    for (uint8_t i = 0; i < NUM_DRUMS; i++)
+    {
+      if (Drum[i]->isPlaying() && Drum[i]->getVoiceGroup() == requiredVoiceGroup)
+      {
+        Drum[i]->stop();
+        Drum[i]->enableInterpolation(false);
+        Drum[i]->setPlaybackRate(1.0);
+        return i;
+      }
+    }
   }
-  //  #ifdef DEBUG
-  //    LOG.print(F("Using next free Drum slot "));
-  //    LOG.println(drum_counter % NUM_DRUMS);
-  //  #endif
+  else
+  {
+    // Use timestamp-based strategy (oldest or newest)
+    int8_t slot = apply_strategy(requiredVoiceGroup, strategy);
+    if (slot >= 0)
+    {
+      Drum[slot]->stop();
+      Drum[slot]->enableInterpolation(false);
+      Drum[slot]->setPlaybackRate(1.0);
+      return slot;
+    }
+  }
 
-  // do not play the sample
-  return (99);
+  // 4. Fallback: no voices available
+  return 99;
 }
 
 void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
@@ -4163,7 +4282,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
     if (device == 5 || msp[j].midi_channel == MIDI_CHANNEL_OMNI || msp[j].midi_channel == inChannel)
     {
       // if (device == 5 || msp[j].midi_channel == inChannel) {
-      for (uint8_t i = 0; i < 8; i++)
+      for (uint8_t i = 0; i < NUM_DRUMS; i++)  // Fixed: was hardcoded to 8
       {
         if ((inNumber == note_buffer_msp[i] && note_buffer_msp[i] > 1 && msp_playmode_sample_slot[i] != 0 && seq.ticks == msp_playmode_sample_slot[i]) ||
           (inNumber == note_buffer_msp[i] && note_buffer_msp[i] > 1))

@@ -583,52 +583,52 @@ LCDML_add(32, LCDML_0_10, 12, "Clear Song", UI_func_clear_song);
 LCDML_add(33, LCDML_0_10, 13, "Clear Chains", UI_func_clear_song_chains);
 LCDML_add(34, LCDML_0_10, 14, "Clear Patterns", UI_func_clear_patterns);
 LCDML_add(35, LCDML_0_10, 15, "Settings", UI_func_seq_settings);
-LCDML_add(36, LCDML_0, 11, "Mixer", UI_func_mixer);
-LCDML_add(37, LCDML_0, 12, "Slice Editor", UI_func_slice_editor);
-LCDML_add(38, LCDML_0, 13, "Audio/SMP Record", UI_func_recorder);
-LCDML_add(39, LCDML_0, 14, "SMF/MIDI Player", UI_func_midiplayer);
-LCDML_add(40, LCDML_0, 15, "Load/Save", NULL);
-LCDML_add(41, LCDML_0_15, 1, "Load Perf.", UI_func_load_performance);
-LCDML_add(42, LCDML_0_15, 2, "Save Perf.", UI_func_save_performance);
-LCDML_add(43, LCDML_0_15, 3, "Name Perf.", UI_func_set_performance_name);
-LCDML_add(44, LCDML_0_15, 4, "Name Voice", UI_func_set_voice_name);
-LCDML_add(45, LCDML_0_15, 5, "Name Multisample", UI_func_set_multisample_name);
-LCDML_add(46, LCDML_0_15, 6, "Name Braids", UI_func_set_braids_name);
-LCDML_add(47, LCDML_0_15, 7, "MIDI", NULL);
-LCDML_add(48, LCDML_0_15_7, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(49, LCDML_0_15_7, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
-LCDML_add(50, LCDML_0_15_7, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
-LCDML_add(51, LCDML_0, 16, "File Manager", UI_func_file_manager);
-LCDML_add(52, LCDML_0, 17, "System", NULL);
-LCDML_add(53, LCDML_0_17, 1, "Stereo/Mono", UI_func_stereo_mono);
-LCDML_add(54, LCDML_0_17, 2, "MIDI channels", UI_func_midi_channels);
-LCDML_add(55, LCDML_0_17, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
-LCDML_add(56, LCDML_0_17, 4, "MIDI Mapping", UI_func_custom_mappings);
-LCDML_add(57, LCDML_0_17, 5, "Favorites", UI_func_favorites);
-LCDML_add(58, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
-LCDML_add(59, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(60, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
-LCDML_add(61, LCDML_0, 18, "Extras/Test", NULL);
-LCDML_add(62, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
-LCDML_add(63, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(64, LCDML_0_18, 3, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(65, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(66, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
-
+LCDML_add(36, LCDML_0_10, 16, "Samp. Voice Alloc.", UI_func_voice_group_config);
+LCDML_add(37, LCDML_0, 11, "Mixer", UI_func_mixer);
+LCDML_add(38, LCDML_0, 12, "Slice Editor", UI_func_slice_editor);
+LCDML_add(39, LCDML_0, 13, "Audio/SMP Record", UI_func_recorder);
+LCDML_add(40, LCDML_0, 14, "SMF/MIDI Player", UI_func_midiplayer);
+LCDML_add(41, LCDML_0, 15, "Load/Save", NULL);
+LCDML_add(42, LCDML_0_15, 1, "Load Perf.", UI_func_load_performance);
+LCDML_add(43, LCDML_0_15, 2, "Save Perf.", UI_func_save_performance);
+LCDML_add(44, LCDML_0_15, 3, "Name Perf.", UI_func_set_performance_name);
+LCDML_add(45, LCDML_0_15, 4, "Name Voice", UI_func_set_voice_name);
+LCDML_add(46, LCDML_0_15, 5, "Name Multisample", UI_func_set_multisample_name);
+LCDML_add(47, LCDML_0_15, 6, "Name Braids", UI_func_set_braids_name);
+LCDML_add(48, LCDML_0_15, 7, "MIDI", NULL);
+LCDML_add(49, LCDML_0_15_7, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
+LCDML_add(50, LCDML_0_15_7, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
+LCDML_add(51, LCDML_0_15_7, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
+LCDML_add(52, LCDML_0, 16, "File Manager", UI_func_file_manager);
+LCDML_add(53, LCDML_0, 17, "System", NULL);
+LCDML_add(54, LCDML_0_17, 1, "Stereo/Mono", UI_func_stereo_mono);
+LCDML_add(55, LCDML_0_17, 2, "MIDI channels", UI_func_midi_channels);
+LCDML_add(56, LCDML_0_17, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
+LCDML_add(57, LCDML_0_17, 4, "MIDI Mapping", UI_func_custom_mappings);
+LCDML_add(58, LCDML_0_17, 5, "Favorites", UI_func_favorites);
+LCDML_add(59, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
+LCDML_add(60, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
+LCDML_add(61, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
+LCDML_add(62, LCDML_0, 18, "Extras/Test", NULL);
+LCDML_add(63, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
+LCDML_add(65, LCDML_0_18, 3, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(66, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(67, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
 
 //LCDML_add(67, LCDML_0, 19, "D50", UI_func_d50_synth);
 
 #if defined BITCRUSH
-LCDML_add(67, LCDML_0, 19, "Bitcrusher Test", UI_func_bitcrush);
-LCDML_add(68, LCDML_0, 20, "Info", UI_func_information);
-LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(70, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(71, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(68, LCDML_0, 19, "Bitcrusher Test", UI_func_bitcrush);
+LCDML_add(69, LCDML_0, 20, "Info", UI_func_information);
+LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(72, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 #else
-LCDML_add(67, LCDML_0, 19, "Info", UI_func_information);
-LCDML_addAdvanced(68, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(69, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(70, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(68, LCDML_0, 19, "Info", UI_func_information);
+LCDML_addAdvanced(69, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 #endif
 
 
@@ -6932,6 +6932,8 @@ FLASHMEM void addSampleParameterEditor_uint8_t(const char* name, int16_t limit_m
     renderer);
 }
 
+extern voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+
 FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr, void (* const renderer)(Editor* param, bool refresh) = NULL)
 {
   ui.addCustomEditor(
@@ -7256,6 +7258,9 @@ void _draw_drum_page_dynamic_touch_buttons()
     TouchButton::drawButton(GRID.X[3], GRID.Y[5], "FADE", "OUT", TouchButton::BUTTON_NORMAL);
     TouchButton::drawButton(GRID.X[4], GRID.Y[5], "SAVE", "SAMPLE", TouchButton::BUTTON_NORMAL);
   }
+  
+  // Always show the voice allocation button
+  TouchButton::drawButton(GRID.X[5], GRID.Y[5], "EDIT V.", "GROUPS", TouchButton::BUTTON_ACTIVE);
 }
 
 FLASHMEM void drum_page_drawButtonsOnStateChange() {
@@ -7277,6 +7282,47 @@ FLASHMEM void drum_page_drawButtonsOnStateChange() {
 }
 #endif
 
+// ===== RAM optimization: Static callbacks for UI_func_drums =====
+// Voice group renderer callback for drum editor (FLASHMEM)
+static FLASHMEM void voice_group_render_in_drums(Editor* param, bool refresh) {
+  uint8_t* ptr = (uint8_t*)((uint8_t*)param->value - (uint8_t*)&drum_config[0] + (uint8_t*)&drum_config[activeSample]);
+  uint8_t group = *ptr;
+  
+  // Show value
+  setCursor_textGrid_small(param->x, param->y);
+  setModeColor(param->select_id);
+  display.printf("%2d", group);
+  
+  // Show warning if group has no voices
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  if (sample_voice_group_config[group].max_voices == 0) {
+    display.print(F(" (MUTE!)"));
+  } else {
+    display.printf(" (%2dV)       ", sample_voice_group_config[group].max_voices);
+  }
+}
+
+// DRM MAIN VOLUME callbacks (FLASHMEM)
+static FLASHMEM int16_t drm_volume_getter(Editor* editor) {
+  return round(mapfloat(seq.drums_volume, 0.0, VOL_MAX_FLOAT, 0., 100.));
+}
+
+static FLASHMEM void drm_volume_setter(Editor* editor, int16_t value) {
+  seq.drums_volume = mapfloat(value, 0., 100., 0.0, VOL_MAX_FLOAT);
+  master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+  master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
+}
+
+// SMART FILTER callbacks (FLASHMEM)
+static FLASHMEM int16_t smart_filter_getter(Editor* editor) {
+  return seq.smartfilter;
+}
+
+static FLASHMEM void smart_filter_setter(Editor* editor, int16_t value) {
+  seq.smartfilter = !seq.smartfilter;
+}
+// ===== End RAM optimization callbacks =====
+
 // Create drum UI.
 // The drum UI needs to be redrawn if activesample changes.
 FLASHMEM void UI_func_drums(uint8_t param)
@@ -7291,7 +7337,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
-      display.setCursor(122 + (d * 2 * CHAR_width_small), 18);
+      display.setCursor(0 + (d * 2 * CHAR_width_small), 18);
       display.print("-");
     }
 
@@ -7443,30 +7489,21 @@ FLASHMEM void UI_func_drums(uint8_t param)
     setCursor_textGrid_small(20, 16);
     display.print("GLOBAL");
 
+    // Voice group assignment per drum sample (0 = shared, 1-15 = groups)
+    // Header in red above the value editor
+    setCursor_textGrid_small(20, 14);
+    display.setTextColor(RED);
+    display.print("VOICE GROUP");
+    ui.setCursor(20, 15);
+    
+    addDrumParameterEditor_uint8_t("", 0, NUM_VOICE_GROUPS - 1, &drum_config[0].voice_group, voice_group_render_in_drums);
+
     ui.setCursor(20, 17);
-    ui.addEditor((const char*)F("DRM MAIN VOLUME"), 0, 100,
-      [](Editor* editor) -> int16_t
-      {
-        return round(mapfloat(seq.drums_volume, 0.0, VOL_MAX_FLOAT, 0., 100.));
-      },
-      [](Editor* editor, int16_t value)
-      {
-        seq.drums_volume = mapfloat(value, 0., 100., 0.0, VOL_MAX_FLOAT);
-        master_mixer_r.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
-        master_mixer_l.gain(MASTER_MIX_CH_DRUMS, volume_transform(seq.drums_volume));
-      });
+    ui.addEditor((const char*)F("DRM MAIN VOLUME"), 0, 100, drm_volume_getter, drm_volume_setter);
     ui.addEditor((const char*)F("DRM MIDI CHANNEL"), 0, 18, &drum_midi_channel, NULL, NULL, midi_channel_renderer);
 
     ui.setCursor(20, 19);
-    ui.addEditor((const char*)F("SMART FILTER"), 0, 1,
-      [](Editor* editor) -> int16_t
-      {
-        return seq.smartfilter;
-      },
-      [](Editor* editor, int16_t value)
-      {
-        seq.smartfilter = !seq.smartfilter;
-      });
+    ui.addEditor((const char*)F("SMART FILTER"), 0, 1, smart_filter_getter, smart_filter_setter);
 
     flush_sysex();
 
@@ -7489,6 +7526,184 @@ FLASHMEM void UI_func_drums(uint8_t param)
 
 extern float get_sample_p_offset(uint8_t sample);
 extern void set_sample_pitch(uint8_t sample, float playbackspeed);
+
+// Voice group voices callbacks (FLASHMEM)
+static FLASHMEM int16_t voice_group_voices_get(Editor* editor)
+{
+  uint8_t* ptr = (uint8_t*)editor->value;
+  return *ptr;
+}
+
+static FLASHMEM void voice_group_voices_set(Editor* editor, int16_t value)
+{
+  uint8_t* ptr = (uint8_t*)editor->value;
+  // Calculate available voices (excluding current group)
+  uint8_t group_idx = (ptr - (uint8_t*)&sample_voice_group_config[0].max_voices) / sizeof(voice_group_config_t);
+  
+  // Bounds check: ensure group_idx is valid
+  if (group_idx >= NUM_DRUMS) {
+    DBG_LOG(printf("ERROR: voice_group_voices_set - invalid group_idx %d\n", group_idx));
+    return;  // Silently ignore corrupted pointer
+  }
+  
+  uint8_t used = 0;
+  for (uint8_t g = 0; g < NUM_DRUMS; g++) {
+    if (g != group_idx && sample_voice_group_config[g].max_voices > 0) {
+      used += sample_voice_group_config[g].max_voices;
+    }
+  }
+  uint8_t available = (NUM_DRUMS > used) ? (NUM_DRUMS - used) : 0;
+  *ptr = constrain(value, 0, available);
+}
+
+static FLASHMEM void voice_group_voices_render(Editor* editor, bool refresh)
+{
+  uint8_t* ptr = (uint8_t*)editor->value;
+  uint8_t group_idx = (ptr - (uint8_t*)&sample_voice_group_config[0].max_voices) / sizeof(voice_group_config_t);
+  
+  // Bounds check: ensure group_idx is valid
+  if (group_idx >= NUM_DRUMS) {
+    DBG_LOG(printf("ERROR: voice_group_voices_render - invalid group_idx %d\n", group_idx));
+    return;  // Skip rendering corrupted entry
+  }
+  
+  uint8_t value = *ptr;
+
+  setCursor_textGrid_small(6, 3 + group_idx);
+  setModeColor(editor->select_id);
+  if (value == 0) {
+    display.print(F(" (OFF)  "));
+  } else {
+    display.printf("   %2d   ", value);
+  }
+}
+
+// Helper function for voice group config editors
+FLASHMEM void addVoiceGroupVoicesEditor(uint8_t group_idx)
+{
+  ui.addCustomEditor("", 0, NUM_DRUMS, &sample_voice_group_config[group_idx].max_voices,
+    voice_group_voices_get,
+    voice_group_voices_set,
+    voice_group_voices_render);
+}
+
+// Forward declarations for strategy callbacks used below
+static FLASHMEM int16_t voice_group_strategy_get(Editor* editor);
+static FLASHMEM void    voice_group_strategy_set(Editor* editor, int16_t value);
+static FLASHMEM void    voice_group_strategy_render(Editor* editor, bool refresh);
+
+FLASHMEM void addVoiceGroupStrategyEditor(uint8_t group_idx)
+{
+  ui.addCustomEditor("", 0, ALLOCATION_LAST_NOTE_PRIORITY, &sample_voice_group_config[group_idx].strategy,
+    voice_group_strategy_get,
+    voice_group_strategy_set,
+    voice_group_strategy_render);
+}
+
+// Voice group strategy callbacks (FLASHMEM)
+static FLASHMEM int16_t voice_group_strategy_get(Editor* editor)
+{
+  allocation_strategy_t* ptr = (allocation_strategy_t*)editor->value;
+  return *ptr;
+}
+
+static FLASHMEM void voice_group_strategy_set(Editor* editor, int16_t value)
+{
+  allocation_strategy_t* ptr = (allocation_strategy_t*)editor->value;
+  *ptr = (allocation_strategy_t)value;
+}
+
+static FLASHMEM void voice_group_strategy_render(Editor* editor, bool refresh)
+{
+  allocation_strategy_t* ptr = (allocation_strategy_t*)editor->value;
+  uint8_t group_idx = (ptr - &sample_voice_group_config[0].strategy) / sizeof(voice_group_config_t);
+  
+  // Bounds check: ensure group_idx is valid
+  if (group_idx >= NUM_DRUMS) {
+    DBG_LOG(printf("ERROR: voice_group_strategy_render - invalid group_idx %d\n", group_idx));
+    return;  // Skip rendering corrupted entry
+  }
+
+  setCursor_textGrid_small(17, 3 + group_idx);
+  setModeColor(editor->select_id);
+  switch (*ptr) {
+    case ALLOCATION_ROUND_ROBIN:
+      display.print(F("Round-Robin     "));
+      break;
+    case ALLOCATION_FIRST_NOTE_PRIORITY:
+      display.print(F("First Note Pri. "));
+      break;
+    case ALLOCATION_LAST_NOTE_PRIORITY:
+    default:
+      display.print(F("Last Note Pri.  "));
+      break;
+  }
+}
+
+FLASHMEM void UI_func_voice_group_config(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) {
+    ui.reset();
+    
+    // Draw title with decorative line
+    display.setTextSize(2);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.setCursor(0, 0);
+    display.print(F("SAMPLE VOICE ALLOCATION"));
+    display.setTextSize(1);
+    
+    // Draw column headers with improved spacing and alignment
+    setCursor_textGrid_small(0, 2);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.print(F("GROUP"));
+    setCursor_textGrid_small(7, 2);
+    display.print(F("VOICES"));
+    setCursor_textGrid_small(17, 2);
+    display.print(F("STRATEGY"));
+    
+    // Status bar label with better formatting
+    setCursor_textGrid_small(8, 23);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.print(F("Allocated:"));
+    
+    // Add editors for each voice group
+    for (uint8_t i = 0; i < NUM_VOICE_GROUPS; i++) {
+      ui.setCursor(0, 3 + i);
+      
+      // Group number (non-editable, just display)
+      setCursor_textGrid_small(0, 3 + i);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.printf("%3d", i);
+      
+      // VOICES editor
+      addVoiceGroupVoicesEditor(i);
+      
+      // STRATEGY editor
+      addVoiceGroupStrategyEditor(i);
+    }
+  }
+  
+  if (LCDML.FUNC_loop()) {
+    ui.handle_input();
+    
+    // Update status bar (voices used counter)
+    uint8_t total_voices_used = 0;
+    for (uint8_t i = 0; i < NUM_DRUMS; i++) {
+      if (sample_voice_group_config[i].max_voices > 0) {
+        total_voices_used += sample_voice_group_config[i].max_voices;
+      }
+    }
+    
+    setCursor_textGrid_small(18, 23);
+    display.setTextColor(total_voices_used > NUM_DRUMS ? RED : GREY2, COLOR_BACKGROUND);
+    display.printf("%3d/%d", total_voices_used, NUM_DRUMS);
+  }
+  
+  if (LCDML.FUNC_close()) {
+    ui.clear();
+  }
+}
+
 
 FLASHMEM void pattern_editor_play_current_step(uint8_t step)
 {
@@ -7520,13 +7735,13 @@ FLASHMEM void pattern_editor_play_current_step(uint8_t step)
 }
 
 
+// Static callback for uint8_t auto-update (FLASHMEM)
+static FLASHMEM void autoUpdate_uint8_t_setter(Editor* editor, int16_t val) {
+  *((uint8_t*)editor->value) = val;
+}
+
 FLASHMEM void addAutoUpdateParameterEditor_uint8_t(const char* name, uint8_t minv, uint8_t maxv, uint8_t* value) {
-  ui.addEditor(name, minv, maxv, value,
-    nullptr, // Use default getter
-    [](Editor* editor, int16_t value) {
-      *((uint8_t*)editor->value) = value;
-    }
-  );
+  ui.addEditor(name, minv, maxv, value, nullptr, autoUpdate_uint8_t_setter);
 }
 
 

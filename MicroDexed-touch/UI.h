@@ -26,9 +26,9 @@
 #define _UI_H_
 
 #if defined BITCRUSH
-#define _LCDML_DISP_cnt 70 // max number of menu items (must match)
+#define _LCDML_DISP_cnt 72
 #else
-#define _LCDML_DISP_cnt 69 // max number of menu items (must match)
+#define _LCDML_DISP_cnt 71
 #endif
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
@@ -109,6 +109,7 @@ void UI_func_seq_vel_editor(uint8_t param);
 void UI_func_seq_settings(uint8_t param);
 void UI_func_seq_tracker(uint8_t param);
 void UI_func_drums(uint8_t param);
+void UI_func_voice_group_config(uint8_t param);
 void UI_func_MultiSamplePlay(uint8_t param);
 void UI_func_arpeggio(uint8_t param);
 void UI_func_seq_mute_matrix(uint8_t param);
