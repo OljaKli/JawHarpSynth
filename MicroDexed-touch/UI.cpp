@@ -6557,6 +6557,19 @@ FLASHMEM void print_custom_mapping_drums()
 {
   clear_dexed_instance_icons();
   display.setTextSize(1);
+
+display.setCursor(CHAR_width_small*5, DISPLAY_HEIGHT - CHAR_height_small);
+if (seq.smartfilter)
+{
+  display.setTextColor(RED, COLOR_BACKGROUND);
+  display.print(F("WARNING: SMART FILTER IS ON!"));
+}
+else
+{
+  display.setTextColor(GREEN, COLOR_BACKGROUND);
+  display.print(F("SMART FILTER IS OFF"));
+}
+
   setCursor_textGrid_small(1, 6);
   display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
   display.print(F("SET YOUR MIDI DEVICE TO DRUM CH. "));
@@ -6631,7 +6644,6 @@ FLASHMEM void draw_scrollbar_custom_mappings()
 FLASHMEM void UI_func_custom_mappings(uint8_t param)
 {
   char displayname[8] = { 0, 0, 0, 0, 0, 0, 0 };
-
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_custom_mappings);

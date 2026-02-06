@@ -3601,6 +3601,7 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   //drum played from input selects current drum note if drum screen open
   if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI) {
     const uint8_t sampleNote = midiNoteToSampleNote(inNumber);
+   if ( LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings) )
     selectSample(sampleNote);
   }
 }

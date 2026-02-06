@@ -1397,7 +1397,7 @@ FLASHMEM void handle_touchscreen_mute_matrix()
 #if defined APC
   apc_mute_matrix();
 #endif
-}
+  }
 
 FLASHMEM void handle_touchscreen_arpeggio()
 {
