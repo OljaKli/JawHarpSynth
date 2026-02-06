@@ -6506,8 +6506,6 @@ FLASHMEM void print_custom_mappings()
 
     if (generic_temp_select_menu - 3 == y)
       display.setTextColor(COLOR_SYSTEXT, RED);
-    // else
-    //   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     else if (custom_midi_map[y].in == 0)
       display.setTextColor(GREY2, COLOR_BACKGROUND);
     else if (custom_midi_map[y].type == 1)
@@ -6549,9 +6547,15 @@ FLASHMEM void print_custom_mappings()
   }
 }
 
+FLASHMEM void clear_dexed_instance_icons()
+{
+  display.console = true;
+  display.fillRect(14 * CHAR_width -2, 5, 45, 9, COLOR_BACKGROUND);
+}
+
 FLASHMEM void print_custom_mapping_drums()
 {
-  display.fillRect(14 * CHAR_width + 10, 5, 20, 9, COLOR_BACKGROUND);
+  clear_dexed_instance_icons();
   display.setTextSize(1);
   setCursor_textGrid_small(1, 6);
   display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
@@ -6595,7 +6599,7 @@ FLASHMEM void print_custom_mapping_cc()
 
 FLASHMEM void print_custom_mapping_ui()
 {
-  display.fillRect(14 * CHAR_width + 10, 5, 20, 9, COLOR_BACKGROUND);
+  clear_dexed_instance_icons();
   display.setTextSize(1);
   setCursor_textGrid_small(1, 6);
   display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
@@ -6679,7 +6683,7 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
       }
     }
     if (e.longPressed) {
-      selected_instance_id = !selected_instance_id;
+      increment_dexed_instance_round_robin();
       print_custom_mapping_cc();
     }
     else if (e.pressed)
