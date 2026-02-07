@@ -7054,6 +7054,48 @@ FLASHMEM void selectSample(uint8_t sample) {
   }
 }
 
+// FLASHMEM uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
+//   uint8_t result = sample;
+
+//   if (direction != 0) {
+//     direction = constrain(direction, -1, +1);
+
+//     if (seq.smartfilter && direction != 0) {
+//       bool found = false;
+
+//       for (int16_t note = sample + direction; found == false; note += direction)
+//       {
+//         const bool outOfBounds = (note < 0) || (note > NUM_DRUMSET_CONFIG - 2);
+//         if (outOfBounds) {
+//           break;
+//         }
+//         for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++)
+//         {
+//           if (seq.content_type[pattern] == 0)
+//           {
+//             for (uint8_t step = 0; step < 16; step++)
+//             {
+//               found = (drum_config[note].midinote == seq.note_data[pattern][step] && seq.vel[pattern][step] < 210)
+//                 || (drum_config[note].midinote == seq.vel[pattern][step] && seq.vel[pattern][step] > 209);
+//               if (found) {
+//                 result = note;
+//                 break;
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//     else {
+//       const uint8_t boundary = (direction > 0) ? NUM_DRUMSET_CONFIG - 2 : 0;
+//       if (sample != boundary) {
+//         result = sample + direction;
+//       }
+//     }
+//   }
+//   return result;
+// }
+
 FLASHMEM uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
   uint8_t result = sample;
 
@@ -7069,6 +7111,8 @@ FLASHMEM uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
         if (outOfBounds) {
           break;
         }
+        
+        // Check step sequencer (original code)
         for (uint8_t pattern = 0; (found == false) && (pattern < NUM_SEQ_PATTERN); pattern++)
         {
           if (seq.content_type[pattern] == 0)
@@ -7081,6 +7125,50 @@ FLASHMEM uint8_t findSmartFilteredSample(uint8_t sample, int8_t direction) {
                 result = note;
                 break;
               }
+            }
+          }
+        }
+        
+        // Check Live Sequencer
+        if (!found) {
+          // Use the existing global instance
+          LiveSequencer::LiveSeqData* data = liveSeq.getData();
+          
+          // Check pattern events in LiveSequencer
+          for (const auto& event : data->eventsList) {
+            // Only check NoteOn events with velocity > 0
+            if (event.event == midi::NoteOn && event.note_in_velocity > 0) {
+              // Check if this event is on a drum track
+              if (data->trackSettings[event.track].device == LiveSequencer::DEVICE_INTERNAL &&
+                  data->trackSettings[event.track].instrument == LiveSequencer::INSTR_DRUM) {
+                
+                if (drum_config[note].midinote == event.note_in) {
+                  found = true;
+                  result = note;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Also check song events in LiveSequencer
+          if (!found) {
+            for (const auto& songEventPair : data->songEvents) {
+              for (const auto& event : songEventPair.second) {
+                if (event.event == midi::NoteOn && event.note_in_velocity > 0) {
+                  // Check if this event is on a drum track
+                  if (data->trackSettings[event.track].device == LiveSequencer::DEVICE_INTERNAL &&
+                      data->trackSettings[event.track].instrument == LiveSequencer::INSTR_DRUM) {
+                    
+                    if (drum_config[note].midinote == event.note_in) {
+                      found = true;
+                      result = note;
+                      break;
+                    }
+                  }
+                }
+              }
+              if (found) break;
             }
           }
         }
