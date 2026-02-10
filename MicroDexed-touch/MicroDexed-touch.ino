@@ -2929,14 +2929,18 @@ void loop()
   }
 #endif
 
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay))
   {
     display.setTextSize(1);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
       if (Drum[d]->isPlaying() != display_buffer_samples[d])
       {
-        display.setCursor(d * 2 * CHAR_width_small, 18);
+        if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums))
+          display.setCursor(d * 2 * CHAR_width_small, 18);
+        else  //MSP
+          display.setCursor(d * 2 * CHAR_width_small + 14, 3);
+
         if (Drum[d]->isPlaying())
         {
           display.setTextColor(GREEN, COLOR_BACKGROUND);
@@ -3312,150 +3316,143 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
   AudioInterrupts();
 }
 
-void set_filter(uint8_t d, uint8_t slot) {
-  if (drum_config[d].filter_mode == 0)
+void set_filter(uint8_t d, uint8_t slot, uint8_t inVelocity, uint8_t instance, bool mspmode) {
+
+  if (!mspmode || msp[instance].velocity_to_filter==0)
   {
-    Drum_filter[slot]->setLowpass(0, 20000, 0.2);
-    Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+    if (drum_config[d].filter_mode == 0)
+    {
+      Drum_filter[slot]->setLowpass(0, 20000, 0.2);
+      Drum_filter[slot + NUM_DRUMS]->setLowpass(0, 20000, 0.2);
+    }
+    else if (drum_config[d].filter_mode == 1)
+    {
+      Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 3000, 0.5);
+      Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 3000, 0.5);
+    }
+    else if (drum_config[d].filter_mode == 2)
+    {
+      Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 10000, 0.5);
+      Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 10000, 0.5);
+    }
+    else if (drum_config[d].filter_mode == 3)
+    {
+      Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 10000, 0.5);
+      Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 10000, 0.5);
+    }
   }
-  else if (drum_config[d].filter_mode == 1)
+  else //MSP Velocity Low Pass Filter Mode, overriding the default Drums Filter when triggered inside MSP
   {
-    Drum_filter[slot]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-    Drum_filter[slot + NUM_DRUMS]->setLowpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-  }
-  else if (drum_config[d].filter_mode == 2)
-  {
-    Drum_filter[slot]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-    Drum_filter[slot + NUM_DRUMS]->setBandpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-  }
-  else if (drum_config[d].filter_mode == 3)
-  {
-    Drum_filter[slot]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
-    Drum_filter[slot + NUM_DRUMS]->setHighpass(0, get_sample_filter_freq(d) * 14000, 0.5);
+     Drum_filter[slot]->setLowpass(0, ( inVelocity*inVelocity)/msp[instance].velocity_to_filter, 0.5);
+      Drum_filter[slot + NUM_DRUMS]->setLowpass(0, (inVelocity*inVelocity)/msp[instance].velocity_to_filter, 0.5);
   }
 }
+
 #endif
 
 uint8_t msp_playmode_sample_slot[NUM_DRUMS];
 
 #if defined COMPILE_FOR_PSRAM
 
-void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance)
-{
-
-  // find the MSP preset slot for this midi channel
-
+void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance) {
   if (drum_counter >= NUM_DRUMS)
     drum_counter = 0;
 
-  for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++)
-  {
-    if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high)
-    {
+  for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++) {  // Now loops through 16 zones
+    if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high) {
       const uint8_t zone_voice_group = drum_config[msz[instance][y].psram_entry_number].voice_group;
       uint8_t slot = drum_get_slot(DRUM_POLY, zone_voice_group);
-      if (slot == 99)
-      {
+      if (slot == 99) {
         return;
       }
 
-      //drum_type[slot] = DRUM_POLY;
       Drum[slot]->enableInterpolation(true);
       ts.msp_peak[instance] = (inVelocity * msz[instance][y].vol * msp[instance].sound_intensity) / 900000;
       float pan = mapfloat(msz[instance][y].pan, PANORAMA_MIN, PANORAMA_MAX, 0.0, 1.0);
 
-        AudioNoInterrupts();
+      AudioNoInterrupts();
 
 #if defined DRUMS_FILTERS
-        set_filter(msz[instance][y].psram_entry_number, slot);
-#endif
-        // drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
-        // drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[presetslot][y].vol * msp[presetslot].sound_intensity, 0, 1270000, 0.0, 0.9)));
-
-        if (drum_config[y].numChannels == 1) //mono
-        {
-          drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
-          drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
-        }
-        else //stereo
-        {
-          drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
-          drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
-        }
-
-        drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
-        drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
-
-        global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(msz[instance][y].psram_entry_number) / 5);
-        global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5);
-
-        msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
-
-        Drum[slot]->setVoiceGroup(zone_voice_group);
-
-        if (msz[instance][y].loop_type == 0)
-          Drum[slot]->setLoopType(loop_type::looptype_none);
-        else   if (msz[instance][y].loop_type == 1)
-          Drum[slot]->setLoopType(loop_type::looptype_repeat);
-        else if (msz[instance][y].loop_type == 2)
-          Drum[slot]->setLoopType(loop_type::looptype_pingpong);
-
-        note_buffer_msp[slot] = inNumber;
-        // Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) );
-
-        Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) * mapfloat(msz[instance][y].tune, 0, 200, 0.98, 1.02));
-#if defined DRUMS_FILTERS
-        set_stereo_envelopes(slot, msz[instance][y].psram_entry_number);
-        sample_envelope[slot]->noteOn();
-        sample_envelope[slot + NUM_DRUMS]->noteOn();
-#endif
-        AudioInterrupts();
-
-#if  defined COMPILE_FOR_PSRAM
-        if ((drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
-          drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 0 && y < NUM_DRUMSET_CONFIG - 1) ||
-          (drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
-            drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 210 && y < 216))
-        {
-
-          Drum[slot]->playRaw((int16_t*)drum_config[msz[instance][y].psram_entry_number].drum_data, drum_config[msz[instance][y].psram_entry_number].len,
-            drum_config[msz[instance][y].psram_entry_number].numChannels);
-
-          if (msz[instance][y].loop_type != 0)
-          {
-
-            //Drum[slot]->startLoop(msz[instance][y].loop_start);
-            Drum[slot]->setLoopStart(msz[instance][y].loop_start);
-            Drum[slot]->setLoopFinish(msz[instance][y].loop_end);
-
-          }
-
-        }
+      set_filter(msz[instance][y].psram_entry_number, slot, inVelocity, instance, true);
 #endif
 
-        //     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
-        //     display.fillRect(0, 185 + y * 5, 2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5) - 1, 5, COLOR_BACKGROUND);
-        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
-        //                      (msz[instance][y].high - msz[instance][y].low) * 3.5 + 2.5, 5, RED);
-
-        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].high * 3.5 - (24 * 3.5) + 3.5, 185 + y * 5,
-        //                      DISPLAY_WIDTH - (msz[instance][y].high * 3.5) + (18 * 3.5), 5, COLOR_BACKGROUND);
-        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
-        //                      3.5 + 1, 5 - 2, COLOR_SYSTEXT);
-        //   }
-        // }
-        // else
-        // {
-        //     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
-        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
-        //                      (msz[instance][y].high - msz[instance][y].low) * 3.5 + 2.5, 5, get_multisample_zone_color(y));
-        //     display.fillRect(2 * CHAR_width_small + msz[instance][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
-        //                      3.5 + 1, 5 - 2, COLOR_SYSTEXT);
-        //   }
-        // }
+      if (drum_config[msz[instance][y].psram_entry_number].numChannels == 1) //mono
+      {
+        drum_mixer_r.gain(slot, (1.0 - pan) * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+        drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
       }
+      else //stereo
+      {
+        drum_mixer_r.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+        drum_mixer_l.gain(slot, 1.0 * volume_transform(mapfloat(inVelocity * msz[instance][y].vol * msp[instance].sound_intensity, 0, 1270000, 0.0, 0.8)));
+      }
+
+      drum_reverb_send_mixer_r.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
+      drum_reverb_send_mixer_l.gain(slot, volume_transform(mapfloat(msz[instance][y].rev, 0, 100, 0.0, 0.8)));
+
+      global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(msz[instance][y].psram_entry_number) / 5);
+      global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(msz[instance][y].psram_entry_number) / 5);
+
+      msp_playmode_sample_slot[slot] = msz[instance][y].playmode;
+
+      Drum[slot]->setVoiceGroup(zone_voice_group);
+
+      if (msz[instance][y].loop_type == 0)
+        Drum[slot]->setLoopType(loop_type::looptype_none);
+      else if (msz[instance][y].loop_type == 1)
+        Drum[slot]->setLoopType(loop_type::looptype_repeat);
+      else if (msz[instance][y].loop_type == 2)
+        Drum[slot]->setLoopType(loop_type::looptype_pingpong);
+
+      note_buffer_msp[slot] = inNumber;
+      Drum[slot]->setPlaybackRate(powf(2.0, (inNumber - msz[instance][y].rootnote) / 12.0) * mapfloat(msz[instance][y].tune, 0, 200, 0.98, 1.02));
+
+#if defined DRUMS_FILTERS
+      set_stereo_envelopes(slot, msz[instance][y].psram_entry_number);
+      sample_envelope[slot]->noteOn();
+      sample_envelope[slot + NUM_DRUMS]->noteOn();
+#endif
+
+      AudioInterrupts();
+
+      if ((drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
+        drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 0 && y < NUM_DRUMSET_CONFIG - 1) ||
+        (drum_config[msz[instance][y].psram_entry_number].drum_data != NULL && drum_config[msz[instance][y].psram_entry_number].len > 0 &&
+          drum_config[msz[instance][y].psram_entry_number].len < 10000000 && y >= 210 && y < 216)) {
+
+        Drum[slot]->playRaw((int16_t*)drum_config[msz[instance][y].psram_entry_number].drum_data, drum_config[msz[instance][y].psram_entry_number].len,
+          drum_config[msz[instance][y].psram_entry_number].numChannels);
+
+        if (msz[instance][y].loop_type != 0) {
+          Drum[slot]->setLoopStart(msz[instance][y].loop_start);
+          Drum[slot]->setLoopFinish(msz[instance][y].loop_end);
+        }
+      }
+
+      //     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
+      //     display.fillRect(0, 185 + y * 5, 2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5) - 1, 5, COLOR_BACKGROUND);
+      //     display.fillRect(2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
+      //                      (msz[instance][y].high - msz[instance][y].low) * 3.5 + 2.5, 5, RED);
+
+      //     display.fillRect(2 * CHAR_width_small + msz[instance][y].high * 3.5 - (24 * 3.5) + 3.5, 185 + y * 5,
+      //                      DISPLAY_WIDTH - (msz[instance][y].high * 3.5) + (18 * 3.5), 5, COLOR_BACKGROUND);
+      //     display.fillRect(2 * CHAR_width_small + msz[instance][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
+      //                      3.5 + 1, 5 - 2, COLOR_SYSTEXT);
+      //   }
+      // }
+      // else
+      // {
+      //     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay)) {
+      //     display.fillRect(2 * CHAR_width_small + msz[instance][y].low * 3.5 - (24 * 3.5), 185 + y * 5,
+      //                      (msz[instance][y].high - msz[instance][y].low) * 3.5 + 2.5, 5, get_multisample_zone_color(y));
+      //     display.fillRect(2 * CHAR_width_small + msz[instance][y].rootnote * 3.5 - (24 * 3.5) - 1, 185 + y * 5 + 1,
+      //                      3.5 + 1, 5 - 2, COLOR_SYSTEXT);
+      //   }
+      // }
+
     }
   }
+}
 #endif
 
 FLASHMEM void learn_key(byte inChannel, byte inNumber)
@@ -3601,8 +3598,8 @@ void handleNoteOnInput(byte inChannel, byte inNumber, byte inVelocity, byte devi
   //drum played from input selects current drum note if drum screen open
   if (inChannel == drum_midi_channel || drum_midi_channel == MIDI_CHANNEL_OMNI) {
     const uint8_t sampleNote = midiNoteToSampleNote(inNumber);
-   if ( LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings) )
-    selectSample(sampleNote);
+    if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_custom_mappings))
+      selectSample(sampleNote);
   }
 }
 
@@ -3803,7 +3800,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           if (slot != 99)
           {
 #if defined(DRUMS_FILTERS) 
-            set_filter(d, slot);
+            set_filter(d, slot, 0, 0, false);
 #endif
             global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5);
             global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5);
@@ -4084,7 +4081,7 @@ FLASHMEM int8_t find_oldest_voice_in_group(uint8_t voiceGroup)
 {
   int8_t oldest_slot = -1;
   uint32_t oldest_time = 0xFFFFFFFF;
-  
+
   for (uint8_t i = 0; i < NUM_DRUMS; i++)
   {
     if (Drum[i]->isPlaying() && Drum[i]->getVoiceGroup() == voiceGroup)
@@ -4105,7 +4102,7 @@ FLASHMEM int8_t find_newest_voice_in_group(uint8_t voiceGroup)
 {
   int8_t newest_slot = -1;
   uint32_t newest_time = 0;
-  
+
   for (uint8_t i = 0; i < NUM_DRUMS; i++)
   {
     if (Drum[i]->isPlaying() && Drum[i]->getVoiceGroup() == voiceGroup)
@@ -4126,22 +4123,22 @@ FLASHMEM int8_t apply_strategy(uint8_t voiceGroup, allocation_strategy_t strateg
 {
   switch (strategy)
   {
-    case ALLOCATION_FIRST_NOTE_PRIORITY:
-      return find_newest_voice_in_group(voiceGroup);  // Kill newest to preserve first
-    
-    case ALLOCATION_LAST_NOTE_PRIORITY:
-      return find_oldest_voice_in_group(voiceGroup);  // Kill oldest to preserve last
-    
-    case ALLOCATION_ROUND_ROBIN:
-    default:
-      return -1;  // Round-robin handled separately
+  case ALLOCATION_FIRST_NOTE_PRIORITY:
+    return find_newest_voice_in_group(voiceGroup);  // Kill newest to preserve first
+
+  case ALLOCATION_LAST_NOTE_PRIORITY:
+    return find_oldest_voice_in_group(voiceGroup);  // Kill oldest to preserve last
+
+  case ALLOCATION_ROUND_ROBIN:
+  default:
+    return -1;  // Round-robin handled separately
   }
 }
 
 uint8_t drum_get_slot(uint8_t dt, uint8_t requiredVoiceGroup)
 {
   (void)dt; // dt retained for future class-based policies
-  
+
   // Check if voice group is disabled
   if (sample_voice_group_config[requiredVoiceGroup].max_voices == 0)
   {
@@ -4150,7 +4147,7 @@ uint8_t drum_get_slot(uint8_t dt, uint8_t requiredVoiceGroup)
 
   // 1. Count active voices in this voice group
   uint8_t active_voices = count_active_voices_in_group(requiredVoiceGroup);
-  
+
   // 2. If budget not exceeded, try to find any idle voice
   if (active_voices < sample_voice_group_config[requiredVoiceGroup].max_voices)
   {
@@ -4167,7 +4164,7 @@ uint8_t drum_get_slot(uint8_t dt, uint8_t requiredVoiceGroup)
 
   // 3. Budget exceeded or no idle voices - apply strategy to find voice to steal
   allocation_strategy_t strategy = sample_voice_group_config[requiredVoiceGroup].strategy;
-  
+
   if (strategy == ALLOCATION_ROUND_ROBIN)
   {
     // Find any playing voice in this voice group and steal it

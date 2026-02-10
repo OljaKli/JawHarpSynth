@@ -138,6 +138,7 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
       clear_x = DISPLAY_WIDTH - CHAR_width_small * old_len;
       clear_width = CHAR_width_small * (old_len - l);
     }
+    display.console = true;
     display.fillRect(clear_x, y_pos, clear_width, CHAR_height_small, COLOR_BACKGROUND);
   }
 
@@ -148,6 +149,7 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   case 1: x_pos = DISPLAY_WIDTH - CHAR_width_small * l; break;
   case 2:
     if (l != old_len) {
+      display.console = true;
       display.fillRect(0, y_pos, DISPLAY_WIDTH, CHAR_height_small, COLOR_BACKGROUND);
     }
     x_pos = (DISPLAY_WIDTH - CHAR_width_small * l) / 2;
@@ -1397,7 +1399,7 @@ FLASHMEM void handle_touchscreen_mute_matrix()
 #if defined APC
   apc_mute_matrix();
 #endif
-  }
+}
 
 FLASHMEM void handle_touchscreen_arpeggio()
 {
@@ -1967,5 +1969,31 @@ FLASHMEM void handle_load_performance()
   {
     bitWrite(perf_load_options, perf_liveseq, !bitRead(perf_load_options, perf_liveseq));
     TouchButton::drawButton(GRID.X[2], GRID.Y[3], "LIVESEQ", "DATA", bitRead(perf_load_options, perf_liveseq) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL);
+  }
+}
+
+extern multisample_s msp[NUM_MULTISAMPLES];
+
+FLASHMEM void print_msp_velocity_to_filter_button()
+{
+  char buf[6];
+  if (msp[seq.active_multisample].velocity_to_filter == 0)
+    TouchButton::drawButton(GRID.X[5], GRID.Y[0], "VEL>FLT", "OFF", TouchButton::BUTTON_ACTIVE);
+  else
+  {
+    snprintf_P(buf, sizeof(buf), PSTR("%02d%%"), msp[seq.active_multisample].velocity_to_filter * 20);
+    TouchButton::drawButton(GRID.X[5], GRID.Y[0], "VEL>FLT", buf, TouchButton::BUTTON_RED);
+  }
+}
+
+FLASHMEM void handle_touchscreen_msp()
+{
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+
+    msp[seq.active_multisample].velocity_to_filter++;
+    if (msp[seq.active_multisample].velocity_to_filter > 4)
+      msp[seq.active_multisample].velocity_to_filter = 0;
+
+    print_msp_velocity_to_filter_button();
   }
 }

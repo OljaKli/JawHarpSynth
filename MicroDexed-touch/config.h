@@ -193,7 +193,8 @@
 
 // SAMPLER
 #define NUM_MULTISAMPLES 2
-#define NUM_MULTISAMPLE_ZONES 8
+#define NUM_MULTISAMPLE_ZONES 16  // Changed from 8 to 16
+#define MSP_VISIBLE_ZONES 8       // Number of zones visible on screen
 #define DEFAULT_MSP_MIDI_CHANNEL_INST0 11
 #define DEFAULT_MSP_MIDI_CHANNEL_INST1 12
 
@@ -1008,6 +1009,7 @@ typedef struct multisample_s
   char name[FILENAME_MAX_LEN];
   uint8_t sound_intensity;
   uint8_t midi_channel;
+  uint8_t velocity_to_filter;
 } multisample_t;
 
 // Voice group allocation strategies
