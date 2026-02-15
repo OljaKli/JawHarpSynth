@@ -2296,6 +2296,17 @@ FLASHMEM void print_chain_steps_in_song_page()
 }
 
 uint8_t midiNoteToSampleNote(uint8_t note) {
+
+  // check custom midi mapping
+          for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
+          {
+            if (note == custom_midi_map[c].in && custom_midi_map[c].type == 1)
+            {
+              note = custom_midi_map[c].out;
+              break;
+            }
+          }
+
   // TODO: eliminate magic numbers
   const uint8_t offset = (note > 209) ? 210 : 18;
   return note - offset;

@@ -3776,16 +3776,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           if (drum_counter >= NUM_DRUMS)
             drum_counter = 0;
 
-          // check custom midi mapping
-          for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
-          {
-            if (inNumber == custom_midi_map[c].in && custom_midi_map[c].type == 1)
-            {
-              inNumber = custom_midi_map[c].out;
-              break;
-            }
-          }
-
           const uint8_t d = midiNoteToSampleNote(inNumber);
 
           if (sidechain_active && d == sidechain_sample_number)
