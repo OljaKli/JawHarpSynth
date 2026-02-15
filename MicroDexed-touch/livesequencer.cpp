@@ -211,15 +211,15 @@ FLASHMEM void LiveSequencer::resetControllers() {
 
 FLASHMEM uint8_t LiveSequencer::mapQuantizeDenom(uint8_t denom) {
   switch (denom) {
-    case 1:  return 0;   // NONE
-    case 4:  return 4;   // 1/4
-    case 8:  return 8;   // 1/8
-    case 12: return 12;  // 1/8T
-    case 16: return 16;  // 1/16
-    case 24: return 24;  // 1/16T
-    case 32: return 32;  // 1/32
-    case 64: return 64;  // 1/64
-    default: return 0;   // fallback: no quantize
+  case 1:  return 0;   // NONE
+  case 4:  return 4;   // 1/4
+  case 8:  return 8;   // 1/8
+  case 12: return 12;  // 1/8T
+  case 16: return 16;  // 1/16
+  case 24: return 24;  // 1/16T
+  case 32: return 32;  // 1/32
+  case 64: return 64;  // 1/64
+  default: return 0;   // fallback: no quantize
   }
 }
 
@@ -239,12 +239,12 @@ FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent& e, uint8_t denom) {
 
   if (denom > 1) {
     const uint16_t quantizeMs = data.patternLengthMs / denom;
-    
+
     const uint16_t halfStep = quantizeMs / 2;
     uint8_t resultNumber = e.patternNumber;
     uint16_t resultMs = e.patternMs;
     resultMs = ((e.patternMs + halfStep) / quantizeMs) * quantizeMs;
-    
+
     if (resultMs == data.patternLengthMs) {
       resultMs = 0;
       if (++resultNumber == data.numberOfBars) {
@@ -341,13 +341,17 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
   }
 }
 
+extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
+
 FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
+
   if (data.processMidiIn) {
+    bool skip = false;
     DBG_LOG(printf("got midi note %i\n", note));
-    
+
     // REMOVED: Channel filtering - now all MIDI input is processed
     // if (data.instrumentChannels.count(inChannel) == 0) {
-    
+
     ui_pianoRoll->handleKeyChanged(note, event, velocity);
     // velocity adjustment for keyboard events (live playing or recording)
     const uint8_t velocitySetting = data.trackSettings[data.activeTrack].velocityLevel;
@@ -382,9 +386,24 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
 
           case midi::ControlChange:
             // Record MIDI CC
-            newEvent.note_in = note;              // Controller number
-            newEvent.note_in_velocity = velocity; // Controller value
-            data.pendingEvents.emplace_back(newEvent);
+
+            for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
+            {
+              if (note == custom_midi_map[c].in)
+              {
+                skip = true;
+                break;
+              }
+
+            } // while LiveSeq is recording and a custom MIDI mapped SEQ stop command comes it, MDT crashes
+            
+            if (!skip)
+            {
+              newEvent.note_in = note;              // Controller number
+              newEvent.note_in_velocity = velocity; // Controller value
+              data.pendingEvents.emplace_back(newEvent);
+            }
+
             break;
 
           case midi::PitchBend:
@@ -600,7 +619,8 @@ FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, Laye
         }
       }
       DBG_LOG(printf("Cleared %s on T%u L%u\n", action == LayerMode::LAYER_CLEAR_CC ? "CC" : "PB", track, layer));
-    } else if (action == LayerMode::LAYER_HEAL_NOTES) {
+    }
+    else if (action == LayerMode::LAYER_HEAL_NOTES) {
       const uint16_t healed = healHungNotesInLayer(track, layer);
       DBG_LOG(printf("Healed %u hung/orphan events on T%u L%u P%u\n", healed, track, layer, data.currentPattern));
       (void)healed;
@@ -1447,7 +1467,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
       break;
     }
 
-      data.trackSettings[i].quantizeGrid = mapQuantizeDenom(data.trackSettings[i].quantizeDenom);
+    data.trackSettings[i].quantizeGrid = mapQuantizeDenom(data.trackSettings[i].quantizeDenom);
   }
 }
 
@@ -1759,7 +1779,7 @@ FLASHMEM void LiveSequencer::adjustGridMarkersAfterInsert(uint8_t step, bool shi
     if (marker >= step && marker < (LiveSeqData::GRIDSONGLEN - 1)) {
       marker++;
     }
-  };
+    };
 
   incrementIfNeeded(data.currentGridStep);
 
@@ -1775,7 +1795,7 @@ FLASHMEM void LiveSequencer::adjustGridMarkersAfterRemove(uint8_t step) {
     if (marker > step) {
       marker--;
     }
-  };
+    };
 
   decrementIfNeeded(data.currentGridStep);
   if (data.gridStepOffset > 0 && data.gridStepOffset > step) {
@@ -1788,7 +1808,7 @@ FLASHMEM void LiveSequencer::clampGridMarkers() {
     if (marker >= LiveSeqData::GRIDSONGLEN) {
       marker = LiveSeqData::GRIDSONGLEN - 1;
     }
-  };
+    };
 
   clampMarker(data.gridPlaybackStartStep);
   clampMarker(data.gridPlaybackEndStep);
@@ -1813,30 +1833,30 @@ FLASHMEM void LiveSequencer::resetGridEditorDefaults(void) {
 }
 
 FLASHMEM void LiveSequencer::sanitizeGridSongSteps() {
-	if (!data.gridSongSteps) {
-		return;
-	}
+  if (!data.gridSongSteps) {
+    return;
+  }
 
-	const size_t stride = GRID_ROW_STRIDE;
-	const size_t trackStride = LIVESEQUENCER_NUM_LAYERS;
+  const size_t stride = GRID_ROW_STRIDE;
+  const size_t trackStride = LIVESEQUENCER_NUM_LAYERS;
 
-	for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; ++track) {
-		uint8_t validLayers = data.trackSettings[track].layerCount;
-		if (validLayers > LIVESEQUENCER_NUM_LAYERS) {
-			validLayers = LIVESEQUENCER_NUM_LAYERS;
-		}
+  for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; ++track) {
+    uint8_t validLayers = data.trackSettings[track].layerCount;
+    if (validLayers > LIVESEQUENCER_NUM_LAYERS) {
+      validLayers = LIVESEQUENCER_NUM_LAYERS;
+    }
 
-		if (validLayers >= LIVESEQUENCER_NUM_LAYERS) {
-			continue;
-		}
+    if (validLayers >= LIVESEQUENCER_NUM_LAYERS) {
+      continue;
+    }
 
-		for (uint8_t step = 0; step < LiveSeqData::GRIDSONGLEN; ++step) {
-			uint8_t* const rowTrack = data.gridSongSteps + static_cast<size_t>(step) * stride + track * trackStride;
-			for (uint8_t layer = validLayers; layer < LIVESEQUENCER_NUM_LAYERS; ++layer) {
-				rowTrack[layer] = 0;
-			}
-		}
-	}
+    for (uint8_t step = 0; step < LiveSeqData::GRIDSONGLEN; ++step) {
+      uint8_t* const rowTrack = data.gridSongSteps + static_cast<size_t>(step) * stride + track * trackStride;
+      for (uint8_t layer = validLayers; layer < LIVESEQUENCER_NUM_LAYERS; ++layer) {
+        rowTrack[layer] = 0;
+      }
+    }
+  }
 }
 
 FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
@@ -1869,7 +1889,7 @@ FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
  */
 FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLayer(uint8_t track, uint8_t layer, uint8_t patternNumber) {
   std::vector<HungNote> hungNotes;
-  
+
   if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS || patternNumber >= 255) {
     return hungNotes;
   }
@@ -1898,7 +1918,8 @@ FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLa
     if (isNoteOn) {
       activeMask[note >> 3] |= (1u << (note & 7u));
       noteOnIndices[note] = idx;
-    } else if (isNoteOff) {
+    }
+    else if (isNoteOff) {
       activeMask[note >> 3] &= ~(1u << (note & 7u));
     }
   }
@@ -1923,12 +1944,12 @@ FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLa
  * Detects orphan MIDI events (Note Offs without matching Note Ons, or vice versa)
  * within a specific pattern, filtered to a specific track/layer.
  * Returns vector of OrphanEvent structures.
- * 
+ *
  * Scope: Selected pattern, track, and layer only.
  */
 FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t layer) {
   uint16_t healedCount = 0;  // dropped + fixed
-  
+
   // Find the pattern containing events for this track+layer
   // In pattern mode, each track+layer has events in exactly one pattern
   uint8_t pattern = 255;
@@ -1956,11 +1977,11 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
     if (hung.noteOnIndex < eventsSize) {
       MidiEvent& candidate = data.eventsList[hung.noteOnIndex];
       if (candidate.patternNumber == pattern &&
-          candidate.track == track &&
-          candidate.layer == layer &&
-          candidate.note_in == hung.note &&
-          candidate.event == midi::NoteOn &&
-          candidate.note_in_velocity > 0) {
+        candidate.track == track &&
+        candidate.layer == layer &&
+        candidate.note_in == hung.note &&
+        candidate.event == midi::NoteOn &&
+        candidate.note_in_velocity > 0) {
         noteOnEvent = &candidate;
       }
     }
@@ -1968,11 +1989,11 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
     if (!noteOnEvent) {
       for (auto& event : data.eventsList) {
         if (event.patternNumber == pattern &&
-            event.track == track &&
-            event.layer == layer &&
-            event.note_in == hung.note &&
-            event.event == midi::NoteOn &&
-            event.note_in_velocity > 0) {
+          event.track == track &&
+          event.layer == layer &&
+          event.note_in == hung.note &&
+          event.event == midi::NoteOn &&
+          event.note_in_velocity > 0) {
           noteOnEvent = &event;
           break;
         }
@@ -2028,19 +2049,22 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
       if (depth < MAX_PENDING) {
         pendingNoteOns[note][depth] = &event;
         depth++;
-      } else {
+      }
+      else {
         OrphanEvent orphan{};
         orphan.note = note;
         orphan.eventTime = event.patternMs;
         orphan.isNoteOff = false;
         orphans.push_back(orphan);
       }
-    } else if (isNoteOff) {
+    }
+    else if (isNoteOff) {
       uint8_t& depth = stackDepth[note];
       if (depth > 0) {
         depth--;
         pendingNoteOns[note][depth] = nullptr;
-      } else {
+      }
+      else {
         OrphanEvent orphan{};
         orphan.note = note;
         orphan.eventTime = event.patternMs;

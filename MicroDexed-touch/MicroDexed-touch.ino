@@ -3998,12 +3998,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         }
 #endif
 
-
-        //if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
-           // d50Synth.noteOn(inNumber, inVelocity);
-        //}
-
-
       }
     }
   }
@@ -4610,8 +4604,8 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
         case 200: // CC 200: seq start/stop
           if (!seq.running)
             handleStart();
-          // else
-          // handleStop();
+          //  else
+          //  handleStop();
           break;
         case 201: // CC 201: seq stop
           if (seq.running)
@@ -5268,6 +5262,7 @@ FLASHMEM void handleStop(void)
     {
       liveSeq.onStopped();
       sequencer_part2();
+
       if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
       {
         draw_button_on_grid(36, 1, "STEP", "RECORD", 1); // print step recorder icon
