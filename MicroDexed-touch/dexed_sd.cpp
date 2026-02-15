@@ -44,7 +44,7 @@ extern void set_drums_volume(float vol);
 extern drum_config_t drum_config[];
 extern CustomSample customSamples[NUM_CUSTOM_SAMPLES];
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
-extern voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+extern voice_group_config_t sample_voice_group_config[NUM_VOICE_GROUPS];
 extern void init_default_sample_voice_group_config();
 #endif
 
@@ -3245,13 +3245,6 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
             drumClass = DRUM_POLY;
           }
           drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class = drumClass;
-          
-          // Load voice_group if present (default to 0)
-          if (data_json[i].containsKey("voice_group")) {
-            drum_config[i + NUM_STATIC_PITCHED_SAMPLES].voice_group = data_json[i]["voice_group"];
-          } else {
-            drum_config[i + NUM_STATIC_PITCHED_SAMPLES].voice_group = 0;  // Default to shared pool
-          }
         }
         load_custom_samples_to_psram();
 
@@ -3405,7 +3398,6 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
         data_json[json_index]["end"] = customSamples[i].end;
         data_json[json_index]["loop"] = customSamples[i].loopType;
         data_json[json_index]["class"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].drum_class;
-        data_json[json_index]["voice_group"] = drum_config[i + NUM_STATIC_PITCHED_SAMPLES].voice_group;
 
         json_index++; // Only increment when we add an entry
       }
@@ -4318,10 +4310,16 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["slices_midi_channel"] = slices_midi_channel;
 
       // Save voice group configuration
-      for (uint8_t i = 0; i < NUM_DRUMS; i++)
+      for (uint8_t i = 0; i < NUM_VOICE_GROUPS; i++)
       {
         data_json["sample_group_config"][i]["max_voices"] = sample_voice_group_config[i].max_voices;
         data_json["sample_group_config"][i]["strategy"] = sample_voice_group_config[i].strategy;
+      }
+
+      // Save voice group assignments for all samples (internal + custom)
+      for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG; i++)
+      {
+        data_json["sample_voice_group"][i] = drum_config[i].voice_group;
       }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
@@ -4741,7 +4739,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
         // Load voice group configuration with validation
         if (data_json.containsKey("sample_group_config"))
         {
-          for (uint8_t i = 0; i < NUM_DRUMS; i++)
+          for (uint8_t i = 0; i < NUM_VOICE_GROUPS; i++)
           {
             if (data_json["sample_group_config"][i].containsKey("max_voices"))
             {
@@ -4765,6 +4763,21 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           // Legacy file without sample_group_config - keep current/default settings
 #ifdef DEBUG
           LOG.println(F("Legacy performance file - using default voice group configuration"));
+#endif
+        }
+
+        // Load voice group assignments for all samples (internal + custom)
+        if (data_json.containsKey("sample_voice_group"))
+        {
+          for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG; i++)
+          {
+            if (data_json["sample_voice_group"][i] >= 0 && data_json["sample_voice_group"][i] < NUM_VOICE_GROUPS)
+            {
+              drum_config[i].voice_group = data_json["sample_voice_group"][i];
+            }
+          }
+#ifdef DEBUG
+          LOG.println(F("Loaded sample voice group assignments from performance file"));
 #endif
         }
 
