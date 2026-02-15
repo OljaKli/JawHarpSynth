@@ -1118,7 +1118,7 @@ extern void updateGranularFilters();
 // Initialize default voice group configuration
 FLASHMEM void init_default_sample_voice_group_config()
 {
-  for (uint8_t i = 0; i < NUM_DRUMS; i++)
+  for (uint8_t i = 0; i < NUM_VOICE_GROUPS; i++)
   {
     sample_voice_group_config[i].max_voices = 0;                      // Disabled by default
     sample_voice_group_config[i].strategy = ALLOCATION_ROUND_ROBIN;   // Default strategy
@@ -3360,10 +3360,23 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance) {
 
   for (uint8_t y = 0; y < NUM_MULTISAMPLE_ZONES; y++) {  // Now loops through 16 zones
     if (inNumber >= msz[instance][y].low && inNumber <= msz[instance][y].high) {
-      const uint8_t zone_voice_group = drum_config[msz[instance][y].psram_entry_number].voice_group;
-      uint8_t slot = drum_get_slot(DRUM_POLY, zone_voice_group);
+      const uint8_t psram_idx = msz[instance][y].psram_entry_number;
+      const uint8_t zone_voice_group = drum_config[psram_idx].voice_group; // TODO: maybe we should have voice group override in the zone config at some point, but currently it comes from the drum/sample config.
+      const uint8_t drum_class = drum_config[psram_idx].drum_class;
+#ifdef DEBUG
+      DBG_LOG(printf("MSP inst=%d zone=%d: note=%d entry_num=%d psram_entry=%d vg=%d sample='%s'\n",
+          instance, y, inNumber, msz[instance][y].entry_number, psram_idx,
+          zone_voice_group, drum_config[psram_idx].name));
+#endif
+      uint8_t slot = drum_get_slot(drum_class, zone_voice_group);
       if (slot == 99) {
-        return;
+#ifdef DEBUG
+        DBG_LOG(printf("MSP inst=%d zone=%d: no slot available for voice_group=%d, skipping zone\n",
+            instance, y, zone_voice_group));
+#endif
+        // a return here would stop further checking of any overlapping zones.
+        // we should just skip this zone and check the next one
+        continue;
       }
 
       Drum[slot]->enableInterpolation(true);
