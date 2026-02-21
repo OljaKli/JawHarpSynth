@@ -1187,8 +1187,8 @@ enum fm_modes
 
 enum fav_search_direction
 {
-  LEFT,
-  RIGHT
+  FAV_LEFT,
+  FAV_RIGHT
 };
 
 #ifndef _MAPFLOAT
@@ -1264,39 +1264,14 @@ typedef struct {
 } SuggestedChord;
 
 
-// #define COLOR_HEADER 0xFFFF  // 白色
-// #define COLOR_TEXT 0xF7BE    // 浅灰色
-// #define COLOR_VALUE 0x07E0   // 绿色
-// #define COLOR_SELECTED 0xF800 // 红色
+// Category search global variables
+#define MAX_CATEGORIES 25
+#define MAX_CATEGORY_NAME_LEN 16
+#define MAX_VOICES_PER_BANK 32
+#define MAX_CATEGORIES_PER_VOICE 8
 
-
-// struct d50_config_s {
-//     uint8_t midi_channel;
-//     uint8_t volume;
-//     uint8_t pan;
-//     int8_t transpose;
-//     uint8_t preset;
-//     float balance;
-//     float pcm_level_a;
-//     float pcm_level_b;
-//     float synth_level_a;
-//     float synth_level_b;
-//     float pcm_attack_a;
-//     float pcm_decay_a;
-//     float pcm_release_a;
-//     float synth_attack_a;
-//     float synth_decay_a;
-//     float synth_sustain_a;
-//     float synth_release_a;
-//     float pcm_attack_b;
-//     float pcm_decay_b;
-//     float pcm_release_b;
-//     float synth_attack_b;
-//     float synth_decay_b;
-//     float synth_sustain_b;
-//     float synth_release_b;
-//     float reverb_send;
-//     float delay_send;
-// };
-
+extern bool category_mode_active;
+extern uint8_t category_edit_mode;
+extern uint8_t selected_categories[MAX_CATEGORIES];
+extern uint8_t selected_category_count;
 

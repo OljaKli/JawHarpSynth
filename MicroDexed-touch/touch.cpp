@@ -468,9 +468,31 @@ FLASHMEM void handle_generic_virtual_typewriter_touch() {
   }
 }
 
+#include "voice_categories.h"
+
+extern FLASHMEM void  print_dexed_bank_and_voice();
+
+FLASHMEM void mode_switch_dexed_voice_prep()
+{
+  if (generic_temp_select_menu > 5 && seq.edit_state == 1)
+    seq.edit_state = 0;
+  if (generic_temp_select_menu > 5)
+    generic_temp_select_menu = 3;
+  print_dexed_bank_and_voice();
+}
+
 FLASHMEM void handle_touchscreen_voice_select()
 {
-  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+  // FAV button at GRID.X[4], GRID.Y[0]
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
+    save_favorite(configuration.dexed[selected_instance_id].pool,
+      configuration.dexed[selected_instance_id].bank,
+      configuration.dexed[selected_instance_id].voice,
+      selected_instance_id);
+  }
+
+  // Virtual keyboard button at GRID.X[5], GRID.Y[0]
+  else if (!category_mode_active && TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
     if (seq.cycle_touch_element == 1) {
       border3_large_clear();
       seq.cycle_touch_element = 0;
@@ -479,33 +501,73 @@ FLASHMEM void handle_touchscreen_voice_select()
       printLiveModButtons();
       drawVoiceNameButton();
       print_voice_select_default_help();
-      draw_algo(true); // force redraw
+      draw_algo(true);
     }
     else {
       border3_large_clear();
       seq.cycle_touch_element = 1;
+      mode_switch_dexed_voice_prep();
       TouchButton::drawButton(GRID.X[5], GRID.Y[0], "DEXED", "DETAIL", TouchButton::BUTTON_NORMAL);
       drawVirtualKeyboard();
     }
   }
-  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
-    save_favorite(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+
+  // CATEGORY button 
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[1])) {
+    if (category_mode_active) {
+      exit_category_mode();
+      border3_large_clear();
+      seq.cycle_touch_element = 0;
+
+      TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
+      print_voice_settings_in_dexed_voice_select(true, true);
+      printLiveModButtons();
+      drawVoiceNameButton();
+      print_voice_select_default_help();
+      draw_algo(true);
+    }
+    else {
+      mode_switch_dexed_voice_prep();
+      enter_category_mode();
+    }
   }
-  // VOICE NAME BUTTON HANDLER - Enter naming mode
-  else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
-    // Enter voice naming mode
+
+  // VOICE NAME BUTTON HANDLER
+  else if (!category_mode_active && TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
     seq.cycle_touch_element = 2;
     remove_glow();
     unregisterTouchHandler();
     LCDML.OTHER_jumpToFunc(UI_func_set_voice_name);
   }
-  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]) && seq.cycle_touch_element == 0) {
+
+  else if (category_mode_active) {
+    handle_category_touch();
+
+    // Handle category mode touches
+    if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+      // Mode toggle button
+      category_edit_mode = !category_edit_mode;
+      draw_category_buttons(category_edit_mode == 1);
+
+      if (category_edit_mode == 0) {
+        // Switching to ASSIGN mode - clear filter selections
+        selected_category_count = 0;
+        memset(selected_categories, 0, sizeof(selected_categories));
+      }
+    }
+  }
+
+  else if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]) && seq.cycle_touch_element == 0 && !category_mode_active) {
+    // FAV search button - only when not in category mode
     if (++configuration.sys.favorites > 3) {
       configuration.sys.favorites = 0;
     }
     print_voice_select_fav_search_button();
   }
-  else {
+
+  else
+  {
+    // Normal mode buttons (only when not in category mode)
     if (seq.cycle_touch_element == 1) {
       handleTouchVirtualKeyboard();
     }
@@ -514,14 +576,15 @@ FLASHMEM void handle_touchscreen_voice_select()
         // touch handled
       }
       else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
+        // Algo button - only in normal mode
         uint8_t value = get_algo() + 1;
-        value %= 32; // 0-31
-
+        value %= 32;
         panic_dexed_current_instance();
         set_algo(value);
         draw_algo();
       }
       else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23)) {
+        // Voice editor button
         LCDML.FUNC_setGBAToLastFunc();
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
       }

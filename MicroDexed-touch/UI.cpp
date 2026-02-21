@@ -281,6 +281,11 @@ extern sequencer_t seq;
 extern multisample_t msp[NUM_MULTISAMPLES];
 extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 
+#include "voice_categories.h"
+void find_next_matching_voice();
+void find_previous_matching_voice();
+void update_category_buttons_for_new_voice();
+
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
 extern AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
@@ -951,9 +956,9 @@ FLASHMEM void print_fav_search_text(bool dir)
   display.setCursor(11 * CHAR_width_small, 2 * CHAR_height_small + 3);
   display.setTextSize(2);
   display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-  if (dir == LEFT)
+  if (dir == FAV_LEFT)
     display.print(F("<<SEARCH"));
-  else    if (dir == RIGHT)
+  else    if (dir == FAV_RIGHT)
     display.print("SEARCH>>");
 
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -2298,14 +2303,14 @@ FLASHMEM void print_chain_steps_in_song_page()
 uint8_t midiNoteToSampleNote(uint8_t note) {
 
   // check custom midi mapping
-          for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
-          {
-            if (note == custom_midi_map[c].in && custom_midi_map[c].type == 1)
-            {
-              note = custom_midi_map[c].out;
-              break;
-            }
-          }
+  for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
+  {
+    if (note == custom_midi_map[c].in && custom_midi_map[c].type == 1)
+    {
+      note = custom_midi_map[c].out;
+      break;
+    }
+  }
 
   // TODO: eliminate magic numbers
   const uint8_t offset = (note > 209) ? 210 : 18;
@@ -18034,14 +18039,14 @@ FLASHMEM uint16_t get_multisample_zone_color(uint8_t row) {
   case 7: return YELLOW;            // 0xFFEB
 
     // Next 8 zones - using remaining colors and variations
-  case 8: return DARKGREEN;         
-  case 9: return PINK;              
-  case 10: return COLOR_INSTR;     
-  case 11: return COLOR_PITCHSMP;  
-  case 12: return DX_DARKCYAN;     
-  case 13: return COLOR_CHORDS;   
-  case 14: return COLOR_ARP;        
-  case 15: return COLOR_DRUMS; 
+  case 8: return DARKGREEN;
+  case 9: return PINK;
+  case 10: return COLOR_INSTR;
+  case 11: return COLOR_PITCHSMP;
+  case 12: return DX_DARKCYAN;
+  case 13: return COLOR_CHORDS;
+  case 14: return COLOR_ARP;
+  case 15: return COLOR_DRUMS;
 
   default: return COLOR_SYSTEXT;
   }
@@ -18256,7 +18261,7 @@ FLASHMEM void print_msp_keyboard_zone(uint8_t zone) {
   // Don't draw if zone has no range
   if (msz[seq.active_multisample][zone].low == 0 &&
     msz[seq.active_multisample][zone].high == 0) {
-       display.console = true;
+    display.console = true;
     display.fillRect(1, y_offset + zone * zone_height,
       DISPLAY_WIDTH - 2, zone_height, COLOR_BACKGROUND);
     return;
@@ -18271,41 +18276,41 @@ FLASHMEM void print_msp_keyboard_zone(uint8_t zone) {
   uint8_t zone_y = y_offset + zone * zone_height;
 
   // Left background
-   display.console = true;
+  display.console = true;
   display.fillRect(1, zone_y,
     2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5) - 1,
     zone_height, COLOR_BACKGROUND);
 
   // Zone range
-   display.console = true;
-  if (zone==generic_temp_select_menu - 3)
-  display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5),
-    zone_y,
-    (msz[seq.active_multisample][zone].high - msz[seq.active_multisample][zone].low) * 3.5 + 2.5 + 1,
-    zone_height, get_multisample_zone_color(zone));
-    else
-  display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5),
-    zone_y,
-    (msz[seq.active_multisample][zone].high - msz[seq.active_multisample][zone].low) * 3.5 + 2.5 + 1,
-    zone_height, GREY3);
+  display.console = true;
+  if (zone == generic_temp_select_menu - 3)
+    display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5),
+      zone_y,
+      (msz[seq.active_multisample][zone].high - msz[seq.active_multisample][zone].low) * 3.5 + 2.5 + 1,
+      zone_height, get_multisample_zone_color(zone));
+  else
+    display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5),
+      zone_y,
+      (msz[seq.active_multisample][zone].high - msz[seq.active_multisample][zone].low) * 3.5 + 2.5 + 1,
+      zone_height, GREY3);
 
- display.console = true;
+  display.console = true;
   // Right background
   display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].high * 3.5 - (24 * 3.5) + 3.5 + 1,
     zone_y,
     DISPLAY_WIDTH - (msz[seq.active_multisample][zone].high * 3.5) + (18 * 3.5),
     zone_height, COLOR_BACKGROUND);
 
- display.console = true;
+  display.console = true;
   // Root note marker
-  if (zone==generic_temp_select_menu - 3)
-  display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].rootnote * 3.5 - (24 * 3.5) + 1,
-    zone_y + 1,
-    3.5 + 1, zone_height - 1, COLOR_SYSTEXT);
-    else
+  if (zone == generic_temp_select_menu - 3)
     display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].rootnote * 3.5 - (24 * 3.5) + 1,
-    zone_y + 1,
-    3.5 + 1, zone_height - 1, get_multisample_zone_color(zone));
+      zone_y + 1,
+      3.5 + 1, zone_height - 1, COLOR_SYSTEXT);
+  else
+    display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].rootnote * 3.5 - (24 * 3.5) + 1,
+      zone_y + 1,
+      3.5 + 1, zone_height - 1, get_multisample_zone_color(zone));
 
 }
 
@@ -18350,7 +18355,7 @@ FLASHMEM void print_msp_zone_number()
   setCursor_textGrid_small(50, 4);
   if (generic_temp_select_menu - 3 >= 0)
   {
-     _print_midi_channel(generic_temp_select_menu - 3 + 1);
+    _print_midi_channel(generic_temp_select_menu - 3 + 1);
   }
   else
   {
@@ -18387,7 +18392,7 @@ FLASHMEM void print_msp_all_zones() {
 extern void print_msp_velocity_to_filter_button();
 
 FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
-  
+
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_msp);
@@ -18401,14 +18406,14 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
     encoderDir[ENC_R].reset();
     //encoderDir[ENC_L].reset();  // Reset left encoder too
 
- print_msp_velocity_to_filter_button();
-  display.setTextSize(1);
+    print_msp_velocity_to_filter_button();
+    display.setTextSize(1);
     for (uint8_t d = 0; d < NUM_DRUMS; d++)
     {
-        display.setCursor(d * 2 * CHAR_width_small + 14, 3);
-          display.setTextColor(GREY2, COLOR_BACKGROUND);
-          display.print("-");
-      }
+      display.setCursor(d * 2 * CHAR_width_small + 14, 3);
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print("-");
+    }
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     for (uint8_t oct = 0; oct < 8; oct++)
@@ -18682,7 +18687,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
           uint8_t zone = msp_scroll_offset + i;
           if (zone < NUM_MULTISAMPLE_ZONES) {
             print_msp_zone_text(zone, false);
- print_msp_keyboard_zone(zone);
+            print_msp_keyboard_zone(zone);
           }
         }
       }
@@ -18693,8 +18698,8 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
           if (is_zone_visible(zone_idx)) {
             print_msp_zone_text(zone_idx, false);
           }
-        
-           // Draw keyboard zones for all 16 zones
+
+          // Draw keyboard zones for all 16 zones
           for (uint8_t zone = 0; zone < NUM_MULTISAMPLE_ZONES; zone++) {
             print_msp_keyboard_zone(zone);
           }
@@ -18737,7 +18742,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param)
   {
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
-}
+  }
 }
 #endif
 
@@ -21584,7 +21589,6 @@ FLASHMEM void print_voice_select_fav_search_button()
     TouchButton::drawButton(GRID.X[5], GRID.Y[2], "RND", "NONFAV", TouchButton::BUTTON_NORMAL);
     break;
   }
-
 }
 
 FLASHMEM void draw_algo(bool forceDraw)
@@ -21697,7 +21701,7 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
     setCursor_textGrid_small(11, 7);
     print_formatted_number_signed(configuration.dexed[selected_instance_id].transpose - 24, 2, 5, 1);
   }
-  if (seq.cycle_touch_element != 1)
+  if (seq.cycle_touch_element != 1 && !category_mode_active)
   {
 
     if (menu_item_check(6) || fullrefresh_values)
@@ -21823,6 +21827,16 @@ FLASHMEM void printLiveModButton(int8_t step) {
 
 FLASHMEM void print_voice_select_default_help()
 {
+
+  // Don't show help messages in category mode
+  if (category_mode_active) {
+    // Clear the help text area
+    // display.console = true;
+    // display.fillRect(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2, DISPLAY_WIDTH, CHAR_height_small * 2 + 2, COLOR_BACKGROUND);
+
+    return;
+  }
+
   if (seq.cycle_touch_element != 1) {
     helptext_l(back_text);
     helptext_r(F("< > SELECT VOICE"));
@@ -21899,18 +21913,18 @@ FLASHMEM void reset_live_modifiers()
 }
 
 FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
-
   bool changed = true;
-
-  if (configuration.sys.favorites == 0) {
+ 
+ if (configuration.sys.favorites == 0 && selected_category_count == 0) {
+    // Normal navigation without filters
     int8_t tempValue = 0;
 
-    // show all presets
     switch (generic_temp_select_menu) {
     case MENU_VOICE_BANK:
       tempValue = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
       changed = (tempValue != configuration.dexed[selected_instance_id].bank);
       configuration.dexed[selected_instance_id].bank = tempValue;
+       changed=true;
       break;
 
     case MENU_VOICE_SOUND:
@@ -21922,6 +21936,7 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
         {
           tempValue = MAX_VOICES - 1;
           configuration.dexed[selected_instance_id].bank--;
+         changed=true;
         }
         else
         {
@@ -21934,18 +21949,47 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
         if (configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
           tempValue = 0;
           configuration.dexed[selected_instance_id].bank++;
+         changed=true;
         }
         else {
           changed = false;
           tempValue = MAX_VOICES - 1;
         }
       }
+
+      if (tempValue != configuration.dexed[selected_instance_id].voice) {
+       changed=true;
+      }
       configuration.dexed[selected_instance_id].voice = tempValue;
       break;
     }
   }
+
+  else if (selected_category_count > 0 && category_mode_active) {
+    // Category filter navigation
+    uint8_t old_bank = configuration.dexed[selected_instance_id].bank;
+    uint8_t old_voice = configuration.dexed[selected_instance_id].voice;
+
+    if (e.down) {
+      find_next_matching_voice();
+    }
+    else if (e.up) {
+      find_previous_matching_voice();
+    }
+
+    // Check if voice actually changed
+    if (old_bank != configuration.dexed[selected_instance_id].bank ||
+      old_voice != configuration.dexed[selected_instance_id].voice) {
+     changed=true;
+    }
+   // changed = true; 
+  }
+
   else {
-    // filter favourites
+    // Existing favorite navigation code
+    uint8_t old_bank = configuration.dexed[selected_instance_id].bank;
+    uint8_t old_voice = configuration.dexed[selected_instance_id].voice;
+
     switch (configuration.sys.favorites) {
     case 1: // only Favs
       if (e.down) {
@@ -21969,11 +22013,32 @@ FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
       locate_random_non_favorite();
       break;
     }
+
+    // Check if voice changed
+    if (old_bank != configuration.dexed[selected_instance_id].bank ||
+      old_voice != configuration.dexed[selected_instance_id].voice) {
+      changed = true;
+    }
   }
-  if (changed) {
-    load_sd_voice(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+
+  if (changed ) {
+
+    load_sd_voice(configuration.dexed[selected_instance_id].pool,
+      configuration.dexed[selected_instance_id].bank,
+      configuration.dexed[selected_instance_id].voice,
+      selected_instance_id);
     reset_live_modifiers();
+    changed = true;
+
+    // If in category assign mode, update only the buttons that changed
+   if (category_mode_active && category_edit_mode == 0) {
+   // if (category_mode_active && category_edit_mode == 0 && selected_category_count > 0) {
+      update_category_buttons_for_new_voice();
+    }
+
   }
+
+
 }
 
 FLASHMEM void drawVoiceNameButton() {
@@ -22065,6 +22130,25 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
   }
 }
 
+
+FLASHMEM void  print_dexed_bank_and_voice(){
+ display.setTextSize(2);
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.setCursor(5 * CHAR_width_small, 2 * CHAR_height_small + 3);
+      if (configuration.dexed[selected_instance_id].bank < 100)
+        print_formatted_number(configuration.dexed[selected_instance_id].bank, 2);
+      display.setCursor(5 * CHAR_width_small, 4 * CHAR_height_small + 5);
+      print_formatted_number(configuration.dexed[selected_instance_id].voice + 1, 2);
+
+      setModeColor(2);
+      show_no_grid(2 * CHAR_height_small + 3, 11 * CHAR_width_small, 8, g_bank_name[selected_instance_id], 2, 2);
+
+      setModeColor(3);
+      show_no_grid(4 * CHAR_height_small + 5, 11 * CHAR_width_small, 10, g_voice_name[selected_instance_id], 3, 2);
+
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+}
+      
 FLASHMEM void UI_func_voice_select(uint8_t param)
 {
   if (generic_active_function > 98)
@@ -22073,21 +22157,33 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_voice_select);
-    registerScope(217, 40, 102, 48);
-    dexed_onscreen_algo = 88; // dummy value to force draw on screen init
+    registerScope(217, 40, 50, 48);
+    dexed_onscreen_algo = 88;
     display.fillScreen(COLOR_BACKGROUND);
-    ts.fav_buttton_state = 0; //clear touch button state when starting page
+    ts.fav_buttton_state = 0;
     seq.cycle_touch_element = 0;
-    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
+
+    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
+      LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
       generic_temp_select_menu = 3;
     }
+
+    // Top row buttons
+    TouchButton::drawButton(GRID.X[4], GRID.Y[0], "SET AS", "FAV", TouchButton::BUTTON_ACTIVE);
     TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
+
+    TouchButton::drawButton(GRID.X[5], GRID.Y[1], "VOICE", "CAT", TouchButton::BUTTON_NORMAL);
+
     print_voice_settings_in_dexed_voice_select(true, true);
     print_voice_select_default_help();
     printLiveModButtons();
     drawVoiceNameButton();
     UI_update_instance_icons();
-    draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
+    draw_favorite_icon(configuration.dexed[selected_instance_id].pool,
+      configuration.dexed[selected_instance_id].bank,
+      configuration.dexed[selected_instance_id].voice,
+      selected_instance_id);
+
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
     display.setTextSize(1);
     setCursor_textGrid_small(22, 6);
@@ -22101,8 +22197,13 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
     show_smallfont_noGrid(9 * CHAR_height_small - 2, CHAR_width_small * 25, 10, seq.name);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
     virtual_keyboard_smart_preselect_mode();
     encoderDir[ENC_R].reset();
+
+    // Ensure category mode is off when entering
+    category_mode_active = false;
+    selected_category_count = 0;
   }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
@@ -22220,7 +22321,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
       if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       {
-        if (seq.cycle_touch_element == 0) {
           switch (generic_temp_select_menu) {
           case 10:
             LCDML.FUNC_setGBAToLastFunc();
@@ -22237,10 +22337,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
             print_voice_select_default_help();
             break;
           }
-        }
       }
     }
-
 
     if (seq.cycle_touch_element != 2) { // not in voice name editor
 
@@ -22259,6 +22357,10 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
         generic_temp_select_menu = 5;
       }
 
+       if (category_mode_active && generic_temp_select_menu > 5) {
+        generic_temp_select_menu = 5;
+      }
+
       if (menu_item_check(0))
       {
         setModeColor(0);
@@ -22271,8 +22373,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       {
         setModeColor(1);
         display.setTextSize(1);
-        // display.setCursor(CHAR_width_small * 22, 6);
-        // display.print(F("DEXED"));
         show_no_grid(6, CHAR_width_small * 22, 5, "DEXED", 1, 1);
       }
 
@@ -22280,32 +22380,18 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       {
         draw_favorite_icon(configuration.dexed[selected_instance_id].pool, configuration.dexed[selected_instance_id].bank, configuration.dexed[selected_instance_id].voice, selected_instance_id);
       }
-      display.setTextSize(2);
-      display.setTextColor(GREY2, COLOR_BACKGROUND);
-      display.setCursor(5 * CHAR_width_small, 2 * CHAR_height_small + 3);
-      print_formatted_number(configuration.dexed[selected_instance_id].bank, 2);
-      display.setCursor(5 * CHAR_width_small, 4 * CHAR_height_small + 5);
-      print_formatted_number(configuration.dexed[selected_instance_id].voice + 1, 2);
 
-      setModeColor(2);
-      show_no_grid(2 * CHAR_height_small + 3, 11 * CHAR_width_small, 8, g_bank_name[selected_instance_id], 2, 2);
-
-      setModeColor(3);
-      show_no_grid(4 * CHAR_height_small + 5, 11 * CHAR_width_small, 10, g_voice_name[selected_instance_id], 3, 2);
-
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      print_dexed_bank_and_voice();
 
       if (seq.cycle_touch_element != 1)
       {
-        if (dexed_live_mod.active_button == 0) {
+        if (dexed_live_mod.active_button == 0 && !category_mode_active) {
           draw_algo();
         }
       }
-
-      print_voice_settings_in_dexed_voice_select(false, false);
-
+        print_voice_settings_in_dexed_voice_select(false, false);
+      }
     }
-  }
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -22313,7 +22399,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     unregisterScope();
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
-
     dexed_live_mod.active_button = 0;
   }
 }
@@ -22854,13 +22939,13 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 #endif
           show(2, 1, 16, "Done.");
           delay(MESSAGE_WAIT_TIME);
-      }
+        }
         mode = 0xff;
         LCDML.FUNC_goBackToMenu();
         break;
+      }
     }
-  }
-}
+      }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (mode < 0xff)
@@ -22871,7 +22956,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+    }
 
 FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
 {
@@ -23205,7 +23290,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         show(2, 12, 2, sysex_send_channel);
         break;
       }
-    }
+      }
 
     if (e.pressed) {
 
@@ -23238,7 +23323,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t bank_data[4104];
@@ -23252,7 +23337,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
             show(2, 1, 16, "Done.");
             bank_number = 0xff;
           }
-      }
+          }
         else
         {
           show(2, 1, 16, "No bank.");
@@ -23261,9 +23346,9 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         mode = 0xff;
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
+        }
+      }
     }
-  }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -23273,7 +23358,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
       _cancel_message_old_menus();
     }
   }
-}
+    }
 
 FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 {
@@ -23379,7 +23464,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 #endif
             show(2, 1, 16, "Read error.");
             bank_number = 0xff;
-        }
+          }
           else
           {
             uint8_t voice_data[155];
@@ -23400,7 +23485,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-      }
+          }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -23410,9 +23495,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
+        }
+      }
     }
-  }
-}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -23424,7 +23509,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-}
+  }
 
 FLASHMEM void UI_func_startup_performance(uint8_t param)
 {
@@ -23756,7 +23841,7 @@ extern FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-}
+  }
   return (0);
 }
 
@@ -23954,7 +24039,7 @@ FLASHMEM void locate_previous_favorite()
 
   if (configuration.dexed[selected_instance_id].voice >= 0 && configuration.dexed[selected_instance_id].bank >= 0)
   {
-    print_fav_search_text(LEFT);
+    print_fav_search_text(FAV_LEFT);
 
     do
     { // first find previous fav in current bank
@@ -24024,7 +24109,7 @@ FLASHMEM void locate_next_favorite()
 
   if (configuration.dexed[selected_instance_id].voice <= 30 && configuration.dexed[selected_instance_id].bank <= MAX_BANKS)
   {
-    print_fav_search_text(RIGHT);
+    print_fav_search_text(FAV_RIGHT);
 
     do
     { // first find next fav in current bank
@@ -24134,7 +24219,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
       LOG.println(F(" - It is in Favorites."));
 #endif
       return true;
-  }
+    }
     else
     { // it was not a favorite
 
@@ -24143,7 +24228,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-}
+  }
   else
     return false;
 }
@@ -25449,15 +25534,15 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F("quickcheck found a FAV in bank!"));
 #endif
       return (true);
-  }
+    }
     else
     { // no favorites in bank stored
       return (false);
 #ifdef DEBUG
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
-    }
-}
+  }
+  }
   else
     return false;
 }
@@ -25512,7 +25597,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d/%d.fav"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, i);
         if (SD.exists(tmp))
           countfavs++;
-      }
+    }
       if (countfavs == 0)
       {
         snprintf_P(tmp, sizeof(tmp), PSTR("/%s/%d/%s/%d"), DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b);
@@ -25532,7 +25617,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #endif
     }
   }
-}
+  }
 
 FLASHMEM char* basename(const char* filename)
 {
@@ -25595,7 +25680,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
     case 'G':
       offset = 7;
       break;
-    }
+  }
 
     if (root_note[ms.MatchLength - 2 - 1] == '#')
     {
@@ -25610,13 +25695,13 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
 
     // recalculate low and high notes for all zones
     calc_low_high(preset_number);
-  }
+}
   else
   {
 #ifdef DEBUG
     LOG.println("No match.");
 #endif
-}
+  }
 
 #ifdef DEBUG
   LOG.print(F("MSZ preset #"));
