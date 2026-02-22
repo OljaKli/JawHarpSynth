@@ -112,12 +112,12 @@ static const char* get_group_state_label(uint8_t group_idx, int8_t state_idx) {
     case 5: // FEEL
         switch (state_idx) {
         case 0: return "HAPPY";
-        case 1: return "SAD";
+        case 1: return "SAD ";
         case 2: return "ANGRY";
         case 3: return "CALM";
         case 4: return "MYST";
         case 5: return "EPIC";
-        case 6: return "PLAY";
+        case 6: return "PLAYFL";
         case 7: return "DREAMY";
         case 8: return "FUNKY";
         case 9: return "ETHRL";
@@ -152,7 +152,7 @@ static const char* category_names[] = {
     "NONE",                                   // 0
     // Instruments (1‑18)
     "PIANO", "E.PIANO", "ORGAN", "STRINGS", "PAD", "LEAD",
-    "BASS", "SYNH.BASS", "SYNH.LEAD", "BELLS", "GUITAR", "DRUMS.PERC",
+    "BASS", "SYNTH.BASS", "SYNTH.LEAD", "BELLS", "GUITAR", "DRUMS.PERC",
     "FX", "BRASS", "SYNTH.BRASS", "WOOD.WIND", "VOCAL", "KEYS",
     // Attack (19‑20)
     "SLOW", "FAST",
