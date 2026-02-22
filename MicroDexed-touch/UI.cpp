@@ -21913,132 +21913,108 @@ FLASHMEM void reset_live_modifiers()
 }
 
 FLASHMEM void UI_func_voice_select_loop(EncoderEvents e) {
-  bool changed = true;
- 
- if (configuration.sys.favorites == 0 && selected_category_count == 0) {
-    // Normal navigation without filters
-    int8_t tempValue = 0;
+    bool changed = true;
+    uint8_t old_bank, old_voice;
 
-    switch (generic_temp_select_menu) {
-    case MENU_VOICE_BANK:
-      tempValue = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
-      changed = (tempValue != configuration.dexed[selected_instance_id].bank);
-      configuration.dexed[selected_instance_id].bank = tempValue;
-       changed=true;
-      break;
+    // -----------------------------------------------------------------
+    // 1. FILTER NAVIGATION (category mode + filter mode + filter active)
+    // -----------------------------------------------------------------
+    if (category_mode_active && category_edit_mode == 1 && selected_category_count > 0) {
+        old_bank = configuration.dexed[selected_instance_id].bank;
+        old_voice = configuration.dexed[selected_instance_id].voice;
 
-    case MENU_VOICE_SOUND:
-      tempValue = configuration.dexed[selected_instance_id].voice + e.dir;
-      // check select previous bank
-      if (tempValue < 0)
-      {
-        if (configuration.dexed[selected_instance_id].bank > 0)
-        {
-          tempValue = MAX_VOICES - 1;
-          configuration.dexed[selected_instance_id].bank--;
-         changed=true;
+        if (e.down) {
+            find_next_matching_voice();
+        } else if (e.up) {
+            find_previous_matching_voice();
         }
-        else
-        {
-          changed = false;
-          tempValue = 0;
+
+        changed = (old_bank != configuration.dexed[selected_instance_id].bank ||
+                   old_voice != configuration.dexed[selected_instance_id].voice);
+    }
+
+    // -----------------------------------------------------------------
+    // 2. FAVORITE NAVIGATION (not in category mode, favorites active)
+    // -----------------------------------------------------------------
+    else if (!category_mode_active && configuration.sys.favorites != 0) {
+        old_bank = configuration.dexed[selected_instance_id].bank;
+        old_voice = configuration.dexed[selected_instance_id].voice;
+
+        switch (configuration.sys.favorites) {
+            case 1: // only Favorites
+                if (e.down) locate_next_favorite();
+                else locate_previous_favorite();
+                break;
+            case 2: // only non‑Favorites
+                if (e.down) locate_next_non_favorite();
+                else locate_previous_non_favorite();
+                break;
+            case 3: // random non‑Favorites
+                locate_random_non_favorite();
+                break;
         }
-      }
-      // check select next bank
-      if (tempValue >= MAX_VOICES) {
-        if (configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
-          tempValue = 0;
-          configuration.dexed[selected_instance_id].bank++;
-         changed=true;
+
+        changed = (old_bank != configuration.dexed[selected_instance_id].bank ||
+                   old_voice != configuration.dexed[selected_instance_id].voice);
+    }
+
+    // -----------------------------------------------------------------
+    // 3. NORMAL NAVIGATION (all other cases)
+    //    – Not in category mode and favorites off
+    //    – In category mode but assign mode (or filter empty)
+    // -----------------------------------------------------------------
+    else {
+        int8_t tempValue = 0;
+        switch (generic_temp_select_menu) {
+            case 2: // MENU_VOICE_BANK
+                tempValue = constrain(configuration.dexed[selected_instance_id].bank + e.dir * e.speed, 0, MAX_BANKS - 1);
+                changed = (tempValue != configuration.dexed[selected_instance_id].bank);
+                configuration.dexed[selected_instance_id].bank = tempValue;
+                break;
+
+            case 3: // MENU_VOICE_SOUND
+                tempValue = configuration.dexed[selected_instance_id].voice + e.dir;
+                // Handle bank wrap when moving beyond first/last voice
+                if (tempValue < 0) {
+                    if (configuration.dexed[selected_instance_id].bank > 0) {
+                        tempValue = MAX_VOICES - 1;
+                        configuration.dexed[selected_instance_id].bank--;
+                    } else {
+                        changed = false;
+                        tempValue = 0;
+                    }
+                } else if (tempValue >= MAX_VOICES) {
+                    if (configuration.dexed[selected_instance_id].bank + 1 < MAX_BANKS) {
+                        tempValue = 0;
+                        configuration.dexed[selected_instance_id].bank++;
+                    } else {
+                        changed = false;
+                        tempValue = MAX_VOICES - 1;
+                    }
+                }
+                if (tempValue != configuration.dexed[selected_instance_id].voice) {
+                    changed = true;
+                }
+                configuration.dexed[selected_instance_id].voice = tempValue;
+                break;
         }
-        else {
-          changed = false;
-          tempValue = MAX_VOICES - 1;
+    }
+
+    // -----------------------------------------------------------------
+    // 4. If the voice changed, load it and update the UI
+    // -----------------------------------------------------------------
+    if (changed) {
+        load_sd_voice(configuration.dexed[selected_instance_id].pool,
+                      configuration.dexed[selected_instance_id].bank,
+                      configuration.dexed[selected_instance_id].voice,
+                      selected_instance_id);
+        reset_live_modifiers();
+
+        // In assign mode, update the category buttons to reflect the new voice's tags
+        if (category_mode_active && category_edit_mode == 0) {
+            update_category_buttons_for_new_voice();
         }
-      }
-
-      if (tempValue != configuration.dexed[selected_instance_id].voice) {
-       changed=true;
-      }
-      configuration.dexed[selected_instance_id].voice = tempValue;
-      break;
     }
-  }
-
-  else if (selected_category_count > 0 && category_mode_active) {
-    // Category filter navigation
-    uint8_t old_bank = configuration.dexed[selected_instance_id].bank;
-    uint8_t old_voice = configuration.dexed[selected_instance_id].voice;
-
-    if (e.down) {
-      find_next_matching_voice();
-    }
-    else if (e.up) {
-      find_previous_matching_voice();
-    }
-
-    // Check if voice actually changed
-    if (old_bank != configuration.dexed[selected_instance_id].bank ||
-      old_voice != configuration.dexed[selected_instance_id].voice) {
-     changed=true;
-    }
-   // changed = true; 
-  }
-
-  else {
-    // Existing favorite navigation code
-    uint8_t old_bank = configuration.dexed[selected_instance_id].bank;
-    uint8_t old_voice = configuration.dexed[selected_instance_id].voice;
-
-    switch (configuration.sys.favorites) {
-    case 1: // only Favs
-      if (e.down) {
-        locate_next_favorite();
-      }
-      else {
-        locate_previous_favorite();
-      }
-      break;
-
-    case 2: // only non-Favs
-      if (e.down) {
-        locate_next_non_favorite();
-      }
-      else {
-        locate_previous_non_favorite();
-      }
-      break;
-
-    case 3: // random non-Favs
-      locate_random_non_favorite();
-      break;
-    }
-
-    // Check if voice changed
-    if (old_bank != configuration.dexed[selected_instance_id].bank ||
-      old_voice != configuration.dexed[selected_instance_id].voice) {
-      changed = true;
-    }
-  }
-
-  if (changed ) {
-
-    load_sd_voice(configuration.dexed[selected_instance_id].pool,
-      configuration.dexed[selected_instance_id].bank,
-      configuration.dexed[selected_instance_id].voice,
-      selected_instance_id);
-    reset_live_modifiers();
-    changed = true;
-
-    // If in category assign mode, update only the buttons that changed
-   if (category_mode_active && category_edit_mode == 0) {
-   // if (category_mode_active && category_edit_mode == 0 && selected_category_count > 0) {
-      update_category_buttons_for_new_voice();
-    }
-
-  }
-
-
 }
 
 FLASHMEM void drawVoiceNameButton() {
@@ -22203,7 +22179,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
     // Ensure category mode is off when entering
     category_mode_active = false;
-    selected_category_count = 0;
+    //selected_category_count = 0;
   }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********

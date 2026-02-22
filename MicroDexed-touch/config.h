@@ -260,7 +260,8 @@
 #define YELLOW 0xFFEB
 
 #define GREEN 0x07E0
-#define MIDDLEGREEN 0x1500
+//#define MIDDLEGREEN 0x1500
+#define MIDDLEGREEN 0x0C00 // now slightly darker green
 #define DARKGREEN 0x0AE0
 
 #define GREY1 0xC638
@@ -1265,10 +1266,10 @@ typedef struct {
 
 
 // Category search global variables
-#define MAX_CATEGORIES 25
+#define MAX_CATEGORIES 40
 #define MAX_CATEGORY_NAME_LEN 16
 #define MAX_VOICES_PER_BANK 32
-#define MAX_CATEGORIES_PER_VOICE 8
+#define MAX_CATEGORIES_PER_VOICE 10
 
 extern bool category_mode_active;
 extern uint8_t category_edit_mode;

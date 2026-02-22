@@ -545,15 +545,14 @@ FLASHMEM void handle_touchscreen_voice_select()
 
     // Handle category mode touches
     if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
-      // Mode toggle button
-      category_edit_mode = !category_edit_mode;
-      draw_category_buttons(category_edit_mode == 1);
+      // Toggle between assign (0) and filter (1)
+    category_edit_mode = (category_edit_mode == 0) ? 1 : 0;
 
-      if (category_edit_mode == 0) {
-        // Switching to ASSIGN mode - clear filter selections
-        selected_category_count = 0;
-        memset(selected_categories, 0, sizeof(selected_categories));
-      }
+    // Redraw the entire category grid with the new mode
+    draw_category_buttons(category_edit_mode == 1);
+
+    // The MODE button label is automatically updated by draw_category_buttons()
+    return; // exit after handling
     }
   }
 
