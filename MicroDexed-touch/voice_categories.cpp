@@ -1,9 +1,9 @@
 /*
  * voice_categories.cpp - Voice category management for MicroDexed
  * Stores category metadata per voice in separate JSON files per bank
- * 
+ *
  * Part of MicroDexed
- * 
+ *
  * MIT License
  */
 
@@ -14,7 +14,7 @@
 #include "UI.h"
 #include "ILI9341_t3n.h"
 
-// External references
+ // External references
 extern ILI9341_t3n display;
 extern uint8_t selected_instance_id;
 extern void print_voice_settings_in_dexed_voice_select(bool, bool);
@@ -31,17 +31,17 @@ extern void clear_search_text();
 // Global state
 bool category_mode_active = false;
 uint8_t category_edit_mode = 0; // 0 = assign, 1 = filter
-uint8_t selected_categories[MAX_CATEGORIES] = {0};
+uint8_t selected_categories[MAX_CATEGORIES] = { 0 };
 uint8_t selected_category_count = 0;
 
 // Cache for button states (minimises redraws)
-static bool button_state_cache[MAX_CATEGORIES] = {false};
+static bool button_state_cache[MAX_CATEGORIES] = { false };
 static uint8_t cached_pool = 0;
 static uint8_t cached_bank = 0;
 static uint8_t cached_voice = 0;
 
 // Cache for group states (which state is active, -1 = none)
-static int8_t group_state_cache[6] = {-1, -1, -1, -1, -1, -1};
+static int8_t group_state_cache[6] = { -1, -1, -1, -1, -1, -1 };
 
 static uint8_t saved_favorite_setting = 0;
 
@@ -61,9 +61,9 @@ static void blink_button(uint16_t x, uint16_t y, TouchButton::Color original_col
 // We'll modify the call sites to provide the label.
 
 // However, to keep the code clean, we'll create a version that takes the two label strings.
-static void blink_button_with_labels(uint16_t x, uint16_t y, 
-                                      const char* row1, const char* row2,
-                                      TouchButton::Color original_color) {
+static void blink_button_with_labels(uint16_t x, uint16_t y,
+    const char* row1, const char* row2,
+    TouchButton::Color original_color) {
     // Blink red twice
     for (int i = 0; i < 2; i++) {
         TouchButton::drawButton(x, y, row1, row2, TouchButton::BUTTON_RED);
@@ -76,54 +76,54 @@ static void blink_button_with_labels(uint16_t x, uint16_t y,
 // ------------------------------------------------------------------
 // Multi‑state category groups – using new IDs
 // ------------------------------------------------------------------
-static const uint8_t attack_group[] = {CAT_SLOW_ATTACK, CAT_FAST_ATTACK};
-static const uint8_t decay_group[]   = {CAT_SHORT_DECAY, CAT_LONG_DECAY};
-static const uint8_t release_group[] = {CAT_SHORT_RELEASE, CAT_LONG_RELEASE};
-static const uint8_t tone_group[]    = {CAT_HARD, CAT_SOFT};
-static const uint8_t rating_group[]  = {CAT_RATING1, CAT_RATING2, CAT_RATING3};  // 3 states
-static const uint8_t feel_group[]    = {CAT_HAPPY, CAT_SAD, CAT_ANGRY, CAT_CALM,
+static const uint8_t attack_group[] = { CAT_SLOW_ATTACK, CAT_FAST_ATTACK };
+static const uint8_t decay_group[] = { CAT_SHORT_DECAY, CAT_LONG_DECAY };
+static const uint8_t release_group[] = { CAT_SHORT_RELEASE, CAT_LONG_RELEASE };
+static const uint8_t tone_group[] = { CAT_HARD, CAT_SOFT };
+static const uint8_t rating_group[] = { CAT_RATING1, CAT_RATING2, CAT_RATING3 };  // 3 states
+static const uint8_t feel_group[] = { CAT_HAPPY, CAT_SAD, CAT_ANGRY, CAT_CALM,
                                          CAT_MYST, CAT_EPIC, CAT_PLAYFUL,
-                                         CAT_DREAMY, CAT_FUNKY, CAT_ETHEREAL};
+                                         CAT_DREAMY, CAT_FUNKY, CAT_ETHEREAL };
 
-static const char* group_names[] = {"ATTACK", "DECAY", "RELEASE", "TONE", "RATING", "FEEL"};
-static const uint8_t* group_arrays[] = {attack_group, decay_group, release_group,
-                                         tone_group, rating_group, feel_group};
-static const uint8_t group_sizes[] = {2,2,2,2,3,10};
+static const char* group_names[] = { "ATTACK", "DECAY", "RELEASE", "TONE", "RATING", "FEEL" };
+static const uint8_t* group_arrays[] = { attack_group, decay_group, release_group,
+                                         tone_group, rating_group, feel_group };
+static const uint8_t group_sizes[] = { 2,2,2,2,3,10 };
 
 // Helper: short label for group states (ASCII only)
 static const char* get_group_state_label(uint8_t group_idx, int8_t state_idx) {
     if (state_idx < 0) return "-";
     switch (group_idx) {
-        case 0: // ATTACK
-            return state_idx == 0 ? "SLOW" : "FAST";
-        case 1: // DECAY
-            return state_idx == 0 ? "SHORT" : "LONG";
-        case 2: // RELEASE
-            return state_idx == 0 ? "SHORT" : "LONG";
-        case 3: // TONE
-            return state_idx == 0 ? "HARD" : "SOFT";
-        case 4: // RATING – ASCII asterisks, 3 states
-            switch (state_idx) {
-                case 0: return "*";
-                case 1: return "**";
-                case 2: return "***";
-                default: return "-";
-            }
-        case 5: // FEEL
-            switch (state_idx) {
-                case 0: return "HAPPY";
-                case 1: return "SAD";
-                case 2: return "ANGRY";
-                case 3: return "CALM";
-                case 4: return "MYST";
-                case 5: return "EPIC";
-                case 6: return "PLAY";
-                case 7: return "DREAMY";
-                case 8: return "FUNKY";
-                case 9: return "ETHRL";
-                default: return "-";
-            }
+    case 0: // ATTACK
+        return state_idx == 0 ? "SLOW" : "FAST";
+    case 1: // DECAY
+        return state_idx == 0 ? "SHORT" : "LONG";
+    case 2: // RELEASE
+        return state_idx == 0 ? "SHORT" : "LONG";
+    case 3: // TONE
+        return state_idx == 0 ? "HARD" : "SOFT";
+    case 4: // RATING – ASCII asterisks, 3 states
+        switch (state_idx) {
+        case 0: return "*";
+        case 1: return "**";
+        case 2: return "***";
         default: return "-";
+        }
+    case 5: // FEEL
+        switch (state_idx) {
+        case 0: return "HAPPY";
+        case 1: return "SAD";
+        case 2: return "ANGRY";
+        case 3: return "CALM";
+        case 4: return "MYST";
+        case 5: return "EPIC";
+        case 6: return "PLAY";
+        case 7: return "DREAMY";
+        case 8: return "FUNKY";
+        case 9: return "ETHRL";
+        default: return "-";
+        }
+    default: return "-";
     }
 }
 
@@ -169,27 +169,29 @@ static const char* category_names[] = {
     "PLAYFUL", "DREAMY", "FUNKY", "ETHEREAL"
 };
 
-FLASHMEM void get_category_name(uint8_t category, char *name) {
-    if (category < sizeof(category_names)/sizeof(category_names[0]))
+FLASHMEM void get_category_name(uint8_t category, char* name) {
+    if (category < sizeof(category_names) / sizeof(category_names[0]))
         strcpy(name, category_names[category]);
     else
         sprintf(name, "Cat%d", category);
 }
 
-FLASHMEM void get_category_labels(uint8_t category, char *row1, char *row2) {
-    const char* name = (category < sizeof(category_names)/sizeof(category_names[0])) ?
-                        category_names[category] : "";
+FLASHMEM void get_category_labels(uint8_t category, char* row1, char* row2) {
+    const char* name = (category < sizeof(category_names) / sizeof(category_names[0])) ?
+        category_names[category] : "";
     uint8_t len = strlen(name);
     if (len <= 7) {
         strcpy(row1, name);
         row2[0] = '\0';
-    } else if (strstr(name, ".") != NULL) {
+    }
+    else if (strstr(name, ".") != NULL) {
         char* dot = strstr(name, ".");
         uint8_t split = dot - name;
         strncpy(row1, name, split);
         row1[split] = '\0';
         strcpy(row2, dot + 1);
-    } else {
+    }
+    else {
         strncpy(row1, name, 7);
         row1[7] = '\0';
         strcpy(row2, name + 7);
@@ -199,7 +201,7 @@ FLASHMEM void get_category_labels(uint8_t category, char *row1, char *row2) {
 // ------------------------------------------------------------------
 // SD card load/save (unchanged)
 // ------------------------------------------------------------------
-FLASHMEM bool load_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData *data) {
+FLASHMEM bool load_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData* data) {
     char filename[CONFIG_FILENAME_LEN];
     File catFile;
 
@@ -213,7 +215,7 @@ FLASHMEM bool load_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData 
     }
 
     snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/categories.json"),
-               DEXED_CONFIG_PATH, pool, bank);
+        DEXED_CONFIG_PATH, pool, bank);
 
     if (sd_card_internal > 0 && SD.exists(filename)) {
         catFile = SD.open(filename);
@@ -256,7 +258,7 @@ FLASHMEM bool load_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData 
     return false;
 }
 
-FLASHMEM bool save_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData *data) {
+FLASHMEM bool save_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData* data) {
     char filename[100], folder[100];
     File catFile;
 
@@ -338,7 +340,7 @@ FLASHMEM bool voice_has_category(uint8_t pool, uint8_t bank, uint8_t voice, uint
 
 // Batch version: set categories for a voice (replaces any existing)
 static void set_voice_categories(uint8_t pool, uint8_t bank, uint8_t voice,
-                                 const uint8_t* cats, uint8_t count) {
+    const uint8_t* cats, uint8_t count) {
     BankCategoryData data;
     if (!load_bank_categories(pool, bank, &data)) {
         memset(&data, 0, sizeof(BankCategoryData));
@@ -392,7 +394,8 @@ FLASHMEM void toggle_category_for_voice(uint8_t pool, uint8_t bank, uint8_t voic
             data.voice_categories[voice][i] = data.voice_categories[voice][i + 1];
         }
         data.voice_category_counts[voice]--;
-    } else {
+    }
+    else {
         // Try to add category
         if (data.voice_category_counts[voice] >= MAX_CATEGORIES_PER_VOICE) {
             // Limit reached – blink the button and abort
@@ -405,8 +408,8 @@ FLASHMEM void toggle_category_for_voice(uint8_t pool, uint8_t bank, uint8_t voic
                 char row1[8], row2[8];
                 get_category_labels(category, row1, row2);
                 TouchButton::Color original = button_state_cache[category] ?
-                                               TouchButton::BUTTON_HIGHLIGHTED :
-                                               TouchButton::BUTTON_NORMAL;
+                    TouchButton::BUTTON_HIGHLIGHTED :
+                    TouchButton::BUTTON_NORMAL;
                 blink_button_with_labels(x, y, row1, row2, original);
             }
             return;
@@ -444,8 +447,8 @@ FLASHMEM void toggle_category_for_voice(uint8_t pool, uint8_t bank, uint8_t voic
         char row1[8], row2[8];
         get_category_labels(category, row1, row2);
         TouchButton::Color btn_color = button_state_cache[category] ?
-                                       TouchButton::BUTTON_HIGHLIGHTED :
-                                       TouchButton::BUTTON_NORMAL;
+            TouchButton::BUTTON_HIGHLIGHTED :
+            TouchButton::BUTTON_NORMAL;
         TouchButton::drawButton(x, y, row1, row2, btn_color);
     }
 }
@@ -456,8 +459,8 @@ FLASHMEM void toggle_category_for_voice(uint8_t pool, uint8_t bank, uint8_t voic
 FLASHMEM void update_button_state_cache() {
     BankCategoryData data;
     if (load_bank_categories(configuration.dexed[selected_instance_id].pool,
-                             configuration.dexed[selected_instance_id].bank,
-                             &data)) {
+        configuration.dexed[selected_instance_id].bank,
+        &data)) {
         uint8_t voice = configuration.dexed[selected_instance_id].voice;
         // Reset all to false
         for (uint8_t cat = 1; cat < MAX_CATEGORIES; cat++) {
@@ -472,7 +475,8 @@ FLASHMEM void update_button_state_cache() {
         }
         // Update group cache
         update_group_state_cache();
-    } else {
+    }
+    else {
         // No categories file, all false
         for (uint8_t cat = 1; cat < MAX_CATEGORIES; cat++) {
             button_state_cache[cat] = false;
@@ -543,7 +547,8 @@ FLASHMEM void draw_category_buttons(bool filter_mode) {
                 get_category_labels(cat, row1, row2);
                 TouchButton::Color btn_color = is_selected ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL;
                 TouchButton::drawButton(x, y, row1, row2, btn_color);
-            } else {
+            }
+            else {
                 uint8_t group_idx = bi - 18;
                 const uint8_t* cats = group_arrays[group_idx];
                 uint8_t size = group_sizes[group_idx];
@@ -562,7 +567,8 @@ FLASHMEM void draw_category_buttons(bool filter_mode) {
                 TouchButton::Color btn_color = (selected_state >= 0) ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL;
                 TouchButton::drawButton(x, y, row1, row2, btn_color);
             }
-        } else {
+        }
+        else {
             // Assign mode: draw only when full_redraw_needed is true
             if (full_redraw_needed) {
                 if (bi < 18) {
@@ -571,7 +577,8 @@ FLASHMEM void draw_category_buttons(bool filter_mode) {
                     get_category_labels(cat, row1, row2);
                     TouchButton::Color btn_color = active ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL;
                     TouchButton::drawButton(x, y, row1, row2, btn_color);
-                } else {
+                }
+                else {
                     uint8_t group_idx = bi - 18;
                     int8_t state = group_state_cache[group_idx];
                     strcpy(row1, group_names[group_idx]);
@@ -584,9 +591,10 @@ FLASHMEM void draw_category_buttons(bool filter_mode) {
     }
 
     // Mode toggle button (always redrawn)
-    TouchButton::drawButton(GRID.X[5], GRID.Y[0], "MODE:",
-                           filter_mode ? "FILTER" : "ASSIGN",
-                           TouchButton::BUTTON_ACTIVE);
+    if (filter_mode == 1)
+        TouchButton::drawButton(GRID.X[5], GRID.Y[0], "MODE:", "FILTER", TouchButton::BUTTON_ACTIVE);
+    else
+        TouchButton::drawButton(GRID.X[5], GRID.Y[0], "MODE:", "ASSIGN", TouchButton::BUTTON_HIGHLIGHTED);
 }
 
 // ------------------------------------------------------------------
@@ -610,7 +618,8 @@ FLASHMEM void handle_category_touch() {
                         configuration.dexed[selected_instance_id].voice,
                         cat);
                     // Redraw this button only (done in toggle_category_for_voice)
-                } else {
+                }
+                else {
                     // Group button: cycle through states
                     uint8_t group_idx = bi - 18;
                     const uint8_t* cats = group_arrays[group_idx];
@@ -627,9 +636,9 @@ FLASHMEM void handle_category_touch() {
                     // First, copy all categories that are NOT from this group
                     BankCategoryData data;
                     if (load_bank_categories(
-                            configuration.dexed[selected_instance_id].pool,
-                            configuration.dexed[selected_instance_id].bank,
-                            &data)) {
+                        configuration.dexed[selected_instance_id].pool,
+                        configuration.dexed[selected_instance_id].bank,
+                        &data)) {
                         uint8_t voice = configuration.dexed[selected_instance_id].voice;
                         for (uint8_t i = 0; i < data.voice_category_counts[voice]; i++) {
                             uint8_t c = data.voice_categories[voice][i];
@@ -685,7 +694,8 @@ FLASHMEM void handle_category_touch() {
                     TouchButton::Color btn_color = (next < size) ? TouchButton::BUTTON_HIGHLIGHTED : TouchButton::BUTTON_NORMAL;
                     TouchButton::drawButton(x, y, row1, row2, btn_color);
                 }
-            } else {  // Filter mode: toggle selected category (including group states)
+            }
+            else {  // Filter mode: toggle selected category (including group states)
                 if (bi < 18) {
                     // Instrument button: toggle single category
                     uint8_t cat = bi + 1;
@@ -703,10 +713,12 @@ FLASHMEM void handle_category_touch() {
                             selected_categories[i] = selected_categories[i + 1];
                         }
                         selected_category_count--;
-                    } else if (selected_category_count < MAX_CATEGORIES) {
+                    }
+                    else if (selected_category_count < MAX_CATEGORIES) {
                         selected_categories[selected_category_count++] = cat;
                     }
-                } else {
+                }
+                else {
                     // Group button: cycle through states in filter
                     uint8_t group_idx = bi - 18;
                     const uint8_t* cats = group_arrays[group_idx];
@@ -785,10 +797,10 @@ FLASHMEM void find_next_matching_voice() {
     uint8_t attempts = 0;
     uint8_t current_bank = start_bank;
     uint8_t current_voice = start_voice;
-    
+
     // Show search indicator
     print_cat_search_text(CAT_RIGHT, current_bank);
-    
+
     do {
         current_voice++;
         if (current_voice >= MAX_VOICES_PER_BANK) {
@@ -799,23 +811,23 @@ FLASHMEM void find_next_matching_voice() {
         }
         attempts++;
         if (voice_matches_categories(configuration.dexed[selected_instance_id].pool,
-                                    current_bank, current_voice)) {
+            current_bank, current_voice)) {
             configuration.dexed[selected_instance_id].bank = current_bank;
             configuration.dexed[selected_instance_id].voice = current_voice;
             load_sd_voice(configuration.dexed[selected_instance_id].pool,
-                         current_bank, current_voice, selected_instance_id);
+                current_bank, current_voice, selected_instance_id);
             reset_live_modifiers();
-            
+
             // Do NOT update cache here – let it stay stale so that when returning to assign mode,
             // the mismatch triggers a full redraw.
-            
+
             // Clear search text
             clear_search_text();
             return;
         }
     } while (attempts < (MAX_BANKS * MAX_VOICES_PER_BANK) &&
-             !(current_bank == start_bank && current_voice == start_voice));
-    
+        !(current_bank == start_bank && current_voice == start_voice));
+
     clear_search_text();
 }
 
@@ -826,10 +838,10 @@ FLASHMEM void find_previous_matching_voice() {
     uint8_t attempts = 0;
     uint8_t current_bank = start_bank;
     uint8_t current_voice = start_voice;
-    
+
     // Show search indicator
     print_cat_search_text(CAT_LEFT, current_bank);
-    
+
     do {
         if (current_voice > 0) current_voice--;
         else {
@@ -840,23 +852,23 @@ FLASHMEM void find_previous_matching_voice() {
         }
         attempts++;
         if (voice_matches_categories(configuration.dexed[selected_instance_id].pool,
-                                    current_bank, current_voice)) {
+            current_bank, current_voice)) {
             configuration.dexed[selected_instance_id].bank = current_bank;
             configuration.dexed[selected_instance_id].voice = current_voice;
             load_sd_voice(configuration.dexed[selected_instance_id].pool,
-                         current_bank, current_voice, selected_instance_id);
+                current_bank, current_voice, selected_instance_id);
             reset_live_modifiers();
-            
+
             // Do NOT update cache here – let it stay stale so that when returning to assign mode,
             // the mismatch triggers a full redraw.
-            
+
             // Clear search text
             clear_search_text();
             return;
         }
     } while (attempts < (MAX_BANKS * MAX_VOICES_PER_BANK) &&
-             !(current_bank == start_bank && current_voice == start_voice));
-    
+        !(current_bank == start_bank && current_voice == start_voice));
+
     clear_search_text();
 }
 
@@ -866,7 +878,8 @@ FLASHMEM void print_cat_search_text(uint8_t direction, uint8_t bank) {
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
     if (direction == CAT_LEFT) {
         display.print(F("<<SEARCH B"));
-    } else {
+    }
+    else {
         display.print(F("SEARCH>> B"));
     }
     print_formatted_number(bank, 2);
@@ -907,7 +920,7 @@ FLASHMEM void enter_category_mode() {
 
 FLASHMEM void exit_category_mode() {
     category_mode_active = false;
-   // selected_category_count = 0;
+    // selected_category_count = 0;
     configuration.sys.favorites = saved_favorite_setting;
     TouchButton::drawButton(GRID.X[5], GRID.Y[1], "VOICE", "CAT", TouchButton::BUTTON_NORMAL);
 }
@@ -918,12 +931,12 @@ FLASHMEM void exit_category_mode() {
 FLASHMEM void update_category_buttons_for_new_voice() {
     if (!category_mode_active || category_edit_mode != 0) return;
 
-    bool new_states[MAX_CATEGORIES] = {false};
+    bool new_states[MAX_CATEGORIES] = { false };
     // Instead of 41 SD reads, we load the bank categories once and update caches
     BankCategoryData data;
     if (load_bank_categories(configuration.dexed[selected_instance_id].pool,
-                             configuration.dexed[selected_instance_id].bank,
-                             &data)) {
+        configuration.dexed[selected_instance_id].bank,
+        &data)) {
         uint8_t voice = configuration.dexed[selected_instance_id].voice;
         for (uint8_t cat = 1; cat < MAX_CATEGORIES; cat++) {
             new_states[cat] = false;
@@ -944,7 +957,8 @@ FLASHMEM void update_category_buttons_for_new_voice() {
                 }
             }
         }
-    } else {
+    }
+    else {
         // No data, all false
         for (uint8_t cat = 1; cat < MAX_CATEGORIES; cat++) {
             new_states[cat] = false;
@@ -965,8 +979,8 @@ FLASHMEM void update_category_buttons_for_new_voice() {
             char row1[8], row2[8];
             get_category_labels(cat, row1, row2);
             TouchButton::Color btn_color = new_states[cat] ?
-                                           TouchButton::BUTTON_HIGHLIGHTED :
-                                           TouchButton::BUTTON_NORMAL;
+                TouchButton::BUTTON_HIGHLIGHTED :
+                TouchButton::BUTTON_NORMAL;
             TouchButton::drawButton(x, y, row1, row2, btn_color);
             button_state_cache[cat] = new_states[cat];
         }
