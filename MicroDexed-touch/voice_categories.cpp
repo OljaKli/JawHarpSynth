@@ -4,8 +4,6 @@
  * 
  * Part of MicroDexed
  * 
- * https://github.com/limitedbass/MicroDexed
- * 
  * MIT License
  */
 
@@ -13,7 +11,7 @@
 #include "config.h"
 #include "dexed_sd.h"
 #include "touchbutton.h"
-#include "ui.h"
+#include "UI.h"
 #include "ILI9341_t3n.h"
 
 // External references
@@ -839,10 +837,6 @@ FLASHMEM void enter_category_mode() {
     
     button_index++;
   }
-  
-  
-  
-  
 }
 
 FLASHMEM void exit_category_mode() {

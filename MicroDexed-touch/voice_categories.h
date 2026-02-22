@@ -3,8 +3,6 @@
  * 
  * Part of MicroDexed
  * 
- * https://github.com/limitedbass/MicroDexed
- * 
  * MIT License
  */
 
