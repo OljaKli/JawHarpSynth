@@ -2078,17 +2078,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setBarStart(int8_t num) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
+  bool wasActive = isSettingActivated;
+
   if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
     if (isSettingActivated && editingNote.active) {
-      // Committing changes - note should return to normal color
       commitEditingNote();
     }
     else if (!isSettingActivated && editingNote.active) {
-      // Canceling changes - note should return to normal color  
       cancelEditingNote();
     }
     else if (!isSettingActivated && selectedNote > -1) {
-      // Entering edit mode - but only turn red if we're NOT in selection mode
       bool isParameterEditMode = (editMode != EDIT_SELECT_NOTE && editMode != EDIT_LAYER);
       if (isParameterEditMode) {
         startEditingNote(selectedNote);
@@ -2096,26 +2095,42 @@ FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
     }
   }
   else if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
-    // PATTERN MODE (not mute editor): Handle the selected note redraw
+    // PATTERN MODE
     if (selectedNote > -1) {
-      // Create a region that covers the note area with EMPTY notes
-      // This ensures everything in that area gets redrawn properly
-      uint32_t timeOn = getEventTime(notePairs.at(selectedNote).noteOn);
-      uint32_t timeOff = getEventTime(notePairs.at(selectedNote).noteOff);
-      uint16_t fromX = getNoteCoord(timeOn);
-      uint16_t toX = getNoteCoord(timeOff);
-
-      UpdateRange fullRegion;
-      fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(fromX - 5));
-      fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(toX + 5));
-      fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
-      drawRegionsX.push_back(fullRegion);
-
-      drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+      if (isSettingActivated) {
+        // We are exiting edit mode – commit or cancel based on whether we were editing
+        if (editingNote.active) {
+          // If we were editing, we are now committing (encoder push confirms)
+          commitEditingNote();
+        } else {
+          // Just a redraw region for the selected note (when entering edit mode but not yet editing)
+          uint32_t timeOn = getEventTime(notePairs.at(selectedNote).noteOn);
+          uint32_t timeOff = getEventTime(notePairs.at(selectedNote).noteOff);
+          uint16_t fromX = getNoteCoord(timeOn);
+          uint16_t toX = getNoteCoord(timeOff);
+          UpdateRange fullRegion;
+          fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(fromX - 5));
+          fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(toX + 5));
+          fullRegion.notes = {};
+          drawRegionsX.push_back(fullRegion);
+          drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+        }
+      } else {
+        // Entering edit mode – start editing the selected note if in a parameter mode
+        bool isParameterEditMode = (editMode != EDIT_SELECT_NOTE && editMode != EDIT_LAYER);
+        if (isParameterEditMode && !editingNote.active) {
+          startEditingNote(selectedNote);
+        }
+      }
     }
   }
 
   isSettingActivated = !isSettingActivated;
+
+  // When exiting setting activated mode in pattern mode, we may have committed or cancelled.
+  // If we committed, editingNote is no longer active and notePairs has been rebuilt.
+  // If we cancelled, editingNote is inactive and original events restored.
+  // No extra sort needed here – commitEditingNote already sorts and reloads.
 
   if (mode == MODE_EDIT) {
     buttonEdit->drawNow();
@@ -2484,27 +2499,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleMuteAutomationSelection(EncoderEve
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uint16_t headerFlags) {
   if (!notePairs.empty()) {
-    bool selectedLayerHasNotes = false;
-    for (const auto& note : notePairs) {
-      if (note.noteOn.layer == selectedLayer) {
-        selectedLayerHasNotes = true;
-        break;
-      }
-    }
-
-    if (!selectedLayerHasNotes) {
-      for (int8_t layer = 0; layer < LiveSequencer::LIVESEQUENCER_NUM_LAYERS; layer++) {
-        for (const auto& note : notePairs) {
-          if (note.noteOn.layer == layer) {
-            selectedLayer = layer;
-            selectedLayerHasNotes = true;
-            break;
-          }
-        }
-        if (selectedLayerHasNotes) break;
-      }
-    }
-
+    // Do not automatically switch layers – use the current selectedLayer.
     std::vector<std::pair<int16_t, uint16_t>> notesWithPos;
 
     for (size_t i = 0; i < notePairs.size(); i++) {
@@ -2530,6 +2525,10 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
     }
 
     if (!notesWithPos.empty()) {
+      // Sort by screen X position
+      std::sort(notesWithPos.begin(), notesWithPos.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; });
+
       int16_t newSelection;
 
       if (selectedNote == -1) {
@@ -2557,7 +2556,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
       }
 
       if (newSelection != selectedNote) {
-        // Handle old selection
+        // Redraw old selection
         if (selectedNote > -1) {
           const auto& oldNote = notePairs.at(selectedNote);
           uint32_t oldTimeOn, oldTimeOff;
@@ -2573,12 +2572,12 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
             oldTimeOff = getEventTime(oldNote.noteOff);
           }
 
-          // Create update region for old selection
           addSelectionUpdateRegion(oldTimeOn, oldTimeOff, oldNote.noteOn.note_in);
         }
 
         selectedNote = newSelection;
 
+        // Redraw new selection
         if (selectedNote > -1) {
           const auto& newNote = notePairs.at(selectedNote);
           uint32_t newTimeOn, newTimeOff;
@@ -2594,7 +2593,6 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
             newTimeOff = getEventTime(newNote.noteOff);
           }
 
-          // Create update region for new selection
           addSelectionUpdateRegion(newTimeOn, newTimeOff, newNote.noteOn.note_in);
         }
 
@@ -2603,6 +2601,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
       }
     }
     else {
+      // No visible notes in current layer. Deselect if needed.
       if (selectedNote > -1) {
         const auto& oldNote = notePairs.at(selectedNote);
         uint32_t oldTimeOn, oldTimeOff;
@@ -2618,9 +2617,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleNoteSelection(EncoderEvents e, uin
           oldTimeOff = getEventTime(oldNote.noteOff);
         }
 
-        // Create update region for old selection
         addSelectionUpdateRegion(oldTimeOn, oldTimeOff, oldNote.noteOn.note_in);
-
         selectedNote = -1;
         headerFlags = HEADER_DRAW_ALL;
         drawFlags |= DRAW_BACKGROUND | DRAW_NOTES;
@@ -2675,6 +2672,10 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditLayer(EncoderEvents e, uint16_
       }
 
       selectedLayer = newSelectedLayer;
+
+      // --- FIX: Sort events before reloading to ensure correct pairing ---
+      liveSeq.requestSortEvents();
+
       reloadNotes();
       headerFlags |= (1 << EDIT_LAYER);
       drawFlags |= DRAW_NOTES;
@@ -2722,7 +2723,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOn(EncoderEvents e, uint16
       addNoteUpdateRegion(finalAbsTimeOn, finalAbsTimeOff,
         editingNote.editingNoteOn.note_in, false);
 
-      // Update editing note position
+      // Update editing note position (song mode uses its own method)
       updateEditingNotePosition(finalAbsTimeOn, finalAbsTimeOff);
 
       headerFlags |= (1 << EDIT_NOTEON) | (1 << EDIT_NOTEOFF);
@@ -2731,47 +2732,56 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOn(EncoderEvents e, uint16
   }
   //pattern mode
   else if (selectedNote > -1) {
-    // FIXED PATTERN MODE NOTE-ON EDITING
-    LiveSequencer::MidiEvent& on = notePairs.at(selectedNote).noteOn;
-    LiveSequencer::MidiEvent& off = notePairs.at(selectedNote).noteOff;
+    if (!editingNote.active) return headerFlags; // should be active
 
-    uint32_t oldNoteOnTime = getEventTime(on);
-    uint32_t noteOffTime = getEventTime(off);
-    uint32_t noteLength = (noteOffTime > oldNoteOnTime) ? (noteOffTime - oldNoteOnTime) : 1;
+    // Get current absolute times of the editing note (from the temporary copies)
+    uint32_t currentAbsTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
+    uint32_t currentAbsTimeOff = getAbsoluteEventTime(editingNote.editingNoteOff);
+    uint32_t noteLength = (currentAbsTimeOff > currentAbsTimeOn) ? (currentAbsTimeOff - currentAbsTimeOn) : getQuantizationGridStep();
 
     uint32_t gridStep = getQuantizationGridStep();
-    const uint32_t minTime = 0;
-    uint32_t viewEndMs = uint32_t(view.startBar + view.numBars) * uint32_t(data.patternLengthMs);
-    uint32_t maxTimeFromScreen = (viewEndMs > noteLength) ? (viewEndMs - noteLength) : 0;
-    uint32_t maxTime = maxTimeFromScreen;
+    int32_t movement = e.dir * e.speed * gridStep;
 
-    int32_t gridSteps = roundf(float(oldNoteOnTime) / float(gridStep));
-    gridSteps = constrain(gridSteps + e.dir * e.speed,
-      roundf(float(minTime) / float(gridStep)),
-      roundf(float(maxTime) / float(gridStep)));
-    uint32_t newTime = gridSteps * gridStep;
+    int64_t newAbsTimeOn = (int64_t)currentAbsTimeOn + movement;
 
-    if (newTime != oldNoteOnTime) {
-      // Store old position for redraw region
-      uint32_t oldTimeOff = getEventTime(off);
+    // Total pattern length in ms
+    const uint32_t patternTotalMs = data.numberOfBars * data.patternLengthMs;
+    uint32_t minTime = 0;
+    uint32_t maxTime = (patternTotalMs > noteLength) ? (patternTotalMs - noteLength) : 0;
 
-      // Update the note times
-      setEventTime(on, newTime);
-      uint32_t newNoteOffTime = newTime + noteLength;
-      setEventTime(off, newNoteOffTime);
+    if (newAbsTimeOn < (int64_t)minTime) newAbsTimeOn = minTime;
+    if (newAbsTimeOn > (int64_t)maxTime) newAbsTimeOn = maxTime;
 
-      // Calculate X range covering both old and new positions
-      uint16_t fromX = std::min(getNoteCoord(oldNoteOnTime), getNoteCoord(newTime));
-      uint16_t toX = std::max(getNoteCoord(oldTimeOff), getNoteCoord(newNoteOffTime));
-      fromX = (fromX < 5 + ROLL_WIDTH) ? ROLL_WIDTH : (fromX - 5);
-      toX = (toX > DISPLAY_WIDTH - 5) ? DISPLAY_WIDTH : (toX + 5);
+    uint32_t finalAbsTimeOn = (uint32_t)newAbsTimeOn;
+    uint32_t finalAbsTimeOff = finalAbsTimeOn + noteLength;
 
-      // Create region with empty notes for complete redraw
-      UpdateRange updateRange;
-      updateRange.fromX = fromX;
-      updateRange.toX = toX;
-      updateRange.notes = {}; // EMPTY = redraw everything
-      drawRegionsX.push_back(updateRange);
+    // Ensure note-off does not exceed pattern end
+    if (finalAbsTimeOff > patternTotalMs) {
+      finalAbsTimeOff = patternTotalMs - 1;
+      // Note may be shortened at the very end, which is acceptable.
+    }
+
+    if (finalAbsTimeOn != currentAbsTimeOn || finalAbsTimeOff != currentAbsTimeOff) {
+      // Calculate combined redraw region covering both old and new positions
+      uint16_t oldXOn = getNoteCoord(currentAbsTimeOn);
+      uint16_t oldXOff = getNoteCoord(currentAbsTimeOff);
+      uint16_t newXOn = getNoteCoord(finalAbsTimeOn);
+      uint16_t newXOff = getNoteCoord(finalAbsTimeOff);
+
+      uint16_t fromX = std::min({oldXOn, oldXOff, newXOn, newXOff}) - 5;
+      uint16_t toX = std::max({oldXOn, oldXOff, newXOn, newXOff}) + 5;
+      fromX = std::max(ROLL_WIDTH, fromX);
+      toX = std::min((uint16_t)DISPLAY_WIDTH, toX);
+
+      UpdateRange fullRegion;
+      fullRegion.fromX = fromX;
+      fullRegion.toX = toX;
+      fullRegion.notes = {}; // redraw all notes in this X range
+      drawRegionsX.push_back(fullRegion);
+
+      // Update the temporary editing note times using setEventTime (clamps to pattern)
+      setEventTime(editingNote.editingNoteOn, finalAbsTimeOn);
+      setEventTime(editingNote.editingNoteOff, finalAbsTimeOff);
 
       headerFlags |= (1 << EDIT_NOTEON) | (1 << EDIT_NOTEOFF);
       drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
@@ -2819,10 +2829,10 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOff(EncoderEvents e, uint1
       UpdateRange updateRegion;
       updateRegion.fromX = (x < 5) ? ROLL_WIDTH : std::max(ROLL_WIDTH, (uint16_t)(x - 5));
       updateRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(x + maxW + 5));
-      updateRegion.notes = {}; // Empty set = redraw all notes in this X range
+      updateRegion.notes = {}; // redraw all notes in this X range
       drawRegionsX.push_back(updateRegion);
 
-      // Update editing note position
+      // Update editing note position (song mode)
       updateEditingNotePosition(currentAbsTimeOn, finalAbsTimeOff);
 
       headerFlags |= (1 << EDIT_NOTEOFF);
@@ -2832,40 +2842,44 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditNoteOff(EncoderEvents e, uint1
 
   //pattern mode
   else if (selectedNote > -1) {
-    // FIXED PATTERN MODE NOTE-OFF EDITING
-    LiveSequencer::MidiEvent& on = notePairs.at(selectedNote).noteOn;
-    LiveSequencer::MidiEvent& off = notePairs.at(selectedNote).noteOff;
+    if (!editingNote.active) return headerFlags;
 
-    uint32_t noteOnTime = getEventTime(on);
-    uint32_t oldNoteOffTime = getEventTime(off);
+    uint32_t currentAbsTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
+    uint32_t currentAbsTimeOff = getAbsoluteEventTime(editingNote.editingNoteOff);
 
     uint32_t gridStep = getQuantizationGridStep();
-    const uint32_t minTime = noteOnTime + gridStep;
-    uint32_t viewEndMs = uint32_t(view.startBar + view.numBars) * uint32_t(data.patternLengthMs);
-    uint32_t maxTime = viewEndMs;
+    int64_t movement64 = (int64_t)e.dir * (int64_t)e.speed * (int64_t)gridStep;
 
-    int32_t gridSteps = roundf(float(oldNoteOffTime) / float(gridStep));
-    gridSteps = constrain(gridSteps + e.dir * e.speed,
-      roundf(float(minTime) / float(gridStep)),
-      roundf(float(maxTime) / float(gridStep)));
-    uint32_t newTime = gridSteps * gridStep;
+    const uint32_t patternTotalMs = data.numberOfBars * data.patternLengthMs;
+    int64_t newAbsTimeOff = (int64_t)currentAbsTimeOff + movement64;
+    int64_t minOff = (int64_t)currentAbsTimeOn + (int64_t)gridStep;
+    int64_t maxOff = (int64_t)patternTotalMs - 1; // last valid millisecond
 
-    if (newTime != oldNoteOffTime) {
-      // Update the note time
-      setEventTime(off, newTime);
+    if (newAbsTimeOff < minOff) newAbsTimeOff = minOff;
+    if (newAbsTimeOff > maxOff) newAbsTimeOff = maxOff;
 
-      // Calculate X range covering both old and new positions
-      uint16_t fromX = std::min(getNoteCoord(noteOnTime), getNoteCoord(noteOnTime));
-      uint16_t toX = std::max(getNoteCoord(oldNoteOffTime), getNoteCoord(newTime));
-      fromX = (fromX < 5 + ROLL_WIDTH) ? ROLL_WIDTH : (fromX - 5);
-      toX = (toX > DISPLAY_WIDTH - 5) ? DISPLAY_WIDTH : (toX + 5);
+    uint32_t finalAbsTimeOff = (uint32_t)newAbsTimeOff;
 
-      // Create region with empty notes for complete redraw
-      UpdateRange updateRange;
-      updateRange.fromX = fromX;
-      updateRange.toX = toX;
-      updateRange.notes = {}; // EMPTY = redraw everything
-      drawRegionsX.push_back(updateRange);
+    if (finalAbsTimeOff != currentAbsTimeOff) {
+      // Calculate combined redraw region covering both old and new positions
+      uint16_t oldXOn = getNoteCoord(currentAbsTimeOn);
+      uint16_t oldXOff = getNoteCoord(currentAbsTimeOff);
+      uint16_t newXOn = getNoteCoord(currentAbsTimeOn); // note-on unchanged
+      uint16_t newXOff = getNoteCoord(finalAbsTimeOff);
+
+      uint16_t fromX = std::min({oldXOn, oldXOff, newXOn, newXOff}) - 5;
+      uint16_t toX = std::max({oldXOn, oldXOff, newXOn, newXOff}) + 5;
+      fromX = std::max(ROLL_WIDTH, fromX);
+      toX = std::min((uint16_t)DISPLAY_WIDTH, toX);
+
+      UpdateRange fullRegion;
+      fullRegion.fromX = fromX;
+      fullRegion.toX = toX;
+      fullRegion.notes = {}; // redraw all notes in this X range
+      drawRegionsX.push_back(fullRegion);
+
+      // Update the temporary editing note off time using setEventTime
+      setEventTime(editingNote.editingNoteOff, finalAbsTimeOff);
 
       headerFlags |= (1 << EDIT_NOTEOFF);
       drawFlags |= DRAW_BACKGROUND | DRAW_VERTICAL_BARS | DRAW_NOTES;
@@ -2903,28 +2917,30 @@ FLASHMEM void UI_LiveSeq_PianoRoll::startEditingNote(int16_t noteIndex) {
   editingNote.editingNoteOn = editingNote.originalNoteOn;
   editingNote.editingNoteOff = editingNote.originalNoteOff;
 
-  // Store the original event locations
-  if (noteIndex < static_cast<int16_t>(eventLocations.size())) {
-    SongEventLocation& loc = eventLocations[noteIndex];
-    editingNote.originalSongPatternOn = loc.noteOnPattern;
-    editingNote.originalNoteOnIndex = loc.noteOnIndex;
-    editingNote.originalSongPatternOff = loc.noteOffPattern;
-    editingNote.originalNoteOffIndex = loc.noteOffIndex;
+  if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
+    // Song mode: store event locations and mark original events as invalid in songEvents
+    if (noteIndex < static_cast<int16_t>(eventLocations.size())) {
+      SongEventLocation& loc = eventLocations[noteIndex];
+      editingNote.originalSongPatternOn = loc.noteOnPattern;
+      editingNote.originalNoteOnIndex = loc.noteOnIndex;
+      editingNote.originalSongPatternOff = loc.noteOffPattern;
+      editingNote.originalNoteOffIndex = loc.noteOffIndex;
+      editingNote.targetSongPatternOn = loc.noteOnPattern;
+      editingNote.targetSongPatternOff = loc.noteOffPattern;
+    }
 
-    // Initialize target chunks to original chunks
-    editingNote.targetSongPatternOn = loc.noteOnPattern;
-    editingNote.targetSongPatternOff = loc.noteOffPattern;
-  }
-
-  // Mark the note as invalid in data (same as delete)
-  if (data.songEvents.count(editingNote.originalSongPatternOn) &&
-    editingNote.originalNoteOnIndex < data.songEvents[editingNote.originalSongPatternOn].size()) {
-    data.songEvents[editingNote.originalSongPatternOn][editingNote.originalNoteOnIndex].event = midi::InvalidType;
-  }
-
-  if (data.songEvents.count(editingNote.originalSongPatternOff) &&
-    editingNote.originalNoteOffIndex < data.songEvents[editingNote.originalSongPatternOff].size()) {
-    data.songEvents[editingNote.originalSongPatternOff][editingNote.originalNoteOffIndex].event = midi::InvalidType;
+    if (data.songEvents.count(editingNote.originalSongPatternOn) &&
+        editingNote.originalNoteOnIndex < data.songEvents[editingNote.originalSongPatternOn].size()) {
+      data.songEvents[editingNote.originalSongPatternOn][editingNote.originalNoteOnIndex].event = midi::InvalidType;
+    }
+    if (data.songEvents.count(editingNote.originalSongPatternOff) &&
+        editingNote.originalNoteOffIndex < data.songEvents[editingNote.originalSongPatternOff].size()) {
+      data.songEvents[editingNote.originalSongPatternOff][editingNote.originalNoteOffIndex].event = midi::InvalidType;
+    }
+  } else {
+    // Pattern mode: mark the actual events as invalid via the references in notePairs
+    notePairs[noteIndex].noteOn.event = midi::InvalidType;
+    notePairs[noteIndex].noteOff.event = midi::InvalidType;
   }
 
   editingNote.active = true;
@@ -2934,11 +2950,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::startEditingNote(int16_t noteIndex) {
   uint16_t currentX = getNoteCoord(currentAbsTimeOn);
   uint16_t currentW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
 
-  // Create a region with EMPTY notes to redraw everything in this area
   UpdateRange fullRegion;
   fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(currentX - 5));
   fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(currentX + currentW + 5));
-  fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
+  fullRegion.notes = {};
   drawRegionsX.push_back(fullRegion);
 
   drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
@@ -2972,154 +2987,233 @@ FLASHMEM void UI_LiveSeq_PianoRoll::updateEditingNotePitch(uint8_t newPitch) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::commitEditingNote() {
-
   if (!editingNote.active) return;
 
-  // First, restore the original events to valid state (undo the soft delete)
-  if (data.songEvents.count(editingNote.originalSongPatternOn) &&
-    editingNote.originalNoteOnIndex < data.songEvents[editingNote.originalSongPatternOn].size()) {
-    data.songEvents[editingNote.originalSongPatternOn][editingNote.originalNoteOnIndex].event = midi::NoteOn;
-  }
+  if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
+    // Song mode commit
+    // First, restore the original events to valid state (undo the soft delete)
+    if (data.songEvents.count(editingNote.originalSongPatternOn) &&
+        editingNote.originalNoteOnIndex < data.songEvents[editingNote.originalSongPatternOn].size()) {
+      data.songEvents[editingNote.originalSongPatternOn][editingNote.originalNoteOnIndex].event = midi::NoteOn;
+    }
 
-  if (data.songEvents.count(editingNote.originalSongPatternOff) &&
-    editingNote.originalNoteOffIndex < data.songEvents[editingNote.originalSongPatternOff].size()) {
-    data.songEvents[editingNote.originalSongPatternOff][editingNote.originalNoteOffIndex].event = midi::NoteOff;
-  }
+    if (data.songEvents.count(editingNote.originalSongPatternOff) &&
+        editingNote.originalNoteOffIndex < data.songEvents[editingNote.originalSongPatternOff].size()) {
+      data.songEvents[editingNote.originalSongPatternOff][editingNote.originalNoteOffIndex].event = midi::NoteOff;
+    }
 
-  // Remove original note-on
-  if (data.songEvents.count(editingNote.originalSongPatternOn)) {
-    auto& events = data.songEvents[editingNote.originalSongPatternOn];
+    // Remove original note-on
+    if (data.songEvents.count(editingNote.originalSongPatternOn)) {
+      auto& events = data.songEvents[editingNote.originalSongPatternOn];
+      for (auto it = events.begin(); it != events.end(); ) {
+        if (it->track == editingNote.originalNoteOn.track &&
+            it->layer == editingNote.originalNoteOn.layer &&
+            it->note_in == editingNote.originalNoteOn.note_in &&
+            it->event == midi::NoteOn &&
+            it->patternNumber == editingNote.originalNoteOn.patternNumber &&
+            it->patternMs == editingNote.originalNoteOn.patternMs &&
+            it->note_in_velocity == editingNote.originalNoteOn.note_in_velocity) {
+          it = events.erase(it);
+          break;
+        } else {
+          ++it;
+        }
+      }
+    }
+
+    // Remove original note-off
+    if (data.songEvents.count(editingNote.originalSongPatternOff)) {
+      auto& events = data.songEvents[editingNote.originalSongPatternOff];
+      for (auto it = events.begin(); it != events.end(); ) {
+        if (it->track == editingNote.originalNoteOff.track &&
+            it->layer == editingNote.originalNoteOff.layer &&
+            it->note_in == editingNote.originalNoteOff.note_in &&
+            it->event == midi::NoteOff &&
+            it->patternNumber == editingNote.originalNoteOff.patternNumber &&
+            it->patternMs == editingNote.originalNoteOff.patternMs &&
+            it->note_in_velocity == editingNote.originalNoteOff.note_in_velocity) {
+          it = events.erase(it);
+          break;
+        } else {
+          ++it;
+        }
+      }
+    }
+
+    // Calculate target chunks for the edited note
+    const uint32_t chunkLengthMs = data.numberOfBars * data.patternLengthMs;
+    uint32_t absTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
+    uint32_t absTimeOff = getAbsoluteEventTime(editingNote.editingNoteOff);
+
+    uint16_t targetChunkOn = absTimeOn / chunkLengthMs;
+    uint16_t targetChunkOff = absTimeOff / chunkLengthMs;
+
+    // Ensure target chunks exist
+    if (data.songEvents.find(targetChunkOn) == data.songEvents.end()) {
+      data.songEvents[targetChunkOn] = {};
+    }
+    if (data.songEvents.find(targetChunkOff) == data.songEvents.end()) {
+      data.songEvents[targetChunkOff] = {};
+    }
+
+    // Add the edited events
+    data.songEvents[targetChunkOn].push_back(editingNote.editingNoteOn);
+    data.songEvents[targetChunkOff].push_back(editingNote.editingNoteOff);
+
+    editingNote.active = false;
+
+    // Create update regions for OLD and NEW positions
+    uint32_t oldAbsTimeOn = getAbsoluteEventTime(editingNote.originalNoteOn);
+    uint16_t oldX = getNoteCoord(oldAbsTimeOn);
+    uint16_t oldW = calculateNoteWidth(editingNote.originalNoteOn, editingNote.originalNoteOff);
+
+    uint16_t newX = getNoteCoord(absTimeOn);
+    uint16_t newW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
+
+    UpdateRange fullRegion;
+    fullRegion.fromX = std::min(oldX, newX) - 5;
+    fullRegion.toX = std::max(oldX + oldW, newX + newW) + 5;
+    fullRegion.notes = {};
+    drawRegionsX.push_back(fullRegion);
+
+    drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+
+    // Force complete reload
+    reloadNotes(true);
+
+    // Find the exact note we just committed
+    selectedNote = -1;
+    for (size_t i = 0; i < notePairs.size(); ++i) {
+      if (notePairs[i].noteOn.track == editingNote.editingNoteOn.track &&
+          notePairs[i].noteOn.layer == editingNote.editingNoteOn.layer &&
+          notePairs[i].noteOn.note_in == editingNote.editingNoteOn.note_in &&
+          notePairs[i].noteOn.note_in_velocity == editingNote.editingNoteOn.note_in_velocity &&
+          notePairs[i].noteOn.patternNumber == editingNote.editingNoteOn.patternNumber &&
+          notePairs[i].noteOn.patternMs == editingNote.editingNoteOn.patternMs &&
+          notePairs[i].noteOn.event == editingNote.editingNoteOn.event) {
+        selectedNote = i;
+        break;
+      }
+    }
+
+    liveSeq.requestSortEvents();
+  } else {
+    // Pattern mode commit
+    // Remove original events from data.eventsList
+    auto& events = data.eventsList;
+
+    // Remove original note-on
     for (auto it = events.begin(); it != events.end(); ) {
       if (it->track == editingNote.originalNoteOn.track &&
-        it->layer == editingNote.originalNoteOn.layer &&
-        it->note_in == editingNote.originalNoteOn.note_in &&
-        it->event == midi::NoteOn &&  // Make sure it's a note-on
-        it->patternNumber == editingNote.originalNoteOn.patternNumber &&
-        it->patternMs == editingNote.originalNoteOn.patternMs &&
-        it->note_in_velocity == editingNote.originalNoteOn.note_in_velocity) {
+          it->layer == editingNote.originalNoteOn.layer &&
+          it->note_in == editingNote.originalNoteOn.note_in &&
+          it->event == editingNote.originalNoteOn.event &&
+          it->patternNumber == editingNote.originalNoteOn.patternNumber &&
+          it->patternMs == editingNote.originalNoteOn.patternMs &&
+          it->note_in_velocity == editingNote.originalNoteOn.note_in_velocity) {
         it = events.erase(it);
-        break;
-      }
-      else {
+      } else {
         ++it;
       }
     }
-  }
 
-  // Remove original note-off
-  if (data.songEvents.count(editingNote.originalSongPatternOff)) {
-    auto& events = data.songEvents[editingNote.originalSongPatternOff];
+    // Remove original note-off
     for (auto it = events.begin(); it != events.end(); ) {
       if (it->track == editingNote.originalNoteOff.track &&
-        it->layer == editingNote.originalNoteOff.layer &&
-        it->note_in == editingNote.originalNoteOff.note_in &&
-        it->event == midi::NoteOff &&  // Make sure it's a note-off
-        it->patternNumber == editingNote.originalNoteOff.patternNumber &&
-        it->patternMs == editingNote.originalNoteOff.patternMs &&
-        it->note_in_velocity == editingNote.originalNoteOff.note_in_velocity) {
+          it->layer == editingNote.originalNoteOff.layer &&
+          it->note_in == editingNote.originalNoteOff.note_in &&
+          it->event == editingNote.originalNoteOff.event &&
+          it->patternNumber == editingNote.originalNoteOff.patternNumber &&
+          it->patternMs == editingNote.originalNoteOff.patternMs &&
+          it->note_in_velocity == editingNote.originalNoteOff.note_in_velocity) {
         it = events.erase(it);
-        break;
-      }
-      else {
+      } else {
         ++it;
       }
     }
-  }
 
-  // Calculate target chunks for the edited note
-  const uint32_t chunkLengthMs = data.numberOfBars * data.patternLengthMs;
-  uint32_t absTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
-  uint32_t absTimeOff = getAbsoluteEventTime(editingNote.editingNoteOff);
+    // Add the edited events
+    events.push_back(editingNote.editingNoteOn);
+    events.push_back(editingNote.editingNoteOff);
 
-  uint16_t targetChunkOn = absTimeOn / chunkLengthMs;
-  uint16_t targetChunkOff = absTimeOff / chunkLengthMs;
+    editingNote.active = false;
 
-  // Ensure target chunks exist
-  if (data.songEvents.find(targetChunkOn) == data.songEvents.end()) {
-    data.songEvents[targetChunkOn] = {};
-  }
-  if (data.songEvents.find(targetChunkOff) == data.songEvents.end()) {
-    data.songEvents[targetChunkOff] = {};
-  }
+    // Sort and reload notes
+    liveSeq.requestSortEvents();
+    reloadNotes();
 
-  // Add the edited events
-  data.songEvents[targetChunkOn].push_back(editingNote.editingNoteOn);
-  data.songEvents[targetChunkOff].push_back(editingNote.editingNoteOff);
-
-  editingNote.active = false;
-
-  // Create update regions for OLD and NEW positions
-  // OLD position: where the note used to be
-  uint32_t oldAbsTimeOn = getAbsoluteEventTime(editingNote.originalNoteOn);
-  uint16_t oldX = getNoteCoord(oldAbsTimeOn);
-  uint16_t oldW = calculateNoteWidth(editingNote.originalNoteOn, editingNote.originalNoteOff);
-
-  // NEW position: where the note is now
-  uint16_t newX = getNoteCoord(absTimeOn);
-  uint16_t newW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
-
-  // Create a SINGLE region that covers BOTH old and new positions with EMPTY notes
-  // This ensures ALL notes in this area get redrawn
-  UpdateRange fullRegion;
-  fullRegion.fromX = std::min(oldX, newX) - 5;
-  fullRegion.toX = std::max(oldX + oldW, newX + newW) + 5;
-  fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
-  drawRegionsX.push_back(fullRegion);
-
-  // Also need to redraw vertical bars
-  drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
-
-  // Force complete reload
-  reloadNotes(true);
-
-  // Find the exact note we just committed
-  selectedNote = -1;
-  for (size_t i = 0; i < notePairs.size(); ++i) {
-    // Compare all the properties of the note-on event
-    if (notePairs[i].noteOn.track == editingNote.editingNoteOn.track &&
-      notePairs[i].noteOn.layer == editingNote.editingNoteOn.layer &&
-      notePairs[i].noteOn.note_in == editingNote.editingNoteOn.note_in &&
-      notePairs[i].noteOn.note_in_velocity == editingNote.editingNoteOn.note_in_velocity &&
-      notePairs[i].noteOn.patternNumber == editingNote.editingNoteOn.patternNumber &&
-      notePairs[i].noteOn.patternMs == editingNote.editingNoteOn.patternMs &&
-      notePairs[i].noteOn.event == editingNote.editingNoteOn.event) {
-
-      selectedNote = i;
-      break;
+    // Try to restore selection on the newly committed note
+    LiveSequencer::MidiEvent savedNote = editingNote.editingNoteOn;
+    int16_t newSelection = -1;
+    for (size_t i = 0; i < notePairs.size(); i++) {
+      const auto& on = notePairs[i].noteOn;
+      if (on.track == savedNote.track &&
+          on.layer == savedNote.layer &&
+          on.note_in == savedNote.note_in &&
+          on.patternNumber == savedNote.patternNumber &&
+          on.patternMs == savedNote.patternMs &&
+          on.note_in_velocity == savedNote.note_in_velocity) {
+        newSelection = i;
+        break;
+      }
     }
-  }
+    selectedNote = newSelection;
 
-  liveSeq.requestSortEvents();
+    if (selectedNote != -1) {
+      queueDrawNote(notePairs[selectedNote]);
+      drawFlags |= DRAW_NOTES;
+    }
+
+    liveSeq.requestSortEvents();
+  }
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::cancelEditingNote() {
   if (!editingNote.active) return;
 
-  // Create update region for where the editing note currently is
-  uint32_t currentAbsTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
-  uint16_t currentX = getNoteCoord(currentAbsTimeOn);
-  uint16_t currentW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
+  if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
+    // Song mode cancel
+    uint32_t currentAbsTimeOn = getAbsoluteEventTime(editingNote.editingNoteOn);
+    uint16_t currentX = getNoteCoord(currentAbsTimeOn);
+    uint16_t currentW = calculateNoteWidth(editingNote.editingNoteOn, editingNote.editingNoteOff);
 
-  // Create a region with EMPTY notes to redraw everything in this area
-  UpdateRange fullRegion;
-  fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(currentX - 5));
-  fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(currentX + currentW + 5));
-  fullRegion.notes = {}; // EMPTY = redraw ALL notes in this X range
-  drawRegionsX.push_back(fullRegion);
+    UpdateRange fullRegion;
+    fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(currentX - 5));
+    fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(currentX + currentW + 5));
+    fullRegion.notes = {};
+    drawRegionsX.push_back(fullRegion);
 
-  editingNote.active = false;
+    editingNote.active = false;
 
-  // For cancel, we should be able to keep the same index since we're restoring the original
-  // Just make sure the note is valid again
-  if (editingNote.originalNoteIndex >= 0 &&
-    editingNote.originalNoteIndex < static_cast<int16_t>(notePairs.size())) {
-    notePairs[editingNote.originalNoteIndex].noteOn.event = midi::NoteOn;
-    notePairs[editingNote.originalNoteIndex].noteOff.event = midi::NoteOff;
+    // Restore the original note in notePairs (they were never removed, just marked invalid in songEvents)
+    if (editingNote.originalNoteIndex >= 0 &&
+        editingNote.originalNoteIndex < static_cast<int16_t>(notePairs.size())) {
+      notePairs[editingNote.originalNoteIndex].noteOn.event = midi::NoteOn;
+      notePairs[editingNote.originalNoteIndex].noteOff.event = midi::NoteOff;
+      selectedNote = editingNote.originalNoteIndex;
+    }
+
+    drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+  } else {
+    // Pattern mode cancel: restore the actual events to valid state
+    if (editingNote.originalNoteIndex >= 0 &&
+        editingNote.originalNoteIndex < static_cast<int16_t>(notePairs.size())) {
+      notePairs[editingNote.originalNoteIndex].noteOn.event = midi::NoteOn;
+      notePairs[editingNote.originalNoteIndex].noteOff.event = midi::NoteOff;
+    }
+
+    editingNote.active = false;
+
+    // Reload notes to update display (the original events are now valid again)
+    reloadNotes();
+
+    // Restore selection to the original note
     selectedNote = editingNote.originalNoteIndex;
+    if (selectedNote >= 0 && selectedNote < (int16_t)notePairs.size()) {
+      queueDrawNote(notePairs[selectedNote]);
+      drawFlags |= DRAW_NOTES;
+    }
   }
-
-  // Set flags for redraw
-  drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
 }
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::calculateNoteWidth(const LiveSequencer::MidiEvent& noteOn, const LiveSequencer::MidiEvent& noteOff) const {
@@ -3516,7 +3610,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::setNumOctaves(int8_t num) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::setEventTime(LiveSequencer::MidiEvent& e, uint32_t time) {
-  // Basic conversion - song pattern movement is handled separately
+  // Clamp to pattern length to prevent wrap‑around
+  uint32_t maxTime = data.numberOfBars * data.patternLengthMs - 1;
+  if (time > maxTime) time = maxTime;
+
   uint32_t absoluteBar = time / data.patternLengthMs;
   e.patternNumber = absoluteBar % data.numberOfBars;
   e.patternMs = time % data.patternLengthMs;
@@ -4328,6 +4425,9 @@ buttonPlay = new TouchButton(GRID.X[0], y,
       editMode = EDIT_SELECT_NOTE;
 
       data.activeTrack = newTrack;
+
+      // --- FIX: Sort events before reloading notes ---
+      liveSeq.requestSortEvents();
 
       // Redraw the instrument/quant button if we're in view mode
       if ((mode == MODE_VIEW || data.activeTrack == SONG_MODE_MUTE_TRACK) && buttonInstQuant) {

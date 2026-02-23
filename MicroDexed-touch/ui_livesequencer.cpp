@@ -1394,8 +1394,6 @@ FLASHMEM std::string UI_LiveSequencer::getArpModeName(uint8_t mode) {
 }
 
 FLASHMEM void UI_LiveSequencer::drawLayerButton(const bool horizontal, uint8_t layerMode, int layer, const bool layerEditActive, TouchButton::Color color, uint16_t x, uint16_t y) {
-  if (currentTools != TOOLS_KEYBOARD)
-  {
     char temp_char[4];
     std::string label = "LAYER";
     std::string labelSub = itoa(layer + 1, temp_char, 10);
@@ -1429,7 +1427,6 @@ FLASHMEM void UI_LiveSequencer::drawLayerButton(const bool horizontal, uint8_t l
       }
     }
     TouchButton::drawButton(x, y, label.c_str(), labelSub.c_str(), color);
-  }
 }
 
 FLASHMEM void UI_LiveSequencer::handleLayerEditButtonColor(uint8_t layerMode, TouchButton::Color& color) {
