@@ -4261,7 +4261,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
                     //Drum[i]->stop();
                      // Drum[i]->enableInterpolation(false);
                      // Drum[i]->setPlaybackRate(1.0);
-          break;
+          //break;// we need to process note off for all zones, not just the first match in case we have overlaps
         }
       }
     }
