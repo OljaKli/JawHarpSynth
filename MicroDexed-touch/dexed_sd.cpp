@@ -5461,7 +5461,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number) {
                     }
                     
                     // Recalculate zone boundaries
-                    calc_low_high(i);
+                    //calc_low_high(i); // Not sure we need it here since it would overwrite the loaded low/high values
                 }
                 return (true);
             }

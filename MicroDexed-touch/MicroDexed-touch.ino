@@ -1126,6 +1126,12 @@ FLASHMEM void init_default_sample_voice_group_config()
   // Group 0: backward-compatible shared pool
   sample_voice_group_config[0].max_voices = DEFAULT_DRUM_VOICES;// Enable with default number of voices
   sample_voice_group_config[0].strategy = ALLOCATION_ROUND_ROBIN;
+
+  // Initialize all drum samples to the default voice group 0
+  for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG; i++)
+  {
+    drum_config[i].voice_group = 0; // default voice group
+  }
 }
 
 FLASHMEM void setup()
