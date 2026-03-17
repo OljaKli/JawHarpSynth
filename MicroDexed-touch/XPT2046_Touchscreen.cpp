@@ -21,7 +21,6 @@
 */
 #include "config.h"
 #if defined GENERIC_DISPLAY
-
 #include "XPT2046_Touchscreen.h"
 
 #define Z_THRESHOLD 400

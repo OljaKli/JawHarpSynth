@@ -28,13 +28,17 @@
 #define _LCDML_DISP_cnt 71
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
-#define SCREENSAVER_STAY_TIME 1200  
+#define SCREENSAVER_STAY_TIME 1100  
 #define SCREENSAVER_FADE_TIME 25    // 1s @ 25Hz rate
 #define SCREENSAVER_BRIGHTNESS_STEP (255/SCREENSAVER_FADE_TIME)
 #define SCREENSAVER_MAX_COUNTHUE 359
 
 #include "touchbutton.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "MD_REncoder.h"
 #include "MD_MIDIFile.h"
 
@@ -72,7 +76,7 @@ void show_no_grid(int pos_y, int pos_x, uint8_t field_size, const char* str);
 uint8_t midiNoteToSampleNote(uint8_t note);
 const char* get_drum_name_from_note(uint8_t note);
 const char* seq_find_shortname(uint8_t sstep);
-void seq_printAllVelocitySteps_single_step(uint8_t step, int color);
+void seq_print_single_velocity_step(uint8_t step, int color);
 void print_track_steps_detailed_only_current_playing_note(int xpos, int ypos, uint8_t currentstep);
 void resetScreenTimer();
 void continueWavRecording();

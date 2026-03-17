@@ -3,6 +3,7 @@
 
 #include "Arduino.h"
 #include "AudioStream.h"
+
 class Realtime_Scope : public AudioStream
 {
 public:
@@ -12,7 +13,7 @@ public:
   }
   virtual void update(void);
   void draw_scope(uint16_t x, int y, uint8_t w, uint8_t h);
-
+ 
 private:
   bool scope_is_drawing = false;
   bool updateBuffer = true;

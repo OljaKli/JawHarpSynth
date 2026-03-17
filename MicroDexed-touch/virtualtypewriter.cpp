@@ -1,9 +1,17 @@
 #include "virtualtypewriter.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "touch.h"
 
 extern ts_t ts;
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
 extern int numTouchPoints;
 
 // Keyboard layout

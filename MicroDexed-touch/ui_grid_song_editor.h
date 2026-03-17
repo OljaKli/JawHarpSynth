@@ -6,7 +6,12 @@
 #include "touchbutton.h"
 #include "livesequencer.h"
 
+#if defined ESP_DISPLAY
+class espdisplay;
+#else
 class ILI9341_t3n;
+#endif
+
 struct EncoderEvents;
 
 class GridSongEditorUI {
@@ -20,7 +25,13 @@ public:
     std::function<void()> onExitRequested;
   };
 
+
+#if defined ESP_DISPLAY
+  GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, espdisplay& display);
+#else
   GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, ILI9341_t3n& display);
+#endif
+
   void setCallbacks(const Callbacks& cb);
 
   void enter();
@@ -94,11 +105,17 @@ private:
   FLASHMEM ConfirmButtonView buildConfirmButtonView(const char* idleTop, const char* idleSub, bool enabled, bool confirming) const;
   FLASHMEM void drawConfirmableButton(TouchButton* button, const char* idleTop, const char* idleSub, bool enabled, bool confirming);
   FLASHMEM void drawConfirmableBottomButton(uint16_t x, uint16_t y, const char* idleTop, const char* idleSub, bool enabled, bool confirming);
-  FLASHMEM bool processConfirmableAction(bool enabled, bool& pendingFlag, void (GridSongEditorUI::*armFn)(), void (GridSongEditorUI::*executeFn)());
+  FLASHMEM bool processConfirmableAction(bool enabled, bool& pendingFlag, void (GridSongEditorUI::* armFn)(), void (GridSongEditorUI::* executeFn)());
 
   LiveSequencer& liveSeq;
   LiveSequencer::LiveSeqData& data;
+
+#if defined ESP_DISPLAY
+  espdisplay& display;
+#else
   ILI9341_t3n& display;
+#endif
+
   Callbacks callbacks{};
 
   bool active = false;

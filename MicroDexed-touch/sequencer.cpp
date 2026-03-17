@@ -26,9 +26,18 @@
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
 #include "synth_dexed.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
+
 extern LCDMenuLib2 LCDML;
 extern bool remote_active;
 extern config_t configuration;

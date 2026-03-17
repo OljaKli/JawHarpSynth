@@ -57,7 +57,11 @@ MCP23017 mcp(0x20);
 
 #include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
 
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
 #include "UI.h"
@@ -92,7 +96,9 @@ using namespace TeensyTimerTool;
 
 //#include "D50Synth.h"
 
-#if defined GENERIC_DISPLAY
+#if defined ESP_DISPLAY
+#include "esp_touch.h"
+#elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 #endif
 
@@ -153,7 +159,9 @@ bool back_button_touch_page_check_and_init_done = false;
 bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
-#if defined GENERIC_DISPLAY 
+#if defined ESP_DISPLAY
+extern esp_touchscreen touch;
+#elif defined GENERIC_DISPLAY
 extern XPT2046_Touchscreen touch;
 #endif
 
@@ -331,7 +339,13 @@ extern PsramLoader sampleLoader;
 PitchSamplePlayer WAV_preview_PSRAM;
 #endif
 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
+
+
 extern MD_REncoder ENCODER[];
 #if defined SMFPLAYER
 extern MD_MIDIFile SMF;
@@ -1134,6 +1148,10 @@ FLASHMEM void init_default_sample_voice_group_config()
   }
 }
 
+#if defined ESP_DISPLAY
+extern void sendScreensaverStop();
+#endif
+
 FLASHMEM void setup()
 {
 
@@ -1159,10 +1177,6 @@ FLASHMEM void setup()
   //  granularPoly.setParams(params);
 
 #endif
-
-//d50Synth.begin();
-
-
 
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
   delay(60);
@@ -1300,20 +1314,38 @@ FLASHMEM void setup()
   pinMode(BI_BUTTON_B, INPUT_PULLUP);
 #endif
 
+#ifdef ESP_DISPLAY
+  Serial4.begin(6000000, SERIAL_8N1);
+ // Serial4.begin(460800, SERIAL_8N1);
+#endif
+
+#ifdef ESP_DISPLAY
+ sendScreensaverStop();
+#endif
+
   // Init display
+#ifndef ESP_DISPLAY
   SPI.begin();
+#endif
+
   display.begin();
 
   // invert display colors
+#ifndef ESP_DISPLAY
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   display.invertDisplay(1);
   //display.invertDisplay(configuration.sys.invert_colors);
+#endif
 #endif
 
 #if defined GENERIC_DISPLAY
   touch.begin();
   touch_ic_found = true;
 #endif
+
+   #if defined ESP_DISPLAY
+   touch_ic_found = true;
+   #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))
@@ -1637,6 +1669,10 @@ FLASHMEM void setup()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_BUTTON_A) == false || digitalRead(BI_BUTTON_B) == false) // is pushed
     bootup_performance_loading = false;
+#endif
+
+#ifdef ESP_DISPLAY
+ sendScreensaverStop();
 #endif
 
   // Initialize processor and memory measurements
@@ -2036,7 +2072,7 @@ FLASHMEM void sub_step_recording(bool touchinput, uint8_t touchparam)
             set_pattern_content_type_color(seq.active_pattern);
         }
         display.print(seq_find_shortname(cur_step)[0]);
-        seq_printAllVelocitySteps_single_step(cur_step, GREY1);
+        seq_print_single_velocity_step(cur_step, GREY1);
         if (seq.cycle_touch_element != 1)
           print_track_steps_detailed_only_current_playing_note(0, CHAR_height * 4 + 3, cur_step);
 
@@ -2774,8 +2810,13 @@ FLASHMEM void display_granular_status()
 }
 #endif
 
+#if defined GLOW
+uint32_t lastGlowUpdate = 0;
+#endif
+
 void loop()
 {
+
   // Chords Detection
 // Handle chord timeout
   if (chord_note_count > 0 && since_last_note > CHORD_CAPTURE_WINDOW) {
@@ -3121,13 +3162,17 @@ void loop()
     update_sidechain();  //work in progress
   }
 
+#if defined GLOW
+  if (millis() - lastGlowUpdate >= 70)
+  {
+    glow();
+    lastGlowUpdate = millis();
+  }
+#endif
+
   if (control_rate > CONTROL_RATE_MS)
   {
     control_rate = 0;
-
-#if defined GLOW
-    glow();
-#endif
 
     // Check drum sample release completion: stop players when envelope finishes
     check_drum_release_completion();
@@ -3324,7 +3369,7 @@ void set_stereo_envelopes(uint8_t instance_id, uint8_t sample)
 
 void set_filter(uint8_t d, uint8_t slot, uint8_t inVelocity, uint8_t instance, bool mspmode) {
 
-  if (!mspmode || msp[instance].velocity_to_filter==0)
+  if (!mspmode || msp[instance].velocity_to_filter == 0)
   {
     if (drum_config[d].filter_mode == 0)
     {
@@ -3349,8 +3394,8 @@ void set_filter(uint8_t d, uint8_t slot, uint8_t inVelocity, uint8_t instance, b
   }
   else //MSP Velocity Low Pass Filter Mode, overriding the default Drums Filter when triggered inside MSP
   {
-     Drum_filter[slot]->setLowpass(0, ( inVelocity*inVelocity)/msp[instance].velocity_to_filter, 0.5);
-      Drum_filter[slot + NUM_DRUMS]->setLowpass(0, (inVelocity*inVelocity)/msp[instance].velocity_to_filter, 0.5);
+    Drum_filter[slot]->setLowpass(0, (inVelocity * inVelocity) / msp[instance].velocity_to_filter, 0.5);
+    Drum_filter[slot + NUM_DRUMS]->setLowpass(0, (inVelocity * inVelocity) / msp[instance].velocity_to_filter, 0.5);
   }
 }
 
@@ -3371,14 +3416,14 @@ void Multi_Sample_Player(byte inNumber, byte inVelocity, byte instance) {
       const uint8_t drum_class = drum_config[psram_idx].drum_class;
 #ifdef DEBUG
       DBG_LOG(printf("MSP inst=%d zone=%d: note=%d entry_num=%d psram_entry=%d vg=%d sample='%s'\n",
-          instance, y, inNumber, msz[instance][y].entry_number, psram_idx,
-          zone_voice_group, drum_config[psram_idx].name));
+        instance, y, inNumber, msz[instance][y].entry_number, psram_idx,
+        zone_voice_group, drum_config[psram_idx].name));
 #endif
       uint8_t slot = drum_get_slot(drum_class, zone_voice_group);
       if (slot == 99) {
 #ifdef DEBUG
         DBG_LOG(printf("MSP inst=%d zone=%d: no slot available for voice_group=%d, skipping zone\n",
-            instance, y, zone_voice_group));
+          instance, y, zone_voice_group));
 #endif
         // a return here would stop further checking of any overlapping zones.
         // we should just skip this zone and check the next one

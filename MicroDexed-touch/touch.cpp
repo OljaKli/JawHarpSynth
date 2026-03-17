@@ -2,7 +2,11 @@
 #include "sequencer.h"
 #include "livesequencer.h"
 #include <LCDMenuLib2.h>
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include <Audio.h>
 #include "template_mixer.hpp"
 #include "UI.h"
@@ -10,7 +14,12 @@
 #include "virtualkeyboard.h"
 #include "noisemaker.h"
 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
+
 extern config_t configuration;
 extern uint8_t selected_instance_id;
 extern LCDMenuLib2 LCDML;
@@ -39,7 +48,7 @@ fm_t fm;                         // file manager
 bool loop_start_button = false;
 bool loop_end_button = false;
 bool isButtonTouched = false;
-int numTouchPoints = 0;
+uint8_t numTouchPoints = 0;
 
 extern bool wakeScreenFlag;
 

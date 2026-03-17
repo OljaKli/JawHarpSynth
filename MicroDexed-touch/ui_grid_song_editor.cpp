@@ -6,7 +6,11 @@
 
 #include <Arduino.h>
 
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "touch.h"
 #include "sequencer.h"
 
@@ -15,10 +19,18 @@ extern int numTouchPoints;
 extern bool remote_active;
 extern sequencer_t seq;
 
+#if defined ESP_DISPLAY
+FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, espdisplay& disp)
+  : liveSeq(sequencer), data(d), display(disp) {
+  initButtons();
+}
+#else
 FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, ILI9341_t3n& disp)
   : liveSeq(sequencer), data(d), display(disp) {
   initButtons();
 }
+#endif
+
 
 FLASHMEM void GridSongEditorUI::setCallbacks(const Callbacks& cb) {
   callbacks = cb;

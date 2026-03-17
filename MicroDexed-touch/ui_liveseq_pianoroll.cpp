@@ -2,14 +2,22 @@
 #include "UI.h"
 #include "config.h"
 #include "touch.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "LCDMenuLib2.h"
 #include "ui_livesequencer.h"
 #include "MD_REncoder.h"
 #include <map>
 
 extern LCDMenuLib2 LCDML;
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
 extern MD_REncoder ENCODER[NUM_ENCODER];
 
 UI_LiveSeq_PianoRoll* ui_pianoroll;
@@ -1313,7 +1321,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     display.fillScreen(COLOR_BACKGROUND);
     LCDML.FUNC_setLoopInterval(25); // 40Hz gui refresh
 
-    display.drawLine(0, CONTENT_HEIGHT, DISPLAY_WIDTH, CONTENT_HEIGHT, GREY2);
+    //display.drawLine(0, CONTENT_HEIGHT, DISPLAY_WIDTH, CONTENT_HEIGHT, GREY2);  //phtodo
 
     drawLayersIndicator();
     drawAreaIndicator();
@@ -3582,7 +3590,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
 
   if (modeFlags == HEADER_DRAW_ALL) {
     display.console = true;
-    display.fillRect(132, CONTENT_HEIGHT + 4, DISPLAY_WIDTH, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
+   // display.fillRect(132, CONTENT_HEIGHT + 4, DISPLAY_WIDTH, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
+     display.fillRect(132, CONTENT_HEIGHT + 4, 187, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
   }
 
   switch (mode) {
@@ -3890,7 +3899,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
   // Draw VERTICAL grid lines
   for (uint8_t step = 0; step <= view.numBars * substeps; step++) {
     const uint16_t x = ROLL_WIDTH + round(step * stepWidth);
-    if (x >= minX && x <= maxX) {
+    if (x >= minX && x < maxX) {
       uint16_t color = (step % substeps == 0) ? GREY2 : GREY3;
       display.drawLine(x, 0, x, CONTENT_HEIGHT, color);
     }
@@ -3901,7 +3910,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
     if (note % 12 == 0) {
       const uint8_t noteIndex = view.highestNote - note;
       const uint16_t y = round(noteIndex * view.noteHeight);
-      display.drawLine(minX, y, maxX, y, GREY2);
+      display.drawLine(minX, y, maxX-1, y, GREY2);
     }
   }
 }

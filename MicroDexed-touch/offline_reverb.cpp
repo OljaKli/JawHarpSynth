@@ -4,8 +4,17 @@
 #include <string.h>
 #include <Arduino.h>
 #include <LCDMenuLib2.h>
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
+
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
 
 // Comb filter implementation
 FLASHMEM void OfflineReverb::CombFilter::init(uint32_t size) {

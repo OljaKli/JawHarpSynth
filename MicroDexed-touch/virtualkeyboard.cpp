@@ -6,7 +6,11 @@
 
 #include "touch.h"
 #include "LCDMenuLib2.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "drums.h"
 
 static constexpr float KEY_WIDTH_WHITE = 30;
@@ -18,7 +22,11 @@ static constexpr float KEY_WIDTH_BLACK = 22;
 static constexpr float KEY_HEIGHT_BLACK = 34;
 
 extern LCDMenuLib2 LCDML;
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
 extern ts_t ts;
 extern sequencer_t seq;
 extern uint8_t selected_instance_id; // dexed

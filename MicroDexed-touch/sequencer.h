@@ -26,8 +26,12 @@
 #ifndef _SEQUENCER_H
 #define _SEQUENCER_H
 
-#if defined GENERIC_DISPLAY
+#if defined ESP_DISPLAY
+#include "esp_touch.h"
+extern esp_touchscreen touch;
+#elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
+extern XPT2046_Touchscreen touch;
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY

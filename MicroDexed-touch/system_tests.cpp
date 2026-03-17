@@ -1,8 +1,17 @@
 #include "system_tests.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "UI.h"
 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
+
 uint8_t psram_test_dline = 7;
 
 FLASHMEM void fill_up_with_spaces_psram()

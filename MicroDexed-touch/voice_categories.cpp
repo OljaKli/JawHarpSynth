@@ -12,10 +12,20 @@
 #include "dexed_sd.h"
 #include "touchbutton.h"
 #include "UI.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 
  // External references
+ 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
+
 extern uint8_t selected_instance_id;
 extern void print_voice_settings_in_dexed_voice_select(bool, bool);
 extern void print_voice_select_default_help();
@@ -48,14 +58,12 @@ static uint8_t saved_favorite_setting = 0;
 // ------------------------------------------------------------------
 // Helper: blink a button red twice
 // ------------------------------------------------------------------
-static void blink_button(uint16_t x, uint16_t y, TouchButton::Color original_color) {
-    char row1[8], row2[8];
-    // We need the current label to redraw. For instrument buttons we can get from cache,
-    // but for groups we need the group name and state. Since this is called from contexts
-    // where we know the category/group, we'll recompute the label.
-    // For simplicity, we'll assume the caller knows how to get the label.
-    // In practice, we'll pass the label strings.
-}
+//     // We need the current label to redraw. For instrument buttons we can get from cache,
+//     // but for groups we need the group name and state. Since this is called from contexts
+//     // where we know the category/group, we'll recompute the label.
+//     // For simplicity, we'll assume the caller knows how to get the label.
+//     // In practice, we'll pass the label strings.
+// }
 
 // But better: we can store the button's current label when we call blink. 
 // We'll modify the call sites to provide the label.

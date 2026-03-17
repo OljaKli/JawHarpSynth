@@ -3,7 +3,11 @@
 
 #include "config.h"
 
-#if defined GENERIC_DISPLAY
+
+#if defined ESP_DISPLAY
+#include "esp_touch.h"
+extern esp_touchscreen touch;
+#elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 extern XPT2046_Touchscreen touch;
 #endif
@@ -77,7 +81,13 @@ typedef struct fm_s
   bool SD_CARD_READER_EXT;
 } fm_t;
 
-static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
+#if defined ESP_DISPLAY
+static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 60; 
+#else
+//static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
+static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 20; 
+#endif
+
 typedef void (*TouchFn)();
 
 void registerTouchHandler(TouchFn touchFn);
@@ -85,9 +95,6 @@ void unregisterTouchHandler(void);
 TouchFn getCurrentTouchHandler(void);
 void updateTouchScreen();
 uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
-
-// void helptext_l(const char* str);
-// void helptext_r(const char* str);
 
 // RAM string versions
 FLASHMEM void helptext_l(const char* str);

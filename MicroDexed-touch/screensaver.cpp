@@ -1,15 +1,101 @@
 #include "config.h"
 #include "screensaver.h"
 #include "UI.h"
+
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
+
 #include "midi_devices.h"
 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
-extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
-extern bool remote_active;
+#endif
 
 uint8_t screensaver_brightness = 255;
 uint16_t screensaver_counthue = 0;
+extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern bool remote_active;
+
+FLASHMEM void boot_animation()
+{
+  display.setTextSize(2);
+  randomSeed(analogRead(0));
+  char chars[16 * 10];
+  char chars_buffer[16 * 10];
+  char text1[10] = { 'W', 'E', 'L', 'C', 'O', 'M', 'E', ' ', 'T', 'O' };
+  char text2[10] = { 'M', 'I', 'C', 'R', 'O', 'D', 'E', 'X', 'E', 'D' };
+  uint8_t pos_x_1 = random(4);
+  uint8_t pos_y_1 = random(4) + 1;
+  uint8_t pos_x_2 = random(4) + 3;
+  uint8_t pos_y_2 = random(4) + 5;
+  uint8_t match_count_1 = 0;
+  uint8_t match_count_2 = 0;
+  uint8_t count = 0;
+  uint8_t hue = random(2);
+  uint8_t fade_point = 60;
+
+  for (uint8_t t = 0; t < 16 * 10; t++)
+  {
+    chars[t] = 32 + random(92 - 32);
+  }
+
+  for (uint8_t f = 0; f < 125; f++)
+  {
+    for (uint8_t x = 0; x < 16; x++)
+    {
+      for (uint8_t y = 0; y < 10; y++)
+      {
+        if (y == pos_y_1 && x >= pos_x_1 && x < pos_x_1 + 10 && f < fade_point)
+        {
+          if (chars[count] > text1[match_count_1])
+            chars[count]--;
+          else  if (chars[count] < text1[match_count_1])
+            chars[count]++;
+          match_count_1++;
+          display.setTextColor(ColorHSV(hue * 110, f * 3.8, 254), 0);
+        }
+        else
+          if (y == pos_y_2 && x >= pos_x_2 && x < pos_x_2 + 10 && f < fade_point)
+          {
+            if (chars[count] > text2[match_count_2])
+              chars[count]--;
+            else  if (chars[count] < text2[match_count_2])
+              chars[count]++;
+            match_count_2++;
+            display.setTextColor(ColorHSV(hue * 110, f * 3.8, 254), 0);
+          }
+          else
+          {
+            if ((chars[count] > 32 && random(2) != 0) || (f >= fade_point && chars[count] > 32 && random(7) != 1))
+              chars[count]--;
+
+            if ((y == pos_y_1 && x >= pos_x_1 && x < pos_x_1 + 10) || (y == pos_y_2 && x >= pos_x_2 && x < pos_x_2 + 10))
+              display.setTextColor(ColorHSV(hue * 110, fade_point * 3.8, 254 + fade_point - (f * 1.9)), 0);
+            else
+              display.setTextColor(ColorHSV(0, 0, 255 - f * 2), 0);
+          }
+        if (chars_buffer[count] != chars[count] || y == pos_y_1 || y == pos_y_2)
+        {
+          display.setCursor(20 + x * 18, 18 + y * 21);
+          display.print(chars[count]);
+          chars_buffer[count] = chars[count];
+        }
+        count++;
+      }
+    }
+    count = 0;
+    match_count_1 = 0;
+    match_count_2 = 0;
+    delay(30);
+  }
+}
+
+#ifndef ESP_DISPLAY
 
 uint8_t const qix_num = 22;
 
@@ -958,79 +1044,7 @@ FLASHMEM void flock_frame()
   flock_instance.drawFrame();
 }
 
-FLASHMEM void boot_animation()
-{
-  display.setTextSize(2);
-  randomSeed(analogRead(0));
-  char chars[16 * 10];
-  char chars_buffer[16 * 10];
-  char text1[10] = { 'W', 'E', 'L', 'C', 'O', 'M', 'E', ' ', 'T', 'O' };
-  char text2[10] = { 'M', 'I', 'C', 'R', 'O', 'D', 'E', 'X', 'E', 'D' };
-  uint8_t pos_x_1 = random(4);
-  uint8_t pos_y_1 = random(4) + 1;
-  uint8_t pos_x_2 = random(4) + 3;
-  uint8_t pos_y_2 = random(4) + 5;
-  uint8_t match_count_1 = 0;
-  uint8_t match_count_2 = 0;
-  uint8_t count = 0;
-  uint8_t hue = random(2);
-  uint8_t fade_point = 60;
 
-  for (uint8_t t = 0; t < 16 * 10; t++)
-  {
-    chars[t] = 32 + random(92 - 32);
-  }
-
-  for (uint8_t f = 0; f < 125; f++)
-  {
-    for (uint8_t x = 0; x < 16; x++)
-    {
-      for (uint8_t y = 0; y < 10; y++)
-      {
-        if (y == pos_y_1 && x >= pos_x_1 && x < pos_x_1 + 10 && f < fade_point)
-        {
-          if (chars[count] > text1[match_count_1])
-            chars[count]--;
-          else  if (chars[count] < text1[match_count_1])
-            chars[count]++;
-          match_count_1++;
-          display.setTextColor(ColorHSV(hue * 110, f * 3.8, 254), 0);
-        }
-        else
-          if (y == pos_y_2 && x >= pos_x_2 && x < pos_x_2 + 10 && f < fade_point)
-          {
-            if (chars[count] > text2[match_count_2])
-              chars[count]--;
-            else  if (chars[count] < text2[match_count_2])
-              chars[count]++;
-            match_count_2++;
-            display.setTextColor(ColorHSV(hue * 110, f * 3.8, 254), 0);
-          }
-          else
-          {
-            if ((chars[count] > 32 && random(2) != 0) || (f >= fade_point && chars[count] > 32 && random(7) != 1))
-              chars[count]--;
-
-            if ((y == pos_y_1 && x >= pos_x_1 && x < pos_x_1 + 10) || (y == pos_y_2 && x >= pos_x_2 && x < pos_x_2 + 10))
-              display.setTextColor(ColorHSV(hue * 110, fade_point * 3.8, 254 + fade_point - (f * 1.9)), 0);
-            else
-              display.setTextColor(ColorHSV(0, 0, 255 - f * 2), 0);
-          }
-        if (chars_buffer[count] != chars[count] || y == pos_y_1 || y == pos_y_2)
-        {
-          display.setCursor(20 + x * 18, 18 + y * 21);
-          display.print(chars[count]);
-          chars_buffer[count] = chars[count];
-        }
-        count++;
-      }
-    }
-    count = 0;
-    match_count_1 = 0;
-    match_count_2 = 0;
-    delay(30);
-  }
-}
 
 class GameOfLife {
 private:
@@ -2292,3 +2306,5 @@ FLASHMEM void AsteroidsScreensaver::erasePreviousState() {
 }
 
 AsteroidsScreensaver asteroidsSaver;
+
+#endif

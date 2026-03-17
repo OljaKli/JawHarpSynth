@@ -6,7 +6,11 @@
 #include "drums.h"
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 #include "UI.h"
 
 extern void apc(uint8_t a, uint8_t b, uint8_t c);
@@ -22,7 +26,7 @@ extern bool APC_BUTTONS_RIGHT[8];
 extern void print_current_sample_and_pitch_buffer();
 extern void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps);
 extern void seq_printAllVelocitySteps();
-extern void  seq_printAllVelocitySteps_single_step(uint8_t step, int color);
+extern void  seq_print_single_velocity_step(uint8_t step, int color);
 extern void seq_printAllSeqSteps();
 extern void pattern_editor_play_current_step(uint8_t step);
 extern void insert_pattern_step(uint8_t step);
@@ -260,7 +264,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         if (seq.vel[seq.active_pattern][in1 - 48] < 210) //normal sample
         {
           seq.vel[seq.active_pattern][in1 - 48] = in2;
-          seq_printAllVelocitySteps_single_step(in1 - 48, GREY1);
+          seq_print_single_velocity_step(in1 - 48, GREY1);
         }
       }
       if (APC_BUTTONS_RIGHT[4]) //edit velocity 2nd row (9-16)
@@ -268,7 +272,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         if (seq.vel[seq.active_pattern][in1 - 48 + 8] < 210) //normal sample
         {
           seq.vel[seq.active_pattern][in1 - 48 + 8] = in2;
-          seq_printAllVelocitySteps_single_step(in1 - 48 + 8, GREY1);
+          seq_print_single_velocity_step(in1 - 48 + 8, GREY1);
         }
       }
     }

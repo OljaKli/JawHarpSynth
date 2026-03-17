@@ -133,7 +133,7 @@
 //*************************************************************************************************
 //* DISPLAY AND TOUCHSCREEN
 //*************************************************************************************************
-#ifndef CAPACITIVE_TOUCH_DISPLAY // TFT with Capacitive Touchscreen (default)
+#if !defined(CAPACITIVE_TOUCH_DISPLAY)  && !defined (ESP_DISPLAY) // TFT with Capacitive Touchscreen (default)
 #define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (outdated)
 #endif
 
@@ -1275,4 +1275,5 @@ extern bool category_mode_active;
 extern uint8_t category_edit_mode;
 extern uint8_t selected_categories[MAX_CATEGORIES];
 extern uint8_t selected_category_count;
+
 

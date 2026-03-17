@@ -1,8 +1,16 @@
 #include "touchbutton.h"
 #include "touch.h"
+#ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
+#else 
+#include "esp32.h"
+#endif
 
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#else
 extern ILI9341_t3n display;
+#endif
 extern ts_t ts;
 extern int numTouchPoints;
 

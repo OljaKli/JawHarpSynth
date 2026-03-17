@@ -1,3 +1,5 @@
+#ifndef ESP_DISPLAY
+
 // https://github.com/KurtE/ILI9341_t3n
 // http://forum.pjrc.com/threads/26305-Highly-optimized-ILI9341-(320x240-TFT-color-display)-library
 
@@ -1257,6 +1259,8 @@ FLASHMEM void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
   uint16_t fgcolor, uint16_t bgcolor, uint8_t size_x,
   uint8_t size_y)
 {
+
+
   if ((x >= _width) ||              // Clip right
     (y >= _height) ||             // Clip bottom
     ((x + 6 * size_x - 1) < 0) || // Clip left  TODO: is this correct?
@@ -1789,3 +1793,5 @@ FLASHMEM uint8_t ILI9341_t3n::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ..
 
   return pos;
 }
+
+#endif
