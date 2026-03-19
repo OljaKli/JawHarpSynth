@@ -1051,6 +1051,12 @@ typedef struct sys_s
   uint8_t mono;
   uint8_t dexed_engine_type;
   uint8_t soft_midi_thru;
+  bool thru_usb_to_din;                  // USB MIDI -> DIN MIDI
+  bool thru_usb_to_host;                 // USB MIDI -> USB Host MIDI
+  bool thru_din_to_usb;                   // DIN MIDI -> USB MIDI
+  bool thru_din_to_host;                  // DIN MIDI -> USB Host MIDI
+  bool thru_host_to_usb;                  // USB Host MIDI -> USB MIDI
+  bool thru_host_to_din;                  // USB Host MIDI -> DIN MIDI 
   uint8_t performance_number;
   uint8_t favorites;
   uint8_t load_at_startup_performance;

@@ -1653,7 +1653,7 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
 #endif
   }
   return (false);
-  }
+}
 
 /******************************************************************************
    SD EPIANO
@@ -1729,9 +1729,9 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_epiano_json(uint8_t number)
 {
@@ -1796,7 +1796,7 @@ FLASHMEM bool save_sd_epiano_json(uint8_t number)
 
   AudioInterrupts();
   return (false);
-  }
+}
 
 FLASHMEM void serializeEventToJSON(JsonObject& o, LiveSequencer::EventVector::iterator it) {
   o["source"] = it->source;
@@ -2125,10 +2125,10 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   AudioInterrupts();
   return (true);
-    }
+}
 
 FLASHMEM bool save_sd_gridsong_json(uint8_t number)
 {
@@ -2312,6 +2312,12 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.mono = data_json["mono"];
         configuration.sys.dexed_engine_type = data_json["dexed_engine_type"];
         configuration.sys.soft_midi_thru = data_json["soft_midi_thru"];
+        configuration.sys.thru_usb_to_din = data_json["thru_usb_to_din"] | true;
+        configuration.sys.thru_usb_to_host = data_json["thru_usb_to_host"] | true;
+        configuration.sys.thru_din_to_usb = data_json["thru_din_to_usb"] | true;
+        configuration.sys.thru_din_to_host = data_json["thru_din_to_host"] | true;
+        configuration.sys.thru_host_to_usb = data_json["thru_host_to_usb"] | true;
+        configuration.sys.thru_host_to_din = data_json["thru_host_to_din"] | true;
         configuration.sys.performance_number = data_json["performance_number"];
         configuration.sys.favorites = data_json["favorites"];
         configuration.sys.load_at_startup_performance = data_json["load_at_startup_performance"];
@@ -2392,11 +2398,11 @@ FLASHMEM bool load_sd_sys_json(void)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
 
   AudioInterrupts();
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_sys_json(void)
 {
@@ -2418,6 +2424,12 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["dexed_engine_type"] = configuration.sys.dexed_engine_type;
       data_json["mono"] = configuration.sys.mono;
       data_json["soft_midi_thru"] = configuration.sys.soft_midi_thru;
+      data_json["thru_usb_to_din"] = configuration.sys.thru_usb_to_din;
+      data_json["thru_usb_to_host"] = configuration.sys.thru_usb_to_host;
+      data_json["thru_din_to_usb"] = configuration.sys.thru_din_to_usb;
+      data_json["thru_din_to_host"] = configuration.sys.thru_din_to_host;
+      data_json["thru_host_to_usb"] = configuration.sys.thru_host_to_usb;
+      data_json["thru_host_to_din"] = configuration.sys.thru_host_to_din;
       data_json["performance_number"] = configuration.sys.performance_number;
       data_json["favorites"] = configuration.sys.favorites;
       data_json["load_at_startup_performance"] = configuration.sys.load_at_startup_performance;
@@ -2488,7 +2500,7 @@ FLASHMEM bool save_sd_sys_json(void)
 
   AudioInterrupts();
   return (false);
-  }
+}
 
 /******************************************************************************
    SD NOISEMAKER
@@ -2936,11 +2948,11 @@ FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
 
   AudioInterrupts();
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 {
@@ -3016,7 +3028,7 @@ FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
 
   AudioInterrupts();
   return (false);
-  }
+}
 
 /******************************************************************************
    SD MULTIBAND
@@ -3103,11 +3115,11 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
 
   AudioInterrupts();
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_multiband_json(uint8_t number)
 {
@@ -3177,7 +3189,7 @@ FLASHMEM bool save_sd_multiband_json(uint8_t number)
 
   AudioInterrupts();
   return (false);
-  }
+}
 
 
 /******************************************************************************
@@ -3265,11 +3277,11 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
 
   AudioInterrupts();
   return (false);
-    }
+}
 
 // FLASHMEM bool save_sd_samples_json(uint8_t number)
 // {
@@ -3424,7 +3436,7 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
   }
   AudioInterrupts();
   return (false);
-  }
+}
 
 #endif
 
@@ -3592,11 +3604,11 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
 
   AudioInterrupts();
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_sidechain_json(uint8_t number)
 {
@@ -3648,7 +3660,7 @@ FLASHMEM bool save_sd_sidechain_json(uint8_t number)
 
   AudioInterrupts();
   return (false);
-  }
+}
 
 /******************************************************************************
    SD GRANULAR
@@ -3828,9 +3840,9 @@ FLASHMEM bool load_sd_chain_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_chain_json(uint8_t number)
 {
@@ -3873,7 +3885,7 @@ FLASHMEM bool save_sd_chain_json(uint8_t number)
 #endif
   }
   return (false);
-  }
+}
 
 FLASHMEM bool load_sd_transpose_json(uint8_t number)
 {
@@ -3925,9 +3937,9 @@ FLASHMEM bool load_sd_transpose_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_transpose_json(uint8_t number)
 {
@@ -3970,7 +3982,7 @@ FLASHMEM bool save_sd_transpose_json(uint8_t number)
 #endif
   }
   return (false);
-  }
+}
 
 FLASHMEM bool load_sd_song_json(uint8_t number)
 {
@@ -4025,9 +4037,9 @@ FLASHMEM bool load_sd_song_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 FLASHMEM bool save_sd_song_json(uint8_t number)
 {
@@ -4070,7 +4082,7 @@ FLASHMEM bool save_sd_song_json(uint8_t number)
 #endif
   }
   return (false);
-  }
+}
 
 FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
 {
@@ -4124,7 +4136,7 @@ FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
 #endif
   }
   return (false);
-  }
+}
 
 FLASHMEM bool save_sd_seq_sub_patterns_json(uint8_t number)
 {
@@ -4178,7 +4190,7 @@ FLASHMEM bool save_sd_seq_sub_patterns_json(uint8_t number)
 #endif
   }
   return (false);
-  }
+}
 
 FLASHMEM bool save_sd_performance_json(uint8_t number)
 {
@@ -4349,7 +4361,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
 #endif
 
   return (false);
-  }
+}
 
 FLASHMEM bool check_performance_directory(uint8_t number)
 {
@@ -4378,10 +4390,10 @@ FLASHMEM bool check_performance_directory(uint8_t number)
 #else
       SD.mkdir(dir);
 #endif
-      }
+    }
     AudioInterrupts();
     return (true);
-    }
+  }
 #ifdef DEBUG
   else
   {
@@ -4389,7 +4401,7 @@ FLASHMEM bool check_performance_directory(uint8_t number)
   }
 #endif
   return (false);
-  }
+}
 
 FLASHMEM void get_sd_performance_name_json(uint8_t number)
 {
@@ -4436,8 +4448,8 @@ FLASHMEM void get_sd_performance_name_json(uint8_t number)
       }
 #endif
     }
-      }
-      }
+  }
+}
 
 FLASHMEM bool load_sd_seq_sub_vel_json(uint8_t number)
 {
@@ -4502,9 +4514,9 @@ FLASHMEM bool load_sd_seq_sub_vel_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
 {
@@ -4571,9 +4583,9 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 extern void update_seq_speed();
 extern uint8_t perf_load_options;
@@ -4746,7 +4758,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
               uint8_t max_voices = data_json["sample_group_config"][i]["max_voices"];
               sample_voice_group_config[i].max_voices = constrain(max_voices, 0, NUM_DRUMS);
             }
-            
+
             if (data_json["sample_group_config"][i].containsKey("strategy"))
             {
               uint8_t strategy = data_json["sample_group_config"][i]["strategy"];
@@ -4866,9 +4878,9 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
       LOG.println(F(" available."));
 #endif
     }
-      }
+  }
   return (false);
-    }
+}
 
 FLASHMEM bool check_sd_performance_exists(uint8_t number)
 {
@@ -5060,7 +5072,7 @@ FLASHMEM bool get_sd_data(File sysex, uint8_t format, uint8_t* conf)
 #endif
 
   return (true);
-  }
+}
 
 FLASHMEM bool write_sd_data(File sysex, uint8_t format, uint8_t* data, uint16_t len)
 {
@@ -5115,7 +5127,7 @@ FLASHMEM bool write_sd_data(File sysex, uint8_t format, uint8_t* data, uint16_t 
 #endif
 
   return (true);
-  }
+}
 
 FLASHMEM bool get_bank_name(uint8_t p, uint8_t b, char* bank_name)
 {
@@ -5287,198 +5299,200 @@ FLASHMEM void string_toupper(char* s)
 #if defined COMPILE_FOR_PSRAM
 
 FLASHMEM bool save_sd_multisample_presets_json(uint8_t number) {
-    if (number < 0)
-        return (false);
+  if (number < 0)
+    return (false);
 
-    if (sd_card_internal > 0) {
-        number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
-        snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTISAMPLE_PRESETS_CONFIG_NAME);
+  if (sd_card_internal > 0) {
+    number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTISAMPLE_PRESETS_CONFIG_NAME);
 #ifdef DEBUG
-        LOG.print(F("Saving multisample slot "));
-        LOG.print(number);
-        LOG.print(F(" to "));
-        LOG.println(filename);
+    LOG.print(F("Saving multisample slot "));
+    LOG.print(number);
+    LOG.print(F(" to "));
+    LOG.println(filename);
 #endif
-        AudioNoInterrupts();
-        if (SD.exists(filename)) {
+    AudioNoInterrupts();
+    if (SD.exists(filename)) {
 #ifdef DEBUG
-            LOG.println(F("remove old multisample file"));
+      LOG.println(F("remove old multisample file"));
 #endif
-            SD.remove(filename);
+      SD.remove(filename);
+    }
+    json = SD.open(filename, FILE_WRITE);
+    if (json) {
+      char zone_filename[CONFIG_FILENAME_LEN];
+      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+
+      for (uint8_t i = 0; i < NUM_MULTISAMPLES; i++) {
+        data_json[i]["name"] = msp[i].name;
+        data_json[i]["sound_intensity"] = msp[i].sound_intensity;
+        data_json[i]["midi_channel"] = msp[i].midi_channel;
+        data_json[i]["velocity_to_filter"] = msp[i].velocity_to_filter;
+
+        // Save metadata about the format
+        data_json[i]["num_zones"] = NUM_MULTISAMPLE_ZONES; // Save that we're using 16 zones
+        data_json[i]["version"] = 2; // Version 2 for 16 zones
+
+        for (uint8_t j = 0; j < NUM_MULTISAMPLE_ZONES; j++) { // Changed from 8 to 16
+          strcpy(zone_filename, msz[i][j].filename);
+          if (strchr(zone_filename, '.')) {
+            *(strchr(zone_filename, '.')) = '\0';
+          }
+          data_json[i]["zones"]["filename"][j] = zone_filename;
+          data_json[i]["zones"]["root"][j] = msz[i][j].rootnote;
+          data_json[i]["zones"]["psram_no"][j] = msz[i][j].psram_entry_number;
+          data_json[i]["zones"]["low"][j] = msz[i][j].low;
+          data_json[i]["zones"]["high"][j] = msz[i][j].high;
+          data_json[i]["zones"]["playmode"][j] = msz[i][j].playmode;
+          data_json[i]["zones"]["vol"][j] = msz[i][j].vol;
+          data_json[i]["zones"]["pan"][j] = msz[i][j].pan;
+          data_json[i]["zones"]["rev"][j] = msz[i][j].rev;
+          data_json[i]["zones"]["tune"][j] = msz[i][j].tune;
+          data_json[i]["zones"]["loop_type"][j] = msz[i][j].loop_type;
+          data_json[i]["zones"]["loop_start"][j] = msz[i][j].loop_start;
+          data_json[i]["zones"]["loop_end"][j] = msz[i][j].loop_end;
         }
-        json = SD.open(filename, FILE_WRITE);
-        if (json) {
-            char zone_filename[CONFIG_FILENAME_LEN];
-            StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-
-            for (uint8_t i = 0; i < NUM_MULTISAMPLES; i++) {
-                data_json[i]["name"] = msp[i].name;
-                data_json[i]["sound_intensity"] = msp[i].sound_intensity;
-                data_json[i]["midi_channel"] = msp[i].midi_channel;
-                data_json[i]["velocity_to_filter"] = msp[i].velocity_to_filter;
-                
-                // Save metadata about the format
-                data_json[i]["num_zones"] = NUM_MULTISAMPLE_ZONES; // Save that we're using 16 zones
-                data_json[i]["version"] = 2; // Version 2 for 16 zones
-
-                for (uint8_t j = 0; j < NUM_MULTISAMPLE_ZONES; j++) { // Changed from 8 to 16
-                    strcpy(zone_filename, msz[i][j].filename);
-                    if (strchr(zone_filename, '.')) {
-                        *(strchr(zone_filename, '.')) = '\0';
-                    }
-                    data_json[i]["zones"]["filename"][j] = zone_filename;
-                    data_json[i]["zones"]["root"][j] = msz[i][j].rootnote;
-                    data_json[i]["zones"]["psram_no"][j] = msz[i][j].psram_entry_number;
-                    data_json[i]["zones"]["low"][j] = msz[i][j].low;
-                    data_json[i]["zones"]["high"][j] = msz[i][j].high;
-                    data_json[i]["zones"]["playmode"][j] = msz[i][j].playmode;
-                    data_json[i]["zones"]["vol"][j] = msz[i][j].vol;
-                    data_json[i]["zones"]["pan"][j] = msz[i][j].pan;
-                    data_json[i]["zones"]["rev"][j] = msz[i][j].rev;
-                    data_json[i]["zones"]["tune"][j] = msz[i][j].tune;
-                    data_json[i]["zones"]["loop_type"][j] = msz[i][j].loop_type;
-                    data_json[i]["zones"]["loop_start"][j] = msz[i][j].loop_start;
-                    data_json[i]["zones"]["loop_end"][j] = msz[i][j].loop_end;
-                }
-            }
+      }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
-            LOG.println(F("Write JSON data:"));
-            serializeJsonPretty(data_json, Serial);
-            LOG.println();
+      LOG.println(F("Write JSON data:"));
+      serializeJsonPretty(data_json, Serial);
+      LOG.println();
 #endif
-            serializeJsonPretty(data_json, json);
-            json.close();
-            AudioInterrupts();
-            return (true);
-        } else {
-#ifdef DEBUG
-            LOG.print(F("E : Cannot open "));
-            LOG.print(filename);
-            LOG.println(F(" on SD."));
-#endif
-        }
-        AudioInterrupts();
-        json.close();
+      serializeJsonPretty(data_json, json);
+      json.close();
+      AudioInterrupts();
+      return (true);
     }
-    return (false);
+    else {
+#ifdef DEBUG
+      LOG.print(F("E : Cannot open "));
+      LOG.print(filename);
+      LOG.println(F(" on SD."));
+#endif
+    }
+    AudioInterrupts();
+    json.close();
+  }
+  return (false);
 }
 
 extern void calc_low_high(uint8_t preset);
 
 FLASHMEM bool load_sd_multisample_presets_json(uint8_t number) {
-    if (number < 0)
-        return (false);
+  if (number < 0)
+    return (false);
 
-    if (sd_card_internal > 0) {
-        number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
-        snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTISAMPLE_PRESETS_CONFIG_NAME);
+  if (sd_card_internal > 0) {
+    number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%s.json"), PERFORMANCE_CONFIG_PATH, number, MULTISAMPLE_PRESETS_CONFIG_NAME);
 
-        AudioNoInterrupts();
-        if (SD.exists(filename)) {
+    AudioNoInterrupts();
+    if (SD.exists(filename)) {
 #ifdef DEBUG
-            LOG.print(F("Found msp presets data ["));
-            LOG.print(filename);
-            LOG.println(F("]... loading..."));
-            LOG.println(F(" "));
+      LOG.print(F("Found msp presets data ["));
+      LOG.print(filename);
+      LOG.println(F("]... loading..."));
+      LOG.println(F(" "));
 #endif
 
-            json = SD.open(filename);
-            if (json) {
-                StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
-                DeserializationError error = deserializeJson(data_json, json);
-                json.close();
-                AudioInterrupts();
+      json = SD.open(filename);
+      if (json) {
+        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        DeserializationError error = deserializeJson(data_json, json);
+        json.close();
+        AudioInterrupts();
 
-                if (error) {
+        if (error) {
 #ifdef DEBUG
-                    LOG.print(F("JSON deserialize error: "));
-                    LOG.println(error.c_str());
+          LOG.print(F("JSON deserialize error: "));
+          LOG.println(error.c_str());
 #endif
-                    return (false);
-                }
+          return (false);
+        }
 
 #if defined(DEBUG) && defined(DEBUG_SHOW_JSON)
-                LOG.println(F("Read JSON data:"));
-                serializeJsonPretty(data_json, Serial);
-                LOG.println();
+        LOG.println(F("Read JSON data:"));
+        serializeJsonPretty(data_json, Serial);
+        LOG.println();
 #endif
-                
-                for (uint8_t i = 0; i < NUM_MULTISAMPLES; i++) {
-                    strcpy(msp[i].name, data_json[i]["name"] | "");
-                    msp[i].sound_intensity = data_json[i]["sound_intensity"] | 100;
-                    msp[i].midi_channel = data_json[i]["midi_channel"] | 
-                                          (i == 0 ? DEFAULT_MSP_MIDI_CHANNEL_INST0 : DEFAULT_MSP_MIDI_CHANNEL_INST1);
 
-                    msp[i].velocity_to_filter = data_json[i]["velocity_to_filter"];
-                    // Check version or num_zones to determine if we have old 8-zone or new 16-zone format
-                    uint8_t saved_num_zones = data_json[i]["num_zones"] | 8; // Default to 8 for old files
-                    uint8_t version = data_json[i]["version"] | 1; // Default to 1 for old files
-                    
-                    // Initialize all 16 zones with defaults
-                    for (uint8_t j = 0; j < NUM_MULTISAMPLE_ZONES; j++) {
-                        // Set defaults
-                        msz[i][j].rootnote = 0;
-                        msz[i][j].psram_entry_number = 0;
-                        msz[i][j].low = 0;
-                        msz[i][j].high = 0;
-                        msz[i][j].playmode = 0;
-                        msz[i][j].vol = 100;
-                        msz[i][j].pan = 20; // Center
-                        msz[i][j].rev = 0;
-                        msz[i][j].tune = 100;
-                        msz[i][j].loop_type = 0;
-                        msz[i][j].loop_start = 0;
-                        msz[i][j].loop_end = 0;
-                        memset(msz[i][j].filename, 0, sizeof(msz[i][j].filename));
-                    }
-                    
-                    // Load zones from JSON (up to saved_num_zones or NUM_MULTISAMPLE_ZONES, whichever is smaller)
-                    uint8_t zones_to_load = min(saved_num_zones, (uint8_t)NUM_MULTISAMPLE_ZONES);
-                    
-                    for (uint8_t j = 0; j < zones_to_load; j++) {
-                        const char* zone_filename = data_json[i]["zones"]["filename"][j] | "";
-                        strcpy(msz[i][j].filename, zone_filename);
-                        if (strlen(msz[i][j].filename) > 0)
-                            strcat(msz[i][j].filename, ".wav");
-                        
-                        msz[i][j].rootnote = data_json[i]["zones"]["root"][j] | 0;
-                        msz[i][j].psram_entry_number = data_json[i]["zones"]["psram_no"][j] | 0;
-                        msz[i][j].low = data_json[i]["zones"]["low"][j] | 0;
-                        msz[i][j].high = data_json[i]["zones"]["high"][j] | 0;
-                        msz[i][j].playmode = data_json[i]["zones"]["playmode"][j] | 0;
-                        msz[i][j].vol = data_json[i]["zones"]["vol"][j] | 100;
-                        msz[i][j].pan = data_json[i]["zones"]["pan"][j] | 20;
-                        msz[i][j].rev = data_json[i]["zones"]["rev"][j] | 0;
-                        msz[i][j].tune = data_json[i]["zones"]["tune"][j] | 100;
-                        msz[i][j].loop_type = data_json[i]["zones"]["loop_type"][j] | 0;
-                        msz[i][j].loop_start = data_json[i]["zones"]["loop_start"][j] | 0;
-                        msz[i][j].loop_end = data_json[i]["zones"]["loop_end"][j] | 0;
-                        
-                        // For old files (version 1), set default tune if 0
-                        if (version == 1 && msz[i][j].tune == 0)
-                            msz[i][j].tune = 100;
-                    }
-                    
-                    // Recalculate zone boundaries
-                    //calc_low_high(i); // Not sure we need it here since it would overwrite the loaded low/high values
-                }
-                return (true);
-            }
-#ifdef DEBUG
-            else {
-                LOG.print(F("E: Cannot open "));
-                LOG.print(filename);
-                LOG.println(F(" on SD."));
-            }
-        } else {
-            LOG.print(F("No "));
-            LOG.print(filename);
-            LOG.println(F(" available."));
-#endif
+        for (uint8_t i = 0; i < NUM_MULTISAMPLES; i++) {
+          strcpy(msp[i].name, data_json[i]["name"] | "");
+          msp[i].sound_intensity = data_json[i]["sound_intensity"] | 100;
+          msp[i].midi_channel = data_json[i]["midi_channel"] |
+            (i == 0 ? DEFAULT_MSP_MIDI_CHANNEL_INST0 : DEFAULT_MSP_MIDI_CHANNEL_INST1);
+
+          msp[i].velocity_to_filter = data_json[i]["velocity_to_filter"];
+          // Check version or num_zones to determine if we have old 8-zone or new 16-zone format
+          uint8_t saved_num_zones = data_json[i]["num_zones"] | 8; // Default to 8 for old files
+          uint8_t version = data_json[i]["version"] | 1; // Default to 1 for old files
+
+          // Initialize all 16 zones with defaults
+          for (uint8_t j = 0; j < NUM_MULTISAMPLE_ZONES; j++) {
+            // Set defaults
+            msz[i][j].rootnote = 0;
+            msz[i][j].psram_entry_number = 0;
+            msz[i][j].low = 0;
+            msz[i][j].high = 0;
+            msz[i][j].playmode = 0;
+            msz[i][j].vol = 100;
+            msz[i][j].pan = 20; // Center
+            msz[i][j].rev = 0;
+            msz[i][j].tune = 100;
+            msz[i][j].loop_type = 0;
+            msz[i][j].loop_start = 0;
+            msz[i][j].loop_end = 0;
+            memset(msz[i][j].filename, 0, sizeof(msz[i][j].filename));
+          }
+
+          // Load zones from JSON (up to saved_num_zones or NUM_MULTISAMPLE_ZONES, whichever is smaller)
+          uint8_t zones_to_load = min(saved_num_zones, (uint8_t)NUM_MULTISAMPLE_ZONES);
+
+          for (uint8_t j = 0; j < zones_to_load; j++) {
+            const char* zone_filename = data_json[i]["zones"]["filename"][j] | "";
+            strcpy(msz[i][j].filename, zone_filename);
+            if (strlen(msz[i][j].filename) > 0)
+              strcat(msz[i][j].filename, ".wav");
+
+            msz[i][j].rootnote = data_json[i]["zones"]["root"][j] | 0;
+            msz[i][j].psram_entry_number = data_json[i]["zones"]["psram_no"][j] | 0;
+            msz[i][j].low = data_json[i]["zones"]["low"][j] | 0;
+            msz[i][j].high = data_json[i]["zones"]["high"][j] | 0;
+            msz[i][j].playmode = data_json[i]["zones"]["playmode"][j] | 0;
+            msz[i][j].vol = data_json[i]["zones"]["vol"][j] | 100;
+            msz[i][j].pan = data_json[i]["zones"]["pan"][j] | 20;
+            msz[i][j].rev = data_json[i]["zones"]["rev"][j] | 0;
+            msz[i][j].tune = data_json[i]["zones"]["tune"][j] | 100;
+            msz[i][j].loop_type = data_json[i]["zones"]["loop_type"][j] | 0;
+            msz[i][j].loop_start = data_json[i]["zones"]["loop_start"][j] | 0;
+            msz[i][j].loop_end = data_json[i]["zones"]["loop_end"][j] | 0;
+
+            // For old files (version 1), set default tune if 0
+            if (version == 1 && msz[i][j].tune == 0)
+              msz[i][j].tune = 100;
+          }
+
+          // Recalculate zone boundaries
+          //calc_low_high(i); // Not sure we need it here since it would overwrite the loaded low/high values
         }
+        return (true);
+      }
+#ifdef DEBUG
+      else {
+        LOG.print(F("E: Cannot open "));
+        LOG.print(filename);
+        LOG.println(F(" on SD."));
+      }
     }
-    return (false);
+    else {
+      LOG.print(F("No "));
+      LOG.print(filename);
+      LOG.println(F(" available."));
+#endif
+    }
+  }
+  return (false);
 }
 #endif
 

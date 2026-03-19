@@ -3538,8 +3538,6 @@ FLASHMEM void gamepad_seq_navigation_func(uint32_t buttons)
   }
 }
 
-
-
 /***********************************************************************
    GENERAL UI ELEMENTS
  ***********************************************************************/
@@ -20132,48 +20130,219 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 }
 
 
+FLASHMEM void update_selective_values_midi_thru()
+{
+  display.setTextSize(1);
+
+  // Master THRU (parameter 0) – now at row 4
+  if (menu_item_check(0))
+  {
+    setCursor_textGrid_small(26, 4);
+    setModeColor(0);
+    if (configuration.sys.soft_midi_thru)
+      display.print(F("ON "));
+    else
+      display.print(F("OFF"));
+  }
+
+  bool master_on = (configuration.sys.soft_midi_thru != 0);
+
+  // MICRO USB -> DIN/TRS (parameter 1) – row 6
+  if (menu_item_check(1))
+  {
+    setCursor_textGrid_small(26, 6);
+    if (!master_on)
+    {
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print(configuration.sys.thru_usb_to_din ? F("ON ") : F("OFF"));
+    }
+    else
+    {
+      setModeColor(1);
+      display.print(configuration.sys.thru_usb_to_din ? F("ON ") : F("OFF"));
+    }
+  }
+
+  // MICRO USB -> USB HOST (parameter 2) – row 7
+  if (menu_item_check(2))
+  {
+    setCursor_textGrid_small(26, 7);
+    if (!master_on)
+    {
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print(configuration.sys.thru_usb_to_host ? F("ON ") : F("OFF"));
+    }
+    else
+    {
+      setModeColor(2);
+      display.print(configuration.sys.thru_usb_to_host ? F("ON ") : F("OFF"));
+    }
+  }
+
+  // DIN/TRS -> MICRO USB (parameter 3) – row 8
+  if (menu_item_check(3))
+  {
+    setCursor_textGrid_small(26, 8);
+    if (!master_on)
+    {
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print(configuration.sys.thru_din_to_usb ? F("ON ") : F("OFF"));
+    }
+    else
+    {
+      setModeColor(3);
+      display.print(configuration.sys.thru_din_to_usb ? F("ON ") : F("OFF"));
+    }
+  }
+
+  // DIN/TRS -> USB HOST (parameter 4) – row 9
+  if (menu_item_check(4))
+  {
+    setCursor_textGrid_small(26, 9);
+    if (!master_on)
+    {
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print(configuration.sys.thru_din_to_host ? F("ON ") : F("OFF"));
+    }
+    else
+    {
+      setModeColor(4);
+      display.print(configuration.sys.thru_din_to_host ? F("ON ") : F("OFF"));
+    }
+  }
+
+  // USB HOST -> MICRO USB (parameter 5) – row 10
+  if (menu_item_check(5))
+  {
+    setCursor_textGrid_small(26, 10);
+    if (!master_on)
+    {
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print(configuration.sys.thru_host_to_usb ? F("ON ") : F("OFF"));
+    }
+    else
+    {
+      setModeColor(5);
+      display.print(configuration.sys.thru_host_to_usb ? F("ON ") : F("OFF"));
+    }
+  }
+
+  // USB HOST -> DIN/TRS (parameter 6) – row 11
+  if (menu_item_check(6))
+  {
+    setCursor_textGrid_small(26, 11);
+    if (!master_on)
+    {
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.print(configuration.sys.thru_host_to_din ? F("ON ") : F("OFF"));
+    }
+    else
+    {
+      setModeColor(6);
+      display.print(configuration.sys.thru_host_to_din ? F("ON ") : F("OFF"));
+    }
+  }
+}
+
 FLASHMEM void UI_func_midi_soft_thru(uint8_t param)
 {
-  static uint8_t old_soft_midi_thru;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     clear_bottom_half_screen_without_backbutton();
-    old_soft_midi_thru = configuration.sys.soft_midi_thru;
     encoderDir[ENC_R].reset();
+    display.setTextSize(1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(2);
-    setCursor_textGrid(1, 1);
-    display.print(F("MIDI Soft THRU"));
+
+    // Header at row 2 (row 1 is empty)
+    setCursor_textGrid_small(1, 2);
+    display.print(F("MIDI SOFT THRU"));
+
+    // Static labels – shifted down accordingly
+    setCursor_textGrid_small(1, 4);
+
+    display.print(F("GLOBAL THRU"));
+    setCursor_textGrid_small(1, 6);
+    display.print(F("MICRO USB -> DIN/TRS"));
+    setCursor_textGrid_small(1, 7);
+    display.print(F("MICRO USB -> USB HOST"));
+    setCursor_textGrid_small(1, 8);
+    display.print(F("DIN/TRS   -> MICRO USB"));
+    setCursor_textGrid_small(1, 9);
+    display.print(F("DIN/TRS   -> USB HOST"));
+    setCursor_textGrid_small(1, 10);
+    display.print(F("USB HOST  -> MICRO USB"));
+    setCursor_textGrid_small(1, 11);
+    display.print(F("USB HOST  -> DIN/TRS"));
+
+    // Descriptive text (grey, 3 lines, after a blank line)
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    setCursor_textGrid_small(1, 17);
+    display.print(F("WHEN GLOBAL ON: MIDI FROM A PORT IS SENT TO OUTPUTS,"));
+    setCursor_textGrid_small(1, 18);
+    display.print(F("PER ENABLED ROUTES. GLOBAL OFF DISABLES ALL ROUTING."));
+    
+    helptext_l(back_text);
+    helptext_r(F("< > SELECT   PUSH EDIT"));
+
+    generic_temp_select_menu = 0;
+    generic_full_draw_required = true;
+    update_selective_values_midi_thru();
+    generic_full_draw_required = false;
   }
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setTextSize(2);
-
     const EncoderEvents e = getEncoderEvents(ENC_R);
+    bool master_on = (configuration.sys.soft_midi_thru != 0);
+
     if (e.turned) {
-      configuration.sys.soft_midi_thru = constrain(configuration.sys.soft_midi_thru + e.dir, SOFT_MIDI_THRU_MIN, SOFT_MIDI_THRU_MAX);
+      if (!seq.edit_state) {
+        int8_t direction = e.dir;
+        int8_t new_menu = generic_temp_select_menu;
+
+        if (master_on) {
+          new_menu = constrain(generic_temp_select_menu + direction, 0, 6);
+        } else {
+          new_menu = 0;
+        }
+
+        if (new_menu != generic_temp_select_menu) {
+          generic_temp_select_menu = new_menu;
+          generic_full_draw_required = true;
+        }
+      } else {
+        if (generic_temp_select_menu == 0) {
+          configuration.sys.soft_midi_thru = constrain(configuration.sys.soft_midi_thru + e.dir, 0, 1);
+          generic_full_draw_required = true;
+        } else if (master_on) {
+          switch (generic_temp_select_menu) {
+            case 1: configuration.sys.thru_usb_to_din = !configuration.sys.thru_usb_to_din; break;
+            case 2: configuration.sys.thru_usb_to_host = !configuration.sys.thru_usb_to_host; break;
+            case 3: configuration.sys.thru_din_to_usb = !configuration.sys.thru_din_to_usb; break;
+            case 4: configuration.sys.thru_din_to_host = !configuration.sys.thru_din_to_host; break;
+            case 5: configuration.sys.thru_host_to_usb = !configuration.sys.thru_host_to_usb; break;
+            case 6: configuration.sys.thru_host_to_din = !configuration.sys.thru_host_to_din; break;
+          }
+          generic_full_draw_required = true;
+        }
+      }
     }
 
-    setCursor_textGrid(1, 2);
-    switch (configuration.sys.soft_midi_thru)
-    {
-    case 0:
-      display.print(F("[OFF]"));
-      break;
-    case 1:
-      display.print(F("[ON ]"));
-      break;
+    if (e.pressed) {
+      seq.edit_state = !seq.edit_state;
+      generic_full_draw_required = true;
     }
+
+    update_selective_values_midi_thru();
+    generic_full_draw_required = false;
   }
+
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
-    if (old_soft_midi_thru != configuration.sys.soft_midi_thru)
-    {
-      save_sys_flag = true;
-      save_sys = 0;
-    }
+    save_sys_flag = true;
+    save_sys = 0;
+    display.fillScreen(COLOR_BACKGROUND);
   }
 }
 

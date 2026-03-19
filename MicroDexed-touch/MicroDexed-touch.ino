@@ -5642,6 +5642,14 @@ FLASHMEM void check_configuration_sys(void)
   configuration.sys.vol = constrain(configuration.sys.vol, VOLUME_MIN, VOLUME_MAX);
   configuration.sys.mono = constrain(configuration.sys.mono, MONO_MIN, MONO_MAX);
   configuration.sys.soft_midi_thru = constrain(configuration.sys.soft_midi_thru, SOFT_MIDI_THRU_MIN, SOFT_MIDI_THRU_MAX);
+  
+  configuration.sys.thru_usb_to_din   = constrain(configuration.sys.thru_usb_to_din,   0, 1);
+  configuration.sys.thru_usb_to_host  = constrain(configuration.sys.thru_usb_to_host,  0, 1);
+  configuration.sys.thru_din_to_usb   = constrain(configuration.sys.thru_din_to_usb,   0, 1);
+  configuration.sys.thru_din_to_host  = constrain(configuration.sys.thru_din_to_host,  0, 1);
+  configuration.sys.thru_host_to_usb  = constrain(configuration.sys.thru_host_to_usb,  0, 1);
+  configuration.sys.thru_host_to_din  = constrain(configuration.sys.thru_host_to_din,  0, 1);
+  
   configuration.sys.favorites = constrain(configuration.sys.favorites, FAVORITES_NUM_MIN, FAVORITES_NUM_MAX);
   configuration.sys.performance_number = constrain(configuration.sys.performance_number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   configuration.sys.load_at_startup_performance = constrain(configuration.sys.load_at_startup_performance, STARTUP_NUM_MIN, STARTUP_NUM_MAX);

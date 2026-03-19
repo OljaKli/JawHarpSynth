@@ -30,12 +30,10 @@
 
 FLASHMEM bool XPT2046_Touchscreen::begin(SPIClass &wspi)
 {
- 
   _pspi = &wspi;
   _pspi->begin();
   pinMode(csPin, OUTPUT);
   digitalWrite(csPin, HIGH);
-
   return true;
 }
 
