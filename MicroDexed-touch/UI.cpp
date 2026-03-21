@@ -1230,9 +1230,19 @@ FLASHMEM void draw_button_on_grid_smarttext(uint8_t x, uint8_t y, const char* t1
 #endif
 
 
+#if defined ESP_DISPLAY
 FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str)
 {
-  display.setTextSize(1);
+  // Buffer large enough for any field (max 15 characters + null)
+  char tmp[20];
+  // Format: left-justify, take at most field_size chars from str, pad to field_size.
+  snprintf(tmp, sizeof(tmp), "%-*.*s", field_size, field_size, str);
+  display.setCursor(pos_x, pos_y);
+  display.print(tmp);
+}
+#else
+FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str)
+{
   char tmp[STRING_BUFFER_SIZE];
   char* s = tmp;
   uint8_t l = strlen(str);
@@ -1244,6 +1254,7 @@ FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, co
   display.setCursor(pos_x, pos_y);
   display.print(tmp);
 }
+#endif
 
 FLASHMEM void setCursor_textGrid(uint8_t pos_x, uint8_t pos_y)
 {
@@ -2937,8 +2948,16 @@ extern void gol_loop();
 #endif
 extern bool wakeScreenFlag;
 
+#if defined ESP_DISPLAY
+extern void sendScreensaverStop();
+#endif
+
 FLASHMEM void resetScreenTimer() {
   LCDML.SCREEN_resetTimer();
+
+#if defined ESP_DISPLAY
+sendScreensaverStop();
+#endif
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
     int id = LCDML.MENU_getLastActiveFunctionID();
@@ -4136,6 +4155,17 @@ static uint8_t packetType = 0;
 static uint8_t touchIndex = 0;
 static bool inTouchPacket = false;
 
+void redraw_current_page_or_fallback()
+{
+    int id = LCDML.MENU_getLastActiveFunctionID();
+    if (id != _LCDML_NO_FUNC) {
+      LCDML.OTHER_jumpToID(id);
+    }
+    else {
+      LCDML.FUNC_goBackToMenu();
+   }
+}
+
 void processIncomingSerial(bool& ackReceived) {
   while (Serial4.available() > 0) {
     uint8_t data = Serial4.read();
@@ -4143,11 +4173,14 @@ void processIncomingSerial(bool& ackReceived) {
     if (data == ACK_BYTE) {
       ackReceived = true;
     }
-    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD) {
-      packetType = data;
-      inTouchPacket = true;
-      touchIndex = 0;
-    }
+    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD || data == 0xAE) {
+    packetType = data;
+    inTouchPacket = true;
+    touchIndex = 0;
+}
+    else if (data == 0xAE && touchIndex == 0) {
+    redraw_current_page_or_fallback();
+}
     else if (data == 0xBB && inTouchPacket) {
       if (packetType == 0xAA && touchIndex == 2) {
         uint16_t esp_touch_x = touchBuffer[0];
@@ -4159,6 +4192,9 @@ void processIncomingSerial(bool& ackReceived) {
         remote_touched = true;
 
       }
+          else if (packetType == 0xAE && touchIndex == 0) {
+redraw_current_page_or_fallback();
+    }
       else if (packetType == 0xAB && touchIndex == 1) {
         uint8_t btn = touchBuffer[0];
         if (btn <= 13) {
@@ -5233,6 +5269,8 @@ FLASHMEM void lcdml_menu_clear(void)
 #endif
 }
 
+
+
 #ifndef TOUCH_UI  //begin regular menu
 FLASHMEM void lcdml_menu_display(void)
 {
@@ -5297,7 +5335,6 @@ FLASHMEM void lcdml_menu_display(void)
           // check the type off a menu element
           if (tmp->checkType_menu() == true)
           {
-            // display normal content
             LCDML_getContent(content_text, tmp->getID());
 
             if (n == LCDML.MENU_getCursorPos())
@@ -5305,6 +5342,8 @@ FLASHMEM void lcdml_menu_display(void)
             else
               display.setTextColor(GREY2, COLOR_BACKGROUND);
             show(n + 1, 0, display_cols - 2, content_text);
+
+
           }
           else
           {
@@ -18105,13 +18144,31 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
 
 FLASHMEM void print_note_name_and_octave(uint8_t note)
 {
-  display.print(noteNames[note % 12][0]);
-  if (noteNames[note % 12][1] != '\0')
-  {
-    display.print(noteNames[note % 12][1]);
-  }
-  display.print((note / 12) - 1);
-  display.print(" ");
+  // display.print(noteNames[note % 12][0]);
+  // if (noteNames[note % 12][1] != '\0')
+  // {
+  //   display.print(noteNames[note % 12][1]);
+  // }
+  // display.print((note / 12) - 1);
+  // display.print(" ");
+
+    char buffer[4];  // 3 chars + null
+    if (note == 0) {
+        strcpy(buffer, "C1 ");
+    } else {
+        const char* names[] = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"};
+        uint8_t n = note % 12;
+        uint8_t oct = note / 12 - 1;
+        const char* name = names[n];
+        uint8_t len = strlen(name);  // 1 or 2
+        if (len == 1) {
+            snprintf(buffer, sizeof(buffer), "%s%d ", name, oct);  // e.g., "C4 "
+        } else {
+            snprintf(buffer, sizeof(buffer), "%s%d", name, oct);   // e.g., "C#4"
+        }
+    }
+    display.print(buffer);
+   
 }
 
 FLASHMEM uint8_t get_distance(uint8_t a, uint8_t b)
@@ -18275,8 +18332,16 @@ FLASHMEM uint8_t get_zone_display_index(uint8_t zone) {
 FLASHMEM bool is_zone_visible(uint8_t zone) {
   return zone >= msp_scroll_offset && zone < msp_scroll_offset + MSP_VISIBLE_ZONES;
 }
+#ifdef ESP_DISPLAY
+extern void sendZoneLine(uint8_t zone, uint8_t row,
+                  uint8_t rootnote, uint8_t low, uint8_t high,
+                  uint8_t playmode, uint8_t vol, uint8_t pan,
+                  uint8_t rev, uint8_t tune,
+                  const char* filename);
+#endif
 
 FLASHMEM void print_msp_zone_text(uint8_t zone, bool fullrefresh_values) {
+
   uint8_t display_index = get_zone_display_index(zone);
   uint8_t yoffset = 7;
 
@@ -18290,21 +18355,19 @@ FLASHMEM void print_msp_zone_text(uint8_t zone, bool fullrefresh_values) {
   setCursor_textGrid_small(2, display_index + yoffset);
   print_note_name_and_octave(msz[seq.active_multisample][zone].rootnote);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(" ");
-
+  
   // Low note
   setCursor_textGrid_small(7, display_index + yoffset);
   sub_MultiSample_setColor(zone, 1);
   print_note_name_and_octave(msz[seq.active_multisample][zone].low);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(" ");
-
+  
   // High note
   setCursor_textGrid_small(11, display_index + yoffset);
   sub_MultiSample_setColor(zone, 2);
   print_note_name_and_octave(msz[seq.active_multisample][zone].high);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  display.print(" ");
+ 
 
   // Play mode
   char tmp[4];
@@ -18365,21 +18428,27 @@ FLASHMEM void print_msp_zone_text(uint8_t zone, bool fullrefresh_values) {
   // Filename
   setCursor_textGrid_small(36, display_index + yoffset);
   sub_MultiSample_setColor(zone, 8);
-  display.print("[");
 
-  if (msz[seq.active_multisample][generic_temp_select_menu - 3].entry_number == 0 &&
+char zoneText[18]; // enough for "[" + 14 chars + "]" + null
+const char* content;
+if (msz[seq.active_multisample][zone].entry_number == 0 &&
     seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 8) {
-    show_smallfont_noGrid((display_index + yoffset) * (CHAR_height_small + 2),
-      37 * CHAR_width_small, 15, "CLEAR ZONE ?");
-  }
-  else {
-    show_smallfont_noGrid((display_index + yoffset) * (CHAR_height_small + 2),
-      37 * CHAR_width_small, 15,
-      msz[seq.active_multisample][zone].filename);
-  }
+    content = "CLEAR ZONE ?";
+} else {
+    content = msz[seq.active_multisample][zone].filename;
+}
+// Create a fixed-width string of 14 characters by padding with spaces
+char fixedContent[15];
+int len = strlen(content);
+int i;
+for (i = 0; i < 14; i++) {
+    if (i < len) fixedContent[i] = content[i];
+    else fixedContent[i] = ' ';
+}
+fixedContent[14] = '\0';
+snprintf(zoneText, sizeof(zoneText), "[%s]", fixedContent);
+display.print(zoneText);
 
-  setCursor_textGrid_small(51, display_index + yoffset);
-  display.print("]");
 }
 
 FLASHMEM void print_msp_keyboard_zone(uint8_t zone) {
@@ -18521,18 +18590,24 @@ extern void print_msp_velocity_to_filter_button();
 
 FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
+  static uint8_t last_multisample = 0;
+  static uint8_t last_scroll_offset = 0;
+  static uint8_t last_selected_zone = 255;
+  static uint8_t last_selected_track = 0;
+  static bool last_edit_state = false;
+  static uint8_t last_root_notes[NUM_MULTISAMPLE_ZONES] = {0};
+
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_msp);
     seq.edit_state = false;
     generic_temp_select_menu = 0;
-    seq.selected_track = 0;  // Start with first column selected
-    msp_scroll_offset = 0;  // Initialize scroll offset
-    // calc_low_high(seq.active_multisample);
+    seq.selected_track = 0;
+    msp_scroll_offset = 0;
     display.fillScreen(COLOR_BACKGROUND);
 
     encoderDir[ENC_R].reset();
-    //encoderDir[ENC_L].reset();  // Reset left encoder too
+    encoderDir[ENC_L].reset();
 
     print_msp_velocity_to_filter_button();
     display.setTextSize(1);
@@ -18581,34 +18656,56 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
     print_msp_all_zones();
 
+    // Initialize state tracking
+    last_multisample = seq.active_multisample;
+    last_scroll_offset = msp_scroll_offset;
+    last_selected_zone = (generic_temp_select_menu > 2 && generic_temp_select_menu <= 18) ? generic_temp_select_menu - 3 : 255;
+    last_selected_track = seq.selected_track;
+    last_edit_state = seq.edit_state;
+    for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+        last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+    }
   }
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     multisample_zone_t& zoneEdited = msz[seq.active_multisample][generic_temp_select_menu - 3];
     const EncoderEvents e_right = getEncoderEvents(ENC_R);
-    // const EncoderEvents e_left = getEncoderEvents(ENC_L);
+    // Left encoder is handled globally; we detect changes via state tracking.
 
-         // Update the display for the current zone
-    if (generic_temp_select_menu >= 3 && generic_temp_select_menu <= 18) {
-      uint8_t zone_idx = generic_temp_select_menu - 3;
-      if (is_zone_visible(zone_idx)) {
-        print_msp_zone_text(zone_idx, false);
-      }
-    }
+    // Helper to redraw current zone text after editing
+    auto redrawCurrentZoneText = [&]() {
+        if (generic_temp_select_menu > 2) {
+            uint8_t zone = generic_temp_select_menu - 3;
+            if (is_zone_visible(zone)) {
+                print_msp_zone_text(zone, false);
+            }
+        }
+    };
 
+    // ========== RIGHT ENCODER: zone navigation & value editing ==========
     // Handle scroll wheel for zone scrolling when not editing
     if (e_right.turned && !seq.edit_state && generic_temp_select_menu >= 3 && generic_temp_select_menu <= 18) {
-      // Scroll zones up/down when at edges
+      bool scroll_changed = false;
       if (e_right.dir > 0 && generic_temp_select_menu == msp_scroll_offset + MSP_VISIBLE_ZONES + 2 &&
         msp_scroll_offset < NUM_MULTISAMPLE_ZONES - MSP_VISIBLE_ZONES) {
         msp_scroll_offset++;
-        print_msp_all_zones();
+        scroll_changed = true;
       }
       else if (e_right.dir < 0 && generic_temp_select_menu == msp_scroll_offset + 3 && msp_scroll_offset > 0) {
         msp_scroll_offset--;
-        print_msp_all_zones();
+        scroll_changed = true;
       }
 
+      if (scroll_changed) {
+        print_msp_all_zones();
+        // Immediately update the last scroll offset to prevent duplicate redraw
+        last_scroll_offset = msp_scroll_offset;
+        // Also update the stored root notes (they may have changed)
+        for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+            last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+        }
+      }
     }
 
     if (e_right.turned) {
@@ -18620,6 +18717,11 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
           calc_low_high(seq.active_multisample);
           print_msp_all_zones();
           print_msp_velocity_to_filter_button();
+          // Update last scroll offset and root notes after full redraw
+          last_scroll_offset = msp_scroll_offset;
+          for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+              last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+          }
         }
         else
         {
@@ -18634,15 +18736,16 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
       if (seq.edit_state && generic_temp_select_menu == 1)
       {
         msp[seq.active_multisample].sound_intensity = constrain(msp[seq.active_multisample].sound_intensity + e_right.dir * e_right.speed, 0, 100);
+        redrawCurrentZoneText();
       }
       if (seq.edit_state && generic_temp_select_menu == 2)
       {
         msp[seq.active_multisample].midi_channel = constrain(msp[seq.active_multisample].midi_channel + e_right.dir, 0, 17);
+        redrawCurrentZoneText();
       }
 
       if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 8) // file name selection
       {
-
 #if  defined COMPILE_FOR_PSRAM
         zoneEdited.entry_number = constrain(zoneEdited.entry_number + e_right.dir, 0, NUM_DRUMSET_CONFIG - 1);
         if (seq.running == true)
@@ -18650,27 +18753,31 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
         if ((zoneEdited.entry_number) - 1 >= 0)
           fill_msz(drum_config[zoneEdited.entry_number - 1].filename, seq.active_multisample, generic_temp_select_menu - 3, zoneEdited.entry_number - 1);
+        redrawCurrentZoneText();
 #endif
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 7) // tune/pitch
       {
         zoneEdited.tune = constrain(zoneEdited.tune + e_right.dir * e_right.speed, 1, 200);
+        redrawCurrentZoneText();
       }
       if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 6) // reverb send selection
       {
         zoneEdited.rev = constrain(zoneEdited.rev + e_right.dir * e_right.speed, 0, 100);
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 5) // pan selection
       {
         zoneEdited.pan = constrain(zoneEdited.pan + e_right.dir * e_right.speed, PANORAMA_MIN, PANORAMA_MAX);
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 4) // volume selection
       {
         zoneEdited.vol = constrain(zoneEdited.vol + e_right.dir * e_right.speed, 0, 100);
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 3) // playmode selection
       {
-        // zoneEdited.playmode = !zoneEdited.playmode;
         zoneEdited.playmode = constrain(zoneEdited.playmode + e_right.dir, 0, 6);
         if (zoneEdited.playmode > 1 && zoneEdited.playmode % 2 == 0)
         {
@@ -18679,18 +18786,31 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
           else if (e_right.down)
             zoneEdited.playmode--;
         }
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 2) // high selection
       {
         zoneEdited.high = constrain(zoneEdited.high + e_right.dir * e_right.speed, 24, 109);
+        if (generic_temp_select_menu > 2) {
+            print_msp_keyboard_zone(generic_temp_select_menu - 3);
+        }
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 1) // low selection
       {
         zoneEdited.low = constrain(zoneEdited.low + e_right.dir * e_right.speed, 24, 109);
+        if (generic_temp_select_menu > 2) {
+            print_msp_keyboard_zone(generic_temp_select_menu - 3);
+        }
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state && generic_temp_select_menu > 2 && seq.selected_track == 0) // root note selection
       {
         zoneEdited.rootnote = constrain(zoneEdited.rootnote + e_right.dir * e_right.speed, 24, 109);
+        if (generic_temp_select_menu > 2) {
+            print_msp_keyboard_zone(generic_temp_select_menu - 3);
+        }
+        redrawCurrentZoneText();
       }
       else if (seq.edit_state == false) // no option is selected, scroll parameter rows
       {
@@ -18702,25 +18822,29 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
         if (generic_temp_select_menu >= 3 && generic_temp_select_menu <= 18) {
           uint8_t zone_idx = generic_temp_select_menu - 3;
           if (zone_idx < msp_scroll_offset) {
-            // Selected zone is above visible area
             msp_scroll_offset = zone_idx;
             print_msp_all_zones();
+            last_scroll_offset = msp_scroll_offset;
+            for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+                last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+            }
           }
           else if (zone_idx >= msp_scroll_offset + MSP_VISIBLE_ZONES) {
-            // Selected zone is below visible area
             msp_scroll_offset = zone_idx - MSP_VISIBLE_ZONES + 1;
             print_msp_all_zones();
+            last_scroll_offset = msp_scroll_offset;
+            for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+                last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+            }
           }
           else {
             // Zone is visible, update only affected zones
-            // Update old zone if it was visible
             if (old_menu >= 3 && old_menu <= 18) {
               uint8_t old_zone = old_menu - 3;
               if (is_zone_visible(old_zone)) {
                 print_msp_zone_text(old_zone, false);
               }
             }
-            // Update new zone
             if (is_zone_visible(zone_idx)) {
               print_msp_zone_text(zone_idx, false);
             }
@@ -18730,6 +18854,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
       }
     }
 
+    // ========== BUTTON PRESS: toggle edit mode / confirm ==========
     if (LCDML.BT_checkEnter())
     {
       if (seq.edit_state && generic_temp_select_menu == 0 && seq.active_multisample == NUM_MULTISAMPLES)
@@ -18746,9 +18871,9 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
         msz[seq.active_multisample][generic_temp_select_menu - 3].low = 0;
         msz[seq.active_multisample][generic_temp_select_menu - 3].vol = 100;
         msz[seq.active_multisample][generic_temp_select_menu - 3].tune = 100;
-        //msz[seq.active_multisample][generic_temp_select_menu - 3].psram_entry_number = NUM_DRUMSET_CONFIG-1;
         msz[seq.active_multisample][generic_temp_select_menu - 3].psram_entry_number = 0;
         memset(msz[seq.active_multisample][generic_temp_select_menu - 3].filename, 0, sizeof(msz[seq.active_multisample][generic_temp_select_menu - 3].filename));
+        redrawCurrentZoneText();
       }
       if (seq.edit_state == false) {
         seq.edit_state = true;
@@ -18758,7 +18883,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
       }
     }
 
-    // Update help text based on selection
+    // ========== HELP TEXT ==========
     if (generic_temp_select_menu > 2) {
       if (seq.edit_state) {
         helptext_l(F("MOVE X"));
@@ -18779,8 +18904,76 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
         helptext_r(F("SEL. MIDI CHANNEL"));
     }
 
-    display.setTextSize(2);
+    // ========== INCREMENTAL REDRAW (state tracking) ==========
+    // 1. Multisample changed
+    if (seq.active_multisample != last_multisample) {
+        print_msp_all_zones();
+        last_multisample = seq.active_multisample;
+        last_scroll_offset = msp_scroll_offset;
+        last_selected_zone = (generic_temp_select_menu > 2 && generic_temp_select_menu <= 18) ? generic_temp_select_menu - 3 : 255;
+        last_selected_track = seq.selected_track;
+        last_edit_state = seq.edit_state;
+        for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+            last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+        }
+    }
+    // 2. Scroll offset changed (only if not already handled)
+    else if (msp_scroll_offset != last_scroll_offset) {
+        print_msp_all_zones();
+        last_scroll_offset = msp_scroll_offset;
+        for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+            last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+        }
+    }
+    else {
+        uint8_t current_selected_zone = (generic_temp_select_menu > 2 && generic_temp_select_menu <= 18) ? generic_temp_select_menu - 3 : 255;
+        bool edit_state_changed = (seq.edit_state != last_edit_state);
+        bool selection_changed = (current_selected_zone != last_selected_zone);
+        bool track_changed = (seq.selected_track != last_selected_track);
+        bool root_note_changed = false;
+        for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+            if (msz[seq.active_multisample][i].rootnote != last_root_notes[i]) {
+                root_note_changed = true;
+                break;
+            }
+        }
 
+        // 3. Selection, track, or edit state changed
+        if (selection_changed || track_changed || edit_state_changed) {
+            // Redraw text of old and new selected zone (if visible)
+            if (last_selected_zone < NUM_MULTISAMPLE_ZONES && is_zone_visible(last_selected_zone)) {
+                print_msp_zone_text(last_selected_zone, false);
+            }
+            if (current_selected_zone < NUM_MULTISAMPLE_ZONES && is_zone_visible(current_selected_zone)) {
+                print_msp_zone_text(current_selected_zone, false);
+            }
+            // Redraw keyboard zones for old and new selection
+            if (last_selected_zone < NUM_MULTISAMPLE_ZONES) {
+                print_msp_keyboard_zone(last_selected_zone);
+            }
+            if (current_selected_zone < NUM_MULTISAMPLE_ZONES) {
+                print_msp_keyboard_zone(current_selected_zone);
+            }
+            last_selected_zone = current_selected_zone;
+            last_selected_track = seq.selected_track;
+            last_edit_state = seq.edit_state;
+        }
+
+        // 4. Root note changed
+        if (root_note_changed) {
+            for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+                if (msz[seq.active_multisample][i].rootnote != last_root_notes[i]) {
+                    print_msp_keyboard_zone(i);
+                }
+            }
+            for (uint8_t i = 0; i < NUM_MULTISAMPLE_ZONES; i++) {
+                last_root_notes[i] = msz[seq.active_multisample][i].rootnote;
+            }
+        }
+    }
+
+    // ========== STATIC ELEMENTS (multisample name, volume, MIDI channel) ==========
+    display.setTextSize(2);
     if (seq.active_multisample < NUM_MULTISAMPLES)
     {
       display.setTextColor(GREY2, COLOR_BACKGROUND);
@@ -18805,40 +18998,11 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
       setModeColor(2);
       setCursor_textGrid_small(36, 4);
       _print_midi_channel(msp[seq.active_multisample].midi_channel);
-#if defined GLOW
-      set_glow_show_text_no_grid(36 * CHAR_width_small, 4 * (CHAR_height_small + 2), 4, get_midi_channel_name(msp[seq.active_multisample].midi_channel), 2, 1);
-#endif
-
-      // UPDATED: When not editing, update all visible zones
-      if (seq.edit_state == false) {
-        for (uint8_t i = 0; i < MSP_VISIBLE_ZONES; i++) {
-          uint8_t zone = msp_scroll_offset + i;
-          if (zone < NUM_MULTISAMPLE_ZONES) {
-            print_msp_zone_text(zone, false);
-            print_msp_keyboard_zone(zone);
-          }
-        }
-      }
-      else {
-        // When editing, update only the edited zone if visible
-        if (generic_temp_select_menu > 2) {
-          uint8_t zone_idx = generic_temp_select_menu - 3;
-          if (is_zone_visible(zone_idx)) {
-            print_msp_zone_text(zone_idx, false);
-          }
-
-          // Draw keyboard zones for all 16 zones
-          for (uint8_t zone = 0; zone < NUM_MULTISAMPLE_ZONES; zone++) {
-            print_msp_keyboard_zone(zone);
-          }
-
-        }
-      }
     }
   }
+
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-
     encoderDir[ENC_R].reset();
     encoderDir[ENC_L].reset();
     unregisterTouchHandler();
@@ -20809,144 +20973,419 @@ FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t valu
 
 }
 
+// FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
+// {
+//   const uint8_t max_visible_settings = 10;
 
+//   auto clear_desc = [](uint8_t line) {
+//     setCursor_textGrid_small(2, line);
+//     print_empty_spaces(42, 1);
+//     };
+
+//   auto clear_val = [](uint8_t line) {
+//     setCursor_textGrid_small(42, line);
+//     print_empty_spaces(8, 1);
+//     };
+
+//   auto render_label = [](uint8_t setting_index, uint8_t line) {
+//     setCursor_textGrid_small(2, line);
+//     switch (setting_index) {
+//     case 0: display.print(F("GAMEPAD/NATIVE KEY SPEED")); break;
+//     case 1: display.print(F("SCREENSAVER START")); break;
+//     case 2: display.print(F("SCREENSAVER MODE")); break;
+//     case 3: display.print(F("DISPLAY ROTATION")); break;
+//     case 4: display.print(F("TOUCH SCREEN ROTATION")); break;
+//     case 5: display.print(F("SWAP ENCODER DIRECTION (A/B PINS)")); break;
+//     case 6: display.print(F("SKIP BOOT ANIMATION")); break;
+//     case 7: display.print(F("INVERT COLORS (EXPERIMENTAL)")); break;
+//     case 8: display.print(F("DISPLAY BRIGHTNESS")); break;
+//     case 9: display.print(F("DEXED ENGINE")); break;
+//     case 10: display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS")); break;
+//     case 11: display.print(F("SEND SYSEX ON VOICE CHANGE")); break;
+//     case 12: display.print(F("SEND MIDI CC DUMPS")); break;
+//     case 13: display.print(F("SWAP MIDI ACTIVITY LEDS")); break;
+//     case 14: display.print(F("RGB ENCODER DEFAULT COLOR"));
+// #ifndef RGB_ENCODERS
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     case 15: display.print(F("RGB ENCODER EDITOR COLOR"));
+// #ifndef RGB_ENCODERS
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     case 16: display.print(F("ANALOG VOLUME CONTROL"));
+// #ifndef MCP_CV
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     case 17: display.print(F("EXT. SUSTAIN PEDAL/DAMPER"));
+// #ifndef MCP_CV
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     case 18: display.print(F("EXTERNAL CV CLOCK INPUT"));
+// #ifndef MCP_CV
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+
+//     case 19: display.print(F("MIDI INPUT CC -> CV2"));
+// #ifndef MCP_CV
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     case 20: display.print(F("MIDI INPUT CC -> CV4"));
+// #ifndef MCP_CV
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     case 21: display.print(F("NOTE TRANSPOSE -> CV1"));
+// #ifndef MCP_CV
+//       display.print(F(" [NA]"));
+// #endif
+//       break;
+//     }
+//     };
+
+//   auto render_value = [](uint8_t setting_index, uint8_t line) {
+//     setModeColor(setting_index);
+//     setCursor_textGrid_small(42, line);
+//     switch (setting_index) {
+//     case 0: print_formatted_number(configuration.sys.gamepad_speed, 3); setCursor_textGrid_small(46, line); display.print(F("ms")); break;
+//     case 1: print_formatted_number(configuration.sys.screen_saver_start, 2); setCursor_textGrid_small(45, line); display.print(configuration.sys.screen_saver_start > 1 ? F("MINS") : F("MIN ")); break;
+//     case 2: print_screensaver_mode(); break;
+//     case 3: display.print(configuration.sys.display_rotation); break;
+//     case 4: display.print(configuration.sys.touch_rotation); break;
+//     case 5: display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF")); break;
+//     case 6: display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO ")); break;
+//     case 7: display.print(configuration.sys.invert_colors ? F("YES") : F("NO ")); break;
+//     case 8: print_formatted_number(configuration.sys.brightness, 3); break;
+//     case 9:
+//       if (MicroDexed[0]->getEngineType() == 0) display.print(F("MSFA"));
+//       else if (MicroDexed[0]->getEngineType() == 1) display.print(F("MK-I"));
+//       else if (MicroDexed[0]->getEngineType() == 2) display.print(F("OPL "));
+//       break;
+//     case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
+//     case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
+//     case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
+//     case 13: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
+//     case 14: display.print(configuration.sys.rgb_enc_color_def);
+//       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_def);
+//       break;
+//     case 15: display.print(configuration.sys.rgb_enc_color_sel);
+//       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
+//       break;
+//     case 16: display.print(configuration.sys.vol_control ? F("YES") : F("NO ")); break;
+//     case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
+//     case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
+
+//     case 19: print_formatted_number(configuration.sys.dac_cv_2, 2);  break;
+//     case 20: print_formatted_number(configuration.sys.dac_cv_4, 2);  break;
+//     case 21: print_formatted_number(configuration.sys.dac_cv_transpose, 2);  break;
+
+
+//       break;
+
+//     }
+//     };
+
+//   // Only update description if the scroll position changes
+//   if (scroll_position != previous_scroll_position) {
+
+//     for (uint8_t i = 0; i < max_visible_settings; i++) {
+//       uint8_t setting_index = scroll_position + i;
+//       if (setting_index >= total_menu_items) break;
+//       clear_desc(6 + i);
+//       render_label(setting_index, 6 + i);
+//     }
+//   }
+
+//   for (uint8_t i = 0; i < max_visible_settings; i++)
+//   {
+//     uint8_t setting_index = scroll_position + i;
+//     if (setting_index >= total_menu_items) break;
+//     if (menu_item_check(setting_index) || scroll_position != previous_scroll_position)
+//     {
+//       clear_val(6 + i);
+//       render_value(setting_index, 6 + i);
+//     }
+//   }
+
+//   if (scroll_position != previous_scroll_position)
+//     previous_scroll_position = scroll_position;
+
+//   drawScrollbar(308, 60, 10, total_menu_items, generic_temp_select_menu, 10);
+//   _system_settings_long_help_texts();
+// }
 
 FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
 {
   const uint8_t max_visible_settings = 10;
+  const uint8_t LABEL_WIDTH = 42;      // width of description column (characters)
+  const uint8_t VALUE_WIDTH = 8;       // width of value column (characters)
 
-  auto clear_desc = [](uint8_t line) {
+  // Helper: left‑justify a string into a fixed‑width buffer with spaces
+  auto left_justify = [](char* dst, const char* src, uint8_t width) {
+    uint8_t len = strlen(src);
+    if (len > width) len = width;
+    memcpy(dst, src, len);
+    if (len < width) memset(dst + len, ' ', width - len);
+  };
+
+  // Render a single setting label (fixed width, left‑aligned)
+  auto render_label = [&](uint8_t setting_index, uint8_t line) {
     setCursor_textGrid_small(2, line);
-    print_empty_spaces(42, 1);
-    };
+    char label[LABEL_WIDTH + 1];
+    memset(label, ' ', LABEL_WIDTH);
+    label[LABEL_WIDTH] = '\0';
 
-  auto clear_val = [](uint8_t line) {
-    setCursor_textGrid_small(42, line);
-    print_empty_spaces(8, 1);
-    };
-
-  auto render_label = [](uint8_t setting_index, uint8_t line) {
-    setCursor_textGrid_small(2, line);
+    const __FlashStringHelper* base = nullptr;
     switch (setting_index) {
-    case 0: display.print(F("GAMEPAD/NATIVE KEY SPEED")); break;
-    case 1: display.print(F("SCREENSAVER START")); break;
-    case 2: display.print(F("SCREENSAVER MODE")); break;
-    case 3: display.print(F("DISPLAY ROTATION")); break;
-    case 4: display.print(F("TOUCH SCREEN ROTATION")); break;
-    case 5: display.print(F("SWAP ENCODER DIRECTION (A/B PINS)")); break;
-    case 6: display.print(F("SKIP BOOT ANIMATION")); break;
-    case 7: display.print(F("INVERT COLORS (EXPERIMENTAL)")); break;
-    case 8: display.print(F("DISPLAY BRIGHTNESS")); break;
-    case 9: display.print(F("DEXED ENGINE")); break;
-    case 10: display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS")); break;
-    case 11: display.print(F("SEND SYSEX ON VOICE CHANGE")); break;
-    case 12: display.print(F("SEND MIDI CC DUMPS")); break;
-    case 13: display.print(F("SWAP MIDI ACTIVITY LEDS")); break;
-    case 14: display.print(F("RGB ENCODER DEFAULT COLOR"));
-#ifndef RGB_ENCODERS
-      display.print(F(" [NA]"));
-#endif
-      break;
-    case 15: display.print(F("RGB ENCODER EDITOR COLOR"));
-#ifndef RGB_ENCODERS
-      display.print(F(" [NA]"));
-#endif
-      break;
-    case 16: display.print(F("ANALOG VOLUME CONTROL"));
-#ifndef MCP_CV
-      display.print(F(" [NA]"));
-#endif
-      break;
-    case 17: display.print(F("EXT. SUSTAIN PEDAL/DAMPER"));
-#ifndef MCP_CV
-      display.print(F(" [NA]"));
-#endif
-      break;
-    case 18: display.print(F("EXTERNAL CV CLOCK INPUT"));
-#ifndef MCP_CV
-      display.print(F(" [NA]"));
-#endif
-      break;
-
-    case 19: display.print(F("MIDI INPUT CC -> CV2"));
-#ifndef MCP_CV
-      display.print(F(" [NA]"));
-#endif
-      break;
-    case 20: display.print(F("MIDI INPUT CC -> CV4"));
-#ifndef MCP_CV
-      display.print(F(" [NA]"));
-#endif
-      break;
-    case 21: display.print(F("NOTE TRANSPOSE -> CV1"));
-#ifndef MCP_CV
-      display.print(F(" [NA]"));
-#endif
-      break;
+      case 0:  base = F("GAMEPAD/NATIVE KEY SPEED"); break;
+      case 1:  base = F("SCREENSAVER START"); break;
+      case 2:  base = F("SCREENSAVER MODE"); break;
+      case 3:  base = F("DISPLAY ROTATION"); break;
+      case 4:  base = F("TOUCH SCREEN ROTATION"); break;
+      case 5:  base = F("SWAP ENCODER DIRECTION (A/B PINS)"); break;
+      case 6:  base = F("SKIP BOOT ANIMATION"); break;
+      case 7:  base = F("INVERT COLORS (EXPERIMENTAL)"); break;
+      case 8:  base = F("DISPLAY BRIGHTNESS"); break;
+      case 9:  base = F("DEXED ENGINE"); break;
+      case 10: base = F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS"); break;
+      case 11: base = F("SEND SYSEX ON VOICE CHANGE"); break;
+      case 12: base = F("SEND MIDI CC DUMPS"); break;
+      case 13: base = F("SWAP MIDI ACTIVITY LEDS"); break;
+      case 14: base = F("RGB ENCODER DEFAULT COLOR"); break;
+      case 15: base = F("RGB ENCODER EDITOR COLOR"); break;
+      case 16: base = F("ANALOG VOLUME CONTROL"); break;
+      case 17: base = F("EXT. SUSTAIN PEDAL/DAMPER"); break;
+      case 18: base = F("EXTERNAL CV CLOCK INPUT"); break;
+      case 19: base = F("MIDI INPUT CC -> CV2"); break;
+      case 20: base = F("MIDI INPUT CC -> CV4"); break;
+      case 21: base = F("NOTE TRANSPOSE -> CV1"); break;
     }
-    };
 
-  auto render_value = [](uint8_t setting_index, uint8_t line) {
+    uint8_t base_len = 0;
+    if (base) {
+      base_len = strlen_P((PGM_P)base);
+      if (base_len > LABEL_WIDTH) base_len = LABEL_WIDTH;
+      memcpy_P(label, (PGM_P)base, base_len);
+    }
+
+    bool append_na = false;
+    switch (setting_index) {
+
+       case 3: case 4:
+#if defined ESP_DISPLAY
+        append_na = true;
+#endif
+        break;
+      case 14: case 15:
+#ifndef RGB_ENCODERS
+        append_na = true;
+#endif
+        break;
+      case 16: case 17: case 18: case 19: case 20: case 21:
+#ifndef MCP_CV
+        append_na = true;
+#endif
+        break;
+    }
+    if (append_na) {
+      const char na[] = " [NA]";
+      uint8_t na_len = sizeof(na) - 1;
+      uint8_t available = LABEL_WIDTH - na_len;
+      if (base_len > available) {
+        base_len = available;
+        memcpy_P(label, (PGM_P)base, base_len);
+      }
+      memcpy(label + base_len, na, na_len);
+    }
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.print(label);
+  };
+
+  // Render a single setting value (fixed width, left‑aligned)
+  auto render_value = [&](uint8_t setting_index, uint8_t line) {
     setModeColor(setting_index);
     setCursor_textGrid_small(42, line);
+
+    char val_buf[VALUE_WIDTH + 1];
+    memset(val_buf, ' ', VALUE_WIDTH);
+    val_buf[VALUE_WIDTH] = '\0';
+
     switch (setting_index) {
-    case 0: print_formatted_number(configuration.sys.gamepad_speed, 3); setCursor_textGrid_small(46, line); display.print(F("ms")); break;
-    case 1: print_formatted_number(configuration.sys.screen_saver_start, 2); setCursor_textGrid_small(45, line); display.print(configuration.sys.screen_saver_start > 1 ? F("MINS") : F("MIN ")); break;
-    case 2: print_screensaver_mode(); break;
-    case 3: display.print(configuration.sys.display_rotation); break;
-    case 4: display.print(configuration.sys.touch_rotation); break;
-    case 5: display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF")); break;
-    case 6: display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO ")); break;
-    case 7: display.print(configuration.sys.invert_colors ? F("YES") : F("NO ")); break;
-    case 8: print_formatted_number(configuration.sys.brightness, 3); break;
-    case 9:
-      if (MicroDexed[0]->getEngineType() == 0) display.print(F("MSFA"));
-      else if (MicroDexed[0]->getEngineType() == 1) display.print(F("MK-I"));
-      else if (MicroDexed[0]->getEngineType() == 2) display.print(F("OPL "));
-      break;
-    case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
-    case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
-    case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
-    case 13: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
-    case 14: display.print(configuration.sys.rgb_enc_color_def);
-      _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_def);
-      break;
-    case 15: display.print(configuration.sys.rgb_enc_color_sel);
-      _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
-      break;
-    case 16: display.print(configuration.sys.vol_control ? F("YES") : F("NO ")); break;
-    case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
-    case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
+      case 0: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%3dms", configuration.sys.gamepad_speed);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 1: {
+        uint8_t start = configuration.sys.screen_saver_start;
+        char tmp[VALUE_WIDTH + 1];
+        const char* unit = (start > 1) ? "MINS" : "MIN ";
 
-    case 19: print_formatted_number(configuration.sys.dac_cv_2, 2);  break;
-    case 20: print_formatted_number(configuration.sys.dac_cv_4, 2);  break;
-    case 21: print_formatted_number(configuration.sys.dac_cv_transpose, 2);  break;
-
-
-      break;
-
+        // Exactly replicate original: two‑digit field (with leading space if needed),
+        // then a space, then the unit.
+        if (start < 10) {
+          // single digit: e.g. " 5 MINS"
+          snprintf(tmp, sizeof(tmp), "%d %s", start, unit);
+        } else {
+          // two digits: e.g. "10 MINS"
+          snprintf(tmp, sizeof(tmp), "%d %s", start, unit);
+        }
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 2: {
+        const char* mode_str = "";
+        switch (configuration.sys.screen_saver_mode) {
+          case ScreenSaver::RANDOM:     mode_str = "RANDOM  "; break;
+          case ScreenSaver::QIX:        mode_str = "QIX     "; break;
+          case ScreenSaver::CUBE:       mode_str = "CUBE    "; break;
+          case ScreenSaver::SWARM:      mode_str = "SWARM   "; break;
+          case ScreenSaver::TERRAIN:    mode_str = "TERRAIN "; break;
+          case ScreenSaver::GAMEOFLIFE: mode_str = "GO LIFE "; break;
+          case ScreenSaver::CM5_I:      mode_str = "CM5 I   "; break;
+          case ScreenSaver::CM5_II:     mode_str = "CM5 II  "; break;
+          case ScreenSaver::ASTERO:     mode_str = "ASTERO  "; break;
+          case ScreenSaver::DISABLED:   mode_str = "OFF     "; break;
+          default:                      mode_str = "ERROR   "; break;
+        }
+        left_justify(val_buf, mode_str, VALUE_WIDTH);
+        break;
+      }
+      case 3: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%d", configuration.sys.display_rotation);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 4: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%d", configuration.sys.touch_rotation);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 5: {
+        const char* str = configuration.sys.reverse_encoder_pins ? "ON " : "OFF";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 6: {
+        const char* str = configuration.sys.boot_anim_skip ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 7: {
+        const char* str = configuration.sys.invert_colors ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 8: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%3d", configuration.sys.brightness);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 9: {
+        uint8_t engine = MicroDexed[0]->getEngineType();
+        const char* e_str = (engine == 0) ? "MSFA   " : (engine == 1) ? "MK-I   " : "OPL    ";
+        left_justify(val_buf, e_str, VALUE_WIDTH);
+        break;
+      }
+      case 10: {
+        const char* str = configuration.sys.skip_midi_channel_warning ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 11: {
+        const char* str = configuration.sys.send_sysex_on_voice_change ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 12: {
+        const char* str = configuration.sys.send_midi_cc ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 13: {
+        const char* str = configuration.sys.swap_midi_leds ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 14:
+      case 15: {
+        uint8_t color = (setting_index == 14) ? configuration.sys.rgb_enc_color_def
+                                              : configuration.sys.rgb_enc_color_sel;
+        char num[4];
+        snprintf(num, sizeof(num), "%3d", color);
+        uint8_t num_len = strlen(num);
+        display.print(num);
+        if (num_len < VALUE_WIDTH) {
+          char spaces[VALUE_WIDTH + 1];
+          memset(spaces, ' ', VALUE_WIDTH - num_len);
+          spaces[VALUE_WIDTH - num_len] = '\0';
+          display.print(spaces);
+        }
+        setCursor_textGrid_small(42 + num_len, line);
+        _render_rgb_enc_preview_system_settings(line, color);
+        return;
+      }
+      case 16: {
+        const char* str = configuration.sys.vol_control ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 17: {
+        const char* str = configuration.sys.sus_pedal ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 18: {
+        const char* str = configuration.sys.ext_clock ? "YES" : "NO ";
+        left_justify(val_buf, str, VALUE_WIDTH);
+        break;
+      }
+      case 19: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_2);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 20: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_4);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
+      case 21: {
+        char tmp[VALUE_WIDTH + 1];
+        snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_transpose);
+        left_justify(val_buf, tmp, VALUE_WIDTH);
+        break;
+      }
     }
-    };
 
-  // Only update description if the scroll position changes
+    display.print(val_buf);
+  };
+
+  // Main rendering – no explicit clearing
   if (scroll_position != previous_scroll_position) {
-
     for (uint8_t i = 0; i < max_visible_settings; i++) {
-      uint8_t setting_index = scroll_position + i;
-      if (setting_index >= total_menu_items) break;
-      clear_desc(6 + i);
-      render_label(setting_index, 6 + i);
+      uint8_t idx = scroll_position + i;
+      if (idx >= total_menu_items) break;
+      render_label(idx, 6 + i);
     }
   }
 
-  for (uint8_t i = 0; i < max_visible_settings; i++)
-  {
-    uint8_t setting_index = scroll_position + i;
-    if (setting_index >= total_menu_items) break;
-    if (menu_item_check(setting_index) || scroll_position != previous_scroll_position)
-    {
-      clear_val(6 + i);
-      render_value(setting_index, 6 + i);
+  for (uint8_t i = 0; i < max_visible_settings; i++) {
+    uint8_t idx = scroll_position + i;
+    if (idx >= total_menu_items) break;
+    if (menu_item_check(idx) || scroll_position != previous_scroll_position) {
+      render_value(idx, 6 + i);
     }
   }
 
@@ -21009,8 +21448,10 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 0: configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed + (e.dir * 10), GAMEPAD_SPEED_MIN, GAMEPAD_SPEED_MAX); break;
         case 1: configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (e.dir * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX); setup_screensaver(); break;
         case 2: configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (e.dir * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX); setup_screensaver(); break;
+       #ifndef ESP_DISPLAY
         case 3: configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (e.dir * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX); display.setRotation(configuration.sys.display_rotation); break;
         case 4: configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation + (e.dir * 1), TOUCH_ROTATION_MIN, TOUCH_ROTATION_MAX); break;
+       #endif
         case 5: configuration.sys.reverse_encoder_pins = !configuration.sys.reverse_encoder_pins; _setup_rotation_and_encoders(false); break;
         case 6: configuration.sys.boot_anim_skip = !configuration.sys.boot_anim_skip; break;
 #ifndef ESP_DISPLAY

@@ -185,11 +185,11 @@ const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
 #define CMD_DRAWPIXEL_FAST    13
 #define CMD_PRINT_FAST         14
 #define CMD_PRINT_STRING_FAST  15
-#define CMD_PRINT_STRING_FAST 15
 #define CMD_SCOPE_DATA 16
 #define CMD_FILLRECT_RAINBOW 17
 #define CMD_SCREENSAVER_START  18
 #define CMD_SCREENSAVER_STOP   19
+#define CMD_PRINT_STATIC_LABEL 20
 
 uint16_t lastFillColor;
 uint16_t lastLineColor;    // for drawLine and drawRect outline
@@ -200,7 +200,6 @@ uint8_t  lastTextSize;
 
 extern void processIncomingSerial(bool& ackReceived);
 static uint8_t packetCounter = 0;
-
 
 void sendSyncAndWait() {
   // Build a SYNC packet (command = 1, length = 0)
@@ -240,9 +239,6 @@ void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   }
 }
 
-// extern uint8_t screensaver_brightness;
-// extern uint16_t screensaver_counthue;
-
 void sendScreensaverStop() {
     sendPacket(CMD_SCREENSAVER_STOP, nullptr, 0);
 }
@@ -274,6 +270,7 @@ FLASHMEM espdisplay::espdisplay(uint8_t c)
 };
 
 //=======================================================================
+
 
 void espdisplay::sendScopeData(uint16_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t* data) {
   uint8_t payload[5 + w];   // x(2), y(1), w(1), h(1), data
@@ -329,7 +326,7 @@ void espdisplay::drawPixel(int16_t x, int16_t y, uint16_t color)
     sendPacket(CMD_DRAWPIXEL, payload, 5);
     lastPixelColor = color;
   }
-  delayMicroseconds(40);
+  //delayMicroseconds(20);
 }
 
 void espdisplay::fillScreen(uint16_t color)
@@ -394,6 +391,35 @@ void espdisplay::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
   }
   delayMicroseconds(50);
 }
+
+FLASHMEM void espdisplay::printStaticLabel(uint8_t id, uint8_t col, uint8_t row) {
+    uint8_t payload[3];
+    payload[0] = col;
+    payload[1] = row;
+    payload[2] = id;
+    sendPacket(CMD_PRINT_STATIC_LABEL, payload, sizeof(payload));
+}
+
+FLASHMEM void espdisplay::sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y) {
+    // Only send if remote is active
+    if (!remote_active) return;
+
+    // Build the same SysEx that would be sent by write() when console is true.
+    uint8_t colors[8];
+    uint8_t nbBytes = fillSysexDataColor(colors, 2, textcolor, textbgcolor);
+    uint8_t sizeMsg = 2 * 2 + 1 + nbBytes + 1 + strlen(text);
+    uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
+    if (sysexDrawString == NULL) return;
+
+    fillSysexData(sysexDrawString, 2, x, y);
+    sysexDrawString[4] = nbBytes;
+    memcpy(sysexDrawString + 4 + 1, colors, nbBytes);
+    sysexDrawString[4 + 1 + nbBytes] = textsize_x;
+    memcpy(sysexDrawString + 4 + 1 + nbBytes + 1, text, strlen(text));
+    sendSysEx(72, sizeMsg, sysexDrawString, true);
+    free(sysexDrawString);
+}
+
 
 // draw rectangle with rainbow gradient
 FLASHMEM void espdisplay::fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h)
@@ -699,7 +725,6 @@ void espdisplay::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
     sendPacket(CMD_DRAWLINE, payload, 8);
     lastLineColor = color;
   }
-
   // delayMicroseconds(400);
 }
 
@@ -822,22 +847,13 @@ size_t espdisplay::write(const uint8_t* buffer, size_t size)
     lastTextSize = textsize_x;
   }
   
-  //size_t cb = size;
-  // while (cb)
-  // {
-  //   uint8_t c = *buffer++;
-  //   cb--;
-  //   // drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize_x, textsize_y);
-  //   cursor_x += textsize_x * 6;
-  // }
-
 size_t cb = size;
 while (cb--) {
   buffer++;
   cursor_x += textsize_x * 6;
 }
 
-  delayMicroseconds(50);
+ //delayMicroseconds(50);
   return size;
 }
 

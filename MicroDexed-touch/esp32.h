@@ -8,10 +8,10 @@
 #include "Arduino.h"
 #include <stdint.h>
 
-#define PACKETS_PER_BATCH   10      // Send this many packets before requesting ACK
+#define PACKETS_PER_BATCH   5      // Send this many packets before requesting ACK
 #define BATCH_SYNC_CMD      99      // Command code for SYNC packet
 #define ACK_BYTE            0xAD
-#define ACK_TIMEOUT_MS      100       // Time to wait for ACK
+#define ACK_TIMEOUT_MS      80       // Time to wait for ACK
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
 
@@ -35,6 +35,9 @@ public:
   void fillSysexData(uint8_t arr[], uint8_t nbArg, ...);
   uint8_t fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...);
 
+void sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y);
+
+  void printStaticLabel(uint8_t id, uint8_t col, uint8_t row);
   void pushColor(uint16_t color);
   void fillScreen(uint16_t color);
   inline void fillWindow(uint16_t color)

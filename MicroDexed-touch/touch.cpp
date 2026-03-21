@@ -241,39 +241,96 @@ FLASHMEM void back_touchbutton()
 }
 #endif
 
+// FLASHMEM void draw_back_touchbutton()
+// {
+//   if (ts.keyb_in_menu_activated == false)
+//   {
+//     // back text can be drawn as a touch button
+//     if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
+//     {
+//       TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+//     }
+//     else
+//       if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
+//       {
+//         TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
+
+//       }
+//   }
+//   if (legacy_touch_button_back_page() && (LCDML.FUNC_getID() > _LCDML_DISP_cnt))
+//   {
+//     //remove unusable touch buttons from screen
+//     clear_bottom_half_screen_without_backbutton();
+//     //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
+
+//   }
+//   else if (legacy_touch_button_back_page())
+//   { // but when virtual keyboard was active when coming from main menu, it must be redrawn
+//     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+//   }
+//   else if (touch_button_back_page() && seq.cycle_touch_element != 1)
+//   {
+//     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
+//   }
+// }
+
 FLASHMEM void draw_back_touchbutton()
 {
-  if (ts.keyb_in_menu_activated == false)
+  static uint8_t last_layer = 255;
+  static uint8_t last_func_id = 255;
+  static bool last_legacy = false;
+  static bool last_touch = false;
+  static bool last_keyb = false;
+  static uint8_t last_cycle = 0;
+
+  uint8_t layer = LCDML.MENU_getLayer();
+  uint8_t func_id = LCDML.FUNC_getID();
+  bool legacy = legacy_touch_button_back_page();
+  bool touch = touch_button_back_page();
+  bool keyb = ts.keyb_in_menu_activated;
+  uint8_t cycle = seq.cycle_touch_element;
+
+  // If nothing relevant changed, skip redraw
+  if (layer == last_layer && func_id == last_func_id && legacy == last_legacy &&
+      touch == last_touch && keyb == last_keyb && cycle == last_cycle) {
+    return;
+  }
+
+  // Update stored state
+  last_layer = layer;
+  last_func_id = func_id;
+  last_legacy = legacy;
+  last_touch = touch;
+  last_keyb = keyb;
+  last_cycle = cycle;
+
+  // --- original drawing logic (unchanged) ---
+  if (keyb == false)
   {
-    // back text can be drawn as a touch button
-    if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
+    if (layer != 0 && func_id == 255) // not in root menu but in menu
     {
       TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
     }
-    else
-      if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
-      {
-        TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
-
-      }
+    else if (layer == 0 && func_id == 255) // root menu, no where to go back
+    {
+      TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
+    }
   }
-  if (legacy_touch_button_back_page() && (LCDML.FUNC_getID() > _LCDML_DISP_cnt))
+
+  if (legacy && (func_id > _LCDML_DISP_cnt))
   {
-    //remove unusable touch buttons from screen
     clear_bottom_half_screen_without_backbutton();
-    //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
-
   }
-  //else if (legacy_touch_button_back_page()&& ts.keyb_in_menu_activated  )
-  else if (legacy_touch_button_back_page())
-  { // but when virtual keyboard was active when coming from main menu, it must be redrawn
+  else if (legacy)
+  {
     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
   }
-  else if (touch_button_back_page() && seq.cycle_touch_element != 1)
+  else if (touch && cycle != 1)
   {
     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
   }
 }
+
 
 FLASHMEM uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b)
 {

@@ -5653,8 +5653,15 @@ FLASHMEM void check_configuration_sys(void)
   configuration.sys.favorites = constrain(configuration.sys.favorites, FAVORITES_NUM_MIN, FAVORITES_NUM_MAX);
   configuration.sys.performance_number = constrain(configuration.sys.performance_number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   configuration.sys.load_at_startup_performance = constrain(configuration.sys.load_at_startup_performance, STARTUP_NUM_MIN, STARTUP_NUM_MAX);
+  
+  #if defined ESP_DISPLAY
+   configuration.sys.display_rotation = 3;
+  configuration.sys.touch_rotation = 2;
+  #else
   configuration.sys.display_rotation = constrain(configuration.sys.display_rotation, 0, 3);
   configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
+#endif
+
   configuration.sys.reverse_encoder_pins = constrain(configuration.sys.reverse_encoder_pins, false, true);
   configuration.sys.boot_anim_skip = constrain(configuration.sys.boot_anim_skip, false, true);
   setup_screensaver();
@@ -5771,7 +5778,11 @@ FLASHMEM void init_configuration(void)
   configuration.sys.soft_midi_thru = SOFT_MIDI_THRU_DEFAULT;
   configuration.sys.performance_number = PERFORMANCE_NUM_DEFAULT;
   configuration.sys.load_at_startup_performance = STARTUP_NUM_DEFAULT;
+#if defined ESP_DISPLAY
+configuration.sys.display_rotation = 3;
+#else
   configuration.sys.display_rotation = DISPLAY_ROTATION_DEFAULT;
+#endif
   configuration.sys.touch_rotation = TOUCH_ROTATION_DEFAULT;
   configuration.sys.reverse_encoder_pins = false;
   configuration.sys.boot_anim_skip = false;
