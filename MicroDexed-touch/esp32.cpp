@@ -241,12 +241,14 @@ void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
 
 void sendScreensaverStop() {
     sendPacket(CMD_SCREENSAVER_STOP, nullptr, 0);
+        // Flush the batch to send the stop command immediately
+    if (packetCounter > 0) {
+        sendSyncAndWait();
+        packetCounter = 0;
+    }
 }
 
 FLASHMEM void start_screensaver_on_esp(uint8_t id) {
-  // uint8_t buf[4] = { id, screensaver_brightness,
-  //                    lowByte(screensaver_counthue),
-  //                    highByte(screensaver_counthue) };
   uint8_t buf[4] = { id };
   sendPacket(CMD_SCREENSAVER_START, buf, 1);
 }
