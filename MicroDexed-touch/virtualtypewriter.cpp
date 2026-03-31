@@ -12,7 +12,7 @@ extern espdisplay display;
 #else
 extern ILI9341_t3n display;
 #endif
-extern int numTouchPoints;
+extern uint8_t numTouchPoints;
 
 // Keyboard layout
 static const char *keyboard_rows[] = {

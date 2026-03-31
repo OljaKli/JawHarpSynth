@@ -12,7 +12,7 @@ extern espdisplay display;
 extern ILI9341_t3n display;
 #endif
 extern ts_t ts;
-extern int numTouchPoints;
+extern uint8_t numTouchPoints;
 
 static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { GREY1, GREY3 },               // COLOR_NORMAL

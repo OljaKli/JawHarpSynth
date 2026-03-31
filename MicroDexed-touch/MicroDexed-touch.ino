@@ -302,7 +302,7 @@ AudioPlaySdResmp* Drum[NUM_DRUMS];
 PitchSamplePlayer* Drum[NUM_DRUMS];
 
 // Voice group configuration: per-group voice budgets and allocation strategies
-voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+voice_group_config_t sample_voice_group_config[NUM_VOICE_GROUPS];
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
 #include "effect_delay_ext8.h"
