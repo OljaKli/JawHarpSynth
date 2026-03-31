@@ -1343,7 +1343,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         b->drawNow();
       }
     }
-    if (guiFlags & drawSongLayers && !gridEditor.isActive()) {
+    if ((currentTools == TOOLS_SONG) && (guiFlags & drawSongLayers) && !gridEditor.isActive()) {
       TouchButton::Color color = TouchButton::BUTTON_ACTIVE;
       handleLayerEditButtonColor(songLayerMode, color);
       for (int songLayer = 0; songLayer < data.songLayerCount; songLayer++) {
