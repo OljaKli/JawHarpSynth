@@ -219,7 +219,6 @@ public:
     // volatile
     bool processMidiIn;
     std::string performanceName;
-    std::unordered_set<uint8_t> instrumentChannels;
     Track tracks[LIVESEQUENCER_NUM_TRACKS];
     ArpSettings arpSettings;
     uint8_t lastSongEventPattern; // because using unordered map above we need to know last index to be able to know song length (eg. for song loop)
@@ -348,7 +347,6 @@ private:
   void checkLoadNewArpNotes(void);
   void onSongStopped(void);
   void updateTrackChannels(bool initial = false);
-  void updateInstrumentChannels(void);
   void addPendingNotes(bool incrementLayer = true);
   void refreshSongLength(void);
   void applySongStartLayerMutes(void);

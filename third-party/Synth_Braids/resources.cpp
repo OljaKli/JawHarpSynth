@@ -42,7 +42,7 @@ const char* string_table[] = {
   str_dummy,
 };
 
-  FLASHMEM const uint16_t lut_resonator_coefficient[] = {
+PROGMEM const uint16_t lut_resonator_coefficient[] = {
    65535,  65535,  65535,  65535,
    65535,  65535,  65535,  65535,
    65535,  65535,  65535,  65535,
@@ -77,7 +77,7 @@ const char* string_table[] = {
        0,      0,      0,      0,
        0,
 };
-FLASHMEM const uint16_t lut_resonator_scale[] = {
+PROGMEM const uint16_t lut_resonator_scale[] = {
        1,      1,      1,      1,
        1,      1,      1,      2,
        2,      2,      2,      2,
@@ -112,7 +112,7 @@ FLASHMEM const uint16_t lut_resonator_scale[] = {
      256,    256,    256,    256,
      256,
 };
-FLASHMEM const uint16_t lut_svf_cutoff[] = {
+PROGMEM const uint16_t lut_svf_cutoff[] = {
       38,     40,     42,     45,
       48,     50,     53,     57,
       60,     64,     67,     72,
@@ -179,7 +179,7 @@ FLASHMEM const uint16_t lut_svf_cutoff[] = {
    25078,  25078,  25078,  25078,
    25078,
 };
-FLASHMEM const uint16_t lut_svf_damp[] = {
+PROGMEM const uint16_t lut_svf_damp[] = {
    65534,  49213,  46125,  44055,
    42453,  41129,  39991,  38988,
    38086,  37266,  36512,  35812,
@@ -246,7 +246,7 @@ FLASHMEM const uint16_t lut_svf_damp[] = {
      510,    445,    381,    317,
      253,
 };
-FLASHMEM const uint16_t lut_svf_scale[] = {
+PROGMEM const uint16_t lut_svf_scale[] = {
    32767,  28395,  27490,  26866,
    26373,  25958,  25596,  25273,
    24979,  24709,  24458,  24222,
@@ -313,7 +313,7 @@ FLASHMEM const uint16_t lut_svf_scale[] = {
     2890,   2701,   2499,   2280,
     2038,
 };
-FLASHMEM const uint16_t lut_granular_envelope[] = {
+PROGMEM const uint16_t lut_granular_envelope[] = {
        0,      4,     19,     44,
       78,    123,    177,    241,
      314,    398,    490,    593,
@@ -444,7 +444,7 @@ FLASHMEM const uint16_t lut_granular_envelope[] = {
        0,      0,      0,      0,
        0,
 };
-FLASHMEM const uint16_t lut_granular_envelope_rate[] = {
+PROGMEM const uint16_t lut_granular_envelope_rate[] = {
     2048,   2070,   2092,   2115,
     2138,   2161,   2185,   2209,
     2233,   2257,   2282,   2307,
@@ -511,7 +511,7 @@ FLASHMEM const uint16_t lut_granular_envelope_rate[] = {
    31378,  31720,  32065,  32415,
    32768,
 };
-FLASHMEM const uint16_t lut_bowing_envelope[] = {
+PROGMEM const uint16_t lut_bowing_envelope[] = {
        0,     23,     47,     71,
       95,    119,    143,    167,
      191,    215,    239,    263,
@@ -604,7 +604,7 @@ FLASHMEM const uint16_t lut_bowing_envelope[] = {
     5242,   5242,   5242,   5242,
     5242,   5242,
 };
-FLASHMEM const uint16_t lut_bowing_friction[] = {
+PROGMEM const uint16_t lut_bowing_friction[] = {
    32768,  32768,  32768,  32768,
    32768,  32768,  32768,  32768,
    32768,  32768,  32768,  32768,
@@ -671,7 +671,7 @@ FLASHMEM const uint16_t lut_bowing_friction[] = {
       67,     66,     66,     65,
       64,
 };
-FLASHMEM const uint16_t lut_blowing_envelope[] = {
+PROGMEM const uint16_t lut_blowing_envelope[] = {
        0,    394,    788,   1183,
     1577,   1972,   2366,   2761,
     3155,   3549,   3944,   4338,
@@ -723,7 +723,7 @@ FLASHMEM const uint16_t lut_blowing_envelope[] = {
    17039,  17039,  17039,  17039,
    17039,
 };
-FLASHMEM const uint16_t lut_flute_body_filter[] = {
+PROGMEM const uint16_t lut_flute_body_filter[] = {
       30,     32,     34,     36,
       38,     40,     43,     45,
       48,     51,     54,     57,
@@ -757,7 +757,7 @@ FLASHMEM const uint16_t lut_flute_body_filter[] = {
     2867,   2867,   2867,   2867,
     2867,   2867,   2867,   2867,
 };
-FLASHMEM const uint16_t lut_fm_frequency_quantizer[] = {
+PROGMEM const uint16_t lut_fm_frequency_quantizer[] = {
     7168,   7168,   7168,   7360,
     7552,   7744,   7936,   8128,
     8320,   8512,   8704,   8896,
@@ -792,7 +792,7 @@ FLASHMEM const uint16_t lut_fm_frequency_quantizer[] = {
    25216,  25600,  25600,  25600,
    25600,
 };
-FLASHMEM const uint16_t lut_vco_detune[] = {
+PROGMEM const uint16_t lut_vco_detune[] = {
       10,     10,     10,     47,
      116,    184,    252,    321,
      389,    456,    524,    592,
@@ -859,7 +859,7 @@ FLASHMEM const uint16_t lut_vco_detune[] = {
    15913,  15971,  16029,  16086,
    16143,
 };
-FLASHMEM const uint16_t lut_bell[] = {
+PROGMEM const uint16_t lut_bell[] = {
        0,    670,   2655,   5873,
    10191,  15434,  21387,  27805,
    34427,  40980,  47198,  52824,
@@ -926,7 +926,7 @@ FLASHMEM const uint16_t lut_bell[] = {
       25,     11,      2,      0,
        0,
 };
-FLASHMEM const uint16_t lut_env_expo[] = {
+PROGMEM const uint16_t lut_env_expo[] = {
        0,   1034,   2053,   3057,
     4044,   5016,   5974,   6916,
     7844,   8757,   9656,  10542,
@@ -1013,7 +1013,7 @@ const uint16_t* lookup_table_table[] = {
   lut_env_expo,
 };
 
-FLASHMEM const int16_t lut_blowing_jet[] = {
+PROGMEM const int16_t lut_blowing_jet[] = {
        0,   -255,   -511,   -767,
    -1022,  -1278,  -1532,  -1786,
    -2039,  -2292,  -2544,  -2795,
@@ -1182,7 +1182,7 @@ const uint32_t* lookup_table_hr_table[] = {
   lut_env_portamento_increments,
 };
 
-FLASHMEM const int16_t wav_formant_sine[] = {
+PROGMEM const int16_t wav_formant_sine[] = {
        0,      0,      0,      0,
        0,      0,      0,      0,
        0,      0,      0,      0,
@@ -1248,7 +1248,7 @@ FLASHMEM const int16_t wav_formant_sine[] = {
       -7,     -8,    -10,    -12,
      -14,    -17,    -20,    -24,
 };
-FLASHMEM const int16_t wav_formant_square[] = {
+PROGMEM const int16_t wav_formant_square[] = {
        0,      1,      1,      2,
        2,      3,      3,      4,
        4,      5,      6,      8,
@@ -1314,7 +1314,7 @@ FLASHMEM const int16_t wav_formant_square[] = {
       -4,     -5,     -6,     -8,
       -9,    -11,    -13,    -16,
 };
-FLASHMEM const int16_t wav_sine[] = {
+PROGMEM const int16_t wav_sine[] = {
   -32512, -32502, -32473, -32423,
   -32356, -32265, -32160, -32031,
   -31885, -31719, -31533, -31331,
@@ -1381,7 +1381,7 @@ FLASHMEM const int16_t wav_sine[] = {
   -32356, -32423, -32473, -32502,
   -32512,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_0[] = {
+PROGMEM const int16_t wav_bandlimited_comb_0[] = {
     -103,   -140,   -132,    -97,
     -115,   -147,   -116,    -95,
     -133,   -142,   -100,   -104,
@@ -1448,7 +1448,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_0[] = {
      -96,   -128,   -142,   -106,
     -103,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_1[] = {
+PROGMEM const int16_t wav_bandlimited_comb_1[] = {
     -109,   -175,   -121,   -115,
     -178,   -111,   -123,   -178,
     -103,   -133,   -175,    -96,
@@ -1515,7 +1515,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_1[] = {
     -138,   -105,   -172,   -129,
     -109,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_2[] = {
+PROGMEM const int16_t wav_bandlimited_comb_2[] = {
     -173,    -80,   -185,    -71,
     -191,    -65,   -197,    -62,
     -196,    -66,   -190,    -74,
@@ -1582,7 +1582,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_2[] = {
     -144,   -107,   -160,    -93,
     -173,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_3[] = {
+PROGMEM const int16_t wav_bandlimited_comb_3[] = {
     -137,   -161,   -168,   -156,
     -130,    -90,    -45,     -3,
       26,     43,     36,     10,
@@ -1649,7 +1649,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_3[] = {
        6,    -23,    -61,   -102,
     -137,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_4[] = {
+PROGMEM const int16_t wav_bandlimited_comb_4[] = {
     -218,    -71,    -60,   -231,
       53,   -260,    -12,   -119,
     -189,     42,   -286,     44,
@@ -1716,7 +1716,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_4[] = {
     -129,    -13,   -252,     41,
     -218,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_5[] = {
+PROGMEM const int16_t wav_bandlimited_comb_5[] = {
     -347,     76,   -338,   -201,
       36,   -432,    -30,   -104,
     -415,     90,   -287,   -287,
@@ -1783,7 +1783,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_5[] = {
      -33,   -409,      9,   -182,
     -347,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_6[] = {
+PROGMEM const int16_t wav_bandlimited_comb_6[] = {
     -553,   -586,    -60,     91,
     -415,   -683,   -224,    156,
     -232,   -711,   -417,    142,
@@ -1850,7 +1850,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_6[] = {
     -628,   -442,     48,    -33,
     -553,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_7[] = {
+PROGMEM const int16_t wav_bandlimited_comb_7[] = {
        0,    185,   -125,   -700,
    -1083,   -963,   -428,    116,
      225,   -197,   -827,  -1171,
@@ -1917,7 +1917,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_7[] = {
     -588,   -999,   -974,   -526,
        0,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_8[] = {
+PROGMEM const int16_t wav_bandlimited_comb_8[] = {
    -1419,  -1704,  -1670,  -1320,
     -759,   -165,    267,    393,
      162,   -364,  -1014,  -1588,
@@ -1984,7 +1984,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_8[] = {
      255,     80,   -353,   -912,
    -1419,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_9[] = {
+PROGMEM const int16_t wav_bandlimited_comb_9[] = {
    -2331,  -1858,  -1285,   -683,
     -123,    320,    587,    639,
      466,     80,   -477,  -1138,
@@ -2051,7 +2051,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_9[] = {
    -2428,  -2695,  -2771,  -2648,
    -2330,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_10[] = {
+PROGMEM const int16_t wav_bandlimited_comb_10[] = {
        0,    399,    686,    844,
      862,    730,    459,     53,
     -469,  -1077,  -1748,  -2443,
@@ -2118,7 +2118,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_10[] = {
    -2180,  -1608,  -1032,   -486,
        0,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_11[] = {
+PROGMEM const int16_t wav_bandlimited_comb_11[] = {
        0,    457,    858,   1194,
     1456,   1640,   1738,   1748,
     1666,   1490,   1224,    864,
@@ -2185,7 +2185,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_11[] = {
    -2203,  -1616,  -1046,   -505,
        0,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_12[] = {
+PROGMEM const int16_t wav_bandlimited_comb_12[] = {
   -10865, -11388, -11877, -12336,
   -12752, -13130, -13458, -13740,
   -13967, -14139, -14252, -14305,
@@ -2252,7 +2252,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_12[] = {
    -8558,  -9161,  -9747, -10317,
   -10866,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_13[] = {
+PROGMEM const int16_t wav_bandlimited_comb_13[] = {
   -16288, -15866, -15406, -14909,
   -14370, -13796, -13184, -12537,
   -11852, -11136, -10384,  -9599,
@@ -2319,7 +2319,7 @@ FLASHMEM const int16_t wav_bandlimited_comb_13[] = {
   -17576, -17313, -17011, -16670,
   -16287,
 };
-FLASHMEM const int16_t wav_bandlimited_comb_14[] = {
+PROGMEM const int16_t wav_bandlimited_comb_14[] = {
        0,    804,   1608,   2410,
     3212,   4011,   4808,   5601,
     6393,   7178,   7963,   8738,
@@ -2409,7 +2409,7 @@ const int16_t* waveform_table[] = {
   wav_bandlimited_comb_14,
 };
 
-FLASHMEM const int16_t ws_moderate_overdrive[] = {
+PROGMEM const int16_t ws_moderate_overdrive[] = {
   -32766, -32728, -32689, -32648,
   -32607, -32564, -32519, -32474,
   -32427, -32378, -32328, -32277,
@@ -2476,7 +2476,7 @@ FLASHMEM const int16_t ws_moderate_overdrive[] = {
    32607,  32648,  32689,  32728,
    32728,
 };
-FLASHMEM const int16_t ws_violent_overdrive[] = {
+PROGMEM const int16_t ws_violent_overdrive[] = {
   -32766, -32766, -32766, -32766,
   -32766, -32766, -32766, -32766,
   -32766, -32766, -32766, -32766,
@@ -2543,7 +2543,7 @@ FLASHMEM const int16_t ws_violent_overdrive[] = {
    32766,  32766,  32766,  32766,
    32766,
 };
-FLASHMEM const int16_t ws_sine_fold[] = {
+PROGMEM const int16_t ws_sine_fold[] = {
   -32766, -32682, -32595, -32504,
   -32410, -32315, -32218, -32121,
   -32025, -31931, -31840, -31754,
@@ -2610,7 +2610,7 @@ FLASHMEM const int16_t ws_sine_fold[] = {
    32410,  32504,  32595,  32682,
    32682,
 };
-FLASHMEM const int16_t ws_tri_fold[] = {
+PROGMEM const int16_t ws_tri_fold[] = {
      -78, -20070, -31636, -30481,
   -17545,   1825,  20257,  31198,
    31144,  20555,   3335, -14748,
