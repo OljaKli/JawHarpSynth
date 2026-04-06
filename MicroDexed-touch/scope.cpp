@@ -46,7 +46,6 @@ void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
     scopebuffer[i] = signFactor * log10f(1.0 + (9 * value / 32768.0)) + halfHeight; // log plot
   }
 
-
 // Check if the entire scope buffer is empty (no audio)
 bool allZero = true;
 for (uint16_t i = 0; i < w; i++) {
@@ -78,6 +77,7 @@ if (allZero) {
     }
   }
 #endif
+
   updateBuffer = true;
   scope_is_drawing = false;
 }

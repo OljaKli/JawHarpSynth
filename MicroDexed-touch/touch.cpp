@@ -48,7 +48,7 @@ fm_t fm;                         // file manager
 bool loop_start_button = false;
 bool loop_end_button = false;
 bool isButtonTouched = false;
-uint8_t numTouchPoints = 0;
+int numTouchPoints = 0;
 
 extern bool wakeScreenFlag;
 
@@ -208,80 +208,10 @@ FLASHMEM void helptext_c(const __FlashStringHelper* str) {
 
 extern void clear_bottom_half_screen_without_backbutton();
 
-#ifdef TOUCH_UI
-FLASHMEM void back_touchbutton()
-{
-  if (ts.keyb_in_menu_activated == false)
-  {
-    // back text can be drawn as a touch button
-    if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
-    {
-      draw_button_on_grid(2, 25, "GO", back_text, 1);
-    }
-    else
-      if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
-      {
-        draw_button_on_grid(2, 25, "", "", 98);//clear
-      }
-  }
-  if (legacy_touch_button_back_page())
-  {
-    //remove unusable touch buttons from screen
-    display.console = true;
-    display.fillRect(270, 87, CHAR_width_small * button_size_x, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
-    display.fillRect(12, 144, 300, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
-    display.fillRect(78, 200, 234, CHAR_height_small * button_size_y, COLOR_BACKGROUND);
-    display.console = false;
-    //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
-  }
-  else if (touch_button_back_page() && seq.cycle_touch_element != 1)
-  {
-    draw_button_on_grid(2, 25, "GO", back_text, 1);
-  }
-}
-#endif
-
-// FLASHMEM void draw_back_touchbutton()
-// {
-//   if (ts.keyb_in_menu_activated == false)
-//   {
-//     // back text can be drawn as a touch button
-//     if (LCDML.MENU_getLayer() != 0 && LCDML.FUNC_getID() == 255) //not in root menu but in menu
-//     {
-//       TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
-//     }
-//     else
-//       if (LCDML.MENU_getLayer() == 0 && LCDML.FUNC_getID() == 255) // root menu, no where to go back
-//       {
-//         TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
-
-//       }
-//   }
-//   if (legacy_touch_button_back_page() && (LCDML.FUNC_getID() > _LCDML_DISP_cnt))
-//   {
-//     //remove unusable touch buttons from screen
-//     clear_bottom_half_screen_without_backbutton();
-//     //draw_button_on_grid(2, 25, "GO", back_text, 0);  //the back button should already be there
-
-//   }
-//   else if (legacy_touch_button_back_page())
-//   { // but when virtual keyboard was active when coming from main menu, it must be redrawn
-//     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
-//   }
-//   else if (touch_button_back_page() && seq.cycle_touch_element != 1)
-//   {
-//     TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", back_text, TouchButton::BUTTON_NORMAL);
-//   }
-// }
-
 FLASHMEM void draw_back_touchbutton()
 {
-  static uint8_t last_layer = 255;
-  static uint8_t last_func_id = 255;
-  static bool last_legacy = false;
-  static bool last_touch = false;
-  static bool last_keyb = false;
-  static uint8_t last_cycle = 0;
+  static uint8_t last_cursor_abs = 0;
+  uint8_t cursor_abs = LCDML.MENU_getCursorPosAbs();
 
   uint8_t layer = LCDML.MENU_getLayer();
   uint8_t func_id = LCDML.FUNC_getID();
@@ -290,21 +220,13 @@ FLASHMEM void draw_back_touchbutton()
   bool keyb = ts.keyb_in_menu_activated;
   uint8_t cycle = seq.cycle_touch_element;
 
-  // If nothing relevant changed, skip redraw
-  if (layer == last_layer && func_id == last_func_id && legacy == last_legacy &&
-      touch == last_touch && keyb == last_keyb && cycle == last_cycle) {
+  if (cursor_abs != last_cursor_abs && LCDML.FUNC_getID() > _LCDML_DISP_cnt) {
     return;
   }
 
   // Update stored state
-  last_layer = layer;
-  last_func_id = func_id;
-  last_legacy = legacy;
-  last_touch = touch;
-  last_keyb = keyb;
-  last_cycle = cycle;
+  last_cursor_abs = cursor_abs;
 
-  // --- original drawing logic (unchanged) ---
   if (keyb == false)
   {
     if (layer != 0 && func_id == 255) // not in root menu but in menu
@@ -443,8 +365,11 @@ extern uint8_t edit_pos_global;
 extern bool edit_mode_global;
 extern uint8_t vtw_x;
 extern char g_voice_name[6][11]; // Assuming 6 instances, 10 chars + null terminator
+#if defined GLOW
 extern void remove_glow(void);
+#endif
 void virtual_typewriter_init(int8_t pos);
+
 bool virtual_typewriter_touchloop(char* out_key);
 void virtual_typewriter_update_display();
 // void drawVoiceNameButton();
@@ -601,7 +526,9 @@ FLASHMEM void handle_touchscreen_voice_select()
   // VOICE NAME BUTTON HANDLER
   else if (!category_mode_active && TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
     seq.cycle_touch_element = 2;
+#if defined GLOW
     remove_glow();
+#endif
     unregisterTouchHandler();
     LCDML.OTHER_jumpToFunc(UI_func_set_voice_name);
   }
@@ -612,13 +539,13 @@ FLASHMEM void handle_touchscreen_voice_select()
     // Handle category mode touches
     if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
       // Toggle between assign (0) and filter (1)
-    category_edit_mode = (category_edit_mode == 0) ? 1 : 0;
+      category_edit_mode = (category_edit_mode == 0) ? 1 : 0;
 
-    // Redraw the entire category grid with the new mode
-    draw_category_buttons(category_edit_mode == 1);
+      // Redraw the entire category grid with the new mode
+      draw_category_buttons(category_edit_mode == 1);
 
-    // The MODE button label is automatically updated by draw_category_buttons()
-    return; // exit after handling
+      // The MODE button label is automatically updated by draw_category_buttons()
+      return; // exit after handling
     }
   }
 
@@ -1662,6 +1589,38 @@ FLASHMEM void _multiband_button(uint8_t x, uint8_t y, uint8_t offset_y)
   mb_set_master();
 }
 
+#if defined TOUCHMENU
+static const uint32_t MENU_TAP_THRESHOLD_MS = 1500;   // 1.5 seconds
+static const int MENU_DRAG_THRESHOLD = 5;             // pixels of movement to be considered a drag
+
+static int menuTouchedAbsIndex = -1;
+static uint32_t menuTouchStartTime = 0;
+static bool menuDragActive = false;
+static int menuDragStartCursorAbs = 0;
+static int menuDragMaxDelta = 0;                      // max pixel movement during the gesture
+static int menuDragLastY = 0;
+
+
+static void moveCursorBy(int steps) {
+  if (steps > 0) {
+    for (int i = 0; i < steps; ++i) LCDML.BT_down();
+  }
+  else if (steps < 0) {
+    for (int i = 0; i < -steps; ++i) LCDML.BT_up();
+  }
+}
+
+static void setCursorAbs(int absIdx) {
+  int total = LCDML.MENU_getChilds();
+  int max = total - 1;
+  if (absIdx < 0) absIdx = 0;
+  if (absIdx > max) absIdx = max;
+  int current = LCDML.MENU_getCursorPosAbs();
+  if (absIdx != current) moveCursorBy(absIdx - current);
+}
+#endif
+
+
 FLASHMEM void handle_touchscreen_menu()
 {
   if ((ts.keyb_in_menu_activated == false) && TouchButton::isPressed(GRID.X[4], GRID.Y[5]))
@@ -1671,104 +1630,199 @@ FLASHMEM void handle_touchscreen_menu()
 
   if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) // only when not in UI_func_volume
   {
-    if (ts.touch_ui_drawn_in_menu == false)
-    {
-      if (ts.keyb_in_menu_activated)
-      {
-        drawVirtualKeyboard();
-        TouchButton::drawButton(GRID.X[5], GRID.Y[2], "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
-      }
-      else
-      {
-        draw_menu_ui_icons();
-      }
-      ts.touch_ui_drawn_in_menu = true;
-    }
 
-    if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
+#if defined TOUCHMENU
+    static bool touchActive = false;
+    static int touchStartY = 0;
+    static bool dragMode = false;
+    static const int DRAG_THRESHOLD_PX = 15;
+
+    if (!ts.keyb_in_menu_activated && LCDML.FUNC_getID() == 255)
     {
-      display.console = true;
-      display.fillRect(0, GRID.Y[3], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[3], COLOR_BACKGROUND);
-      display.console = false;
-      ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
-      if (ts.keyb_in_menu_activated)
+      if (numTouchPoints > 0)
       {
-        drawVirtualKeyboard();
-        TouchButton::drawButton(GRID.X[5], GRID.Y[2], "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
-      }
-      else
-      {
-        draw_menu_ui_icons();
-        if (LCDML.MENU_getLayer() > last_menu_depth)
+        int touchX = ts.p.x;
+        int touchY = ts.p.y;
+
+        if (touchX <= 240 && touchY < CHAR_height * 7)
         {
-          draw_back_touchbutton();
+          if (!touchActive)
+          {
+            // First touch
+            touchStartY = touchY;
+            touchActive = true;
+            dragMode = false;
+          }
+          else
+          {
+            // Check if we should start dragging
+            int deltaY = touchY - touchStartY;
+            if (!dragMode && abs(deltaY) > DRAG_THRESHOLD_PX)
+            {
+              dragMode = true;
+            }
+
+            if (dragMode)
+            {
+              // Handle scrolling
+              int steps = deltaY / DRAG_THRESHOLD_PX;
+              if (steps != 0)
+              {
+                if (steps > 0) {
+                  for (int i = 0; i < steps; i++) LCDML.BT_down();
+                }
+                else {
+                  for (int i = 0; i < -steps; i++) LCDML.BT_up();
+                }
+                touchStartY += steps * DRAG_THRESHOLD_PX;
+              }
+            }
+          }
         }
       }
-    }
-    if (ts.keyb_in_menu_activated == false)
-    {
-      if (TouchButton::isPressed(GRID.X[0], GRID.Y[3]))
+      else if (numTouchPoints == 0 && touchActive)
       {
-        LCDML.OTHER_jumpToFunc(UI_func_voice_select);
-      }
-      else if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
-      {
-        LCDML.OTHER_jumpToFunc(UI_func_song);
-      }
-      else if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
-      {
-        LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
-      }
-      else if (TouchButton::isPressed(GRID.X[3], GRID.Y[3]))
-      {
-        LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
-      }
-      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3]))
-      {
-        if (seq.running)
+        int finalX = ts.p.x;
+        int finalY = ts.p.y;
+
+        if (finalX <= 240)
         {
-          handleStop();
+          if (!dragMode)
+          {
+            // TAP: Calculate touched row and move cursor there
+            int clampedY = constrain(finalY, CHAR_height, CHAR_height * 7);
+            int touchedRow = (clampedY - CHAR_height) / CHAR_height;
+            int currentRow = LCDML.MENU_getCursorPos();
+
+            int steps = touchedRow - currentRow;
+            if (steps != 0)
+            {
+              if (steps > 0) {
+                for (int i = 0; i < steps; i++) LCDML.BT_down();
+              }
+              else {
+                for (int i = 0; i < -steps; i++) LCDML.BT_up();
+              }
+            }
+            LCDML.BT_enter();
+          }
+          // If it was a drag, do nothing (cursor already at final position)
+        }
+
+        touchActive = false;
+        dragMode = false;
+      }
+    }
+#endif
+
+#if defined TOUCHMENU
+    if (!touchActive)
+    {
+#endif
+
+      if (ts.touch_ui_drawn_in_menu == false)
+      {
+        if (ts.keyb_in_menu_activated)
+        {
+          drawVirtualKeyboard();
+          TouchButton::drawButton(GRID.X[5], GRID.Y[2], "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
         }
         else
         {
-          handleStart();
+          draw_menu_ui_icons();
+        }
+        ts.touch_ui_drawn_in_menu = true;
+      }
+
+      if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
+      {
+        display.console = true;
+        display.fillRect(0, GRID.Y[3], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[3], COLOR_BACKGROUND);
+        display.console = false;
+        ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
+        if (ts.keyb_in_menu_activated)
+        {
+          drawVirtualKeyboard();
+          TouchButton::drawButton(GRID.X[5], GRID.Y[2], "V.KEYB.", "OFF", TouchButton::BUTTON_ACTIVE);
+        }
+        else
+        {
+          draw_menu_ui_icons();
+          if (LCDML.MENU_getLayer() > last_menu_depth)
+          {
+            draw_back_touchbutton();
+          }
         }
       }
-      else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5]))
+      if (ts.keyb_in_menu_activated == false)
       {
-        display.setTextSize(2);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        LCDML.OTHER_jumpToFunc(UI_func_load_performance);
-      }
-      else if (TouchButton::isPressed(GRID.X[3], GRID.Y[5]))
-      {
-        display.setTextSize(2);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        LCDML.OTHER_jumpToFunc(UI_func_save_performance);
-      }
-      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
-      {
-        LCDML.OTHER_jumpToFunc(UI_func_mixer);
-      }
-      else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]))// back button
-      {
-        LCDML.BT_quit();
-      }
+        if (TouchButton::isPressed(GRID.X[0], GRID.Y[3]))
+        {
+          LCDML.OTHER_jumpToFunc(UI_func_voice_select);
+        }
+        else if (TouchButton::isPressed(GRID.X[1], GRID.Y[3]))
+        {
+          LCDML.OTHER_jumpToFunc(UI_func_song);
+        }
+        else if (TouchButton::isPressed(GRID.X[2], GRID.Y[3]))
+        {
+          LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
+        }
+        else if (TouchButton::isPressed(GRID.X[3], GRID.Y[3]))
+        {
+          LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
+        }
+        else if (TouchButton::isPressed(GRID.X[5], GRID.Y[3]))
+        {
+          if (seq.running)
+          {
+            handleStop();
+          }
+          else
+          {
+            handleStart();
+          }
+        }
+        else if (TouchButton::isPressed(GRID.X[2], GRID.Y[5]))
+        {
+          display.setTextSize(2);
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          LCDML.OTHER_jumpToFunc(UI_func_load_performance);
+        }
+        else if (TouchButton::isPressed(GRID.X[3], GRID.Y[5]))
+        {
+          display.setTextSize(2);
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+          LCDML.OTHER_jumpToFunc(UI_func_save_performance);
+        }
+        else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5]))
+        {
+          LCDML.OTHER_jumpToFunc(UI_func_mixer);
+        }
+        else if (TouchButton::isPressed(GRID.X[0], GRID.Y[5]))// back button
+        {
+          LCDML.BT_quit();
+        }
 
-      // else if (TouchButton::isPressed(GRID.X[5], GRID.Y[4]))  // render audio instead of recording test
-      // {
-      //   toggleOutputMode();
+        // else if (TouchButton::isPressed(GRID.X[5], GRID.Y[4]))  // render audio instead of recording test
+        // {
+        //   toggleOutputMode();
 
-      //   if (is_offline_mode == false)
-      //     TouchButton::drawButton(GRID.X[5], GRID.Y[4], "MODE", "LIVE", TouchButton::BUTTON_NORMAL);
-      //   else
-      //     TouchButton::drawButton(GRID.X[5], GRID.Y[4], "MODE", "RENDER", TouchButton::BUTTON_ACTIVE);
-      // }
+        //   if (is_offline_mode == false)
+        //     TouchButton::drawButton(GRID.X[5], GRID.Y[4], "MODE", "LIVE", TouchButton::BUTTON_NORMAL);
+        //   else
+        //     TouchButton::drawButton(GRID.X[5], GRID.Y[4], "MODE", "RENDER", TouchButton::BUTTON_ACTIVE);
+        // }
+      }
+      ts.touch_ui_drawn_in_menu = true;
+
+#if defined TOUCHMENU
     }
-    ts.touch_ui_drawn_in_menu = true;
-  }
-  if (ts.keyb_in_menu_activated) {
-    handleTouchVirtualKeyboard();
+#endif
+
+    if (ts.keyb_in_menu_activated) {
+      handleTouchVirtualKeyboard();
+    }
   }
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);

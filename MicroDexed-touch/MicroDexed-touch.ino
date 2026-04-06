@@ -96,15 +96,14 @@ using namespace TeensyTimerTool;
 
 //#include "D50Synth.h"
 
-#if defined ESP_DISPLAY
+#ifdef CAPACITIVE_TOUCH_DISPLAY
+#include "Adafruit_FT6206.h"
+#elif defined ESP_DISPLAY
 #include "esp_touch.h"
 #elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 #endif
 
-#ifdef CAPACITIVE_TOUCH_DISPLAY
-#include "Adafruit_FT6206.h"
-#endif
 
 #ifdef COMPILE_FOR_SDCARD
 #include <TeensyVariablePlayback.h>
@@ -159,14 +158,13 @@ bool back_button_touch_page_check_and_init_done = false;
 bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
-#if defined ESP_DISPLAY
-extern esp_touchscreen touch;
-#elif defined GENERIC_DISPLAY
-extern XPT2046_Touchscreen touch;
-#endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
+#elif defined ESP_DISPLAY
+extern esp_touchscreen touch;
+#elif defined GENERIC_DISPLAY
+extern XPT2046_Touchscreen touch;
 #endif
 
 // Editor operations
@@ -344,7 +342,6 @@ extern espdisplay display;
 #else
 extern ILI9341_t3n display;
 #endif
-
 
 extern MD_REncoder ENCODER[];
 #if defined SMFPLAYER
@@ -1024,7 +1021,6 @@ FLASHMEM void set_custom_enc_colors()
     mcp.write1(RGB_LED_R_BLUE, !bitRead(configuration.sys.rgb_enc_color_sel, 2));
   }
 }
-
 #endif
 
 /***********************************************************************
@@ -1052,12 +1048,11 @@ void updateEncoderR(void)
 
 extern bool trs_pedal;
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if  defined BUTTON_LEDS && defined MCP_23017
 FLASHMEM void All_Button_LEDS(bool state)
 {
   if (state)
   {
-
     setled(LED_UP, HIGH);
 
     if (configuration.sys.sus_pedal)
@@ -1150,6 +1145,16 @@ FLASHMEM void init_default_sample_voice_group_config()
 
 #if defined ESP_DISPLAY
 extern void sendScreensaverStop();
+extern void sendGlowClear();
+
+void sendVersion() {
+  const char* version = VERSION;   // defined as "1.9.939"
+  uint8_t len = strlen(version);
+  uint8_t payload[1 + len];
+  payload[0] = len;
+  memcpy(&payload[1], version, len);
+  sendPacket(CMD_VERSION_REPORT, payload, 1 + len);
+}
 #endif
 
 FLASHMEM void setup()
@@ -1173,15 +1178,11 @@ FLASHMEM void setup()
   granular_params.density = 30;
   granular_params.spread = 80;
   granular_params.active = true;
-
-  //  granularPoly.setParams(params);
-
 #endif
 
 #if  !defined CAPACITIVE_TOUCH_DISPLAY
   delay(60);
 #endif
-
 
 #ifdef  MCP_CV
   initMCP4728();  // 4x 12Bit DAC MCP4728 Init
@@ -1192,8 +1193,10 @@ FLASHMEM void setup()
 
   Wire.begin();
   Wire.setClock(400000);
-  // Wire.setClock(100000);
+
+#if defined  MCP_23008 || defined MCP_23017
   mcp.begin();
+#endif
 
 #if defined MCP_23008
   mcp.pinMode8(0x00);    //  0 = output,  1 = input
@@ -1205,25 +1208,12 @@ FLASHMEM void setup()
 #endif
 
   //mcp.write8(0xFF);
-
+#if defined  MCP_23008 || defined MCP_23017
   setled(RGB_LED_R_RED, HIGH);
   setled(RGB_LED_R_GREEN, HIGH);
   setled(RGB_LED_R_BLUE, LOW);
-
-  // mcp.setAllPins(B, HIGH);
-
 #endif
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-  // mcp.pinMode(LED_UP, OUTPUT);
-  // mcp.pinMode(LED_DOWN, OUTPUT);
-  // mcp.pinMode(LED_LEFT, OUTPUT);
-  // mcp.pinMode(LED_RIGHT, OUTPUT);
-  // mcp.pinMode(LED_SEL, OUTPUT);
-  // mcp.pinMode(LED_START, OUTPUT);
-  // mcp.pinMode(LED_BUT_A, OUTPUT);
-  // mcp.pinMode(LED_BUT_B, OUTPUT);
- // All_Button_LEDS(true);
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
@@ -1258,12 +1248,6 @@ FLASHMEM void setup()
   LOG.flush();
 #endif
 
-  //Reset clock to 132 Mhz
-        // CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
-        // CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-        //     | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
-        // CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-
 #ifdef PSRAM
   // zero all malloccable RAM so crashes are deterministic
   std::vector<uint8_t*> blocks;
@@ -1288,6 +1272,10 @@ FLASHMEM void setup()
   pinMode(TFT_TOUCH_IRQ, INPUT);
 #endif
 
+#ifdef ESP_DISPLAY
+  Serial4.begin(6000000, SERIAL_8N1);
+#endif
+
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
   pinMode(BUT_R_PIN, INPUT);
   pinMode(BUT_L_PIN, INPUT);
@@ -1295,7 +1283,6 @@ FLASHMEM void setup()
   pinMode(BUT_R_PIN, INPUT_PULLUP);
   pinMode(BUT_L_PIN, INPUT_PULLUP);
 #endif
-
 
   //Encoder with Interrupts
   attachInterrupt(ENC_L_PIN_A, updateEncoderL, CHANGE);
@@ -1310,17 +1297,10 @@ FLASHMEM void setup()
   pinMode(BI_RIGHT, INPUT_PULLUP);
   pinMode(BI_SELECT, INPUT_PULLUP);
   pinMode(BI_START, INPUT_PULLUP);
+#ifndef REDUCED_BUTTON_INTERFACE_ESP
   pinMode(BI_BUTTON_A, INPUT_PULLUP);
   pinMode(BI_BUTTON_B, INPUT_PULLUP);
 #endif
-
-#ifdef ESP_DISPLAY
-  Serial4.begin(6000000, SERIAL_8N1);
- // Serial4.begin(460800, SERIAL_8N1);
-#endif
-
-#ifdef ESP_DISPLAY
- sendScreensaverStop();
 #endif
 
   // Init display
@@ -1329,6 +1309,8 @@ FLASHMEM void setup()
 #endif
 
   display.begin();
+
+
 
   // invert display colors
 #ifndef ESP_DISPLAY
@@ -1343,9 +1325,9 @@ FLASHMEM void setup()
   touch_ic_found = true;
 #endif
 
-   #if defined ESP_DISPLAY
-   touch_ic_found = true;
-   #endif
+#if defined ESP_DISPLAY
+  touch_ic_found = true;
+#endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   if (!touch.begin(40))
@@ -1434,7 +1416,7 @@ FLASHMEM void setup()
 
 #endif
 
-#ifdef MUSIKANDMORE
+#if defined BUTTON_LEDS && defined MCP_23017
   All_Button_LEDS(true);
 #endif
 
@@ -1611,6 +1593,18 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
+#ifdef ESP_DISPLAY
+ AudioNoInterrupts();
+  delay(100);
+  sendVersion();
+ 
+  // sendScreensaverStop();
+  // delay(20);
+  // sendGlowClear();
+  // sendGlowStop();
+   AudioInterrupts();
+#endif
+
   AudioNoInterrupts();
   // Start SD card
   sd_card_internal = check_internal_sd_card();
@@ -1657,7 +1651,7 @@ FLASHMEM void setup()
   //MIDI_input_timer.begin(check_midi_devices, 5000, true);  //crashes when using APC with timer interrupt (USB Host MIDI out+in at the same time?)
 #endif
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) || defined INVERTED_ENC_BUTTONS
   if (digitalRead(BUT_R_PIN) || digitalRead(BUT_L_PIN)) // is pushed
     bootup_performance_loading = false;
 #else
@@ -1667,12 +1661,15 @@ FLASHMEM void setup()
 
 
 #ifdef ONBOARD_BUTTON_INTERFACE
+#ifndef REDUCED_BUTTON_INTERFACE_ESP
   if (digitalRead(BI_BUTTON_A) == false || digitalRead(BI_BUTTON_B) == false) // is pushed
     bootup_performance_loading = false;
 #endif
+#endif
+
 
 #ifdef ESP_DISPLAY
- sendScreensaverStop();
+  sendScreensaverStop();
 #endif
 
   // Initialize processor and memory measurements
@@ -1808,12 +1805,13 @@ FLASHMEM void setup()
   set_midi_led_pins();
 #endif
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
   All_Button_LEDS(false);
+#endif
+
 #ifdef MIDI_ACTIVITY_LIGHTS
   digitalWrite(LED_MIDI_IN, HIGH);
   digitalWrite(LED_MIDI_OUT, HIGH);
-#endif
 #endif
 
 #ifdef COMPILE_FOR_PSRAM
@@ -2234,6 +2232,160 @@ uint8_t  glow_textsize;
 const char* glow_zero_name;
 uint8_t glow_type;
 
+#if defined ESP_DISPLAY
+
+//#include "esp32.h"
+
+static uint8_t last_glow_menu_item = 255;
+static int16_t last_glow_value = 0;
+
+// Mimics print_formatted_number (leading zeros)
+FLASHMEM static void format_unsigned_leading_zeros(char* buf, size_t bufsize, uint16_t value, uint8_t width) {
+  snprintf(buf, bufsize, "%0*u", width, value);
+}
+
+// Mimics print_formatted_number_signed (plus sign for positive, minus sign and two digits for negative)
+FLASHMEM static void format_signed_with_sign(char* buf, size_t bufsize, int16_t value) {
+  if (value >= 0) {
+    snprintf(buf, bufsize, "+%02d", value);
+  }
+  else {
+    snprintf(buf, bufsize, "%03d", value);   // includes minus sign, total width 3
+  }
+}
+
+FLASHMEM void formatGlowString(char* buffer, size_t bufsize) {
+  buffer[0] = '\0';
+  switch (glow_type) {
+  case 0: // bargraph
+    if (glow_limit_min == 0 && glow_limit_max == 1) {
+      snprintf(buffer, bufsize, glow_input_value ? "ON " : "OFF");
+    }
+    else if (glow_zero_name != NULL && glow_input_value == 0) {
+      strncpy(buffer, glow_zero_name, bufsize);
+    }
+    else if (glow_zero_name != NULL && glow_input_value == 17) {
+      strncpy(buffer, glow_zero_name, bufsize);
+    }
+    else if (glow_limit_min < 0) {
+      format_signed_with_sign(buffer, bufsize, glow_input_value);
+    }
+    else if (glow_limit_max < 100) {
+      format_unsigned_leading_zeros(buffer, bufsize, (uint16_t)glow_input_value, 2);
+    }
+    else if (glow_limit_max < 1000) {
+      format_unsigned_leading_zeros(buffer, bufsize, (uint16_t)glow_input_value, 3);
+    }
+    else {
+      format_unsigned_leading_zeros(buffer, bufsize, (uint16_t)glow_input_value, 4);
+    }
+    break;
+  case 1: // panbar – exact string from _print_panbar_value
+    if (glow_input_value < 20) {
+      snprintf(buffer, bufsize, "L%02d", 20 - glow_input_value);
+    }
+    else if (glow_input_value > 20) {
+      snprintf(buffer, bufsize, "R%02d", glow_input_value - 20);
+    }
+    else {
+      snprintf(buffer, bufsize, "C%02d", 0);
+    }
+    break;
+  case 2: // unsigned integer
+
+  case 5: // integer for song page
+    format_unsigned_leading_zeros(buffer, bufsize, (uint16_t)glow_input_value, glow_len);
+    break;
+  case 4: // signed integer
+    format_signed_with_sign(buffer, bufsize, glow_input_value);
+    break;
+  case 6: // empty "--"
+    if (glow_input_value == -1) {
+      snprintf(buffer, bufsize, "--");
+    }
+    else {
+      format_unsigned_leading_zeros(buffer, bufsize, (uint16_t)glow_input_value, glow_len);
+    }
+    break;
+  case 3: // text
+    if (glow_str != NULL) {
+      strncpy(buffer, glow_str, bufsize);
+    }
+    break;
+  default:
+    buffer[0] = '\0';
+    break;
+  }
+}
+
+
+FLASHMEM void sendGlowStart() {
+  char str[64];
+
+  formatGlowString(str, sizeof(str));
+  uint8_t len = strlen(str);
+  if (len == 0) return;
+
+  int16_t pixel_x, pixel_y;
+  uint8_t txtsize;
+
+  if (glow_type == 0 || glow_type == 1) {
+    // Small font grid (6×10)
+    pixel_y = glow_y * 10;
+    txtsize = 1;   // small font
+
+    if (glow_type == 0) {
+      // Cursor positioning for bargraph (matches draw_glow)
+      if (glow_limit_min == 0 && glow_limit_max == 1) {
+        pixel_x = glow_x * 6;
+      }
+      else if (glow_zero_name != NULL && (glow_input_value == 0 || glow_input_value == 17)) {
+        pixel_x = glow_x * 6;
+      }
+      else if (glow_limit_min < 0) {
+        pixel_x = glow_x * 6;
+      }
+      else if (glow_limit_max < 100) {
+        pixel_x = (glow_x + 1) * 6;   // two‑digit number shifted right
+      }
+      else {
+        pixel_x = glow_x * 6;
+      }
+    }
+    else { // panbar
+      pixel_x = glow_x * 6;   // always at original column
+    }
+  }
+  else {
+    // Types 2,3,4,5,6: pixel coordinates already set
+    pixel_x = glow_x;
+    pixel_y = glow_y;
+    txtsize = glow_textsize;
+  }
+
+  // Packet: x(2), y(1), textsize(1), len(1), string
+  uint8_t packet[5 + len];
+  packet[0] = lowByte(pixel_x);
+  packet[1] = highByte(pixel_x);
+  packet[2] = (uint8_t)pixel_y;
+  packet[3] = txtsize;
+  packet[4] = len;
+  memcpy(&packet[5], str, len);
+
+  sendPacket(CMD_GLOW_START, packet, 5 + len);
+
+  last_glow_menu_item = generic_temp_select_menu;
+  last_glow_value = glow_input_value;
+}
+
+void sendGlowStop() {
+  sendPacket(CMD_GLOW_STOP, nullptr, 0);
+  last_glow_menu_item = 255;
+}
+
+
+#endif // ESP_DISPLAY
+
 FLASHMEM static bool set_glow_params(uint8_t x, uint8_t y, uint8_t type, int menuitem, bool force = false)
 {
   bool result = menuitem == generic_temp_select_menu || force;
@@ -2379,27 +2531,57 @@ FLASHMEM void draw_glow()
   display.setTextSize(1);
 }
 
-FLASHMEM void glow(void)
+uint32_t glowDebugCounter = 0;
+
+void glow(void)
 {
+
   if (!remote_active)
   {
-    if ((seq.edit_state == 0 && glow_menu_item == generic_temp_select_menu && LCDML.FUNC_getID() < 63 && legacy_touch_button_back_page() == false)
-      || (seq.edit_state == 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && glow_track == seq.selected_track &&
-        seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0))
-    {
-      if (glow_count >= 0)
-      {
+    bool isActive = (seq.edit_state == 0 && glow_menu_item == generic_temp_select_menu &&
+      LCDML.FUNC_getID() < 63 && legacy_touch_button_back_page() == false)
+      || (seq.edit_state == 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) &&
+        glow_track == seq.selected_track && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0);
+
+#if defined ESP_DISPLAY
+    if (isActive && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song)) {
+
+      // If the parameter changed, stop the previous glow before starting new one
+      if (glow_menu_item != last_glow_menu_item && last_glow_menu_item != 255) {
+        sendGlowStop();
+      }
+      // Now start new glow if needed
+      if (glow_menu_item != last_glow_menu_item || glow_input_value != last_glow_value) {
+        sendGlowStart();
+      }
+    }
+    else {
+      // Not active: stop glow if it was active
+      if (last_glow_menu_item != 255) {
+        sendGlowStop();
+      }
+      // Reset tracking
+      last_glow_menu_item = 255;
+      last_glow_value = glow_input_value;
+    }
+#endif
+
+#if !defined ESP_DISPLAY
+    if (isActive) {
+      // Original glow drawing (only when not using remote display)
+      if (glow_count >= 0) {
         if (glow_count < glow_smoothness_pts)
           glow_count++;
         else
           glow_count = 0;
-
         glow_bright = 255.0 * (exp(-(pow(((glow_count / glow_smoothness_pts) - glow_beta) / glow_gamma, 2.0)) / 2.0));
       }
-      else
+      else {
         glow_bright = GLOW_OFF;
+      }
       draw_glow();
     }
+#endif
   }
 }
 
@@ -2447,32 +2629,6 @@ uint8_t RGB_state = 199;
 FLASHMEM void setRGBencoderColor()
 {
   if (RGB_state != seq.edit_state) {
-
-    //     if (seq.edit_state == 0)
-    //     {
-    //       setled(RGB_LED_L_RED, HIGH);
-    //       setled(RGB_LED_L_GREEN, HIGH);
-    //       setled(RGB_LED_L_BLUE, LOW);
-    //       setled(RGB_LED_R_RED, HIGH);
-    //       setled(RGB_LED_R_GREEN, HIGH);
-    //       setled(RGB_LED_R_BLUE, LOW);
-    // // #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-    // //       setled(LED_BUT_A, LOW);
-    // // #endif
-    //     }
-    //     else
-    //     {
-    //       setled(RGB_LED_L_RED, HIGH);
-    //       setled(RGB_LED_L_GREEN, HIGH);
-    //       setled(RGB_LED_L_BLUE, LOW);
-
-    //       setled(RGB_LED_R_RED, LOW);
-    //       setled(RGB_LED_R_GREEN, HIGH);
-    //       setled(RGB_LED_R_BLUE, HIGH);
-    // // #if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
-    // //       setled(LED_BUT_A, HIGH);
-    // //       #endif
-    //     }
 
     set_custom_enc_colors();
     RGB_state = seq.edit_state;
@@ -2816,7 +2972,6 @@ uint32_t lastGlowUpdate = 0;
 
 void loop()
 {
-
   // Chords Detection
 // Handle chord timeout
   if (chord_note_count > 0 && since_last_note > CHORD_CAPTURE_WINDOW) {
@@ -2837,7 +2992,9 @@ void loop()
     if (trs_pedal != trs_pedal_previous)
     {
       set_trs_pedal();
+#if  defined BUTTON_LEDS && defined MCP_23017
       setled(LED_DOWN, trs_pedal);
+#endif
 
       trs_pedal_previous = trs_pedal;
     }
@@ -2872,7 +3029,9 @@ void loop()
         midi_bpm_counter = 0;
       }
       midi_bpm_counter++;
+#if  defined BUTTON_LEDS && defined MCP_23017
       setled(LED_UP, cv_clock);
+#endif
       cv_clock_previous = cv_clock;
     }
   }
@@ -3166,6 +3325,17 @@ void loop()
   if (millis() - lastGlowUpdate >= 70)
   {
     glow();
+
+#if defined ESP_DISPLAY
+    static uint8_t last_edit_state = 0;
+    if (seq.edit_state != last_edit_state) {
+      last_edit_state = seq.edit_state;
+      if (seq.edit_state == 0) {
+        sendGlowStop();
+      }
+    }
+#endif
+
     lastGlowUpdate = millis();
   }
 #endif
@@ -5289,7 +5459,7 @@ FLASHMEM void handleStart(void)
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
   }
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
   setled(LED_START, HIGH);
 #endif
 
@@ -5347,7 +5517,7 @@ FLASHMEM void handleStop(void)
       }
 #endif
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
       setled(LED_START, LOW);
 #endif
 
@@ -5642,22 +5812,22 @@ FLASHMEM void check_configuration_sys(void)
   configuration.sys.vol = constrain(configuration.sys.vol, VOLUME_MIN, VOLUME_MAX);
   configuration.sys.mono = constrain(configuration.sys.mono, MONO_MIN, MONO_MAX);
   configuration.sys.soft_midi_thru = constrain(configuration.sys.soft_midi_thru, SOFT_MIDI_THRU_MIN, SOFT_MIDI_THRU_MAX);
-  
-  configuration.sys.thru_usb_to_din   = constrain(configuration.sys.thru_usb_to_din,   0, 1);
-  configuration.sys.thru_usb_to_host  = constrain(configuration.sys.thru_usb_to_host,  0, 1);
-  configuration.sys.thru_din_to_usb   = constrain(configuration.sys.thru_din_to_usb,   0, 1);
-  configuration.sys.thru_din_to_host  = constrain(configuration.sys.thru_din_to_host,  0, 1);
-  configuration.sys.thru_host_to_usb  = constrain(configuration.sys.thru_host_to_usb,  0, 1);
-  configuration.sys.thru_host_to_din  = constrain(configuration.sys.thru_host_to_din,  0, 1);
-  
+
+  configuration.sys.thru_usb_to_din = constrain(configuration.sys.thru_usb_to_din, 0, 1);
+  configuration.sys.thru_usb_to_host = constrain(configuration.sys.thru_usb_to_host, 0, 1);
+  configuration.sys.thru_din_to_usb = constrain(configuration.sys.thru_din_to_usb, 0, 1);
+  configuration.sys.thru_din_to_host = constrain(configuration.sys.thru_din_to_host, 0, 1);
+  configuration.sys.thru_host_to_usb = constrain(configuration.sys.thru_host_to_usb, 0, 1);
+  configuration.sys.thru_host_to_din = constrain(configuration.sys.thru_host_to_din, 0, 1);
+
   configuration.sys.favorites = constrain(configuration.sys.favorites, FAVORITES_NUM_MIN, FAVORITES_NUM_MAX);
   configuration.sys.performance_number = constrain(configuration.sys.performance_number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   configuration.sys.load_at_startup_performance = constrain(configuration.sys.load_at_startup_performance, STARTUP_NUM_MIN, STARTUP_NUM_MAX);
-  
-  #if defined ESP_DISPLAY
-   configuration.sys.display_rotation = 3;
+
+#if defined ESP_DISPLAY
+  configuration.sys.display_rotation = 3;
   configuration.sys.touch_rotation = 2;
-  #else
+#else
   configuration.sys.display_rotation = constrain(configuration.sys.display_rotation, 0, 3);
   configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
 #endif
@@ -5779,7 +5949,7 @@ FLASHMEM void init_configuration(void)
   configuration.sys.performance_number = PERFORMANCE_NUM_DEFAULT;
   configuration.sys.load_at_startup_performance = STARTUP_NUM_DEFAULT;
 #if defined ESP_DISPLAY
-configuration.sys.display_rotation = 3;
+  configuration.sys.display_rotation = 3;
 #else
   configuration.sys.display_rotation = DISPLAY_ROTATION_DEFAULT;
 #endif

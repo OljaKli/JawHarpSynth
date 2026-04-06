@@ -19,7 +19,7 @@
 #endif
 
  // External references
- 
+
 #if defined ESP_DISPLAY
 extern espdisplay display;
 #else
@@ -274,7 +274,9 @@ FLASHMEM bool save_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData*
     bank = constrain(bank, 0, MAX_BANKS - 1);
 
     snprintf_P(folder, sizeof(folder), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, pool, bank);
-    snprintf_P(filename, sizeof(filename), PSTR("%s/categories.json"), folder);
+    // snprintf_P(filename, sizeof(filename), PSTR("%s/categories.json"), folder);
+    strlcpy(filename, folder, sizeof(filename));
+    strlcat(filename, "/categories.json", sizeof(filename));
 
     if (sd_card_internal > 0) {
         if (!SD.exists(folder)) {
