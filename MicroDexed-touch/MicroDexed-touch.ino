@@ -1169,18 +1169,11 @@ FLASHMEM void sendMinEspVersion() {
 
 #if defined ESP_DISPLAY
 void sendVolumeIconsMode(bool volumeIcons) {
-    static bool lastMode = true;          // prevent duplicate sends
+    static bool lastMode = true;
     if (volumeIcons == lastMode) return;
     lastMode = volumeIcons;
-    const uint8_t cmd = 101;
-    const uint8_t len = 1;
-    const uint8_t payload = volumeIcons ? 1 : 0;
-    uint8_t checksum = 0xFE ^ cmd ^ len ^ payload;
-    Serial4.write(0xFE);
-    Serial4.write(cmd);
-    Serial4.write(len);
-    Serial4.write(payload);
-    Serial4.write(checksum);
+    uint8_t payload = volumeIcons ? 1 : 0;
+    sendPacket(CMD_SET_VOLUME_ICONS_MODE, &payload, 1);
 }
 static bool lastVolumeIconsMode = true;
 #endif
