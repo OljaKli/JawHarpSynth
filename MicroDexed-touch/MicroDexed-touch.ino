@@ -1147,7 +1147,7 @@ FLASHMEM void init_default_sample_voice_group_config()
 extern void sendScreensaverStop();
 extern void sendGlowClear();
 
-void sendVersion() {
+FLASHMEM void sendVersion() {
   const char* version = VERSION;   // defined as "1.9.939"
   uint8_t len = strlen(version);
   uint8_t payload[1 + len];
@@ -1155,6 +1155,34 @@ void sendVersion() {
   memcpy(&payload[1], version, len);
   sendPacket(CMD_VERSION_REPORT, payload, 1 + len);
 }
+
+FLASHMEM void sendMinEspVersion() {
+    const char* version = MIN_VERSION_ESP_DISPLAY;
+    uint8_t len = strlen(version);
+    uint8_t payload[1 + len];
+    payload[0] = len;
+    memcpy(&payload[1], version, len);
+    sendPacket(CMD_MIN_VERSION_ESP, payload, 1 + len);
+}
+
+#endif
+
+#if defined ESP_DISPLAY
+void sendVolumeIconsMode(bool volumeIcons) {
+    static bool lastMode = true;          // prevent duplicate sends
+    if (volumeIcons == lastMode) return;
+    lastMode = volumeIcons;
+    const uint8_t cmd = 101;
+    const uint8_t len = 1;
+    const uint8_t payload = volumeIcons ? 1 : 0;
+    uint8_t checksum = 0xFE ^ cmd ^ len ^ payload;
+    Serial4.write(0xFE);
+    Serial4.write(cmd);
+    Serial4.write(len);
+    Serial4.write(payload);
+    Serial4.write(checksum);
+}
+static bool lastVolumeIconsMode = true;
 #endif
 
 FLASHMEM void setup()
@@ -1597,7 +1625,8 @@ FLASHMEM void setup()
  AudioNoInterrupts();
   delay(100);
   sendVersion();
- 
+  delay(100);
+ sendMinEspVersion();  
   // sendScreensaverStop();
   // delay(20);
   // sendGlowClear();
@@ -2970,8 +2999,21 @@ FLASHMEM void display_granular_status()
 uint32_t lastGlowUpdate = 0;
 #endif
 
+#if defined ESP_DISPLAY
+ extern void  sendEditMode(bool);
+#endif
+
 void loop()
 {
+
+#if defined ESP_DISPLAY
+static uint8_t lastEditState = 0;
+if (seq.edit_state != lastEditState) {
+    lastEditState = seq.edit_state;
+    sendEditMode(seq.edit_state);
+}
+#endif
+
   // Chords Detection
 // Handle chord timeout
   if (chord_note_count > 0 && since_last_note > CHORD_CAPTURE_WINDOW) {
@@ -3080,6 +3122,26 @@ void loop()
 
   LCDML.loop();
 
+// #if defined ESP_DISPLAY
+// uint8_t currentFuncID = LCDML.FUNC_getID();
+// if (currentFuncID != lastFuncID) {
+//     lastFuncID = currentFuncID;
+//     bool volumeIcons = true;
+//     // Check if current page is one of the special pages
+//     if (currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) ||
+//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) ||
+//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) ||
+//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) ||
+//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_song)) {
+//         volumeIcons = false;
+//     }
+//     if (volumeIcons != lastVolumeIconsMode) {
+//         sendVolumeIconsMode(volumeIcons);
+//         lastVolumeIconsMode = volumeIcons;
+//     }
+// }
+// #endif
+
   if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found)
   {
     touchReadTimer = 0;
@@ -3092,6 +3154,7 @@ void loop()
       // menu
       handle_touchscreen_menu();
       scope.draw_scope(230, 18, 87, 64);
+     
     }
 
     if (back_button_touch_page_check_and_init_done == false) {

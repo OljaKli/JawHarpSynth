@@ -1,0 +1,7 @@
+Installation Instructions
+
+Please read carefully the manual at:
+doc/MicroDexed-touch-manual.pdf
+
+about the Waveshare ESP32 display.
+Join us in discord!

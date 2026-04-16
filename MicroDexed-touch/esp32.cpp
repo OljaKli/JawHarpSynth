@@ -200,7 +200,7 @@ static uint8_t getColorIndex(uint16_t color) {
 const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
 
 // Packet protocol
-#define PKT_SYNC        0xFE
+#define PKT_SYNC        0xAA
 
 uint16_t lastFillColor;
 uint16_t lastLineColor;    // for drawLine and drawRect outline
@@ -212,42 +212,33 @@ uint8_t  lastTextSize;
 extern void processIncomingSerial(bool& ackReceived);
 static uint8_t packetCounter = 0;
 
-void sendSyncAndWait() {
-  Serial4.write(PKT_SYNC);
-  Serial4.write(BATCH_SYNC_CMD);
-  Serial4.write(0);        // payload length = 0
-  uint8_t checksum = PKT_SYNC ^ BATCH_SYNC_CMD ^ 0;
-  Serial4.write(checksum);
-
-  bool ackReceived = false;
-  elapsedMillis timeout = 0;
-  while (!ackReceived && timeout < ACK_TIMEOUT_MS) {
-    processIncomingSerial(ackReceived);
-  }
-}
+// uint8_t crc8(const uint8_t *data, size_t len) {
+//     uint8_t crc = 0x00;
+//     for (size_t i = 0; i < len; i++) {
+//         crc ^= data[i];
+//         for (uint8_t bit = 0; bit < 8; bit++) {
+//             if (crc & 0x80)
+//                 crc = (crc << 1) ^ 0x07;  // polynomial 0x07 (CRC-8-ATM)
+//             else
+//                 crc <<= 1;
+//         }
+//     }
+//     return crc;
+// }
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
-
-  if (len > 50) {
-    // Handle error: split or truncate
-    return;
-}
+  if (len > 250) return;   // keep the safety check
 
   Serial4.write(PKT_SYNC);
   Serial4.write(cmd);
   Serial4.write(len);
-  for (uint16_t i = 0; i < len; i++) {
+  for (uint8_t i = 0; i < len; i++) {
     Serial4.write(payload[i]);
   }
   uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
-  for (uint16_t i = 0; i < len; i++) checksum ^= payload[i];
+  for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
   Serial4.write(checksum);
-
-  packetCounter++;
-  if (packetCounter >= PACKETS_PER_BATCH) {
-    sendSyncAndWait();
-    packetCounter = 0;
-  }
+   delayMicroseconds(180);
 }
 
 void sendGlowClear() {
@@ -256,11 +247,6 @@ void sendGlowClear() {
 
 void sendScreensaverStop() {
   sendPacket(CMD_SCREENSAVER_STOP, nullptr, 0);
-  // Flush the batch to send the stop command immediately
-  if (packetCounter > 0) {
-    sendSyncAndWait();
-    packetCounter = 0;
-  }
 }
 
 FLASHMEM void start_screensaver_on_esp(uint8_t id) {
@@ -287,6 +273,11 @@ FLASHMEM espdisplay::espdisplay(uint8_t c)
 };
 
 //=======================================================================
+
+void sendEditMode(bool editState) {
+    uint8_t payload = editState ? 1 : 0;
+    sendPacket(CMD_SET_EDIT_MODE, &payload, 1);
+}
 
 void espdisplay::drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t highlight) {
   uint8_t payload[4];
@@ -458,21 +449,34 @@ void espdisplay::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
       uint8_t idx = getColorIndex(color);
       if (idx != 255) {
         // Indexed fillRect
-        uint8_t payload[7] = { lowByte(x), highByte(x), (uint8_t)y, lowByte(w), highByte(w), (uint8_t)h, idx };
+        uint8_t payload[7] = { 
+          lowByte(x), 
+          highByte(x), 
+          (uint8_t)y, 
+          lowByte(w), 
+          highByte(w), 
+          (uint8_t)h, 
+          idx };
         sendPacket(CMD_FILLRECT_INDEXED, payload, 7);
         lastFillColor = color;
       }
       else {
         // Full fillRect
-        uint8_t payload[8] = { lowByte(x), highByte(x), (uint8_t)y, lowByte(w), highByte(w), (uint8_t)h, lowByte(color), highByte(color) };
+        uint8_t payload[8] = { 
+          lowByte(x), 
+          highByte(x), 
+          (uint8_t)y, 
+          lowByte(w), 
+          highByte(w), 
+          (uint8_t)h, 
+          lowByte(color), 
+          highByte(color) };
         sendPacket(CMD_FILLRECT, payload, 8);
         lastFillColor = color;
       }
     }
   }
 }
-
-
 
 // draw rectangle with rainbow gradient
 FLASHMEM void espdisplay::fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h)
@@ -759,6 +763,7 @@ void espdisplay::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
     console = false;
   }
   if (esp_draw) {
+
     if (color == lastLineColor) {
       uint8_t payload[6]; // x0(2), y0(1), x1(2), y1(1)
       payload[0] = lowByte(x0);
@@ -773,7 +778,14 @@ void espdisplay::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
       uint8_t idx = getColorIndex(color);
       if (idx != 255) {
         // Indexed line
-        uint8_t payload[7] = { lowByte(x0), highByte(x0), (uint8_t)y0, lowByte(x1), highByte(x1), (uint8_t)y1, idx };
+        uint8_t payload[7] = { 
+          lowByte(x0), 
+          highByte(x0), 
+          (uint8_t)y0, 
+          lowByte(x1), 
+          highByte(x1), 
+          (uint8_t)y1, 
+          idx };
         sendPacket(CMD_DRAWLINE_INDEXED, payload, 7);
         lastLineColor = color;
       }
@@ -809,7 +821,7 @@ void espdisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
 
   if (esp_draw) {
     if (color == lastLineColor) {
-      uint8_t payload[6]; // x(2), y(1), w(2), h(1)
+      uint8_t payload[6]; 
       payload[0] = lowByte(x);
       payload[1] = highByte(x);
       payload[2] = (uint8_t)y;
@@ -822,13 +834,28 @@ void espdisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
       uint8_t idx = getColorIndex(color);
       if (idx != 255) {
         // Indexed rect
-        uint8_t payload[7] = { lowByte(x), highByte(x), (uint8_t)y, lowByte(w), highByte(w), (uint8_t)h, idx };
+        uint8_t payload[7] = {
+        lowByte(x),
+        highByte(x), 
+        (uint8_t)y,
+        lowByte(w), 
+        highByte(w), 
+        (uint8_t)h,
+        idx };
         sendPacket(CMD_DRAWRECT_INDEXED, payload, 7);
         lastLineColor = color;
       }
       else {
         // Full rect
-        uint8_t payload[8] = { lowByte(x), highByte(x), (uint8_t)y, lowByte(w), highByte(w), (uint8_t)h, lowByte(color), highByte(color) };
+        uint8_t payload[8] = { 
+          lowByte(x), 
+          highByte(x), 
+          (uint8_t)y, 
+          lowByte(w), 
+          highByte(w), 
+          (uint8_t)h, 
+          lowByte(color), 
+          highByte(color) };
         sendPacket(CMD_DRAWRECT, payload, 8);
         lastLineColor = color;
       }

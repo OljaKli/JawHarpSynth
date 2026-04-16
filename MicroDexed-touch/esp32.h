@@ -7,17 +7,21 @@
 
 #include "Arduino.h"
 #include <stdint.h>
-//10 50
-#define PACKETS_PER_BATCH   10      // Send this many packets before requesting ACK
-#define BATCH_SYNC_CMD      99      // Command code for SYNC packet
-#define ACK_BYTE            0xAD
-#define ACK_TIMEOUT_MS      40       // Time to wait for ACK
+//10 50   10 40 
+
+// #define PACKETS_PER_BATCH   10      // Send this many packets before requesting ACK
+// #define BATCH_SYNC_CMD      99      // Command code for SYNC packet
+ #define ACK_BYTE            0xAD
+// #define ACK_TIMEOUT_MS      40       // Time to wait for ACK
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
 
 #define sint16_t int16_t
 
 #define SYSEX_HEADER_SIZE 3
+
+// Minimum ESP firmware version required by this Teensy firmware
+#define MIN_VERSION_ESP_DISPLAY "1.9.945"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -43,7 +47,6 @@
 #define CMD_FILLCIRCLE_INDEXED   23
 #define CMD_DRAWPIXEL_INDEXED    24
 #define CMD_PRINT_STRING_INDEXED 25
-// New commands for glow offloading
 #define CMD_GLOW_START 26
 #define CMD_GLOW_UPDATE 27
 #define CMD_GLOW_STOP 28
@@ -53,8 +56,12 @@
 #define CMD_DRAW_PARAM_BAR 32
 #define CMD_DRAW_PANBAR 33
 #define CMD_VERSION_REPORT 100   // unique command code
+#define CMD_SET_VOLUME_ICONS_MODE 101
+#define CMD_SET_EDIT_MODE 102
+#define CMD_MIN_VERSION_ESP 103
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
+void sendEditMode(bool);
 
 class espdisplay : public Print
 {

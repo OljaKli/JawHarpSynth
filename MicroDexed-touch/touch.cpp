@@ -931,6 +931,7 @@ FLASHMEM void handle_touchscreen_granular() {
 }
 #endif
 
+
 FLASHMEM void print_file_manager_active_border()
 {
   // active_window   0 = left window (SDCARD) , 1 = PSRAM OR SDCARD2
@@ -948,6 +949,7 @@ FLASHMEM void print_file_manager_active_border()
     display.console = true;
     display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
+ 
   fm.sd_mode = 0;
   print_file_manager_buttons();
 }

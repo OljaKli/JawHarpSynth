@@ -173,6 +173,8 @@ PsramLoader sampleLoader(psram_free_bytes);
 
 #if defined ESP_DISPLAY
 espdisplay display(0);
+extern void sendVolumeIconsMode(bool);
+
 #else
 #if defined GENERIC_DISPLAY
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
@@ -1159,6 +1161,8 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
 
 
 #if defined ESP_DISPLAY
+ //extern void sendEditMode(bool);
+
 FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str)
 {
   // Buffer large enough for any field (max 15 characters + null)
@@ -4034,6 +4038,9 @@ public:
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
     {
       seq.edit_state = 1 - seq.edit_state;
+      // #if defined ESP_DISPLAY
+      // sendEditMode(seq.edit_state);  
+      // #endif
       editors[generic_temp_select_menu].draw_editor(true);
       flush_sysex();
     }
@@ -4227,6 +4234,7 @@ void processIncomingSerial(bool& ackReceived) {
   }
 }
 #endif
+
 
 FLASHMEM void lcdml_menu_control(void)
 {
@@ -4651,7 +4659,6 @@ FLASHMEM void lcdml_menu_control(void)
         }
       }
       else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) &&
-        //  LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
@@ -4784,6 +4791,11 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
       encoderDir[ENC_R].Right(true);
       LCDML.BT_right();
+
+      // #if defined ESP_DISPLAY
+      //     sendEditMode(seq.edit_state);
+      // #endif
+
       g_LCDML_CONTROL_button_prev[ENC_R] = LOW;
       g_LCDML_CONTROL_button_press_time[ENC_R] = -1;
     }
@@ -4828,6 +4840,7 @@ FLASHMEM void lcdml_menu_control(void)
 #ifdef DEBUG
         LOG.println(F("ENC-R short"));
 #endif
+
         encoderDir[ENC_R].ButtonShort(true);
 
         LCDML.BT_enter();
@@ -13239,6 +13252,9 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    #if defined ESP_DISPLAY
+sendVolumeIconsMode(false); 
+#endif
     // setup function
     seq.menu = 0;
     seq.edit_state = false;
@@ -13347,6 +13363,9 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+#if defined ESP_DISPLAY
+sendVolumeIconsMode(true); 
+#endif
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
@@ -13474,6 +13493,10 @@ FLASHMEM void UI_func_song(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+sendVolumeIconsMode(false); 
+#endif
+
     // setup function
 #if defined APC
     APC_MODE = APC_SONG;
@@ -13977,6 +14000,9 @@ FLASHMEM void UI_func_song(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+#if defined ESP_DISPLAY
+sendVolumeIconsMode(true); 
+#endif
     encoderDir[ENC_R].reset();
     seq.cycle_touch_element = 0;
     seq.tracktype_or_instrument_assign = 0;
@@ -15481,7 +15507,6 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
 
-    //setCursor_textGrid_small(4, 23);
     display.setCursor(CHAR_width_small * 5, DISPLAY_HEIGHT - CHAR_height_small);
     display.setTextColor(GREY2);
     display.setTextSize(1);
@@ -15499,7 +15524,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 #endif
     display.fillRect(0, 15, 95, 214, GREY4);
     display.fillRect(98, 15, 92, 214, GREY3);
-    display.fillRect(193, 15, 130, 214, GREY4);
+    display.fillRect(193, 15, 127, 214, GREY4);
 
     print_static_text_master_effects();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -16026,7 +16051,7 @@ FLASHMEM void UI_func_information(uint8_t param)
       MicroDexed[0]->keydown(MIDI_G3, 40);
       sysinfo_chord_state = 1;
     }
-    randomSeed(analogRead(0));
+    //randomSeed(analogRead(0));
     if (random(2) == 0) {
       sysinfo_logo_version = 2;
       splash_screen2();
@@ -18525,6 +18550,9 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+sendVolumeIconsMode(false); 
+#endif
     registerTouchHandler(handle_touchscreen_msp);
     seq.edit_state = false;
     generic_temp_select_menu = 0;
@@ -18929,6 +18957,10 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+    #if defined ESP_DISPLAY
+sendVolumeIconsMode(true); 
+#endif
+
     encoderDir[ENC_R].reset();
     encoderDir[ENC_L].reset();
     unregisterTouchHandler();
