@@ -21193,6 +21193,9 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       uint8_t idx = scroll_position + i;
       if (idx >= total_menu_items) break;
       render_label(idx, 6 + i);
+      #if defined ESP_DISPLAY
+      delay(1);
+      #endif
     }
   }
 
