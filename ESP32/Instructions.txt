@@ -1,7 +1,9 @@
 Installation Instructions
 
+Only the IPS panel + capacitive touch version of the displays are supported.
+
 Please read carefully the manual at:
 doc/MicroDexed-touch-manual.pdf
 
-about the Waveshare ESP32 display.
+about the ESP32 displays.
 Join us in discord!

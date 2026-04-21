@@ -323,6 +323,11 @@ FLASHMEM void print_current_chord()
 
 extern void sub_step_recording(bool touchinput, uint8_t touchparam);
 
+#if defined GLOW
+extern void remove_glow(void);
+#endif
+bool livemod_touch_state;
+
 FLASHMEM bool handleLiveModButtons(void) {
   bool pressedOne = false;
   const int8_t buttonStep = dexed_live_mod.active_button - 1;
@@ -343,6 +348,9 @@ FLASHMEM bool handleLiveModButtons(void) {
   }
   if (pressedOne) {
     if (dexed_live_mod.active_button > 0) {
+       #if defined ESP_DISPLAY
+      sendEditMode(true);
+      #endif
       helptext_r(F("< > CHANGE MODIFIER VALUE"));
       display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
       print_empty_spaces(38, 1);
@@ -353,6 +361,9 @@ FLASHMEM bool handleLiveModButtons(void) {
     }
     else {
       print_voice_select_default_help();
+       #if defined ESP_DISPLAY
+      sendEditMode(false);
+      #endif
     }
   }
   return pressedOne;
@@ -365,9 +376,7 @@ extern uint8_t edit_pos_global;
 extern bool edit_mode_global;
 extern uint8_t vtw_x;
 extern char g_voice_name[6][11]; // Assuming 6 instances, 10 chars + null terminator
-#if defined GLOW
-extern void remove_glow(void);
-#endif
+
 void virtual_typewriter_init(int8_t pos);
 
 bool virtual_typewriter_touchloop(char* out_key);

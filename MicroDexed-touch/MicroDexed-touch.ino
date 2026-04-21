@@ -1146,6 +1146,8 @@ FLASHMEM void init_default_sample_voice_group_config()
 #if defined ESP_DISPLAY
 extern void sendScreensaverStop();
 extern void sendGlowClear();
+bool espAlive = false;
+uint32_t lastESPHandshakeTime = 0;
 
 FLASHMEM void sendVersion() {
   const char* version = VERSION;   // defined as "1.9.939"
@@ -1157,25 +1159,36 @@ FLASHMEM void sendVersion() {
 }
 
 FLASHMEM void sendMinEspVersion() {
-    const char* version = MIN_VERSION_ESP_DISPLAY;
-    uint8_t len = strlen(version);
-    uint8_t payload[1 + len];
-    payload[0] = len;
-    memcpy(&payload[1], version, len);
-    sendPacket(CMD_MIN_VERSION_ESP, payload, 1 + len);
+  const char* version = MIN_VERSION_ESP_DISPLAY;
+  uint8_t len = strlen(version);
+  uint8_t payload[1 + len];
+  payload[0] = len;
+  memcpy(&payload[1], version, len);
+  sendPacket(CMD_MIN_VERSION_ESP, payload, 1 + len);
+}
+
+FLASHMEM void resendEspHandshake() {
+  sendVersion();
+  delay(20);
+  sendMinEspVersion();
+  delay(20);
+  sendScreensaverStop();
 }
 
 #endif
 
 #if defined ESP_DISPLAY
 void sendVolumeIconsMode(bool volumeIcons) {
-    static bool lastMode = true;
-    if (volumeIcons == lastMode) return;
-    lastMode = volumeIcons;
-    uint8_t payload = volumeIcons ? 1 : 0;
-    sendPacket(CMD_SET_VOLUME_ICONS_MODE, &payload, 1);
+  static bool lastMode = true;
+  if (volumeIcons == lastMode) return;
+  lastMode = volumeIcons;
+  uint8_t payload = volumeIcons ? 1 : 0;
+  sendPacket(CMD_SET_VOLUME_ICONS_MODE, &payload, 1);
 }
-static bool lastVolumeIconsMode = true;
+//static bool lastVolumeIconsMode = true;
+uint32_t lastHeartbeatSend = 0;
+uint32_t lastHeartbeatReceive = 0;
+bool handshakeComplete = false;   // true when both versions received and compatible
 #endif
 
 FLASHMEM void setup()
@@ -1615,16 +1628,20 @@ FLASHMEM void setup()
 #endif
 
 #ifdef ESP_DISPLAY
- AudioNoInterrupts();
+  AudioNoInterrupts();
   delay(100);
   sendVersion();
   delay(100);
- sendMinEspVersion();  
+  sendMinEspVersion();
+  lastESPHandshakeTime = millis();
   // sendScreensaverStop();
   // delay(20);
   // sendGlowClear();
   // sendGlowStop();
-   AudioInterrupts();
+  AudioInterrupts();
+
+  lastHeartbeatSend = millis();
+  lastHeartbeatReceive = millis();
 #endif
 
   AudioNoInterrupts();
@@ -2993,18 +3010,19 @@ uint32_t lastGlowUpdate = 0;
 #endif
 
 #if defined ESP_DISPLAY
- extern void  sendEditMode(bool);
+extern void  sendEditMode(bool);
 #endif
 
 void loop()
 {
 
 #if defined ESP_DISPLAY
-static uint8_t lastEditState = 0;
-if (seq.edit_state != lastEditState) {
+  static uint8_t lastEditState = 0;
+  if (seq.edit_state != lastEditState) {
     lastEditState = seq.edit_state;
     sendEditMode(seq.edit_state);
-}
+  }
+
 #endif
 
   // Chords Detection
@@ -3018,7 +3036,7 @@ if (seq.edit_state != lastEditState) {
     resetChordBuffer();
   }
 
-  // MM Test Stuff
+  // MAM functions
 
 #ifdef MUSIKANDMORE
   if (configuration.sys.sus_pedal)
@@ -3115,25 +3133,37 @@ if (seq.edit_state != lastEditState) {
 
   LCDML.loop();
 
-// #if defined ESP_DISPLAY
-// uint8_t currentFuncID = LCDML.FUNC_getID();
-// if (currentFuncID != lastFuncID) {
-//     lastFuncID = currentFuncID;
-//     bool volumeIcons = true;
-//     // Check if current page is one of the special pages
-//     if (currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) ||
-//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) ||
-//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) ||
-//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) ||
-//         currentFuncID == LCDML.OTHER_getIDFromFunction(UI_func_song)) {
-//         volumeIcons = false;
-//     }
-//     if (volumeIcons != lastVolumeIconsMode) {
-//         sendVolumeIconsMode(volumeIcons);
-//         lastVolumeIconsMode = volumeIcons;
-//     }
-// }
-// #endif
+
+#if defined ESP_DISPLAY
+  // If we haven't received any packet from ESP for 3 seconds, assume it's gone
+  if (espAlive && (millis() - lastESPHandshakeTime > 3000)) {
+    espAlive = false;
+    // Resend handshake immediately to wake up ESP
+    sendVersion();
+    sendMinEspVersion();
+    lastESPHandshakeTime = millis();
+  }
+
+  uint32_t now = millis();
+
+  if (handshakeComplete) {
+    // Send heartbeat every 1 seconds
+    if (now - lastHeartbeatSend >= 1000) {
+      lastHeartbeatSend = now;
+      uint8_t dummy = 0;
+      sendPacket(CMD_HEARTBEAT, &dummy, 1);
+    }
+    // Timeout after 2 seconds of no heartbeat
+    if (now - lastHeartbeatReceive >= 3000) {
+      handshakeComplete = false;
+      // Re-send handshake to ESP
+      sendVersion();
+      sendMinEspVersion();
+      lastHeartbeatReceive = now;
+      lastHeartbeatSend = now;
+    }
+  }
+#endif
 
   if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found)
   {
@@ -3147,7 +3177,7 @@ if (seq.edit_state != lastEditState) {
       // menu
       handle_touchscreen_menu();
       scope.draw_scope(230, 18, 87, 64);
-     
+
     }
 
     if (back_button_touch_page_check_and_init_done == false) {

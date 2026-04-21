@@ -1161,7 +1161,6 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
 
 
 #if defined ESP_DISPLAY
- //extern void sendEditMode(bool);
 
 FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str)
 {
@@ -3570,27 +3569,28 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
 #endif
 
 #if defined(ESP_DISPLAY)
-        // Map values to uint8_t (all fit in 0-255)
-        uint8_t val8, min8, max8;
-        if (limit_min < 0) {
-            // Pan range -99..99 -> 1..199
-            val8 = input_value + 100;
-            min8 = 1;
-            max8 = 199;
-        } else {
-            val8 = constrain(input_value, 0, 255);
-            min8 = limit_min;
-            max8 = limit_max;
-        }
-        uint8_t highlight = 0;
-        if (generic_temp_select_menu == selected_option) {
-            highlight = seq.edit_state ? 2 : 1;
-        }
-        display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  // Map values to uint8_t (all fit in 0-255)
+  uint8_t val8, min8, max8;
+  if (limit_min < 0) {
+    // Pan range -99..99 -> 1..199
+    val8 = input_value + 100;
+    min8 = 1;
+    max8 = 199;
+  }
+  else {
+    val8 = constrain(input_value, 0, 255);
+    min8 = limit_min;
+    max8 = limit_max;
+  }
+  uint8_t highlight = 0;
+  if (generic_temp_select_menu == selected_option) {
+    highlight = seq.edit_state ? 2 : 1;
+  }
+  display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
 #endif
 
 #if defined(ESP_DISPLAY)
-esp_draw=false;
+  esp_draw = false;
 #endif
 
   setModeColor(selected_option);
@@ -3638,8 +3638,8 @@ esp_draw=false;
       display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + split, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
     }
   }
- #if defined(ESP_DISPLAY)
-esp_draw=true;
+#if defined(ESP_DISPLAY)
+  esp_draw = true;
 #endif
 
 }
@@ -3669,7 +3669,7 @@ FLASHMEM void print_small_intbar(uint8_t x, uint8_t y, uint8_t input_value, uint
   //set_glow(x,y,input_value,selected_option,0,100,show_zero ? NULL : (const char*)F("OFF"));
 }
 
-bool esp_draw=true;
+bool esp_draw = true;
 
 FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
 {
@@ -3679,15 +3679,15 @@ FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint
 #endif
 
 #if defined(ESP_DISPLAY)
-       uint8_t highlight = 0;
-        if (generic_temp_select_menu == selected_option) {
-            highlight = seq.edit_state ? 2 : 1;
-        }
-        display.drawESPPanBar(x, y, input_value, highlight); 
+  uint8_t highlight = 0;
+  if (generic_temp_select_menu == selected_option) {
+    highlight = seq.edit_state ? 2 : 1;
+  }
+  display.drawESPPanBar(x, y, input_value, highlight);
 #endif
 
 #if defined(ESP_DISPLAY)
-esp_draw=false;
+  esp_draw = false;
 #endif
   setModeColor(selected_option);
   _print_panbar_value(input_value);
@@ -3697,7 +3697,7 @@ esp_draw=false;
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, 5 * CHAR_width_small - 2, 7 - 2, COLOR_BACKGROUND);
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + input_value / 1.60, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
 #if defined(ESP_DISPLAY)
-esp_draw=true;
+  esp_draw = true;
 #endif
 }
 
@@ -4140,16 +4140,39 @@ static uint8_t packetType = 0;
 static uint8_t touchIndex = 0;
 static bool inTouchPacket = false;
 
+
+extern bool  espAlive;
+extern void  sendVersion();
+extern void sendMinEspVersion();
+extern uint32_t lastESPHandshakeTime;
+extern void draw_menu_ui_icons();
+
 void redraw_current_page_or_fallback()
 {
-  int id = LCDML.MENU_getLastActiveFunctionID();
-  if (id != _LCDML_NO_FUNC) {
-    LCDML.OTHER_jumpToID(id);
-  }
-  else {
-    LCDML.FUNC_goBackToMenu();
-  }
+display.fillScreen(COLOR_BACKGROUND);
+             LCDML.OTHER_jumpToID(0);
+              delay(10);
+            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+              draw_menu_ui_icons();
+            draw_back_touchbutton();
+
+  //           LCDML.OTHER_setCursorToID(LCDML.MENU_getLastCursorPositionID());
+  // int id = LCDML.MENU_getLastActiveFunctionID();
+  // if (id != _LCDML_NO_FUNC) {
+  //   LCDML.OTHER_jumpToID(id);
+  // }
+  // else {
+  //   LCDML.FUNC_goBackToMenu();
+  // }
+
 }
+
+
+#if defined ESP_DISPLAY
+extern  uint32_t lastHeartbeatSend;
+extern  uint32_t lastHeartbeatReceive;
+extern  bool handshakeComplete;   
+#endif
 
 void processIncomingSerial(bool& ackReceived) {
   while (Serial4.available() > 0) {
@@ -4158,6 +4181,7 @@ void processIncomingSerial(bool& ackReceived) {
     if (data == ACK_BYTE) {
       ackReceived = true;
     }
+   
     else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD || data == 0xAE) {
       packetType = data;
       inTouchPacket = true;
@@ -4167,6 +4191,7 @@ void processIncomingSerial(bool& ackReceived) {
       redraw_current_page_or_fallback();
     }
     else if (data == 0xBB && inTouchPacket) {
+
       if (packetType == 0xAA && touchIndex == 2) {
         uint16_t esp_touch_x = touchBuffer[0];
         uint16_t esp_touch_y = touchBuffer[1];
@@ -4204,6 +4229,13 @@ void processIncomingSerial(bool& ackReceived) {
       inTouchPacket = false;
       touchIndex = 0;
       packetType = 0;
+
+    if (!handshakeComplete) {
+    handshakeComplete = true;
+    lastHeartbeatReceive = millis();
+}
+lastESPHandshakeTime = millis();
+
     }
     else if (data == 0xCC) {
       // release
@@ -4222,6 +4254,16 @@ void processIncomingSerial(bool& ackReceived) {
       touchIndex = 0;
       packetType = 0;
     }
+
+else if (data == 0x98) {
+    // ESP requesting handshake (e.g., after reboot)
+    // Resend our version information
+    sendVersion();
+    sendMinEspVersion();
+    lastESPHandshakeTime = millis();
+  
+}
+
     else if (inTouchPacket && touchIndex < 2) {
       touchBuffer[touchIndex++] = data;
     }
@@ -4235,6 +4277,7 @@ void processIncomingSerial(bool& ackReceived) {
 }
 #endif
 
+extern bool livemod_touch_state;
 
 FLASHMEM void lcdml_menu_control(void)
 {
@@ -4338,9 +4381,11 @@ FLASHMEM void lcdml_menu_control(void)
     break;
 
   case 15: // enc r
+    //phtodo xxxxxxxxxxxxxxxxxxx
     LCDML.BT_enter();
     encoderDir[ENC_R].ButtonShort(true);
     esp_buttonNumber = 99;
+    //phtodo xxxxxxxxxxxxxxxxxxxxxxxxx
 
     break;
 
@@ -5189,10 +5234,10 @@ FLASHMEM void lcdml_menu_control(void)
             ui_liveSeq->notifyLeftEncoderShort();
           }
           else {
-          
+
             LCDML.BT_quit();
             LCDML.SCREEN_resetTimer(); // reset timer on exiting screensaver through back key
-           
+
           }
         }
       }
@@ -6322,7 +6367,7 @@ FLASHMEM void pattern_preview_in_probability_editor(uint8_t line, uint8_t patter
 
   display.setTextColor(col, GREY4);
   display.print(buf);          // prints the 16 characters
-  
+
 }
 
 // FLASHMEM void pattern_preview_in_probability_editor(uint8_t line, uint8_t patternno)
@@ -6445,17 +6490,17 @@ FLASHMEM void UI_func_seq_probabilities(uint8_t param)
     display.print(F("PATTERN   CHANCE   VEL.+-   PREVIEW"));
 
     // Draw all brackets once (they never change)
-display.setTextSize(1);
-display.setTextColor(GREY1, COLOR_BACKGROUND);
-for (uint8_t line = 0; line < 14; line++) {
-    // Opening bracket at column 20 (adjust as needed)
-    setCursor_textGrid_small(28, 6 + line);
-    display.print("[");
-    // Closing bracket after 16 characters (column 20+16 = 36)
-    setCursor_textGrid_small(45, 6 + line);
-    display.print("]");
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-}
+    display.setTextSize(1);
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
+    for (uint8_t line = 0; line < 14; line++) {
+      // Opening bracket at column 20 (adjust as needed)
+      setCursor_textGrid_small(28, 6 + line);
+      display.print("[");
+      // Closing bracket after 16 characters (column 20+16 = 36)
+      setCursor_textGrid_small(45, 6 + line);
+      display.print("]");
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -6708,9 +6753,9 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
     draw_button_on_grid(36, 1, "PREV.", "", 0);
-    #if defined ESP_DISPLAY
- display.drawLocalBitmap(CHAR_width_small * 38 + 4, CHAR_height * 1 + 8,BITMAP_PLAY, GREEN);
-    #else
+#if defined ESP_DISPLAY
+    display.drawLocalBitmap(CHAR_width_small * 38 + 4, CHAR_height * 1 + 8, BITMAP_PLAY, GREEN);
+#else
     drawBitmap(CHAR_width_small * 38 + 4, CHAR_height * 1 + 8, special_chars[BITMAP_PLAY], 8, 8, GREEN);
 #endif
     draw_button_on_grid(45, 1, "MIDI", "LEARN", 0);
@@ -7030,8 +7075,8 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   uint16_t waveColor, uint16_t bgColor) {
   if (toX > fromX) {
 
-  #if defined ESP_DISPLAY
-lastPixelColor=254;
+#if defined ESP_DISPLAY
+    lastPixelColor = 254;
 #endif
 
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
@@ -8984,10 +9029,10 @@ FLASHMEM void seq_printAllVelocitySteps()
         if (seq.vel[seq.active_pattern][i] > 209)
         {
 #if defined ESP_DISPLAY
- display.drawLocalBitmap((i - 1) * CHAR_width + 13, 2 * CHAR_height + 7, BITMAP_PITCHED, COLOR_PITCHSMP);
+          display.drawLocalBitmap((i - 1) * CHAR_width + 13, 2 * CHAR_height + 7, BITMAP_PITCHED, COLOR_PITCHSMP);
 #else
           drawBitmap((i - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[BITMAP_PITCHED], 8, 8, COLOR_PITCHSMP);
-          #endif
+#endif
         }
       }
     }
@@ -9045,11 +9090,11 @@ FLASHMEM void seq_print_single_velocity_step(uint8_t step, int color)
     {
       if (seq.vel[seq.active_pattern][step] > 209)
       {
-        #if defined ESP_DISPLAY
- display.drawLocalBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, BITMAP_PITCHED, COLOR_PITCHSMP);
-        #else
+#if defined ESP_DISPLAY
+        display.drawLocalBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, BITMAP_PITCHED, COLOR_PITCHSMP);
+#else
         drawBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[22], 8, 8, COLOR_PITCHSMP);
-        #endif
+#endif
       }
     }
   }
@@ -13252,8 +13297,8 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
-    #if defined ESP_DISPLAY
-sendVolumeIconsMode(false); 
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(false);
 #endif
     // setup function
     seq.menu = 0;
@@ -13364,7 +13409,7 @@ sendVolumeIconsMode(false);
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
 #if defined ESP_DISPLAY
-sendVolumeIconsMode(true); 
+    sendVolumeIconsMode(true);
 #endif
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
@@ -13494,7 +13539,7 @@ FLASHMEM void UI_func_song(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
 #if defined ESP_DISPLAY
-sendVolumeIconsMode(false); 
+    sendVolumeIconsMode(false);
 #endif
 
     // setup function
@@ -14001,7 +14046,7 @@ sendVolumeIconsMode(false);
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
 #if defined ESP_DISPLAY
-sendVolumeIconsMode(true); 
+    sendVolumeIconsMode(true);
 #endif
     encoderDir[ENC_R].reset();
     seq.cycle_touch_element = 0;
@@ -15335,7 +15380,7 @@ FLASHMEM void print_delay_multiplier(uint8_t instance, uint8_t param)
     print_formatted_number(configuration.fx.delay_multiplier[instance], 2, 18, 1);
   }
   // display.print(configuration.fx.delay_multiplier[instance]);
-display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.print(F("x"));
   print_delay_time(instance, 99);
   set_global_delay_filter(instance);
@@ -17850,11 +17895,11 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 
   if (fm.sd_folder_depth > 0)
   {
-    #if defined ESP_DISPLAY
+#if defined ESP_DISPLAY
     display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, YELLOW);
-    #else
+#else
     drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, YELLOW);
-    #endif
+#endif
 
     display.setCursor(CHAR_width_small * 3 + xoffset * CHAR_width_small, 4 * 11);
     display.print("..");
@@ -17862,11 +17907,11 @@ FLASHMEM void sd_printDirectory(bool forceReload)
   else
   {
 
- #if defined ESP_DISPLAY
+#if defined ESP_DISPLAY
     display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
-    #else
+#else
     drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, COLOR_BACKGROUND);
-    #endif
+#endif
     display.setCursor(CHAR_width_small * 3 + xoffset * CHAR_width_small, 4 * 11);
     display.print("/ ");
   }
@@ -17907,9 +17952,9 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     // Draw the top line with proper highlight if needed
     if (fm.sd_folder_depth > 0) {
       // show ".." highlighted so cursor is visibly on it
- #if defined ESP_DISPLAY
- display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
- #else
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
       drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, YELLOW);
 #endif
       display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP); // inverted highlight
@@ -17917,9 +17962,9 @@ FLASHMEM void sd_printDirectory(bool forceReload)
       display.print("..");
     }
     else {
- #if defined ESP_DISPLAY
- display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
- #else
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
       drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, COLOR_BACKGROUND);
 #endif
       display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
@@ -17957,9 +18002,9 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 
     if (sd_entry.isDirectory)
     {
-       #if defined ESP_DISPLAY
- display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, BITMAP_FOLDER, YELLOW);
-       #else
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, BITMAP_FOLDER, YELLOW);
+#else
       drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[BITMAP_FOLDER], 8, 8, YELLOW);
 #endif
       if (f == fm.sd_selected_file && fm.sd_parent_folder == false)
@@ -17974,9 +18019,9 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     }
     else
     {
- #if defined ESP_DISPLAY
- display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, BITMAP_FOLDER, COLOR_BACKGROUND);
- #else
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
       drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[BITMAP_FOLDER], 8, 8, COLOR_BACKGROUND);
 #endif
 
@@ -18101,7 +18146,7 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
 
 FLASHMEM void print_note_name_and_octave(uint8_t note)
 {
-  char buffer[6]; 
+  char buffer[6];
   if (note == 0) {
     strcpy(buffer, "C1 ");
   }
@@ -18551,7 +18596,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
 #if defined ESP_DISPLAY
-sendVolumeIconsMode(false); 
+    sendVolumeIconsMode(false);
 #endif
     registerTouchHandler(handle_touchscreen_msp);
     seq.edit_state = false;
@@ -18957,8 +19002,8 @@ sendVolumeIconsMode(false);
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
-    #if defined ESP_DISPLAY
-sendVolumeIconsMode(true); 
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(true);
 #endif
 
     encoderDir[ENC_R].reset();
@@ -21193,9 +21238,9 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       uint8_t idx = scroll_position + i;
       if (idx >= total_menu_items) break;
       render_label(idx, 6 + i);
-      #if defined ESP_DISPLAY
+#if defined ESP_DISPLAY
       delay(1);
-      #endif
+#endif
     }
   }
 
@@ -22381,7 +22426,7 @@ FLASHMEM void printLiveModButton(int8_t step) {
   if (seq.cycle_touch_element != 1) {
     char buf[5];
     snprintf(buf, 5, "%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
-    const TouchButton::Color c = (dexed_live_mod.active_button - 1) == step ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL;
+    const TouchButton::Color c = (dexed_live_mod.active_button - 1) == step ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
     TouchButton::drawButton(GRID.X[step], GRID.Y[5] - 23, labels[step], buf, c);
   }
 }
@@ -22697,6 +22742,9 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+    sendEditMode(false);
+#endif
     registerTouchHandler(handle_touchscreen_voice_select);
     registerScope(217, 40, 50, 48);
     dexed_onscreen_algo = 88;
@@ -22938,6 +22986,11 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
   {
     unregisterTouchHandler();
     unregisterScope();
+#if defined ESP_DISPLAY
+    if (seq.edit_state == false)
+      sendEditMode(false);
+#endif
+
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     dexed_live_mod.active_button = 0;
