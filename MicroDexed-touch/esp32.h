@@ -11,7 +11,7 @@
 
 // #define PACKETS_PER_BATCH   10      // Send this many packets before requesting ACK
 // #define BATCH_SYNC_CMD      99      // Command code for SYNC packet
- #define ACK_BYTE            0xAD
+#define ACK_BYTE            0xAD
 // #define ACK_TIMEOUT_MS      40       // Time to wait for ACK
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
@@ -21,7 +21,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.946"
+#define MIN_VERSION_ESP_DISPLAY "1.9.947"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -59,9 +59,7 @@
 #define CMD_SET_VOLUME_ICONS_MODE 101
 #define CMD_SET_EDIT_MODE 102
 #define CMD_MIN_VERSION_ESP 103
-
-#define CMD_HEARTBEAT 99
-
+#define CMD_MIDI_DATA  205
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
 void sendEditMode(bool);

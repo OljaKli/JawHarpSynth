@@ -1186,8 +1186,6 @@ void sendVolumeIconsMode(bool volumeIcons) {
   sendPacket(CMD_SET_VOLUME_ICONS_MODE, &payload, 1);
 }
 //static bool lastVolumeIconsMode = true;
-uint32_t lastHeartbeatSend = 0;
-uint32_t lastHeartbeatReceive = 0;
 bool handshakeComplete = false;   // true when both versions received and compatible
 #endif
 
@@ -1639,9 +1637,6 @@ FLASHMEM void setup()
   // sendGlowClear();
   // sendGlowStop();
   AudioInterrupts();
-
-  lastHeartbeatSend = millis();
-  lastHeartbeatReceive = millis();
 #endif
 
   AudioNoInterrupts();
@@ -3132,38 +3127,6 @@ void loop()
 #endif
 
   LCDML.loop();
-
-
-#if defined ESP_DISPLAY
-  // If we haven't received any packet from ESP for 3 seconds, assume it's gone
-  if (espAlive && (millis() - lastESPHandshakeTime > 3000)) {
-    espAlive = false;
-    // Resend handshake immediately to wake up ESP
-    sendVersion();
-    sendMinEspVersion();
-    lastESPHandshakeTime = millis();
-  }
-
-  uint32_t now = millis();
-
-  if (handshakeComplete) {
-    // Send heartbeat every 1 seconds
-    if (now - lastHeartbeatSend >= 1000) {
-      lastHeartbeatSend = now;
-      uint8_t dummy = 0;
-      sendPacket(CMD_HEARTBEAT, &dummy, 1);
-    }
-    // Timeout after 2 seconds of no heartbeat
-    if (now - lastHeartbeatReceive >= 3000) {
-      handshakeComplete = false;
-      // Re-send handshake to ESP
-      sendVersion();
-      sendMinEspVersion();
-      lastHeartbeatReceive = now;
-      lastHeartbeatSend = now;
-    }
-  }
-#endif
 
   if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found)
   {

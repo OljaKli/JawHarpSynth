@@ -4131,7 +4131,7 @@ extern int numTouchPoints;
 #if defined ESP_DISPLAY
 uint8_t esp_function_id = 255;
 bool function_jump_pending = false;
-static uint8_t touchBuffer[2];
+static uint8_t touchBuffer[16];
 uint8_t esp_buttonNumber = touchBuffer[0];
 static uint8_t esp_pending_button = 255;      // 255 = no pending press
 static uint32_t esp_press_start = 0;
@@ -4149,29 +4149,113 @@ extern void draw_menu_ui_icons();
 
 void redraw_current_page_or_fallback()
 {
-display.fillScreen(COLOR_BACKGROUND);
-             LCDML.OTHER_jumpToID(0);
-              delay(10);
-            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-              draw_menu_ui_icons();
-            draw_back_touchbutton();
-
-  //           LCDML.OTHER_setCursorToID(LCDML.MENU_getLastCursorPositionID());
-  // int id = LCDML.MENU_getLastActiveFunctionID();
-  // if (id != _LCDML_NO_FUNC) {
-  //   LCDML.OTHER_jumpToID(id);
-  // }
-  // else {
-  //   LCDML.FUNC_goBackToMenu();
-  // }
-
+  display.fillScreen(COLOR_BACKGROUND);
+  LCDML.OTHER_jumpToID(0);
+  delay(10);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  draw_menu_ui_icons();
+  draw_back_touchbutton();
 }
 
-
 #if defined ESP_DISPLAY
-extern  uint32_t lastHeartbeatSend;
-extern  uint32_t lastHeartbeatReceive;
-extern  bool handshakeComplete;   
+// MIDI handlers from the main sketch
+extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleControlChange(byte inChannel, byte inCtrl, byte inValue);
+extern void handleProgramChange(byte inChannel, byte inProgram);
+extern void handleAfterTouch(byte inChannel, byte inPressure);
+extern void handlePitchBend(byte inChannel, int16_t inPitch);
+
+void processMidiDataFromESP(uint8_t* data, uint8_t len) {
+  uint8_t idx = 0;
+  uint8_t runningStatus = 0;
+ 
+  while (idx < len) {
+    uint8_t byte = data[idx];
+
+    // Check for status byte (MSB set and not a system common message)
+    if ((byte & 0x80) && (byte & 0xF0) != 0xF0) {
+      runningStatus = byte;
+      idx++;
+      uint8_t cmd = runningStatus & 0xF0;
+      uint8_t channel = (runningStatus & 0x0F) + 1; // convert to 1‑16
+
+      // Note On / Off
+      if (cmd == 0x90 || cmd == 0x80) {
+        if (idx + 1 >= len) break;
+        uint8_t note = data[idx++];
+        uint8_t velocity = data[idx++];
+        bool isNoteOn = (cmd == 0x90 && velocity > 0);
+        if (cmd == 0x90 && velocity == 0) isNoteOn = false;
+
+        if (isNoteOn) {
+          handleNoteOn(channel, note, velocity, 0);
+        }
+        else {
+          handleNoteOff(channel, note, velocity, 0);
+        }
+      }
+      // Control Change
+      else if (cmd == 0xB0) {
+        if (idx + 1 >= len) break;
+        uint8_t controller = data[idx++];
+        uint8_t value = data[idx++];
+        handleControlChange(channel, controller, value);
+      }
+      // Program Change (1 byte)
+      else if (cmd == 0xC0) {
+        if (idx >= len) break;
+        uint8_t program = data[idx++];
+        handleProgramChange(channel, program);
+      }
+      // Channel Aftertouch (1 byte)
+      else if (cmd == 0xD0) {
+        if (idx >= len) break;
+        uint8_t pressure = data[idx++];
+        handleAfterTouch(channel, pressure);
+      }
+      // Pitch Bend (2 bytes)
+      else if (cmd == 0xE0) {
+        if (idx + 1 >= len) break;
+        uint8_t lsb = data[idx++];
+        uint8_t msb = data[idx++];
+        int16_t pitch = ((msb << 7) | lsb) - 8192;
+        handlePitchBend(channel, pitch);
+      }
+      // Other 2‑byte commands (not implemented)
+      else {
+        if (idx + 1 >= len) break;
+        idx += 2;
+      }
+    }
+    // Running status (data byte only)
+    else if (runningStatus != 0) {
+      uint8_t cmd = runningStatus & 0xF0;
+      if (cmd == 0x90 || cmd == 0x80) {
+        if (idx + 1 >= len) break;
+        uint8_t note = data[idx++];
+        uint8_t velocity = data[idx++];
+        bool isNoteOn = (cmd == 0x90 && velocity > 0);
+        if (cmd == 0x90 && velocity == 0) isNoteOn = false;
+        uint8_t channel = (runningStatus & 0x0F) + 1;
+        if (isNoteOn) {
+          handleNoteOn(channel, note, velocity, 0);
+        }
+        else {
+          handleNoteOff(channel, note, velocity, 0);
+        }
+      }
+      else {
+        // skip one data byte for other running status messages
+        idx++;
+      }
+    }
+    else {
+      // Unexpected byte – abort this packet
+      break;
+    }
+  }
+}
 #endif
 
 void processIncomingSerial(bool& ackReceived) {
@@ -4181,17 +4265,25 @@ void processIncomingSerial(bool& ackReceived) {
     if (data == ACK_BYTE) {
       ackReceived = true;
     }
-   
-    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD || data == 0xAE) {
+
+    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
+      data == 0xAE || data == CMD_MIDI_DATA) {
       packetType = data;
       inTouchPacket = true;
       touchIndex = 0;
     }
+
     else if (data == 0xAE && touchIndex == 0) {
       redraw_current_page_or_fallback();
     }
     else if (data == 0xBB && inTouchPacket) {
 
+      if (packetType == CMD_MIDI_DATA && touchIndex >= 1) {
+        uint8_t len = touchBuffer[0];
+        if (len > 0 && touchIndex >= 1 + len) {
+          processMidiDataFromESP(&touchBuffer[1], len);
+        }
+      }
       if (packetType == 0xAA && touchIndex == 2) {
         uint16_t esp_touch_x = touchBuffer[0];
         uint16_t esp_touch_y = touchBuffer[1];
@@ -4229,13 +4321,6 @@ void processIncomingSerial(bool& ackReceived) {
       inTouchPacket = false;
       touchIndex = 0;
       packetType = 0;
-
-    if (!handshakeComplete) {
-    handshakeComplete = true;
-    lastHeartbeatReceive = millis();
-}
-lastESPHandshakeTime = millis();
-
     }
     else if (data == 0xCC) {
       // release
@@ -4255,16 +4340,16 @@ lastESPHandshakeTime = millis();
       packetType = 0;
     }
 
-else if (data == 0x98) {
-    // ESP requesting handshake (e.g., after reboot)
-    // Resend our version information
-    sendVersion();
-    sendMinEspVersion();
-    lastESPHandshakeTime = millis();
-  
-}
+    else if (data == 0x98) {
+      // ESP requesting handshake (e.g., after reboot)
+      // Resend our version information
+      sendVersion();
+      sendMinEspVersion();
+      lastESPHandshakeTime = millis();
 
-    else if (inTouchPacket && touchIndex < 2) {
+    }
+
+    else if (inTouchPacket && touchIndex < sizeof(touchBuffer)) {
       touchBuffer[touchIndex++] = data;
     }
 

@@ -238,7 +238,7 @@ void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
   for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
   Serial4.write(checksum);
-   delayMicroseconds(180);
+  delayMicroseconds(180);
 }
 
 void sendGlowClear() {
@@ -275,8 +275,8 @@ FLASHMEM espdisplay::espdisplay(uint8_t c)
 //=======================================================================
 
 void sendEditMode(bool editState) {
-    uint8_t payload = editState ? 1 : 0;
-    sendPacket(CMD_SET_EDIT_MODE, &payload, 1);
+  uint8_t payload = editState ? 1 : 0;
+  sendPacket(CMD_SET_EDIT_MODE, &payload, 1);
 }
 
 void espdisplay::drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t highlight) {
@@ -449,27 +449,27 @@ void espdisplay::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
       uint8_t idx = getColorIndex(color);
       if (idx != 255) {
         // Indexed fillRect
-        uint8_t payload[7] = { 
-          lowByte(x), 
-          highByte(x), 
-          (uint8_t)y, 
-          lowByte(w), 
-          highByte(w), 
-          (uint8_t)h, 
+        uint8_t payload[7] = {
+          lowByte(x),
+          highByte(x),
+          (uint8_t)y,
+          lowByte(w),
+          highByte(w),
+          (uint8_t)h,
           idx };
         sendPacket(CMD_FILLRECT_INDEXED, payload, 7);
         lastFillColor = color;
       }
       else {
         // Full fillRect
-        uint8_t payload[8] = { 
-          lowByte(x), 
-          highByte(x), 
-          (uint8_t)y, 
-          lowByte(w), 
-          highByte(w), 
-          (uint8_t)h, 
-          lowByte(color), 
+        uint8_t payload[8] = {
+          lowByte(x),
+          highByte(x),
+          (uint8_t)y,
+          lowByte(w),
+          highByte(w),
+          (uint8_t)h,
+          lowByte(color),
           highByte(color) };
         sendPacket(CMD_FILLRECT, payload, 8);
         lastFillColor = color;
@@ -778,13 +778,13 @@ void espdisplay::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
       uint8_t idx = getColorIndex(color);
       if (idx != 255) {
         // Indexed line
-        uint8_t payload[7] = { 
-          lowByte(x0), 
-          highByte(x0), 
-          (uint8_t)y0, 
-          lowByte(x1), 
-          highByte(x1), 
-          (uint8_t)y1, 
+        uint8_t payload[7] = {
+          lowByte(x0),
+          highByte(x0),
+          (uint8_t)y0,
+          lowByte(x1),
+          highByte(x1),
+          (uint8_t)y1,
           idx };
         sendPacket(CMD_DRAWLINE_INDEXED, payload, 7);
         lastLineColor = color;
@@ -821,7 +821,7 @@ void espdisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
 
   if (esp_draw) {
     if (color == lastLineColor) {
-      uint8_t payload[6]; 
+      uint8_t payload[6];
       payload[0] = lowByte(x);
       payload[1] = highByte(x);
       payload[2] = (uint8_t)y;
@@ -836,10 +836,10 @@ void espdisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
         // Indexed rect
         uint8_t payload[7] = {
         lowByte(x),
-        highByte(x), 
+        highByte(x),
         (uint8_t)y,
-        lowByte(w), 
-        highByte(w), 
+        lowByte(w),
+        highByte(w),
         (uint8_t)h,
         idx };
         sendPacket(CMD_DRAWRECT_INDEXED, payload, 7);
@@ -847,14 +847,14 @@ void espdisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
       }
       else {
         // Full rect
-        uint8_t payload[8] = { 
-          lowByte(x), 
-          highByte(x), 
-          (uint8_t)y, 
-          lowByte(w), 
-          highByte(w), 
-          (uint8_t)h, 
-          lowByte(color), 
+        uint8_t payload[8] = {
+          lowByte(x),
+          highByte(x),
+          (uint8_t)y,
+          lowByte(w),
+          highByte(w),
+          (uint8_t)h,
+          lowByte(color),
           highByte(color) };
         sendPacket(CMD_DRAWRECT, payload, 8);
         lastLineColor = color;
