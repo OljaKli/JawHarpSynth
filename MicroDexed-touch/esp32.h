@@ -7,17 +7,62 @@
 
 #include "Arduino.h"
 #include <stdint.h>
+//10 50   10 40 
 
-#define PACKETS_PER_BATCH   5      // Send this many packets before requesting ACK
-#define BATCH_SYNC_CMD      99      // Command code for SYNC packet
+// #define PACKETS_PER_BATCH   10      // Send this many packets before requesting ACK
+// #define BATCH_SYNC_CMD      99      // Command code for SYNC packet
 #define ACK_BYTE            0xAD
-#define ACK_TIMEOUT_MS      80       // Time to wait for ACK
+// #define ACK_TIMEOUT_MS      40       // Time to wait for ACK
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
 
 #define sint16_t int16_t
 
 #define SYSEX_HEADER_SIZE 3
+
+// Minimum ESP firmware version required by this Teensy firmware
+#define MIN_VERSION_ESP_DISPLAY "1.9.947"
+
+// Command codes (renumbered consecutively, same as on ESP)
+#define CMD_FILLRECT      2
+#define CMD_DRAWRECT      3
+#define CMD_DRAWLINE      4
+#define CMD_FILLCIRCLE    6
+#define CMD_DRAWPIXEL     7
+#define CMD_PRINT_STRING  8
+#define CMD_FILLRECT_FAST     9
+#define CMD_DRAWRECT_FAST     10
+#define CMD_DRAWLINE_FAST     11
+#define CMD_FILLCIRCLE_FAST   12
+#define CMD_DRAWPIXEL_FAST    13
+#define CMD_PRINT_FAST         14
+#define CMD_PRINT_STRING_FAST  15
+#define CMD_SCOPE_DATA 16
+#define CMD_FILLRECT_RAINBOW 17
+#define CMD_SCREENSAVER_START  18
+#define CMD_SCREENSAVER_STOP   19
+#define CMD_FILLRECT_INDEXED     20
+#define CMD_DRAWRECT_INDEXED     21
+#define CMD_DRAWLINE_INDEXED     22
+#define CMD_FILLCIRCLE_INDEXED   23
+#define CMD_DRAWPIXEL_INDEXED    24
+#define CMD_PRINT_STRING_INDEXED 25
+#define CMD_GLOW_START 26
+#define CMD_GLOW_UPDATE 27
+#define CMD_GLOW_STOP 28
+#define CMD_GLOW_CLEAR 29  
+#define CMD_DRAW_BITMAP 30
+#define CMD_DRAW_BITMAP_BG 31
+#define CMD_DRAW_PARAM_BAR 32
+#define CMD_DRAW_PANBAR 33
+#define CMD_VERSION_REPORT 100   // unique command code
+#define CMD_SET_VOLUME_ICONS_MODE 101
+#define CMD_SET_EDIT_MODE 102
+#define CMD_MIN_VERSION_ESP 103
+#define CMD_MIDI_DATA  205
+
+void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
+void sendEditMode(bool);
 
 class espdisplay : public Print
 {
@@ -28,26 +73,24 @@ private:
 public:
 
   espdisplay(uint8_t c);
-
   void begin(uint8_t c = 0);
   void flushSysEx();
   void sendSysEx(uint8_t cmd, uint8_t length, uint8_t* data, bool hasStartEnd);
   void fillSysexData(uint8_t arr[], uint8_t nbArg, ...);
   uint8_t fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...);
-
-void sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y);
-
-  void printStaticLabel(uint8_t id, uint8_t col, uint8_t row);
-  void pushColor(uint16_t color);
   void fillScreen(uint16_t color);
-  inline void fillWindow(uint16_t color)
-  {
-    fillScreen(color);
-  }
+  inline void fillWindow(uint16_t color) { fillScreen(color); }
   void drawPixel(int16_t x, int16_t y, uint16_t color);
   void sendScopeData(uint16_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t* data);
+
+  void drawESPParamBar(uint8_t x, uint8_t y, uint8_t value, uint8_t min, uint8_t max,
+    uint8_t highlight, bool show_bar, const char* zero_name = nullptr);
+  void drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t highlight);
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
   void fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h);
+
+  void drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint16_t color);
+  void drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint16_t color, uint16_t bg);
 
   void setRotation(uint8_t r);
   void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
@@ -82,7 +125,7 @@ void sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y);
 
   void drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
   void fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
-  
+
   void drawBitmap(int16_t x, int16_t y, const uint8_t* bitmap, int16_t w,
     int16_t h, uint16_t color);
   void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
@@ -139,7 +182,7 @@ void sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y);
   // virtual size_t write(uint8_t);
   // virtual size_t write(const uint8_t* buffer, size_t size);
 
- size_t write(uint8_t);
+  size_t write(uint8_t);
   size_t write(const uint8_t* buffer, size_t size);
 
   void repeatWrite(const uint8_t* buffer, size_t size, uint8_t nbRepeat);
@@ -164,7 +207,7 @@ void sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y);
   }
 
   void drawFontChar(unsigned int c);
-  
+
   // added support for drawing strings/numbers/floats with centering
   // modified from tft_ili9341_ESP github library
 

@@ -26,22 +26,22 @@ UI_LiveSeq_PianoRoll* ui_pianoroll;
 
 FLASHMEM void UI_LiveSeq_PianoRoll::storeCurrentStateForUndo() {
   quantizationUndoState.clear();
-  
+
   // Only store state for regular tracks (0-11) or song notes track (12)
   if (data.activeTrack == SONG_MODE_MUTE_TRACK) {
     return; // Skip mute automation track
   }
-  
+
   quantizationUndoState.track = data.activeTrack;
   quantizationUndoState.layer = selectedLayer;
   quantizationUndoState.quantizeLevel = quantizeLevel;
-  
+
   if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
     // Store all song notes in selected layer for undo
     for (const auto& patternEntry : data.songEvents) {
       uint16_t songPatternIndex = patternEntry.first;
       const auto& patternEvents = patternEntry.second; // This is a vector<MidiEvent>
-      
+
       // Collect NoteOn events in selected layer
       for (size_t i = 0; i < patternEvents.size(); i++) {
         const auto& event = patternEvents[i];
@@ -52,24 +52,24 @@ FLASHMEM void UI_LiveSeq_PianoRoll::storeCurrentStateForUndo() {
           noteState.songPatternIndex = songPatternIndex;
           noteState.noteOn = event;
           noteState.indexInData = i;
-          
+
           // Find matching NoteOff
           bool foundNoteOff = false;
           for (size_t j = 0; j < patternEvents.size(); j++) {
             const auto& offEvent = patternEvents[j];
             if (offEvent.event == midi::NoteOff &&
-                offEvent.layer == event.layer &&
-                offEvent.track == event.track &&
-                offEvent.note_in == event.note_in &&
-                offEvent.note_in_velocity == event.note_in_velocity) {
-              
+              offEvent.layer == event.layer &&
+              offEvent.track == event.track &&
+              offEvent.note_in == event.note_in &&
+              offEvent.note_in_velocity == event.note_in_velocity) {
+
               noteState.noteOff = offEvent;
               quantizationUndoState.originalNotes.push_back(noteState);
               foundNoteOff = true;
               break;
             }
           }
-          
+
           // If no NoteOff found, create a default one
           if (!foundNoteOff) {
             LiveSequencer::MidiEvent defaultOff = event;
@@ -81,7 +81,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::storeCurrentStateForUndo() {
         }
       }
     }
-  } 
+  }
   else if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
     // Store pattern track notes for undo - use the current notePairs
     for (size_t i = 0; i < notePairs.size(); i++) {
@@ -97,7 +97,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::storeCurrentStateForUndo() {
       }
     }
   }
-  
+
   quantizationUndoState.hasUndoData = !quantizationUndoState.originalNotes.empty();
 }
 
@@ -105,49 +105,51 @@ FLASHMEM void UI_LiveSeq_PianoRoll::applyQuantizationUndo() {
   if (!quantizationUndoState.hasUndoData) {
     return;
   }
-  
+
   // Only apply undo if we're on the same track and layer
-  if (data.activeTrack != quantizationUndoState.track || 
-      selectedLayer != quantizationUndoState.layer) {
+  if (data.activeTrack != quantizationUndoState.track ||
+    selectedLayer != quantizationUndoState.layer) {
     return;
   }
-  
+
   bool changed = false;
-  
+
   if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
     // For song mode: restore original notes
     // First remove all notes in this layer (both NoteOn and NoteOff)
     for (auto& patternEntry : data.songEvents) {
       auto& patternEvents = patternEntry.second; // This is a vector<MidiEvent>
-      
+
       // Remove NoteOn events in selected layer
       for (size_t i = 0; i < patternEvents.size(); ) {
         if (patternEvents[i].event == midi::NoteOn && patternEvents[i].layer == selectedLayer) {
           patternEvents.erase(patternEvents.begin() + i);
           changed = true;
-        } else {
+        }
+        else {
           i++;
         }
       }
-      
+
       // Remove NoteOff events in selected layer
       for (size_t i = 0; i < patternEvents.size(); ) {
         if (patternEvents[i].event == midi::NoteOff && patternEvents[i].layer == selectedLayer) {
           patternEvents.erase(patternEvents.begin() + i);
           changed = true;
-        } else {
+        }
+        else {
           i++;
         }
       }
     }
-    
+
     // Now add back the original notes
     for (const auto& noteState : quantizationUndoState.originalNotes) {
       // Ensure the song pattern exists
       if (data.songEvents.find(noteState.songPatternIndex) == data.songEvents.end()) {
         data.songEvents[noteState.songPatternIndex] = {};
       }
-      
+
       // Add NoteOn and NoteOff back
       data.songEvents[noteState.songPatternIndex].push_back(noteState.noteOn);
       data.songEvents[noteState.songPatternIndex].push_back(noteState.noteOff);
@@ -157,7 +159,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::applyQuantizationUndo() {
   else if (data.activeTrack < SONG_MODE_NOTES_TRACK) {
     // For pattern tracks: mark all current notes in this layer for deletion
     // and add back the original notes
-    
+
     // Mark current notes in this layer for deletion
     for (auto& notePair : notePairs) {
       if (notePair.noteOn.layer == selectedLayer) {
@@ -166,7 +168,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::applyQuantizationUndo() {
         changed = true;
       }
     }
-    
+
     // Add back original notes using liveSeq.addNotePair
     for (const auto& noteState : quantizationUndoState.originalNotes) {
       // Add the note back through the sequencer
@@ -174,32 +176,33 @@ FLASHMEM void UI_LiveSeq_PianoRoll::applyQuantizationUndo() {
       changed = true;
     }
   }
-  
+
   if (changed) {
     // Request sorting
     liveSeq.requestSortEvents();
-    
+
     // Reload and redraw
     reloadNotes();
     drawFlags |= DRAW_CONTENT_FULL;
-    
+
     // Clear undo state
     quantizationUndoState.clear();
-    
+
     // Show undo confirmation
     display.console = true;
     display.setTextSize(1);
     display.setTextColor(GREEN, COLOR_BACKGROUND);
     display.fillRect(GRID.X[2] - 8, CONTENT_HEIGHT - 40, 80, CHAR_height_small, HEADER_BG_COLOR);
     display.setCursor(GRID.X[2] - 8, CONTENT_HEIGHT - 40);
-    
+
     if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
       display.printf("SONG L%d UNDO!", selectedLayer + 1);
-    } else {
+    }
+    else {
       display.printf("TRACK%d LAYER%d UNDO!", data.activeTrack + 1, selectedLayer + 1);
     }
     delay(1000);
-    
+
     // Update Play button
     if (buttonPlay) {
       buttonPlay->drawNow();
@@ -224,7 +227,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllNotesInCurrentTrack() {
   if (quantizeLevel == QUANTIZE_OFF) {
     return; // No quantization selected
   }
-  
+
   // Only store undo for regular tracks or song notes track
   if (data.activeTrack != SONG_MODE_MUTE_TRACK) {
     // Store current state for undo BEFORE quantization
@@ -250,7 +253,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllNotesInCurrentTrack() {
 
   // Request event sorting for proper playback
   liveSeq.requestSortEvents();
-  
+
   // Update the Play button to show it can be used for undo
   if (quantizationUndoState.hasUndoData && buttonPlay) {
     buttonPlay->drawNow();
@@ -354,10 +357,10 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllSongNotes(uint32_t gridSize) {
       if (quantizedTimeOn != patternRelativeTime) {
         // Calculate what the new note-off time would be if we keep the same length
         uint32_t quantizedTimeOff = quantizedTimeOn + noteOnInfo.noteLength;
-        
+
         // Check if note-off would be invalid (before or at note-on)
         bool needToAdjustNoteOff = (quantizedTimeOff <= quantizedTimeOn);
-        
+
         // Update NoteOn event
         setPatternRelativeTime(*noteOnInfo.eventPtr, quantizedTimeOn, noteOnInfo.songPatternIndex);
 
@@ -365,7 +368,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllSongNotes(uint32_t gridSize) {
         if (needToAdjustNoteOff) {
           // Only adjust note-off if it would be invalid
           quantizedTimeOff = quantizedTimeOn + gridSize; // Use grid size as minimum
-          
+
           // Find matching NoteOff
           bool foundNoteOff = false;
           for (size_t i = 0; i < events.size(); i++) {
@@ -545,7 +548,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllPatternNotes(uint32_t gridSize) {
 
             // Check if note-off would be invalid (before or at note-on)
             bool needToAdjustNoteOff = (quantizedTimeOff <= quantizedTimeOn);
-            
+
             if (needToAdjustNoteOff) {
               // Only adjust note-off if it would be invalid
               quantizedTimeOff = quantizedTimeOn + gridSize; // Use grid size as minimum
@@ -1472,11 +1475,16 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
+  if (view.cursorPos >= DISPLAY_WIDTH)
+    return;
   display.console = true;
   display.drawLine(view.cursorPos, 0, view.cursorPos, CONTENT_HEIGHT - 1, view.cursorColor);
+
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
+  if (stepCursorPosition >= DISPLAY_WIDTH)
+    return;
   display.console = true;
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
@@ -2104,82 +2112,83 @@ FLASHMEM void UI_LiveSeq_PianoRoll::toggleSettingActivated(void) {
       }
     }
   }
-      if (data.activeTrack < SONG_MODE_NOTES_TRACK && selectedNote > -1) {
-        uint32_t timeOn = getEventTime(notePairs.at(selectedNote).noteOn);
-        uint32_t timeOff = getEventTime(notePairs.at(selectedNote).noteOff);
-        uint16_t fromX = getNoteCoord(timeOn);
-        uint16_t toX = getNoteCoord(timeOff);
-        UpdateRange fullRegion;
-        fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(fromX - 5));
-        fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(toX + 5));
-        fullRegion.notes = {};
-        drawRegionsX.push_back(fullRegion);
-        drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+  if (data.activeTrack < SONG_MODE_NOTES_TRACK && selectedNote > -1) {
+    uint32_t timeOn = getEventTime(notePairs.at(selectedNote).noteOn);
+    uint32_t timeOff = getEventTime(notePairs.at(selectedNote).noteOff);
+    uint16_t fromX = getNoteCoord(timeOn);
+    uint16_t toX = getNoteCoord(timeOff);
+    UpdateRange fullRegion;
+    fullRegion.fromX = std::max(ROLL_WIDTH, (uint16_t)(fromX - 5));
+    fullRegion.toX = std::min((uint16_t)DISPLAY_WIDTH, (uint16_t)(toX + 5));
+    fullRegion.notes = {};
+    drawRegionsX.push_back(fullRegion);
+    drawFlags |= DRAW_VERTICAL_BARS | DRAW_NOTES;
+  }
+
+  // Toggle state
+  isSettingActivated = !isSettingActivated;
+
+  // Post‑toggle actions
+  if (wasActivated && data.activeTrack < SONG_MODE_NOTES_TRACK) {
+    // Exiting edit mode: sort and reload, but try to keep selection
+    uint8_t savedTrack = 0;
+    uint8_t savedLayer = 0;
+    uint8_t savedPitch = 0;
+    uint8_t savedPattern = 0;
+    uint16_t savedMs = 0;
+    bool haveSaved = false;
+    if (selectedNote >= 0 && selectedNote < (int)notePairs.size()) {
+      auto& on = notePairs[selectedNote].noteOn;
+      savedTrack = on.track;
+      savedLayer = on.layer;
+      savedPitch = on.note_in;
+      savedPattern = on.patternNumber;
+      savedMs = on.patternMs;
+      haveSaved = true;
     }
 
-    // Toggle state
-    isSettingActivated = !isSettingActivated;
+    liveSeq.requestSortEvents();
+    reloadNotes();
 
-    // Post‑toggle actions
-    if (wasActivated && data.activeTrack < SONG_MODE_NOTES_TRACK) {
-        // Exiting edit mode: sort and reload, but try to keep selection
-        uint8_t savedTrack = 0;
-        uint8_t savedLayer = 0;
-        uint8_t savedPitch = 0;
-        uint8_t savedPattern = 0;
-        uint16_t savedMs = 0;
-        bool haveSaved = false;
-        if (selectedNote >= 0 && selectedNote < (int)notePairs.size()) {
-            auto& on = notePairs[selectedNote].noteOn;
-            savedTrack = on.track;
-            savedLayer = on.layer;
-            savedPitch = on.note_in;
-            savedPattern = on.patternNumber;
-            savedMs = on.patternMs;
-            haveSaved = true;
+    if (haveSaved) {
+      selectedNote = -1;
+      for (size_t i = 0; i < notePairs.size(); ++i) {
+        auto& on = notePairs[i].noteOn;
+        if (on.track == savedTrack && on.layer == savedLayer && on.note_in == savedPitch &&
+          on.patternNumber == savedPattern && on.patternMs == savedMs) {
+          selectedNote = i;
+          break;
         }
-
-        liveSeq.requestSortEvents();
-        reloadNotes();
-
-        if (haveSaved) {
-            selectedNote = -1;
-            for (size_t i = 0; i < notePairs.size(); ++i) {
-                auto& on = notePairs[i].noteOn;
-                if (on.track == savedTrack && on.layer == savedLayer && on.note_in == savedPitch &&
-                    on.patternNumber == savedPattern && on.patternMs == savedMs) {
-                    selectedNote = i;
-                    break;
-                }
-            }
-            // Fallback to first note in layer if not found
-            if (selectedNote == -1 && !notePairs.empty()) {
-                for (size_t i = 0; i < notePairs.size(); ++i) {
-                    if (notePairs[i].noteOn.layer == selectedLayer) {
-                        selectedNote = i;
-                        break;
-                    }
-                }
-            }
-        } else {
-            selectedNote = -1;
-        }
-    }
-    else if (!wasActivated && data.activeTrack < SONG_MODE_NOTES_TRACK && selectedNote == -1) {
-        // Entering edit mode with no selection: pick first note in current layer
+      }
+      // Fallback to first note in layer if not found
+      if (selectedNote == -1 && !notePairs.empty()) {
         for (size_t i = 0; i < notePairs.size(); ++i) {
-            if (notePairs[i].noteOn.layer == selectedLayer) {
-                selectedNote = i;
-                break;
-            }
+          if (notePairs[i].noteOn.layer == selectedLayer) {
+            selectedNote = i;
+            break;
+          }
         }
+      }
     }
+    else {
+      selectedNote = -1;
+    }
+  }
+  else if (!wasActivated && data.activeTrack < SONG_MODE_NOTES_TRACK && selectedNote == -1) {
+    // Entering edit mode with no selection: pick first note in current layer
+    for (size_t i = 0; i < notePairs.size(); ++i) {
+      if (notePairs[i].noteOn.layer == selectedLayer) {
+        selectedNote = i;
+        break;
+      }
+    }
+  }
 
-    // Common UI updates
-    if (mode == MODE_EDIT) {
-        buttonEdit->drawNow();
-    }
-    drawHeader(HEADER_DRAW_ALL);
+  // Common UI updates
+  if (mode == MODE_EDIT) {
+    buttonEdit->drawNow();
+  }
+  drawHeader(HEADER_DRAW_ALL);
 }
 
 FLASHMEM uint16_t UI_LiveSeq_PianoRoll::getSongPatternForNote(const LiveSequencer::NotePair& note) const {
@@ -2727,7 +2736,7 @@ FLASHMEM uint16_t UI_LiveSeq_PianoRoll::handleEditLayer(EncoderEvents e, uint16_
     if (newSelectedLayer != selectedLayer) {
       // CLEAR UNDO STATE WHEN CHANGING LAYERS
       clearUndoState();
-      
+
       if (selectedNote > -1) {
         queueDrawNote(notePairs.at(selectedNote));
         selectedNote = -1;
@@ -3590,8 +3599,8 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
 
   if (modeFlags == HEADER_DRAW_ALL) {
     display.console = true;
-   // display.fillRect(132, CONTENT_HEIGHT + 4, DISPLAY_WIDTH, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
-     display.fillRect(132, CONTENT_HEIGHT + 4, 187, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
+    // display.fillRect(132, CONTENT_HEIGHT + 4, DISPLAY_WIDTH, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
+    display.fillRect(132, CONTENT_HEIGHT + 4, 187, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
   }
 
   switch (mode) {
@@ -3910,7 +3919,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
     if (note % 12 == 0) {
       const uint8_t noteIndex = view.highestNote - note;
       const uint16_t y = round(noteIndex * view.noteHeight);
-      display.drawLine(minX, y, maxX-1, y, GREY2);
+      display.drawLine(minX, y, maxX - 1, y, GREY2);
     }
   }
 }
@@ -4109,7 +4118,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
     }
 
 
-// Clear undo state when switching modes (except if going to same track/layer)
+    // Clear undo state when switching modes (except if going to same track/layer)
     if (oldMode == MODE_EDIT || newMode == MODE_EDIT) {
       // Keep undo data when staying in edit mode, but clear when leaving edit mode
       if (oldMode == MODE_EDIT && newMode != MODE_EDIT) {
@@ -4310,14 +4319,15 @@ FLASHMEM uint8_t UI_LiveSeq_PianoRoll::getMaxTrackForCurrentMode() const {
 FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
   const uint16_t y = CONTENT_HEIGHT + HEADER_HEIGHT + LINE_HEIGHT;
 
-buttonPlay = new TouchButton(GRID.X[0], y,
+  buttonPlay = new TouchButton(GRID.X[0], y,
     [this](auto* b) {
       // Check if we have undo data available
-      if (quantizationUndoState.hasUndoData && !data.isRunning && 
-          data.activeTrack != SONG_MODE_MUTE_TRACK) {
+      if (quantizationUndoState.hasUndoData && !data.isRunning &&
+        data.activeTrack != SONG_MODE_MUTE_TRACK) {
         // Show UNDO text when undo is available (only for regular/song tracks)
         b->draw("UNDO", "QUANT", TouchButton::BUTTON_RED);
-      } else {
+      }
+      else {
         // Normal play/stop button
         const TouchButton::Color playColor = data.isRunning ? TouchButton::BUTTON_RED : TouchButton::BUTTON_ACTIVE;
         b->draw((data.isRunning ? "STOP" : "START"), "", playColor);
@@ -4325,13 +4335,13 @@ buttonPlay = new TouchButton(GRID.X[0], y,
     },
     [this](auto* b) {
       // Check if we should perform undo (only for regular/song tracks)
-      if (quantizationUndoState.hasUndoData && !data.isRunning && 
-          data.activeTrack != SONG_MODE_MUTE_TRACK) {
+      if (quantizationUndoState.hasUndoData && !data.isRunning &&
+        data.activeTrack != SONG_MODE_MUTE_TRACK) {
         // Apply quantization undo
         applyQuantizationUndo();
         return;
       }
-      
+
       // Normal play/stop functionality
       const bool isRunning = data.isRunning;
       if (isRunning) {
@@ -4374,7 +4384,7 @@ buttonPlay = new TouchButton(GRID.X[0], y,
       if (editingNote.active) {
         cancelEditingNote();
       }
-      
+
       // CLEAR UNDO STATE WHEN SWITCHING TRACKS
       clearUndoState();
 
@@ -4513,7 +4523,7 @@ buttonPlay = new TouchButton(GRID.X[0], y,
         uint8_t oldLevel = quantizeLevel;
         quantizeLevel = (quantizeLevel + 1) % QUANTIZE_NUM;
         b->drawNow(); // Explicitly redraw after change
-        
+
         // Clear undo state when quantization level changes (if we have undo data)
         if (quantizationUndoState.hasUndoData && oldLevel != quantizeLevel) {
           clearUndoState();

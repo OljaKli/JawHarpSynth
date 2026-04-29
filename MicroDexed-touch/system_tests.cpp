@@ -163,7 +163,7 @@ FLASHMEM void psram_test()
   fill_up_with_spaces_psram();
   psram_test_dline++;
   setCursor_textGrid_small(2, psram_test_dline);
-  sprintf(text1, "Test ran for %lu seconds", msec / 1000);
+  sprintf(text1, "Test ran for %lu seconds", (msec / 1000));
   display.print(text1);
   fill_up_with_spaces_psram();
   psram_test_dline++;

@@ -1,0 +1,9 @@
+Installation Instructions
+
+Only the IPS panel + capacitive touch version of the displays are supported.
+
+Please read carefully the manual at:
+doc/MicroDexed-touch-manual.pdf
+
+about the ESP32 displays.
+Join us in discord!

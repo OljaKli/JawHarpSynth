@@ -10,9 +10,7 @@ extern esp_touchscreen touch;
 #elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 extern XPT2046_Touchscreen touch;
-#endif
-
-#ifdef CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;
 #endif
@@ -84,11 +82,12 @@ typedef struct fm_s
 #if defined ESP_DISPLAY
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 60; 
 #else
-//static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10; // 100Hz
-static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 20; 
+static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10;
 #endif
 
 typedef void (*TouchFn)();
+
+void draw_back_touchbutton();          
 
 void registerTouchHandler(TouchFn touchFn);
 void unregisterTouchHandler(void);

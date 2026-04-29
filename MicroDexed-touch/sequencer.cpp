@@ -887,12 +887,16 @@ FLASHMEM void print_formatted_number(uint16_t number, uint8_t length, uint8_t me
 
 FLASHMEM void print_formatted_number(uint16_t number, uint8_t length, uint8_t track, uint8_t menuitem, uint8_t textsize, bool state)
 {
-  //test song page
-#if defined GLOW
+  // song page
+#if defined GLOW  && !defined ESP_DISPLAY
   if (seq.edit_state == 0)
     set_glow_print_number(display.getCursorX(), display.getCursorY(), number, length, track, menuitem, textsize, state);
+  else
+    print_formatted_number(number, length);
+#else
+  print_formatted_number(number, length);
 #endif
-  //not printing anything here directly
+
 }
 
 FLASHMEM void print_formatted_number_trailing_space(uint16_t number, uint8_t length) {

@@ -227,22 +227,17 @@ FLASHMEM ILI9341_t3n::ILI9341_t3n(uint8_t cs, uint8_t dc, uint8_t rst, uint8_t m
 void ILI9341_t3n::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1,
   uint16_t y1)
 {
-
   beginSPITransaction(_SPI_CLOCK);
   setAddr(x0, y0, x1, y1);
   writecommand_last(ILI9341_RAMWR); // write to RAM
   endSPITransaction();
-
 }
-
 
 void ILI9341_t3n::pushColor(uint16_t color)
 {
-
   beginSPITransaction(_SPI_CLOCK);
   writedata16_last(color);
   endSPITransaction();
-
 }
 
 void ILI9341_t3n::drawPixel(int16_t x, int16_t y, uint16_t color)
@@ -1259,7 +1254,6 @@ FLASHMEM void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
   uint16_t fgcolor, uint16_t bgcolor, uint8_t size_x,
   uint8_t size_y)
 {
-
 
   if ((x >= _width) ||              // Clip right
     (y >= _height) ||             // Clip bottom

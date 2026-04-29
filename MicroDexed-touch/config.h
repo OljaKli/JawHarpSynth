@@ -72,6 +72,12 @@
 #define APC_NUM_PADS 64
 #endif
 
+// Enable packet checksum for serial communication with ESP display
+
+#if defined(ESP_DISPLAY)
+extern bool esp_draw;
+#endif
+
 //*************************************************************************************************
 //* MIDI HARDWARE SETTINGS
 //*************************************************************************************************
@@ -133,11 +139,11 @@
 //*************************************************************************************************
 //* DISPLAY AND TOUCHSCREEN
 //*************************************************************************************************
-#if !defined(CAPACITIVE_TOUCH_DISPLAY)  && !defined (ESP_DISPLAY) // TFT with Capacitive Touchscreen (default)
+#if !defined CAPACITIVE_TOUCH_DISPLAY && !defined ESP_DISPLAY // TFT with Capacitive Touchscreen (default)
 #define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (outdated)
 #endif
 
-//*************************************************************************************************
+//*************************************************s************************************************
 //* DEXED SEQUENCER, EPIANO AND EFFECTS SETTINGS
 //*************************************************************************************************
 // Number of Dexed instances
@@ -248,30 +254,35 @@
 #define COLOR_BACKGROUND 0x0000
 #define COLOR_SYSTEXT 0xFFFF
 #define DX_DARKCYAN 0x030D 
-
 #define COLOR_INSTR 0x7BBD
 #define COLOR_CHORDS 0xE2FA
 #define COLOR_ARP 0xFC80
 #define COLOR_DRUMS 0xFE4F
 #define COLOR_PITCHSMP 0x159A
-
 #define RED 0xD000
-#define PINK 0xF81F
-#define YELLOW 0xFFEB
-
 #define GREEN 0x07E0
-//#define MIDDLEGREEN 0x1500
-#define MIDDLEGREEN 0x0C00 // now slightly darker green
+#define MIDDLEGREEN 0x0C00
 #define DARKGREEN 0x0AE0
-
 #define GREY1 0xC638
 #define GREY2 0x52AA
 #define GREY3 0x2104
 #define GREY4 0x10A2
 
+#define PINK 0xF81F
+#define YELLOW 0xFFEB
+
 // #define GREY4 0xC638 //only for UI test
 
 // Display
+
+// In a common header file
+#define BITMAP_FOLDER    23
+#define BITMAP_PLAY      19
+#define BITMAP_RECORD    20
+#define BITMAP_STOP      21
+#define BITMAP_FAVORITE  18
+#define BITMAP_PITCHED   22
+#define BITMAP_NOTE      16
 
 const char back_text[5] = { 'B', 'A', 'C', 'K' };
 const char back_clear[5] = { ' ', ' ', ' ', ' ' };
@@ -283,12 +294,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define DISPLAY_HEIGHT 240
 
 #define display_cols 20
-
-#ifdef TOUCH_UI
-#define display_rows 16
-#else
 #define display_rows 6
-#endif
 
 #define CHAR_width 12
 #define CHAR_height 17
@@ -325,7 +331,6 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 //*************************************************************************************************
 
 #if (defined RGB_ENCODERS && defined MCP_23008) || (defined RGB_ENCODERS && defined MCP_23017)
-
 #define RGB_LED_L_RED 0                            // MCP GPA0  = LED_ENC_L RED
 #define RGB_LED_L_GREEN 1                          // MCP GPA1  = LED_ENC_L GREEN
 #define RGB_LED_L_BLUE 2                           // MCP GPA2  = LED_ENC_L BLUE
@@ -334,7 +339,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define RGB_LED_R_BLUE 5                           // MCP GPA5  = LED_ENC_R BLUE
 #endif
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if  defined BUTTON_LEDS && defined MCP_23017
 #define LED_UP 8                                   // MCP GPB0  = LED Button UP
 #define LED_DOWN 9                                 // MCP GPB1  = LED Button DOWN
 #define LED_LEFT 10                                // MCP GPB2  = LED Button LEFT
@@ -415,6 +420,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 
 #define AUDIO_DEVICE_USB
 
+
 #ifdef ONBOARD_BUTTON_INTERFACE
 #define BI_UP 2
 #define BI_DOWN 3
@@ -422,8 +428,10 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define BI_RIGHT 5
 #define BI_SELECT 9
 #define BI_START 10
+#ifndef REDUCED_BUTTON_INTERFACE_ESP
 #define BI_BUTTON_A 16
 #define BI_BUTTON_B 17
+#endif
 #endif
 
 #ifdef MUSIKANDMORE

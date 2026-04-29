@@ -1,7 +1,10 @@
 #if defined ESP_DISPLAY
 
 #include "config.h"
+
+#ifndef _espdisplayH_
 #include "esp32.h"
+#endif
 
 extern bool remote_active;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
@@ -165,31 +168,39 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
 }
 #endif
 
+// Predefined color table (must match order in ESP32)
+static const uint16_t predefinedColors[] = {
+  COLOR_BACKGROUND, // 0
+  COLOR_SYSTEXT,    // 1
+  DX_DARKCYAN,      // 2
+  COLOR_INSTR,      // 3
+  COLOR_CHORDS,     // 4
+  COLOR_ARP,        // 5
+  COLOR_DRUMS,      // 6
+  COLOR_PITCHSMP,   // 7
+  RED,              // 8
+  GREEN,            // 9
+  MIDDLEGREEN,      // 10
+  DARKGREEN,        // 11
+  GREY1,            // 12
+  GREY2,            // 13
+  GREY3,            // 14
+  GREY4             // 15
+};
+
+// Returns index 0-15 if color is in table, else 255
+static uint8_t getColorIndex(uint16_t color) {
+  for (uint8_t i = 0; i < 16; i++) {
+    if (predefinedColors[i] == color) return i;
+  }
+  return 255;
+}
+
 // MIDI sysex render header for remote
 const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
 
 // Packet protocol
-#define PKT_SYNC        0xFE
-
-// Command codes (renumbered consecutively, same as on ESP)
-#define CMD_FILLRECT      2
-#define CMD_DRAWRECT      3
-#define CMD_DRAWLINE      4
-#define CMD_FILLCIRCLE    6
-#define CMD_DRAWPIXEL     7
-#define CMD_PRINT_STRING  8
-#define CMD_FILLRECT_FAST     9
-#define CMD_DRAWRECT_FAST     10
-#define CMD_DRAWLINE_FAST     11
-#define CMD_FILLCIRCLE_FAST   12
-#define CMD_DRAWPIXEL_FAST    13
-#define CMD_PRINT_FAST         14
-#define CMD_PRINT_STRING_FAST  15
-#define CMD_SCOPE_DATA 16
-#define CMD_FILLRECT_RAINBOW 17
-#define CMD_SCREENSAVER_START  18
-#define CMD_SCREENSAVER_STOP   19
-#define CMD_PRINT_STATIC_LABEL 20
+#define PKT_SYNC        0xAA
 
 uint16_t lastFillColor;
 uint16_t lastLineColor;    // for drawLine and drawRect outline
@@ -201,51 +212,41 @@ uint8_t  lastTextSize;
 extern void processIncomingSerial(bool& ackReceived);
 static uint8_t packetCounter = 0;
 
-void sendSyncAndWait() {
-  // Build a SYNC packet (command = 1, length = 0)
-  uint8_t checksum = PKT_SYNC ^ BATCH_SYNC_CMD ^ 0;  // length zero
-
-  Serial4.write(PKT_SYNC);
-  Serial4.write(BATCH_SYNC_CMD);
-  Serial4.write(0);        // payload length = 0
-  Serial4.write(checksum);
-
-  // Wait for ACK from ESP
-  bool ackReceived = false;
-  elapsedMillis timeout = 0;
-  while (!ackReceived && timeout < ACK_TIMEOUT_MS) {
-    processIncomingSerial(ackReceived);
-    // delayMicroseconds(50);
-  }
-}
+// uint8_t crc8(const uint8_t *data, size_t len) {
+//     uint8_t crc = 0x00;
+//     for (size_t i = 0; i < len; i++) {
+//         crc ^= data[i];
+//         for (uint8_t bit = 0; bit < 8; bit++) {
+//             if (crc & 0x80)
+//                 crc = (crc << 1) ^ 0x07;  // polynomial 0x07 (CRC-8-ATM)
+//             else
+//                 crc <<= 1;
+//         }
+//     }
+//     return crc;
+// }
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
-  uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
+  if (len > 250) return;   // keep the safety check
 
   Serial4.write(PKT_SYNC);
   Serial4.write(cmd);
   Serial4.write(len);
-  for (uint16_t i = 0; i < len; i++) {
+  for (uint8_t i = 0; i < len; i++) {
     Serial4.write(payload[i]);
-    checksum ^= payload[i];
   }
+  uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
+  for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
   Serial4.write(checksum);
+  delayMicroseconds(180);
+}
 
-  // Increment counter and check if batch is complete
-  packetCounter++;
-  if (packetCounter >= PACKETS_PER_BATCH) {
-    sendSyncAndWait();    // Flush batch and wait for ACK
-    packetCounter = 0;    // Reset counter
-  }
+void sendGlowClear() {
+  sendPacket(CMD_GLOW_CLEAR, nullptr, 0);
 }
 
 void sendScreensaverStop() {
-    sendPacket(CMD_SCREENSAVER_STOP, nullptr, 0);
-        // Flush the batch to send the stop command immediately
-    if (packetCounter > 0) {
-        sendSyncAndWait();
-        packetCounter = 0;
-    }
+  sendPacket(CMD_SCREENSAVER_STOP, nullptr, 0);
 }
 
 FLASHMEM void start_screensaver_on_esp(uint8_t id) {
@@ -273,6 +274,67 @@ FLASHMEM espdisplay::espdisplay(uint8_t c)
 
 //=======================================================================
 
+void sendEditMode(bool editState) {
+  uint8_t payload = editState ? 1 : 0;
+  sendPacket(CMD_SET_EDIT_MODE, &payload, 1);
+}
+
+void espdisplay::drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t highlight) {
+  uint8_t payload[4];
+  payload[0] = x;
+  payload[1] = y;
+  payload[2] = value;      // 0-40 (20 = center)
+  payload[3] = highlight;  // 0=normal,1=selected,2=editing
+  sendPacket(CMD_DRAW_PANBAR, payload, 4);
+}
+
+void espdisplay::drawESPParamBar(uint8_t x, uint8_t y, uint8_t value, uint8_t min, uint8_t max,
+  uint8_t highlight, bool show_bar, const char* zero_name) {
+  uint8_t zero_len = (zero_name != nullptr) ? strlen(zero_name) : 0;
+  uint8_t payload[7 + zero_len];
+  uint8_t idx = 0;
+  payload[idx++] = x;
+  payload[idx++] = y;
+  payload[idx++] = value;
+  payload[idx++] = min;
+  payload[idx++] = max;
+  payload[idx++] = (show_bar ? 1 : 0) | ((highlight & 3) << 1);
+  payload[idx++] = zero_len;
+  if (zero_len) {
+    memcpy(&payload[idx], zero_name, zero_len);
+  }
+  sendPacket(CMD_DRAW_PARAM_BAR, payload, 7 + zero_len); // FIXED: use actual payload size
+}
+
+//--------------------------------------------------------------------------------------
+
+void espdisplay::drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint16_t color) {
+  if (esp_draw) {
+    uint8_t payload[6];
+    payload[0] = lowByte(x);
+    payload[1] = highByte(x);
+    payload[2] = (uint8_t)y;
+    payload[3] = bitmap_idx;
+    payload[4] = lowByte(color);
+    payload[5] = highByte(color);
+    sendPacket(CMD_DRAW_BITMAP, payload, 6);
+  }
+}
+
+void espdisplay::drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint16_t color, uint16_t bg) {
+  if (esp_draw) {
+    uint8_t payload[8];
+    payload[0] = lowByte(x);
+    payload[1] = highByte(x);
+    payload[2] = (uint8_t)y;
+    payload[3] = bitmap_idx;
+    payload[4] = lowByte(color);
+    payload[5] = highByte(color);
+    payload[6] = lowByte(bg);
+    payload[7] = highByte(bg);
+    sendPacket(CMD_DRAW_BITMAP_BG, payload, 8);
+  }
+}
 
 void espdisplay::sendScopeData(uint16_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t* data) {
   uint8_t payload[5 + w];   // x(2), y(1), w(1), h(1), data
@@ -306,29 +368,34 @@ void espdisplay::drawPixel(int16_t x, int16_t y, uint16_t color)
     memcpy(sysexDrawPixel + 4 + 1, colors, nbBytes);
 
     sendSysEx(90, 4 + 1 + nbBytes, sysexDrawPixel, true);
-    delayMicroseconds(40); //40
+    delayMicroseconds(20); //40
   }
 
-  if (color == lastPixelColor) {
-    // Fast pixel (no color)
-    uint8_t payload[3]; // x(2), y(1)
-    payload[0] = lowByte(x);
-    payload[1] = highByte(x);
-    payload[2] = (uint8_t)y;
-    sendPacket(CMD_DRAWPIXEL_FAST, payload, 3);
+  if (esp_draw) {
+    if (color == lastPixelColor) {
+      // Fast pixel (no color)
+      uint8_t payload[3]; // x(2), y(1)
+      payload[0] = lowByte(x);
+      payload[1] = highByte(x);
+      payload[2] = (uint8_t)y;
+      sendPacket(CMD_DRAWPIXEL_FAST, payload, 3);
+    }
+    else {
+      uint8_t idx = getColorIndex(color);
+      if (idx != 255) {
+        // Indexed pixel
+        uint8_t payload[4] = { lowByte(x), highByte(x), (uint8_t)y, idx };
+        sendPacket(CMD_DRAWPIXEL_INDEXED, payload, 4);
+        lastPixelColor = color;
+      }
+      else {
+        // Full pixel
+        uint8_t payload[5] = { lowByte(x), highByte(x), (uint8_t)y, lowByte(color), highByte(color) };
+        sendPacket(CMD_DRAWPIXEL, payload, 5);
+        lastPixelColor = color;
+      }
+    }
   }
-  else {
-    // Full pixel (with color)
-    uint8_t payload[5];
-    payload[0] = lowByte(x);
-    payload[1] = highByte(x);
-    payload[2] = (uint8_t)y;
-    payload[3] = lowByte(color);
-    payload[4] = highByte(color);
-    sendPacket(CMD_DRAWPIXEL, payload, 5);
-    lastPixelColor = color;
-  }
-  //delayMicroseconds(20);
 }
 
 void espdisplay::fillScreen(uint16_t color)
@@ -366,62 +433,50 @@ void espdisplay::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
     sendSysEx(94, 8 + 1 + nbBytes, sysexFillRect, true);
   }
 
-  if (color == lastFillColor) {
-    // Fast fillRect (no color)
-    uint8_t payload[6]; // x(2), y(1), w(2), h(1)
-    payload[0] = lowByte(x);
-    payload[1] = highByte(x);
-    payload[2] = (uint8_t)y;
-    payload[3] = lowByte(w);
-    payload[4] = highByte(w);
-    payload[5] = (uint8_t)h;
-    sendPacket(CMD_FILLRECT_FAST, payload, 6);
+  if (esp_draw) {
+    if (color == lastFillColor) {
+      // Fast fillRect (no color)
+      uint8_t payload[6]; // x(2), y(1), w(2), h(1)
+      payload[0] = lowByte(x);
+      payload[1] = highByte(x);
+      payload[2] = (uint8_t)y;
+      payload[3] = lowByte(w);
+      payload[4] = highByte(w);
+      payload[5] = (uint8_t)h;
+      sendPacket(CMD_FILLRECT_FAST, payload, 6);
+    }
+    else {
+      uint8_t idx = getColorIndex(color);
+      if (idx != 255) {
+        // Indexed fillRect
+        uint8_t payload[7] = {
+          lowByte(x),
+          highByte(x),
+          (uint8_t)y,
+          lowByte(w),
+          highByte(w),
+          (uint8_t)h,
+          idx };
+        sendPacket(CMD_FILLRECT_INDEXED, payload, 7);
+        lastFillColor = color;
+      }
+      else {
+        // Full fillRect
+        uint8_t payload[8] = {
+          lowByte(x),
+          highByte(x),
+          (uint8_t)y,
+          lowByte(w),
+          highByte(w),
+          (uint8_t)h,
+          lowByte(color),
+          highByte(color) };
+        sendPacket(CMD_FILLRECT, payload, 8);
+        lastFillColor = color;
+      }
+    }
   }
-  else {
-    // Full fillRect (with color)
-    uint8_t payload[8];
-    payload[0] = lowByte(x);
-    payload[1] = highByte(x);
-    payload[2] = (uint8_t)y;
-    payload[3] = lowByte(w);
-    payload[4] = highByte(w);
-    payload[5] = (uint8_t)h;
-    payload[6] = lowByte(color);
-    payload[7] = highByte(color);
-    sendPacket(CMD_FILLRECT, payload, 8);
-    lastFillColor = color;
-  }
-  delayMicroseconds(50);
 }
-
-FLASHMEM void espdisplay::printStaticLabel(uint8_t id, uint8_t col, uint8_t row) {
-    uint8_t payload[3];
-    payload[0] = col;
-    payload[1] = row;
-    payload[2] = id;
-    sendPacket(CMD_PRINT_STATIC_LABEL, payload, sizeof(payload));
-}
-
-FLASHMEM void espdisplay::sendToWebRemoteOnly(const char* text, int16_t x, uint8_t y) {
-    // Only send if remote is active
-    if (!remote_active) return;
-
-    // Build the same SysEx that would be sent by write() when console is true.
-    uint8_t colors[8];
-    uint8_t nbBytes = fillSysexDataColor(colors, 2, textcolor, textbgcolor);
-    uint8_t sizeMsg = 2 * 2 + 1 + nbBytes + 1 + strlen(text);
-    uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
-    if (sysexDrawString == NULL) return;
-
-    fillSysexData(sysexDrawString, 2, x, y);
-    sysexDrawString[4] = nbBytes;
-    memcpy(sysexDrawString + 4 + 1, colors, nbBytes);
-    sysexDrawString[4 + 1 + nbBytes] = textsize_x;
-    memcpy(sysexDrawString + 4 + 1 + nbBytes + 1, text, strlen(text));
-    sendSysEx(72, sizeMsg, sysexDrawString, true);
-    free(sysexDrawString);
-}
-
 
 // draw rectangle with rainbow gradient
 FLASHMEM void espdisplay::fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h)
@@ -561,27 +616,31 @@ FLASHMEM void espdisplay::fillCircle(int16_t x0, int16_t y0, int16_t r,
     sendSysEx(97, 6 + 1 + nbBytes, sysexFillCircle, true);
     console = false;
   }
-
-  if (color == lastFillColor) {
-    uint8_t payload[4]; // x0(2), y0(1), r(1)
-    payload[0] = lowByte(x0);
-    payload[1] = highByte(x0);
-    payload[2] = (uint8_t)y0;
-    payload[3] = (uint8_t)r;
-    sendPacket(CMD_FILLCIRCLE_FAST, payload, 4);
+  if (esp_draw) {
+    if (color == lastFillColor) {
+      uint8_t payload[4]; // x0(2), y0(1), r(1)
+      payload[0] = lowByte(x0);
+      payload[1] = highByte(x0);
+      payload[2] = (uint8_t)y0;
+      payload[3] = (uint8_t)r;
+      sendPacket(CMD_FILLCIRCLE_FAST, payload, 4);
+    }
+    else {
+      uint8_t idx = getColorIndex(color);
+      if (idx != 255) {
+        // Indexed circle
+        uint8_t payload[5] = { lowByte(x0), highByte(x0), (uint8_t)y0, (uint8_t)r, idx };
+        sendPacket(CMD_FILLCIRCLE_INDEXED, payload, 5);
+        lastFillColor = color;
+      }
+      else {
+        // Full circle
+        uint8_t payload[6] = { lowByte(x0), highByte(x0), (uint8_t)y0, (uint8_t)r, lowByte(color), highByte(color) };
+        sendPacket(CMD_FILLCIRCLE, payload, 6);
+        lastFillColor = color;
+      }
+    }
   }
-  else {
-    uint8_t payload[6]; // x0(2), y0(1), r(1), color(2)
-    payload[0] = lowByte(x0);
-    payload[1] = highByte(x0);
-    payload[2] = (uint8_t)y0;
-    payload[3] = (uint8_t)r;
-    payload[4] = lowByte(color);
-    payload[5] = highByte(color);
-    sendPacket(CMD_FILLCIRCLE, payload, 6);
-    lastFillColor = color;
-  }
-  // delayMicroseconds(300);
 }
 
 #define CLIPLEFT  1
@@ -703,31 +762,41 @@ void espdisplay::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
 
     console = false;
   }
+  if (esp_draw) {
 
-  if (color == lastLineColor) {
-    uint8_t payload[6]; // x0(2), y0(1), x1(2), y1(1)
-    payload[0] = lowByte(x0);
-    payload[1] = highByte(x0);
-    payload[2] = (uint8_t)y0;
-    payload[3] = lowByte(x1);
-    payload[4] = highByte(x1);
-    payload[5] = (uint8_t)y1;
-    sendPacket(CMD_DRAWLINE_FAST, payload, 6);
+    if (color == lastLineColor) {
+      uint8_t payload[6]; // x0(2), y0(1), x1(2), y1(1)
+      payload[0] = lowByte(x0);
+      payload[1] = highByte(x0);
+      payload[2] = (uint8_t)y0;
+      payload[3] = lowByte(x1);
+      payload[4] = highByte(x1);
+      payload[5] = (uint8_t)y1;
+      sendPacket(CMD_DRAWLINE_FAST, payload, 6);
+    }
+    else {
+      uint8_t idx = getColorIndex(color);
+      if (idx != 255) {
+        // Indexed line
+        uint8_t payload[7] = {
+          lowByte(x0),
+          highByte(x0),
+          (uint8_t)y0,
+          lowByte(x1),
+          highByte(x1),
+          (uint8_t)y1,
+          idx };
+        sendPacket(CMD_DRAWLINE_INDEXED, payload, 7);
+        lastLineColor = color;
+      }
+      else {
+        // Full line
+        uint8_t payload[8] = { lowByte(x0), highByte(x0), (uint8_t)y0, lowByte(x1), highByte(x1), (uint8_t)y1, lowByte(color), highByte(color) };
+        sendPacket(CMD_DRAWLINE, payload, 8);
+        lastLineColor = color;
+      }
+    }
   }
-  else {
-    uint8_t payload[8];
-    payload[0] = lowByte(x0);
-    payload[1] = highByte(x0);
-    payload[2] = (uint8_t)y0;
-    payload[3] = lowByte(x1);
-    payload[4] = highByte(x1);
-    payload[5] = (uint8_t)y1;
-    payload[6] = lowByte(color);
-    payload[7] = highByte(color);
-    sendPacket(CMD_DRAWLINE, payload, 8);
-    lastLineColor = color;
-  }
-  // delayMicroseconds(400);
 }
 
 // Draw a rectangle
@@ -750,30 +819,48 @@ void espdisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t c
     console = false;
   }
 
-  if (color == lastLineColor) {
-    uint8_t payload[6]; // x(2), y(1), w(2), h(1)
-    payload[0] = lowByte(x);
-    payload[1] = highByte(x);
-    payload[2] = (uint8_t)y;
-    payload[3] = lowByte(w);
-    payload[4] = highByte(w);
-    payload[5] = (uint8_t)h;
-    sendPacket(CMD_DRAWRECT_FAST, payload, 6);
+  if (esp_draw) {
+    if (color == lastLineColor) {
+      uint8_t payload[6];
+      payload[0] = lowByte(x);
+      payload[1] = highByte(x);
+      payload[2] = (uint8_t)y;
+      payload[3] = lowByte(w);
+      payload[4] = highByte(w);
+      payload[5] = (uint8_t)h;
+      sendPacket(CMD_DRAWRECT_FAST, payload, 6);
+    }
+    else {
+      uint8_t idx = getColorIndex(color);
+      if (idx != 255) {
+        // Indexed rect
+        uint8_t payload[7] = {
+        lowByte(x),
+        highByte(x),
+        (uint8_t)y,
+        lowByte(w),
+        highByte(w),
+        (uint8_t)h,
+        idx };
+        sendPacket(CMD_DRAWRECT_INDEXED, payload, 7);
+        lastLineColor = color;
+      }
+      else {
+        // Full rect
+        uint8_t payload[8] = {
+          lowByte(x),
+          highByte(x),
+          (uint8_t)y,
+          lowByte(w),
+          highByte(w),
+          (uint8_t)h,
+          lowByte(color),
+          highByte(color) };
+        sendPacket(CMD_DRAWRECT, payload, 8);
+        lastLineColor = color;
+      }
+    }
   }
-  else {
-    uint8_t payload[8];
-    payload[0] = lowByte(x);
-    payload[1] = highByte(x);
-    payload[2] = (uint8_t)y;
-    payload[3] = lowByte(w);
-    payload[4] = highByte(w);
-    payload[5] = (uint8_t)h;
-    payload[6] = lowByte(color);
-    payload[7] = highByte(color);
-    sendPacket(CMD_DRAWRECT, payload, 8);
-    lastLineColor = color;
-  }
-  //  delayMicroseconds(300);
 }
 
 // overwrite functions from class Print:
@@ -813,49 +900,68 @@ size_t espdisplay::write(const uint8_t* buffer, size_t size)
     console = false;
   }
 
-  bool settingsSame = (textcolor == lastTextFgColor &&
-    textbgcolor == lastTextBgColor &&
-    textsize_x == lastTextSize);
+  if (esp_draw) {
+    bool settingsSame = (textcolor == lastTextFgColor &&
+      textbgcolor == lastTextBgColor &&
+      textsize_x == lastTextSize);
 
-  if (settingsSame) {
-    // Fast string command – length now 1 byte
-    uint16_t payloadLen = 4 + size; // x(2), y(1), len(1), string
-    uint8_t payload[payloadLen];
-    payload[0] = lowByte(cursor_x);
-    payload[1] = highByte(cursor_x);
-    payload[2] = (uint8_t)cursor_y;
-    payload[3] = (uint8_t)size;          // length as single byte
-    memcpy(&payload[4], buffer, size);
-    sendPacket(CMD_PRINT_STRING_FAST, payload, payloadLen);
+    if (settingsSame) {
+      // Fast string command – length now 1 byte
+      uint16_t payloadLen = 4 + size; // x(2), y(1), len(1), string
+      uint8_t payload[payloadLen];
+      payload[0] = lowByte(cursor_x);
+      payload[1] = highByte(cursor_x);
+      payload[2] = (uint8_t)cursor_y;
+      payload[3] = (uint8_t)size;          // length as single byte
+      memcpy(&payload[4], buffer, size);
+      sendPacket(CMD_PRINT_STRING_FAST, payload, payloadLen);
+    }
+    else {
+      uint8_t fgIdx = getColorIndex(textcolor);
+      uint8_t bgIdx = getColorIndex(textbgcolor);
+      bool bothIndexed = (fgIdx != 255 && bgIdx != 255);
+      if (bothIndexed) {
+        // Indexed string: pack fg/bg into one byte
+        uint8_t packed = (fgIdx << 4) | bgIdx;
+        uint16_t payloadLen = 6 + size; // x(2), y(1), packed(1), size_x(1), len(1), string
+        uint8_t payload[payloadLen];
+        payload[0] = lowByte(cursor_x);
+        payload[1] = highByte(cursor_x);
+        payload[2] = (uint8_t)cursor_y;
+        payload[3] = packed;
+        payload[4] = textsize_x;
+        payload[5] = (uint8_t)size;
+        memcpy(&payload[6], buffer, size);
+        sendPacket(CMD_PRINT_STRING_INDEXED, payload, payloadLen);
+      }
+      else {
+        // Full string command
+        uint16_t payloadLen = 9 + size;
+        uint8_t payload[payloadLen];
+        payload[0] = lowByte(cursor_x);
+        payload[1] = highByte(cursor_x);
+        payload[2] = (uint8_t)cursor_y;
+        payload[3] = lowByte(textcolor);
+        payload[4] = highByte(textcolor);
+        payload[5] = lowByte(textbgcolor);
+        payload[6] = highByte(textbgcolor);
+        payload[7] = textsize_x;
+        payload[8] = (uint8_t)size;
+        memcpy(&payload[9], buffer, size);
+        sendPacket(CMD_PRINT_STRING, payload, payloadLen);
+      }
+      lastTextFgColor = textcolor;
+      lastTextBgColor = textbgcolor;
+      lastTextSize = textsize_x;
+    }
   }
-  else {
-    // Full string command – length now 1 byte
-    uint16_t payloadLen = 9 + size; // x(2), y(1), fg(2), bg(2), size_x(1), len(1), string
-    uint8_t payload[payloadLen];
-    payload[0] = lowByte(cursor_x);
-    payload[1] = highByte(cursor_x);
-    payload[2] = (uint8_t)cursor_y;
-    payload[3] = lowByte(textcolor);
-    payload[4] = highByte(textcolor);
-    payload[5] = lowByte(textbgcolor);
-    payload[6] = highByte(textbgcolor);
-    payload[7] = textsize_x;
-    payload[8] = (uint8_t)size;          // length as single byte
-    memcpy(&payload[9], buffer, size);
-    sendPacket(CMD_PRINT_STRING, payload, payloadLen);
-
-    lastTextFgColor = textcolor;
-    lastTextBgColor = textbgcolor;
-    lastTextSize = textsize_x;
+  size_t cb = size;
+  while (cb--) {
+    buffer++;
+    cursor_x += textsize_x * 6;
   }
-  
-size_t cb = size;
-while (cb--) {
-  buffer++;
-  cursor_x += textsize_x * 6;
-}
 
- //delayMicroseconds(50);
+  //delayMicroseconds(50);
   return size;
 }
 
@@ -1096,7 +1202,5 @@ FLASHMEM uint8_t espdisplay::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...
 
   return pos;
 }
-
-
 
 #endif

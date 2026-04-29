@@ -173,6 +173,8 @@ PsramLoader sampleLoader(psram_free_bytes);
 
 #if defined ESP_DISPLAY
 espdisplay display(0);
+extern void sendVolumeIconsMode(bool);
+
 #else
 #if defined GENERIC_DISPLAY
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
@@ -655,9 +657,9 @@ FLASHMEM void unregisterScope(void) {
 }
 
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
-//#include "MCP23008.h"
-//#include "MCP23017.h"
+//#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+
+#if defined RGB_ENCODERS && defined MCP_23017
 extern void setled(uint8_t pin, bool state);
 #endif
 
@@ -1157,80 +1159,9 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
   }
 }
 
-#ifdef TOUCH_UI
-FLASHMEM void draw_button_on_grid_smarttext(uint8_t x, uint8_t y, const char* t1, uint8_t color)
-{
-
-  uint8_t c = 0;
-  uint8_t len = strlen(t1);
-  char out1[8] = { 0,0,0,0,0,0,0 };
-  char out2[8] = { 0,0,0,0,0,0,0 };
-  uint8_t c_out1 = 0;
-  uint8_t c_out2 = 0;
-  uint8_t line = 1;
-
-  if (color == 98) // special case, clear button to background color
-  {
-    display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, GREY4);
-  }
-  else do {
-
-    if (t1[c] == 32 && line == 1) // space triggers new line
-    {
-      line = 2;
-      c++;
-    }
-    else
-      if (c_out1 > 5) // if line 1 full, continue on line 2
-      {
-        line = 2;
-      }
-
-    if (line == 1)
-    {
-      out1[c_out1] = t1[c];
-      c_out1++;
-    }
-
-    else if (line == 2)
-    {
-      out2[c_out2] = t1[c];
-      c_out2++;
-    }
-
-    c++;
-
-  } while (c < len && c_out2 < 6);
-
-  if (remote_active)
-    display.console = true;
-
-  display.setTextSize(1);
-  if (color == 0) // standard grey
-  {
-    display.setTextColor(GREY1, GREY2);
-    display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, GREY2);
-  }
-  else if (color == 1) // button has active color
-  {
-    display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, DX_DARKCYAN);
-  }
-  else if (color == 2) // button has RED color
-  {
-    display.setTextColor(COLOR_SYSTEXT, RED);
-    display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, RED);
-  }
-  display.setCursor(x * CHAR_width_small + CHAR_width_small / 2, y * CHAR_height_small + 6);
-  display.print(out1);
-  display.setCursor(x * CHAR_width_small + CHAR_width_small / 2, y * CHAR_height_small + 10 + CHAR_height_small);
-  display.print(out2);
-  display.setTextSize(1);
-}
-#endif
-
 
 #if defined ESP_DISPLAY
+
 FLASHMEM void show_smallfont_noGrid(int pos_y, int pos_x, uint8_t field_size, const char* str)
 {
   // Buffer large enough for any field (max 15 characters + null)
@@ -1702,6 +1633,7 @@ FLASHMEM bool touch_button_back_page() //modern pages with touch back button
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_microsynth) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_noisemaker) ||
+    LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midi_channels) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_dexed_setup)) {
     return true;
   }
@@ -2621,7 +2553,7 @@ FLASHMEM void print_track_steps_detailed_only_current_playing_note(int xpos, int
 
 FLASHMEM void print_playing_chains()
 {
-
+#ifndef ESP_DISPLAY
   for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
   {
     display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
@@ -2651,6 +2583,7 @@ FLASHMEM void print_playing_chains()
   display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
   display.setCursor(26 * CHAR_width_small, 10);
   print_formatted_number(find_longest_chain(), 2);
+#endif
 }
 
 FLASHMEM void update_display_functions_while_seq_running()
@@ -3410,7 +3343,7 @@ FLASHMEM boolean key_right()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_RIGHT) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_RIGHT, HIGH);
 #endif
     return true;
@@ -3434,7 +3367,7 @@ FLASHMEM boolean key_left()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_LEFT) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_LEFT, HIGH);
 #endif
     return true;
@@ -3459,7 +3392,7 @@ FLASHMEM boolean key_up()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_UP) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_UP, HIGH);
 #endif
     return true;
@@ -3484,7 +3417,7 @@ FLASHMEM boolean key_down()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_DOWN) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_DOWN, HIGH);
 #endif
     return true;
@@ -3628,13 +3561,39 @@ extern void set_glow_panbar(uint8_t x, uint8_t y, int glow_input_value, int menu
 // also automagically shows a pan bar (marker line instead of filled bar), if min is smaller than zero.
 FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL)
 {
+
   setCursor_textGrid_small(x, y);
 #if defined GLOW
   if (seq.edit_state == 0)
     set_glow_bargraph(x, y, input_value, selected_option, limit_min, limit_max, zero_name);
 #endif
-  setModeColor(selected_option);
 
+#if defined(ESP_DISPLAY)
+  // Map values to uint8_t (all fit in 0-255)
+  uint8_t val8, min8, max8;
+  if (limit_min < 0) {
+    // Pan range -99..99 -> 1..199
+    val8 = input_value + 100;
+    min8 = 1;
+    max8 = 199;
+  }
+  else {
+    val8 = constrain(input_value, 0, 255);
+    min8 = limit_min;
+    max8 = limit_max;
+  }
+  uint8_t highlight = 0;
+  if (generic_temp_select_menu == selected_option) {
+    highlight = seq.edit_state ? 2 : 1;
+  }
+  display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+#endif
+
+#if defined(ESP_DISPLAY)
+  esp_draw = false;
+#endif
+
+  setModeColor(selected_option);
   if (limit_min == 0 && limit_max == 1)
     display.print(input_value ? F("ON ") : F("OFF"));
   else if (zero_name != NULL && input_value == 0)
@@ -3679,6 +3638,10 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
       display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + split, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
     }
   }
+#if defined(ESP_DISPLAY)
+  esp_draw = true;
+#endif
+
 }
 
 FLASHMEM void _print_panbar_value(uint8_t input_value)
@@ -3699,11 +3662,14 @@ FLASHMEM void _print_panbar_value(uint8_t input_value)
     print_formatted_number(input_value - 20, 2);
   }
 }
+
 FLASHMEM void print_small_intbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option, boolean show_bar, boolean show_zero)
 {
   print_small_scaled_bar(x, y, input_value, 0, 100, selected_option, show_bar, show_zero ? NULL : (const char*)F("OFF"));
   //set_glow(x,y,input_value,selected_option,0,100,show_zero ? NULL : (const char*)F("OFF"));
 }
+
+bool esp_draw = true;
 
 FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
 {
@@ -3711,15 +3677,28 @@ FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint
 #if defined GLOW
   set_glow_panbar(x, y, input_value, selected_option);
 #endif
-  setModeColor(selected_option);
 
+#if defined(ESP_DISPLAY)
+  uint8_t highlight = 0;
+  if (generic_temp_select_menu == selected_option) {
+    highlight = seq.edit_state ? 2 : 1;
+  }
+  display.drawESPPanBar(x, y, input_value, highlight);
+#endif
+
+#if defined(ESP_DISPLAY)
+  esp_draw = false;
+#endif
+  setModeColor(selected_option);
   _print_panbar_value(input_value);
   display.console = true;
   display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 5 * CHAR_width_small, 7, COLOR_SYSTEXT);
   display.console = true;
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, 5 * CHAR_width_small - 2, 7 - 2, COLOR_BACKGROUND);
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + input_value / 1.60, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
-
+#if defined(ESP_DISPLAY)
+  esp_draw = true;
+#endif
 }
 
 
@@ -3890,7 +3869,6 @@ public:
     if (touch_button_back_page() || legacy_touch_button_back_page())
     {
       draw_back_touchbutton();
-      // current_page_has_touch_back_button = true;
     }
     else
       helptext_l(back_text);
@@ -4060,6 +4038,9 @@ public:
     if (LCDML.BT_checkEnter() && encoderDir[ENC_R].ButtonShort())
     {
       seq.edit_state = 1 - seq.edit_state;
+      // #if defined ESP_DISPLAY
+      // sendEditMode(seq.edit_state);  
+      // #endif
       editors[generic_temp_select_menu].draw_editor(true);
       flush_sysex();
     }
@@ -4139,7 +4120,7 @@ extern int analog_volume_value_previous;
    MENU CONTROL
  ***********************************************************************/
 
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
 extern void All_Button_LEDS(bool state);
 #endif
 
@@ -4150,7 +4131,7 @@ extern uint8_t numTouchPoints;
 #if defined ESP_DISPLAY
 uint8_t esp_function_id = 255;
 bool function_jump_pending = false;
-static uint8_t touchBuffer[2];
+static uint8_t touchBuffer[16];
 uint8_t esp_buttonNumber = touchBuffer[0];
 static uint8_t esp_pending_button = 255;      // 255 = no pending press
 static uint32_t esp_press_start = 0;
@@ -4159,16 +4140,123 @@ static uint8_t packetType = 0;
 static uint8_t touchIndex = 0;
 static bool inTouchPacket = false;
 
+
+extern bool  espAlive;
+extern void  sendVersion();
+extern void sendMinEspVersion();
+extern uint32_t lastESPHandshakeTime;
+extern void draw_menu_ui_icons();
+
 void redraw_current_page_or_fallback()
 {
-  int id = LCDML.MENU_getLastActiveFunctionID();
-  if (id != _LCDML_NO_FUNC) {
-    LCDML.OTHER_jumpToID(id);
-  }
-  else {
-    LCDML.FUNC_goBackToMenu();
+  display.fillScreen(COLOR_BACKGROUND);
+  LCDML.OTHER_jumpToID(0);
+  delay(10);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  draw_menu_ui_icons();
+  draw_back_touchbutton();
+}
+
+#if defined ESP_DISPLAY
+// MIDI handlers from the main sketch
+extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
+extern void handleControlChange(byte inChannel, byte inCtrl, byte inValue);
+extern void handleProgramChange(byte inChannel, byte inProgram);
+extern void handleAfterTouch(byte inChannel, byte inPressure);
+extern void handlePitchBend(byte inChannel, int16_t inPitch);
+
+void processMidiDataFromESP(uint8_t* data, uint8_t len) {
+  uint8_t idx = 0;
+  uint8_t runningStatus = 0;
+ 
+  while (idx < len) {
+    uint8_t byte = data[idx];
+
+    // Check for status byte (MSB set and not a system common message)
+    if ((byte & 0x80) && (byte & 0xF0) != 0xF0) {
+      runningStatus = byte;
+      idx++;
+      uint8_t cmd = runningStatus & 0xF0;
+      uint8_t channel = (runningStatus & 0x0F) + 1; // convert to 1‑16
+
+      // Note On / Off
+      if (cmd == 0x90 || cmd == 0x80) {
+        if (idx + 1 >= len) break;
+        uint8_t note = data[idx++];
+        uint8_t velocity = data[idx++];
+        bool isNoteOn = (cmd == 0x90 && velocity > 0);
+        if (cmd == 0x90 && velocity == 0) isNoteOn = false;
+
+        if (isNoteOn) {
+          handleNoteOn(channel, note, velocity, 0);
+        }
+        else {
+          handleNoteOff(channel, note, velocity, 0);
+        }
+      }
+      // Control Change
+      else if (cmd == 0xB0) {
+        if (idx + 1 >= len) break;
+        uint8_t controller = data[idx++];
+        uint8_t value = data[idx++];
+        handleControlChange(channel, controller, value);
+      }
+      // Program Change (1 byte)
+      else if (cmd == 0xC0) {
+        if (idx >= len) break;
+        uint8_t program = data[idx++];
+        handleProgramChange(channel, program);
+      }
+      // Channel Aftertouch (1 byte)
+      else if (cmd == 0xD0) {
+        if (idx >= len) break;
+        uint8_t pressure = data[idx++];
+        handleAfterTouch(channel, pressure);
+      }
+      // Pitch Bend (2 bytes)
+      else if (cmd == 0xE0) {
+        if (idx + 1 >= len) break;
+        uint8_t lsb = data[idx++];
+        uint8_t msb = data[idx++];
+        int16_t pitch = ((msb << 7) | lsb) - 8192;
+        handlePitchBend(channel, pitch);
+      }
+      // Other 2‑byte commands (not implemented)
+      else {
+        if (idx + 1 >= len) break;
+        idx += 2;
+      }
+    }
+    // Running status (data byte only)
+    else if (runningStatus != 0) {
+      uint8_t cmd = runningStatus & 0xF0;
+      if (cmd == 0x90 || cmd == 0x80) {
+        if (idx + 1 >= len) break;
+        uint8_t note = data[idx++];
+        uint8_t velocity = data[idx++];
+        bool isNoteOn = (cmd == 0x90 && velocity > 0);
+        if (cmd == 0x90 && velocity == 0) isNoteOn = false;
+        uint8_t channel = (runningStatus & 0x0F) + 1;
+        if (isNoteOn) {
+          handleNoteOn(channel, note, velocity, 0);
+        }
+        else {
+          handleNoteOff(channel, note, velocity, 0);
+        }
+      }
+      else {
+        // skip one data byte for other running status messages
+        idx++;
+      }
+    }
+    else {
+      // Unexpected byte – abort this packet
+      break;
+    }
   }
 }
+#endif
 
 void processIncomingSerial(bool& ackReceived) {
   while (Serial4.available() > 0) {
@@ -4177,15 +4265,25 @@ void processIncomingSerial(bool& ackReceived) {
     if (data == ACK_BYTE) {
       ackReceived = true;
     }
-    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD || data == 0xAE) {
+
+    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
+      data == 0xAE || data == CMD_MIDI_DATA) {
       packetType = data;
       inTouchPacket = true;
       touchIndex = 0;
     }
+
     else if (data == 0xAE && touchIndex == 0) {
       redraw_current_page_or_fallback();
     }
     else if (data == 0xBB && inTouchPacket) {
+
+      if (packetType == CMD_MIDI_DATA && touchIndex >= 1) {
+        uint8_t len = touchBuffer[0];
+        if (len > 0 && touchIndex >= 1 + len) {
+          processMidiDataFromESP(&touchBuffer[1], len);
+        }
+      }
       if (packetType == 0xAA && touchIndex == 2) {
         uint16_t esp_touch_x = touchBuffer[0];
         uint16_t esp_touch_y = touchBuffer[1];
@@ -4241,7 +4339,17 @@ void processIncomingSerial(bool& ackReceived) {
       touchIndex = 0;
       packetType = 0;
     }
-    else if (inTouchPacket && touchIndex < 2) {
+
+    else if (data == 0x98) {
+      // ESP requesting handshake (e.g., after reboot)
+      // Resend our version information
+      sendVersion();
+      sendMinEspVersion();
+      lastESPHandshakeTime = millis();
+
+    }
+
+    else if (inTouchPacket && touchIndex < sizeof(touchBuffer)) {
       touchBuffer[touchIndex++] = data;
     }
 
@@ -4253,6 +4361,8 @@ void processIncomingSerial(bool& ackReceived) {
   }
 }
 #endif
+
+extern bool livemod_touch_state;
 
 FLASHMEM void lcdml_menu_control(void)
 {
@@ -4273,15 +4383,14 @@ FLASHMEM void lcdml_menu_control(void)
   // Volatile Variables
   int8_t g_LCDML_CONTROL_Encoder_position[NUM_ENCODER] = { ENCODER[ENC_R].read(), ENCODER[ENC_L].read() };
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+  //#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+#if defined RGB_ENCODERS
   button[0] = !digitalRead(BUT_R_PIN);
   button[1] = !digitalRead(BUT_L_PIN);
 #else
   button[0] = digitalRead(BUT_R_PIN);
   button[1] = digitalRead(BUT_L_PIN);
 #endif
-
-
 
 #if defined ESP_DISPLAY
   // readESPTouch();
@@ -4357,9 +4466,11 @@ FLASHMEM void lcdml_menu_control(void)
     break;
 
   case 15: // enc r
+    //phtodo xxxxxxxxxxxxxxxxxxx
     LCDML.BT_enter();
     encoderDir[ENC_R].ButtonShort(true);
     esp_buttonNumber = 99;
+    //phtodo xxxxxxxxxxxxxxxxxxxxxxxxx
 
     break;
 
@@ -4394,7 +4505,7 @@ FLASHMEM void lcdml_menu_control(void)
     case 10:
       button[ENC_R] = LOW;
       break;
-}
+    }
   }
 #endif
 
@@ -4413,7 +4524,7 @@ FLASHMEM void lcdml_menu_control(void)
         if (configuration.sys.vol > 100)
           configuration.sys.vol = 100;
         analog_volume_value_previous = analog_volume_value;
-}
+      }
     }
   }
 #endif
@@ -4511,7 +4622,7 @@ FLASHMEM void lcdml_menu_control(void)
 
   if (digitalRead(BI_SELECT) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_SEL, HIGH);
 #endif
     buttons = GAMEPAD_SELECT;
@@ -4523,9 +4634,11 @@ FLASHMEM void lcdml_menu_control(void)
     else
       buttons = GAMEPAD_START;
   }
+
+#ifndef REDUCED_BUTTON_INTERFACE_ESP
   if (digitalRead(BI_BUTTON_A) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_BUT_A, HIGH);
 #endif
     // buttons = buttons + GAMEPAD_BUTTON_A;
@@ -4533,12 +4646,14 @@ FLASHMEM void lcdml_menu_control(void)
   }
   if (digitalRead(BI_BUTTON_B) == false)
   {
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     setled(LED_BUT_B, HIGH);
 #endif
     // buttons = buttons + GAMEPAD_BUTTON_B;
     buttons = GAMEPAD_BUTTON_B;
-    }
+  }
+#endif
+
   //}
 #endif
 
@@ -4560,12 +4675,6 @@ FLASHMEM void lcdml_menu_control(void)
 
   if (gamepad_millis + (gamepad_accelerate) >= configuration.sys.gamepad_speed)
   {
-
-    // key-learn function
-    // if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad) && temp_int < 9)
-    // {
-    //   gamepad_learn_func(buttons);
-    // }
 
     // LSDJ Style Navigation:
     if (buttons == GAMEPAD_SELECT && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song))
@@ -4680,7 +4789,6 @@ FLASHMEM void lcdml_menu_control(void)
         }
       }
       else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) &&
-        //  LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_map_gamepad) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
@@ -4772,7 +4880,7 @@ FLASHMEM void lcdml_menu_control(void)
         handleStop();
     }
     //  }
-#if (defined BUTTON_LEDS && defined MCP_23008) || (defined BUTTON_LEDS && defined MCP_23017)
+#if defined BUTTON_LEDS && defined MCP_23017
     All_Button_LEDS(false);
 #endif
   }
@@ -4803,7 +4911,7 @@ FLASHMEM void lcdml_menu_control(void)
       LCDML.BT_down();
     }
     ENCODER[ENC_R].write(g_LCDML_CONTROL_Encoder_position[ENC_R] + 4);
-    }
+  }
   else if (g_LCDML_CONTROL_Encoder_position[ENC_R] >= 3)
   {
     if (!button[ENC_R])
@@ -4813,6 +4921,11 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
       encoderDir[ENC_R].Right(true);
       LCDML.BT_right();
+
+      // #if defined ESP_DISPLAY
+      //     sendEditMode(seq.edit_state);
+      // #endif
+
       g_LCDML_CONTROL_button_prev[ENC_R] = LOW;
       g_LCDML_CONTROL_button_press_time[ENC_R] = -1;
     }
@@ -4825,7 +4938,7 @@ FLASHMEM void lcdml_menu_control(void)
       LCDML.BT_up();
     }
     ENCODER[ENC_R].write(g_LCDML_CONTROL_Encoder_position[ENC_R] - 4);
-    }
+  }
   else
   {
     if (!button[ENC_R] && g_LCDML_CONTROL_button_prev[ENC_R]) // falling edge, button pressed
@@ -4857,11 +4970,12 @@ FLASHMEM void lcdml_menu_control(void)
 #ifdef DEBUG
         LOG.println(F("ENC-R short"));
 #endif
+
         encoderDir[ENC_R].ButtonShort(true);
 
         LCDML.BT_enter();
       }
-      }
+    }
   }
   if (encoderDir[ENC_R].ButtonPressed() == true && (millis() - g_LCDML_CONTROL_button_press_time[ENC_R]) >= LONG_BUTTON_PRESS)
   {
@@ -5022,7 +5136,7 @@ FLASHMEM void lcdml_menu_control(void)
       }
     }
     ENCODER[ENC_L].write(g_LCDML_CONTROL_Encoder_position[ENC_L] + 4);
-    }
+  }
   else if (g_LCDML_CONTROL_Encoder_position[ENC_L] >= 3)
   {
     if (!button[ENC_L])
@@ -5143,7 +5257,7 @@ FLASHMEM void lcdml_menu_control(void)
       }
     }
     ENCODER[ENC_L].write(g_LCDML_CONTROL_Encoder_position[ENC_L] - 4);
-    }
+  }
   else
   {
     if (!button[ENC_L] && g_LCDML_CONTROL_button_prev[ENC_L]) // falling edge, button pressed
@@ -5205,13 +5319,15 @@ FLASHMEM void lcdml_menu_control(void)
             ui_liveSeq->notifyLeftEncoderShort();
           }
           else {
+
             LCDML.BT_quit();
             LCDML.SCREEN_resetTimer(); // reset timer on exiting screensaver through back key
+
           }
         }
       }
-      }
     }
+  }
 
   if (encoderDir[ENC_L].ButtonPressed() == true && (millis() - g_LCDML_CONTROL_button_press_time[ENC_L]) >= LONG_BUTTON_PRESS)
   {
@@ -5240,17 +5356,15 @@ FLASHMEM void lcdml_menu_control(void)
     encoderDir[ENC_L].reset();
     encoderDir[ENC_R].reset();
   }
-  }
+}
 
 #if defined GLOW
 extern int glow_menu_item;
 #endif
 
-#ifdef TOUCH_UI
-extern void back_touchbutton();
-#endif
-
 extern bool disableDirectMIDIinput;
+
+extern void sendGlowClear();
 
 /***********************************************************************
    MENU DISPLAY
@@ -5258,12 +5372,8 @@ extern bool disableDirectMIDIinput;
 FLASHMEM void lcdml_menu_clear(void)
 {
 
-#ifdef TOUCH_UI
-  //
-#else
   if (seq.menu_status == 0)
     border1_clear();
-#endif
 
   ts.touch_ui_drawn_in_menu = false;
   back_button_touch_page_check_and_init_done = false;
@@ -5273,12 +5383,13 @@ FLASHMEM void lcdml_menu_clear(void)
 #endif
 }
 
-
-
-#ifndef TOUCH_UI  //begin regular menu
 FLASHMEM void lcdml_menu_display(void)
 {
   disableDirectMIDIinput = false;
+
+#if defined ESP_DISPLAY
+  sendGlowClear();
+#endif
 
   // update content
   // ***************
@@ -5376,128 +5487,6 @@ FLASHMEM void lcdml_menu_display(void)
     drawScrollbar((_LCDML_DISP_cols - 2) * CHAR_width + CHAR_width_small, CHAR_height, 6, LCDML.MENU_getChilds(), LCDML.MENU_getCursorPosAbs(), CHAR_height);
   }
 }
-
-#else  // begin touch_ui 
-
-FLASHMEM void lcdml_menu_display(void)
-{
-
-  if (seq.menu_status == 0)
-  {
-    display.fillScreen(COLOR_BACKGROUND);
-    seq.menu_status = 1;
-  }
-
-  // update content
-  // ***************
-  if (LCDML.DISP_checkMenuUpdate())
-  {
-    // declaration of some variables
-    // ***************
-    // content variable
-    char content_text[_LCDML_DISP_cols]; // save the content text of current menu element
-    // menu element object
-    LCDMenuLib2_menu* tmp;
-    // some limit values
-    uint8_t i = LCDML.MENU_getScroll();
-    //uint8_t maxi = _LCDML_DISP_rows + i;
-    uint8_t maxi = 16;
-    uint8_t n = 0;
-    uint8_t xpos = 0, ypos = 0;
-    uint8_t count_num_buttons = 0;
-
-
-    // check if this element has children
-    if ((tmp = LCDML.MENU_getDisplayedObj()) != NULL)
-    {
-      // Display a header with the parent element name
-      display.setTextSize(1);
-      display.setTextColor(GREY1, COLOR_BACKGROUND);
-
-      if (LCDML.MENU_getLayer() == 0)
-      {
-        // this is displayed when no header is available
-       // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width + CHAR_width_small*4;
-        x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
-        last_menu_depth = LCDML.MENU_getLayer();
-        display.console = true;
-        //display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()] + CHAR_width, 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
-        display.console = false;
-        //if (ts.keyb_in_menu_activated == false)
-        //{
-          //display.setCursor(0, DISPLAY_HEIGHT - CHAR_height_small);
-          //display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-          //display.print(back_clear);
-        //}
-      }
-      else if (LCDML.MENU_getLayer() > last_menu_depth)
-      {
-        // display.setCursor(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7);
-        // display.setTextColor(RED, COLOR_BACKGROUND);
-        // display.print(">");
-        // display.setTextColor(GREY1, COLOR_BACKGROUND);
-        // LCDML_getContent(content_text, LCDML.MENU_getParentID());
-        // show_uppercase_no_grid(7, display.getCursorX(), strlen(content_text), content_text);
-        // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = display.getCursorX();
-       // if (ts.keyb_in_menu_activated == false)
-        //  helptext_l(back_text);//xxxyyy
-      }
-      back_touchbutton();
-      display.setTextSize(2);
-      seq.edit_state = false;
-      generic_active_function = 0;
-      // loop to display lines
-      do
-      {
-        // check if a menu element has a condition and if the condition be true
-        if (tmp->checkCondition())
-        {
-          // check the type off a menu element
-          if (tmp->checkType_menu() == true)
-          {
-            // display normal content
-            LCDML_getContent(content_text, tmp->getID());
-            if (n == LCDML.MENU_getCursorPos())
-              draw_button_on_grid_smarttext(xpos * 11 + 2, ypos * 6 + 1, content_text, 1);
-            else
-              draw_button_on_grid_smarttext(xpos * 11 + 2, ypos * 6 + 1, content_text, 0);
-            xpos++;
-            if (xpos > 3)
-            {
-              ypos++;
-              xpos = 0;
-            }
-            count_num_buttons++;
-          }
-          else
-          {
-            if (tmp->checkType_dynParam())
-            {
-              tmp->callback(n);
-            }
-          }
-          i++;
-          n++;
-        }
-        // try to go to the next sibling and check the number of displayed rows
-      } while (((tmp = tmp->getSibling(1)) != NULL) && (i < maxi - 1));
-
-      // clear menu buttons if menu content < number touch buttons
-      do
-      {
-        draw_button_on_grid_smarttext(xpos * 11 + 2, ypos * 6 + 1, "", 98); //empty touch button slot
-        xpos++;
-        if (xpos > 3)
-        {
-          ypos++;
-          xpos = 0;
-        }
-        count_num_buttons++;
-  } while (count_num_buttons < maxi);
-}
-      }
-    }
-#endif
 
 FLASHMEM void draw_instance_editor(Editor* editor, bool refresh)
 {
@@ -6445,36 +6434,62 @@ FLASHMEM void UI_handle_OP(uint8_t param)
 
 FLASHMEM void pattern_preview_in_probability_editor(uint8_t line, uint8_t patternno)
 {
-  display.setTextSize(1);
+  char buf[17];  // 16 chars + null terminator
+  uint8_t old = seq.active_pattern;
   seq.active_pattern = patternno;
-  display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
-  if (patternno == 99)
-  {
-    display.print(F("EMPTY "));
-  }
-  display.setTextColor(GREY1, GREY4);
-  display.print("[");
+
   for (uint8_t i = 0; i < 16; i++)
-  {
-    if (seq.vel[patternno][i] > 209)
-      display.setTextColor(COLOR_PITCHSMP, GREY4);
-    else
-    {
-      if (seq.content_type[patternno] == 0) // Drumpattern
-        display.setTextColor(COLOR_DRUMS, GREY4);
-      else if (seq.content_type[patternno] == 1) // Instrument Pattern
-        display.setTextColor(COLOR_INSTR, GREY4);
-      else if (seq.content_type[patternno] == 2 || seq.content_type[patternno] == 3) //  chord or arp pattern
-        display.setTextColor(COLOR_CHORDS, GREY4);
-    }
-    if (patternno == 99)
-      display.print(F(" "));
-    else
-      display.print(seq_find_shortname(i)[0]);
-  }
-  display.setTextColor(GREY1, GREY4);
-  display.print("]");
+    buf[i] = (patternno == 99) ? ' ' : seq_find_shortname(i)[0];
+  buf[16] = '\0';
+
+  seq.active_pattern = old;
+
+  uint16_t col;
+  if (patternno == 99) col = COLOR_SYSTEXT;
+  else if (seq.content_type[patternno] == 0) col = COLOR_DRUMS;
+  else if (seq.content_type[patternno] == 1) col = COLOR_INSTR;
+  else col = COLOR_CHORDS;
+
+  display.setTextColor(col, GREY4);
+  display.print(buf);          // prints the 16 characters
+
 }
+
+// FLASHMEM void pattern_preview_in_probability_editor(uint8_t line, uint8_t patternno)
+// {
+//   display.setTextSize(1);
+//   seq.active_pattern = patternno;
+//   display.setTextColor(COLOR_SYSTEXT, COLOR_CHORDS);
+//   if (patternno == 99)
+//   {
+//     display.print(F("EMPTY "));
+//   }
+//   display.setTextColor(GREY1, GREY4);
+//   display.print("[");
+//   for (uint8_t i = 0; i < 16; i++)
+//   {
+//     if (seq.vel[patternno][i] > 209)
+//       display.setTextColor(COLOR_PITCHSMP, GREY4);
+//     else
+//     {
+//       if (seq.content_type[patternno] == 0) // Drumpattern
+//         display.setTextColor(COLOR_DRUMS, GREY4);
+//       else if (seq.content_type[patternno] == 1) // Instrument Pattern
+//         display.setTextColor(COLOR_INSTR, GREY4);
+//       else if (seq.content_type[patternno] == 2 || seq.content_type[patternno] == 3) //  chord or arp pattern
+//         display.setTextColor(COLOR_CHORDS, GREY4);
+//     }
+//     if (patternno == 99)
+//       display.print(F(" "));
+//     else
+//       display.print(seq_find_shortname(i)[0]);
+//   }
+//   display.setTextColor(GREY1, GREY4);
+//   display.print("]");
+// }
+
+
+
 
 FLASHMEM void print_probabilities()
 {
@@ -6558,6 +6573,19 @@ FLASHMEM void UI_func_seq_probabilities(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     setCursor_textGrid_small(1, 4);
     display.print(F("PATTERN   CHANCE   VEL.+-   PREVIEW"));
+
+    // Draw all brackets once (they never change)
+    display.setTextSize(1);
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
+    for (uint8_t line = 0; line < 14; line++) {
+      // Opening bracket at column 20 (adjust as needed)
+      setCursor_textGrid_small(28, 6 + line);
+      display.print("[");
+      // Closing bracket after 16 characters (column 20+16 = 36)
+      setCursor_textGrid_small(45, 6 + line);
+      display.print("]");
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
   }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -6810,7 +6838,11 @@ FLASHMEM void UI_func_custom_mappings(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
     draw_button_on_grid(36, 1, "PREV.", "", 0);
-    drawBitmap(CHAR_width_small * 38 + 4, CHAR_height * 1 + 8, special_chars[19], 8, 8, GREEN);
+#if defined ESP_DISPLAY
+    display.drawLocalBitmap(CHAR_width_small * 38 + 4, CHAR_height * 1 + 8, BITMAP_PLAY, GREEN);
+#else
+    drawBitmap(CHAR_width_small * 38 + 4, CHAR_height * 1 + 8, special_chars[BITMAP_PLAY], 8, 8, GREEN);
+#endif
     draw_button_on_grid(45, 1, "MIDI", "LEARN", 0);
     display.setTextSize(1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
@@ -7118,11 +7150,20 @@ FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min,
     NULL);
 }
 
+#if defined ESP_DISPLAY
+extern int16_t lastPixelColor;
+#endif
+
 void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   int16_t* data, uint32_t length, uint8_t numChannels,
   uint16_t fromX, uint16_t toX,
   uint16_t waveColor, uint16_t bgColor) {
   if (toX > fromX) {
+
+#if defined ESP_DISPLAY
+    lastPixelColor = 254;
+#endif
+
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
 
     if ((toX - fromX) > 1) {
@@ -7136,6 +7177,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
         display.drawLine(xLine, y, xLine, y + h, bgColor);
       }
     }
+
 
     if (w > 0 && data != nullptr) {
       const uint8_t spacing = 4; // stereo looks better with spacing for loud waves
@@ -7651,19 +7693,12 @@ FLASHMEM void UI_func_drums(uint8_t param)
     display.print("ENVELOPE");
 
     ui.setCursor(0, 11);
-#if (NUM_DEXED>2)
+
     addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 100, &drum_config[0].env_attack);
     addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 100, &drum_config[0].env_hold);
     addDrumParameterEditor_uint8_t((const char*)F("DECAY"), 0, 100, &drum_config[0].env_decay);
     addDrumParameterEditor_uint8_t((const char*)F("SUSTAIN"), 0, 100, &drum_config[0].env_sustain);
     addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 100, &drum_config[0].env_release);
-#else
-    addDrumParameterEditor_uint8_t((const char*)F("ATTACK"), 0, 0, &drum_config[0].env_attack);
-    addDrumParameterEditor_uint8_t((const char*)F("HOLD"), 0, 0, &drum_config[0].env_hold);
-    addDrumParameterEditor_uint8_t((const char*)F("DECAY"), 0, 0, &drum_config[0].env_decay);
-    addDrumParameterEditor_uint8_t((const char*)F("SUSTAIN"), 0, 0, &drum_config[0].env_sustain);
-    addDrumParameterEditor_uint8_t((const char*)F("RELEASE"), 0, 0, &drum_config[0].env_release);
-#endif
 
     flush_sysex();
 
@@ -7671,17 +7706,11 @@ FLASHMEM void UI_func_drums(uint8_t param)
     display.setTextColor(RED);
     display.print("FILTER");
     ui.setCursor(0, 17);
-#if (NUM_DEXED>2)
+
     addDrumParameterEditor_uint8_t("", 0, 3, &drum_config[0].filter_mode);
     addDrumParameterEditor_uint8_t((const char*)F("FRQ"), 0, 100, &drum_config[0].filter_freq);
     ui.setCursor(0, 19);
     addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 100, &drum_config[0].filter_q);
-#else
-    addDrumParameterEditor_uint8_t("FILTER", 0, 0, &drum_config[0].filter_mode);
-    addDrumParameterEditor_uint8_t((const char*)F("FRQ"), 0, 0, &drum_config[0].filter_freq);
-    ui.setCursor(0, 19);
-    addDrumParameterEditor_uint8_t((const char*)F("Q"), 0, 0, &drum_config[0].filter_q);
-#endif
 
     flush_sysex();
 
@@ -9038,13 +9067,13 @@ FLASHMEM void seq_printAllSeqSteps()
           else
           {
             apc(64 - 16 - 8 + i, seq.note_data[seq.active_pattern][i], 6);
+          }
+        }
+      }
     }
-  }
-}
-  }
 #endif
   }
-  }
+}
 
 FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col);
 
@@ -9084,7 +9113,11 @@ FLASHMEM void seq_printAllVelocitySteps()
       {
         if (seq.vel[seq.active_pattern][i] > 209)
         {
-          drawBitmap((i - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[22], 8, 8, COLOR_PITCHSMP);
+#if defined ESP_DISPLAY
+          display.drawLocalBitmap((i - 1) * CHAR_width + 13, 2 * CHAR_height + 7, BITMAP_PITCHED, COLOR_PITCHSMP);
+#else
+          drawBitmap((i - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[BITMAP_PITCHED], 8, 8, COLOR_PITCHSMP);
+#endif
         }
       }
     }
@@ -9107,11 +9140,11 @@ FLASHMEM void seq_printAllVelocitySteps()
             sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 45);
           else
             sub_print_volume_pad(seq.vel[seq.active_pattern][i], 64 - 32 - 8 - 8 + i, 3); //white, pitched sample
+        }
       }
     }
-  }
 #endif
-}
+  }
 }
 
 FLASHMEM void seq_print_single_velocity_step(uint8_t step, int color)
@@ -9142,7 +9175,11 @@ FLASHMEM void seq_print_single_velocity_step(uint8_t step, int color)
     {
       if (seq.vel[seq.active_pattern][step] > 209)
       {
+#if defined ESP_DISPLAY
+        display.drawLocalBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, BITMAP_PITCHED, COLOR_PITCHSMP);
+#else
         drawBitmap((step - 1) * CHAR_width + 13, 2 * CHAR_height + 7, special_chars[22], 8, 8, COLOR_PITCHSMP);
+#endif
       }
     }
   }
@@ -9158,9 +9195,9 @@ FLASHMEM void seq_print_single_velocity_step(uint8_t step, int color)
     {
       sub_print_volume_pad(seq.vel[seq.active_pattern][step], 64 - 32 - 8 - 8 + step, 45);
     }
-    }
-#endif
   }
+#endif
+}
 
 bool wave_editor_skip_redraw_overview = false;
 
@@ -9678,7 +9715,7 @@ FLASHMEM void UI_func_slice_editor(uint8_t param)
         {
           menuhelper_previous_val = fm.sample_source;
         }
-    }
+      }
 
       else if (seq.edit_state == 1 && generic_temp_select_menu == 3 && fm.sample_source > 1 && fm.sample_source < 4)  // loop start
       {
@@ -9743,7 +9780,7 @@ FLASHMEM void UI_func_slice_editor(uint8_t param)
 
         draw_waveform_slice_editor((generic_temp_select_menu - 6) / 2);
       }
-  }
+    }
     if (e.pressed)// handle button presses during menu >>>>>>>>>>>>>>>>
     {
       stop_all_drum_slots();
@@ -9810,7 +9847,7 @@ FLASHMEM void UI_func_slice_editor(uint8_t param)
       print_updated_slices_text();
     }
 #endif
-}
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     unregisterTouchHandler();
@@ -11789,7 +11826,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 #if defined APC
       apc_print_volume_pads();
 #endif
-}
+    }
 
     display.setTextSize(2);
 
@@ -11894,10 +11931,10 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           APC_BUTTONS_RIGHT[6] = false;
           APC_BUTTONS_RIGHT[7] = false;
           apc_print_right_buttons();
-      }
+        }
 #endif
+      }
     }
-  }
     if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     {
       if (seq.menu == 0 && seq.active_function == 0 && seq.cycle_touch_element != 1)
@@ -12299,7 +12336,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         }
     }
     virtual_keyboard_smart_preselect_mode();
-    }
+  }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     unregisterTouchHandler();
@@ -13345,6 +13382,9 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(false);
+#endif
     // setup function
     seq.menu = 0;
     seq.edit_state = false;
@@ -13453,6 +13493,9 @@ FLASHMEM void UI_func_seq_tracker(uint8_t param)
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(true);
+#endif
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
@@ -13580,6 +13623,10 @@ FLASHMEM void UI_func_song(uint8_t param)
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(false);
+#endif
+
     // setup function
 #if defined APC
     APC_MODE = APC_SONG;
@@ -13609,6 +13656,7 @@ FLASHMEM void UI_func_song(uint8_t param)
     }
 
     UI_toplineInfoText(2);
+
     display.setCursor(1, 1);
     display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
     display.print(F("SONG"));
@@ -13617,8 +13665,11 @@ FLASHMEM void UI_func_song(uint8_t param)
     display.setCursor(CHAR_width_small * 21, 1);
     display.print(F("SLEN"));
     display.setCursor(CHAR_width_small * 26, 1);
+
+#ifndef ESP_DISPLAY
     display.print(F("LC"));
     print_chain_header();
+#endif
 
     display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
     show_no_grid(10, 1, 10, seq.name);
@@ -13634,7 +13685,7 @@ FLASHMEM void UI_func_song(uint8_t param)
     sub_song_print_instruments(GREY2, COLOR_BACKGROUND);
 
     display.setTextSize(1);
-}
+  }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
@@ -14065,7 +14116,7 @@ FLASHMEM void UI_func_song(uint8_t param)
       song_page_full_draw_transpose_complete = false;
       song_previous_displayed_chain = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
       chain_endline = 99;
-  }
+    }
 
     if (seq.loop_edit_step == 1 || seq.loop_edit_step == 2)
       edit_song_loop();
@@ -14079,6 +14130,9 @@ FLASHMEM void UI_func_song(uint8_t param)
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(true);
+#endif
     encoderDir[ENC_R].reset();
     seq.cycle_touch_element = 0;
     seq.tracktype_or_instrument_assign = 0;
@@ -15038,14 +15092,14 @@ FLASHMEM void set_delay_sync(uint8_t sync, uint8_t instance)
         LOG.print(midi_sync_delay_time, DEC);
         LOG.println(F("ms"));
 #endif
+      }
     }
-  }
     else
     {
       uint16_t midi_sync_delay_time = uint16_t(60000.0 * midi_ticks_factor[sync] / seq.bpm);
       delay_fx[instance]->delay(0, constrain(midi_sync_delay_time * configuration.fx.delay_multiplier[instance], DELAY_TIME_MIN, DELAY_TIME_MAX * 10));
     }
-}
+  }
 }
 
 FLASHMEM void print_sync_timing(uint8_t sync)
@@ -15403,15 +15457,15 @@ FLASHMEM void print_delay_multiplier(uint8_t instance, uint8_t param)
   if (instance == 0)
   {
     setCursor_textGrid_small(6, 3);
-    print_formatted_number(configuration.fx.delay_multiplier[instance], 1, 1, 1);
+    print_formatted_number(configuration.fx.delay_multiplier[instance], 2, 1, 1);
   }
   else
   {
     setCursor_textGrid_small(22, 3);
-    print_formatted_number(configuration.fx.delay_multiplier[instance], 1, 18, 1);
+    print_formatted_number(configuration.fx.delay_multiplier[instance], 2, 18, 1);
   }
   // display.print(configuration.fx.delay_multiplier[instance]);
-
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.print(F("x"));
   print_delay_time(instance, 99);
   set_global_delay_filter(instance);
@@ -15583,7 +15637,6 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
 
-    //setCursor_textGrid_small(4, 23);
     display.setCursor(CHAR_width_small * 5, DISPLAY_HEIGHT - CHAR_height_small);
     display.setTextColor(GREY2);
     display.setTextSize(1);
@@ -15595,13 +15648,13 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
     }
     else {
       display.print(F("NO VALID PSRAM FOUND"));
-  }
+    }
 #else
     display.print(F("FOR LONGER DELAYS ADD PSRAM"));
 #endif
     display.fillRect(0, 15, 95, 214, GREY4);
     display.fillRect(98, 15, 92, 214, GREY3);
-    display.fillRect(193, 15, 130, 214, GREY4);
+    display.fillRect(193, 15, 127, 214, GREY4);
 
     print_static_text_master_effects();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -15613,7 +15666,7 @@ FLASHMEM void UI_func_master_effects(uint8_t param)
 
     helptext_l(back_text);
     helptext_r(F("SELECT PARAM."));
-}
+  }
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     if (LCDML.BT_checkEnter()) {
@@ -16128,7 +16181,7 @@ FLASHMEM void UI_func_information(uint8_t param)
       MicroDexed[0]->keydown(MIDI_G3, 40);
       sysinfo_chord_state = 1;
     }
-    randomSeed(analogRead(0));
+    //randomSeed(analogRead(0));
     if (random(2) == 0) {
       sysinfo_logo_version = 2;
       splash_screen2();
@@ -17542,6 +17595,11 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     display.fillScreen(COLOR_BACKGROUND);
+
+    seq.cycle_touch_element = 0;
+    seq.edit_state = 0;
+    generic_temp_select_menu = 0;
+
     unregisterTouchHandler();
     unregisterScope();
     encoderDir[ENC_R].reset();
@@ -17758,7 +17816,6 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
     seq.edit_state = 0;
     generic_menu = 0;
 
-
     _print_arranger_labels();
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
@@ -17923,13 +17980,23 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 
   if (fm.sd_folder_depth > 0)
   {
-    drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[23], 8, 8, YELLOW);
+#if defined ESP_DISPLAY
+    display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, YELLOW);
+#else
+    drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, YELLOW);
+#endif
+
     display.setCursor(CHAR_width_small * 3 + xoffset * CHAR_width_small, 4 * 11);
     display.print("..");
   }
   else
   {
-    drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[23], 8, 8, COLOR_BACKGROUND);
+
+#if defined ESP_DISPLAY
+    display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
+    drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, COLOR_BACKGROUND);
+#endif
     display.setCursor(CHAR_width_small * 3 + xoffset * CHAR_width_small, 4 * 11);
     display.print("/ ");
   }
@@ -17970,13 +18037,21 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     // Draw the top line with proper highlight if needed
     if (fm.sd_folder_depth > 0) {
       // show ".." highlighted so cursor is visibly on it
-      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[23], 8, 8, YELLOW);
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
+      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, YELLOW);
+#endif
       display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP); // inverted highlight
       display.setCursor(CHAR_width_small * 3 + xoffset * CHAR_width_small, 4 * 11);
       display.print("..");
     }
     else {
-      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[23], 8, 8, COLOR_BACKGROUND);
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
+      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, 4 * 11 - 1, special_chars[BITMAP_FOLDER], 8, 8, COLOR_BACKGROUND);
+#endif
       display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
       display.setCursor(CHAR_width_small * 3 + xoffset * CHAR_width_small, 4 * 11);
       display.print("/ ");
@@ -18012,7 +18087,11 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 
     if (sd_entry.isDirectory)
     {
-      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[23], 8, 8, YELLOW);
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, BITMAP_FOLDER, YELLOW);
+#else
+      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[BITMAP_FOLDER], 8, 8, YELLOW);
+#endif
       if (f == fm.sd_selected_file && fm.sd_parent_folder == false)
         display.setTextColor(COLOR_BACKGROUND, COLOR_PITCHSMP);
       else
@@ -18025,7 +18104,11 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     }
     else
     {
-      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[23], 8, 8, COLOR_BACKGROUND);
+#if defined ESP_DISPLAY
+      display.drawLocalBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, BITMAP_FOLDER, COLOR_BACKGROUND);
+#else
+      drawBitmap(CHAR_width_small + xoffset * CHAR_width_small, f * 11 - 1 + 5 * 11, special_chars[BITMAP_FOLDER], 8, 8, COLOR_BACKGROUND);
+#endif
 
       if (sd_entry.name.length() > FILENAME_MAX_LEN - 1 && f == fm.sd_selected_file)
         display.setTextColor(COLOR_BACKGROUND, RED);
@@ -18057,7 +18140,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
 
     rows_drawn++;
   } // end for
-  }
+}
 
 
 #if defined COMPILE_FOR_PSRAM
@@ -18148,15 +18231,7 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
 
 FLASHMEM void print_note_name_and_octave(uint8_t note)
 {
-  // display.print(noteNames[note % 12][0]);
-  // if (noteNames[note % 12][1] != '\0')
-  // {
-  //   display.print(noteNames[note % 12][1]);
-  // }
-  // display.print((note / 12) - 1);
-  // display.print(" ");
-
-  char buffer[4];  // 3 chars + null
+  char buffer[6];
   if (note == 0) {
     strcpy(buffer, "C1 ");
   }
@@ -18174,7 +18249,6 @@ FLASHMEM void print_note_name_and_octave(uint8_t note)
     }
   }
   display.print(buffer);
-
 }
 
 FLASHMEM uint8_t get_distance(uint8_t a, uint8_t b)
@@ -18606,6 +18680,9 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(false);
+#endif
     registerTouchHandler(handle_touchscreen_msp);
     seq.edit_state = false;
     generic_temp_select_menu = 0;
@@ -19010,6 +19087,10 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+#if defined ESP_DISPLAY
+    sendVolumeIconsMode(true);
+#endif
+
     encoderDir[ENC_R].reset();
     encoderDir[ENC_L].reset();
     unregisterTouchHandler();
@@ -19338,9 +19419,8 @@ FLASHMEM void previewWavSliceEditor() {
 FLASHMEM void file_manager_clear_text_line()
 {
   display.console = true;
-  display.fillRect(CHAR_width_small * 1, CHAR_height_small * 23 + 5, (53 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
+  display.fillRect(2, CHAR_height_small * 23 + 5, (53 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
 }
-
 
 // Consolidated error/info display function
 FLASHMEM void showError(const char* message) {
@@ -19350,7 +19430,6 @@ FLASHMEM void showError(const char* message) {
   display.print(message);
   //fill_up_with_spaces_left_window_filemanager();
 }
-
 
 #ifdef COMPILE_FOR_PSRAM 
 #ifdef SECOND_SD
@@ -19695,7 +19774,7 @@ bool deleteFolderExternalSD(const String& path) {
   if (!SD_EXTERNAL.rmdir(path.c_str())) {  // Added .c_str() here
     showError("Failed to remove dir");
     success = false;
-}
+  }
   return success;
 }
 #endif
@@ -19785,7 +19864,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     }
     if (!SD_EXTERNAL.exists(BRAIDS)) {
       SD_EXTERNAL.mkdir(BRAIDS);
-      }
+    }
     if (!SD_EXTERNAL.exists(DRUMS)) {
       SD_EXTERNAL.mkdir(DRUMS);
     }
@@ -19827,7 +19906,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     print_file_manager_buttons();
     print_file_manager_delete_button();
     print_file_manager_active_border();
-    }
+  }
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
@@ -20132,7 +20211,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
         }
 
         return; // folder click handled
-        }
+      }
 
       else { // is a file
         switch (fm.sd_mode) {
@@ -20206,12 +20285,12 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
 
         print_file_manager_buttons();
       }
-      }
+    }
 
 
-    } //loop end
+  } //loop end
 
-    // show files
+  // show files
   if (fm.active_window == 0 && fm.SD_CARD_READER_EXT == false)
   {
     fm.sd_new_name[0] = 0x2f;
@@ -20298,7 +20377,7 @@ FLASHMEM void UI_func_file_manager(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
-  }
+}
 
 
 FLASHMEM void update_selective_values_midi_thru()
@@ -20653,8 +20732,9 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     generic_temp_select_menu = 0;
     setCursor_textGrid(1, 1);
     display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(F("MIDI CHANNELS"));
-    helptext_l(back_text);
+    //helptext_l(back_text);
     helptext_r(F("EDIT"));
     display.setTextSize(1);
     for (uint8_t i = 0; i < 4; i++)
@@ -20664,7 +20744,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 #else
       _show_midi_channel(F("DEXED INSTANCE #"), 5 + i, MIDI_CHANNEL_OFF, i + 1);
 #endif
-  }
+    }
 
 #ifdef GRANULAR
     _show_midi_channel(F("GRANULAR SYNTH"), 9, granular_params.midi_channel);
@@ -20685,7 +20765,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 
     _show_midi_channel(F("DRUMS/SAMPLES"), 17, drum_midi_channel);
     _show_midi_channel(F("DRUM SLICES"), 18, slices_midi_channel);
-}
+  }
 
   if (LCDML.FUNC_loop())
   {
@@ -20713,7 +20793,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 #if defined(GLOW)
         if (new_menu != generic_temp_select_menu)
           remove_glow();
-#endif // defined(GLOW)
+#endif 
 
         generic_temp_select_menu = new_menu;
       }
@@ -20784,7 +20864,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     if (count_omni() != 0)
     {
       display.setTextSize(1);
-      setCursor_textGrid_small(8, 21);
+      setCursor_textGrid_small(9, 21);
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       display.print(F("WARNING: "));
       display.setTextColor(RED, COLOR_BACKGROUND);
@@ -20795,9 +20875,9 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       else
         display.print(F(" INSTRUMENTS ARE SET TO OMNI "));
       display.setTextColor(GREY2, COLOR_BACKGROUND);
-      setCursor_textGrid_small(8, 22);
+      setCursor_textGrid_small(9, 22);
       display.print(F("ASSIGN EACH INSTRUMENT TO AN UNIQUE"));
-      setCursor_textGrid_small(8, 23);
+      setCursor_textGrid_small(9, 23);
       display.print(F("MIDI CHANNEL AND "));
       display.setTextColor(GREY1, COLOR_BACKGROUND);
       display.print(F("SAVE YOUR PERFORMANCE"));
@@ -20806,7 +20886,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     else if (count_midi_channel_duplicates(false) != 0)
     {
       display.setTextSize(1);
-      setCursor_textGrid_small(8, 21);
+      setCursor_textGrid_small(9, 21);
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       display.print(F("NOTICE: "));
       display.setTextColor(RED, COLOR_BACKGROUND);
@@ -20834,9 +20914,9 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
       if (count_midi_channel_duplicates(false) == 1)
         display.print(F("  "));
 
-      setCursor_textGrid_small(8, 22);
+      setCursor_textGrid_small(9, 22);
       display.print(F("TO MULTIPLE INSTRUMENTS - YOU CAN  "));
-      setCursor_textGrid_small(8, 23);
+      setCursor_textGrid_small(9, 23);
       display.print(F("IGNORE THIS WHEN IT IS DONE"));
       display.setTextColor(GREY1, COLOR_BACKGROUND);
       display.print(F(" ON PURPOSE"));
@@ -20846,7 +20926,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     else if (check_and_confirm_midi_channels == true)
     {
       display.setTextSize(1);
-      setCursor_textGrid_small(8, 21);
+      setCursor_textGrid_small(9, 21);
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       display.print(F("ALL MIDI CHANNEL SETTINGS"));
       display.setTextColor(GREEN, COLOR_BACKGROUND);
@@ -20854,9 +20934,9 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
 
       display.setTextColor(GREY2, COLOR_BACKGROUND);
 
-      setCursor_textGrid_small(8, 22);
+      setCursor_textGrid_small(9, 22);
       display.print(F("YOU NOW SHOULD SAVE YOUR CHANGES   "));
-      setCursor_textGrid_small(8, 23);
+      setCursor_textGrid_small(9, 23);
       display.print(F("TO THE CURRENTLY LOADED PERFORMANCE   "));
       display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
       check_and_confirm_midi_channels = false;
@@ -20879,7 +20959,7 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 
 
@@ -20982,152 +21062,6 @@ FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t valu
 #endif
 
 }
-
-// FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
-// {
-//   const uint8_t max_visible_settings = 10;
-
-//   auto clear_desc = [](uint8_t line) {
-//     setCursor_textGrid_small(2, line);
-//     print_empty_spaces(42, 1);
-//     };
-
-//   auto clear_val = [](uint8_t line) {
-//     setCursor_textGrid_small(42, line);
-//     print_empty_spaces(8, 1);
-//     };
-
-//   auto render_label = [](uint8_t setting_index, uint8_t line) {
-//     setCursor_textGrid_small(2, line);
-//     switch (setting_index) {
-//     case 0: display.print(F("GAMEPAD/NATIVE KEY SPEED")); break;
-//     case 1: display.print(F("SCREENSAVER START")); break;
-//     case 2: display.print(F("SCREENSAVER MODE")); break;
-//     case 3: display.print(F("DISPLAY ROTATION")); break;
-//     case 4: display.print(F("TOUCH SCREEN ROTATION")); break;
-//     case 5: display.print(F("SWAP ENCODER DIRECTION (A/B PINS)")); break;
-//     case 6: display.print(F("SKIP BOOT ANIMATION")); break;
-//     case 7: display.print(F("INVERT COLORS (EXPERIMENTAL)")); break;
-//     case 8: display.print(F("DISPLAY BRIGHTNESS")); break;
-//     case 9: display.print(F("DEXED ENGINE")); break;
-//     case 10: display.print(F("SKIP MIDI CHANNEL & MIDI SYNC WARNINGS")); break;
-//     case 11: display.print(F("SEND SYSEX ON VOICE CHANGE")); break;
-//     case 12: display.print(F("SEND MIDI CC DUMPS")); break;
-//     case 13: display.print(F("SWAP MIDI ACTIVITY LEDS")); break;
-//     case 14: display.print(F("RGB ENCODER DEFAULT COLOR"));
-// #ifndef RGB_ENCODERS
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     case 15: display.print(F("RGB ENCODER EDITOR COLOR"));
-// #ifndef RGB_ENCODERS
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     case 16: display.print(F("ANALOG VOLUME CONTROL"));
-// #ifndef MCP_CV
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     case 17: display.print(F("EXT. SUSTAIN PEDAL/DAMPER"));
-// #ifndef MCP_CV
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     case 18: display.print(F("EXTERNAL CV CLOCK INPUT"));
-// #ifndef MCP_CV
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-
-//     case 19: display.print(F("MIDI INPUT CC -> CV2"));
-// #ifndef MCP_CV
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     case 20: display.print(F("MIDI INPUT CC -> CV4"));
-// #ifndef MCP_CV
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     case 21: display.print(F("NOTE TRANSPOSE -> CV1"));
-// #ifndef MCP_CV
-//       display.print(F(" [NA]"));
-// #endif
-//       break;
-//     }
-//     };
-
-//   auto render_value = [](uint8_t setting_index, uint8_t line) {
-//     setModeColor(setting_index);
-//     setCursor_textGrid_small(42, line);
-//     switch (setting_index) {
-//     case 0: print_formatted_number(configuration.sys.gamepad_speed, 3); setCursor_textGrid_small(46, line); display.print(F("ms")); break;
-//     case 1: print_formatted_number(configuration.sys.screen_saver_start, 2); setCursor_textGrid_small(45, line); display.print(configuration.sys.screen_saver_start > 1 ? F("MINS") : F("MIN ")); break;
-//     case 2: print_screensaver_mode(); break;
-//     case 3: display.print(configuration.sys.display_rotation); break;
-//     case 4: display.print(configuration.sys.touch_rotation); break;
-//     case 5: display.print(configuration.sys.reverse_encoder_pins ? F("ON ") : F("OFF")); break;
-//     case 6: display.print(configuration.sys.boot_anim_skip ? F("YES") : F("NO ")); break;
-//     case 7: display.print(configuration.sys.invert_colors ? F("YES") : F("NO ")); break;
-//     case 8: print_formatted_number(configuration.sys.brightness, 3); break;
-//     case 9:
-//       if (MicroDexed[0]->getEngineType() == 0) display.print(F("MSFA"));
-//       else if (MicroDexed[0]->getEngineType() == 1) display.print(F("MK-I"));
-//       else if (MicroDexed[0]->getEngineType() == 2) display.print(F("OPL "));
-//       break;
-//     case 10: display.print(configuration.sys.skip_midi_channel_warning ? F("YES") : F("NO ")); break;
-//     case 11: display.print(configuration.sys.send_sysex_on_voice_change ? F("YES") : F("NO ")); break;
-//     case 12: display.print(configuration.sys.send_midi_cc ? F("YES") : F("NO ")); break;
-//     case 13: display.print(configuration.sys.swap_midi_leds ? F("YES") : F("NO ")); break;
-//     case 14: display.print(configuration.sys.rgb_enc_color_def);
-//       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_def);
-//       break;
-//     case 15: display.print(configuration.sys.rgb_enc_color_sel);
-//       _render_rgb_enc_preview_system_settings(line, configuration.sys.rgb_enc_color_sel);
-//       break;
-//     case 16: display.print(configuration.sys.vol_control ? F("YES") : F("NO ")); break;
-//     case 17: display.print(configuration.sys.sus_pedal ? F("YES") : F("NO ")); break;
-//     case 18: display.print(configuration.sys.ext_clock ? F("YES") : F("NO ")); break;
-
-//     case 19: print_formatted_number(configuration.sys.dac_cv_2, 2);  break;
-//     case 20: print_formatted_number(configuration.sys.dac_cv_4, 2);  break;
-//     case 21: print_formatted_number(configuration.sys.dac_cv_transpose, 2);  break;
-
-
-//       break;
-
-//     }
-//     };
-
-//   // Only update description if the scroll position changes
-//   if (scroll_position != previous_scroll_position) {
-
-//     for (uint8_t i = 0; i < max_visible_settings; i++) {
-//       uint8_t setting_index = scroll_position + i;
-//       if (setting_index >= total_menu_items) break;
-//       clear_desc(6 + i);
-//       render_label(setting_index, 6 + i);
-//     }
-//   }
-
-//   for (uint8_t i = 0; i < max_visible_settings; i++)
-//   {
-//     uint8_t setting_index = scroll_position + i;
-//     if (setting_index >= total_menu_items) break;
-//     if (menu_item_check(setting_index) || scroll_position != previous_scroll_position)
-//     {
-//       clear_val(6 + i);
-//       render_value(setting_index, 6 + i);
-//     }
-//   }
-
-//   if (scroll_position != previous_scroll_position)
-//     previous_scroll_position = scroll_position;
-
-//   drawScrollbar(308, 60, 10, total_menu_items, generic_temp_select_menu, 10);
-//   _system_settings_long_help_texts();
-// }
 
 FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
 {
@@ -21389,6 +21323,9 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       uint8_t idx = scroll_position + i;
       if (idx >= total_menu_items) break;
       render_label(idx, 6 + i);
+#if defined ESP_DISPLAY
+      delay(1);
+#endif
     }
   }
 
@@ -22574,7 +22511,7 @@ FLASHMEM void printLiveModButton(int8_t step) {
   if (seq.cycle_touch_element != 1) {
     char buf[5];
     snprintf(buf, 5, "%+03i", dexed_live_mod.live_adsr_values[selected_instance_id][step]);
-    const TouchButton::Color c = (dexed_live_mod.active_button - 1) == step ? TouchButton::BUTTON_ACTIVE : TouchButton::BUTTON_NORMAL;
+    const TouchButton::Color c = (dexed_live_mod.active_button - 1) == step ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL;
     TouchButton::drawButton(GRID.X[step], GRID.Y[5] - 23, labels[step], buf, c);
   }
 }
@@ -22890,6 +22827,9 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+    sendEditMode(false);
+#endif
     registerTouchHandler(handle_touchscreen_voice_select);
     registerScope(217, 40, 50, 48);
     dexed_onscreen_algo = 88;
@@ -23131,6 +23071,11 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
   {
     unregisterTouchHandler();
     unregisterScope();
+#if defined ESP_DISPLAY
+    if (seq.edit_state == false)
+      sendEditMode(false);
+#endif
+
     display.fillScreen(COLOR_BACKGROUND);
     encoderDir[ENC_R].reset();
     dexed_live_mod.active_button = 0;
@@ -23673,13 +23618,13 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
 #endif
           show(2, 1, 16, "Done.");
           delay(MESSAGE_WAIT_TIME);
-      }
+        }
         mode = 0xff;
         LCDML.FUNC_goBackToMenu();
         break;
+      }
     }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     if (mode < 0xff)
@@ -23690,7 +23635,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 FLASHMEM void UI_func_sysex_receive_bank(uint8_t param)
 {
@@ -24071,7 +24016,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
             show(2, 1, 16, "Done.");
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No bank.");
@@ -24080,9 +24025,9 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         mode = 0xff;
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
+      }
     }
   }
-}
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     encoderDir[ENC_R].reset();
@@ -24219,7 +24164,7 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
 
             bank_number = 0xff;
           }
-      }
+        }
         else
         {
           show(2, 1, 16, "No voice.");
@@ -24229,9 +24174,9 @@ FLASHMEM void UI_func_sysex_send_voice(uint8_t param)
         delay(MESSAGE_WAIT_TIME);
         LCDML.FUNC_goBackToMenu();
         break;
+      }
     }
   }
-}
 
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
@@ -24575,7 +24520,7 @@ extern FLASHMEM uint8_t search_accepted_char(uint8_t c)
 #endif
     if (c == accepted_chars[i])
       return (i);
-}
+  }
   return (0);
 }
 
@@ -24962,7 +24907,7 @@ FLASHMEM bool check_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_i
 #endif
       return false;
     }
-}
+  }
   else
     return false;
 }
@@ -25883,7 +25828,7 @@ FLASHMEM void UI_func_test_mute(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
   }
-  }
+}
 
 #if !defined PSRAM  //PSRAM TEST can only run when a non-psram firmware is loaded
 extern void psram_test();
@@ -26276,7 +26221,7 @@ FLASHMEM bool quick_check_favorites_in_bank(uint8_t p, uint8_t b, uint8_t instan
       LOG.println(F(" - It is no Favorite in current Bank."));
 #endif
     }
-}
+  }
   else
     return false;
 }
@@ -26318,7 +26263,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Added to Favorites..."));
 #endif
-      }
+    }
     else
     { // delete the file, is no longer a favorite
       SD.remove(tmp);
@@ -26341,7 +26286,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
         LOG.print(countfavs);
         LOG.println(F("Removed folder since no voice in bank flagged as favorite any more"));
 #endif
-    }
+      }
 
       ////remove fav symbol
       draw_favorite_icon(p, b, v, instance_id);
@@ -26349,7 +26294,7 @@ FLASHMEM void save_favorite(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id
 #ifdef DEBUG
       LOG.println(F("Removed from Favorites..."));
 #endif
-}
+    }
   }
 }
 
@@ -26447,7 +26392,7 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
   LOG.print(F(" root: "));
   LOG.println(msz[preset_number][zone_number].rootnote);
 #endif
-  }
+}
 #endif
 
 /*************************************************************************
@@ -26644,7 +26589,7 @@ FLASHMEM void splash_screen1()
   display.setCursor(0, 133);
   display.print(F("(c) 2021-2023 H.WIRTZ, M.KOSLOWSKI, D.PERBAL"));
   display.setCursor(0, 142);
-  display.print(F("(c) 2024-2025 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
+  display.print(F("(c) 2024-2026 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
 }
 
 
@@ -26764,7 +26709,7 @@ FLASHMEM void splash_screen2()
   display.setCursor(1, 100);
   display.print(F("(c) 2021-2023 H.WIRTZ, M.KOSLOWSKI, D.PERBAL"));
   display.setCursor(1, 110);
-  display.print(F("(c) 2024-2025 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
+  display.print(F("(c) 2024-2026 H.WIRTZ, M.KOSLOWSKI, D.PERBAL, D.WEBER"));
   display.setCursor(1 + CHAR_width_small * 4, 128);
   display.setTextColor(GREY2);
   display.print(F("https://codeberg.org/positionhigh/"));

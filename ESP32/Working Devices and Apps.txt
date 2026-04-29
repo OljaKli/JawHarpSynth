@@ -1,0 +1,12 @@
+Working Bluetooth Devices and Apps for MDT with ESP Display
+
+Hardware:
+M-VAVE SMK-37 Pro (MIDI Controller with internal DX7 Emu)
+
+Software Android:
+
+Byte By Byte - MIDI BLE Connect
+Byte By Byte - MIDI Keyboard
+
+Software IOS:
+
