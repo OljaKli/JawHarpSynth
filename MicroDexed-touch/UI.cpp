@@ -16028,6 +16028,10 @@ FLASHMEM void sysinfo_reload_prev_voice(DxPoolSettings settings)
   }
 }
 
+#ifdef PSRAM
+extern uint8_t psramspeed;
+#endif
+
 FLASHMEM void UI_func_information(uint8_t param)
 {
   static uint16_t loopMs = 0;
@@ -16170,6 +16174,15 @@ FLASHMEM void UI_func_information(uint8_t param)
     display.print(F("TOUCH"));
     display.setTextColor(GREY1);
 #endif
+
+#ifdef PSRAM
+ display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
+   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.print("PSRAM ");
+    display.print(psramspeed);
+     display.print("MHz");
+#endif
+
 
     if (seq.running == false) {
       oldSettings.pool = configuration.dexed[0].pool;
