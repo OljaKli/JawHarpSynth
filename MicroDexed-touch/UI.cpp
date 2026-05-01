@@ -174,13 +174,10 @@ PsramLoader sampleLoader(psram_free_bytes);
 #if defined ESP_DISPLAY
 espdisplay display(0);
 extern void sendVolumeIconsMode(bool);
-
-#else
-#if defined GENERIC_DISPLAY
+#elif defined GENERIC_DISPLAY
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
 #else
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK);
-#endif
 #endif
 
 MD_REncoder ENCODER[NUM_ENCODER]{ MD_REncoder(ENC_R_PIN_B, ENC_R_PIN_A), MD_REncoder(ENC_L_PIN_B, ENC_L_PIN_A) };
