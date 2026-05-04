@@ -4919,10 +4919,6 @@ FLASHMEM void lcdml_menu_control(void)
       encoderDir[ENC_R].Right(true);
       LCDML.BT_right();
 
-      // #if defined ESP_DISPLAY
-      //     sendEditMode(seq.edit_state);
-      // #endif
-
       g_LCDML_CONTROL_button_prev[ENC_R] = LOW;
       g_LCDML_CONTROL_button_press_time[ENC_R] = -1;
     }
@@ -7608,6 +7604,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_drums);
+    registerScope(276, 135, 40, 40);
     drumScreenActive = true;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
@@ -7793,6 +7790,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
     unregisterTouchHandler();
+     unregisterScope();
     drumScreenActive = false;
     ui.clear();
   }
@@ -10389,7 +10387,6 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
     else if (seq.menu > 1 && seq.menu < 17)
     {
       display.setTextSize(2);
-      //set_pattern_content_type_color(seq.active_pattern);
       setCursor_textGrid(seq.menu - 2, 1);
 
       if (seq.menu - 2 > 15 - seq.pattern_len_dec)
@@ -10401,8 +10398,9 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
         set_pattern_content_type_color(seq.active_pattern);
       display.print(seq_find_shortname(seq.menu - 2)[0]);
 
-      setCursor_textGrid(seq.menu - 1, 1);
 
+      setCursor_textGrid(seq.menu - 1, 1);
+      
       if (seq.menu - 1 > 15 - seq.pattern_len_dec && seq.active_function == 99) ////////
         display.setTextColor(COLOR_BACKGROUND, GREY2);
 
@@ -12808,6 +12806,7 @@ FLASHMEM void UI_func_epiano(uint8_t param)
     // setup function
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
+    registerScope(269, 15, 51, 40);
     print_epiano_static_texts();
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) && LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
       generic_temp_select_menu = 0;
@@ -12906,6 +12905,7 @@ FLASHMEM void UI_func_epiano(uint8_t param)
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     generic_menu = 0;
+     unregisterScope();
     // generic_active_function = 99;
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
@@ -23418,7 +23418,7 @@ FLASHMEM void UI_func_volume(uint8_t param)
     display.setTextSize(2);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     setCursor_textGrid(1, 1);
-    display.print(F("Master Volume"));
+    display.print(F("MASTER VOLUME"));
 
     if (multiband_active)
     {
@@ -23458,7 +23458,7 @@ FLASHMEM void UI_func_volume(uint8_t param)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     // setCursor_textGrid(1, 1);
     // display.print(F("Master Volume"));
-    display_bar_int("Master Vol.", configuration.sys.vol, 1.0, VOLUME_MIN, VOLUME_MAX, 3, false, false, false);
+    display_bar_int("MASTER VOL.", configuration.sys.vol, 1.0, VOLUME_MIN, VOLUME_MAX, 3, false, false, false);
     set_volume(configuration.sys.vol, configuration.sys.mono);
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********

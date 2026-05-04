@@ -1,4 +1,5 @@
 #include "scope.h"
+//#include "UI.h"
 #ifndef ESP_DISPLAY
 #include "ILI9341_t3n.h"
 #else 
@@ -16,6 +17,7 @@ void Realtime_Scope::update(void)
   audio_block_t* block = receiveReadOnly(0);
   if (block) {
     if (updateBuffer) {
+   //  if (currentScopeSettings.enabled && updateBuffer) {
       updateBuffer = false;
 
       if (scope_is_drawing == false) {
@@ -30,6 +32,7 @@ void Realtime_Scope::update(void)
 
 void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
 {
+ // if (!currentScopeSettings.enabled) return;
 
 #if defined ESP_DISPLAY
 static uint8_t scopeDivider = 0;
@@ -52,20 +55,20 @@ scopeDivider = 0;
     scopebuffer[i] = signFactor * log10f(1.0 + (9 * value / 32768.0)) + halfHeight; // log plot
   }
 
-// Check if the entire scope buffer is empty (no audio)
-// bool allZero = true;
-// for (uint16_t i = 0; i < w; i++) {
-//    if (abs(scopebuffer[i] - halfHeight) > 0) {
-//         allZero = false;
-//         break;
-//     }
-// }
-// if (allZero) {
-//     // Nothing to draw – skip sending
-//     updateBuffer = true;
-//     scope_is_drawing = false;
-//     return;
-// }
+//Check if the entire scope buffer is empty (no audio)
+bool allZero = true;
+for (uint16_t i = 0; i < w; i++) {
+   if (abs(scopebuffer[i] - halfHeight) > 1) {
+        allZero = false;
+        break;
+    }
+}
+if (allZero) {
+    // Nothing to draw – skip sending
+    updateBuffer = true;
+    scope_is_drawing = false;
+    return;
+}
 
 #if defined ESP_DISPLAY
   // Send Y‑values to ESP in a single packet
