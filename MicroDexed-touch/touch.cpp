@@ -72,12 +72,9 @@ TouchFn getCurrentTouchHandler(void) {
 FLASHMEM void updateTouchScreen() {
   if (remote_touched) {
     numTouchPoints = 1;
-  }
-  else {
-    // no remote touch, so update to check for real touch
+  } else {
     numTouchPoints = touch.touched();
     if (numTouchPoints > 0) {
-
 #if defined GENERIC_DISPLAY    
       // Scale from ~0->4000 to tft
       ts.p = touch.getPoint();
@@ -102,8 +99,7 @@ FLASHMEM void updateTouchScreen() {
         break;
       }
 #endif
-    }
-    else {
+    } else {
       isButtonTouched = false;
     }
   }
