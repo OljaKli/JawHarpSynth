@@ -1384,8 +1384,6 @@ FLASHMEM void setup()
 
   display.begin();
 
-
-
   // invert display colors
 #ifndef ESP_DISPLAY
 #ifdef CAPACITIVE_TOUCH_DISPLAY
@@ -4280,7 +4278,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           }
         }
 #endif
-
         //
         // E-Piano
         //
@@ -4298,18 +4295,31 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           dac_cv_3 = inVelocity * 25.98f;
 #ifdef MCP_CV 
           // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
-
           dac.analogWrite(0, dac_cv_1);
           dac.analogWrite(2, dac_cv_3);
-
           digitalWrite(GATE_OUT, HIGH); //gate on
-
           //dac.enable(true);
 #endif
 
-
 #ifdef MUSIKANDMORE
       //setled(LED_DOWN, true);
+#endif
+
+          dac_midi_note = inNumber;
+          dac_midi_vel = inVelocity;
+          dac_state = 1;
+
+        }
+        else if (inChannel == 21 && seq.running ) ///CV Output
+        {
+          dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
+          dac_cv_3 = inVelocity * 25.98f;
+#ifdef MCP_CV 
+          // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
+          dac.analogWrite(0, dac_cv_1);
+          dac.analogWrite(2, dac_cv_3);
+          digitalWrite(GATE_OUT, HIGH); //gate on
+          //dac.enable(true);
 #endif
 
           dac_midi_note = inNumber;
@@ -4615,7 +4625,6 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
       }
     }
 
-
     if (inChannel == configuration.sys.cv_midi_channel && seq.running == false)
     {
 #ifdef MCP_CV ///CV Output
@@ -4628,7 +4637,22 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
 #ifdef MUSIKANDMORE
+      //setled(LED_DOWN, false);
+#endif
 
+    }
+else if (inChannel == 21 && seq.running )
+    {
+#ifdef MCP_CV ///CV Output
+      // dac.analogWrite((inNumber - 8) * NOTESTEP_CV, inVelocity * 31, 0, 0);
+     // dac.enable(false);
+      dac_midi_note = 0;
+      dac_midi_vel = 0;
+      dac_state = 2;
+      digitalWrite(GATE_OUT, LOW); //gate off
+#endif
+
+#ifdef MUSIKANDMORE
       //setled(LED_DOWN, false);
 #endif
 

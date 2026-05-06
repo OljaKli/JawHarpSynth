@@ -399,6 +399,10 @@ FLASHMEM void arp_track(uint8_t d)
     else if (seq.instrument[d] == 5) {
       handleNoteOn(braids_osc.midi_channel, transformedNote, velocity, 4);
     }
+    else if (seq.instrument[d] == 64) {
+      handleNoteOn(21, transformedNote, velocity, 0);
+    }
+
   }
 
   seq.arp_note_prev = transformedNote;

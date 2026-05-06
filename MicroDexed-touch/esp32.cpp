@@ -212,7 +212,6 @@ uint8_t  lastTextSize;
 extern void processIncomingSerial(bool& ackReceived);
 //static uint8_t packetCounter = 0;
 
-
 // struct QueuedDrawCmd {
 //     uint8_t cmd;
 //     uint8_t payload[250];

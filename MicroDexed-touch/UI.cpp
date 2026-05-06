@@ -2634,7 +2634,7 @@ FLASHMEM void update_display_functions_while_seq_running()
         display.setTextColor(COLOR_SYSTEXT, RED);
         display.print(seq_find_shortname(seq.menu - 3)[0]);
       }
-      else if (seq.menu < 16 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
+      else if (seq.menu-1 < 16 && seq.menu-1 >=0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
       { // update static cursor while moving cursor running in vel editor
         setCursor_textGrid(seq.menu - 1, 1);
         display.setTextSize(2);
