@@ -22,6 +22,8 @@ FLASHMEM void fill_up_with_spaces_psram()
   } while (display.getCursorX() < 52 * CHAR_width_small);
 }
 
+elapsedMillis msec;
+
 FLASHMEM void psram_test()
 {
   char text1[40];
@@ -41,7 +43,7 @@ FLASHMEM void psram_test()
   fill_up_with_spaces_psram();
   memory_begin = (uint32_t*)(0x70000000);
   memory_end = (uint32_t*)(0x70000000 + size * 1048576);
-  elapsedMillis msec = 0;
+  msec = 0;
   if (!psram_check_fixed_pattern(0x5A698421))
     return;
   if (!psram_check_lfsr_pattern(2976674124ul))

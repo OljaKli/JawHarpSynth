@@ -75,6 +75,7 @@
 // Enable packet checksum for serial communication with ESP display
 
 #if defined(ESP_DISPLAY)
+//#define DRAW_QUEUE_SIZE 1 
 extern bool esp_draw;
 #endif
 

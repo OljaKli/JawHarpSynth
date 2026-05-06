@@ -17,6 +17,7 @@ public:
 private:
   bool scope_is_drawing = false;
   bool updateBuffer = true;
+  
   audio_block_t *inputQueueArray[2];
   int16_t scopebuffer[AUDIO_BLOCK_SAMPLES];
   int16_t scopebuffer_old[AUDIO_BLOCK_SAMPLES] = { 32 };

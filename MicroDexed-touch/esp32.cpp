@@ -210,21 +210,57 @@ uint16_t lastTextBgColor;
 uint8_t  lastTextSize;
 
 extern void processIncomingSerial(bool& ackReceived);
-static uint8_t packetCounter = 0;
+//static uint8_t packetCounter = 0;
 
-// uint8_t crc8(const uint8_t *data, size_t len) {
-//     uint8_t crc = 0x00;
-//     for (size_t i = 0; i < len; i++) {
-//         crc ^= data[i];
-//         for (uint8_t bit = 0; bit < 8; bit++) {
-//             if (crc & 0x80)
-//                 crc = (crc << 1) ^ 0x07;  // polynomial 0x07 (CRC-8-ATM)
-//             else
-//                 crc <<= 1;
+
+// struct QueuedDrawCmd {
+//     uint8_t cmd;
+//     uint8_t payload[250];
+//     uint8_t len;
+// };
+
+// static QueuedDrawCmd drawQueue[DRAW_QUEUE_SIZE];
+// static uint8_t drawQueueHead = 0;
+// static uint8_t drawQueueCount = 0;
+
+
+// void flushDrawQueueSingle() {
+//     if (drawQueueCount == 0) return;
+
+//     QueuedDrawCmd& q = drawQueue[drawQueueHead];
+
+//     Serial4.write(PKT_SYNC);
+//     Serial4.write(q.cmd);
+//     Serial4.write(q.len);
+//     Serial4.write(q.payload, q.len);
+
+//     uint8_t checksum = PKT_SYNC ^ q.cmd ^ q.len;
+//     for (uint8_t j = 0; j < q.len; j++) checksum ^= q.payload[j];
+//     Serial4.write(checksum);
+
+//     drawQueueHead = (drawQueueHead + 1) % DRAW_QUEUE_SIZE;
+//     drawQueueCount--;
+//    // delayMicroseconds(180);
+
+// }
+
+// void queuePacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
+//     if (drawQueueCount >= DRAW_QUEUE_SIZE) {
+//         // Queue full – force‑send a batch to free space
+//         flushDrawQueueSingle();
+//         // If still full (extremely unlikely), drop the oldest packet
+//         if (drawQueueCount >= DRAW_QUEUE_SIZE) {
+//             drawQueueHead = (drawQueueHead + 1) % DRAW_QUEUE_SIZE;
+//             drawQueueCount--;
 //         }
 //     }
-//     return crc;
+//     uint8_t idx = (drawQueueHead + drawQueueCount) % DRAW_QUEUE_SIZE;
+//     drawQueue[idx].cmd = cmd;
+//     drawQueue[idx].len = len;
+//     if (len > 0) memcpy(drawQueue[idx].payload, payload, len);
+//     drawQueueCount++;
 // }
+
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   if (len > 250) return;   // keep the safety check
@@ -238,7 +274,7 @@ void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
   for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
   Serial4.write(checksum);
-  delayMicroseconds(180);
+ // delayMicroseconds(180);
 }
 
 void sendGlowClear() {

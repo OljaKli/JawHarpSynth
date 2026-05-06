@@ -7,12 +7,8 @@
 
 #include "Arduino.h"
 #include <stdint.h>
-//10 50   10 40 
 
-// #define PACKETS_PER_BATCH   10      // Send this many packets before requesting ACK
-// #define BATCH_SYNC_CMD      99      // Command code for SYNC packet
 #define ACK_BYTE            0xAD
-// #define ACK_TIMEOUT_MS      40       // Time to wait for ACK
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
 
@@ -62,6 +58,8 @@
 #define CMD_MIDI_DATA  205
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
+//void queuePacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
+
 void sendEditMode(bool);
 
 class espdisplay : public Print

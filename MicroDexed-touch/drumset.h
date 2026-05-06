@@ -5,7 +5,12 @@
 #include "midinotes.h"
 #include "config.h"
 
-#ifdef COMPILE_FOR_PROGMEM
+
+#ifdef PSRAMTEST
+#include "drumsamples-empty.h"
+#define CHECK_PROGMEM_SAMPLE(s) s
+#define SAMPLE_SIZE(s) sizeof(s) / 2
+#elif COMPILE_FOR_PROGMEM
 #include "drumsamples.h"
 #define CHECK_PROGMEM_SAMPLE(s) s
 #define SAMPLE_SIZE(s) sizeof(s) / 2
