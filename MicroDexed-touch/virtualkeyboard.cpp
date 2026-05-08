@@ -47,7 +47,7 @@ void touch_check_all_keyboard_buttons();
 bool dark_keyboard;
 
 static bool keyboardHelpActive = false;
-static bool keyboardHelpDone   = false;
+static bool keyboardHelpDone = false;
 static uint32_t keyboardHelpStartMs = 0;
 
 // Maximum white keys for the largest view (mode 2)
@@ -62,70 +62,105 @@ static constexpr uint8_t whiteKeyOffsets[MAX_WHITE_KEYS] = {
 };
 
 struct KeyboardParams {
-    uint8_t  numWhite;
-    float    whiteWidth;
-    float    whiteSpacing;
-    float    blackWidth;
-    float    blackHeight;           // absolute height of black keys
+  uint8_t  numWhite;
+  float    whiteWidth;
+  float    whiteSpacing;
+  float    blackWidth;
+  float    blackHeight;           // absolute height of black keys
 };
 
 static const KeyboardParams keyParams[3] = {
-    // mode 0 – original 10 keys (unchanged)
-    {10, 30.0f, 2.0f, 22.0f, 34.0f},
-    // mode 1 – 15 keys (unchanged)
-    {15, 19.0f, 2.0f, 13.0f, 34.0f},
-    // mode 2 – 20 keys, now exactly fits the display width
-    {20, 14.0f, 2.0f, 10.0f, 34.0f}
+  // mode 0 – original 10 keys (unchanged)
+  {10, 30.0f, 2.0f, 22.0f, 34.0f},
+  // mode 1 – 15 keys (unchanged)
+  {15, 19.0f, 2.0f, 13.0f, 34.0f},
+  // mode 2 – 20 keys, now exactly fits the display width
+  {20, 14.0f, 2.0f, 10.0f, 34.0f}
 };
 
 struct KeyboardLayout {
-    uint8_t  numWhite;
-    float    whiteX[MAX_WHITE_KEYS];
-    float    whiteW;
-    uint8_t  whiteNote[MAX_WHITE_KEYS];   // semitone offset from base octave
-    uint8_t  numBlack;
-    float    blackX[MAX_WHITE_KEYS-1];
-    uint8_t  blackNote[MAX_WHITE_KEYS-1];
-    float    blackW;
-    float    blackH;
+  uint8_t  numWhite;
+  float    whiteX[MAX_WHITE_KEYS];
+  float    whiteW;
+  uint8_t  whiteNote[MAX_WHITE_KEYS];   // semitone offset from base octave
+  uint8_t  numBlack;
+  float    blackX[MAX_WHITE_KEYS - 1];
+  uint8_t  blackNote[MAX_WHITE_KEYS - 1];
+  float    blackW;
+  float    blackH;
 };
 
 static void calculateKeyboardLayout(KeyboardLayout& layout) {
-    uint8_t mode = ts.virtual_keyboard_view_mode;
-    const KeyboardParams& p = keyParams[mode];
-    layout.numWhite = p.numWhite;
+  uint8_t mode = ts.virtual_keyboard_view_mode;
+  const KeyboardParams& p = keyParams[mode];
+  layout.numWhite = p.numWhite;
 
-    // Convert widths / spacing to exact pixels
-    int whiteW  = (int)(p.whiteWidth + 0.5f);
-    int spacing = (int)(p.whiteSpacing + 0.5f);
-    layout.whiteW = (float)whiteW;          // still a float for touch detection
-    layout.blackW = p.blackWidth;
-    layout.blackH = p.blackHeight;
+  // Convert widths / spacing to exact pixels
+  int whiteW = (int)(p.whiteWidth + 0.5f);
+  int spacing = (int)(p.whiteSpacing + 0.5f);
+  layout.whiteW = (float)whiteW;          // still a float for touch detection
+  layout.blackW = p.blackWidth;
+  layout.blackH = p.blackHeight;
 
-    // Total required width
-    int total = p.numWhite * whiteW + (p.numWhite - 1) * spacing;
-    // Centre on the display
-    int x = (DISPLAY_WIDTH - total) / 2;
-    if (x < 0) x = 0;
+  // Total required width
+  int total = p.numWhite * whiteW + (p.numWhite - 1) * spacing;
+  // Centre on the display
+  int x = (DISPLAY_WIDTH - total) / 2;
+  if (x < 0) x = 0;
 
-    for (uint8_t i = 0; i < p.numWhite; i++) {
-        layout.whiteX[i]   = (float)x;
-        layout.whiteNote[i] = whiteKeyOffsets[i];
-        x += whiteW + spacing;                 // identical gap everywhere
+  for (uint8_t i = 0; i < p.numWhite; i++) {
+    layout.whiteX[i] = (float)x;
+    layout.whiteNote[i] = whiteKeyOffsets[i];
+    x += whiteW + spacing;                 // identical gap everywhere
+  }
+
+  // ---- Black keys (centres remain fine) ----
+  layout.numBlack = 0;
+  for (uint8_t i = 0; i < p.numWhite - 1; i++) {
+    if (layout.whiteNote[i + 1] - layout.whiteNote[i] == 2) {
+      float left = layout.whiteX[i] + layout.whiteW;
+      float right = layout.whiteX[i + 1];
+      float center = (left + right) * 0.5f;
+      layout.blackX[layout.numBlack] = center - layout.blackW * 0.5f;
+      layout.blackNote[layout.numBlack] = layout.whiteNote[i] + 1;
+      layout.numBlack++;
     }
+  }
+}
 
-    // ---- Black keys (centres remain fine) ----
-    layout.numBlack = 0;
-    for (uint8_t i = 0; i < p.numWhite - 1; i++) {
-        if (layout.whiteNote[i+1] - layout.whiteNote[i] == 2) {
-            float left  = layout.whiteX[i]   + layout.whiteW;
-            float right = layout.whiteX[i+1];
-            float center = (left + right) * 0.5f;
-            layout.blackX[layout.numBlack]   = center - layout.blackW * 0.5f;
-            layout.blackNote[layout.numBlack] = layout.whiteNote[i] + 1;
-            layout.numBlack++;
-        }
+FLASHMEM void print_octave_header()
+{
+  display.setCursor(32 * CHAR_width_small + 2, 17 * CHAR_height_small - 1, 1);
+  display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setTextSize(1);
+  display.print("OCT");
+  display.setTextSize(2);
+  display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small + 3);
+  display.print(ts.virtual_keyboard_octave);
+  display.setTextSize(1);
+}
+
+FLASHMEM void print_octaves_on_keyboard()
+{
+  if (ts.current_virtual_keyboard_display_mode == 0) {
+    KeyboardLayout layout;
+    calculateKeyboardLayout(layout);
+
+    for (uint8_t i = 0; i < layout.numWhite; i++) {
+      if (layout.whiteNote[i] % 12 == 0) {
+        if (ts.virtual_keyboard_state_white & (1 << i))
+          display.setTextColor(COLOR_SYSTEXT, RED);
+        else
+          display.setTextColor(COLOR_BACKGROUND, dark_keyboard ? GREY3 : COLOR_SYSTEXT);
+
+        constexpr int labelWidth = 2 * CHAR_width_small;
+        int labelX = layout.whiteX[i] + (layout.whiteW - labelWidth) / 2;
+        display.setCursor(labelX, VIRT_KEYB_YPOS + 57.75);
+        display.print("C");
+        display.print(ts.virtual_keyboard_octave + layout.whiteNote[i] / 12);
+      }
     }
+  }
 }
 
 FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
@@ -157,37 +192,39 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
       keyboardHelpActive = true;
       keyboardHelpStartMs = millis();
     }
-    if (millis() - keyboardHelpStartMs < 5000)   // <-- change to 2000 if you want exactly 2 seconds
+    if (millis() - keyboardHelpStartMs < 3000)
     {
-      // Hide normal instrument name and octave labels while help is active
-      drawFlags &= ~(VK_DRAW_INSTRUMENT_NAME | VK_DRAW_OCTAVE);
+      // Hide normal instrument name while help is active
+      drawFlags &= ~(VK_DRAW_INSTRUMENT_NAME);
+
 
       // Draw help rectangles and text
-      int leftBtnX  = GRID.X[2];
+      int leftBtnX = GRID.X[2];
       int rightBtnX = GRID.X[3] + TouchButton::BUTTON_SIZE_X;
-      int midY      = GRID.Y[3];
-      int midH      = TouchButton::BUTTON_SIZE_Y;
+      int midY = GRID.Y[3];
+      int midH = TouchButton::BUTTON_SIZE_Y;
 
       // Dark‑mode half (left)
       display.setTextSize(1);
       display.console = true;
-      display.fillRect(leftBtnX-1, midY, (rightBtnX - leftBtnX) / 2, midH, RED);
+      display.fillRect(leftBtnX - 1, midY, (rightBtnX - leftBtnX) / 2, midH, RED);
       display.console = false;
       display.setCursor(leftBtnX + 3, midY + 5);
       display.setTextColor(COLOR_SYSTEXT, RED);
       display.print("BRIGHT/");
-      display.setCursor(leftBtnX + 3, midY + 5+10);
+      display.setCursor(leftBtnX + 3, midY + 5 + 10);
       display.print("DARK");
 
       // Size‑toggle half (right)
       display.console = true;
-      display.fillRect(leftBtnX +3+ (rightBtnX - leftBtnX) / 2, midY,
-                       (rightBtnX - leftBtnX) / 2-2, midH, RED);
+      display.fillRect(leftBtnX + 3 + (rightBtnX - leftBtnX) / 2, midY,
+        (rightBtnX - leftBtnX) / 2 - 2, midH, RED);
       display.console = false;
       display.setCursor(leftBtnX + (rightBtnX - leftBtnX) / 2 + 7, midY + 5);
       display.print("KEYB.");
-      display.setCursor(leftBtnX + (rightBtnX - leftBtnX) / 2 + 7, midY + 5+10);
+      display.setCursor(leftBtnX + (rightBtnX - leftBtnX) / 2 + 7, midY + 5 + 10);
       display.print("SIZE");
+
     }
   }
 
@@ -206,16 +243,16 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   // Always update the MIDI channel, but only draw if allowed.
   // ------------------------------------------------------------
   bool helpOverlayVisible = (keyboardHelpActive && !keyboardHelpDone &&
-                             millis() - keyboardHelpStartMs < 5000);
+    millis() - keyboardHelpStartMs < 3000);
   virtual_keyboard_print_current_instrument(
-      (drawFlags & VK_DRAW_INSTRUMENT_NAME) && !helpOverlayVisible
+    (drawFlags & VK_DRAW_INSTRUMENT_NAME) && !helpOverlayVisible
   );
 
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
 
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) &&
-      seq.cycle_touch_element == 1 && seq.step_recording) {
+    seq.cycle_touch_element == 1 && seq.step_recording) {
     virtual_keyboard_print_velocity_bar();
   }
 
@@ -232,19 +269,19 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 
       // White keys
       for (uint8_t i = 0; i < layout.numWhite; i++) {
-          display.console = true;
-          display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
-                           layout.whiteW, KEY_HEIGHT_WHITE,
-                           dark_keyboard ? GREY3 : COLOR_SYSTEXT);
-          display.console = false;
+        display.console = true;
+        display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
+          layout.whiteW, KEY_HEIGHT_WHITE,
+          dark_keyboard ? GREY3 : COLOR_SYSTEXT);
+        display.console = false;
       }
 
       // Black keys
       for (uint8_t b = 0; b < layout.numBlack; b++) {
-          display.console = true;
-          display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                           layout.blackW, layout.blackH, COLOR_BACKGROUND);
-          display.console = false;
+        display.console = true;
+        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+          layout.blackW, layout.blackH, COLOR_BACKGROUND);
+        display.console = false;
       }
     }
     break;
@@ -258,81 +295,21 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   // Octave label drawing with help‑aware suppression
   // ------------------------------------------------------------
   if ((drawFlags & VK_DRAW_OCTAVE) && !helpOverlayVisible) {
-    display.setCursor(32 * CHAR_width_small + 2, 17 * CHAR_height_small-1 ,1);
-    display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.print("OCT");
-    display.setTextSize(2);
-    display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small + 3);
-    display.print(ts.virtual_keyboard_octave);
-    display.setTextSize(1);
-
-    if (ts.current_virtual_keyboard_display_mode == 0) {
-      KeyboardLayout layout;
-      calculateKeyboardLayout(layout);
-
-      for (uint8_t i = 0; i < layout.numWhite; i++) {
-        if (layout.whiteNote[i] % 12 == 0) {
-          if (ts.virtual_keyboard_state_white & (1 << i))
-              display.setTextColor(COLOR_SYSTEXT, RED);
-          else
-              display.setTextColor(COLOR_BACKGROUND, dark_keyboard ? GREY3 : COLOR_SYSTEXT);
-
-          constexpr int labelWidth = 2 * CHAR_width_small;
-          int labelX = layout.whiteX[i] + (layout.whiteW - labelWidth) / 2;
-          display.setCursor(labelX, VIRT_KEYB_YPOS + 57.75);
-          display.print("C");
-          display.print(ts.virtual_keyboard_octave + layout.whiteNote[i] / 12);
-        }
-      }
-    }
+    print_octave_header();
+    print_octaves_on_keyboard();
+  }
+  else if (drawFlags & VK_DRAW_OCTAVE) {
+    print_octaves_on_keyboard();
   }
   display.console = false;
 }
 
-// FLASHMEM void virtual_keyboard_key_off_white(uint8_t x)
-// {
-//   uint8_t halftones = 0;
-//   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-//   display.setTextSize(1);
-
-//   // draw white keys
-//   for (uint8_t z = 0; z < x; z++) {
-//     if (seq.piano2[z] == 1) {
-//       halftones = halftones + 1;
-//     }
-//   }
-//   handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x + halftones, 0);
-
-//   display.console = true;
-//   display.fillRect(1 + x * (KEY_WIDTH_WHITE + KEY_SPACING_WHITE), VIRT_KEYB_YPOS + 34, KEY_WIDTH_WHITE, KEY_HEIGHT_WHITE, dark_keyboard ? GREY3 : COLOR_SYSTEXT); // white key
-//   display.console = false;
-
-//   display.setTextSize(2);
-//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//   display.console = false;
-// }
-
-// FLASHMEM void virtual_keyboard_key_off_black(uint8_t x)
-// {
-//   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-//   display.setTextSize(1);
-
-//   handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, ts.virtual_keyboard_octave * 12 + x, 0);
-//   display.console = true;
-//   display.fillRect(x * KEY_OFFSET_BLACK, VIRT_KEYB_YPOS, KEY_WIDTH_BLACK, KEY_HEIGHT_BLACK, COLOR_BACKGROUND); // BLACK key
-//   display.console = false;
-
-//   display.setTextSize(2);
-//   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//   display.console = false;
-// }
-
 static FLASHMEM void virtual_keyboard_key_off_white_layout(uint8_t idx, uint8_t note, KeyboardLayout& layout) {
-    handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 0);
+  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 0);
 }
 
 FLASHMEM void virtual_keyboard_key_off_black_layout(uint8_t idx, uint8_t note, KeyboardLayout& layout) {
-    handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 0);
+  handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 0);
 }
 
 FLASHMEM void touch_button_oct_up()
@@ -395,21 +372,22 @@ FLASHMEM void touch_check_all_keyboard_buttons()
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
     touch_button_oct_up();
   }
- // darkmode + keyboard view mode toggle (combined central buttons)
-int leftBtnX  = GRID.X[2];
-int rightBtnX = GRID.X[3] + TouchButton::BUTTON_SIZE_X;
-int midY      = GRID.Y[3];
-int midH      = TouchButton::BUTTON_SIZE_Y;
-if (TouchButton::isAreaPressed(leftBtnX, midY, rightBtnX - leftBtnX, midH)) {
+  // darkmode + keyboard view mode toggle (combined central buttons)
+  int leftBtnX = GRID.X[2];
+  int rightBtnX = GRID.X[3] + TouchButton::BUTTON_SIZE_X;
+  int midY = GRID.Y[3];
+  int midH = TouchButton::BUTTON_SIZE_Y;
+  if (TouchButton::isAreaPressed(leftBtnX, midY, rightBtnX - leftBtnX, midH)) {
     if (ts.p.x < leftBtnX + (rightBtnX - leftBtnX) / 2) {
-        // Left half – toggle dark keyboard
-        dark_keyboard = !dark_keyboard;
-    } else {
-        // Right half – cycle through keyboard view modes
-        ts.virtual_keyboard_view_mode = (ts.virtual_keyboard_view_mode + 1) % 3;
+      // Left half – toggle dark keyboard
+      dark_keyboard = !dark_keyboard;
+    }
+    else {
+      // Right half – cycle through keyboard view modes
+      ts.virtual_keyboard_view_mode = (ts.virtual_keyboard_view_mode + 1) % 3;
     }
     drawVirtualKeyboard();
-}
+  }
   // instrument buttons (disabled for livesequencer)
   if (ts.virtual_keyboard_instrument != 0) {
     if (TouchButton::isPressed(GRID.X[1], GRID.Y[3])) {
@@ -430,11 +408,6 @@ FLASHMEM void virtual_keyboard_print_current_instrument(bool drawName)
 {
   // Visual part – only when we are explicitly asked to draw
   if (drawName) {
-    display.console = true;
-    display.fillRect(18 * CHAR_width_small-1, 16 * CHAR_height_small-1,
-                     18 * CHAR_width_small-2, 4 * CHAR_height_small+3, COLOR_BACKGROUND);
-    display.console = false;
-
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.setTextSize(2);
     display.setCursor(18 * CHAR_width_small, 16 * CHAR_height_small);
@@ -442,13 +415,10 @@ FLASHMEM void virtual_keyboard_print_current_instrument(bool drawName)
       display.print(F("PLAYING"));
     }
     else if (ts.virtual_keyboard_instrument < 14) {
-      display.setTextSize(1);
-      display.print(F("PITCHED SAMPLE #"));
+      display.print(F("SAMPLE"));
       display.print(ts.virtual_keyboard_instrument - 10);
-      display.print(" ");
     }
 
-    display.setTextSize(2);
     display.setCursor(18 * CHAR_width_small, 18 * CHAR_height_small + 3);
     display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
   }
@@ -533,22 +503,41 @@ FLASHMEM void print_drumpads() {
   }
 }
 
+FLASHMEM void clear_inst_header()
+{
+  display.console = true;
+  display.fillRect(18 * CHAR_width_small - 1, 16 * CHAR_height_small - 1,
+    18 * CHAR_width_small - 2, 4 * CHAR_height_small + 3,
+    COLOR_BACKGROUND);
+  display.console = false;
+}
 FLASHMEM void handleTouchVirtualKeyboard()
 {
+
+  // ---- Abort help overlay only after it has been visible for a short time ----
+  if (keyboardHelpActive && !keyboardHelpDone && numTouchPoints > 0
+    && (millis() - keyboardHelpStartMs > 500))
+  {
+    clear_inst_header();
+    keyboardHelpActive = false;
+    keyboardHelpDone = true;
+    drawVirtualKeyboard();
+  }
+
   touch_check_all_keyboard_buttons();
 
   bool isPressed = numTouchPoints > 0;
 
   // Redraw the keyboard if the help overlay has expired
   if (keyboardHelpActive && !keyboardHelpDone && (millis() - keyboardHelpStartMs >= 5000)) {
+    clear_inst_header();
     keyboardHelpActive = false;
     keyboardHelpDone = true;
     drawVirtualKeyboard();
-    //return;  // skip further touch processing this frame – the redraw is all we need
   }
 
   if (ts.current_virtual_keyboard_display_mode == 0)
-{
+  {
     KeyboardLayout layout;
     calculateKeyboardLayout(layout);
 
@@ -558,140 +547,150 @@ FLASHMEM void handleTouchVirtualKeyboard()
     // ---- White keys ----
     bool isWithinWhiteY = ts.p.y > VIRT_KEYB_YPOS + 36;   // original lower‑half threshold
     for (uint8_t i = 0; i < layout.numWhite; i++) {
-        bool isWithinKey = isPressed && ts.p.x > layout.whiteX[i]
-                           && ts.p.x < (layout.whiteX[i] + layout.whiteW) && isWithinWhiteY;
-        bool isKeyPress   = (ts.virtual_keyboard_state_white & (1 << i)) == 0 && isWithinKey;
-        bool isKeyRelease = (ts.virtual_keyboard_state_white & (1 << i)) != 0 && !isWithinKey;
+      bool isWithinKey = isPressed && ts.p.x > layout.whiteX[i]
+        && ts.p.x < (layout.whiteX[i] + layout.whiteW) && isWithinWhiteY;
+      bool isKeyPress = (ts.virtual_keyboard_state_white & (1 << i)) == 0 && isWithinKey;
+      bool isKeyRelease = (ts.virtual_keyboard_state_white & (1 << i)) != 0 && !isWithinKey;
 
-        if (isKeyPress) {
-            ts.virtual_keyboard_state_white |= (1 << i);
-            uint8_t note = ts.virtual_keyboard_octave * 12 + layout.whiteNote[i];
+      if (isKeyPress) {
+        ts.virtual_keyboard_state_white |= (1 << i);
+        uint8_t note = ts.virtual_keyboard_octave * 12 + layout.whiteNote[i];
 
-            // -------- EXACT instrument logic from original code --------
-            if (ts.virtual_keyboard_instrument > VK_GRANULAR && ts.virtual_keyboard_instrument != VK_CV1) {
-                set_sample_pitch(ts.virtual_keyboard_instrument - 8,
-                    (float)pow(2, (note - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 8));
-                if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
-                    (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
-                } else {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
-                }
-            } else if (ts.virtual_keyboard_instrument == VK_CV1) {
-                handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note + 12, 120);
-            } else {
-                if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
-                    (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, ts.virtual_keyboard_velocity);
-                } else {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 120);
-                }
-            }
-
-                   // Draw full white key red
-            display.console = true;
-            display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
-                             layout.whiteW, KEY_HEIGHT_WHITE, RED);
-
-            // Restore overlapping black keys **using rectangle intersection**
-            float whiteLeft  = layout.whiteX[i];
-            float whiteRight = whiteLeft + layout.whiteW;
-            for (uint8_t b = 0; b < layout.numBlack; b++) {
-                float blackLeft  = layout.blackX[b];
-                float blackRight = blackLeft + layout.blackW;
-                // Check if the black key rectangle intersects the white key rectangle
-                if (blackLeft < whiteRight && blackRight > whiteLeft) {
-                    if (ts.virtual_keyboard_state_black & (1 << b)) {
-                        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                                         layout.blackW, layout.blackH, RED);
-                    } else {
-                        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                                         layout.blackW, layout.blackH, COLOR_BACKGROUND);
-                    }
-                }
-            }
-            display.console = false;
+        // -------- EXACT instrument logic from original code --------
+        if (ts.virtual_keyboard_instrument > VK_GRANULAR && ts.virtual_keyboard_instrument != VK_CV1) {
+          set_sample_pitch(ts.virtual_keyboard_instrument - 8,
+            (float)pow(2, (note - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 8));
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
+            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
+          }
+          else {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
+          }
         }
-           else if (isKeyRelease) {
-            ts.virtual_keyboard_state_white &= ~(1 << i);
-            display.console = true;
-            display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
-                             layout.whiteW, KEY_HEIGHT_WHITE,
-                             dark_keyboard ? GREY3 : COLOR_SYSTEXT);
+        else if (ts.virtual_keyboard_instrument == VK_CV1) {
+          handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note + 12, 120);
+        }
+        else {
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
+            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, ts.virtual_keyboard_velocity);
+          }
+          else {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 120);
+          }
+        }
 
-            // Restore overlapping black keys (same rectangle intersection)
-            float whiteLeft  = layout.whiteX[i];
-            float whiteRight = whiteLeft + layout.whiteW;
-            for (uint8_t b = 0; b < layout.numBlack; b++) {
-                float blackLeft  = layout.blackX[b];
-                float blackRight = blackLeft + layout.blackW;
-                if (blackLeft < whiteRight && blackRight > whiteLeft) {
-                    if (ts.virtual_keyboard_state_black & (1 << b)) {
-                        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                                         layout.blackW, layout.blackH, RED);
-                    } else {
-                        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                                         layout.blackW, layout.blackH, COLOR_BACKGROUND);
-                    }
-                }
+        // Draw full white key red
+        display.console = true;
+        display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
+          layout.whiteW, KEY_HEIGHT_WHITE, RED);
+
+        // Restore overlapping black keys **using rectangle intersection**
+        float whiteLeft = layout.whiteX[i];
+        float whiteRight = whiteLeft + layout.whiteW;
+        for (uint8_t b = 0; b < layout.numBlack; b++) {
+          float blackLeft = layout.blackX[b];
+          float blackRight = blackLeft + layout.blackW;
+          // Check if the black key rectangle intersects the white key rectangle
+          if (blackLeft < whiteRight && blackRight > whiteLeft) {
+            if (ts.virtual_keyboard_state_black & (1 << b)) {
+              display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+                layout.blackW, layout.blackH, RED);
             }
-            display.console = false;
-            virtual_keyboard_key_off_white_layout(i, ts.virtual_keyboard_octave * 12 + layout.whiteNote[i], layout);
+            else {
+              display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+                layout.blackW, layout.blackH, COLOR_BACKGROUND);
+            }
+          }
         }
-        if (isKeyPress || isKeyRelease) {
-            drawVirtualKeyboard(VK_DRAW_OCTAVE);
+        display.console = false;
+      }
+      else if (isKeyRelease) {
+        ts.virtual_keyboard_state_white &= ~(1 << i);
+        display.console = true;
+        display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
+          layout.whiteW, KEY_HEIGHT_WHITE,
+          dark_keyboard ? GREY3 : COLOR_SYSTEXT);
+
+        // Restore overlapping black keys (same rectangle intersection)
+        float whiteLeft = layout.whiteX[i];
+        float whiteRight = whiteLeft + layout.whiteW;
+        for (uint8_t b = 0; b < layout.numBlack; b++) {
+          float blackLeft = layout.blackX[b];
+          float blackRight = blackLeft + layout.blackW;
+          if (blackLeft < whiteRight && blackRight > whiteLeft) {
+            if (ts.virtual_keyboard_state_black & (1 << b)) {
+              display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+                layout.blackW, layout.blackH, RED);
+            }
+            else {
+              display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+                layout.blackW, layout.blackH, COLOR_BACKGROUND);
+            }
+          }
         }
+        display.console = false;
+        virtual_keyboard_key_off_white_layout(i, ts.virtual_keyboard_octave * 12 + layout.whiteNote[i], layout);
+      }
+      if (isKeyPress || isKeyRelease) {
+        drawVirtualKeyboard(VK_DRAW_OCTAVE);
+      }
     }
 
     // ---- Black keys ----
     bool isWithinBlackY = ts.p.y > VIRT_KEYB_YPOS && ts.p.y < VIRT_KEYB_YPOS + 34;
     for (uint8_t b = 0; b < layout.numBlack; b++) {
-        bool isWithinKey = isPressed && ts.p.x > layout.blackX[b]
-                           && ts.p.x < (layout.blackX[b] + layout.blackW) && isWithinBlackY;
-        bool isKeyPress   = (ts.virtual_keyboard_state_black & (1 << b)) == 0 && isWithinKey;
-        bool isKeyRelease = (ts.virtual_keyboard_state_black & (1 << b)) != 0 && !isWithinKey;
+      bool isWithinKey = isPressed && ts.p.x > layout.blackX[b]
+        && ts.p.x < (layout.blackX[b] + layout.blackW) && isWithinBlackY;
+      bool isKeyPress = (ts.virtual_keyboard_state_black & (1 << b)) == 0 && isWithinKey;
+      bool isKeyRelease = (ts.virtual_keyboard_state_black & (1 << b)) != 0 && !isWithinKey;
 
-        if (isKeyPress) {
-            ts.virtual_keyboard_state_black |= (1 << b);
-            uint8_t note = ts.virtual_keyboard_octave * 12 + layout.blackNote[b];
+      if (isKeyPress) {
+        ts.virtual_keyboard_state_black |= (1 << b);
+        uint8_t note = ts.virtual_keyboard_octave * 12 + layout.blackNote[b];
 
-            // -------- SAME instrument logic --------
-            if (ts.virtual_keyboard_instrument > VK_GRANULAR && ts.virtual_keyboard_instrument != VK_CV1) {
-                set_sample_pitch(ts.virtual_keyboard_instrument - 8,
-                    (float)pow(2, (note - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 8));
-                if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
-                    (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
-                } else {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
-                }
-            } else if (ts.virtual_keyboard_instrument == VK_CV1) {
-                handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note + 12, 120);
-            } else {
-                if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
-                    (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, ts.virtual_keyboard_velocity);
-                } else {
-                    handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 120);
-                }
-            }
-
-            display.console = true;
-            display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                             layout.blackW, layout.blackH, RED);
-            display.console = false;
+        // -------- SAME instrument logic --------
+        if (ts.virtual_keyboard_instrument > VK_GRANULAR && ts.virtual_keyboard_instrument != VK_CV1) {
+          set_sample_pitch(ts.virtual_keyboard_instrument - 8,
+            (float)pow(2, (note - 72) / 12.00) * get_sample_p_offset(ts.virtual_keyboard_instrument - 8));
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
+            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, ts.virtual_keyboard_velocity);
+          }
+          else {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, 210 + ts.virtual_keyboard_instrument - 8, 100);
+          }
         }
-      else if (isKeyRelease) {
-    ts.virtual_keyboard_state_black &= ~(1 << b);
-    display.console = true;
-    display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
-                     layout.blackW, layout.blackH, COLOR_BACKGROUND);
-    display.console = false;
+        else if (ts.virtual_keyboard_instrument == VK_CV1) {
+          handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note + 12, 120);
+        }
+        else {
+          if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) && seq.cycle_touch_element == 1) ||
+            (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) && seq.cycle_touch_element == 1)) {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, ts.virtual_keyboard_velocity);
+          }
+          else {
+            handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, note, 120);
+          }
+        }
 
-    virtual_keyboard_key_off_black_layout(b, ts.virtual_keyboard_octave * 12 + layout.blackNote[b], layout);
-}
+        display.console = true;
+        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+          layout.blackW, layout.blackH, RED);
+        display.console = false;
+      }
+      else if (isKeyRelease) {
+        ts.virtual_keyboard_state_black &= ~(1 << b);
+        display.console = true;
+        display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
+          layout.blackW, layout.blackH, COLOR_BACKGROUND);
+        display.console = false;
+
+        virtual_keyboard_key_off_black_layout(b, ts.virtual_keyboard_octave * 12 + layout.blackNote[b], layout);
+      }
     }
-}
+  }
 
   else if (ts.current_virtual_keyboard_display_mode == 1) {
     if (ts.virtual_keyboard_instrument == VK_DRUMS || ts.virtual_keyboard_instrument == 0) {
