@@ -1185,60 +1185,63 @@ void sendVolumeIconsMode(bool volumeIcons) {
   uint8_t payload = volumeIcons ? 1 : 0;
   sendPacket(CMD_SET_VOLUME_ICONS_MODE, &payload, 1);
 }
-//static bool lastVolumeIconsMode = true;
+
 bool handshakeComplete = false;   // true when both versions received and compatible
 #endif
 
-uint8_t psramspeed = 0;
-FLASHMEM void update_psram_speed(int speed_mhz) {
-  // What clocks exist:
-  static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
+// uint8_t psramspeed = 0;
+// FLASHMEM void update_psram_speed(int speed_mhz) {
+//   // What clocks exist:
+//   static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
 
-  // See what the closest setting might be:
-  uint8_t clk_save = 0, divider_save = 0;
-  int min_delta = speed_mhz;
-  for (uint8_t clk = 0; clk < 4; clk++) {
-    uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
-    int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
-    if ((delta < min_delta) && (divider < 8)) {
-      min_delta = delta;
-      clk_save = clk;
-      divider_save = divider;
-    }
-  }
+//   // See what the closest setting might be:
+//   uint8_t clk_save = 0, divider_save = 0;
+//   int min_delta = speed_mhz;
+//   for (uint8_t clk = 0; clk < 4; clk++) {
+//     uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
+//     int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
+//     if ((delta < min_delta) && (divider < 8)) {
+//       min_delta = delta;
+//       clk_save = clk;
+//       divider_save = divider;
+//     }
+//   }
 
-  // first turn off FLEXSPI2
-  CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+//   // first turn off FLEXSPI2
+//   CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
 
-  divider_save--; // 0 biased.
-  // Serial.printf("Update FLEXSPI2 speed: %u clk:%u div:%u Actual:%u\n", speed_mhz, clk_save, divider_save,
-  //     flexspio2_clock_speeds[clk_save]/ (divider_save + 1));
-  psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
+//   divider_save--; // 0 biased.
+//   psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
 
-  // Set the clock settings.
-  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-    | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
+//   // Set the clock settings.
+//   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+//     | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
 
-  // Turn FlexSPI2 clock back on
-  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-}
+//   // Turn FlexSPI2 clock back on
+//   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+// }
 
 
 FLASHMEM void setup()
 {
 
-#ifndef LARGEPSRAM
-  //**************************
-  //Reset QSPI clock from 88Mhz to 132 Mhz.
-  //  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
-  //  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-  //    | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
-  //  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+#ifdef PSRAM
+
+  //#ifndef LARGEPSRAM
+    //**************************
+    //Reset QSPI clock from 88Mhz to 132 Mhz.
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
+  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+    | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
   //**************************
 
-  update_psram_speed(132);
-#else
-  update_psram_speed(120);
+
+//   update_psram_speed(132);
+// #else
+//   update_psram_speed(120);
+// #endif
+
 #endif
 
 #ifdef GRANULAR
@@ -3047,7 +3050,7 @@ uint32_t lastGlowUpdate = 0;
 
 #if defined ESP_DISPLAY
 extern void sendEditMode(bool);
-//extern void flushDrawQueueSingle();
+extern void processIncomingSerial();
 #endif
 
 
@@ -3061,8 +3064,8 @@ void loop()
     lastEditState = seq.edit_state;
     sendEditMode(seq.edit_state);
   }
-  
-   // flushDrawQueueSingle();
+
+  // flushDrawQueueSingle();
 #endif
 
   // Chords Detection
@@ -3130,6 +3133,10 @@ void loop()
   }
 #endif
 
+#endif
+
+#if defined ESP_DISPLAY
+  processIncomingSerial();
 #endif
 
   // Serial read (commands from web remote)
@@ -4310,7 +4317,7 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           dac_state = 1;
 
         }
-        else if (inChannel == 21 && seq.running ) ///CV Output
+        else if (inChannel == 21 && seq.running) ///CV Output
         {
           dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
           dac_cv_3 = inVelocity * 25.98f;
@@ -4641,7 +4648,7 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
     }
-else if (inChannel == 21 && seq.running )
+    else if (inChannel == 21 && seq.running)
     {
 #ifdef MCP_CV ///CV Output
       // dac.analogWrite((inNumber - 8) * NOTESTEP_CV, inVelocity * 31, 0, 0);

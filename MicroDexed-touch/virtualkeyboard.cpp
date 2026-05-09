@@ -46,10 +46,6 @@ void touch_check_all_keyboard_buttons();
 
 bool dark_keyboard;
 
-static bool keyboardHelpActive = false;
-static bool keyboardHelpDone = false;
-static uint32_t keyboardHelpStartMs = 0;
-
 // Maximum white keys for the largest view (mode 2)
 static constexpr uint8_t MAX_WHITE_KEYS = 20;
 
@@ -128,16 +124,72 @@ static void calculateKeyboardLayout(KeyboardLayout& layout) {
   }
 }
 
-FLASHMEM void print_octave_header()
+
+
+FLASHMEM void draw_keyboard_control_buttons(void)
 {
-  display.setCursor(32 * CHAR_width_small + 2, 17 * CHAR_height_small - 1, 1);
-  display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
+  const uint8_t col1 = 2;   // Dark/Bright
+  const uint8_t col2 = 3;   // Keyb.Size
+
+  int btnX1 = GRID.X[col1];
+  int btnX2 = GRID.X[col2];
+  int btnY = GRID.Y[3];
+  int btnW = TouchButton::BUTTON_SIZE_X;
+  int btnH = TouchButton::BUTTON_SIZE_Y;
+
+  int halfH = btnH / 2;
+  int yFill = btnY + halfH;                 // only the lower half is filled
+
+  uint16_t fillColor = GREY3;
+  uint16_t textColor = GREY1;
+
+  // ── Left button: Dark / Bright ──────────────────────────────
+  display.console = true;
+  display.fillRect(btnX1, yFill, btnW, halfH, fillColor);
+  display.console = false;
+
   display.setTextSize(1);
-  display.print("OCT");
+  display.setTextColor(textColor, fillColor);
+
+  const char* toggleLabel = dark_keyboard ? "BRIGHT" : "DARK";
+  int textW = strlen(toggleLabel) * CHAR_width_small;
+  int textX = btnX1 + (btnW - textW) / 2;
+  int textY = yFill + halfH / 2 - 4;
+
+  display.setCursor(textX, textY);
+  display.print(toggleLabel);
   display.setTextSize(2);
-  display.setCursor(33 * CHAR_width_small + 3, 18 * CHAR_height_small + 3);
-  display.print(ts.virtual_keyboard_octave);
+
+  // ── Right button: Keysize ───────────────────────────────────
+  display.console = true;
+  display.fillRect(btnX2, yFill, btnW, halfH, fillColor);
+  display.console = false;
+
   display.setTextSize(1);
+  display.setTextColor(textColor, fillColor);
+
+  const char* sizeLabel = "KEYSIZE";
+  textW = strlen(sizeLabel) * CHAR_width_small;
+  textX = btnX2 + (btnW - textW) / 2;
+  textY = yFill + halfH / 2 - 4;
+
+  display.setCursor(textX, textY);
+  display.print(sizeLabel);
+
+}
+
+
+FLASHMEM void print_octave_label(void)
+{
+  // Position right of the instrument name, same line
+  const int x = 32 * CHAR_width_small + 3;
+  const int y = 16 * CHAR_height_small + 4;          // line 16
+
+  display.setTextSize(1);                        // small font
+  display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setCursor(x, y);
+  display.printf(F("OC%d"), ts.virtual_keyboard_octave);
+
 }
 
 FLASHMEM void print_octaves_on_keyboard()
@@ -182,51 +234,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   }
   ts.previous_virtual_keyboard_display_mode = ts.current_virtual_keyboard_display_mode;
 
-  // ---------- One‑time help overlay ----------
-  // Only draw the help when the keyboard area itself is being redrawn.
-  // This prevents the heavy drawing from running on every tiny update.
-  if (!keyboardHelpDone && (drawFlags & VK_DRAW_KEYS))
-  {
-    if (!keyboardHelpActive)
-    {
-      keyboardHelpActive = true;
-      keyboardHelpStartMs = millis();
-    }
-    if (millis() - keyboardHelpStartMs < 3000)
-    {
-      // Hide normal instrument name while help is active
-      drawFlags &= ~(VK_DRAW_INSTRUMENT_NAME);
-
-
-      // Draw help rectangles and text
-      int leftBtnX = GRID.X[2];
-      int rightBtnX = GRID.X[3] + TouchButton::BUTTON_SIZE_X;
-      int midY = GRID.Y[3];
-      int midH = TouchButton::BUTTON_SIZE_Y;
-
-      // Dark‑mode half (left)
-      display.setTextSize(1);
-      display.console = true;
-      display.fillRect(leftBtnX - 1, midY, (rightBtnX - leftBtnX) / 2, midH, RED);
-      display.console = false;
-      display.setCursor(leftBtnX + 3, midY + 5);
-      display.setTextColor(COLOR_SYSTEXT, RED);
-      display.print("BRIGHT/");
-      display.setCursor(leftBtnX + 3, midY + 5 + 10);
-      display.print("DARK");
-
-      // Size‑toggle half (right)
-      display.console = true;
-      display.fillRect(leftBtnX + 3 + (rightBtnX - leftBtnX) / 2, midY,
-        (rightBtnX - leftBtnX) / 2 - 2, midH, RED);
-      display.console = false;
-      display.setCursor(leftBtnX + (rightBtnX - leftBtnX) / 2 + 7, midY + 5);
-      display.print("KEYB.");
-      display.setCursor(leftBtnX + (rightBtnX - leftBtnX) / 2 + 7, midY + 5 + 10);
-      display.print("SIZE");
-
-    }
-  }
+  // ---------- One‑time help overlay REMOVED completely ----------
 
   if (drawFlags & VK_DRAW_OCTAVE_BUTTONS) {
     TouchButton::drawButton(GRID.X[0], GRID.Y[3], "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
@@ -238,15 +246,11 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
     TouchButton::drawButton(GRID.X[4], GRID.Y[3], "INSTR.", "+", TouchButton::BUTTON_NORMAL);
   }
 
-  // ------------------------------------------------------------
-  // Instrument name drawing with help‑aware suppression
-  // Always update the MIDI channel, but only draw if allowed.
-  // ------------------------------------------------------------
-  bool helpOverlayVisible = (keyboardHelpActive && !keyboardHelpDone &&
-    millis() - keyboardHelpStartMs < 3000);
-  virtual_keyboard_print_current_instrument(
-    (drawFlags & VK_DRAW_INSTRUMENT_NAME) && !helpOverlayVisible
-  );
+  // Instrument name (line 16) and octave label
+  if (drawFlags & VK_DRAW_INSTRUMENT_NAME) {
+    virtual_keyboard_print_current_instrument(true);
+    print_octave_label();
+  }
 
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
@@ -289,17 +293,15 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
       print_drumpads();
       break;
     }
+    draw_keyboard_control_buttons();
   }
 
-  // ------------------------------------------------------------
-  // Octave label drawing with help‑aware suppression
-  // ------------------------------------------------------------
-  if ((drawFlags & VK_DRAW_OCTAVE) && !helpOverlayVisible) {
-    print_octave_header();
+
+
+  // Octave labels on white keys (C notes)
+  if (drawFlags & VK_DRAW_OCTAVE) {
     print_octaves_on_keyboard();
-  }
-  else if (drawFlags & VK_DRAW_OCTAVE) {
-    print_octaves_on_keyboard();
+    print_octave_label();
   }
   display.console = false;
 }
@@ -372,22 +374,19 @@ FLASHMEM void touch_check_all_keyboard_buttons()
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[3])) {
     touch_button_oct_up();
   }
-  // darkmode + keyboard view mode toggle (combined central buttons)
-  int leftBtnX = GRID.X[2];
-  int rightBtnX = GRID.X[3] + TouchButton::BUTTON_SIZE_X;
-  int midY = GRID.Y[3];
-  int midH = TouchButton::BUTTON_SIZE_Y;
-  if (TouchButton::isAreaPressed(leftBtnX, midY, rightBtnX - leftBtnX, midH)) {
-    if (ts.p.x < leftBtnX + (rightBtnX - leftBtnX) / 2) {
-      // Left half – toggle dark keyboard
-      dark_keyboard = !dark_keyboard;
-    }
-    else {
-      // Right half – cycle through keyboard view modes
-      ts.virtual_keyboard_view_mode = (ts.virtual_keyboard_view_mode + 1) % 3;
-    }
-    drawVirtualKeyboard();
+
+  // Dark/bright toggle
+  if (TouchButton::isPressed(GRID.X[2], GRID.Y[3])) {
+    dark_keyboard = !dark_keyboard;
+    drawVirtualKeyboard(VK_DRAW_KEYS | VK_DRAW_OCTAVE);
   }
+
+  // Keyboard size toggle
+  if (TouchButton::isPressed(GRID.X[3], GRID.Y[3])) {
+    ts.virtual_keyboard_view_mode = (ts.virtual_keyboard_view_mode + 1) % 3;
+    drawVirtualKeyboard(VK_DRAW_KEYS | VK_DRAW_OCTAVE);
+  }
+
   // instrument buttons (disabled for livesequencer)
   if (ts.virtual_keyboard_instrument != 0) {
     if (TouchButton::isPressed(GRID.X[1], GRID.Y[3])) {
@@ -406,81 +405,99 @@ extern granular_params_t granular_params;
 
 FLASHMEM void virtual_keyboard_print_current_instrument(bool drawName)
 {
-  // Visual part – only when we are explicitly asked to draw
-  if (drawName) {
-    display.setTextColor(GREY2, COLOR_BACKGROUND);
-    display.setTextSize(2);
-    display.setCursor(18 * CHAR_width_small, 16 * CHAR_height_small);
-    if (ts.virtual_keyboard_instrument < 11 || ts.virtual_keyboard_instrument == 14) {
-      display.print(F("PLAYING"));
-    }
-    else if (ts.virtual_keyboard_instrument < 14) {
-      display.print(F("SAMPLE"));
-      display.print(ts.virtual_keyboard_instrument - 10);
-    }
-
-    display.setCursor(18 * CHAR_width_small, 18 * CHAR_height_small + 3);
-    display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
-  }
-
-  // MIDI channel assignment – ALWAYS runs, regardless of drawing flags
+  // Update MIDI channel assignment (always runs)
   switch (ts.virtual_keyboard_instrument) {
   case VK_LIVESEQUENCER:
-    if (drawName) display.print(F("LIVESEQ"));
     ts.virtual_keyboard_midi_channel = 20;
     break;
   case VK_GRANULAR:
-    if (drawName) display.print(F("GRANULE"));
 #ifdef GRANULAR
     ts.virtual_keyboard_midi_channel = granular_params.midi_channel;
 #endif
     break;
   case VK_CV1:
-    if (drawName) display.print(F("CV1    "));
     ts.virtual_keyboard_midi_channel = configuration.sys.cv_midi_channel;
     break;
   case VK_DEXED0:
-    if (drawName) display.print(F("DEXED1 "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[0].midi_channel;
     break;
   case VK_DEXED1:
-    if (drawName) display.print(F("DEXED2 "));
     ts.virtual_keyboard_midi_channel = configuration.dexed[1].midi_channel;
     break;
   case VK_DEXED2:
-    if (drawName) display.print(F("DEXED3 "));
-    if (NUM_DEXED > 2)
-      ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
+    if (NUM_DEXED > 2) ts.virtual_keyboard_midi_channel = configuration.dexed[2].midi_channel;
     break;
   case VK_DEXED3:
-    if (drawName) display.print(F("DEXED4 "));
-    if (NUM_DEXED > 2)
-      ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
+    if (NUM_DEXED > 2) ts.virtual_keyboard_midi_channel = configuration.dexed[3].midi_channel;
     break;
   case VK_MICROSYNTH0:
-    if (drawName) display.print(F("MSYNTH1"));
     ts.virtual_keyboard_midi_channel = microsynth[0].midi_channel;
     break;
   case VK_MICROSYNTH1:
-    if (drawName) display.print(F("MSYNTH2"));
     ts.virtual_keyboard_midi_channel = microsynth[1].midi_channel;
     break;
   case VK_EPIANO:
-    if (drawName) display.print(F("EPIANO "));
     ts.virtual_keyboard_midi_channel = configuration.epiano.midi_channel;
     break;
   case VK_DRUMS:
-    if (drawName) display.print(F("DRUMS  "));
     ts.virtual_keyboard_midi_channel = drum_midi_channel;
     break;
   case VK_BRAIDS:
-    if (drawName) display.print(F("BRAIDS "));
     ts.virtual_keyboard_midi_channel = braids_osc.midi_channel;
     break;
   default: // >9
-    if (drawName) show_no_grid(18 * CHAR_height_small + 3, 18 * CHAR_width_small, 7, get_drum_name_from_note(ts.virtual_keyboard_instrument - 8 + 210));
     ts.virtual_keyboard_midi_channel = drum_midi_channel;
     break;
+  }
+
+  if (drawName) {
+    display.setTextColor(dark_keyboard ? GREY2 : COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.setTextSize(2);
+    // Now at line 16 instead of 18
+    display.setCursor(18 * CHAR_width_small, 16 * CHAR_height_small);
+
+    switch (ts.virtual_keyboard_instrument) {
+    case VK_LIVESEQUENCER:
+      display.print(F("LIVESEQ"));
+      break;
+    case VK_GRANULAR:
+      display.print(F("GRANULE"));
+      break;
+    case VK_CV1:
+      display.print(F("CV1 OUT"));
+      break;
+    case VK_DEXED0:
+      display.print(F("DEXED1 "));
+      break;
+    case VK_DEXED1:
+      display.print(F("DEXED2 "));
+      break;
+    case VK_DEXED2:
+      display.print(F("DEXED3 "));
+      break;
+    case VK_DEXED3:
+      display.print(F("DEXED4 "));
+      break;
+    case VK_MICROSYNTH0:
+      display.print(F("MSYNTH1"));
+      break;
+    case VK_MICROSYNTH1:
+      display.print(F("MSYNTH2"));
+      break;
+    case VK_EPIANO:
+      display.print(F("EPIANO "));
+      break;
+    case VK_DRUMS:
+      display.print(F("DRUMS  "));
+      break;
+    case VK_BRAIDS:
+      display.print(F("BRAIDS "));
+      break;
+    default: // >9
+      show_no_grid(16 * CHAR_height_small, 18 * CHAR_width_small, 7,
+        get_drum_name_from_note(ts.virtual_keyboard_instrument - 8 + 210));
+      break;
+    }
   }
 }
 
@@ -498,8 +515,9 @@ FLASHMEM void printDrumPad(uint8_t padIndex, TouchButton::Color color) {
 }
 
 FLASHMEM void print_drumpads() {
+  TouchButton::Color padColor = dark_keyboard ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE;
   for (uint8_t x = 0; x < 12; x++) {
-    printDrumPad(x, TouchButton::BUTTON_ACTIVE);
+    printDrumPad(x, padColor);
   }
 }
 
@@ -513,28 +531,15 @@ FLASHMEM void clear_inst_header()
 }
 FLASHMEM void handleTouchVirtualKeyboard()
 {
-
-  // ---- Abort help overlay only after it has been visible for a short time ----
-  if (keyboardHelpActive && !keyboardHelpDone && numTouchPoints > 0
-    && (millis() - keyboardHelpStartMs > 500))
-  {
-    clear_inst_header();
-    keyboardHelpActive = false;
-    keyboardHelpDone = true;
-    drawVirtualKeyboard();
-  }
+  // ---- Abort code for help overlay REMOVED ----
+  // The help functionality no longer exists; no need to clear anything.
 
   touch_check_all_keyboard_buttons();
 
   bool isPressed = numTouchPoints > 0;
 
   // Redraw the keyboard if the help overlay has expired
-  if (keyboardHelpActive && !keyboardHelpDone && (millis() - keyboardHelpStartMs >= 5000)) {
-    clear_inst_header();
-    keyboardHelpActive = false;
-    keyboardHelpDone = true;
-    drawVirtualKeyboard();
-  }
+  // (also removed – no help overlay anymore)
 
   if (ts.current_virtual_keyboard_display_mode == 0)
   {
@@ -592,7 +597,6 @@ FLASHMEM void handleTouchVirtualKeyboard()
         for (uint8_t b = 0; b < layout.numBlack; b++) {
           float blackLeft = layout.blackX[b];
           float blackRight = blackLeft + layout.blackW;
-          // Check if the black key rectangle intersects the white key rectangle
           if (blackLeft < whiteRight && blackRight > whiteLeft) {
             if (ts.virtual_keyboard_state_black & (1 << b)) {
               display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
@@ -694,6 +698,8 @@ FLASHMEM void handleTouchVirtualKeyboard()
 
   else if (ts.current_virtual_keyboard_display_mode == 1) {
     if (ts.virtual_keyboard_instrument == VK_DRUMS || ts.virtual_keyboard_instrument == 0) {
+      TouchButton::Color normalColor = dark_keyboard ? TouchButton::BUTTON_NORMAL : TouchButton::BUTTON_ACTIVE;
+
       for (uint8_t x = 0; x < 12; x++) {
         const bool isWithinPad = TouchButton::isInArea(GRID.X[x % 6], GRID.Y[4 + (x / 6)], TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y);
         const bool isPadPress = (ts.virtual_keyboard_state_white & (1 << x)) == 0 && isWithinPad;
@@ -706,7 +712,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
           handleNoteOn_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note].midinote, ts.virtual_keyboard_velocity);
         }
         if (isPadRelease) {
-          printDrumPad(x, TouchButton::BUTTON_ACTIVE);
+          printDrumPad(x, normalColor);
           ts.virtual_keyboard_state_white &= ~(1 << x);
           handleNoteOff_MIDI_DEVICE_DIN(ts.virtual_keyboard_midi_channel, drum_config[note].midinote, ts.virtual_keyboard_velocity);
         }
@@ -714,7 +720,6 @@ FLASHMEM void handleTouchVirtualKeyboard()
     }
   }
 
-  // display.fillRect(ts.p.x-1,ts.p.y-1,3,3,YELLOW);
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.console = false;

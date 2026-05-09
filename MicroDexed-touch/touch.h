@@ -80,11 +80,8 @@ typedef struct fm_s
   bool SD_CARD_READER_EXT;
 } fm_t;
 
-#if defined ESP_DISPLAY
-static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 60; 
-#else
+
 static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10;
-#endif
 
 typedef void (*TouchFn)();
 

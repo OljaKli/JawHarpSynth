@@ -17,7 +17,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.947"
+#define MIN_VERSION_ESP_DISPLAY "1.9.952"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -33,7 +33,7 @@
 #define CMD_DRAWPIXEL_FAST    13
 #define CMD_PRINT_FAST         14
 #define CMD_PRINT_STRING_FAST  15
-#define CMD_SCOPE_DATA 16
+#define CMD_SCOPE_DATA 16 // kept for compatibility
 #define CMD_FILLRECT_RAINBOW 17
 #define CMD_SCREENSAVER_START  18
 #define CMD_SCREENSAVER_STOP   19
@@ -51,11 +51,14 @@
 #define CMD_DRAW_BITMAP_BG 31
 #define CMD_DRAW_PARAM_BAR 32
 #define CMD_DRAW_PANBAR 33
+#define CMD_SET_SCOPE_CONFIG 34  // new: set X,Y,W,H
+#define CMD_SCOPE_Y_DATA     35  // new: stream only Y values
 #define CMD_VERSION_REPORT 100   // unique command code
 #define CMD_SET_VOLUME_ICONS_MODE 101
 #define CMD_SET_EDIT_MODE 102
 #define CMD_MIN_VERSION_ESP 103
 #define CMD_MIDI_DATA  205
+
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
 //void queuePacket(uint8_t cmd, const uint8_t* payload, uint16_t len);

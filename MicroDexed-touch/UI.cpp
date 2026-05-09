@@ -4255,15 +4255,11 @@ void processMidiDataFromESP(uint8_t* data, uint8_t len) {
 }
 #endif
 
-void processIncomingSerial(bool& ackReceived) {
+void processIncomingSerial() {
   while (Serial4.available() > 0) {
     uint8_t data = Serial4.read();
 
-    if (data == ACK_BYTE) {
-      ackReceived = true;
-    }
-
-    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
+   if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
       data == 0xAE || data == CMD_MIDI_DATA) {
       packetType = data;
       inTouchPacket = true;
@@ -4390,10 +4386,8 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
 
 #if defined ESP_DISPLAY
-  // readESPTouch();
 
-  bool dummy;
-  processIncomingSerial(dummy);
+ // processIncomingSerial();
 
   // Check for ESP long press (encoder buttons only)
   if (esp_pending_button != 255) {
@@ -16025,9 +16019,9 @@ FLASHMEM void sysinfo_reload_prev_voice(DxPoolSettings settings)
   }
 }
 
-#ifdef PSRAM
-extern uint8_t psramspeed;
-#endif
+// #ifdef PSRAM
+// extern uint8_t psramspeed;
+// #endif
 
 FLASHMEM void UI_func_information(uint8_t param)
 {
@@ -16172,14 +16166,13 @@ FLASHMEM void UI_func_information(uint8_t param)
     display.setTextColor(GREY1);
 #endif
 
-#ifdef PSRAM
- display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
-   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.print("PSRAM ");
-    display.print(psramspeed);
-     display.print("MHz");
-#endif
-
+// #ifdef PSRAM
+//  display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
+//  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//  display.print("PSRAM ");
+//  display.print(psramspeed);
+//  display.print("MHz");
+// #endif
 
     if (seq.running == false) {
       oldSettings.pool = configuration.dexed[0].pool;
@@ -26697,7 +26690,13 @@ FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
             run++;
 
           // Draw the entire run with a single fillRect
+
           display.fillRect(x, y + yoffset, run, 1, color);
+
+  #if defined ESP_DISPLAY
+  delayMicroseconds(350);
+  #endif
+
           x += run;       // skip the whole run
           continue;       // avoid double increment
         }

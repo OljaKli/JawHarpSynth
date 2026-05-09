@@ -209,57 +209,7 @@ uint16_t lastTextFgColor;
 uint16_t lastTextBgColor;
 uint8_t  lastTextSize;
 
-extern void processIncomingSerial(bool& ackReceived);
-//static uint8_t packetCounter = 0;
-
-// struct QueuedDrawCmd {
-//     uint8_t cmd;
-//     uint8_t payload[250];
-//     uint8_t len;
-// };
-
-// static QueuedDrawCmd drawQueue[DRAW_QUEUE_SIZE];
-// static uint8_t drawQueueHead = 0;
-// static uint8_t drawQueueCount = 0;
-
-
-// void flushDrawQueueSingle() {
-//     if (drawQueueCount == 0) return;
-
-//     QueuedDrawCmd& q = drawQueue[drawQueueHead];
-
-//     Serial4.write(PKT_SYNC);
-//     Serial4.write(q.cmd);
-//     Serial4.write(q.len);
-//     Serial4.write(q.payload, q.len);
-
-//     uint8_t checksum = PKT_SYNC ^ q.cmd ^ q.len;
-//     for (uint8_t j = 0; j < q.len; j++) checksum ^= q.payload[j];
-//     Serial4.write(checksum);
-
-//     drawQueueHead = (drawQueueHead + 1) % DRAW_QUEUE_SIZE;
-//     drawQueueCount--;
-//    // delayMicroseconds(180);
-
-// }
-
-// void queuePacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
-//     if (drawQueueCount >= DRAW_QUEUE_SIZE) {
-//         // Queue full – force‑send a batch to free space
-//         flushDrawQueueSingle();
-//         // If still full (extremely unlikely), drop the oldest packet
-//         if (drawQueueCount >= DRAW_QUEUE_SIZE) {
-//             drawQueueHead = (drawQueueHead + 1) % DRAW_QUEUE_SIZE;
-//             drawQueueCount--;
-//         }
-//     }
-//     uint8_t idx = (drawQueueHead + drawQueueCount) % DRAW_QUEUE_SIZE;
-//     drawQueue[idx].cmd = cmd;
-//     drawQueue[idx].len = len;
-//     if (len > 0) memcpy(drawQueue[idx].payload, payload, len);
-//     drawQueueCount++;
-// }
-
+extern void processIncomingSerial();
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   if (len > 250) return;   // keep the safety check
@@ -273,7 +223,6 @@ void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
   for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
   Serial4.write(checksum);
- // delayMicroseconds(180);
 }
 
 void sendGlowClear() {
@@ -371,15 +320,34 @@ void espdisplay::drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint1
   }
 }
 
+// void espdisplay::sendScopeData(uint16_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t* data) {
+//   uint8_t payload[5 + w];   // x(2), y(1), w(1), h(1), data
+//   payload[0] = lowByte(x);
+//   payload[1] = highByte(x);
+//   payload[2] = y;
+//   payload[3] = w;
+//   payload[4] = h;
+//   memcpy(&payload[5], data, w);
+//   sendPacket(CMD_SCOPE_DATA, payload, 5 + w);
+// }
+
 void espdisplay::sendScopeData(uint16_t x, uint8_t y, uint8_t w, uint8_t h, const uint8_t* data) {
-  uint8_t payload[5 + w];   // x(2), y(1), w(1), h(1), data
-  payload[0] = lowByte(x);
-  payload[1] = highByte(x);
-  payload[2] = y;
-  payload[3] = w;
-  payload[4] = h;
-  memcpy(&payload[5], data, w);
-  sendPacket(CMD_SCOPE_DATA, payload, 5 + w);
+  static uint16_t last_x = 0xFFFF, last_y = 0xFF, last_w = 0, last_h = 0;
+
+  // Send configuration only when the window changes
+  if (x != last_x || y != last_y || w != last_w || h != last_h) {
+    uint8_t cfg[5];
+    cfg[0] = lowByte(x);
+    cfg[1] = highByte(x);
+    cfg[2] = y;
+    cfg[3] = w;
+    cfg[4] = h;
+    sendPacket(CMD_SET_SCOPE_CONFIG, cfg, 5);
+    last_x = x; last_y = y; last_w = w; last_h = h;
+  }
+
+  // Send Y‑data only
+  sendPacket(CMD_SCOPE_Y_DATA, data, w);
 }
 
 void espdisplay::drawPixel(int16_t x, int16_t y, uint16_t color)
