@@ -17,7 +17,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.952"
+#define MIN_VERSION_ESP_DISPLAY "1.9.953"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -53,6 +53,7 @@
 #define CMD_DRAW_PANBAR 33
 #define CMD_SET_SCOPE_CONFIG 34  // new: set X,Y,W,H
 #define CMD_SCOPE_Y_DATA     35  // new: stream only Y values
+#define CMD_DRAW_PARAM_BAR16  36
 #define CMD_VERSION_REPORT 100   // unique command code
 #define CMD_SET_VOLUME_ICONS_MODE 101
 #define CMD_SET_EDIT_MODE 102
@@ -87,6 +88,8 @@ public:
   void drawESPParamBar(uint8_t x, uint8_t y, uint8_t value, uint8_t min, uint8_t max,
     uint8_t highlight, bool show_bar, const char* zero_name = nullptr);
   void drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t highlight);
+  void drawESPParamBar16(uint8_t x, uint8_t y, uint16_t value, uint16_t min, uint16_t max,
+                       uint8_t highlight, bool show_bar, const char* zero_name);
   void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
   void fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h);
 

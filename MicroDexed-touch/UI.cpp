@@ -3566,24 +3566,28 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
 #endif
 
 #if defined(ESP_DISPLAY)
-  // Map values to uint8_t (all fit in 0-255)
-  uint8_t val8, min8, max8;
-  if (limit_min < 0) {
-    // Pan range -99..99 -> 1..199
-    val8 = input_value + 100;
-    min8 = 1;
-    max8 = 199;
-  }
-  else {
-    val8 = constrain(input_value, 0, 255);
-    min8 = limit_min;
-    max8 = limit_max;
-  }
-  uint8_t highlight = 0;
+   uint8_t highlight = 0;
   if (generic_temp_select_menu == selected_option) {
     highlight = seq.edit_state ? 2 : 1;
   }
-  display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  // Check if the range exceeds 255 (cannot fit in 8 bits)
+  if ((limit_max - limit_min) > 255) {
+    // Use the 16-bit version to preserve full range
+    display.drawESPParamBar16(x, y, (uint16_t)input_value, (uint16_t)limit_min, (uint16_t)limit_max,
+                              highlight, show_bar, zero_name);
+  } else if (limit_min < 0) {
+    // Pan bar -99..99 -> send as 0-199 (fits in 8 bits)
+    uint8_t val8 = input_value + 100;
+    uint8_t min8 = 1;
+    uint8_t max8 = 199;
+    display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  } else {
+    // Normal range that fits in 0‑255
+    uint8_t val8 = constrain(input_value, 0, 255);
+    uint8_t min8 = limit_min;
+    uint8_t max8 = limit_max;
+    display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  }
 #endif
 
 #if defined(ESP_DISPLAY)
@@ -5856,8 +5860,20 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
+ #ifdef ESP_DISPLAY
+  // Static timer to throttle redraws
+   elapsedMillis sampleChangeTimer = 0;
+   uint8_t lastESPSample = 0xFF;   // track last drawn sample
+#endif
+
 FLASHMEM void drawDrumsSampleWave(bool fullRedraw) {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+
+#ifdef ESP_DISPLAY
+if (sampleChangeTimer < 150) 
+  return;
+#endif
+
   static uint16_t lastFromX = 0;
   static uint16_t lastToX = 0;
   const drum_config_t& slot = drum_config[activeSample];
@@ -5874,9 +5890,10 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw) {
     const uint16_t toX = plotX + ceil(to * plotW);
 
     if (fullRedraw) {
-      drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
-      drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX);
-      drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
+   
+      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
+      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX,DX_DARKCYAN,GREY4);
+      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
       lastFromX = fromX;
       lastToX = toX;
     }
@@ -7137,19 +7154,24 @@ FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min,
     NULL);
 }
 
-#if defined ESP_DISPLAY
-extern int16_t lastPixelColor;
-#endif
+// #if defined ESP_DISPLAY
+// extern int16_t lastPixelColor;
+// #endif
 
 void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   int16_t* data, uint32_t length, uint8_t numChannels,
   uint16_t fromX, uint16_t toX,
   uint16_t waveColor, uint16_t bgColor) {
+
+    fromX = constrain(fromX, x, x + w);
+  toX   = constrain(toX,   x, x + w);
+  if (toX <= fromX) return;
+
   if (toX > fromX) {
 
-#if defined ESP_DISPLAY
-    lastPixelColor = 254;
-#endif
+// #if defined ESP_DISPLAY
+//     lastPixelColor = 254;
+// #endif
 
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
 
@@ -7211,6 +7233,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
           display.console = true;
           display.drawLine(xi, yMin, xi, yMax, waveColor); // drawLine() is off a bit to the left          
         }
+        
       }
     }
     else {
@@ -7589,6 +7612,11 @@ static FLASHMEM int16_t smart_filter_getter(Editor* editor) {
 static FLASHMEM void smart_filter_setter(Editor* editor, int16_t value) {
   seq.smartfilter = !seq.smartfilter;
 }
+
+ #if defined ESP_DISPLAY
+ extern int16_t lastLineColor;
+ #endif
+
 // ===== End RAM optimization callbacks =====
 
 // Create drum UI.
@@ -7598,7 +7626,15 @@ FLASHMEM void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_drums);
-    registerScope(276, 135, 40, 40);
+ 
+#ifndef ESP_DISPLAY
+  registerScope(276, 135, 40, 40);
+#endif
+
+#ifdef ESP_DISPLAY
+lastLineColor=0xFFF1;
+#endif
+
     drumScreenActive = true;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
@@ -7629,7 +7665,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
       },
       [](Editor* editor, bool refresh) { // TODO: still called twice on editor change
         // render the current selected drum sample slot number and name
-        char header[22] = { " " };
+        char header[21] = { " " };
         sprintf(header, "%02i:  %s", activeSample, basename(drum_config[activeSample].name));
 
         display.setTextSize(2);
@@ -7723,7 +7759,9 @@ FLASHMEM void UI_func_drums(uint8_t param)
       }
       else {
         setCursor_textGrid_small(param->x, param->y);
-        print_empty_spaces(22, 1);
+       display.console = true;
+       display.fillRect(120, 130, 138, 8, COLOR_BACKGROUND);
+       display.console = false;
       }
       });
 
@@ -7778,13 +7816,19 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.handle_input();
     handleCustomSliceEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
+#ifdef ESP_DISPLAY
+   if (activeSample != lastESPSample)
+  sampleChangeTimer = 0;
+#endif
     flush_sysex();
 
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
     unregisterTouchHandler();
+#ifndef ESP_DISPLAY
      unregisterScope();
+#endif
     drumScreenActive = false;
     ui.clear();
   }

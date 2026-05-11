@@ -272,6 +272,27 @@ void espdisplay::drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t high
   sendPacket(CMD_DRAW_PANBAR, payload, 4);
 }
 
+void espdisplay::drawESPParamBar16(uint8_t x, uint8_t y, uint16_t value, uint16_t min, uint16_t max,
+                                   uint8_t highlight, bool show_bar, const char* zero_name) {
+  uint8_t zero_len = (zero_name != nullptr) ? strlen(zero_name) : 0;
+  uint8_t payload[9 + zero_len];  // 9 = x(1) + y(1) + value(2) + min(2) + max(2) + flags(1) + zero_len(1)
+  uint8_t idx = 0;
+  payload[idx++] = x;
+  payload[idx++] = y;
+  payload[idx++] = lowByte(value);
+  payload[idx++] = highByte(value);
+  payload[idx++] = lowByte(min);
+  payload[idx++] = highByte(min);
+  payload[idx++] = lowByte(max);
+  payload[idx++] = highByte(max);
+  payload[idx++] = (show_bar ? 1 : 0) | ((highlight & 3) << 1);
+  payload[idx++] = zero_len;
+  if (zero_len) {
+    memcpy(&payload[idx], zero_name, zero_len);
+  }
+  sendPacket(CMD_DRAW_PARAM_BAR16, payload, 9 + zero_len);
+}
+
 void espdisplay::drawESPParamBar(uint8_t x, uint8_t y, uint8_t value, uint8_t min, uint8_t max,
   uint8_t highlight, bool show_bar, const char* zero_name) {
   uint8_t zero_len = (zero_name != nullptr) ? strlen(zero_name) : 0;
