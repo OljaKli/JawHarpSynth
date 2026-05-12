@@ -3331,16 +3331,16 @@ void loop()
 
       if (dac_state == 1) //dac on
       {
-        setCursor_textGrid_small(19, 3);
+        setCursor_textGrid_small(22, 3);
         print_formatted_number(dac_midi_note, 3);
-        setCursor_textGrid_small(19, 4);
+        setCursor_textGrid_small(22, 4);
         print_note_name_and_octave(dac_midi_note);
         display.print("  ");
-        setCursor_textGrid_small(19, 5);
+        setCursor_textGrid_small(22, 5);
         print_formatted_number(dac_cv_1, 4);
-        setCursor_textGrid_small(19, 6);
+        setCursor_textGrid_small(22, 6);
         print_formatted_number(dac_midi_vel, 3);
-        setCursor_textGrid_small(19, 7);
+        setCursor_textGrid_small(22, 7);
         print_formatted_number(dac_cv_3, 4);
 
         setCursor_textGrid_small(30, 1);
@@ -4299,10 +4299,20 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         if (inChannel == configuration.sys.cv_midi_channel && seq.running == false) ///CV Output
         {
           dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
-          dac_cv_3 = inVelocity * 25.98f;
+          if (configuration.sys.dac_5v)
+            dac_cv_3 = inVelocity * 12.99f;
+          else
+            dac_cv_3 = inVelocity * 25.98f;
+
 #ifdef MCP_CV 
-          // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
-          dac.analogWrite(0, dac_cv_1);
+          if (configuration.sys.dac_5v)
+          {
+            if (dac_cv_1 < 2063)
+              dac.analogWrite(0, dac_cv_1);
+          }
+          else
+            dac.analogWrite(0, dac_cv_1);
+
           dac.analogWrite(2, dac_cv_3);
           digitalWrite(GATE_OUT, HIGH); //gate on
           //dac.enable(true);
@@ -4320,10 +4330,19 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         else if (inChannel == 21 && seq.running) ///CV Output
         {
           dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
-          dac_cv_3 = inVelocity * 25.98f;
+          if (configuration.sys.dac_5v)
+            dac_cv_3 = inVelocity * 12.99f;
+          else
+            dac_cv_3 = inVelocity * 25.98f;
+
 #ifdef MCP_CV 
-          // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
-          dac.analogWrite(0, dac_cv_1);
+          if (configuration.sys.dac_5v)
+          {
+            if (dac_cv_1 < 2063)
+              dac.analogWrite(0, dac_cv_1);
+          }
+          else
+            dac.analogWrite(0, dac_cv_1);
           dac.analogWrite(2, dac_cv_3);
           digitalWrite(GATE_OUT, HIGH); //gate on
           //dac.enable(true);
@@ -4755,10 +4774,21 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
 
 #ifdef  MCP_CV
     if (inCtrl == configuration.sys.dac_cv_2)
-      dac.analogWrite(1, inValue * 25.98f);
+    {
+      if (configuration.sys.dac_5v)
+        dac.analogWrite(1, inValue * 12.99f);
+      else
+        dac.analogWrite(1, inValue * 25.98f);
+    }
     else
       if (inCtrl == configuration.sys.dac_cv_4)
-        dac.analogWrite(3, inValue * 25.98f);
+      {
+        if (configuration.sys.dac_5v)
+          dac.analogWrite(3, inValue * 12.99f);
+        else
+          dac.analogWrite(3, inValue * 25.98f);
+      }
+
 #endif
 
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
@@ -5601,6 +5631,12 @@ FLASHMEM void handleStart(void)
   midiSendRealtime(midi::Start);
 
 
+#ifdef MCP_CV ///CV Output
+  dac.analogWrite(0, 0);
+  dac.analogWrite(2, 0);
+  digitalWrite(GATE_OUT, LOW); //gate off
+#endif
+
 }
 
 FLASHMEM void handleContinue(void)
@@ -5700,6 +5736,12 @@ FLASHMEM void handleStop(void)
 
 #ifdef MUSIKANDMORE
   digitalWrite(CV_CLOCK_OUT, LOW);
+#endif
+
+#ifdef MCP_CV ///CV Output
+  dac.analogWrite(0, 0);
+  dac.analogWrite(2, 0);
+  digitalWrite(GATE_OUT, LOW); //gate off
 #endif
 
 }

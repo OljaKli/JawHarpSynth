@@ -17571,28 +17571,45 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     display.print(F("CV OUTPUT VALUE"));
 
     setCursor_textGrid_small(1, 6);
-    display.print(F("VELOCITY"));
+    display.print(F("VELOCITY CV3 [C]"));
     setCursor_textGrid_small(1, 7);
     display.print(F("OUTPUT VELOCITY"));
 
     setCursor_textGrid_small(1, 8);
     display.print(F("MIDI CHANNEL"));
     setCursor_textGrid_small(1, 9);
-    display.print(F("MIDI CC > CV2"));
+    display.print(F("MIDI CC > CV2 [B]"));
     setCursor_textGrid_small(1, 10);
-    display.print(F("MIDI CC > CV4"));
+    display.print(F("MIDI CC > CV4 [D]"));
     setCursor_textGrid_small(1, 11);
-    display.print(F("NOTE TRANSP.>CV1"));
+    display.print(F("NOTE TRANSP.>CV1 [A]"));
 
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(19, 8);
+    setCursor_textGrid_small(22, 8);
     print_formatted_number(configuration.sys.cv_midi_channel, 2);
-    setCursor_textGrid_small(19, 9);
+    setCursor_textGrid_small(22, 9);
     print_formatted_number(configuration.sys.dac_cv_2, 2);
-    setCursor_textGrid_small(19, 10);
+    setCursor_textGrid_small(22, 10);
     print_formatted_number(configuration.sys.dac_cv_4, 2);
-    setCursor_textGrid_small(19, 11);
+    setCursor_textGrid_small(22, 11);
     print_formatted_number(configuration.sys.dac_cv_transpose, 2);
+
+ display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT,RED);
+ if (configuration.sys.dac_5v)
+ {
+   setCursor_textGrid_small(34, 10);
+ display.print("0-5V MODE");
+ }
+
+else
+{
+   setCursor_textGrid_small(33, 10);
+display.print("0-10V MODE");
+}
+
+display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT,COLOR_BACKGROUND);
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
       LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -17626,16 +17643,16 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
 
     display.setTextSize(1);
     setModeColor(0);
-    setCursor_textGrid_small(19, 8);
+    setCursor_textGrid_small(22, 8);
     print_formatted_number(configuration.sys.cv_midi_channel, 2, 0, 1);
     setModeColor(1);
-    setCursor_textGrid_small(19, 9);
+    setCursor_textGrid_small(22, 9);
     print_formatted_number(configuration.sys.dac_cv_2, 2, 1, 1);
     setModeColor(2);
-    setCursor_textGrid_small(19, 10);
+    setCursor_textGrid_small(22, 10);
     print_formatted_number(configuration.sys.dac_cv_4, 2, 2, 1);
     setModeColor(3);
-    setCursor_textGrid_small(19, 11);
+    setCursor_textGrid_small(22, 11);
     print_formatted_number(configuration.sys.dac_cv_transpose, 2, 3, 1);
 
   }
@@ -21155,6 +21172,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 19: base = F("MIDI INPUT CC -> CV2"); break;
     case 20: base = F("MIDI INPUT CC -> CV4"); break;
     case 21: base = F("NOTE TRANSPOSE -> CV1"); break;
+    case 22: base = F("CV STANDARD RANGE"); break;
     }
 
     uint8_t base_len = 0;
@@ -21177,7 +21195,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       append_na = true;
 #endif
       break;
-    case 16: case 17: case 18: case 19: case 20: case 21:
+    case 16: case 17: case 18: case 19: case 20: case 21: case 22:
 #ifndef MCP_CV
       append_na = true;
 #endif
@@ -21222,11 +21240,11 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       // then a space, then the unit.
       if (start < 10) {
         // single digit: e.g. " 5 MINS"
-        snprintf(tmp, sizeof(tmp), "%d %s", start, unit);
+        snprintf(tmp, sizeof(tmp), "%02d %s", start, unit);
       }
       else {
         // two digits: e.g. "10 MINS"
-        snprintf(tmp, sizeof(tmp), "%d %s", start, unit);
+        snprintf(tmp, sizeof(tmp), "%02d %s", start, unit);
       }
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
@@ -21251,13 +21269,13 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     }
     case 3: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%d", configuration.sys.display_rotation);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.display_rotation);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
     case 4: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%d", configuration.sys.touch_rotation);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.touch_rotation);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
@@ -21313,7 +21331,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       uint8_t color = (setting_index == 14) ? configuration.sys.rgb_enc_color_def
         : configuration.sys.rgb_enc_color_sel;
       char num[4];
-      snprintf(num, sizeof(num), "%3d", color);
+      snprintf(num, sizeof(num), "%02d", color);
       uint8_t num_len = strlen(num);
       display.print(num);
       if (num_len < VALUE_WIDTH) {
@@ -21343,22 +21361,28 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     }
     case 19: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_2);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.dac_cv_2);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
     case 20: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_4);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.dac_cv_4);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
     case 21: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_transpose);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.dac_cv_transpose);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
+    case 22: {
+      const char* str = configuration.sys.dac_5v ? "0-5V " : "0-10V";
+      left_justify(val_buf, str, VALUE_WIDTH);
+      break;
+    }
+
     }
 
     display.print(val_buf);
@@ -21394,7 +21418,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 22; // Zero Indexed
+  static uint8_t total_menu_items = 23; // Zero Indexed
 
   if (LCDML.FUNC_setup())
   {
@@ -21480,6 +21504,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 19: configuration.sys.dac_cv_2 = constrain(configuration.sys.dac_cv_2 + (e.dir * 1), 0, 99); break;
         case 20: configuration.sys.dac_cv_4 = constrain(configuration.sys.dac_cv_4 + (e.dir * 1), 0, 99); break;
         case 21: configuration.sys.dac_cv_transpose = constrain(configuration.sys.dac_cv_transpose + (e.dir * 1), 0, 36); break;
+        case 22: configuration.sys.dac_5v = constrain(configuration.sys.dac_5v + (e.dir * 1), 0, 1); break;
 
         }
       }

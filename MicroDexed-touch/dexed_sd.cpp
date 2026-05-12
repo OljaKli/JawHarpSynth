@@ -2338,6 +2338,7 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.dac_cv_transpose = data_json["cvtranspose"];
         configuration.sys.dac_cv_2 = data_json["cv2cc"];
         configuration.sys.dac_cv_4 = data_json["cv4cc"];
+        configuration.sys.dac_5v = data_json["dac5v"];
         configuration.sys.cv_midi_channel = data_json["cv_midi_channel"];
 
         if (data_json["rgb_enc_color_def"] > 0)
@@ -2453,6 +2454,8 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["cvtranspose"] = configuration.sys.dac_cv_transpose;
       data_json["cv2cc"] = configuration.sys.dac_cv_2;
       data_json["cv4cc"] = configuration.sys.dac_cv_4;
+      data_json["dac5v"] = configuration.sys.dac_5v;
+
       data_json["cv_midi_channel"] = configuration.sys.cv_midi_channel;
 
       if (configuration.sys.rgb_enc_color_def != 0)
