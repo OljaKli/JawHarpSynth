@@ -1185,60 +1185,63 @@ void sendVolumeIconsMode(bool volumeIcons) {
   uint8_t payload = volumeIcons ? 1 : 0;
   sendPacket(CMD_SET_VOLUME_ICONS_MODE, &payload, 1);
 }
-//static bool lastVolumeIconsMode = true;
+
 bool handshakeComplete = false;   // true when both versions received and compatible
 #endif
 
-uint8_t psramspeed = 0;
-FLASHMEM void update_psram_speed(int speed_mhz) {
-  // What clocks exist:
-  static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
+// uint8_t psramspeed = 0;
+// FLASHMEM void update_psram_speed(int speed_mhz) {
+//   // What clocks exist:
+//   static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
 
-  // See what the closest setting might be:
-  uint8_t clk_save = 0, divider_save = 0;
-  int min_delta = speed_mhz;
-  for (uint8_t clk = 0; clk < 4; clk++) {
-    uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
-    int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
-    if ((delta < min_delta) && (divider < 8)) {
-      min_delta = delta;
-      clk_save = clk;
-      divider_save = divider;
-    }
-  }
+//   // See what the closest setting might be:
+//   uint8_t clk_save = 0, divider_save = 0;
+//   int min_delta = speed_mhz;
+//   for (uint8_t clk = 0; clk < 4; clk++) {
+//     uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
+//     int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
+//     if ((delta < min_delta) && (divider < 8)) {
+//       min_delta = delta;
+//       clk_save = clk;
+//       divider_save = divider;
+//     }
+//   }
 
-  // first turn off FLEXSPI2
-  CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+//   // first turn off FLEXSPI2
+//   CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
 
-  divider_save--; // 0 biased.
-  // Serial.printf("Update FLEXSPI2 speed: %u clk:%u div:%u Actual:%u\n", speed_mhz, clk_save, divider_save,
-  //     flexspio2_clock_speeds[clk_save]/ (divider_save + 1));
-  psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
+//   divider_save--; // 0 biased.
+//   psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
 
-  // Set the clock settings.
-  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-    | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
+//   // Set the clock settings.
+//   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+//     | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
 
-  // Turn FlexSPI2 clock back on
-  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-}
+//   // Turn FlexSPI2 clock back on
+//   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+// }
 
 
 FLASHMEM void setup()
 {
 
-#ifndef LARGEPSRAM
-  //**************************
-  //Reset QSPI clock from 88Mhz to 132 Mhz.
-  //  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
-  //  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-  //    | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
-  //  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+#ifdef PSRAM
+
+  //#ifndef LARGEPSRAM
+    //**************************
+    //Reset QSPI clock from 88Mhz to 132 Mhz.
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
+  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+    | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
   //**************************
 
-  update_psram_speed(132);
-#else
-  update_psram_speed(120);
+
+//   update_psram_speed(132);
+// #else
+//   update_psram_speed(120);
+// #endif
+
 #endif
 
 #ifdef GRANULAR
@@ -1383,8 +1386,6 @@ FLASHMEM void setup()
 #endif
 
   display.begin();
-
-
 
   // invert display colors
 #ifndef ESP_DISPLAY
@@ -3049,7 +3050,7 @@ uint32_t lastGlowUpdate = 0;
 
 #if defined ESP_DISPLAY
 extern void sendEditMode(bool);
-//extern void flushDrawQueueSingle();
+extern void processIncomingSerial();
 #endif
 
 
@@ -3063,8 +3064,8 @@ void loop()
     lastEditState = seq.edit_state;
     sendEditMode(seq.edit_state);
   }
-  
-   // flushDrawQueueSingle();
+
+  // flushDrawQueueSingle();
 #endif
 
   // Chords Detection
@@ -3132,6 +3133,10 @@ void loop()
   }
 #endif
 
+#endif
+
+#if defined ESP_DISPLAY
+  processIncomingSerial();
 #endif
 
   // Serial read (commands from web remote)
@@ -3326,16 +3331,16 @@ void loop()
 
       if (dac_state == 1) //dac on
       {
-        setCursor_textGrid_small(19, 3);
+        setCursor_textGrid_small(22, 3);
         print_formatted_number(dac_midi_note, 3);
-        setCursor_textGrid_small(19, 4);
+        setCursor_textGrid_small(22, 4);
         print_note_name_and_octave(dac_midi_note);
         display.print("  ");
-        setCursor_textGrid_small(19, 5);
+        setCursor_textGrid_small(22, 5);
         print_formatted_number(dac_cv_1, 4);
-        setCursor_textGrid_small(19, 6);
+        setCursor_textGrid_small(22, 6);
         print_formatted_number(dac_midi_vel, 3);
-        setCursor_textGrid_small(19, 7);
+        setCursor_textGrid_small(22, 7);
         print_formatted_number(dac_cv_3, 4);
 
         setCursor_textGrid_small(30, 1);
@@ -4280,7 +4285,6 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
           }
         }
 #endif
-
         //
         // E-Piano
         //
@@ -4295,21 +4299,53 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
         if (inChannel == configuration.sys.cv_midi_channel && seq.running == false) ///CV Output
         {
           dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
-          dac_cv_3 = inVelocity * 25.98f;
+          if (configuration.sys.dac_5v)
+            dac_cv_3 = inVelocity * 12.99f;
+          else
+            dac_cv_3 = inVelocity * 25.98f;
+
 #ifdef MCP_CV 
-          // dac.analogWrite(dac_cv_1, 0, dac_cv_3, 0);
+          if (configuration.sys.dac_5v)
+          {
+            if (dac_cv_1 < 2063)
+              dac.analogWrite(0, dac_cv_1);
+          }
+          else
+            dac.analogWrite(0, dac_cv_1);
 
-          dac.analogWrite(0, dac_cv_1);
           dac.analogWrite(2, dac_cv_3);
-
           digitalWrite(GATE_OUT, HIGH); //gate on
-
           //dac.enable(true);
 #endif
 
-
 #ifdef MUSIKANDMORE
       //setled(LED_DOWN, true);
+#endif
+
+          dac_midi_note = inNumber;
+          dac_midi_vel = inVelocity;
+          dac_state = 1;
+
+        }
+        else if (inChannel == 21 && seq.running) ///CV Output
+        {
+          dac_cv_1 = (inNumber - 24 + configuration.sys.dac_cv_transpose) * NOTESTEP_CV;
+          if (configuration.sys.dac_5v)
+            dac_cv_3 = inVelocity * 12.99f;
+          else
+            dac_cv_3 = inVelocity * 25.98f;
+
+#ifdef MCP_CV 
+          if (configuration.sys.dac_5v)
+          {
+            if (dac_cv_1 < 2063)
+              dac.analogWrite(0, dac_cv_1);
+          }
+          else
+            dac.analogWrite(0, dac_cv_1);
+          dac.analogWrite(2, dac_cv_3);
+          digitalWrite(GATE_OUT, HIGH); //gate on
+          //dac.enable(true);
 #endif
 
           dac_midi_note = inNumber;
@@ -4615,7 +4651,6 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
       }
     }
 
-
     if (inChannel == configuration.sys.cv_midi_channel && seq.running == false)
     {
 #ifdef MCP_CV ///CV Output
@@ -4628,7 +4663,22 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
 #endif
 
 #ifdef MUSIKANDMORE
+      //setled(LED_DOWN, false);
+#endif
 
+    }
+    else if (inChannel == 21 && seq.running)
+    {
+#ifdef MCP_CV ///CV Output
+      // dac.analogWrite((inNumber - 8) * NOTESTEP_CV, inVelocity * 31, 0, 0);
+     // dac.enable(false);
+      dac_midi_note = 0;
+      dac_midi_vel = 0;
+      dac_state = 2;
+      digitalWrite(GATE_OUT, LOW); //gate off
+#endif
+
+#ifdef MUSIKANDMORE
       //setled(LED_DOWN, false);
 #endif
 
@@ -4724,10 +4774,21 @@ void handleControlChange(byte inChannel, byte inCtrl, byte inValue)
 
 #ifdef  MCP_CV
     if (inCtrl == configuration.sys.dac_cv_2)
-      dac.analogWrite(1, inValue * 25.98f);
+    {
+      if (configuration.sys.dac_5v)
+        dac.analogWrite(1, inValue * 12.99f);
+      else
+        dac.analogWrite(1, inValue * 25.98f);
+    }
     else
       if (inCtrl == configuration.sys.dac_cv_4)
-        dac.analogWrite(3, inValue * 25.98f);
+      {
+        if (configuration.sys.dac_5v)
+          dac.analogWrite(3, inValue * 12.99f);
+        else
+          dac.analogWrite(3, inValue * 25.98f);
+      }
+
 #endif
 
     for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
@@ -5570,6 +5631,12 @@ FLASHMEM void handleStart(void)
   midiSendRealtime(midi::Start);
 
 
+#ifdef MCP_CV ///CV Output
+  dac.analogWrite(0, 0);
+  dac.analogWrite(2, 0);
+  digitalWrite(GATE_OUT, LOW); //gate off
+#endif
+
 }
 
 FLASHMEM void handleContinue(void)
@@ -5669,6 +5736,12 @@ FLASHMEM void handleStop(void)
 
 #ifdef MUSIKANDMORE
   digitalWrite(CV_CLOCK_OUT, LOW);
+#endif
+
+#ifdef MCP_CV ///CV Output
+  dac.analogWrite(0, 0);
+  dac.analogWrite(2, 0);
+  digitalWrite(GATE_OUT, LOW); //gate off
 #endif
 
 }

@@ -2634,7 +2634,7 @@ FLASHMEM void update_display_functions_while_seq_running()
         display.setTextColor(COLOR_SYSTEXT, RED);
         display.print(seq_find_shortname(seq.menu - 3)[0]);
       }
-      else if (seq.menu < 16 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
+      else if (seq.menu-1 < 16 && seq.menu-1 >=0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
       { // update static cursor while moving cursor running in vel editor
         setCursor_textGrid(seq.menu - 1, 1);
         display.setTextSize(2);
@@ -3566,24 +3566,28 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
 #endif
 
 #if defined(ESP_DISPLAY)
-  // Map values to uint8_t (all fit in 0-255)
-  uint8_t val8, min8, max8;
-  if (limit_min < 0) {
-    // Pan range -99..99 -> 1..199
-    val8 = input_value + 100;
-    min8 = 1;
-    max8 = 199;
-  }
-  else {
-    val8 = constrain(input_value, 0, 255);
-    min8 = limit_min;
-    max8 = limit_max;
-  }
-  uint8_t highlight = 0;
+   uint8_t highlight = 0;
   if (generic_temp_select_menu == selected_option) {
     highlight = seq.edit_state ? 2 : 1;
   }
-  display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  // Check if the range exceeds 255 (cannot fit in 8 bits)
+  if ((limit_max - limit_min) > 255) {
+    // Use the 16-bit version to preserve full range
+    display.drawESPParamBar16(x, y, (uint16_t)input_value, (uint16_t)limit_min, (uint16_t)limit_max,
+                              highlight, show_bar, zero_name);
+  } else if (limit_min < 0) {
+    // Pan bar -99..99 -> send as 0-199 (fits in 8 bits)
+    uint8_t val8 = input_value + 100;
+    uint8_t min8 = 1;
+    uint8_t max8 = 199;
+    display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  } else {
+    // Normal range that fits in 0‑255
+    uint8_t val8 = constrain(input_value, 0, 255);
+    uint8_t min8 = limit_min;
+    uint8_t max8 = limit_max;
+    display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
+  }
 #endif
 
 #if defined(ESP_DISPLAY)
@@ -4255,15 +4259,11 @@ void processMidiDataFromESP(uint8_t* data, uint8_t len) {
 }
 #endif
 
-void processIncomingSerial(bool& ackReceived) {
+void processIncomingSerial() {
   while (Serial4.available() > 0) {
     uint8_t data = Serial4.read();
 
-    if (data == ACK_BYTE) {
-      ackReceived = true;
-    }
-
-    else if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
+   if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
       data == 0xAE || data == CMD_MIDI_DATA) {
       packetType = data;
       inTouchPacket = true;
@@ -4390,10 +4390,8 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
 
 #if defined ESP_DISPLAY
-  // readESPTouch();
 
-  bool dummy;
-  processIncomingSerial(dummy);
+ // processIncomingSerial();
 
   // Check for ESP long press (encoder buttons only)
   if (esp_pending_button != 255) {
@@ -5862,8 +5860,20 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
+ #ifdef ESP_DISPLAY
+  // Static timer to throttle redraws
+   elapsedMillis sampleChangeTimer = 0;
+   uint8_t lastESPSample = 0xFF;   // track last drawn sample
+#endif
+
 FLASHMEM void drawDrumsSampleWave(bool fullRedraw) {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
+
+#ifdef ESP_DISPLAY
+if (sampleChangeTimer < 150) 
+  return;
+#endif
+
   static uint16_t lastFromX = 0;
   static uint16_t lastToX = 0;
   const drum_config_t& slot = drum_config[activeSample];
@@ -5880,9 +5890,10 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw) {
     const uint16_t toX = plotX + ceil(to * plotW);
 
     if (fullRedraw) {
-      drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
-      drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX);
-      drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
+   
+      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
+      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX,DX_DARKCYAN,GREY4);
+      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
       lastFromX = fromX;
       lastToX = toX;
     }
@@ -7143,19 +7154,24 @@ FLASHMEM void addDrumParameterEditor_int8_t(const char* name, int16_t limit_min,
     NULL);
 }
 
-#if defined ESP_DISPLAY
-extern int16_t lastPixelColor;
-#endif
+// #if defined ESP_DISPLAY
+// extern int16_t lastPixelColor;
+// #endif
 
 void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   int16_t* data, uint32_t length, uint8_t numChannels,
   uint16_t fromX, uint16_t toX,
   uint16_t waveColor, uint16_t bgColor) {
+
+    fromX = constrain(fromX, x, x + w);
+  toX   = constrain(toX,   x, x + w);
+  if (toX <= fromX) return;
+
   if (toX > fromX) {
 
-#if defined ESP_DISPLAY
-    lastPixelColor = 254;
-#endif
+// #if defined ESP_DISPLAY
+//     lastPixelColor = 254;
+// #endif
 
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
 
@@ -7217,6 +7233,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
           display.console = true;
           display.drawLine(xi, yMin, xi, yMax, waveColor); // drawLine() is off a bit to the left          
         }
+        
       }
     }
     else {
@@ -7595,6 +7612,11 @@ static FLASHMEM int16_t smart_filter_getter(Editor* editor) {
 static FLASHMEM void smart_filter_setter(Editor* editor, int16_t value) {
   seq.smartfilter = !seq.smartfilter;
 }
+
+ #if defined ESP_DISPLAY
+ extern int16_t lastLineColor;
+ #endif
+
 // ===== End RAM optimization callbacks =====
 
 // Create drum UI.
@@ -7604,7 +7626,15 @@ FLASHMEM void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_drums);
-    registerScope(276, 135, 40, 40);
+ 
+#ifndef ESP_DISPLAY
+  registerScope(276, 135, 40, 40);
+#endif
+
+#ifdef ESP_DISPLAY
+lastLineColor=0xFFF1;
+#endif
+
     drumScreenActive = true;
     ui.reset();
     ui.clear(); // just recreate UI without resetting selection / edit mode
@@ -7635,7 +7665,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
       },
       [](Editor* editor, bool refresh) { // TODO: still called twice on editor change
         // render the current selected drum sample slot number and name
-        char header[22] = { " " };
+        char header[21] = { " " };
         sprintf(header, "%02i:  %s", activeSample, basename(drum_config[activeSample].name));
 
         display.setTextSize(2);
@@ -7729,7 +7759,9 @@ FLASHMEM void UI_func_drums(uint8_t param)
       }
       else {
         setCursor_textGrid_small(param->x, param->y);
-        print_empty_spaces(22, 1);
+       display.console = true;
+       display.fillRect(120, 130, 138, 8, COLOR_BACKGROUND);
+       display.console = false;
       }
       });
 
@@ -7784,13 +7816,19 @@ FLASHMEM void UI_func_drums(uint8_t param)
     ui.handle_input();
     handleCustomSliceEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
+#ifdef ESP_DISPLAY
+   if (activeSample != lastESPSample)
+  sampleChangeTimer = 0;
+#endif
     flush_sysex();
 
   }
   if (LCDML.FUNC_close()) // ****** CLOSE *********
   {
     unregisterTouchHandler();
+#ifndef ESP_DISPLAY
      unregisterScope();
+#endif
     drumScreenActive = false;
     ui.clear();
   }
@@ -16025,9 +16063,9 @@ FLASHMEM void sysinfo_reload_prev_voice(DxPoolSettings settings)
   }
 }
 
-#ifdef PSRAM
-extern uint8_t psramspeed;
-#endif
+// #ifdef PSRAM
+// extern uint8_t psramspeed;
+// #endif
 
 FLASHMEM void UI_func_information(uint8_t param)
 {
@@ -16172,14 +16210,13 @@ FLASHMEM void UI_func_information(uint8_t param)
     display.setTextColor(GREY1);
 #endif
 
-#ifdef PSRAM
- display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
-   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.print("PSRAM ");
-    display.print(psramspeed);
-     display.print("MHz");
-#endif
-
+// #ifdef PSRAM
+//  display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
+//  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+//  display.print("PSRAM ");
+//  display.print(psramspeed);
+//  display.print("MHz");
+// #endif
 
     if (seq.running == false) {
       oldSettings.pool = configuration.dexed[0].pool;
@@ -17534,28 +17571,45 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     display.print(F("CV OUTPUT VALUE"));
 
     setCursor_textGrid_small(1, 6);
-    display.print(F("VELOCITY"));
+    display.print(F("VELOCITY CV3 [C]"));
     setCursor_textGrid_small(1, 7);
     display.print(F("OUTPUT VELOCITY"));
 
     setCursor_textGrid_small(1, 8);
     display.print(F("MIDI CHANNEL"));
     setCursor_textGrid_small(1, 9);
-    display.print(F("MIDI CC > CV2"));
+    display.print(F("MIDI CC > CV2 [B]"));
     setCursor_textGrid_small(1, 10);
-    display.print(F("MIDI CC > CV4"));
+    display.print(F("MIDI CC > CV4 [D]"));
     setCursor_textGrid_small(1, 11);
-    display.print(F("NOTE TRANSP.>CV1"));
+    display.print(F("NOTE TRANSP.>CV1 [A]"));
 
     display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(19, 8);
+    setCursor_textGrid_small(22, 8);
     print_formatted_number(configuration.sys.cv_midi_channel, 2);
-    setCursor_textGrid_small(19, 9);
+    setCursor_textGrid_small(22, 9);
     print_formatted_number(configuration.sys.dac_cv_2, 2);
-    setCursor_textGrid_small(19, 10);
+    setCursor_textGrid_small(22, 10);
     print_formatted_number(configuration.sys.dac_cv_4, 2);
-    setCursor_textGrid_small(19, 11);
+    setCursor_textGrid_small(22, 11);
     print_formatted_number(configuration.sys.dac_cv_transpose, 2);
+
+ display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT,RED);
+ if (configuration.sys.dac_5v)
+ {
+   setCursor_textGrid_small(34, 10);
+ display.print("0-5V MODE");
+ }
+
+else
+{
+   setCursor_textGrid_small(33, 10);
+display.print("0-10V MODE");
+}
+
+display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT,COLOR_BACKGROUND);
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
       LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -17589,16 +17643,16 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
 
     display.setTextSize(1);
     setModeColor(0);
-    setCursor_textGrid_small(19, 8);
+    setCursor_textGrid_small(22, 8);
     print_formatted_number(configuration.sys.cv_midi_channel, 2, 0, 1);
     setModeColor(1);
-    setCursor_textGrid_small(19, 9);
+    setCursor_textGrid_small(22, 9);
     print_formatted_number(configuration.sys.dac_cv_2, 2, 1, 1);
     setModeColor(2);
-    setCursor_textGrid_small(19, 10);
+    setCursor_textGrid_small(22, 10);
     print_formatted_number(configuration.sys.dac_cv_4, 2, 2, 1);
     setModeColor(3);
-    setCursor_textGrid_small(19, 11);
+    setCursor_textGrid_small(22, 11);
     print_formatted_number(configuration.sys.dac_cv_transpose, 2, 3, 1);
 
   }
@@ -21118,6 +21172,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 19: base = F("MIDI INPUT CC -> CV2"); break;
     case 20: base = F("MIDI INPUT CC -> CV4"); break;
     case 21: base = F("NOTE TRANSPOSE -> CV1"); break;
+    case 22: base = F("CV STANDARD RANGE"); break;
     }
 
     uint8_t base_len = 0;
@@ -21140,7 +21195,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       append_na = true;
 #endif
       break;
-    case 16: case 17: case 18: case 19: case 20: case 21:
+    case 16: case 17: case 18: case 19: case 20: case 21: case 22:
 #ifndef MCP_CV
       append_na = true;
 #endif
@@ -21185,11 +21240,11 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       // then a space, then the unit.
       if (start < 10) {
         // single digit: e.g. " 5 MINS"
-        snprintf(tmp, sizeof(tmp), "%d %s", start, unit);
+        snprintf(tmp, sizeof(tmp), "%02d %s", start, unit);
       }
       else {
         // two digits: e.g. "10 MINS"
-        snprintf(tmp, sizeof(tmp), "%d %s", start, unit);
+        snprintf(tmp, sizeof(tmp), "%02d %s", start, unit);
       }
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
@@ -21214,13 +21269,13 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     }
     case 3: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%d", configuration.sys.display_rotation);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.display_rotation);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
     case 4: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%d", configuration.sys.touch_rotation);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.touch_rotation);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
@@ -21276,7 +21331,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       uint8_t color = (setting_index == 14) ? configuration.sys.rgb_enc_color_def
         : configuration.sys.rgb_enc_color_sel;
       char num[4];
-      snprintf(num, sizeof(num), "%3d", color);
+      snprintf(num, sizeof(num), "%02d", color);
       uint8_t num_len = strlen(num);
       display.print(num);
       if (num_len < VALUE_WIDTH) {
@@ -21306,22 +21361,28 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     }
     case 19: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_2);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.dac_cv_2);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
     case 20: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_4);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.dac_cv_4);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
     case 21: {
       char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.dac_cv_transpose);
+      snprintf(tmp, sizeof(tmp), "%02d", configuration.sys.dac_cv_transpose);
       left_justify(val_buf, tmp, VALUE_WIDTH);
       break;
     }
+    case 22: {
+      const char* str = configuration.sys.dac_5v ? "0-5V " : "0-10V";
+      left_justify(val_buf, str, VALUE_WIDTH);
+      break;
+    }
+
     }
 
     display.print(val_buf);
@@ -21357,7 +21418,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 22; // Zero Indexed
+  static uint8_t total_menu_items = 23; // Zero Indexed
 
   if (LCDML.FUNC_setup())
   {
@@ -21443,6 +21504,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 19: configuration.sys.dac_cv_2 = constrain(configuration.sys.dac_cv_2 + (e.dir * 1), 0, 99); break;
         case 20: configuration.sys.dac_cv_4 = constrain(configuration.sys.dac_cv_4 + (e.dir * 1), 0, 99); break;
         case 21: configuration.sys.dac_cv_transpose = constrain(configuration.sys.dac_cv_transpose + (e.dir * 1), 0, 36); break;
+        case 22: configuration.sys.dac_5v = constrain(configuration.sys.dac_5v + (e.dir * 1), 0, 1); break;
 
         }
       }
@@ -26697,7 +26759,13 @@ FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
             run++;
 
           // Draw the entire run with a single fillRect
+
           display.fillRect(x, y + yoffset, run, 1, color);
+
+  #if defined ESP_DISPLAY
+  delayMicroseconds(350);
+  #endif
+
           x += run;       // skip the whole run
           continue;       // avoid double increment
         }

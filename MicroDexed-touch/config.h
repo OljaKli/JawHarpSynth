@@ -1092,6 +1092,7 @@ typedef struct sys_s
   uint8_t dac_cv_2;
   uint8_t dac_cv_4;
   uint8_t dac_cv_transpose;
+  bool dac_5v;
 } sys_t;
 
 typedef struct storage_file_s

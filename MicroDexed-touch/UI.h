@@ -53,8 +53,6 @@ struct ScopeSettings {
   bool onlyDrawWhenRunning;
 };
 
-//extern ScopeSettings currentScopeSettings;
-
 void splash_draw_header();
 void splash_draw_D();
 void splash_draw_reverseD();

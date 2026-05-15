@@ -74,10 +74,8 @@ FLASHMEM void updateTouchScreen() {
     numTouchPoints = 1;
   }
   else {
-    // no remote touch, so update to check for real touch
     numTouchPoints = touch.touched();
     if (numTouchPoints > 0) {
-
 #if defined GENERIC_DISPLAY    
       // Scale from ~0->4000 to tft
       ts.p = touch.getPoint();
@@ -348,9 +346,9 @@ FLASHMEM bool handleLiveModButtons(void) {
   }
   if (pressedOne) {
     if (dexed_live_mod.active_button > 0) {
-       #if defined ESP_DISPLAY
+#if defined ESP_DISPLAY
       sendEditMode(true);
-      #endif
+#endif
       helptext_r(F("< > CHANGE MODIFIER VALUE"));
       display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
       print_empty_spaces(38, 1);
@@ -361,9 +359,9 @@ FLASHMEM bool handleLiveModButtons(void) {
     }
     else {
       print_voice_select_default_help();
-       #if defined ESP_DISPLAY
+#if defined ESP_DISPLAY
       sendEditMode(false);
-      #endif
+#endif
     }
   }
   return pressedOne;
@@ -958,7 +956,7 @@ FLASHMEM void print_file_manager_active_border()
     display.console = true;
     display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
- 
+
   fm.sd_mode = 0;
   print_file_manager_buttons();
 }
@@ -1223,6 +1221,12 @@ extern FLASHMEM void fadeSample();
 extern FLASHMEM void saveSample();
 #endif
 
+#ifdef ESP_DISPLAY
+extern elapsedMillis sampleChangeTimer;
+extern uint8_t lastESPSample;
+extern void drawDrumsSampleWave(bool fullRedraw);
+#endif
+
 FLASHMEM void handle_touchscreen_drums()
 {
   if (TouchButton::isPressed(GRID.X[1], GRID.Y[5]))
@@ -1232,6 +1236,14 @@ FLASHMEM void handle_touchscreen_drums()
     delay(60);
     TouchButton::drawButton(GRID.X[1], GRID.Y[5], "PLAY", "SAMPLE", TouchButton::BUTTON_ACTIVE);
   }
+
+#ifdef ESP_DISPLAY
+  if (activeSample != lastESPSample && sampleChangeTimer > 150) {
+    drawDrumsSampleWave(true);
+    sampleChangeTimer = 0;
+    lastESPSample = activeSample;
+  }
+#endif
 
 #ifdef COMPILE_FOR_PSRAM
 
@@ -1743,7 +1755,7 @@ FLASHMEM void handle_touchscreen_menu()
           draw_menu_ui_icons();
         }
         ts.touch_ui_drawn_in_menu = true;
-      }
+  }
 
       if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
       {
@@ -1834,7 +1846,7 @@ FLASHMEM void handle_touchscreen_menu()
     if (ts.keyb_in_menu_activated) {
       handleTouchVirtualKeyboard();
     }
-  }
+    }
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }

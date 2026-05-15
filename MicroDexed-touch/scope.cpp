@@ -32,12 +32,11 @@ void Realtime_Scope::update(void)
 
 void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
 {
- // if (!currentScopeSettings.enabled) return;
-
-#if defined ESP_DISPLAY
-static uint8_t scopeDivider = 0;
-if (++scopeDivider < 2) return;  // send every 4th block → ~86 Hz
-scopeDivider = 0;
+ 
+ #if defined ESP_DISPLAY
+  static elapsedMillis scopeTimer = 0;
+  if (scopeTimer < 50) return;
+  scopeTimer = 0;
 #endif
 
   scope_is_drawing = true;
@@ -56,19 +55,19 @@ scopeDivider = 0;
   }
 
 //Check if the entire scope buffer is empty (no audio)
-bool allZero = true;
-for (uint16_t i = 0; i < w; i++) {
-   if (abs(scopebuffer[i] - halfHeight) > 1) {
-        allZero = false;
-        break;
-    }
-}
-if (allZero) {
-    // Nothing to draw – skip sending
-    updateBuffer = true;
-    scope_is_drawing = false;
-    return;
-}
+// bool allZero = true;
+// for (uint16_t i = 0; i < w/2; i++) {
+//    if (abs(scopebuffer[i] - halfHeight) > 1) {
+//         allZero = false;
+//         break;
+//     }
+// }
+// if (allZero) {
+//     // Nothing to draw – skip sending
+//     updateBuffer = true;
+//     scope_is_drawing = false;
+//     return;
+// }
 
 #if defined ESP_DISPLAY
   // Send Y‑values to ESP in a single packet
