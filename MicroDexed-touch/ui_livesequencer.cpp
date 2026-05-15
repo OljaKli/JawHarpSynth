@@ -11,7 +11,7 @@
 #include "ui_liveseq_pianoroll.h"
 #include "virtualkeyboard.h"
 #include <algorithm>
-
+#include "ui_drum_pattern_editor.h" 
 
 extern sequencer_t seq;
 extern LCDMenuLib2 LCDML;
@@ -40,6 +40,7 @@ FLASHMEM UI_LiveSequencer::UI_LiveSequencer(LiveSequencer& sequencer, LiveSequen
   };
   gridEditor.setCallbacks(callbacks);
 }
+
 
 FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
   const LiveSequencer::TrackSettings& trackSettings = data.trackSettings[data.activeTrack];
@@ -129,6 +130,23 @@ FLASHMEM void UI_LiveSequencer::init(void) {
         openScreen(UI_func_liveseq_graphic, (trackOffset + trackIndex));
       }));
   }
+
+drumPatternButton = new TouchButton(GRID.X[5], GRID.Y[5],
+    [this](auto* b) { // drawHandler
+        bool isDrumTrack = (data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM);
+        if (isDrumTrack) {
+            b->draw("DRUM P.", "EDITOR", TouchButton::BUTTON_ACTIVE);
+        } else {
+            b->draw("DRUM P.", "EDITOR", TouchButton::BUTTON_INACTIVE);
+        }
+    },
+    [this](auto* b) { // clickedHandler
+        if (data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM) {
+            UI_LiveSequencer::openScreen(UI_func_drum_pattern_editor);
+        }
+    });
+
+toolsPages[TOOLS_PATTERN].push_back(drumPatternButton);
 
   // MODE BUTTON with long press support
   modeButton = new TouchButton(GRID.X[5], GRID.Y[0],
@@ -428,6 +446,7 @@ FLASHMEM void UI_LiveSequencer::init(void) {
         b->drawNow();
       }
     });
+
   toolsPages[TOOLS_PATTERN].push_back(applyPatternLength);
   toolsPages[TOOLS_PATTERN].push_back(new TouchButton(GRID.X[0], GRID.Y[3],
     [](auto* b) { // drawHandler
@@ -787,7 +806,7 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
     }
 
     msCount += DRAW_INTERVAL;
-    if (msCount >= 200) {
+ if (msCount >= 200) {
       drawUpdates(drawCpuLoad);
       msCount = 0;
     }
@@ -966,6 +985,14 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
       drawTrackLayers(activeOld);
       trackLayerMode = LiveSequencer::LayerMode::LAYER_MUTE;
     }
+   
+// if (showingTools && currentTools == TOOLS_PATTERN) {
+//     drawUpdates(drawTools);
+// }
+if (showingTools && currentTools == TOOLS_PATTERN && drumPatternButton) {
+    drumPatternButton->drawNow();
+}
+
     DBG_LOG(printf("active track now is %i\n", track + 1));
   }
 }

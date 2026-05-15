@@ -7,7 +7,7 @@
 
 #include "Arduino.h"
 #include <stdint.h>
-
+#include <set>
 #define ACK_BYTE            0xAD
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
@@ -17,7 +17,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.953"
+#define MIN_VERSION_ESP_DISPLAY "1.9.954"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -51,9 +51,11 @@
 #define CMD_DRAW_BITMAP_BG 31
 #define CMD_DRAW_PARAM_BAR 32
 #define CMD_DRAW_PANBAR 33
-#define CMD_SET_SCOPE_CONFIG 34  // new: set X,Y,W,H
+#define CMD_SET_SCOPE_CONFIG 34  
 #define CMD_SCOPE_Y_DATA     35  // new: stream only Y values
 #define CMD_DRAW_PARAM_BAR16  36
+#define CMD_DRAW_PIANO_ROLL_BG_REGION  37
+#define CMD_DRAW_PIANO_ROLL_KEYS  38
 #define CMD_VERSION_REPORT 100   // unique command code
 #define CMD_SET_VOLUME_ICONS_MODE 101
 #define CMD_SET_EDIT_MODE 102
@@ -96,6 +98,14 @@ public:
   void drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint16_t color);
   void drawLocalBitmap(int16_t x, int16_t y, uint8_t bitmap_idx, uint16_t color, uint16_t bg);
 
+void drawPianoRollBackgroundRegion(uint16_t xFrom, uint16_t width, uint8_t height,
+                                                uint8_t lowestNote, uint8_t highestNote,
+                                                uint8_t noteHeight,
+                                                const std::set<uint8_t>& notes);
+void drawPianoRollKeys(uint8_t rollWidth, uint8_t contentHeight,
+                       const std::vector<uint8_t>& whiteLinesY,
+                       uint8_t blackKeyHeight,
+                       const std::vector<uint8_t>& blackKeysY);
   void setRotation(uint8_t r);
   void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
   // Pass 8-bit (each) R,G,B, get back 16-bit packed color

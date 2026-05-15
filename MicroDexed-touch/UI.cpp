@@ -68,6 +68,8 @@
 #include "virtualtypewriter.h"
 #endif
 
+//#include "ui_drum_pattern_editor.h"
+
 using namespace TeensyTimerTool;
 extern bool virtual_typewriter_active;
 
@@ -583,52 +585,53 @@ LCDML_add(22, LCDML_0_10, 2, "Pattern Editor", UI_func_seq_pattern_editor);
 LCDML_add(23, LCDML_0_10, 3, "Vel./Chrd Edit", UI_func_seq_vel_editor);
 LCDML_add(24, LCDML_0_10, 4, "Live Sequencer", UI_func_livesequencer);
 LCDML_add(25, LCDML_0_10, 5, "Live Seq. Editor", UI_func_liveseq_graphic);
-LCDML_add(26, LCDML_0_10, 6, "Arpeggio", UI_func_arpeggio);
-LCDML_add(27, LCDML_0_10, 7, "Mute Matrix", UI_func_seq_mute_matrix);
-LCDML_add(28, LCDML_0_10, 8, "Tracker", UI_func_seq_tracker);
-LCDML_add(29, LCDML_0_10, 9, "Probabilities", UI_func_seq_probabilities);
-LCDML_add(30, LCDML_0_10, 10, "Smart Filter", UI_func_smart_filter);
-LCDML_add(31, LCDML_0_10, 11, "Clear ALL", UI_func_clear_all);
-LCDML_add(32, LCDML_0_10, 12, "Clear Song", UI_func_clear_song);
-LCDML_add(33, LCDML_0_10, 13, "Clear Chains", UI_func_clear_song_chains);
-LCDML_add(34, LCDML_0_10, 14, "Clear Patterns", UI_func_clear_patterns);
-LCDML_add(35, LCDML_0_10, 15, "Settings", UI_func_seq_settings);
-LCDML_add(36, LCDML_0_10, 16, "Samp. Voice Alloc.", UI_func_voice_group_config);
-LCDML_add(37, LCDML_0, 11, "Mixer", UI_func_mixer);
-LCDML_add(38, LCDML_0, 12, "Slice Editor", UI_func_slice_editor);
-LCDML_add(39, LCDML_0, 13, "Audio/SMP Record", UI_func_recorder);
-LCDML_add(40, LCDML_0, 14, "SMF/MIDI Player", UI_func_midiplayer);
-LCDML_add(41, LCDML_0, 15, "Load/Save", NULL);
-LCDML_add(42, LCDML_0_15, 1, "Load Perf.", UI_func_load_performance);
-LCDML_add(43, LCDML_0_15, 2, "Save Perf.", UI_func_save_performance);
-LCDML_add(44, LCDML_0_15, 3, "Name Perf.", UI_func_set_performance_name);
-LCDML_add(45, LCDML_0_15, 4, "Name Voice", UI_func_set_voice_name);
-LCDML_add(46, LCDML_0_15, 5, "Name Multisample", UI_func_set_multisample_name);
-LCDML_add(47, LCDML_0_15, 6, "Name Braids", UI_func_set_braids_name);
-LCDML_add(48, LCDML_0_15, 7, "MIDI", NULL);
-LCDML_add(49, LCDML_0_15_7, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
-LCDML_add(50, LCDML_0_15_7, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
-LCDML_add(51, LCDML_0_15_7, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
-LCDML_add(52, LCDML_0, 16, "File Manager", UI_func_file_manager);
-LCDML_add(53, LCDML_0, 17, "System", NULL);
-LCDML_add(54, LCDML_0_17, 1, "Stereo/Mono", UI_func_stereo_mono);
-LCDML_add(55, LCDML_0_17, 2, "MIDI channels", UI_func_midi_channels);
-LCDML_add(56, LCDML_0_17, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
-LCDML_add(57, LCDML_0_17, 4, "MIDI Mapping", UI_func_custom_mappings);
-LCDML_add(58, LCDML_0_17, 5, "Favorites", UI_func_favorites);
-LCDML_add(59, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
-LCDML_add(60, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(61, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
-LCDML_add(62, LCDML_0, 18, "Extras/Test", NULL);
-LCDML_add(63, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
-LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(65, LCDML_0_18, 3, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(66, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(67, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
-LCDML_add(68, LCDML_0, 19, "Info", UI_func_information);
-LCDML_addAdvanced(69, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_add(26, LCDML_0_10, 6, "DrumPatternEditor", UI_func_drum_pattern_editor);
+LCDML_add(27, LCDML_0_10, 7, "Arpeggio", UI_func_arpeggio);
+LCDML_add(28, LCDML_0_10, 8, "Mute Matrix", UI_func_seq_mute_matrix);
+LCDML_add(29, LCDML_0_10, 9, "Tracker", UI_func_seq_tracker);
+LCDML_add(30, LCDML_0_10, 10, "Probabilities", UI_func_seq_probabilities);
+LCDML_add(31, LCDML_0_10, 11, "Smart Filter", UI_func_smart_filter);
+LCDML_add(32, LCDML_0_10, 12, "Clear ALL", UI_func_clear_all);
+LCDML_add(33, LCDML_0_10, 13, "Clear Song", UI_func_clear_song);
+LCDML_add(34, LCDML_0_10, 14, "Clear Chains", UI_func_clear_song_chains);
+LCDML_add(35, LCDML_0_10, 15, "Clear Patterns", UI_func_clear_patterns);
+LCDML_add(36, LCDML_0_10, 16, "Settings", UI_func_seq_settings);
+LCDML_add(37, LCDML_0_10, 17, "Samp. Voice Alloc.", UI_func_voice_group_config);
+LCDML_add(38, LCDML_0, 11, "Mixer", UI_func_mixer);
+LCDML_add(39, LCDML_0, 12, "Slice Editor", UI_func_slice_editor);
+LCDML_add(40, LCDML_0, 13, "Audio/SMP Record", UI_func_recorder);
+LCDML_add(41, LCDML_0, 14, "SMF/MIDI Player", UI_func_midiplayer);
+LCDML_add(42, LCDML_0, 15, "Load/Save", NULL);
+LCDML_add(43, LCDML_0_15, 1, "Load Perf.", UI_func_load_performance);
+LCDML_add(44, LCDML_0_15, 2, "Save Perf.", UI_func_save_performance);
+LCDML_add(45, LCDML_0_15, 3, "Name Perf.", UI_func_set_performance_name);
+LCDML_add(46, LCDML_0_15, 4, "Name Voice", UI_func_set_voice_name);
+LCDML_add(47, LCDML_0_15, 5, "Name Multisample", UI_func_set_multisample_name);
+LCDML_add(48, LCDML_0_15, 6, "Name Braids", UI_func_set_braids_name);
+LCDML_add(49, LCDML_0_15, 7, "MIDI", NULL);
+LCDML_add(50, LCDML_0_15_7, 1, "MIDI Recv Bank", UI_func_sysex_receive_bank);
+LCDML_add(51, LCDML_0_15_7, 2, "MIDI Send Bank", UI_func_sysex_send_bank);
+LCDML_add(52, LCDML_0_15_7, 3, "MIDI Send Voice", UI_func_sysex_send_voice);
+LCDML_add(53, LCDML_0, 16, "File Manager", UI_func_file_manager);
+LCDML_add(54, LCDML_0, 17, "System", NULL);
+LCDML_add(55, LCDML_0_17, 1, "Stereo/Mono", UI_func_stereo_mono);
+LCDML_add(56, LCDML_0_17, 2, "MIDI channels", UI_func_midi_channels);
+LCDML_add(57, LCDML_0_17, 3, "MIDI Soft THRU", UI_func_midi_soft_thru);
+LCDML_add(58, LCDML_0_17, 4, "MIDI Mapping", UI_func_custom_mappings);
+LCDML_add(59, LCDML_0_17, 5, "Favorites", UI_func_favorites);
+LCDML_add(60, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
+LCDML_add(61, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
+LCDML_add(62, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
+LCDML_add(63, LCDML_0, 18, "Extras/Test", NULL);
+LCDML_add(64, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(65, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
+LCDML_add(66, LCDML_0_18, 3, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(67, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(68, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
+LCDML_add(69, LCDML_0, 19, "Info", UI_func_information);
+LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(72, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -652,7 +655,6 @@ FLASHMEM void unregisterScope(void) {
     .enabled = false
   };
 }
-
 
 //#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
 
@@ -4343,7 +4345,6 @@ void processIncomingSerial() {
       sendVersion();
       sendMinEspVersion();
       lastESPHandshakeTime = millis();
-
     }
 
     else if (inTouchPacket && touchIndex < sizeof(touchBuffer)) {

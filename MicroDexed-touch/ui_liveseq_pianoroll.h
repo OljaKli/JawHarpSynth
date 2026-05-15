@@ -10,6 +10,7 @@
 #include "config.h"
 #include <set>
 
+
 static constexpr uint8_t SONG_MODE_NOTES_TRACK = 12;
 static constexpr uint8_t SONG_MODE_MUTE_TRACK = 13;
 static constexpr uint8_t MAX_TRACKS = 14; // 12 patterns + 2 song mode tracks
@@ -118,7 +119,8 @@ public:
   uint16_t stepCursorPositionPrev = ROLL_WIDTH;
 
 private:
-
+elapsedMillis timeSinceOpened;
+  void addNoteAtPosition(uint16_t x, uint16_t y);
   FLASHMEM void quantizeAllNotesInCurrentTrack();
   FLASHMEM void quantizeAllSongNotes(uint32_t gridSize);
   FLASHMEM void quantizeAllPatternNotes(uint32_t gridSize);

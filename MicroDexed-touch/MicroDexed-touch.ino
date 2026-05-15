@@ -159,6 +159,8 @@ bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
 
+bool suppressReload; //liveseq
+
 #ifdef CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY
@@ -1150,7 +1152,7 @@ bool espAlive = false;
 uint32_t lastESPHandshakeTime = 0;
 
 FLASHMEM void sendVersion() {
-  const char* version = VERSION;   // defined as "1.9.939"
+  const char* version = VERSION;  
   uint8_t len = strlen(version);
   uint8_t payload[1 + len];
   payload[0] = len;
@@ -1668,19 +1670,7 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
-#ifdef ESP_DISPLAY
-  AudioNoInterrupts();
-  delay(100);
-  sendVersion();
-  delay(100);
-  sendMinEspVersion();
-  lastESPHandshakeTime = millis();
-  // sendScreensaverStop();
-  // delay(20);
-  // sendGlowClear();
-  // sendGlowStop();
-  AudioInterrupts();
-#endif
+
 
   AudioNoInterrupts();
   // Start SD card
@@ -1745,8 +1735,20 @@ FLASHMEM void setup()
 #endif
 #endif
 
-
 #ifdef ESP_DISPLAY
+  AudioNoInterrupts();
+  delay(100);
+  sendVersion();
+  delay(100);
+  sendMinEspVersion();
+
+  lastESPHandshakeTime = millis();
+  // sendScreensaverStop();
+  // delay(20);
+  // sendGlowClear();
+  // sendGlowStop();
+  AudioInterrupts();
+
   sendScreensaverStop();
 #endif
 
@@ -3058,14 +3060,11 @@ void loop()
 {
 
 #if defined ESP_DISPLAY
-
   static uint8_t lastEditState = 0;
   if (seq.edit_state != lastEditState) {
     lastEditState = seq.edit_state;
     sendEditMode(seq.edit_state);
   }
-
-  // flushDrawQueueSingle();
 #endif
 
   // Chords Detection
