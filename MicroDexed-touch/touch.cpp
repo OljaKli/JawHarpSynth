@@ -48,7 +48,7 @@ fm_t fm;                         // file manager
 bool loop_start_button = false;
 bool loop_end_button = false;
 bool isButtonTouched = false;
-int numTouchPoints = 0;
+uint8_t numTouchPoints = 0;
 
 extern bool wakeScreenFlag;
 
