@@ -11,7 +11,8 @@
 #include "ui_liveseq_pianoroll.h"
 #include "virtualkeyboard.h"
 #include <algorithm>
-#include "ui_drum_pattern_editor.h" 
+#include "ui_drum_pattern_editor.h"
+#include "ui_melodic_pattern_editor.h"
 
 extern sequencer_t seq;
 extern LCDMenuLib2 LCDML;
@@ -131,22 +132,25 @@ FLASHMEM void UI_LiveSequencer::init(void) {
       }));
   }
 
-drumPatternButton = new TouchButton(GRID.X[5], GRID.Y[5],
+// Pattern editor button (adapts to track type)
+patternEditorButton = new TouchButton(GRID.X[5], GRID.Y[5],
     [this](auto* b) { // drawHandler
         bool isDrumTrack = (data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM);
         if (isDrumTrack) {
             b->draw("DRUM P.", "EDITOR", TouchButton::BUTTON_ACTIVE);
         } else {
-            b->draw("DRUM P.", "EDITOR", TouchButton::BUTTON_INACTIVE);
+            b->draw("MELODIC", "EDITOR", TouchButton::BUTTON_ACTIVE);
         }
     },
     [this](auto* b) { // clickedHandler
-        if (data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM) {
+        bool isDrumTrack = (data.trackSettings[data.activeTrack].instrument == LiveSequencer::INSTR_DRUM);
+        if (isDrumTrack) {
             UI_LiveSequencer::openScreen(UI_func_drum_pattern_editor);
+        } else {
+            UI_LiveSequencer::openScreen(UI_func_melodic_pattern_editor);
         }
     });
-
-toolsPages[TOOLS_PATTERN].push_back(drumPatternButton);
+toolsPages[TOOLS_PATTERN].push_back(patternEditorButton);
 
   // MODE BUTTON with long press support
   modeButton = new TouchButton(GRID.X[5], GRID.Y[0],
@@ -989,8 +993,8 @@ FLASHMEM void UI_LiveSequencer::onTrackButtonPressed(uint8_t track) {
 // if (showingTools && currentTools == TOOLS_PATTERN) {
 //     drawUpdates(drawTools);
 // }
-if (showingTools && currentTools == TOOLS_PATTERN && drumPatternButton) {
-    drumPatternButton->drawNow();
+if (showingTools && currentTools == TOOLS_PATTERN && patternEditorButton) {
+    patternEditorButton->drawNow();
 }
 
     DBG_LOG(printf("active track now is %i\n", track + 1));

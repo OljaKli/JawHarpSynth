@@ -13,6 +13,7 @@
 #include <elapsedMillis.h>
 #include <SD.h>  
 #include <Audio.h>
+#include "UI_liveseq_editor_shared.h"
 
 extern bool remote_active;
 extern uint8_t sd_card_internal;
@@ -73,15 +74,6 @@ static constexpr uint16_t SELECTION_START_Y = 30;
 static constexpr uint16_t SELECTION_CELL_W = (DISPLAY_WIDTH - 20) / SELECTION_COLS;
 static constexpr uint16_t SELECTION_CELL_H = 24;
 
-// Velocity slider
-static constexpr uint16_t TOP_TEXT_Y = 12;
-static constexpr uint16_t VEL_TEXT_X = 178;
-static constexpr uint16_t VEL_SLIDER_X = 200;
-static constexpr uint16_t VEL_SLIDER_W = 98;
-static constexpr uint16_t VEL_VALUE_X = VEL_SLIDER_X + VEL_SLIDER_W + 5;;
-static constexpr uint16_t VEL_SLIDER_Y = 8;
-static constexpr uint16_t VEL_SLIDER_H = 8;
-
 // ----------------------------------------------------------------------
 // Static data
 // ----------------------------------------------------------------------
@@ -111,17 +103,11 @@ void writeGrid();
 void drawGridUI();
 void drawSelectionScreen();
 void drawDrumList();
-void drawLayerButton();
-void drawCopyButton();
-void drawVelocitySlider();
-void drawStartStopButton();
 void drawRunningIndicator(bool forceFullRedraw = false);
 void redrawCell(uint8_t slot, uint8_t step);
 void toggleNoteEvent(uint8_t slot, uint8_t step);
 void copyPattern();
 void pastePattern();
-void setVelocityFromTouch(int16_t x);
-static uint16_t velocityToColor(uint8_t vel);
 void updateStartStopButton();
 
 // ----------------------------------------------------------------------
@@ -131,7 +117,7 @@ void updateStartStopButton();
 // Show a temporary text message at the top of the screen
 FLASHMEM void showMessage(const char* msg) {
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-     if (remote_active) display.console = true;
+    if (remote_active) display.console = true;
     display.fillRect(0, 0, DISPLAY_WIDTH, 20, COLOR_BACKGROUND);
     display.setTextSize(1);
     uint16_t textWidth = strlen(msg) * CHAR_width_small;
@@ -187,13 +173,6 @@ static uint32_t stepToAbsTime(uint8_t step, int8_t bar) {
 }
 
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
-
-FLASHMEM uint16_t velocityToColor(uint8_t vel) {
-    if (vel == 0) return 0;
-    uint8_t brightness = 60 + (vel * 194) / 127;
-    return ColorHSV(80, 255, brightness);
-}
-
 
 // ----------------------------------------------------------------------
 // Core logic
@@ -376,7 +355,7 @@ FLASHMEM void copyPattern() {
     }
     hasCopied = true;
     copyModeActive = true;
-    drawCopyButton();
+    drawCopyPasteButton(BTN_COPY_X, BTN_Y, copyModeActive);
 }
 
 FLASHMEM void redrawGridOnly() {
@@ -411,45 +390,10 @@ FLASHMEM void pastePattern() {
 
     // 5. Reset copy mode and redraw the copy button
     copyModeActive = false;
-    drawCopyButton();
+    drawCopyPasteButton(BTN_COPY_X, BTN_Y, copyModeActive);
 
     // 6. Force a complete redraw of the grid (now using the fresh data)
     redrawGridOnly();
-}
-
-// ----------------------------------------------------------------------
-// Velocity slider with sliding support
-// ----------------------------------------------------------------------
-FLASHMEM void setVelocityFromTouch(int16_t x) {
-    if (x < VEL_SLIDER_X) x = VEL_SLIDER_X;
-    if (x > VEL_SLIDER_X + VEL_SLIDER_W) x = VEL_SLIDER_X + VEL_SLIDER_W;
-    uint8_t newVel = ((x - VEL_SLIDER_X) * 127) / VEL_SLIDER_W;
-    if (newVel < 1) newVel = 1;
-    if (newVel != currentVelocity) {
-        currentVelocity = newVel;
-        drawVelocitySlider();
-    }
-}
-
-FLASHMEM void drawVelocitySlider() {
-     if (remote_active) display.console = true;
-    display.fillRect(VEL_TEXT_X - 5, VEL_SLIDER_Y - 3, VEL_SLIDER_W + 45, VEL_SLIDER_H + 6, COLOR_BACKGROUND);
-    display.setTextSize(1);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.setCursor(VEL_TEXT_X, VEL_SLIDER_Y + 1);
-    display.print("VEL");
-     if (remote_active) display.console = true;
-    display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, VEL_SLIDER_W, VEL_SLIDER_H, GREY3);
-    uint16_t fillWidth = (currentVelocity * VEL_SLIDER_W) / 127;
-    if (fillWidth > 0) {
-        uint16_t color = velocityToColor(currentVelocity);
-         if (remote_active) display.console = true;
-        display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, fillWidth, VEL_SLIDER_H, color);
-    }
-    uint16_t markerX = VEL_SLIDER_X + fillWidth;
-    display.drawLine(markerX, VEL_SLIDER_Y - 2, markerX, VEL_SLIDER_Y + VEL_SLIDER_H + 2, COLOR_SYSTEXT);
-    display.setCursor(VEL_VALUE_X, VEL_SLIDER_Y);
-    display.printf("%3d", currentVelocity);
 }
 
 // ----------------------------------------------------------------------
@@ -459,11 +403,11 @@ FLASHMEM void drawDrumList() {
     uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
     uint8_t startRow = selectionScroll;
 
-     // Page number (optional, can be drawn in drawSelectionScreen)
+    // Page number (optional, can be drawn in drawSelectionScreen)
     uint8_t rowsPerPage = SELECTION_ROWS_VISIBLE;
     uint8_t currentPage = (selectionScroll / rowsPerPage) + 1;
     uint8_t totalPages = (totalRows + rowsPerPage - 1) / rowsPerPage;
-   
+
     display.setCursor(DISPLAY_WIDTH - 80, 10);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
@@ -485,7 +429,7 @@ FLASHMEM void drawDrumList() {
                 uint8_t candidateNote = drum_config[idx].midinote;
                 bool isSelected = (currentNote == candidateNote);
                 uint16_t bg = isSelected ? MIDDLEGREEN : DX_DARKCYAN;
-                 if (remote_active) display.console = true;
+                if (remote_active) display.console = true;
                 display.fillRect(x, y, SELECTION_CELL_W - 2, SELECTION_CELL_H - 2, bg);
                 display.setTextColor(COLOR_SYSTEXT, bg);
                 display.setCursor(x + 4, y + 6);
@@ -506,7 +450,7 @@ FLASHMEM void drawDrumList() {
             }
             else {
                 // Clear this cell (no sample)
-                 if (remote_active) display.console = true;
+                if (remote_active) display.console = true;
                 display.fillRect(x, y, SELECTION_CELL_W - 2, SELECTION_CELL_H - 2, COLOR_BACKGROUND);
             }
         }
@@ -550,7 +494,7 @@ FLASHMEM void updateStartStopButton() {
     LiveSequencer::LiveSeqData* data = getData();
     if (data->isRunning != lastRunningState) {
         lastRunningState = data->isRunning;
-        drawStartStopButton();
+        drawStartStopButton(BTN_START_STOP_X, BTN_Y, data->isRunning);
         if (!data->isRunning) {
             // Reset step display when stopped
             drawRunningIndicator(true); // force full redraw of indicator row (all grey)
@@ -559,7 +503,7 @@ FLASHMEM void updateStartStopButton() {
 }
 
 FLASHMEM void drawLayerButton() {
-    char layerNum[2];
+    char layerNum[4];
     sprintf(layerNum, "%u", activeLayer + 1);
     TouchButton::drawButton(BTN_LAYER_X, BTN_Y, "LAYER", layerNum, TouchButton::BUTTON_HIGHLIGHTED);
 }
@@ -581,7 +525,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
         // Redraw all cells in grey
         for (uint8_t step = 0; step < STEPS_PER_BAR; step++) {
             uint16_t x = GRID_START_X + step * CELL_W;
-             if (remote_active) display.console = true;
+            if (remote_active) display.console = true;
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
         }
         lastSeqStep = 255; // force update on next step change
@@ -592,7 +536,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
         if (lastSeqStep != 255) {
             // Clear any previous highlight
             uint16_t x = GRID_START_X + lastSeqStep * CELL_W;
-             if (remote_active) display.console = true;
+            if (remote_active) display.console = true;
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
             lastSeqStep = 255;
         }
@@ -605,7 +549,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     // Clear previous step (if valid)
     if (lastSeqStep < STEPS_PER_BAR) {
         uint16_t xPrev = GRID_START_X + lastSeqStep * CELL_W;
-         if (remote_active) display.console = true;
+        if (remote_active) display.console = true;
         display.fillRect(xPrev, y, CELL_W - 1, CELL_H - 1, GREY3);
     }
 
@@ -620,13 +564,13 @@ FLASHMEM void redrawCell(uint8_t slot, uint8_t step) {
     uint16_t x = GRID_START_X + step * CELL_W;
     uint16_t y = GRID_START_Y + slot * CELL_H;
     uint16_t bgColor = ((step / 4) % 2 == 0) ? GREY3 : GREY2;
-     if (remote_active) display.console = true;
+    if (remote_active) display.console = true;
     display.fillRect(x, y, CELL_W - 1, CELL_H - 1, bgColor);
     if (noteGrid[slot][step]) {
         uint8_t vel = noteVelocity[slot][step];
         if (vel == 0) vel = 100;
         uint16_t noteColor = velocityToColor(vel);
-         if (remote_active) display.console = true;
+        if (remote_active) display.console = true;
         display.fillRect(x, y, CELL_W - 1, CELL_H - 1, noteColor);
     }
 }
@@ -646,6 +590,24 @@ FLASHMEM void drawBarMeasure() {
     }
 }
 
+FLASHMEM void drawTrackNumber()
+{
+    display.setCursor(0, TOP_TEXT_Y);
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.printf("TRACK %02d", getActiveTrack() + 1);
+}
+
+FLASHMEM void drawBarLayer()
+{
+    LiveSequencer::LiveSeqData* data = getData();
+    display.setCursor(CHAR_width_small*10, TOP_TEXT_Y);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.setTextSize(1);
+    display.printf("BAR %d/%d LAYER %d", currentBar + 1, data->numberOfBars, activeLayer + 1);
+
+}
+
 FLASHMEM void drawGridUI() {
     LiveSequencer::LiveSeqData* data = getData();
     display.fillScreen(COLOR_BACKGROUND);
@@ -653,10 +615,9 @@ FLASHMEM void drawGridUI() {
     display.setTextColor(RED, COLOR_BACKGROUND);
     display.setCursor(0, 0);
     display.printf("DRUM PATTERN TOUCH EDITOR");
-    display.setCursor(0, TOP_TEXT_Y);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.printf("TRACK %d  BAR %d/%d  LAYER %d", getActiveTrack() + 1, currentBar + 1, data->numberOfBars, activeLayer + 1);
-    drawVelocitySlider();
+    drawTrackNumber();
+    drawBarLayer();
+    drawVelocitySlider(currentVelocity);
 
     for (uint8_t slot = 0; slot < NUM_DRUM_SLOTS; slot++) {
         uint8_t y = GRID_START_Y + slot * CELL_H;
@@ -709,11 +670,11 @@ FLASHMEM void drawGridUI() {
         }
     }
 
-    drawStartStopButton();
+    drawStartStopButton(BTN_START_STOP_X, BTN_Y, data->isRunning);
     TouchButton::drawButton(BTN_PREV_X, BTN_Y, "< BAR", "", TouchButton::BUTTON_ACTIVE);
     TouchButton::drawButton(BTN_NEXT_X, BTN_Y, "BAR >", "", TouchButton::BUTTON_ACTIVE);
     drawLayerButton();
-    drawCopyButton();
+    drawCopyPasteButton(BTN_COPY_X, BTN_Y, copyModeActive);
     TouchButton::drawButton(BTN_EXIT_X, BTN_Y, "EXIT", "", TouchButton::BUTTON_RED);
 }
 
@@ -738,7 +699,7 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
     // Velocity slider – always update if touch is inside slider area
     if (y >= VEL_SLIDER_Y - 5 && y <= VEL_SLIDER_Y + VEL_SLIDER_H + 5 &&
         x >= VEL_SLIDER_X - 5 && x <= VEL_VALUE_X + 25) {
-        setVelocityFromTouch(x);
+        setVelocityFromTouch(x, currentVelocity);
         return;
     }
 
@@ -748,7 +709,7 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
             if (data->isRunning) liveSeq.stop();
             else liveSeq.start();
             // Force immediate update of button and running indicator
-            drawStartStopButton();
+            drawStartStopButton(BTN_START_STOP_X, BTN_Y, data->isRunning);
             if (!data->isRunning) {
                 drawRunningIndicator(true);
             }
@@ -756,23 +717,14 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
         }
         if (x >= BTN_PREV_X && x < BTN_PREV_X + BTN_W) {
             if (currentBar > 0) { currentBar--; loadGrid(); redrawGridOnly(); }
-            if (remote_active) display.console = true;
-            display.fillRect(0, TOP_TEXT_Y, 170, CHAR_height_small, COLOR_BACKGROUND);
-            display.setCursor(0, TOP_TEXT_Y);
-            display.setTextSize(1);
-            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-            display.printf("TRACK %d  BAR %d/%d  LAYER %d", getActiveTrack() + 1, currentBar + 1, data->numberOfBars, activeLayer + 1);
+            drawBarLayer();
             drawLayerButton();
             return;
         }
         if (x >= BTN_NEXT_X && x < BTN_NEXT_X + BTN_W) {
             if (currentBar < (int8_t)(data->numberOfBars - 1)) { currentBar++; loadGrid(); redrawGridOnly(); }
-             if (remote_active) display.console = true;
-            display.fillRect(0, TOP_TEXT_Y, 170, CHAR_height_small, COLOR_BACKGROUND);
-            display.setCursor(0, TOP_TEXT_Y);
-            display.setTextSize(1);
-            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-            display.printf("TRACK %d  BAR %d/%d  LAYER %d", getActiveTrack() + 1, currentBar + 1, data->numberOfBars, activeLayer + 1);
+
+            drawBarLayer();
             drawLayerButton();
             return;
         }
@@ -780,12 +732,8 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
             activeLayer = (activeLayer + 1) % 4;
             loadGrid();
             redrawGridOnly();
-             if (remote_active) display.console = true;
-            display.fillRect(0, TOP_TEXT_Y, 180, CHAR_height_small, COLOR_BACKGROUND);
-            display.setCursor(0, TOP_TEXT_Y);
-            display.setTextSize(1);
-            display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-            display.printf("TRACK %d  BAR %d/%d  LAYER %d", getActiveTrack() + 1, currentBar + 1, data->numberOfBars, activeLayer + 1);
+
+            drawBarLayer();
             drawLayerButton();
             return;
         }
@@ -826,7 +774,7 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
 
 FLASHMEM void handleSelectionTouch(int16_t x, int16_t y) {
     if (timeSinceOpened < 1500) return;
-    uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
+   // uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
 
     if (y >= DISPLAY_HEIGHT - 40 && y < DISPLAY_HEIGHT) {
         uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
@@ -1072,22 +1020,14 @@ FLASHMEM void UI_func_drum_pattern_editor(uint8_t param) {
             LiveSequencer::LiveSeqData* data = getData();
             if (e_right.dir > 0 && currentBar < (int8_t)(data->numberOfBars - 1)) {
                 currentBar++; loadGrid(); redrawGridOnly();
-                 if (remote_active) display.console = true;
-                display.fillRect(0, TOP_TEXT_Y, 180, CHAR_height_small, COLOR_BACKGROUND);
-                display.setCursor(10, TOP_TEXT_Y);
-                display.setTextSize(1);
-                display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-                display.printf("TRACK %d  BAR %d/%d  LAYER %d", getActiveTrack() + 1, currentBar + 1, data->numberOfBars, activeLayer + 1);
+
+                drawBarLayer();
                 drawLayerButton();
             }
             else if (e_right.dir < 0 && currentBar > 0) {
                 currentBar--; loadGrid(); redrawGridOnly();
-                 if (remote_active) display.console = true;
-                display.fillRect(0, TOP_TEXT_Y, 180, CHAR_height_small, COLOR_BACKGROUND);
-                display.setCursor(0, TOP_TEXT_Y);
-                display.setTextSize(1);
-                display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-                display.printf("TRACK %d  BAR %d/%d  LAYER %d", getActiveTrack() + 1, currentBar + 1, data->numberOfBars, activeLayer + 1);
+
+                drawBarLayer();
                 drawLayerButton();
             }
         }

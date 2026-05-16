@@ -41,7 +41,7 @@ public:
   bool isGridEditorActive() const;
   void notifyLeftEncoderShort();
 
-  TouchButton* drumPatternButton = nullptr;
+  TouchButton* patternEditorButton = nullptr;   // unified pattern editor button
   
 private:
   uint16_t msCount = 0;

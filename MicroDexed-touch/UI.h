@@ -25,7 +25,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#define _LCDML_DISP_cnt 72
+#define _LCDML_DISP_cnt 73
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1100  
@@ -89,6 +89,7 @@ void UI_func_dexed_controllers(uint8_t param);
 void UI_func_dexed_setup(uint8_t param);
 void UI_func_information(uint8_t param);
 void UI_func_drum_pattern_editor(uint8_t param);
+void UI_func_melodic_pattern_editor(uint8_t param);
 void UI_func_cv_page(uint8_t param);
 void UI_func_chord_arranger(uint8_t param);
 void UI_func_noisemaker(uint8_t param);
@@ -132,6 +133,7 @@ void UI_func_sound_intensity(uint8_t param);
 void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
 void UI_func_granular(uint8_t param);
+
 
 void setup_ui(void);
 #if defined SMFPLAYER
