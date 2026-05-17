@@ -2637,7 +2637,7 @@ FLASHMEM void update_display_functions_while_seq_running()
         display.setTextColor(COLOR_SYSTEXT, RED);
         display.print(seq_find_shortname(seq.menu - 3)[0]);
       }
-      else if (seq.menu-1 < 16 && seq.menu-1 >=0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
+      else if (seq.menu - 1 < 16 && seq.menu - 1 >= 0 && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
       { // update static cursor while moving cursor running in vel editor
         setCursor_textGrid(seq.menu - 1, 1);
         display.setTextSize(2);
@@ -3569,7 +3569,7 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
 #endif
 
 #if defined(ESP_DISPLAY)
-   uint8_t highlight = 0;
+  uint8_t highlight = 0;
   if (generic_temp_select_menu == selected_option) {
     highlight = seq.edit_state ? 2 : 1;
   }
@@ -3577,14 +3577,16 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
   if ((limit_max - limit_min) > 255) {
     // Use the 16-bit version to preserve full range
     display.drawESPParamBar16(x, y, (uint16_t)input_value, (uint16_t)limit_min, (uint16_t)limit_max,
-                              highlight, show_bar, zero_name);
-  } else if (limit_min < 0) {
+      highlight, show_bar, zero_name);
+  }
+  else if (limit_min < 0) {
     // Pan bar -99..99 -> send as 0-199 (fits in 8 bits)
     uint8_t val8 = input_value + 100;
     uint8_t min8 = 1;
     uint8_t max8 = 199;
     display.drawESPParamBar(x, y, val8, min8, max8, highlight, show_bar, zero_name);
-  } else {
+  }
+  else {
     // Normal range that fits in 0‑255
     uint8_t val8 = constrain(input_value, 0, 255);
     uint8_t min8 = limit_min;
@@ -4173,7 +4175,7 @@ extern void handlePitchBend(byte inChannel, int16_t inPitch);
 void processMidiDataFromESP(uint8_t* data, uint8_t len) {
   uint8_t idx = 0;
   uint8_t runningStatus = 0;
- 
+
   while (idx < len) {
     uint8_t byte = data[idx];
 
@@ -4194,9 +4196,18 @@ void processMidiDataFromESP(uint8_t* data, uint8_t len) {
 
         if (isNoteOn) {
           handleNoteOn(channel, note, velocity, 0);
+
+          if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_liveseq_graphic) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_melodic_pattern_editor))
+            liveSeq.handleMidiEvent(channel, midi::NoteOn, note, velocity);
         }
         else {
           handleNoteOff(channel, note, velocity, 0);
+          if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_liveseq_graphic) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_melodic_pattern_editor))
+            liveSeq.handleMidiEvent(channel, midi::NoteOff, note, velocity);
         }
       }
       // Control Change
@@ -4244,9 +4255,17 @@ void processMidiDataFromESP(uint8_t* data, uint8_t len) {
         uint8_t channel = (runningStatus & 0x0F) + 1;
         if (isNoteOn) {
           handleNoteOn(channel, note, velocity, 0);
+          if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_liveseq_graphic) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_melodic_pattern_editor))
+            liveSeq.handleMidiEvent(channel, midi::NoteOn, note, velocity);
         }
         else {
           handleNoteOff(channel, note, velocity, 0);
+          if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_livesequencer) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_liveseq_graphic) ||
+            LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_melodic_pattern_editor))
+            liveSeq.handleMidiEvent(channel, midi::NoteOff, note, velocity);
         }
       }
       else {
@@ -4266,7 +4285,7 @@ void processIncomingSerial() {
   while (Serial4.available() > 0) {
     uint8_t data = Serial4.read();
 
-   if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
+    if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
       data == 0xAE || data == CMD_MIDI_DATA) {
       packetType = data;
       inTouchPacket = true;
@@ -4393,9 +4412,9 @@ FLASHMEM void lcdml_menu_control(void)
 
 #if defined ESP_DISPLAY
 
- // processIncomingSerial();
+  // processIncomingSerial();
 
-  // Check for ESP long press (encoder buttons only)
+   // Check for ESP long press (encoder buttons only)
   if (esp_pending_button != 255) {
     uint32_t now = millis();
     if (now - esp_press_start >= LONG_BUTTON_PRESS) {
@@ -5862,18 +5881,18 @@ FLASHMEM void UI_func_favorites(uint8_t param)
   }
 }
 
- #ifdef ESP_DISPLAY
-  // Static timer to throttle redraws
-   elapsedMillis sampleChangeTimer = 0;
-   uint8_t lastESPSample = 0xFF;   // track last drawn sample
+#ifdef ESP_DISPLAY
+// Static timer to throttle redraws
+elapsedMillis sampleChangeTimer = 0;
+uint8_t lastESPSample = 0xFF;   // track last drawn sample
 #endif
 
 FLASHMEM void drawDrumsSampleWave(bool fullRedraw) {
 #if defined(COMPILE_FOR_PSRAM) || defined(COMPILE_FOR_PROGMEM)
 
 #ifdef ESP_DISPLAY
-if (sampleChangeTimer < 150) 
-  return;
+  if (sampleChangeTimer < 150)
+    return;
 #endif
 
   static uint16_t lastFromX = 0;
@@ -5892,10 +5911,10 @@ if (sampleChangeTimer < 150)
     const uint16_t toX = plotX + ceil(to * plotW);
 
     if (fullRedraw) {
-   
-      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
-      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX,DX_DARKCYAN,GREY4);
-      drawSampleWaveform(plotX, plotY-1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
+
+      drawSampleWaveform(plotX, plotY - 1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, plotX, fromX, GREY2, GREY4);
+      drawSampleWaveform(plotX, plotY - 1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, fromX, toX, DX_DARKCYAN, GREY4);
+      drawSampleWaveform(plotX, plotY - 1, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, toX, plotX + plotW, GREY2, GREY4);
       lastFromX = fromX;
       lastToX = toX;
     }
@@ -7165,15 +7184,15 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
   uint16_t fromX, uint16_t toX,
   uint16_t waveColor, uint16_t bgColor) {
 
-    fromX = constrain(fromX, x, x + w);
-  toX   = constrain(toX,   x, x + w);
+  fromX = constrain(fromX, x, x + w);
+  toX = constrain(toX, x, x + w);
   if (toX <= fromX) return;
 
   if (toX > fromX) {
 
-// #if defined ESP_DISPLAY
-//     lastPixelColor = 254;
-// #endif
+    // #if defined ESP_DISPLAY
+    //     lastPixelColor = 254;
+    // #endif
 
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
 
@@ -7235,7 +7254,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
           display.console = true;
           display.drawLine(xi, yMin, xi, yMax, waveColor); // drawLine() is off a bit to the left          
         }
-        
+
       }
     }
     else {
@@ -7615,9 +7634,9 @@ static FLASHMEM void smart_filter_setter(Editor* editor, int16_t value) {
   seq.smartfilter = !seq.smartfilter;
 }
 
- #if defined ESP_DISPLAY
- extern int16_t lastLineColor;
- #endif
+#if defined ESP_DISPLAY
+extern int16_t lastLineColor;
+#endif
 
 // ===== End RAM optimization callbacks =====
 
@@ -7628,13 +7647,13 @@ FLASHMEM void UI_func_drums(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     registerTouchHandler(handle_touchscreen_drums);
- 
+
 #ifndef ESP_DISPLAY
-  registerScope(276, 135, 40, 40);
+    registerScope(276, 135, 40, 40);
 #endif
 
 #ifdef ESP_DISPLAY
-lastLineColor=0xFFF1;
+    lastLineColor = 0xFFF1;
 #endif
 
     drumScreenActive = true;
@@ -7761,9 +7780,9 @@ lastLineColor=0xFFF1;
       }
       else {
         setCursor_textGrid_small(param->x, param->y);
-       display.console = true;
-       display.fillRect(120, 130, 138, 8, COLOR_BACKGROUND);
-       display.console = false;
+        display.console = true;
+        display.fillRect(120, 130, 138, 8, COLOR_BACKGROUND);
+        display.console = false;
       }
       });
 
@@ -7819,8 +7838,8 @@ lastLineColor=0xFFF1;
     handleCustomSliceEditor(isCustomSample(activeSample), false); // jump over custom sample fields if not visible
     checkDrawFilterText();
 #ifdef ESP_DISPLAY
-   if (activeSample != lastESPSample)
-  sampleChangeTimer = 0;
+    if (activeSample != lastESPSample)
+      sampleChangeTimer = 0;
 #endif
     flush_sysex();
 
@@ -7829,7 +7848,7 @@ lastLineColor=0xFFF1;
   {
     unregisterTouchHandler();
 #ifndef ESP_DISPLAY
-     unregisterScope();
+    unregisterScope();
 #endif
     drumScreenActive = false;
     ui.clear();
@@ -10440,7 +10459,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
 
 
       setCursor_textGrid(seq.menu - 1, 1);
-      
+
       if (seq.menu - 1 > 15 - seq.pattern_len_dec && seq.active_function == 99) ////////
         display.setTextColor(COLOR_BACKGROUND, GREY2);
 
@@ -12945,7 +12964,7 @@ FLASHMEM void UI_func_epiano(uint8_t param)
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
     generic_menu = 0;
-     unregisterScope();
+    unregisterScope();
     // generic_active_function = 99;
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
@@ -16212,13 +16231,13 @@ FLASHMEM void UI_func_information(uint8_t param)
     display.setTextColor(GREY1);
 #endif
 
-// #ifdef PSRAM
-//  display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
-//  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-//  display.print("PSRAM ");
-//  display.print(psramspeed);
-//  display.print("MHz");
-// #endif
+    // #ifdef PSRAM
+    //  display.setCursor(CHAR_width_small * 40 - 2, CHAR_height_small * 29);
+    //  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    //  display.print("PSRAM ");
+    //  display.print(psramspeed);
+    //  display.print("MHz");
+    // #endif
 
     if (seq.running == false) {
       oldSettings.pool = configuration.dexed[0].pool;
@@ -17596,22 +17615,22 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
     setCursor_textGrid_small(22, 11);
     print_formatted_number(configuration.sys.dac_cv_transpose, 2);
 
- display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT,RED);
- if (configuration.sys.dac_5v)
- {
-   setCursor_textGrid_small(34, 10);
- display.print("0-5V MODE");
- }
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, RED);
+    if (configuration.sys.dac_5v)
+    {
+      setCursor_textGrid_small(34, 10);
+      display.print("0-5V MODE");
+    }
 
-else
-{
-   setCursor_textGrid_small(33, 10);
-display.print("0-10V MODE");
-}
+    else
+    {
+      setCursor_textGrid_small(33, 10);
+      display.print("0-10V MODE");
+    }
 
-display.setTextSize(1);
-    display.setTextColor(COLOR_SYSTEXT,COLOR_BACKGROUND);
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
     if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
       LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver)) {
@@ -26763,9 +26782,9 @@ FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
 
           display.fillRect(x, y + yoffset, run, 1, color);
 
-  #if defined ESP_DISPLAY
-  delayMicroseconds(350);
-  #endif
+#if defined ESP_DISPLAY
+          delayMicroseconds(350);
+#endif
 
           x += run;       // skip the whole run
           continue;       // avoid double increment
