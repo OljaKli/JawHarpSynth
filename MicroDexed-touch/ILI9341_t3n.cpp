@@ -27,136 +27,647 @@ extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 
 // 5x7 font
 PROGMEM const unsigned char font[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, //
-    0x3E, 0x5B, 0x4F, 0x5B, 0x3E, //
-    0x3E, 0x6B, 0x4F, 0x6B, 0x3E, //
-    0x1C, 0x3E, 0x7C, 0x3E, 0x1C, //
-    0x18, 0x3C, 0x7E, 0x3C, 0x18, //
-    0x1C, 0x57, 0x7D, 0x57, 0x1C, //
-    0x1C, 0x5E, 0x7F, 0x5E, 0x1C, //
-    0x00, 0x18, 0x3C, 0x18, 0x00, //
-    0xFF, 0xE7, 0xC3, 0xE7, 0xFF, //
-    0x00, 0x18, 0x24, 0x18, 0x00, //
-    0xFF, 0xE7, 0xDB, 0xE7, 0xFF, //
-    0x30, 0x48, 0x3A, 0x06, 0x0E, //
-    0x26, 0x29, 0x79, 0x29, 0x26, //
-    0x40, 0x30, 0x0c, 0x02, 0x7F, // BRAIDS Wave 1 SAW  // 0x39, 0x55, 0x55, 0x55, 0x59,  // note: grid is vertical slices
-    0x10, 0x08, 0x04, 0x1e, 0x00, // BRAIDS Centered SAW
-    0x40, 0x20, 0x10, 0x08, 0x7C, // BRAIDS BABY SAW
-    0x60, 0x1C, 0x03, 0x1C, 0x60, // BRAIDS TRIANGLE
-    0x7f, 0x01, 0x01, 0x01, 0x7f, // BRAIDS SQUARE //160
-    0x78, 0x08, 0x08, 0x08, 0x78, // BRAIDS BABY SQUARE
-    0x40, 0x40, 0x7F, 0x01, 0x7F, // BRAIDS PULSE  0x7D, 0x12, 0x11, 0x12, 0x7D A-umlaut
-    0xF0, 0x28, 0x25, 0x28, 0xF0,
-    0x3e, 0x08, 0x00, 0x08, 0x00, // Sample Play Mode : Trigger Mode. part1 //144
-    0x08, 0x00, 0x3E, 0x1C, 0x08, // Sample Play Mode : Trigger Mode. part2 //145
-    0x3e, 0x08, 0x08, 0x08, 0x08, // Sample Play Mode : Hold Mode part1
-    0x08, 0x08, 0x08, 0x08, 0x3e, // Sample Play Mode : Hold Mode part2    0x10, 0x20, 0x7E, 0x20, 0x10, //
-    0x06, 0x0F, 0x09, 0x0F, 0x06, //
-    0x08, 0x08, 0x2A, 0x1C, 0x08, //
-    0x08, 0x1C, 0x2A, 0x08, 0x08, //
-    0x1E, 0x10, 0x10, 0x10, 0x10, //
-    0x0C, 0x1E, 0x0C, 0x1E, 0x0C, //
-    0x08, 0x0c, 0x0e, 0x0c, 0x08, // up arrow
-    0x02, 0x06, 0x0e, 0x06, 0x02, // down arrow
-    0x00, 0x00, 0x00, 0x00, 0x00, // space
-    0x00, 0x00, 0x5F, 0x00, 0x00, // !
-    0x00, 0x07, 0x00, 0x07, 0x00, // "
-    0x14, 0x7F, 0x14, 0x7F, 0x14, // #
-    0x24, 0x2A, 0x7F, 0x2A, 0x12, // $
-    0x23, 0x13, 0x08, 0x64, 0x62, // %
-    0x36, 0x49, 0x55, 0x22, 0x50, // &
-    0x00, 0x05, 0x03, 0x00, 0x00, // '
-    0x00, 0x1C, 0x22, 0x41, 0x00, // (
-    0x00, 0x41, 0x22, 0x1C, 0x00, // )
-    0x08, 0x2A, 0x1C, 0x2A, 0x08, // *
-    0x08, 0x08, 0x3E, 0x08, 0x08, // +
-    0x00, 0x50, 0x30, 0x00, 0x00, // ,
-    0x08, 0x08, 0x08, 0x08, 0x08, // -
-    0x00, 0x60, 0x60, 0x00, 0x00, // .
-    0x20, 0x10, 0x08, 0x04, 0x02, // /
-    0x7F, 0x51, 0x49, 0x45, 0x7F, // 0
-    0x40, 0x41, 0x7F, 0x40, 0x40, // 1
-    0x79, 0x49, 0x49, 0x49, 0x4F, // 2
-    0x49, 0x49, 0x49, 0x49, 0x7F, // 3
-    0x0F, 0x08, 0x08, 0x08, 0x7F, // 4
-    0x4F, 0x49, 0x49, 0x49, 0x79, // 5
-    0x7F, 0x49, 0x49, 0x49, 0x79, // 6
-    0x01, 0x01, 0x71, 0x09, 0x07, // 7
-    0x7F, 0x49, 0x49, 0x49, 0x7F, // 8
-    0x0F, 0x09, 0x09, 0x09, 0x7F, // 9
-    0x00, 0x36, 0x36, 0x00, 0x00, // :
-    0x00, 0x56, 0x36, 0x00, 0x00, // ;
-    0x00, 0x08, 0x14, 0x22, 0x41, // <
-    0x14, 0x14, 0x14, 0x14, 0x14, // =
-    0x41, 0x22, 0x14, 0x08, 0x00, // >
-    0x02, 0x01, 0x51, 0x09, 0x06, // ?
-    0x32, 0x49, 0x79, 0x41, 0x3E, // @  //64
-    0x7E, 0x09, 0x09, 0x09, 0x7E, // A
-    0x7F, 0x49, 0x49, 0x49, 0x36, // B
-    0x3E, 0x41, 0x41, 0x41, 0x22, // C
-    0x7F, 0x41, 0x41, 0x41, 0x3E, // D
-    0x7F, 0x49, 0x49, 0x49, 0x41, // E
-    0x7F, 0x09, 0x09, 0x01, 0x01, // F
-    0x3E, 0x41, 0x41, 0x51, 0x32, // G
-    0x7F, 0x08, 0x08, 0x08, 0x7F, // H
-    0x41, 0x41, 0x7F, 0x41, 0x41, // I
-    0x20, 0x40, 0x41, 0x3F, 0x01, // J
-    0x7F, 0x08, 0x14, 0x22, 0x41, // K
-    0x7F, 0x40, 0x40, 0x40, 0x40, // L
-    0x7F, 0x02, 0x04, 0x02, 0x7F, // M
-    0x7F, 0x02, 0x04, 0x08, 0x7F, // N
-    0x3E, 0x41, 0x41, 0x41, 0x3E, // O
-    0x7F, 0x09, 0x09, 0x09, 0x06, // P
-    0x3E, 0x41, 0x51, 0x21, 0x5E, // Q
-    0x7F, 0x09, 0x09, 0x19, 0x66, // R
-    0x46, 0x49, 0x49, 0x49, 0x31, // S
-    0x01, 0x01, 0x7F, 0x01, 0x01, // T
-    0x3F, 0x40, 0x40, 0x40, 0x3F, // U
-    0x1F, 0x20, 0x40, 0x20, 0x1F, // V
-    0x7F, 0x20, 0x18, 0x20, 0x7F, // W
-    0x63, 0x14, 0x08, 0x14, 0x63, // X
-    0x47, 0x48, 0x48, 0x48, 0x3F, // Y
-    0x61, 0x51, 0x49, 0x45, 0x43, // Z
-    0x00, 0x00, 0x7F, 0x41, 0x41, // [
-    0x02, 0x04, 0x08, 0x10, 0x20, // "\"
-    0x41, 0x41, 0x7F, 0x00, 0x00, // ]
-    0x04, 0x02, 0x01, 0x02, 0x04, // ^
-    0x40, 0x40, 0x40, 0x40, 0x40, // _
-    0x00, 0x01, 0x02, 0x04, 0x00, // `
-    0x38, 0x44, 0x44, 0x44, 0x7C, // a
-    0x7E, 0x44, 0x44, 0x44, 0x38, // b
-    0x38, 0x44, 0x44, 0x44, 0x44, // c
-    0x38, 0x44, 0x44, 0x44, 0x7E, // d
-    0x38, 0x54, 0x54, 0x54, 0x58, // e
-    0x10, 0x7C, 0x12, 0x12, 0x12, // f
-    0x1C, 0x54, 0x54, 0x54, 0x3C, // g
-    0x7E, 0x04, 0x04, 0x04, 0x78, // h
-    0x00, 0x44, 0x7D, 0x40, 0x00, // i
-    0x20, 0x40, 0x44, 0x3D, 0x00, // j
-    0x00, 0x7F, 0x10, 0x28, 0x44, // k
-    0x3C, 0x40, 0x40, 0x40, 0x40, // l
-    0x7C, 0x04, 0x78, 0x04, 0x7C, // m
-    0x7C, 0x04, 0x04, 0x04, 0x78, // n
-    0x38, 0x44, 0x44, 0x44, 0x38, // o
-    0x7C, 0x24, 0x24, 0x24, 0x1C, // p
-    0x38, 0x24, 0x24, 0x24, 0x7C, // q
-    0x78, 0x04, 0x04, 0x04, 0x04, // r
-    0x58, 0x54, 0x54, 0x54, 0x34, // s
-    0x04, 0x3E, 0x44, 0x44, 0x44, // t
-    0x3C, 0x40, 0x40, 0x40, 0x3C, // u
-    0x1C, 0x20, 0x40, 0x20, 0x1C, // v
-    0x3C, 0x40, 0x30, 0x40, 0x3C, // w
-    0x44, 0x28, 0x10, 0x28, 0x44, // x
-    0x4C, 0x50, 0x50, 0x50, 0x3C, // y
-    0x44, 0x64, 0x54, 0x4C, 0x44, // z
-    0x00, 0x08, 0x36, 0x41, 0x00, // {
-    0x00, 0x00, 0x7F, 0x00, 0x00, // |
-    0x00, 0x41, 0x36, 0x08, 0x00, // }
-    0x08, 0x08, 0x2A, 0x1C, 0x08, // ->
-    0x08, 0x1C, 0x2A, 0x08, 0x08, // <-
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00, //
+    0x3E,
+    0x5B,
+    0x4F,
+    0x5B,
+    0x3E, //
+    0x3E,
+    0x6B,
+    0x4F,
+    0x6B,
+    0x3E, //
+    0x1C,
+    0x3E,
+    0x7C,
+    0x3E,
+    0x1C, //
+    0x18,
+    0x3C,
+    0x7E,
+    0x3C,
+    0x18, //
+    0x1C,
+    0x57,
+    0x7D,
+    0x57,
+    0x1C, //
+    0x1C,
+    0x5E,
+    0x7F,
+    0x5E,
+    0x1C, //
+    0x00,
+    0x18,
+    0x3C,
+    0x18,
+    0x00, //
+    0xFF,
+    0xE7,
+    0xC3,
+    0xE7,
+    0xFF, //
+    0x00,
+    0x18,
+    0x24,
+    0x18,
+    0x00, //
+    0xFF,
+    0xE7,
+    0xDB,
+    0xE7,
+    0xFF, //
+    0x30,
+    0x48,
+    0x3A,
+    0x06,
+    0x0E, //
+    0x26,
+    0x29,
+    0x79,
+    0x29,
+    0x26, //
+    0x40,
+    0x30,
+    0x0c,
+    0x02,
+    0x7F, // BRAIDS Wave 1 SAW  // 0x39, 0x55, 0x55, 0x55, 0x59,  // note: grid is vertical slices
+    0x10,
+    0x08,
+    0x04,
+    0x1e,
+    0x00, // BRAIDS Centered SAW
+    0x40,
+    0x20,
+    0x10,
+    0x08,
+    0x7C, // BRAIDS BABY SAW
+    0x60,
+    0x1C,
+    0x03,
+    0x1C,
+    0x60, // BRAIDS TRIANGLE
+    0x7f,
+    0x01,
+    0x01,
+    0x01,
+    0x7f, // BRAIDS SQUARE //160
+    0x78,
+    0x08,
+    0x08,
+    0x08,
+    0x78, // BRAIDS BABY SQUARE
+    0x40,
+    0x40,
+    0x7F,
+    0x01,
+    0x7F, // BRAIDS PULSE  0x7D, 0x12, 0x11, 0x12, 0x7D A-umlaut
+    0xF0,
+    0x28,
+    0x25,
+    0x28,
+    0xF0,
+    0x3e,
+    0x08,
+    0x00,
+    0x08,
+    0x00, // Sample Play Mode : Trigger Mode. part1 //144
+    0x08,
+    0x00,
+    0x3E,
+    0x1C,
+    0x08, // Sample Play Mode : Trigger Mode. part2 //145
+    0x3e,
+    0x08,
+    0x08,
+    0x08,
+    0x08, // Sample Play Mode : Hold Mode part1
+    0x08,
+    0x08,
+    0x08,
+    0x08,
+    0x3e, // Sample Play Mode : Hold Mode part2    0x10, 0x20, 0x7E, 0x20, 0x10, //
+    0x06,
+    0x0F,
+    0x09,
+    0x0F,
+    0x06, //
+    0x08,
+    0x08,
+    0x2A,
+    0x1C,
+    0x08, //
+    0x08,
+    0x1C,
+    0x2A,
+    0x08,
+    0x08, //
+    0x1E,
+    0x10,
+    0x10,
+    0x10,
+    0x10, //
+    0x0C,
+    0x1E,
+    0x0C,
+    0x1E,
+    0x0C, //
+    0x08,
+    0x0c,
+    0x0e,
+    0x0c,
+    0x08, // up arrow
+    0x02,
+    0x06,
+    0x0e,
+    0x06,
+    0x02, // down arrow
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00, // space
+    0x00,
+    0x00,
+    0x5F,
+    0x00,
+    0x00, // !
+    0x00,
+    0x07,
+    0x00,
+    0x07,
+    0x00, // "
+    0x14,
+    0x7F,
+    0x14,
+    0x7F,
+    0x14, // #
+    0x24,
+    0x2A,
+    0x7F,
+    0x2A,
+    0x12, // $
+    0x23,
+    0x13,
+    0x08,
+    0x64,
+    0x62, // %
+    0x36,
+    0x49,
+    0x55,
+    0x22,
+    0x50, // &
+    0x00,
+    0x05,
+    0x03,
+    0x00,
+    0x00, // '
+    0x00,
+    0x1C,
+    0x22,
+    0x41,
+    0x00, // (
+    0x00,
+    0x41,
+    0x22,
+    0x1C,
+    0x00, // )
+    0x08,
+    0x2A,
+    0x1C,
+    0x2A,
+    0x08, // *
+    0x08,
+    0x08,
+    0x3E,
+    0x08,
+    0x08, // +
+    0x00,
+    0x50,
+    0x30,
+    0x00,
+    0x00, // ,
+    0x08,
+    0x08,
+    0x08,
+    0x08,
+    0x08, // -
+    0x00,
+    0x60,
+    0x60,
+    0x00,
+    0x00, // .
+    0x20,
+    0x10,
+    0x08,
+    0x04,
+    0x02, // /
+    0x7F,
+    0x51,
+    0x49,
+    0x45,
+    0x7F, // 0
+    0x40,
+    0x41,
+    0x7F,
+    0x40,
+    0x40, // 1
+    0x79,
+    0x49,
+    0x49,
+    0x49,
+    0x4F, // 2
+    0x49,
+    0x49,
+    0x49,
+    0x49,
+    0x7F, // 3
+    0x0F,
+    0x08,
+    0x08,
+    0x08,
+    0x7F, // 4
+    0x4F,
+    0x49,
+    0x49,
+    0x49,
+    0x79, // 5
+    0x7F,
+    0x49,
+    0x49,
+    0x49,
+    0x79, // 6
+    0x01,
+    0x01,
+    0x71,
+    0x09,
+    0x07, // 7
+    0x7F,
+    0x49,
+    0x49,
+    0x49,
+    0x7F, // 8
+    0x0F,
+    0x09,
+    0x09,
+    0x09,
+    0x7F, // 9
+    0x00,
+    0x36,
+    0x36,
+    0x00,
+    0x00, // :
+    0x00,
+    0x56,
+    0x36,
+    0x00,
+    0x00, // ;
+    0x00,
+    0x08,
+    0x14,
+    0x22,
+    0x41, // <
+    0x14,
+    0x14,
+    0x14,
+    0x14,
+    0x14, // =
+    0x41,
+    0x22,
+    0x14,
+    0x08,
+    0x00, // >
+    0x02,
+    0x01,
+    0x51,
+    0x09,
+    0x06, // ?
+    0x32,
+    0x49,
+    0x79,
+    0x41,
+    0x3E, // @  //64
+    0x7E,
+    0x09,
+    0x09,
+    0x09,
+    0x7E, // A
+    0x7F,
+    0x49,
+    0x49,
+    0x49,
+    0x36, // B
+    0x3E,
+    0x41,
+    0x41,
+    0x41,
+    0x22, // C
+    0x7F,
+    0x41,
+    0x41,
+    0x41,
+    0x3E, // D
+    0x7F,
+    0x49,
+    0x49,
+    0x49,
+    0x41, // E
+    0x7F,
+    0x09,
+    0x09,
+    0x01,
+    0x01, // F
+    0x3E,
+    0x41,
+    0x41,
+    0x51,
+    0x32, // G
+    0x7F,
+    0x08,
+    0x08,
+    0x08,
+    0x7F, // H
+    0x41,
+    0x41,
+    0x7F,
+    0x41,
+    0x41, // I
+    0x20,
+    0x40,
+    0x41,
+    0x3F,
+    0x01, // J
+    0x7F,
+    0x08,
+    0x14,
+    0x22,
+    0x41, // K
+    0x7F,
+    0x40,
+    0x40,
+    0x40,
+    0x40, // L
+    0x7F,
+    0x02,
+    0x04,
+    0x02,
+    0x7F, // M
+    0x7F,
+    0x02,
+    0x04,
+    0x08,
+    0x7F, // N
+    0x3E,
+    0x41,
+    0x41,
+    0x41,
+    0x3E, // O
+    0x7F,
+    0x09,
+    0x09,
+    0x09,
+    0x06, // P
+    0x3E,
+    0x41,
+    0x51,
+    0x21,
+    0x5E, // Q
+    0x7F,
+    0x09,
+    0x09,
+    0x19,
+    0x66, // R
+    0x46,
+    0x49,
+    0x49,
+    0x49,
+    0x31, // S
+    0x01,
+    0x01,
+    0x7F,
+    0x01,
+    0x01, // T
+    0x3F,
+    0x40,
+    0x40,
+    0x40,
+    0x3F, // U
+    0x1F,
+    0x20,
+    0x40,
+    0x20,
+    0x1F, // V
+    0x7F,
+    0x20,
+    0x18,
+    0x20,
+    0x7F, // W
+    0x63,
+    0x14,
+    0x08,
+    0x14,
+    0x63, // X
+    0x47,
+    0x48,
+    0x48,
+    0x48,
+    0x3F, // Y
+    0x61,
+    0x51,
+    0x49,
+    0x45,
+    0x43, // Z
+    0x00,
+    0x00,
+    0x7F,
+    0x41,
+    0x41, // [
+    0x02,
+    0x04,
+    0x08,
+    0x10,
+    0x20, // "\"
+    0x41,
+    0x41,
+    0x7F,
+    0x00,
+    0x00, // ]
+    0x04,
+    0x02,
+    0x01,
+    0x02,
+    0x04, // ^
+    0x40,
+    0x40,
+    0x40,
+    0x40,
+    0x40, // _
+    0x00,
+    0x01,
+    0x02,
+    0x04,
+    0x00, // `
+    0x38,
+    0x44,
+    0x44,
+    0x44,
+    0x7C, // a
+    0x7E,
+    0x44,
+    0x44,
+    0x44,
+    0x38, // b
+    0x38,
+    0x44,
+    0x44,
+    0x44,
+    0x44, // c
+    0x38,
+    0x44,
+    0x44,
+    0x44,
+    0x7E, // d
+    0x38,
+    0x54,
+    0x54,
+    0x54,
+    0x58, // e
+    0x10,
+    0x7C,
+    0x12,
+    0x12,
+    0x12, // f
+    0x1C,
+    0x54,
+    0x54,
+    0x54,
+    0x3C, // g
+    0x7E,
+    0x04,
+    0x04,
+    0x04,
+    0x78, // h
+    0x00,
+    0x44,
+    0x7D,
+    0x40,
+    0x00, // i
+    0x20,
+    0x40,
+    0x44,
+    0x3D,
+    0x00, // j
+    0x00,
+    0x7F,
+    0x10,
+    0x28,
+    0x44, // k
+    0x3C,
+    0x40,
+    0x40,
+    0x40,
+    0x40, // l
+    0x7C,
+    0x04,
+    0x78,
+    0x04,
+    0x7C, // m
+    0x7C,
+    0x04,
+    0x04,
+    0x04,
+    0x78, // n
+    0x38,
+    0x44,
+    0x44,
+    0x44,
+    0x38, // o
+    0x7C,
+    0x24,
+    0x24,
+    0x24,
+    0x1C, // p
+    0x38,
+    0x24,
+    0x24,
+    0x24,
+    0x7C, // q
+    0x78,
+    0x04,
+    0x04,
+    0x04,
+    0x04, // r
+    0x58,
+    0x54,
+    0x54,
+    0x54,
+    0x34, // s
+    0x04,
+    0x3E,
+    0x44,
+    0x44,
+    0x44, // t
+    0x3C,
+    0x40,
+    0x40,
+    0x40,
+    0x3C, // u
+    0x1C,
+    0x20,
+    0x40,
+    0x20,
+    0x1C, // v
+    0x3C,
+    0x40,
+    0x30,
+    0x40,
+    0x3C, // w
+    0x44,
+    0x28,
+    0x10,
+    0x28,
+    0x44, // x
+    0x4C,
+    0x50,
+    0x50,
+    0x50,
+    0x3C, // y
+    0x44,
+    0x64,
+    0x54,
+    0x4C,
+    0x44, // z
+    0x00,
+    0x08,
+    0x36,
+    0x41,
+    0x00, // {
+    0x00,
+    0x00,
+    0x7F,
+    0x00,
+    0x00, // |
+    0x00,
+    0x41,
+    0x36,
+    0x08,
+    0x00, // }
+    0x08,
+    0x08,
+    0x2A,
+    0x1C,
+    0x08, // ->
+    0x08,
+    0x1C,
+    0x2A,
+    0x08,
+    0x08, // <-
 };
-
 
 #if defined APC
 extern void apc(uint8_t a, uint8_t b, uint8_t c);
@@ -177,17 +688,15 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
         else
           apc((64 - 8 - 8 * y + x + xoff), 0, 6);
       }
-      else
-        if (x + xoff >= 0 && x + xoff < 8 && x == 5)
-          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+      else if (x + xoff >= 0 && x + xoff < 8 && x == 5)
+        apc((64 - 8 - 8 * y + x + xoff), 0, 6);
     }
   }
 }
 #endif
 
-
 // MIDI sysex render header for remote
-const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
+const uint8_t sysexRenderHeader[] = {0xf0, 0x43, 0x21};
 
 // Teensy 3.1 can only generate 30 MHz SPI when running at 120 MHz (overclock)
 
@@ -196,7 +705,7 @@ const uint8_t sysexRenderHeader[] = { 0xf0, 0x43, 0x21 };
 // specific to each board type (e.g. 11,13 for Uno, 51,52 for Mega, etc.)
 
 FLASHMEM ILI9341_t3n::ILI9341_t3n(uint8_t cs, uint8_t dc, uint8_t rst, uint8_t mosi,
-  uint8_t sclk, uint8_t miso)
+                                  uint8_t sclk, uint8_t miso)
 {
   _cs = cs;
   _dc = dc;
@@ -225,7 +734,7 @@ FLASHMEM ILI9341_t3n::ILI9341_t3n(uint8_t cs, uint8_t dc, uint8_t rst, uint8_t m
 //=======================================================================
 
 void ILI9341_t3n::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1,
-  uint16_t y1)
+                                uint16_t y1)
 {
   beginSPITransaction(_SPI_CLOCK);
   setAddr(x0, y0, x1, y1);
@@ -250,8 +759,8 @@ void ILI9341_t3n::drawPixel(int16_t x, int16_t y, uint16_t color)
   if (console && remote_active)
   {
     static uint8_t sysexDrawPixel[9] = {
-      0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0, 0x0 // could be a unknown color
+        0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x0 // could be a unknown color
     };
 
     fillSysexData(sysexDrawPixel, 2, x, y);
@@ -272,7 +781,7 @@ void ILI9341_t3n::drawPixel(int16_t x, int16_t y, uint16_t color)
 }
 
 void ILI9341_t3n::drawFastVLine(int16_t x, int16_t y, int16_t h,
-  uint16_t color)
+                                uint16_t color)
 {
   x += _originx;
   y += _originy;
@@ -301,7 +810,7 @@ void ILI9341_t3n::drawFastVLine(int16_t x, int16_t y, int16_t h,
 }
 
 void ILI9341_t3n::drawFastHLine(int16_t x, int16_t y, int16_t w,
-  uint16_t color)
+                                uint16_t color)
 {
   x += _originx;
   y += _originy;
@@ -338,7 +847,7 @@ void ILI9341_t3n::fillScreen(uint16_t color)
 }
 
 void ILI9341_t3n::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
-  uint16_t color)
+                           uint16_t color)
 {
   x += _originx;
   y += _originy;
@@ -366,8 +875,8 @@ void ILI9341_t3n::fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
   if (console && remote_active)
   {
     static uint8_t sysexFillRect[13] = {
-      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0, 0x0 // could be unknown color
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x0 // could be unknown color
     };
 
     fillSysexData(sysexFillRect, 4, x, y, w, h);
@@ -417,7 +926,14 @@ FLASHMEM void ILI9341_t3n::fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, u
   if (console && remote_active)
   {
     static uint8_t sysex[8] = {
-      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
     };
 
     fillSysexData(sysex, 4, x, y - h, w, h);
@@ -491,8 +1007,8 @@ FLASHMEM void ILI9341_t3n::brightness(uint8_t value)
 //					color palette data in array at palette
 //					width must be at least 8 pixels
 void ILI9341_t3n::writeRect1BPP(int16_t x, int16_t y, int16_t w, int16_t h,
-  const uint8_t* pixels,
-  const uint16_t* palette)
+                                const uint8_t *pixels,
+                                const uint16_t *palette)
 {
   // Simply call through our helper
   writeRectNBPP(x, y, w, h, 1, pixels, palette);
@@ -503,16 +1019,16 @@ void ILI9341_t3n::writeRect1BPP(int16_t x, int16_t y, int16_t w, int16_t h,
 //					bitmap data in array at pixels
 
 void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
-  uint8_t bits_per_pixel, const uint8_t* pixels,
-  const uint16_t* palette)
+                                uint8_t bits_per_pixel, const uint8_t *pixels,
+                                const uint16_t *palette)
 {
   x += _originx;
   y += _originy;
   uint8_t pixels_per_byte = 8 / bits_per_pixel;
   uint16_t count_of_bytes_per_row =
-    (w + pixels_per_byte - 1) / pixels_per_byte; // Round up to handle non multiples
+      (w + pixels_per_byte - 1) / pixels_per_byte; // Round up to handle non multiples
   uint8_t row_shift_init =
-    8 - bits_per_pixel;                             // We shift down 6 bits by default
+      8 - bits_per_pixel;                             // We shift down 6 bits by default
   uint8_t pixel_bit_mask = (1 << bits_per_pixel) - 1; // get mask to use below
   // Rectangular clipping
 
@@ -550,7 +1066,7 @@ void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
     uint8_t x_clip_left_bytes_incr = x_clip_left / pixels_per_byte;
     pixels += x_clip_left_bytes_incr;
     row_shift_init =
-      8 - (x_clip_left - (x_clip_left_bytes_incr * pixels_per_byte) + 1) * bits_per_pixel;
+        8 - (x_clip_left - (x_clip_left_bytes_incr * pixels_per_byte) + 1) * bits_per_pixel;
   }
 
   if ((x + w - 1) >= _displayclipx2)
@@ -558,8 +1074,8 @@ void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
     w = _displayclipx2 - x;
   }
 
-  const uint8_t* pixels_row_start =
-    pixels; // remember our starting position offset into row
+  const uint8_t *pixels_row_start =
+      pixels; // remember our starting position offset into row
 
   beginSPITransaction(_SPI_CLOCK);
   setAddr(x, y, x + w - 1, y + h - 1);
@@ -586,10 +1102,9 @@ void ILI9341_t3n::writeRectNBPP(int16_t x, int16_t y, int16_t w, int16_t h,
   }
   writecommand_last(ILI9341_NOP);
   endSPITransaction();
-
 }
 
-static const uint8_t PROGMEM init_commands[] = { 4, 0xEF, 0x03, 0x80, 0x02,
+static const uint8_t PROGMEM init_commands[] = {4, 0xEF, 0x03, 0x80, 0x02,
                                                 4, 0xCF, 0x00, 0XC1, 0X30,
                                                 5, 0xED, 0x64, 0x03, 0X12, 0X81,
                                                 4, 0xE8, 0x85, 0x00, 0x78,
@@ -599,20 +1114,20 @@ static const uint8_t PROGMEM init_commands[] = { 4, 0xEF, 0x03, 0x80, 0x02,
                                                 2, ILI9341_PWCTR1, 0x23,       // Power control
                                                 2, ILI9341_PWCTR2, 0x10,       // Power control
                                                 3, ILI9341_VMCTR1, 0x3e, 0x28, // VCM control
-  //2, ILI9341_VMCTR2, 0x86,       // VCM control2 b7
-  2, ILI9341_VMCTR2, 0xb7,       // VCM control2 
-  2, ILI9341_MADCTL, 0x48,       // Memory Access Control
-  2, ILI9341_PIXFMT, 0x55,
-  3, ILI9341_FRMCTR1, 0x00, 0x18,
-  4, ILI9341_DFUNCTR, 0x08, 0x82, 0x27, // Display Function Control
-  2, 0xF2, 0x00,                        // Gamma Function Disable
-  2, ILI9341_GAMMASET, 0x01,            // Gamma curve selected
-  16, ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E,
-  0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00, // Set Gamma
-  16, ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31,
-  0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F, // Set Gamma
-  3, 0xb1, 0x00, 0x10,                            // FrameRate Control 119Hz
-  0 };
+                                                // 2, ILI9341_VMCTR2, 0x86,       // VCM control2 b7
+                                                2, ILI9341_VMCTR2, 0xb7, // VCM control2
+                                                2, ILI9341_MADCTL, 0x48, // Memory Access Control
+                                                2, ILI9341_PIXFMT, 0x55,
+                                                3, ILI9341_FRMCTR1, 0x00, 0x18,
+                                                4, ILI9341_DFUNCTR, 0x08, 0x82, 0x27, // Display Function Control
+                                                2, 0xF2, 0x00,                        // Gamma Function Disable
+                                                2, ILI9341_GAMMASET, 0x01,            // Gamma curve selected
+                                                16, ILI9341_GMCTRP1, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E,
+                                                0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00, // Set Gamma
+                                                16, ILI9341_GMCTRN1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31,
+                                                0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F, // Set Gamma
+                                                3, 0xb1, 0x00, 0x10,                            // FrameRate Control 119Hz
+                                                0};
 
 #if defined GENERIC_DISPLAY
 FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock, uint32_t spi_clock_read)
@@ -622,16 +1137,15 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
 {
   // verify SPI pins are valid;
   // allow user to say use current ones...
-  _SPI_CLOCK = spi_clock;           // #define ILI9341_SPICLOCK 30000000
+  _SPI_CLOCK = spi_clock; // #define ILI9341_SPICLOCK 30000000
 
 #if defined GENERIC_DISPLAY
   _SPI_CLOCK_READ = spi_clock_read; // #define ILI9341_SPICLOCK_READ 2000000
 #endif
 
   _pspi = &SPI1;
-  _spi_num = 1; // Which buss is this spi on?
+  _spi_num = 1;                  // Which buss is this spi on?
   _pimxrt_spi = &IMXRT_LPSPI3_S; // Could hack our way to grab this from SPI
-
 
   // Make sure we have all of the proper SPI pins selected.
   _pspi->setMOSI(_mosi);
@@ -643,8 +1157,8 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
 #endif
 
   // Hack to get hold of the SPI Hardware information...
-  uint32_t* pa = (uint32_t*)((void*)_pspi);
-  _spi_hardware = (SPIClass::SPI_Hardware_t*)(void*)pa[1];
+  uint32_t *pa = (uint32_t *)((void *)_pspi);
+  _spi_hardware = (SPIClass::SPI_Hardware_t *)(void *)pa[1];
 
   _pspi->begin();
 
@@ -693,7 +1207,7 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
   }
 
   beginSPITransaction(_SPI_CLOCK / 4);
-  const uint8_t* addr = init_commands;
+  const uint8_t *addr = init_commands;
   while (1)
   {
     uint8_t count = *addr++;
@@ -756,7 +1270,7 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
 */
 /**************************************************************************/
 FLASHMEM void ILI9341_t3n::drawCircle(int16_t x0, int16_t y0, int16_t r,
-  uint16_t color)
+                                      uint16_t color)
 {
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
@@ -804,7 +1318,7 @@ FLASHMEM void ILI9341_t3n::drawCircle(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 FLASHMEM void ILI9341_t3n::drawCircleHelper(int16_t x0, int16_t y0, int16_t r,
-  uint8_t cornername, uint16_t color)
+                                            uint8_t cornername, uint16_t color)
 {
   int16_t f = 1 - r;
   int16_t ddF_x = 1;
@@ -856,13 +1370,22 @@ FLASHMEM void ILI9341_t3n::drawCircleHelper(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 FLASHMEM void ILI9341_t3n::fillCircle(int16_t x0, int16_t y0, int16_t r,
-  uint16_t color)
+                                      uint16_t color)
 {
   if (remote_active)
   {
     static uint8_t sysexFillCircle[11] = {
-      0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknow color
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0, // could be unknow color
     };
 
     fillSysexData(sysexFillCircle, 3, x0, y0, r);
@@ -891,8 +1414,8 @@ FLASHMEM void ILI9341_t3n::fillCircle(int16_t x0, int16_t y0, int16_t r,
 */
 /**************************************************************************/
 FLASHMEM void ILI9341_t3n::fillCircleHelper(int16_t x0, int16_t y0, int16_t r,
-  uint8_t corners, int16_t delta,
-  uint16_t color)
+                                            uint8_t corners, int16_t delta,
+                                            uint16_t color)
 {
 
   int16_t f = 1 - r;
@@ -937,25 +1460,28 @@ FLASHMEM void ILI9341_t3n::fillCircleHelper(int16_t x0, int16_t y0, int16_t r,
   }
 }
 
-
-#define CLIPLEFT  1
+#define CLIPLEFT 1
 #define CLIPRIGHT 2
 #define CLIPLOWER 4
 #define CLIPUPPER 8
 
 // Cohen Sutherland Line Clipping - thx Wikipedia
-FLASHMEM int get_clips(int16_t& x, int16_t& y, int16_t XMin, int16_t YMin, int16_t XMax, int16_t YMax)
+FLASHMEM int get_clips(int16_t &x, int16_t &y, int16_t XMin, int16_t YMin, int16_t XMax, int16_t YMax)
 {
   int K = 0;
-  if (y < YMin) K = CLIPLOWER;
-  if (y > YMax) K = CLIPUPPER;
-  if (x < XMin) K |= CLIPLEFT;
-  if (x > XMax) K |= CLIPRIGHT;
+  if (y < YMin)
+    K = CLIPLOWER;
+  if (y > YMax)
+    K = CLIPUPPER;
+  if (x < XMin)
+    K |= CLIPLEFT;
+  if (x > XMax)
+    K |= CLIPRIGHT;
 
   return K;
 }
 
-FLASHMEM bool clipline(int16_t& x1, int16_t& y1, int16_t& x2, int16_t& y2, int16_t XMin, int16_t YMin, int16_t XMax, int16_t YMax)
+FLASHMEM bool clipline(int16_t &x1, int16_t &y1, int16_t &x2, int16_t &y2, int16_t XMin, int16_t YMin, int16_t XMax, int16_t YMax)
 {
   int K1 = 0, K2 = 0;
   int32_t dx, dy;
@@ -1035,7 +1561,7 @@ FLASHMEM bool clipline(int16_t& x1, int16_t& y1, int16_t& x2, int16_t& y2, int16
 
 // Bresenham's algorithm - thx wikpedia
 void ILI9341_t3n::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-  uint16_t color)
+                           uint16_t color)
 {
   if (!clipline(x0, y0, x1, y1, _displayclipx1, _displayclipy1, _displayclipx2, _displayclipy2))
     return;
@@ -1043,8 +1569,19 @@ void ILI9341_t3n::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
   if (remote_active)
   {
     static uint8_t sysexDrawLine[13] = {
-      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknown color
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0, // could be unknown color
     };
 
     fillSysexData(sysexDrawLine, 4, x0, y0, x1, y1);
@@ -1176,8 +1713,19 @@ void ILI9341_t3n::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t 
   if (console && remote_active)
   {
     static uint8_t sysexDrawRect[13] = {
-      0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknown color
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x0, // could be unknown color
     };
 
     fillSysexData(sysexDrawRect, 4, x, y, w, h);
@@ -1203,7 +1751,7 @@ size_t ILI9341_t3n::write(uint8_t c)
   return write(&c, 1);
 }
 
-size_t ILI9341_t3n::write(const uint8_t* buffer, size_t size)
+size_t ILI9341_t3n::write(const uint8_t *buffer, size_t size)
 {
 
   if (remote_active)
@@ -1213,7 +1761,7 @@ size_t ILI9341_t3n::write(const uint8_t* buffer, size_t size)
 
     uint8_t sizeMsg = 2 * 2 + 1 + nbBytes + 1 + size;
 
-    uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
+    uint8_t *sysexDrawString = (uint8_t *)malloc(sizeMsg);
     if (sysexDrawString == NULL)
     {
 #ifdef DEBUG
@@ -1242,23 +1790,22 @@ size_t ILI9341_t3n::write(const uint8_t* buffer, size_t size)
     uint8_t c = *buffer++;
     cb--;
     drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize_x,
-      textsize_y);
+             textsize_y);
     cursor_x += textsize_x * 6;
   }
   return size;
 }
 
-
 // Draw a character
 FLASHMEM void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
-  uint16_t fgcolor, uint16_t bgcolor, uint8_t size_x,
-  uint8_t size_y)
+                                    uint16_t fgcolor, uint16_t bgcolor, uint8_t size_x,
+                                    uint8_t size_y)
 {
 
   if ((x >= _width) ||              // Clip right
-    (y >= _height) ||             // Clip bottom
-    ((x + 6 * size_x - 1) < 0) || // Clip left  TODO: is this correct?
-    ((y + 8 * size_y - 1) < 0))   // Clip top   TODO: is this correct?
+      (y >= _height) ||             // Clip bottom
+      ((x + 6 * size_x - 1) < 0) || // Clip left  TODO: is this correct?
+      ((y + 8 * size_y - 1) < 0))   // Clip top   TODO: is this correct?
     return;
 
   if (c == 32)
@@ -1352,33 +1899,33 @@ FLASHMEM void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
           if (line == 0x1F)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 5 * size_x, size_y,
-              fgcolor);
+                     fgcolor);
             break;
           }
           else if (line == 0x1E)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 4 * size_x, size_y,
-              fgcolor);
+                     fgcolor);
             break;
           }
           else if ((line & 0x1C) == 0x1C)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 3 * size_x, size_y,
-              fgcolor);
+                     fgcolor);
             line <<= 4;
             xoff += 4;
           }
           else if ((line & 0x18) == 0x18)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, 2 * size_x, size_y,
-              fgcolor);
+                     fgcolor);
             line <<= 3;
             xoff += 3;
           }
           else if ((line & 0x10) == 0x10)
           {
             fillRect(x + xoff * size_x, y + yoff * size_y, size_x, size_y,
-              fgcolor);
+                     fgcolor);
             line <<= 2;
             xoff += 2;
           }
@@ -1407,9 +1954,9 @@ FLASHMEM void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
     int16_t x_char_start = x; // remember our X where we start outputting...
 
     if ((x >= _displayclipx2) ||                   // Clip right
-      (y >= _displayclipy2) ||                   // Clip bottom
-      ((x + 6 * size_x - 1) < _displayclipx1) || // Clip left  TODO: this is not correct
-      ((y + 8 * size_y - 1) < _displayclipy1))   // Clip top   TODO: this is not correct
+        (y >= _displayclipy2) ||                   // Clip bottom
+        ((x + 6 * size_x - 1) < _displayclipx1) || // Clip left  TODO: this is not correct
+        ((y + 8 * size_y - 1) < _displayclipy1))   // Clip top   TODO: this is not correct
       return;
 
     // need to build actual pixel rectangle we will output into.
@@ -1431,7 +1978,6 @@ FLASHMEM void ILI9341_t3n::drawChar(int16_t x, int16_t y, unsigned char c,
     }
     if ((y + h - 1) >= _displayclipy2)
       h = _displayclipy2 - y;
-
 
     beginSPITransaction(_SPI_CLOCK);
     setAddr(x, y, x + w - 1, y + h - 1);
@@ -1508,7 +2054,7 @@ FLASHMEM void ILI9341_t3n::setCursor(int16_t x, int16_t y, bool autoCenter)
   cursor_y = y;
 }
 
-FLASHMEM void ILI9341_t3n::getCursor(int16_t* x, int16_t* y)
+FLASHMEM void ILI9341_t3n::getCursor(int16_t *x, int16_t *y)
 {
   *x = cursor_x;
   *y = cursor_y;
@@ -1533,9 +2079,9 @@ FLASHMEM void ILI9341_t3n::setTextColor(uint16_t c, uint16_t b)
   textbgcolor = b;
   // pre-expand colors for fast alpha-blending later
   textcolorPrexpanded =
-    (textcolor | (textcolor << 16)) & 0b00000111111000001111100000011111;
+      (textcolor | (textcolor << 16)) & 0b00000111111000001111100000011111;
   textbgcolorPrexpanded =
-    (textbgcolor | (textbgcolor << 16)) & 0b00000111111000001111100000011111;
+      (textbgcolor | (textbgcolor << 16)) & 0b00000111111000001111100000011111;
 }
 
 /***************************************************************************************
@@ -1543,7 +2089,7 @@ FLASHMEM void ILI9341_t3n::setTextColor(uint16_t c, uint16_t b)
 ** Description :            draw string with padding if it is defined
 ***************************************************************************************/
 // Without font number, uses font set by setTextFont()
-int16_t ILI9341_t3n::drawString(const String& string, int poX, int poY)
+int16_t ILI9341_t3n::drawString(const String &string, int poX, int poY)
 {
   int16_t len = string.length() + 2;
   char buffer[len];
@@ -1634,24 +2180,23 @@ void ILI9341_t3n::waitTransmitComplete(uint32_t mcr)
   waitTransmitComplete();
 }
 
-
 // send sysex bundled.
-FLASHMEM void ILI9341_t3n::flushSysEx() {
+FLASHMEM void ILI9341_t3n::flushSysEx()
+{
   if (sysex_len <= SYSEX_HEADER_SIZE)
     return;
 
   memcpy(sysex_buffer, sysexRenderHeader, SYSEX_HEADER_SIZE); // place sysex MIDI header
-  sysex_buffer[sysex_len] = 0xF7; // place sysex end byte
+  sysex_buffer[sysex_len] = 0xF7;                             // place sysex end byte
 
   usbMIDI.sendSysEx(sysex_len + 1, sysex_buffer, true);
 
   sysex_len = SYSEX_HEADER_SIZE;
 }
 
-
 // append sysex data to buffer for sending in a bundled fashion
 // a size field added to split the messages on receiver side.
-FLASHMEM void ILI9341_t3n::sendSysEx(uint8_t renderCmd, uint8_t length, uint8_t* data, bool hasStartEnd)
+FLASHMEM void ILI9341_t3n::sendSysEx(uint8_t renderCmd, uint8_t length, uint8_t *data, bool hasStartEnd)
 {
   if (sysex_len + length > sizeof(sysex_buffer) - 2) // flush if full, keep space for end byte
     flushSysEx();
@@ -1687,19 +2232,22 @@ FLASHMEM void ILI9341_t3n::fillSysexData(uint8_t arr[], uint8_t nbArg, ...)
   }
 }
 
-FLASHMEM uint8_t ILI9341_t3n::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
+FLASHMEM uint8_t ILI9341_t3n::fillSysexDataColor(uint8_t *arr, uint8_t nbArg, ...)
 {
   va_list args;
   va_start(args, nbArg);
   int prev_val = -1;
 
-  uint8_t pos = 0;
+  uint8_t pos = 1; // first byte will be the color mode
+  uint8_t colorCodes[2];
+
   for (uint8_t i = 0; i < nbArg; i++)
   {
     int val = va_arg(args, int);
 
     uint8_t colorCode = 0;
-    switch (val) {
+    switch (val)
+    {
     case COLOR_BACKGROUND:
       colorCode = 0;
       break;
@@ -1760,29 +2308,56 @@ FLASHMEM uint8_t ILI9341_t3n::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ..
       break;
     default:
       colorCode = 255;
-      if (val == prev_val) {
+
+      if (val == prev_val)
+      {
         colorCode = 0;
       }
-      else {
-        // unknown color => to be sent on four 7bits bytes
-        uint16_t hByte = highByte(val);
-        arr[pos] = hByte / 128;
-        arr[pos + 1] = hByte % 128;
-        uint16_t lByte = lowByte(val);
-        arr[pos + 2] = lByte / 128;
-        arr[pos + 3] = lByte % 128;
-
-        pos += 4;
+      else
+      {
+        // unknown color => 16 bits color value
+        // to send on three 7bits bytes
+        arr[pos] = (val >> 14) & 0x7F;
+        arr[pos + 1] = (val >> 7) & 0x7F;
+        arr[pos + 2] = val & 0x7F;
+        pos += 3;
       }
     }
 
-    if (colorCode != 255) {
+    colorCodes[i] = colorCode;
+
+    // Serial.printf("  colorCodes [%d] %d\n", i, colorCodes[i]);
+    if (colorCode != 255)
+    {
       // avoid sending known color on 4 bytes, just send a 1 byte code by MIDI
       arr[pos] = colorCode;
       pos++;
     }
-
     prev_val = val;
+  }
+
+  // set color mode
+  if (colorCodes[0] < 100)
+  {
+    if (nbArg == 2)
+    {
+      arr[0] = colorCodes[1] < 100 ? 0 : 1;
+    }
+    else
+    {
+      arr[0] = 0;
+    }
+  }
+  else
+  {
+    if (nbArg == 2)
+    {
+      arr[0] = colorCodes[1] < 100 ? 2 : 3;
+    }
+    else
+    {
+      arr[0] = 1;
+    }
   }
 
   return pos;
