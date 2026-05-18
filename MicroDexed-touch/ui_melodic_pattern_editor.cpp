@@ -33,7 +33,7 @@ extern ILI9341_t3n display;
 
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 
-
+static bool lastRunningState = false;
 // ----------------------------------------------------------------------
 // Constants – 4 rows (bars) × 16 steps, full width, compact cells
 // ----------------------------------------------------------------------
@@ -231,7 +231,7 @@ FLASHMEM void setVelocityFromTouch_melodic(int16_t x) {
 }
 
 FLASHMEM void redrawGridAndButtons() {
-  
+
     // Redraw all grid cells
     for (uint8_t bar = 0; bar < NUM_BARS; bar++) {
         for (uint8_t step = 0; step < STEPS_PER_BAR; step++) {
@@ -431,6 +431,7 @@ FLASHMEM void drawCopyButton_melodic() {
 FLASHMEM void drawGridUI_melodic() {
     LiveSequencer::LiveSeqData* data = liveSeq.getData();
     // Clear grid area only, keep top bar and slider
+    if (remote_active) display.console = true;
     display.fillRect(0, GRID_START_Y - 2, DISPLAY_WIDTH, NUM_BARS * CELL_H + 4, COLOR_BACKGROUND);
 
     drawLayer();
@@ -502,7 +503,7 @@ FLASHMEM void handleMainTouch_melodic(int16_t x, int16_t y) {
     }
 
     // 2. Buttons – use TouchButton::isPressed()
-    if (TouchButton::isPressed(BTN_START_STOP_X, BTN_Y)) {
+    else if (TouchButton::isPressed(BTN_START_STOP_X, BTN_Y)) {
         LiveSequencer::LiveSeqData* data = liveSeq.getData();
         if (data->isRunning) liveSeq.stop();
         else liveSeq.start();
@@ -515,24 +516,24 @@ FLASHMEM void handleMainTouch_melodic(int16_t x, int16_t y) {
         return;
     }
 
-    if (TouchButton::isPressed(BTN_LAYER_X, BTN_Y)) {
+    else if (TouchButton::isPressed(BTN_LAYER_X, BTN_Y)) {
         changeActiveLayer();
         return;
     }
 
-    if (TouchButton::isPressed(BTN_COPY_X, BTN_Y)) {
+    else if (TouchButton::isPressed(BTN_COPY_X, BTN_Y)) {
         if (copyModeActive) pastePattern_melodic();
         else copyPattern_melodic();
         return;
     }
 
-    if (TouchButton::isPressed(BTN_EXIT_X, BTN_Y)) {
+    else if (TouchButton::isPressed(BTN_EXIT_X, BTN_Y)) {
         LCDML.FUNC_goBackToMenu();
         return;
     }
 
 
-    if (TouchButton::isPressed(BTN_CLEAR_X, BTN_Y_ROW)) {
+    else if (TouchButton::isPressed(BTN_CLEAR_X, BTN_Y_ROW)) {
         bool hadNote = (noteGrid[activeLayer][selectedBar][selectedStep] != 0);
         if (hadNote) {
             noteGrid[activeLayer][selectedBar][selectedStep] = 0;
@@ -549,7 +550,7 @@ FLASHMEM void handleMainTouch_melodic(int16_t x, int16_t y) {
         return;
     }
 
-    if (TouchButton::isPressed(BTN_AUTO_X, BTN_Y_ROW)) {
+    else if (TouchButton::isPressed(BTN_AUTO_X, BTN_Y_ROW)) {
         autoAdvanceMode = (autoAdvanceMode + 1) % 3;
         drawAutoAdvanceButton();
         return;
@@ -590,6 +591,7 @@ FLASHMEM void handleMainTouch_melodic(int16_t x, int16_t y) {
     }
 }
 
+
 // ----------------------------------------------------------------------
 // LCDML entry point
 // ----------------------------------------------------------------------
@@ -614,6 +616,7 @@ FLASHMEM void UI_func_melodic_pattern_editor(uint8_t param) {
         redraw_melodic();
         drawTrackNumber();
         timeSinceOpened = 0;
+        lastRunningState = liveSeq.getData()->isRunning;
         LCDML.FUNC_setLoopInterval(30);
     }
 
@@ -621,21 +624,48 @@ FLASHMEM void UI_func_melodic_pattern_editor(uint8_t param) {
 
         LiveSequencer::LiveSeqData* data = liveSeq.getData();
 
-        if (timeSinceOpened >= 1500) {
+
+        if (timeSinceOpened >= 500) {
             static bool wasTouched = false;
             static uint8_t lastProcessedNote = 0;
 
-            // Encoder right: change selected step note value
+            // Right encoder: turn to change note, press to next step
             const EncoderEvents e_right = getEncoderEvents(ENC_R);
             if (e_right.turned) {
                 int newNote = selectedCellNote;
-                if (e_right.dir > 0) newNote++;
-                else if (newNote > 0) newNote--;
-                if (newNote > 127) newNote = 127;
+                if (newNote == 0) {
+                    // Empty cell – turning up goes to C0
+                    if (e_right.dir > 0) newNote = 12;
+                }
+                else {
+                    if (e_right.dir > 0) {
+                        if (newNote < 127) newNote++;
+                    }
+                    else {
+                        if (newNote > 12) {
+                            newNote--;
+                        }
+                        else if (newNote == 12) {
+                            newNote = 0;    // below C0 becomes empty
+                        }
+                    }
+                }
                 if (newNote != selectedCellNote) {
                     selectedCellNote = newNote;
                     setCellNote_melodic(selectedBar, selectedStep, selectedCellNote);
                 }
+            }
+            else if (e_right.pressed) {
+                // Move to next step on short press
+                uint8_t oldBar = selectedBar;
+                uint8_t oldStep = selectedStep;
+                selectedStep = (selectedStep + 1) % STEPS_PER_BAR;
+                selectedCellNote = noteGrid[activeLayer][selectedBar][selectedStep];
+                redrawCell_melodic(oldBar, oldStep, false);
+                redrawCell_melodic(selectedBar, selectedStep, false);
+                drawClearStepButton();
+                // Do not process any other events this loop to avoid conflicts
+                return;
             }
 
             // Encoder left: exit (short press)
@@ -643,6 +673,22 @@ FLASHMEM void UI_func_melodic_pattern_editor(uint8_t param) {
             if (e_left.pressed) {
                 LCDML.FUNC_goBackToMenu();
                 return;
+            }
+
+            // Right encoder short press: move to next step
+            if (e_right.pressed) {
+                uint8_t oldBar = selectedBar;
+                uint8_t oldStep = selectedStep;
+                selectedStep = (selectedStep + 1) % STEPS_PER_BAR;
+                selectedCellNote = noteGrid[activeLayer][selectedBar][selectedStep];
+                redrawCell_melodic(oldBar, oldStep, false);
+                redrawCell_melodic(selectedBar, selectedStep, false);
+                drawClearStepButton();
+            }
+
+            if (data->isRunning != lastRunningState) {
+                lastRunningState = data->isRunning;
+                drawStartStopButton(BTN_START_STOP_X, BTN_Y, data->isRunning);
             }
 
             // Update step highlight while running
@@ -654,20 +700,41 @@ FLASHMEM void UI_func_melodic_pattern_editor(uint8_t param) {
                     uint8_t step = data->patternTimer / stepMs;
                     if (step < STEPS_PER_BAR) {
                         if (bar != currentHighlightedBar || step != currentHighlightedStep) {
+                            // Reset previous highlighted cell to its normal state
                             if (currentHighlightedBar != 0xFF && currentHighlightedStep != 0xFF) {
                                 redrawCell_melodic(currentHighlightedBar, currentHighlightedStep, false);
                             }
+                            // Set new highlighted position
                             currentHighlightedBar = bar;
                             currentHighlightedStep = step;
-                            redrawCell_melodic(currentHighlightedBar, currentHighlightedStep, true);
+                            // Draw the new cell in red (playing note highlight)
+                            uint16_t x = GRID_START_X + step * CELL_W;
+                            uint16_t y = GRID_START_Y + bar * CELL_H;
+                            if (remote_active) display.console = true;
+                            display.fillRect(x, y, CELL_W - 1, CELL_H - 1, RED);
+                            // Overwrite the note name (if any) in black
+                            uint8_t note = noteGrid[activeLayer][bar][step];
+                            if (note != 0) {
+                                std::string name = noteNumberToString(note);
+                                display.setTextColor(COLOR_SYSTEXT);
+                                display.setCursor(x + (name.length() == 2 ? 4 : 1), y + CELL_H / 2 - 4);
+                                display.print(name.c_str());
+                            }
                         }
                     }
                 }
                 else if (currentHighlightedBar != 0xFF) {
+                    // No valid bar – reset highlight
                     redrawCell_melodic(currentHighlightedBar, currentHighlightedStep, false);
                     currentHighlightedBar = 0xFF;
                     currentHighlightedStep = 0xFF;
                 }
+            }
+            else if (currentHighlightedBar != 0xFF) {
+                // Sequencer stopped – clear highlight
+                redrawCell_melodic(currentHighlightedBar, currentHighlightedStep, false);
+                currentHighlightedBar = 0xFF;
+                currentHighlightedStep = 0xFF;
             }
 
             // Touch handling

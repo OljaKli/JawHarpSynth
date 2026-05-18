@@ -4,5 +4,5 @@
 #include <stdint.h>
 
 void UI_func_drum_pattern_editor(uint8_t param);
-
+extern bool pendingFirstStepDraw;
 #endif

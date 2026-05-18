@@ -5552,6 +5552,8 @@ FLASHMEM void dac_unmute(void)
   seq.DAC_mute_state = false;
 }
 
+bool pendingFirstStepDraw;
+
 FLASHMEM void handleStart(void)
 {
 
@@ -5611,10 +5613,18 @@ FLASHMEM void handleStart(void)
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
 
   }
+
+
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
   }
+
+   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drum_pattern_editor))
+   {
+pendingFirstStepDraw = true;
+   }
+
 
 #if defined BUTTON_LEDS && defined MCP_23017
   setled(LED_START, HIGH);

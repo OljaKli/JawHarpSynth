@@ -517,47 +517,100 @@ FLASHMEM void drawCopyButton() {
     }
 }
 
+ static uint8_t lastIndicatorStep = 255;
+ static uint8_t lastDisplayedBar = 255;
+
 FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     LiveSequencer::LiveSeqData* data = getData();
     uint16_t y = GRID_START_Y + NUM_DRUM_SLOTS * CELL_H + 4;
+    static uint8_t lastStep = 255;
+    static uint8_t lastDisplayedBar = 255;
+    static bool lastRunning = false;
 
-    if (forceFullRedraw) {
-        // Redraw all cells in grey
+    bool runningNow = data->isRunning;
+    //bool justStarted = (runningNow && !lastRunning);
+    lastRunning = runningNow;
+
+    // Handle pending first-step draw (set by start button)
+    if (pendingFirstStepDraw && runningNow) {
+        pendingFirstStepDraw = false;
+        
+        for (uint8_t step = 0; step < 2; step++) {
+            uint16_t x = GRID_START_X + step * CELL_W;
+            if (remote_active) display.console = true;
+            display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
+        }
+        // Draw step 0 explicitly
+        uint8_t currentStep = 0;
+        bool isPlayingCurrentBar = (data->currentPattern == (uint32_t)currentBar);
+        uint16_t cursorColor = isPlayingCurrentBar ? RED : GREY1;
+        uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
+        if (remote_active) display.console = true;
+        display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, cursorColor);
+        lastStep = currentStep;
+        lastDisplayedBar = currentBar;
+        return;
+    }
+
+    // Full redraw on force or bar change (but not on justStarted, because we handled it above)
+    if (forceFullRedraw || currentBar != lastDisplayedBar) {
         for (uint8_t step = 0; step < STEPS_PER_BAR; step++) {
             uint16_t x = GRID_START_X + step * CELL_W;
             if (remote_active) display.console = true;
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
         }
-        lastSeqStep = 255; // force update on next step change
+        lastStep = 255;
+        lastDisplayedBar = currentBar;
+        if (!runningNow) return;
     }
 
-    if (!data->isRunning) {
-        // Ensure no red highlight when stopped
-        if (lastSeqStep != 255) {
-            // Clear any previous highlight
-            uint16_t x = GRID_START_X + lastSeqStep * CELL_W;
+    if (!runningNow) {
+        if (lastStep != 255) {
+            uint16_t x = GRID_START_X + lastStep * CELL_W;
             if (remote_active) display.console = true;
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
-            lastSeqStep = 255;
+            lastStep = 255;
         }
         return;
     }
 
     uint8_t currentStep = seq.step % STEPS_PER_BAR;
-    if (currentStep == lastSeqStep && !forceFullRedraw) return;
+    bool wrap = (lastStep == STEPS_PER_BAR - 1 && currentStep == 0);
+    uint8_t barForColor = wrap ? (data->currentPattern + 1) % data->numberOfBars : data->currentPattern;
+    bool isPlayingCurrentBar = (barForColor == (uint32_t)currentBar);
 
-    // Clear previous step (if valid)
-    if (lastSeqStep < STEPS_PER_BAR) {
-        uint16_t xPrev = GRID_START_X + lastSeqStep * CELL_W;
+    // If we are at the very beginning (lastStep == 255) and not handled by pending, draw current step
+    if (lastStep == 255) {
+        uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
+        if (remote_active) display.console = true;
+        display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, isPlayingCurrentBar ? RED : GREY2);
+        lastStep = currentStep;
+        return;
+    }
+
+    if (wrap) {
+        if (lastStep != 255) {
+            uint16_t xPrev = GRID_START_X + lastStep * CELL_W;
+            if (remote_active) display.console = true;
+            display.fillRect(xPrev, y, CELL_W - 1, CELL_H - 1, GREY3);
+        }
+        uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
+        if (remote_active) display.console = true;
+        display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, isPlayingCurrentBar ? RED : GREY2);
+        lastStep = currentStep;
+        return;
+    }
+
+    if (currentStep == lastStep && !forceFullRedraw) return;
+    if (lastStep != 255 && lastStep != currentStep) {
+        uint16_t xPrev = GRID_START_X + lastStep * CELL_W;
         if (remote_active) display.console = true;
         display.fillRect(xPrev, y, CELL_W - 1, CELL_H - 1, GREY3);
     }
-
-    // Draw current step in red
     uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
-    display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, RED);
-
-    lastSeqStep = currentStep;
+    if (remote_active) display.console = true;
+    display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, isPlayingCurrentBar ? RED : GREY2);
+    lastStep = currentStep;
 }
 
 FLASHMEM void redrawCell(uint8_t slot, uint8_t step) {
@@ -601,7 +654,7 @@ FLASHMEM void drawTrackNumber()
 FLASHMEM void drawBarLayer()
 {
     LiveSequencer::LiveSeqData* data = getData();
-    display.setCursor(CHAR_width_small*10, TOP_TEXT_Y);
+    display.setCursor(CHAR_width_small * 10, TOP_TEXT_Y);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
     display.printf("BAR %d/%d LAYER %d", currentBar + 1, data->numberOfBars, activeLayer + 1);
@@ -659,16 +712,17 @@ FLASHMEM void drawGridUI() {
     // Running indicator row (always visible)
     drawRunningIndicator(true);
 
-    if (data->isRunning) {
-        uint32_t now = data->currentPattern * data->patternLengthMs + data->patternTimer;
-        if ((now / data->patternLengthMs) == (uint32_t)currentBar) {
-            uint16_t step = (now % data->patternLengthMs) / getStepMs();
-            if (step < STEPS_PER_BAR) {
-                uint16_t cursorX = GRID_START_X + step * CELL_W;
-                display.drawRect(cursorX, GRID_START_Y, CELL_W, NUM_DRUM_SLOTS * CELL_H, RED);
-            }
-        }
-    }
+    // if (data->isRunning) {
+    //     uint32_t now = data->currentPattern * data->patternLengthMs + data->patternTimer;
+    //     if ((now / data->patternLengthMs) == (uint32_t)currentBar) {
+    //         uint16_t step = (now % data->patternLengthMs) / getStepMs();
+    //         if (step < STEPS_PER_BAR) {
+    //             uint16_t cursorX = GRID_START_X + step * CELL_W;
+    //           // display.drawRect(cursorX, GRID_START_Y, CELL_W, NUM_DRUM_SLOTS * CELL_H, RED);
+    //             display.drawRect(200,1,15,7, RED);
+    //         }
+    //     }
+    // }
 
     drawStartStopButton(BTN_START_STOP_X, BTN_Y, data->isRunning);
     TouchButton::drawButton(BTN_PREV_X, BTN_Y, "< BAR", "", TouchButton::BUTTON_ACTIVE);
@@ -693,7 +747,7 @@ FLASHMEM void redraw() {
 // Touch handling with sliding for velocity
 // ----------------------------------------------------------------------
 FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
-    if (timeSinceOpened < 1500) return;
+    if (timeSinceOpened < 500) return;
     LiveSequencer::LiveSeqData* data = getData();
 
     // Velocity slider – always update if touch is inside slider area
@@ -703,8 +757,30 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
         return;
     }
 
+
+
+    // Grid cells
+    // else if (x >= GRID_START_X && x < GRID_START_X + STEPS_PER_BAR * CELL_W &&
+    //     y >= GRID_START_Y && y < GRID_START_Y + NUM_DRUM_SLOTS * CELL_H) {
+    //     uint8_t step = (x - GRID_START_X) / CELL_W;
+    //     uint8_t slot = (y - GRID_START_Y) / CELL_H;
+    //     if (slot < NUM_DRUM_SLOTS && step < STEPS_PER_BAR) toggleNoteEvent(slot, step);
+    //     return;
+    // }
+
+
+else if (x >= GRID_START_X && x < GRID_START_X + STEPS_PER_BAR * CELL_W &&
+    y >= GRID_START_Y - 2 && y < GRID_START_Y + NUM_DRUM_SLOTS * CELL_H + 4) {
+    uint8_t step = (x - GRID_START_X) / CELL_W;
+    uint8_t slot = (y - GRID_START_Y) / CELL_H;
+    if (slot < NUM_DRUM_SLOTS && step < STEPS_PER_BAR) {
+        toggleNoteEvent(slot, step);
+        return;
+    }
+}
+
     // Bottom buttons
-    if (y >= BTN_Y && y < BTN_Y + BTN_H) {
+    else if (y >= BTN_Y && y < BTN_Y + BTN_H) {
         if (x >= BTN_START_STOP_X && x < BTN_START_STOP_X + BTN_W) {
             if (data->isRunning) liveSeq.stop();
             else liveSeq.start();
@@ -715,20 +791,20 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
             }
             return;
         }
-        if (x >= BTN_PREV_X && x < BTN_PREV_X + BTN_W) {
+        else   if (x >= BTN_PREV_X && x < BTN_PREV_X + BTN_W) {
             if (currentBar > 0) { currentBar--; loadGrid(); redrawGridOnly(); }
             drawBarLayer();
             drawLayerButton();
             return;
         }
-        if (x >= BTN_NEXT_X && x < BTN_NEXT_X + BTN_W) {
+        else   if (x >= BTN_NEXT_X && x < BTN_NEXT_X + BTN_W) {
             if (currentBar < (int8_t)(data->numberOfBars - 1)) { currentBar++; loadGrid(); redrawGridOnly(); }
 
             drawBarLayer();
             drawLayerButton();
             return;
         }
-        if (x >= BTN_LAYER_X && x < BTN_LAYER_X + BTN_W) {
+        else   if (x >= BTN_LAYER_X && x < BTN_LAYER_X + BTN_W) {
             activeLayer = (activeLayer + 1) % 4;
             loadGrid();
             redrawGridOnly();
@@ -737,30 +813,21 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
             drawLayerButton();
             return;
         }
-        if (x >= BTN_COPY_X && x < BTN_COPY_X + BTN_W) {
+        else   if (x >= BTN_COPY_X && x < BTN_COPY_X + BTN_W) {
             if (copyModeActive) pastePattern();
             else copyPattern();
             display.setTextSize(1);
             return;
         }
-        if (x >= BTN_EXIT_X && x < BTN_EXIT_X + BTN_W) {
+        else   if (x >= BTN_EXIT_X && x < BTN_EXIT_X + BTN_W) {
             LCDML.FUNC_goBackToMenu();
             return;
         }
         return;
     }
 
-    // Grid cells
-    if (x >= GRID_START_X && x < GRID_START_X + STEPS_PER_BAR * CELL_W &&
-        y >= GRID_START_Y && y < GRID_START_Y + NUM_DRUM_SLOTS * CELL_H) {
-        uint8_t step = (x - GRID_START_X) / CELL_W;
-        uint8_t slot = (y - GRID_START_Y) / CELL_H;
-        if (slot < NUM_DRUM_SLOTS && step < STEPS_PER_BAR) toggleNoteEvent(slot, step);
-        return;
-    }
-
     // Drum label area (assign drum to slot)
-    if (x >= 0 && x < LABEL_WIDTH && y >= GRID_START_Y && y < GRID_START_Y + NUM_DRUM_SLOTS * CELL_H) {
+    else if (x >= 0 && x < LABEL_WIDTH && y >= GRID_START_Y && y < GRID_START_Y + NUM_DRUM_SLOTS * CELL_H) {
         uint8_t slot = (y - GRID_START_Y) / CELL_H;
         if (slot < NUM_DRUM_SLOTS) {
             selectedSlot = slot;
@@ -774,7 +841,7 @@ FLASHMEM void handleMainTouch(int16_t x, int16_t y) {
 
 FLASHMEM void handleSelectionTouch(int16_t x, int16_t y) {
     if (timeSinceOpened < 1500) return;
-   // uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
+    // uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
 
     if (y >= DISPLAY_HEIGHT - 40 && y < DISPLAY_HEIGHT) {
         uint8_t totalRows = (NUM_DRUMSET_ACTIVE + SELECTION_COLS - 1) / SELECTION_COLS;
