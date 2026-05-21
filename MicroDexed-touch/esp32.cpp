@@ -263,6 +263,65 @@ void sendEditMode(bool editState) {
   sendPacket(CMD_SET_EDIT_MODE, &payload, 1);
 }
 
+void espdisplay::drawPianoRollBackgroundRegion(uint16_t xFrom, uint16_t width, uint8_t height,
+                                                uint8_t lowestNote, uint8_t highestNote,
+                                                uint8_t noteHeight,
+                                                const std::set<uint8_t>& notes) {
+    uint8_t noteCount = highestNote - lowestNote;
+    uint8_t maskBytes = (noteCount + 7) / 8;
+    uint8_t payload[8 + maskBytes];  
+    
+    payload[0] = lowByte(xFrom);
+    payload[1] = highByte(xFrom);
+    payload[2] = lowByte(width);
+    payload[3] = highByte(width);
+    payload[4] = height;               // uint8_t
+    payload[5] = lowestNote;           // uint8_t
+    payload[6] = highestNote;          // uint8_t
+    payload[7] = noteHeight;           // uint8_t
+    
+    uint8_t* mask = payload + 8;
+    memset(mask, 0, maskBytes);
+    
+    if (notes.empty()) {
+        memset(mask, 0xFF, maskBytes);
+    } else {
+        for (uint8_t note : notes) {
+            if (note >= lowestNote && note < highestNote) {
+                uint8_t bit = note - lowestNote;
+                mask[bit >> 3] |= (1 << (bit & 7));
+            }
+        }
+    }
+    
+    sendPacket(CMD_DRAW_PIANO_ROLL_BG_REGION, payload, 8 + maskBytes);
+}
+
+void espdisplay::drawPianoRollKeys(uint8_t rollWidth, uint8_t contentHeight,
+                                   const std::vector<uint8_t>& whiteLinesY,
+                                   uint8_t blackKeyHeight,
+                                   const std::vector<uint8_t>& blackKeysY) {
+    uint8_t numWhite = whiteLinesY.size();
+    uint8_t numBlack = blackKeysY.size();
+    uint16_t payloadSize = 1 + 1 + 1 + numWhite + 1 + 1 + numBlack;
+    uint8_t payload[payloadSize];
+    uint8_t idx = 0;
+
+    payload[idx++] = rollWidth;
+    payload[idx++] = contentHeight;
+    payload[idx++] = numWhite;
+    for (uint8_t y : whiteLinesY) {
+        payload[idx++] = y;
+    }
+    payload[idx++] = numBlack;
+    payload[idx++] = blackKeyHeight;
+    for (uint8_t y : blackKeysY) {
+        payload[idx++] = y;
+    }
+
+    sendPacket(CMD_DRAW_PIANO_ROLL_KEYS, payload, payloadSize);
+}
+
 void espdisplay::drawESPPanBar(uint8_t x, uint8_t y, uint8_t value, uint8_t highlight) {
   uint8_t payload[4];
   payload[0] = x;

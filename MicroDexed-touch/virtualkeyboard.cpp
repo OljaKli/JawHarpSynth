@@ -531,8 +531,6 @@ FLASHMEM void clear_inst_header()
 }
 FLASHMEM void handleTouchVirtualKeyboard()
 {
-  // ---- Abort code for help overlay REMOVED ----
-  // The help functionality no longer exists; no need to clear anything.
 
   touch_check_all_keyboard_buttons();
 

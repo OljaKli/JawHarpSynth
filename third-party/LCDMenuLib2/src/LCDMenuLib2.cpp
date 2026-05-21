@@ -1975,7 +1975,7 @@ FLASHMEM void    LCDMenuLib2::FUNC_setLoopInterval(unsigned long p_t)
 /* ******************************************************************** */
 {
     // debug information
-    DBG_println(LCDML_DBG_function_name_FUNC, F("LCDML.FUNC_setLoopInterval"));
+    //DBG_println(LCDML_DBG_function_name_FUNC, F("LCDML.FUNC_setLoopInterval"));
 
     actMenu_default_time = p_t;
 }

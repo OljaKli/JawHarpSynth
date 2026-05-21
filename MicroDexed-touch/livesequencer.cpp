@@ -967,7 +967,20 @@ FLASHMEM void LiveSequencer::playArp(const midi::MidiType type, const ArpNote ar
   }
 }
 
+void LiveSequencer::notifyLayerGridChanged() {
+    if (ui_liveSeq) {
+        ui_liveSeq->drawUpdates(UI_LiveSequencer::drawLayerButtons);
+    }
+}
+
+void LiveSequencer::notifyLayerButtonsChanged() {
+    if (ui_liveSeq) {
+        ui_liveSeq->drawUpdates(UI_LiveSequencer::drawLayerButtons);
+    }
+}
+
 FLASHMEM void LiveSequencer::initOnce(void) {
+  
   tickTimer.begin([] { TeensyTimerTool::tick(); }, 0.1ms);
   liveTimer.begin([this] { playNextEvent(); });
   arpTimer.begin([this] { playNextArpNote(); });
@@ -1037,11 +1050,13 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
 
   // then add all notes to events and sort
   if (data.pendingEvents.size()) {
+
     for (auto& e : data.pendingEvents) {
       data.eventsList.emplace_back(e);
     }
     data.pendingEvents.clear();
     sortEvents();
+
     const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
 
     if (canIncrementLayer && incrementLayer) {
@@ -1053,8 +1068,10 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
 }
 
 FLASHMEM void LiveSequencer::sortEvents(void) {
+
   std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
   ui_pianoRoll->onEventsChanged();
+
 }
 
 FLASHMEM void LiveSequencer::requestSortEvents(void) {
@@ -1139,9 +1156,17 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       playNextEvent();
     }
 
+// #ifdef ESP_DISPLAY
+//   noInterrupts();
+// #endif
     // then remove all invalidated notes
     data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
     ui_pianoRoll->onEventsChanged();
+
+// #ifdef ESP_DISPLAY
+//   interrupts(); 
+// #endif
+
 
     // for song mode, add song events for this pattern
     if (data.isSongMode) {
@@ -1574,6 +1599,14 @@ FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
   if (data.isRunning == false) {
     addPendingNotes(false); // do not increment layer count
   }
+}
+
+
+FLASHMEM void LiveSequencer::flushPendingEvents() {
+
+   addPendingNotes(false);   // merge pending events without incrementing layer count
+   requestSortEvents();      // ensure the merged events are sorted
+
 }
 
 FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo) {

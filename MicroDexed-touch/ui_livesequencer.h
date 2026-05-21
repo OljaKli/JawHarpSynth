@@ -8,8 +8,6 @@
 #include "livesequencer.h"
 #include "ui_grid_song_editor.h"
 
-
-
 class UI_LiveSequencer {
 public:
   enum GuiUpdates : uint16_t {
@@ -42,6 +40,8 @@ public:
   bool isGridEditorActive() const;
   void notifyLeftEncoderShort();
 
+  TouchButton* patternEditorButton = nullptr;   // unified pattern editor button
+  
 private:
   uint16_t msCount = 0;
   bool isVisible = false;

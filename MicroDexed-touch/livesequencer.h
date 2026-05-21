@@ -11,8 +11,6 @@
 #include <set>
 #include "UI.h"
 
-
-
 typedef void (*SetupFn)(void*);
 class UI_LiveSequencer;
 
@@ -23,8 +21,10 @@ public:
   static constexpr uint8_t LIVESEQUENCER_NUM_TRACKS = 2 * LIVESEQUENCER_TRACKS_PER_SCREEN;
   static constexpr uint8_t LIVESEQUENCER_NUM_LAYERS = 4;
 
-  bool isTrackLayerEmpty(uint8_t track, uint8_t layer);
-
+bool isTrackLayerEmpty(uint8_t track, uint8_t layer);
+void flushPendingEvents(); 
+void notifyLayerGridChanged();
+void notifyLayerButtonsChanged();
 
   enum EventSource : uint8_t {
     EVENT_SONG = 0,
