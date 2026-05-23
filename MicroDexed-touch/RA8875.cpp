@@ -3135,6 +3135,8 @@ void RA8875::fillWindow(uint16_t color)
 
 }
 
+
+
 /**************************************************************************/
 /*!
 	  clearScreen it's different from fillWindow because it doesn't depends

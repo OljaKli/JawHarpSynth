@@ -376,7 +376,6 @@ bool _doubleBufferText;
 	void 		setInternalInt(enum RA8875intlist b);//   BTE,TOUCH,DMA,KEY
 	void 		clearInternalInt(enum RA8875intlist b);// BTE,TOUCH,DMA,KEY
 
-
 	//--------------Text Write -------------------------
 
 
@@ -644,6 +643,8 @@ private:
 #if defined(_RA8875_TXTRNDOPTIMIZER)
 	void 		_charLineRender(bool lineBuffer[], int charW, int16_t x, int16_t y, int16_t currentYposition, uint16_t fcolor);
 #endif
+
+
 
 
 	//convert a 16bit color(565) into 8bit color(332) as requested by RA8875 datasheet
