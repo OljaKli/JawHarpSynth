@@ -34,10 +34,12 @@
 #define SCREENSAVER_MAX_COUNTHUE 359
 
 #include "touchbutton.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "MD_REncoder.h"
 #include "MD_MIDIFile.h"

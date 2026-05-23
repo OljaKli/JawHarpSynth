@@ -140,7 +140,7 @@ extern bool esp_draw;
 //*************************************************************************************************
 //* DISPLAY AND TOUCHSCREEN
 //*************************************************************************************************
-#if !defined CAPACITIVE_TOUCH_DISPLAY && !defined ESP_DISPLAY // TFT with Capacitive Touchscreen (default)
+#if !defined CAPACITIVE_TOUCH_DISPLAY && !defined ESP_DISPLAY && !defined RA_DISPLAY// TFT with Capacitive Touchscreen (default)
 #define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (outdated)
 #endif
 
@@ -309,18 +309,21 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define TFT_RST 24
 #define TFT_SCK 27
 
-#if defined GENERIC_DISPLAY
+#if defined GENERIC_DISPLAY || defined RA_DISPLAY 
 #define TFT_MISO 39
 #endif
 
 #define TFT_MOSI 26
 
-// IRQ valid for both display types:
 #define TFT_TOUCH_IRQ 33
 
 #if defined GENERIC_DISPLAY
 #define TFT_TOUCH_CS 38
 #endif
+
+// #if defined RA_DISPLAY
+// #define WAKE_PIN 38
+// #endif
 
 #define VOICE_SELECTION_MS 60000
 #define BACK_FROM_VOLUME_MS 2000
@@ -1165,9 +1168,6 @@ enum master_mixer_ports
 #ifdef GRANULAR
   MASTER_MIX_CH_GRANULAR,
 #endif
-#ifdef BITCRUSH
-  MASTER_MIX_CH_BITCRUSH,
-#endif
   MASTER_MIX_CH_MAX,
 };
 
@@ -1185,9 +1185,6 @@ enum reverb_mixer_ports
   REVERB_MIX_CH_AUX_DELAY2,
 #ifdef GRANULAR
   REVERB_MIX_CH_GRANULAR,
-#endif
-#ifdef BITCRUSH
-  REVERB_MIX_CH_BITCRUSH,
 #endif
   REVERB_MIX_CH_MAX,
 };

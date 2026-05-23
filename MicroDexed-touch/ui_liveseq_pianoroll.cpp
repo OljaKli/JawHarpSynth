@@ -2,10 +2,12 @@
 #include "UI.h"
 #include "config.h"
 #include "touch.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "LCDMenuLib2.h"
 #include "ui_livesequencer.h"
@@ -15,9 +17,14 @@
 extern LCDMenuLib2 LCDML;
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
+
+extern void checkWebRemote();
+
 extern MD_REncoder ENCODER[NUM_ENCODER];
 
 UI_LiveSeq_PianoRoll* ui_pianoroll;
@@ -189,7 +196,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::applyQuantizationUndo() {
     quantizationUndoState.clear();
 
     // Show undo confirmation
-    display.console = true;
+    checkWebRemote();
     display.setTextSize(1);
     display.setTextColor(GREEN, COLOR_BACKGROUND);
     display.fillRect(GRID.X[2] - 8, CONTENT_HEIGHT - 40, 80, CHAR_height_small, HEADER_BG_COLOR);
@@ -404,7 +411,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllSongNotes(uint32_t gridSize) {
     removeDuplicateNotesInLayer(selectedLayer);
 
     // Show feedback with layer info
-    display.console = true;
+    checkWebRemote();
     display.setTextSize(1);
     display.setTextColor(GREEN, COLOR_BACKGROUND);
     display.fillRect(GRID.X[2] - 8, CONTENT_HEIGHT - 40, 80, CHAR_height_small, HEADER_BG_COLOR);
@@ -585,7 +592,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::quantizeAllPatternNotes(uint32_t gridSize) {
     }
 
     // Show feedback with layer info
-    display.console = true;
+    checkWebRemote();
     display.setTextSize(1);
     display.setTextColor(GREEN, COLOR_BACKGROUND);
     display.fillRect(GRID.X[2] - 8, CONTENT_HEIGHT - 40, 80, CHAR_height_small, HEADER_BG_COLOR);
@@ -694,7 +701,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawBackgroundForNote(uint8_t note, uint16_t
   const uint16_t y = round(noteIndex * view.noteHeight);
   uint16_t bgColor = (note % 2) ? GREY4 : COLOR_BACKGROUND;
 
-  display.console = true;
+  checkWebRemote();
   const uint16_t width = toX - fromX;
   const uint16_t xFrom = std::max(ROLL_WIDTH, fromX);
 
@@ -1089,7 +1096,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
 
       bool isActiveLayer = (l == selectedLayer);
 
-      display.console = true;
+      checkWebRemote();
       if (hasNotes) {
         if (isMuted) {
           display.fillRect(x, y, layerViewSizeX, (HEADER_HEIGHT / 2), COLOR_BACKGROUND);
@@ -1138,7 +1145,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawLayersIndicator(void) {
       //   isActiveLayer = (notePairs.at(selectedNote).noteOn.layer == l);
       // }
 
-      display.console = true;
+      checkWebRemote();
       if (hasNotes) {
         if (isActiveLayer) {
           // Active layer: filled with color
@@ -1306,7 +1313,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNote(LiveSequencer::NotePair note, bool 
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
-  display.console = true;
+  checkWebRemote();
   static constexpr uint16_t layerViewY = CONTENT_HEIGHT + LINE_HEIGHT;
   display.drawRect(ROLL_WIDTH, layerViewY,
     TouchButton::BUTTON_SIZE_X - ROLL_WIDTH,
@@ -1358,9 +1365,9 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawAreaIndicator(void) {
   display.fillRect(x, y, uint16_t(w), h, MIDDLEGREEN);
 
   // EXTENDED: Clear text areas with background color before drawing new text
-  display.console = true;
+  checkWebRemote();
   display.fillRect(GRID.X[1], layerViewY + 2, 80, CHAR_height_small, COLOR_BACKGROUND);
-  display.console = true;
+  checkWebRemote();
   display.fillRect(GRID.X[1], layerViewY + CHAR_height_small + 4, 80, CHAR_height_small, COLOR_BACKGROUND);
 
   // Show bar info
@@ -1490,7 +1497,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
     reloadNotes(true);
 
     // setup function
-    display.console = true;
+    checkWebRemote();
     display.fillScreen(COLOR_BACKGROUND);
     LCDML.FUNC_setLoopInterval(25);
 
@@ -1647,14 +1654,14 @@ FLASHMEM void UI_LiveSeq_PianoRoll::processLCDM(uint8_t param) {
 FLASHMEM void UI_LiveSeq_PianoRoll::drawCursor(void) {
   if (view.cursorPos >= DISPLAY_WIDTH)
     return;
-  display.console = true;
+  checkWebRemote();
   display.drawLine(view.cursorPos, 0, view.cursorPos, CONTENT_HEIGHT - 1, view.cursorColor);
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawStepCursor(void) {
   if (stepCursorPosition >= DISPLAY_WIDTH)
     return;
-  display.console = true;
+  checkWebRemote();
   display.drawLine(stepCursorPosition, 0, stepCursorPosition, CONTENT_HEIGHT - 1, RED);
 }
 
@@ -1940,7 +1947,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawMuteAutomation(void) {
   if (data.activeTrack != SONG_MODE_MUTE_TRACK) return;
 
   display.setTextSize(1);
-  display.console = true;
+  checkWebRemote();
 
   const uint32_t viewStartMs = uint32_t(view.startBar) * uint32_t(data.patternLengthMs);
   const uint32_t viewEndMs = viewStartMs + uint32_t(view.numBars) * uint32_t(data.patternLengthMs);
@@ -1984,7 +1991,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawMuteAutomation(void) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawBarNumbers(void) {
-  display.console = true;
+  checkWebRemote();
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.setTextSize(1);
 
@@ -2031,7 +2038,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawGUI(void) {
     queueDrawNote({ ROLL_WIDTH, DISPLAY_WIDTH, {} }); // force redraw all
 
     // Clear the content area for full redraw
-    // display.console = true;
+    // checkWebRemote();
     // display.fillRect(ROLL_WIDTH, 0, CONTENT_WIDTH, CONTENT_HEIGHT, COLOR_BACKGROUND);
   }
 
@@ -3408,7 +3415,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawEditingNote() {
   }
 
   // Draw the editing note in RED - always draw regardless of regions
-  display.console = true;
+  checkWebRemote();
   if (w > 1) {
     display.fillRect(x, y, w, h, RED);
   }
@@ -3773,7 +3780,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawHeader(uint16_t modeFlags) {
   char s[16] = { "\0" };
 
   if (modeFlags == HEADER_DRAW_ALL) {
-    display.console = true;
+    checkWebRemote();
     // display.fillRect(132, CONTENT_HEIGHT + 4, DISPLAY_WIDTH, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
     display.fillRect(132, CONTENT_HEIGHT + 4, 187, HEADER_HEIGHT - 6, HEADER_BG_COLOR);
   }
@@ -4048,7 +4055,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   const uint16_t numWhiteKeys = view.numOctaves * 7;
   const float keyHeight = CONTENT_HEIGHT / float(numWhiteKeys);
 
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, 0, ROLL_WIDTH, CONTENT_HEIGHT, COLOR_SYSTEXT);
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
   display.setTextSize(1);
@@ -4056,7 +4063,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
   // Draw white key separators - these scale with zoom Y
   for (uint8_t i = 1; i < numWhiteKeys; i++) {
     const uint16_t y = round(i * keyHeight);
-    display.console = true;
+    checkWebRemote();
     display.drawLine(0, y, ROLL_WIDTH, y, COLOR_BACKGROUND);
   }
 
@@ -4070,7 +4077,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawPianoRoll() {
     case 6:  // F#
     case 8:  // G#
     case 10: // A#
-      display.console = true;
+      checkWebRemote();
       display.fillRect(0, y, 12, view.noteHeight, COLOR_BACKGROUND);
       break;
     }
@@ -4089,7 +4096,7 @@ FLASHMEM std::string UI_LiveSeq_PianoRoll::getNoteString(uint8_t note) {
 }
 
 FLASHMEM void UI_LiveSeq_PianoRoll::drawVerticalBars(void) {
-  display.console = true;
+  checkWebRemote();
 
   // Find the combined X range that needs bar updates
   uint16_t minX = DISPLAY_WIDTH;
@@ -4302,7 +4309,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::drawNoteAtPosition(LiveSequencer::NotePair n
     color = layerColors.at(note.noteOn.layer);
   }
 
-  display.console = true;
+  checkWebRemote();
 
   if (x + w > DISPLAY_WIDTH) {
     w = DISPLAY_WIDTH - x;
@@ -4391,7 +4398,7 @@ FLASHMEM bool UI_LiveSeq_PianoRoll::setMode(uint8_t newMode) {
 
     case MODE_EDIT:
       if (data.activeTrack == SONG_MODE_NOTES_TRACK) {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(GRID.X[2], 183, 23, 20, COLOR_BACKGROUND);
       }
 
@@ -4619,7 +4626,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::initGUI(void) {
       isSettingActivated = false;
       selectedLayer = 0; // Reset to layer 0 when switching tracks
 
-      display.console = true;
+      checkWebRemote();
       display.fillRect(ROLL_WIDTH, 0, CONTENT_WIDTH, CONTENT_HEIGHT, COLOR_BACKGROUND);
 
       viewMode = VIEW_ZOOM_X;

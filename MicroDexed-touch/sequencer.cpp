@@ -26,20 +26,24 @@
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
 #include "synth_dexed.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
 
 extern LCDMenuLib2 LCDML;
-extern bool remote_active;
+extern void checkWebRemote();
 extern config_t configuration;
 extern uint8_t drum_midi_channel;
 extern uint8_t slices_midi_channel;
@@ -1067,8 +1071,7 @@ FLASHMEM void print_keyboard_small(int xpos, int ypos, uint8_t octave, uint8_t a
     // draw white keys
     for (uint8_t y = 0; y < 11; y++)
     {
-      if (remote_active)
-        display.console = true;
+     checkWebRemote();
       display.fillRect(xpos, ypos - CHAR_height - (y * 14), 30, 13, COLOR_SYSTEXT); // pianoroll white key
       if (y == 0 || y == 7 || y == 14)
       {
@@ -1082,8 +1085,8 @@ FLASHMEM void print_keyboard_small(int xpos, int ypos, uint8_t octave, uint8_t a
     {
       if (seq.piano[y] == 1)
       {
-        if (remote_active)
-          display.console = true;
+       
+          checkWebRemote();
 
         display.fillRect(xpos, ypos - (y * 8.15) - offset[offcount], 12, 8, COLOR_BACKGROUND); // BLACK key
         offcount++;
@@ -1102,8 +1105,8 @@ FLASHMEM void print_keyboard_small(int xpos, int ypos, uint8_t octave, uint8_t a
   {
     for (uint8_t x = 0; x < to_step; x++)
     {
-      if (remote_active)
-        display.console = true;
+     
+        checkWebRemote();
 
       if (x > 15 - seq.pattern_len_dec)
         display.fillRect(xpos + 36 + x * 10, ypos + 6 - CHAR_height - (y * 8.15), 5, 6, GREY4); // disabled
@@ -1140,8 +1143,8 @@ FLASHMEM void print_single_pattern_pianoroll_in_pattern_editor(int xpos, int ypo
 
   for (from_step = 0; from_step < to_step; from_step++)
   {
-    if (remote_active)
-      display.console = true;
+   
+      checkWebRemote();
     if ((ypos - 10 - (8.15 * notes_display_shift) - (8.15 * (seq.note_data[pattern][from_step] - lowest_note))) > 4 * CHAR_height + 8)
     {
       if (seq.note_data[pattern][from_step] != 0 && seq.note_data[pattern][from_step] != 130)

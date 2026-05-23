@@ -1164,17 +1164,9 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
       playNextEvent();
     }
 
-// #ifdef ESP_DISPLAY
-//   noInterrupts();
-// #endif
     // then remove all invalidated notes
     data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
     ui_pianoRoll->onEventsChanged();
-
-// #ifdef ESP_DISPLAY
-//   interrupts(); 
-// #endif
-
 
     // for song mode, add song events for this pattern
     if (data.isSongMode) {

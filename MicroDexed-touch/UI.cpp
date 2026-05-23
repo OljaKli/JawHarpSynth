@@ -68,8 +68,6 @@
 #include "virtualtypewriter.h"
 #endif
 
-//#include "ui_drum_pattern_editor.h"
-
 using namespace TeensyTimerTool;
 extern bool virtual_typewriter_active;
 
@@ -108,6 +106,8 @@ bool edit_mode_global;
 extern uint8_t APC_MODE;
 extern bool apc_scroll_message;
 #endif
+
+extern void checkWebRemote();
 
 extern LiveSequencer liveSeq;
 extern UI_LiveSequencer* ui_liveSeq;
@@ -164,6 +164,8 @@ uint8_t fade_text = 255;
 bool lastWasCustomSample = false;
 bool drumScreenActive = false;
 
+bool  force_menu_full_redraw = true;
+
 #ifdef MIDI_ACTIVITY_LIGHTS
 uint8_t LED_MIDI_IN = 40;
 uint8_t LED_MIDI_OUT = 36;
@@ -176,6 +178,10 @@ PsramLoader sampleLoader(psram_free_bytes);
 #if defined ESP_DISPLAY
 espdisplay display(0);
 extern void sendVolumeIconsMode(bool);
+#elif defined (RA_DISPLAY)
+
+RA8875 display = RA8875(TFT_CS, 255,TFT_MOSI, TFT_SCK, TFT_MISO );
+// CS RST mosi_pin sclk miso_pin
 #elif defined GENERIC_DISPLAY
 ILI9341_t3n display(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCK, TFT_MISO);
 #else
@@ -241,13 +247,13 @@ extern AudioAnalyzePeak mb_after_r;
 
 extern PeriodicTimer sequencer_timer;
 
-#if defined ESP_DISPLAY
+#ifdef RA_DISPLAY
+GSL1680 touch;
+#elif defined ESP_DISPLAY
 esp_touchscreen touch(0);
 #elif defined GENERIC_DISPLAY
 XPT2046_Touchscreen touch(TFT_TOUCH_CS);
-#endif
-
-#ifdef CAPACITIVE_TOUCH_DISPLAY
+#elif CAPACITIVE_TOUCH_DISPLAY
 Adafruit_FT6206 touch = Adafruit_FT6206();
 #endif
 
@@ -682,7 +688,7 @@ FLASHMEM uint16_t getContentTypeColor(uint8_t contentType) {
 
 FLASHMEM void clear_bottom_half_screen_without_backbutton()
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(270, 88, 50, 35, COLOR_BACKGROUND);
   display.fillRect(0, 127, 320, 35 + 43, COLOR_BACKGROUND);
   display.fillRect(50, 205, 320 - 50, 35, COLOR_BACKGROUND);
@@ -863,7 +869,7 @@ FLASHMEM const char* get_midi_channel_name(uint8_t midi_channel)
 
 FLASHMEM void clear_song_playhead()
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(CHAR_width_small * 5, CHAR_height_small * 8 - 2, 5, 10 * 16, COLOR_BACKGROUND);
 }
 
@@ -1065,15 +1071,9 @@ FLASHMEM void sub_song_print_instruments(uint16_t front, uint16_t back)
   }
 }
 
-FLASHMEM void check_remote()
-{
-  if (remote_active)
-    display.console = true;
-}
-
 FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const char* t2, uint8_t color)
 {
-  check_remote();
+  checkWebRemote();
   if (color == 99) // special case, draw virtual keyboard button (icon)
   {
     display.fillRect(x * CHAR_width_small, y * CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y / 2 - 2, GREY2);
@@ -1087,7 +1087,7 @@ FLASHMEM void draw_button_on_grid(uint8_t x, uint8_t y, const char* t1, const ch
     // draw white keys
     for (uint8_t i = 0; i < 7; i++)
     {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(x * CHAR_width_small + 6 * i, y * CHAR_height_small + 16, 5, 16, COLOR_SYSTEXT); // pianoroll white key
     }
     for (uint8_t i = 0; i < 11; i++)
@@ -1290,7 +1290,7 @@ FLASHMEM void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
   int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
   uint8_t byte = 0;
 
-  display.console = true;
+  checkWebRemote();
   for (int16_t j = 0; j < h; j++, y++)
   {
     for (int16_t i = 0; i < w; i++)
@@ -1312,7 +1312,7 @@ FLASHMEM void drawBitmap(int16_t x, int16_t y, const uint8_t bitmap[],
   int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
   uint8_t byte = 0;
 
-  display.console = true;
+  checkWebRemote();
   for (int16_t j = 0; j < h; j++, y++)
   {
     for (int16_t i = 0; i < w; i++)
@@ -1333,7 +1333,7 @@ FLASHMEM void drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
   int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
   uint8_t byte = 0;
 
-  display.console = true;
+  checkWebRemote();
   for (int16_t j = 0; j < h; j++, y++)
   {
     for (int16_t i = 0; i < w; i++)
@@ -1355,7 +1355,7 @@ FLASHMEM void drawBitmap(int16_t x, int16_t y, uint8_t* bitmap, int16_t w,
   int16_t byteWidth = (w + 7) / 8; // Bitmap scanline pad = whole byte
   uint8_t byte = 0;
 
-  display.console = true;
+  checkWebRemote();
   for (int16_t j = 0; j < h; j++, y++)
   {
     for (int16_t i = 0; i < w; i++)
@@ -1374,7 +1374,7 @@ FLASHMEM void drawScrollbar(uint16_t x, uint16_t y, uint8_t sbNbLines, uint8_t n
   uint8_t n_max = (nbTotalItems >= sbNbLines) ? sbNbLines : nbTotalItems;
   float sbHeight = sbLineHeight * n_max;
   float sbItemSize = sbHeight / nbTotalItems;
-  display.console = true;
+  checkWebRemote();
   if (sbLineHeight > 10)
   {
     // big font
@@ -1644,25 +1644,25 @@ FLASHMEM bool touch_button_back_page() //modern pages with touch back button
 
 FLASHMEM void border1_clear() // upper left
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, CHAR_height, CHAR_width * 19, CHAR_height * display_rows, COLOR_BACKGROUND);
 }
 
 FLASHMEM void border3_clear() // lower left
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, CHAR_height * 5 - 4, CHAR_width * 17, DISPLAY_HEIGHT - CHAR_height * 5 + 3, COLOR_BACKGROUND);
 }
 
 FLASHMEM void border3_large() // lower left+right as one window
 {
-  display.console = true;
+  checkWebRemote();
   display.drawRect(0, CHAR_height * 6 - 4, DISPLAY_WIDTH, DISPLAY_HEIGHT - CHAR_height * 6 + 4, GREY4);
 }
 
 FLASHMEM void border3_large_clear() // lower left+right as one window
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, CHAR_height * 5, DISPLAY_WIDTH, DISPLAY_HEIGHT - CHAR_height * 5, COLOR_BACKGROUND);
 }
 
@@ -1756,7 +1756,7 @@ FLASHMEM void print_song_loop_arrows()
 {
   uint8_t lineheight = 10;
 
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, CHAR_height_small * 8 - 2, 5, lineheight * 16, COLOR_BACKGROUND);
   display.fillRect(3 * CHAR_width_small, CHAR_height_small * 8 - 2, 5, lineheight * 16, COLOR_BACKGROUND);
   for (uint8_t y = 0; y < 16; y++) // print loop arrows
@@ -1814,12 +1814,12 @@ FLASHMEM void edit_song_loop()
     {
       if (y < 15 && y - 1 >= 0 && y + seq.scrollpos - 1 != seq.loop_start && y - 1 == seq.cursor_scroll - 1)
       {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, y * lineheight + CHAR_height_small * 8 - lineheight, 5, 7, COLOR_BACKGROUND);
       }
       if (y < 15 && y + seq.scrollpos + 1 != seq.loop_start && y + 1 == seq.cursor_scroll + 1)
       {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, (y + 1) * lineheight + CHAR_height_small * 8, 5, 7, COLOR_BACKGROUND);
       }
 
@@ -1836,12 +1836,12 @@ FLASHMEM void edit_song_loop()
 
       if (y < 15 && y - 1 >= 0 && y + seq.scrollpos - 1 != seq.loop_end && y - 1 == seq.cursor_scroll - 1)
       {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(3 * CHAR_width_small, y * lineheight + CHAR_height_small * 8 - lineheight, 5, 7, COLOR_BACKGROUND);
       }
       if (y < 15 && y + seq.scrollpos + 1 != seq.loop_end && y + 1 == seq.cursor_scroll + 1)
       {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(3 * CHAR_width_small, (y + 1) * lineheight + CHAR_height_small * 8, 5, 7, COLOR_BACKGROUND);
       }
 
@@ -2142,7 +2142,7 @@ FLASHMEM void empty_chain_warning_text_in_song_page()
     }
     else
     {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(13 * CHAR_width_small, 29 * CHAR_height_small, 113, 7, COLOR_BACKGROUND);
     }
     chain_warning_number_buffer = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
@@ -3037,9 +3037,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if (remote_active) {
-      display.console = true;
-    }
+    checkWebRemote();
     if (wakeScreenFlag || LCDML.BT_checkAny()) {
       // fast wakeup from MIDI noteOn event and touch presses
       resetScreenTimer();
@@ -3155,9 +3153,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
-    if (remote_active) {
-      display.console = true;
-    }
+    checkWebRemote();
     if (wakeScreenFlag || LCDML.BT_checkAny()) {
       // fast wakeup from MIDI noteOn event and touch presses
       resetScreenTimer();
@@ -3543,10 +3539,10 @@ FLASHMEM void print_fast_level_indicator(uint8_t x, uint8_t y, int16_t input_val
   if (limit_min >= 0)
   { // filled bar
     uint8_t split = (5 * CHAR_width_small - 2) * (input_value - limit_min) / (limit_max - limit_min);
-    display.console = true;
+    checkWebRemote();
     if (split < 5 * CHAR_width_small - 2)
       display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + split, 10 * y + 1, 5 * CHAR_width_small - 2 - split, 5, COLOR_BACKGROUND);
-    display.console = true;
+    checkWebRemote();
     if (split > 0)
       display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y + 1, split, 5, RED);
   }
@@ -3621,26 +3617,26 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
 
   if (show_bar)
   {
-    display.console = true;
+    checkWebRemote();
 
     display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 5 * CHAR_width_small, 7, input_value == 0 ? GREY2 : COLOR_SYSTEXT);
 
     if (limit_min >= 0)
     { // filled bar
       uint8_t split = (5 * CHAR_width_small - 2) * (input_value - limit_min) / (limit_max - limit_min);
-      display.console = true;
+      checkWebRemote();
       if (split < 5 * CHAR_width_small - 2)
         display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + split, 10 * y + 1, 5 * CHAR_width_small - 2 - split, 5, COLOR_BACKGROUND);
-      display.console = true;
+      checkWebRemote();
       if (split > 0)
         display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, split, 5, COLOR_PITCHSMP);
     }
     else
     { // pan bar
       uint8_t split = (5 * CHAR_width_small - 2 - 3) * (input_value - limit_min) / (limit_max - limit_min);
-      display.console = true;
+      checkWebRemote();
       display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, 5 * CHAR_width_small - 2, 7 - 2, COLOR_BACKGROUND);
-      display.console = true;
+      checkWebRemote();
       display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + split, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
     }
   }
@@ -3697,9 +3693,9 @@ FLASHMEM void print_small_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint
 #endif
   setModeColor(selected_option);
   _print_panbar_value(input_value);
-  display.console = true;
+  checkWebRemote();
   display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 5 * CHAR_width_small, 7, COLOR_SYSTEXT);
-  display.console = true;
+  checkWebRemote();
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, 5 * CHAR_width_small - 2, 7 - 2, COLOR_BACKGROUND);
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + input_value / 1.60, 10 * y + 1, 3, 5, COLOR_PITCHSMP);
 #if defined(ESP_DISPLAY)
@@ -4579,6 +4575,7 @@ FLASHMEM void lcdml_menu_control(void)
       remote_console_keystate_b = false;
       ts.touch_ui_drawn_in_menu = false;
       ts.keyb_in_menu_activated = false;
+      force_menu_full_redraw = true;
 
       // enable/disable remote display
       remote_active = (remote_MIDI_CC_value == 1 ? true : false);
@@ -5378,6 +5375,10 @@ extern bool disableDirectMIDIinput;
 
 extern void sendGlowClear();
 
+
+// static variables that persist between calls
+  static uint8_t prev_scroll  = 0xFF;
+  static uint8_t prev_cursor  = 0xFF;
 /***********************************************************************
    MENU DISPLAY
  ***********************************************************************/
@@ -5393,6 +5394,9 @@ FLASHMEM void lcdml_menu_clear(void)
 #if defined GLOW
   glow_menu_item = 9999;
 #endif
+ force_menu_full_redraw = true;
+  prev_scroll = 0xFF;      // force scroll change detection
+    prev_cursor = 0xFF;
 }
 
 FLASHMEM void lcdml_menu_display(void)
@@ -5403,23 +5407,19 @@ FLASHMEM void lcdml_menu_display(void)
   sendGlowClear();
 #endif
 
-  // update content
-  // ***************
-  if (LCDML.DISP_checkMenuUpdate())
+  // Run the update logic if the library signals a change OR a full redraw is pending
+  if (LCDML.DISP_checkMenuUpdate() || force_menu_full_redraw)
   {
-    // declaration of some variables
-    // ***************
-
-    // content variable
-    char content_text[_LCDML_DISP_cols]; // save the content text of current menu element
-    // menu element object
+    char content_text[_LCDML_DISP_cols];
     LCDMenuLib2_menu* tmp;
-    // some limit values
-    uint8_t i = LCDML.MENU_getScroll();
-    uint8_t maxi = _LCDML_DISP_rows + i;
-    uint8_t n = 0;
+    uint8_t scroll = LCDML.MENU_getScroll();
+    uint8_t i      = scroll;
+    uint8_t maxi   = _LCDML_DISP_rows + i;
+    uint8_t n      = 0;
+    uint8_t cursor = LCDML.MENU_getCursorPos();
 
-    // check if this element has children
+    bool scrolled = (scroll != prev_scroll);
+
     if ((tmp = LCDML.MENU_getDisplayedObj()) != NULL)
     {
       // Display a header with the parent element name
@@ -5430,14 +5430,16 @@ FLASHMEM void lcdml_menu_display(void)
       {
         // this is displayed when no header is available
        // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
+         force_menu_full_redraw=true;
         x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = 0;
         last_menu_depth = LCDML.MENU_getLayer();
-        display.console = true;
-        display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7, 90, 7, COLOR_BACKGROUND); //clears longest text of submenus when going back
+        checkWebRemote();
+        display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7, 90, 7, COLOR_BACKGROUND);
         display.console = false;
       }
       else if (LCDML.MENU_getLayer() > last_menu_depth)
       {
+        force_menu_full_redraw=true;
         display.setCursor(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7);
         display.setTextColor(RED, COLOR_BACKGROUND);
         display.print(">");
@@ -5453,50 +5455,65 @@ FLASHMEM void lcdml_menu_display(void)
       seq.edit_state = false;
       generic_active_function = 0;
 
-      // loop to display lines
+      // ── Menu lines ──────────────────────────────────────────────
       do
       {
-        // check if a menu element has a condition and if the condition be true
         if (tmp->checkCondition())
         {
-          // check the type off a menu element
           if (tmp->checkType_menu() == true)
           {
-            LCDML_getContent(content_text, tmp->getID());
+            // Repaint line if: forced redraw, scroll changed, or cursor moved
+            bool need_draw = force_menu_full_redraw
+                          || scrolled
+                          || n == cursor
+                          || n == prev_cursor;
 
-            if (n == LCDML.MENU_getCursorPos())
-              display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-            else
-              display.setTextColor(GREY2, COLOR_BACKGROUND);
-            show(n + 1, 0, display_cols - 2, content_text);
-
-
-          }
-          else
-          {
-            if (tmp->checkType_dynParam())
+            if (need_draw)
             {
-              tmp->callback(n);
+              LCDML_getContent(content_text, tmp->getID());
+
+              if (n == cursor)
+                display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+              else
+                display.setTextColor(GREY2, COLOR_BACKGROUND);
+
+              show(n + 1, 0, display_cols - 2, content_text);
             }
           }
-          // increment some values
+          else if (tmp->checkType_dynParam())
+          {
+            // Dynamic parameter callbacks – they should also be forced to paint
+            // when force_menu_full_redraw is true. See note below.
+            tmp->callback(n);
+          }
           i++;
           n++;
         }
-        // try to go to the next sibling and check the number of displayed rows
       } while (((tmp = tmp->getSibling(1)) != NULL) && (i < maxi));
 
-      // clear menu lines if menu content < display lines
-      if (i < _LCDML_DISP_rows)
+      // Clear trailing lines only on a full repaint
+      if ((scrolled || force_menu_full_redraw) && i < _LCDML_DISP_rows)
       {
-        display.console = true;
-        display.fillRect(0, CHAR_height * (i + 1) - 1, CHAR_width * (_LCDML_DISP_cols - 1), CHAR_height * (_LCDML_DISP_rows - i), COLOR_BACKGROUND);
+        checkWebRemote();
+        display.fillRect(0, CHAR_height * (i + 1) - 1,
+                         CHAR_width * (_LCDML_DISP_cols - 1),
+                         CHAR_height * (_LCDML_DISP_rows - i),
+                         COLOR_BACKGROUND);
       }
     }
+
+    prev_scroll = scroll;
+    prev_cursor = cursor;
+    force_menu_full_redraw = false;   // one‑shot: redraw done
   }
+
   if (LCDML.DISP_checkMenuCursorUpdate())
   {
-    drawScrollbar((_LCDML_DISP_cols - 2) * CHAR_width + CHAR_width_small, CHAR_height, 6, LCDML.MENU_getChilds(), LCDML.MENU_getCursorPosAbs(), CHAR_height);
+    drawScrollbar((_LCDML_DISP_cols - 2) * CHAR_width + CHAR_width_small,
+                  CHAR_height, 6,
+                  LCDML.MENU_getChilds(),
+                  LCDML.MENU_getCursorPosAbs(),
+                  CHAR_height);
   }
 }
 
@@ -5934,7 +5951,7 @@ FLASHMEM void drawDrumsSampleWave(bool fullRedraw) {
 
       // to changed
       if (lastToX != toX) {
-        display.console = true;
+        checkWebRemote();
         if (lastToX < toX) {
           DBG_LOG(printf("UPTO >>: draw from %i to %i\n", lastToX, toX));
           drawSampleWaveform(plotX, plotY, plotW, plotH, (int16_t*)slot.drum_data, slot.len, slot.numChannels, lastToX, toX);
@@ -6753,7 +6770,7 @@ FLASHMEM void print_custom_mappings()
 
 FLASHMEM void clear_dexed_instance_icons()
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(14 * CHAR_width - 2, 5, 45, 9, COLOR_BACKGROUND);
 }
 
@@ -7190,20 +7207,16 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 
   if (toX > fromX) {
 
-    // #if defined ESP_DISPLAY
-    //     lastPixelColor = 254;
-    // #endif
-
     DBG_LOG(printf("DRAW from %i to %i\n", fromX, toX));
 
     if ((toX - fromX) > 1) {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(fromX, y, toX - fromX, h, bgColor);
     }
     else {
       // workaround fillRect not working correctly for width = 1
       for (uint16_t xLine = fromX; xLine < toX; xLine++) {
-        display.console = true;
+        checkWebRemote();
         display.drawLine(xLine, y, xLine, y + h, bgColor);
       }
     }
@@ -7251,7 +7264,7 @@ void drawSampleWaveform(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
           const uint16_t yMax = yZero + binMax[ch] * scaleY;
           const uint16_t yMin = yZero + binMin[ch] * scaleY;
 
-          display.console = true;
+          checkWebRemote();
           display.drawLine(xi, yMin, xi, yMax, waveColor); // drawLine() is off a bit to the left          
         }
 
@@ -7696,7 +7709,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
         //set_glow_show_text_no_grid(5 * CHAR_width, 0, 18, basename(drum_config[activeSample].name), 0, 2);
 #endif
 
-        display.console = true;
+        checkWebRemote();
         if (generic_temp_select_menu != 0)
           display.fillRect(240, 0, 80, CHAR_height - 1, COLOR_BACKGROUND);
         else if (seq.edit_state)
@@ -7780,7 +7793,7 @@ FLASHMEM void UI_func_drums(uint8_t param)
       }
       else {
         setCursor_textGrid_small(param->x, param->y);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(120, 130, 138, 8, COLOR_BACKGROUND);
         display.console = false;
       }
@@ -7809,14 +7822,14 @@ FLASHMEM void UI_func_drums(uint8_t param)
       }
     });*/
 
-    display.setTextColor(RED);
+    display.setTextColor(RED,COLOR_BACKGROUND);
     setCursor_textGrid_small(20, 16);
     display.print("GLOBAL");
 
     // Voice group assignment per drum sample (0 = shared, 1-15 = groups)
     // Header in red above the value editor
     setCursor_textGrid_small(20, 14);
-    display.setTextColor(RED);
+    display.setTextColor(RED,COLOR_BACKGROUND);
     display.print("VOICE GROUP");
     ui.setCursor(20, 15);
 
@@ -8107,10 +8120,10 @@ FLASHMEM void drawNoiseMakerWaveform(bool slot_or_temp) {
     if (drum_config[targetSlot].drum_data == nullptr && drum_config[targetSlot].len == 0) {
       // Draw empty waveform area
       if (remote_active)
-        display.console = true;
+        checkWebRemote();
       display.fillRect(plotX, plotY, plotW, plotH, COLOR_BACKGROUND);
       if (remote_active)
-        display.console = true;
+        checkWebRemote();
       display.drawRect(plotX, plotY, plotW, plotH, GREY3);
 
       // Display "No data" message
@@ -8279,13 +8292,13 @@ FLASHMEM void print_nm_style()
 // ===================== UI parameter builders =============================
 FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
   // Clear parameter area but preserve header and controls
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, 70, 270, 130, COLOR_BACKGROUND);
 
   auto header = [](int x, int y, const char* t) {
     setCursor_textGrid_small(x, y);
     display.setTextSize(1);
-    display.setTextColor(RED);
+    display.setTextColor(RED,COLOR_BACKGROUND);
     display.print(t);
     };
 
@@ -8295,7 +8308,6 @@ FLASHMEM void addNoiseMakerParameterEditors(NoiseMakerParams& p) {
 
   header(0, 8, "GLOBAL REVERB");
   ui.setCursor(0, 9);
-
 
   addAutoUpdateParameterEditor_uint8_t("ROOM SIZE", 0, 100, &p.reverb_room_size);
   addAutoUpdateParameterEditor_uint8_t("DAMPING", 0, 100, &p.reverb_damping);
@@ -9041,7 +9053,7 @@ FLASHMEM void UI_func_seq_settings(uint8_t param)
       display.print(F("SEQ. WILL DEPEND ON THE EXTERNAL DEVICE TO WORK "));
     }
     else {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(4, 12 * CHAR_height - 4, 300, 19, COLOR_BACKGROUND);
     }
   }
@@ -9135,8 +9147,7 @@ FLASHMEM void seq_printAllVelocitySteps()
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
-    if (remote_active)
-      display.console = true;
+    checkWebRemote();
     display.fillRect(0, 2 * CHAR_height, 17 * CHAR_width, 17, COLOR_BACKGROUND);
   }
 
@@ -9152,8 +9163,7 @@ FLASHMEM void seq_printAllVelocitySteps()
           // display.drawLine(0 + i * CHAR_width + 3, CHAR_height * 3 - 3, 0 + i * CHAR_width + 3, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][i] / 10), GREY1);
           // display.drawLine(0 + i * CHAR_width + 4, CHAR_height * 3 - 3, 0 + i * CHAR_width + 4, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][i] / 10), GREY1);
           // display.drawLine(0 + i * CHAR_width + 5, CHAR_height * 3 - 3, 0 + i * CHAR_width + 5, CHAR_height * 3 - 3 - (seq.vel[seq.active_pattern][i] / 10), GREY1);
-          if (remote_active)
-            display.console = true;
+          checkWebRemote();
           display.fillRect(
             i * CHAR_width + 3,                      // x
             CHAR_height * 3 - 3 - barHeight,        // y
@@ -9203,7 +9213,7 @@ FLASHMEM void seq_printAllVelocitySteps()
 
 FLASHMEM void seq_print_single_velocity_step(uint8_t step, int color)
 {
-  check_remote();
+  checkWebRemote();
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
 
@@ -9217,7 +9227,7 @@ FLASHMEM void seq_print_single_velocity_step(uint8_t step, int color)
       int16_t barHeight = seq.vel[seq.active_pattern][step] / 10;
       if (barHeight > 0)   // avoid drawing zero‑height bars
       {
-        check_remote();
+        checkWebRemote();
         display.fillRect(step * CHAR_width + 3,                     // x
           CHAR_height * 3 - 3 - barHeight,          // y (top of bar)
           3,                                         // width
@@ -9390,7 +9400,7 @@ FLASHMEM void print_updated_slices_text()
   }
   else  //is unsliced 
   {
-    display.console = true;
+    checkWebRemote();
     display.fillRect(155, 30, 156, 38, COLOR_BACKGROUND);
     display.console = false;
   }
@@ -9473,7 +9483,7 @@ FLASHMEM void draw_waveform_slice_editor(uint8_t slice)
 
         drawSampleWaveform(xCoord, yCoord, w, h, (int16_t*)sample->drum_data, sample->len, sample->numChannels, from, to, slice_col, GREY3);
 
-        display.console = true;
+        checkWebRemote();
         display.fillRect(xCoord - 2, 164, 2, 7, GREY3);
         display.console = false;
         display.setCursor(xCoord + 1, 164);
@@ -9502,7 +9512,7 @@ FLASHMEM void draw_waveform_slice_editor(uint8_t slice)
     }
     else // empty sample
     {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(0, 72, DISPLAY_WIDTH, 100, GREY3);
       display.console = false;
       display.setCursor(118, 120);
@@ -9755,7 +9765,7 @@ FLASHMEM void UI_func_slice_editor(uint8_t param)
           if (temp_int > 7) {
             temp_int = 7;
           }
-          display.console = true;
+          checkWebRemote();
           display.fillRect(155, 30, 156, 38, COLOR_BACKGROUND);
           display.console = false;
         }
@@ -9853,7 +9863,7 @@ FLASHMEM void UI_func_slice_editor(uint8_t param)
       if (strlen(msz[fm.sample_source - 2][temp_int].filename) < 2)
       {
         show_smallfont_noGrid(CHAR_height_small + 2, CHAR_width_small * 14, 16, "EMPTY  ");
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, 72, DISPLAY_WIDTH, 100, GREY3);
         display.console = false;
       }
@@ -12410,7 +12420,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 FLASHMEM void UI_toplineInfoText(uint8_t s)
 {
   // s=size 1/2 lines
-  check_remote();
+  checkWebRemote();
   if (s == 2)
     display.fillRect(0, 0, DISPLAY_WIDTH, CHAR_height_small * 2 + 3, DX_DARKCYAN);
   else if (s == 1)
@@ -16562,7 +16572,7 @@ FLASHMEM void drawSoloButton(int x, int y, bool is_soloed) {
 // ===================== UI parameter builders =============================
 FLASHMEM void addMultiBandParameterEditors(MultiBandCompressor_UI_t& p) {
   // Clear parameter area but preserve header and controls
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, 70, 270, 130, COLOR_BACKGROUND);
 
   auto header = [](int x, int y, const char* t) {
@@ -17251,7 +17261,7 @@ FLASHMEM void print_OK()
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   display.print(F("OK."));
   print_empty_spaces(24, true);
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, CHAR_height * 3, 310, 4, COLOR_BACKGROUND);
 }
 
@@ -17855,7 +17865,7 @@ FLASHMEM void  _print_arranger_values()
   }
   setModeColor(8);
   print_arr_split_range(22, 10);
-  display.console = true;
+  checkWebRemote();
   if (seq.arr_split_note != 0)
   {
     display.fillRect(CHAR_width_small, 110, seq.arr_split_note * 3.55, 4, DARKGREEN);
@@ -18112,7 +18122,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
     }
 
     // clear the file-list area for this pane so no ghost entries remain
-    display.console = true;
+    checkWebRemote();
     display.fillRect(CHAR_width_small + xoffset * CHAR_width_small,
       5 * 11 - 1,
       CHAR_width_small * 26 - 6,
@@ -18163,7 +18173,7 @@ FLASHMEM void sd_printDirectory(bool forceReload)
       if (rows_drawn == 0) fm.sd_cap_rows = 0;
       else fm.sd_cap_rows = rows_drawn - 1;
 
-      display.console = true;
+      checkWebRemote();
       display.fillRect(CHAR_width_small + xoffset * CHAR_width_small, f * 11 + 5 * 11 - 1, CHAR_width_small * 26 - 6, (11 - f) * 11, COLOR_BACKGROUND);
       break;
     }
@@ -18294,7 +18304,7 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
 {
   uint8_t offset[5] = { 1, 2, 2, 4, 6 }; //+ is the offset to left
   int offcount = 0;
-  display.console = true;
+  checkWebRemote();
   // draw white keys
   for (uint8_t i = 0; i < 7; i++)
   {
@@ -18448,7 +18458,7 @@ FLASHMEM void sub_MultiSample_setColor(uint8_t row, uint8_t column) {
 
 FLASHMEM void print_multisampler_panbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
 {
-  display.console = true;
+  checkWebRemote();
 
   if (selected_option == generic_temp_select_menu - 3 && seq.selected_track == 5 && seq.edit_state)
     display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 3 * CHAR_width_small + 1, 7, RED);
@@ -18457,9 +18467,9 @@ FLASHMEM void print_multisampler_panbar(uint8_t x, uint8_t y, uint8_t input_valu
   else
     display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 3 * CHAR_width_small + 1, 7, GREY2);
 
-  display.console = true;
+  checkWebRemote();
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, 3 * CHAR_width_small - 1, 7 - 2, COLOR_BACKGROUND);
-  display.console = true;
+  checkWebRemote();
   if (input_value == 20)
     display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + input_value / 2.83, 10 * y + 1, 3, 5, COLOR_SYSTEXT);
   else
@@ -18469,7 +18479,7 @@ FLASHMEM void print_multisampler_panbar(uint8_t x, uint8_t y, uint8_t input_valu
 
 FLASHMEM void print_multisampler_tunebar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option)
 {
-  display.console = true;
+  checkWebRemote();
 
   if (selected_option == generic_temp_select_menu - 3 && seq.selected_track == 7 && seq.edit_state)
     display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 3 * CHAR_width_small + 1, 7, RED);
@@ -18478,9 +18488,9 @@ FLASHMEM void print_multisampler_tunebar(uint8_t x, uint8_t y, uint8_t input_val
   else
     display.drawRect(CHAR_width_small * x + 4 * CHAR_width_small, 10 * y, 3 * CHAR_width_small + 1, 7, GREY2);
 
-  display.console = true;
+  checkWebRemote();
   display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1, 10 * y + 1, 3 * CHAR_width_small - 1, 7 - 2, COLOR_BACKGROUND);
-  display.console = true;
+  checkWebRemote();
   if (input_value == 100)
     display.fillRect(CHAR_width_small * x + 4 * CHAR_width_small + 1 + input_value / 14, 10 * y + 1, 3, 5, COLOR_SYSTEXT);
   else
@@ -18555,7 +18565,7 @@ FLASHMEM void print_msp_zone_text(uint8_t zone, bool fullrefresh_values) {
     display.write(24);
 
     if (offset_x < 4) {
-      display.console = 1;
+      checkWebRemote();
       if (seq.edit_state && seq.selected_track == 3)
         display.fillRect(display.getCursorX(), display.getCursorY(), 4 - offset_x, 8, RED);
       else
@@ -18624,7 +18634,7 @@ FLASHMEM void print_msp_keyboard_zone(uint8_t zone) {
   // Don't draw if zone has no range
   if (msz[seq.active_multisample][zone].low == 0 &&
     msz[seq.active_multisample][zone].high == 0) {
-    display.console = true;
+    checkWebRemote();
     display.fillRect(1, y_offset + zone * zone_height,
       DISPLAY_WIDTH - 2, zone_height, COLOR_BACKGROUND);
     return;
@@ -18639,13 +18649,13 @@ FLASHMEM void print_msp_keyboard_zone(uint8_t zone) {
   uint8_t zone_y = y_offset + zone * zone_height;
 
   // Left background
-  display.console = true;
+  checkWebRemote();
   display.fillRect(1, zone_y,
     2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5) - 1,
     zone_height, COLOR_BACKGROUND);
 
   // Zone range
-  display.console = true;
+  checkWebRemote();
   if (zone == generic_temp_select_menu - 3)
     display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].low * 3.5 - (24 * 3.5),
       zone_y,
@@ -18657,14 +18667,14 @@ FLASHMEM void print_msp_keyboard_zone(uint8_t zone) {
       (msz[seq.active_multisample][zone].high - msz[seq.active_multisample][zone].low) * 3.5 + 2.5 + 1,
       zone_height, GREY3);
 
-  display.console = true;
+  checkWebRemote();
   // Right background
   display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].high * 3.5 - (24 * 3.5) + 3.5 + 1,
     zone_y,
     DISPLAY_WIDTH - (msz[seq.active_multisample][zone].high * 3.5) + (18 * 3.5),
     zone_height, COLOR_BACKGROUND);
 
-  display.console = true;
+  checkWebRemote();
   // Root note marker
   if (zone == generic_temp_select_menu - 3)
     display.fillRect(2 * CHAR_width_small + msz[seq.active_multisample][zone].rootnote * 3.5 - (24 * 3.5) + 1,
@@ -19503,7 +19513,7 @@ FLASHMEM void previewWavSliceEditor() {
 
 FLASHMEM void file_manager_clear_text_line()
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(2, CHAR_height_small * 23 + 5, (53 * CHAR_width_small) + 4, 8, COLOR_BACKGROUND);
 }
 
@@ -20737,32 +20747,34 @@ FLASHMEM void UI_func_sd_content_not_found(uint8_t param)
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
     display.print(F(":_("));
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    setCursor_textGrid_small(2, 9);
+    setCursor_textGrid_small(2, 8);
     display.print(F("HAVE YOU COPIED THE SD CONTENT TO YOUR SD CARD ? "));
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-    setCursor_textGrid_small(2, 11);
+    setCursor_textGrid_small(2, 10);
     display.print(F("Please copy all Files/Directories from:"));
-    setCursor_textGrid_small(2, 12);
+    setCursor_textGrid_small(2, 11);
     display.print(F("/addon/SD/"));
-    setCursor_textGrid_small(2, 13);
+    setCursor_textGrid_small(2, 12);
     display.print(F("to the root of your SD Card (FAT32) and"));
-    setCursor_textGrid_small(2, 14);
+    setCursor_textGrid_small(2, 13);
     display.print(F("insert the card in SD Slot of the Teensy 4.1"));
-    setCursor_textGrid_small(2, 16);
+    setCursor_textGrid_small(2, 15);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.print(F("PLEASE ALSO CHECK:"));
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
-    setCursor_textGrid_small(2, 18);
+    setCursor_textGrid_small(2, 17);
     display.print(F("codeberg.org/positionhigh/MicroDexed-touch/releases"));
-    setCursor_textGrid_small(2, 19);
+    setCursor_textGrid_small(2, 18);
     display.setTextColor(GREY1, COLOR_BACKGROUND);
     display.print(F("and the FAQ for further information"));
-    setCursor_textGrid_small(2, 21);
+    setCursor_textGrid_small(2, 19);
     display.setTextColor(GREY1, COLOR_BACKGROUND);
     display.print(F("DISCORD CHAT: "));
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.print(F("https://discord.gg/XCYk5P8GzF"));
-    helptext_l(back_text);
+   
+registerTouchHandler(handle_touchscreen_sd_content_not_found);
+TouchButton::drawButton(GRID.X[0], GRID.Y[5], "GO", "MAIN", TouchButton::BUTTON_NORMAL);
   }
   if (LCDML.FUNC_loop())
   {
@@ -20777,6 +20789,7 @@ FLASHMEM void UI_func_sd_content_not_found(uint8_t param)
   // ****** STABLE END *********
   if (LCDML.FUNC_close())
   {
+    unregisterTouchHandler();
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
   }
@@ -21027,8 +21040,8 @@ FLASHMEM void UI_func_midi_channels(uint8_t param)
     }
     else
     {
-      if (remote_active)
-        display.console = true;
+     
+        checkWebRemote();
       display.fillRect(7 * CHAR_width_small + 3, 25 * CHAR_height_small + 4, 231, 34, COLOR_BACKGROUND);
       if (remote_active)
         display.console = false;
@@ -21137,7 +21150,7 @@ FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t valu
   red = bitRead(value, 0);
   green = bitRead(value, 1);
   blue = bitRead(value, 2);
-  display.console = true;
+  checkWebRemote();
   display.fillRect(280, 10 * (line), 16, 8, RGB24toRGB565(red * 254, green * 254, blue * 254));
   display.console = false;
 
@@ -21551,9 +21564,12 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
 FLASHMEM void _setup_rotation_and_encoders(bool init)
 {
+  #ifndef RA_DISPLAY
   display.setRotation(configuration.sys.display_rotation);
+
 #if defined GENERIC_DISPLAY
   touch.setRotation(configuration.sys.touch_rotation);
+#endif
 #endif
 
   ENCODER[ENC_L].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
@@ -22450,7 +22466,7 @@ FLASHMEM void print_voice_settings_in_dexed_voice_select(bool fullrefresh_text, 
       setCursor_textGrid_small(2, 17);
       display.print(F("REVERB"));
 
-      display.console = true;
+      checkWebRemote();
       display.drawLine(1, CHAR_height * 5 - 2, DISPLAY_WIDTH - 2, CHAR_height * 5 - 2, GREY4);
       display.drawLine(CHAR_width * 18, 1, CHAR_width * 18, CHAR_height * 5 - 2, GREY4);
     }
@@ -22568,7 +22584,7 @@ FLASHMEM void UI_update_instance_icons()
 
   for (uint8_t i = 0; i < NUM_DEXED; i++)
   {
-    display.console = true;
+    checkWebRemote();
     if (i == selected_instance_id)
       display.fillRect((13 + i) * CHAR_width + 10, 5, 9, 9, COLOR_SYSTEXT);
     else
@@ -22614,7 +22630,7 @@ FLASHMEM void print_voice_select_default_help()
   // Don't show help messages in category mode
   if (category_mode_active) {
     // Clear the help text area
-    // display.console = true;
+    // checkWebRemote();
     // display.fillRect(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2, DISPLAY_WIDTH, CHAR_height_small * 2 + 2, COLOR_BACKGROUND);
 
     return;
@@ -22893,7 +22909,6 @@ FLASHMEM void UI_func_set_voice_name(uint8_t param)
   }
 }
 
-
 FLASHMEM void  print_dexed_bank_and_voice() {
   display.setTextSize(2);
   display.setTextColor(GREY2, COLOR_BACKGROUND);
@@ -22923,9 +22938,9 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     sendEditMode(false);
 #endif
     registerTouchHandler(handle_touchscreen_voice_select);
-    registerScope(217, 40, 50, 48);
     dexed_onscreen_algo = 88;
     display.fillScreen(COLOR_BACKGROUND);
+     registerScope(217, 40, 50, 48);
     ts.fav_buttton_state = 0;
     seq.cycle_touch_element = 0;
 
@@ -23168,7 +23183,8 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       sendEditMode(false);
 #endif
 
-    display.fillScreen(COLOR_BACKGROUND);
+checkWebRemote();
+    display.fillScreen(COLOR_BACKGROUND);   
     encoderDir[ENC_R].reset();
     dexed_live_mod.active_button = 0;
   }
@@ -23601,7 +23617,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     clear_bottom_half_screen_without_backbutton();
-    display.console = true;
+    checkWebRemote();
     display.fillRect(CHAR_width * 18, 0, 9 * CHAR_width, CHAR_height * 5, COLOR_BACKGROUND);
 
     encoderDir[ENC_R].reset();
@@ -23674,7 +23690,7 @@ FLASHMEM void UI_func_save_voice(uint8_t param)
         show(2, 5, 10, g_bank_name[selected_instance_id]);
         show(2, 3, 2, " [");
         show(2, 15, 3, "]  ");
-        display.console = true;
+        checkWebRemote();
         display.fillRect(CHAR_width * 1, CHAR_height * 3, 20 * CHAR_width, CHAR_height * 1, COLOR_BACKGROUND);
         helptext_r(F("< > SELECT DESTINATION BANK"));
         display.setTextSize(2);
@@ -24698,7 +24714,7 @@ FLASHMEM void display_bar_float(const char* title, float value, float factor, in
 
   // Bar
   // if (vi == 0)
-  display.console = true;
+  checkWebRemote();
   if (value == 0)
   {
     display.fillRect(CHAR_width, 2 * CHAR_height, 12 * CHAR_width, CHAR_height - 2, COLOR_BACKGROUND);
@@ -24740,7 +24756,7 @@ FLASHMEM void display_meter_float(const char* title, float value, float factor, 
     // Title
     display.setCursor(CHAR_width, CHAR_height);
     display.print(title);
-    display.console = true;
+    checkWebRemote();
     display.drawRect(CHAR_width, 2 * CHAR_height + 2, CHAR_width * 11 + 1, CHAR_height - 5, GREY1);
   }
 
@@ -24752,7 +24768,7 @@ FLASHMEM void display_meter_float(const char* title, float value, float factor, 
   display.print((value + offset) * factor);
 
   // new gauge
-  display.console = true;
+  checkWebRemote();
   display.fillRect(CHAR_width + 1, 2 * CHAR_height + 4, v + 2, 8, COLOR_BACKGROUND);
   display.fillRect(CHAR_width + v + 5, 2 * CHAR_height + 4, CHAR_width * 10 + 7 - v, 8, COLOR_BACKGROUND);
   display.fillRect(CHAR_width + v + 1, 2 * CHAR_height + 4, 4, 8, COLOR_SYSTEXT);
@@ -25102,7 +25118,7 @@ FLASHMEM static inline uint16_t _smf_line_y(uint8_t line) {
 }
 
 FLASHMEM static void smf_ui_clear_channel(uint8_t ch) {
-  display.console = true;
+  checkWebRemote();
   smf_last_noteon_note[ch] = 255;
   // Draw the continuous GREY3 topbar ONCE (avoid per-channel fragmented blocks)
   if (ch == 0) {
@@ -25155,7 +25171,7 @@ FLASHMEM static void smf_ui_redraw_cascade(uint8_t ch) {
   for (uint8_t r = 0; r < SMF_CASCADE_ROWS; r++) {
     const uint8_t line = SMF_CASCADE_TOPLINE + 1 + r;
 
-    display.console = true;
+    checkWebRemote();
     display.fillRect(_smf_col_x(ch),
       _smf_line_y(line),
       SMF_COL_W,
@@ -26257,7 +26273,7 @@ FLASHMEM void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instan
   b = constrain(b, 0, MAX_BANKS - 1);
   v = constrain(v, 0, MAX_VOICES - 1);
   char tmp[CONFIG_FILENAME_LEN];
-  display.console = true;
+  checkWebRemote();
   if (sd_card_internal > 0) {
     display.setTextSize(1);
     sprintf(tmp, "/%s/%d/%s/%d/%d.fav", DEXED_CONFIG_PATH, p, FAV_CONFIG_PATH, b, v);
@@ -26562,7 +26578,7 @@ FLASHMEM void splash_draw_header()
 }
 FLASHMEM void splash_draw_D()
 {
-  check_remote();
+  checkWebRemote();
 
   display.fillRect(3, 34, 89, 2, COLOR_PITCHSMP);
   display.fillRect(3, 39, 97, 2, COLOR_PITCHSMP);
@@ -26600,7 +26616,7 @@ FLASHMEM void splash_draw_X(uint8_t c)
 {
   uint16_t colors[2] = { COLOR_PITCHSMP, COLOR_SYSTEXT };
 
-  check_remote();
+  checkWebRemote();
   display.fillRect(107, 34, 27, 2, colors[c]);
   display.fillRect(186, 34, 27, 2, colors[c]);
   display.fillRect(112, 39, 27, 2, colors[c]);
@@ -26636,7 +26652,7 @@ FLASHMEM void splash_draw_X(uint8_t c)
 
 FLASHMEM void splash_draw_reverseD()
 {
-  check_remote();
+  checkWebRemote();
   display.fillRect(227, 34, 89, 2, COLOR_PITCHSMP);
   display.fillRect(220, 39, 96, 2, COLOR_PITCHSMP);
   display.fillRect(214, 44, 102, 2, COLOR_PITCHSMP);
@@ -26698,7 +26714,7 @@ FLASHMEM void splash_screen1()
 //   uint16_t color;
 
 //   if (remote_active) {
-//     display.console = true;
+//     checkWebRemote();
 //   }
 
 //   for (uint8_t y = incrementY; y < 73; y += incrementY) {
@@ -26749,7 +26765,7 @@ FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
   unsigned char splash[23360];
   RLE_Uncompress(splash_image, splash, sizeof(splash_image));
 
-  if (remote_active) display.console = true;
+  checkWebRemote();
 
   for (uint8_t y = incrementY; y < 73; y += incrementY)
   {
@@ -26827,7 +26843,7 @@ FLASHMEM void displayOp(char id, int _gridX, int _gridY, char link, char fb)
   y += 5 + UI_FM_offset_y;
 
   // Draw OP
-  display.console = true;
+  checkWebRemote();
   display.fillRect(x, y, 13, 11, _gridY == 3 ? MIDDLEGREEN : DX_DARKCYAN);
   display.setTextSize(1);
   if (opOn)
@@ -26844,7 +26860,7 @@ FLASHMEM void displayOp(char id, int _gridX, int _gridY, char link, char fb)
   // Draw lines
   const uint16_t color = opOn ? GREY2 : RED;
 
-  display.console = true;
+  checkWebRemote();
   switch (link)
   {
   case 0: // LINE DOWN
@@ -26918,8 +26934,8 @@ FLASHMEM void UI_draw_FM_algorithm(uint8_t algo, uint8_t x, uint8_t y)
 {
   UI_FM_offset_x = x;
   UI_FM_offset_y = y;
-  display.console = true;
 
+  checkWebRemote();
   display.fillRect(x + 75, y, 50, 22, COLOR_BACKGROUND);
   display.fillRect(x, y + 22, 150, 70, COLOR_BACKGROUND);
 
@@ -27194,7 +27210,7 @@ FLASHMEM void UI_draw_FM_algorithm(uint8_t algo, uint8_t x, uint8_t y)
 FLASHMEM void _draw_volmeter(int x, int y, uint8_t meter, float height)
 {
   // draw bar
-  display.console = true;
+  checkWebRemote();
   if (height > ts.displayed_peak[meter])
   {
     // draw a rainbow gradient rectangle, but only up to the old displayed_peak
@@ -27503,7 +27519,7 @@ FLASHMEM void drawGranularWaveform(bool fullRedraw) {
       }
     }
     // Draw new ticks
-    check_remote();
+    checkWebRemote();
     display.fillRect(plotX, plotY + plotH + 4, plotW - 1, 4, GREY3);
     for (uint8_t i = 0; i < numTicks; i++) {
       uint16_t tickX = plotX + (i * plotW) / numTicks;

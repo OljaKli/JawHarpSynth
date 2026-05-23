@@ -6,24 +6,31 @@
 
 #include "touch.h"
 #include "LCDMenuLib2.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "drums.h"
 
+extern void checkWebRemote();
 
 static constexpr float KEY_HEIGHT_WHITE = 74;
 static constexpr float KEY_LABEL_OFFSET = 9;
 static constexpr float KEY_HEIGHT_BLACK = 34;
 
 extern LCDMenuLib2 LCDML;
+
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
+
 extern ts_t ts;
 extern sequencer_t seq;
 extern uint8_t selected_instance_id; // dexed
@@ -43,6 +50,7 @@ void printDrumPad(uint8_t padIndex, TouchButton::Color color);
 void virtual_keyboard_print_current_instrument(bool drawName = true);
 void print_drumpads();
 void touch_check_all_keyboard_buttons();
+void print_octave_label(void);
 
 bool dark_keyboard;
 
@@ -124,8 +132,6 @@ static void calculateKeyboardLayout(KeyboardLayout& layout) {
   }
 }
 
-
-
 FLASHMEM void draw_keyboard_control_buttons(void)
 {
   const uint8_t col1 = 2;   // Dark/Bright
@@ -144,7 +150,7 @@ FLASHMEM void draw_keyboard_control_buttons(void)
   uint16_t textColor = GREY1;
 
   // ── Left button: Dark / Bright ──────────────────────────────
-  display.console = true;
+  checkWebRemote();
   display.fillRect(btnX1, yFill, btnW, halfH, fillColor);
   display.console = false;
 
@@ -161,7 +167,7 @@ FLASHMEM void draw_keyboard_control_buttons(void)
   display.setTextSize(2);
 
   // ── Right button: Keysize ───────────────────────────────────
-  display.console = true;
+  checkWebRemote();
   display.fillRect(btnX2, yFill, btnW, halfH, fillColor);
   display.console = false;
 
@@ -176,11 +182,12 @@ FLASHMEM void draw_keyboard_control_buttons(void)
   display.setCursor(textX, textY);
   display.print(sizeLabel);
 
+print_octave_label();
 }
 
 
 FLASHMEM void print_octave_label(void)
-{
+{  
   // Position right of the instrument name, same line
   const int x = 32 * CHAR_width_small + 3;
   const int y = 16 * CHAR_height_small + 4;          // line 16
@@ -209,7 +216,8 @@ FLASHMEM void print_octaves_on_keyboard()
         int labelX = layout.whiteX[i] + (layout.whiteW - labelWidth) / 2;
         display.setCursor(labelX, VIRT_KEYB_YPOS + 57.75);
         display.print("C");
-        display.print(ts.virtual_keyboard_octave + layout.whiteNote[i] / 12);
+        uint8_t octave = ts.virtual_keyboard_octave + layout.whiteNote[i] / 12;
+        display.print(octave);
       }
     }
   }
@@ -228,13 +236,11 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   }
   const bool modeChanged = ts.current_virtual_keyboard_display_mode != ts.previous_virtual_keyboard_display_mode;
   if (modeChanged) {
-    display.console = true;
+    checkWebRemote();
     display.fillRect(0, GRID.Y[4], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[4], COLOR_BACKGROUND);
     drawFlags |= VK_DRAW_KEYS | VK_DRAW_OCTAVE;
   }
   ts.previous_virtual_keyboard_display_mode = ts.current_virtual_keyboard_display_mode;
-
-  // ---------- One‑time help overlay REMOVED completely ----------
 
   if (drawFlags & VK_DRAW_OCTAVE_BUTTONS) {
     TouchButton::drawButton(GRID.X[0], GRID.Y[3], "OCTAVE", "-", TouchButton::BUTTON_NORMAL);
@@ -249,7 +255,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   // Instrument name (line 16) and octave label
   if (drawFlags & VK_DRAW_INSTRUMENT_NAME) {
     virtual_keyboard_print_current_instrument(true);
-    print_octave_label();
+   // print_octave_label();
   }
 
   display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
@@ -264,7 +270,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
     switch (ts.current_virtual_keyboard_display_mode) {
     case 0:
     {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(0, VIRT_KEYB_YPOS, DISPLAY_WIDTH, KEY_HEIGHT_WHITE, COLOR_BACKGROUND);
       display.console = false;
 
@@ -273,7 +279,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 
       // White keys
       for (uint8_t i = 0; i < layout.numWhite; i++) {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
           layout.whiteW, KEY_HEIGHT_WHITE,
           dark_keyboard ? GREY3 : COLOR_SYSTEXT);
@@ -282,7 +288,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
 
       // Black keys
       for (uint8_t b = 0; b < layout.numBlack; b++) {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
           layout.blackW, layout.blackH, COLOR_BACKGROUND);
         display.console = false;
@@ -301,7 +307,7 @@ FLASHMEM void drawVirtualKeyboard(uint8_t drawFlags)
   // Octave labels on white keys (C notes)
   if (drawFlags & VK_DRAW_OCTAVE) {
     print_octaves_on_keyboard();
-    print_octave_label();
+   // print_octave_label();
   }
   display.console = false;
 }
@@ -325,6 +331,7 @@ FLASHMEM void touch_button_oct_up()
   else {
     drawVirtualKeyboard(VK_DRAW_OCTAVE);
   }
+   print_octave_label();
 }
 
 FLASHMEM void touch_button_oct_down()
@@ -338,6 +345,7 @@ FLASHMEM void touch_button_oct_down()
   else {
     drawVirtualKeyboard(VK_DRAW_OCTAVE);
   }
+   print_octave_label();
 }
 
 FLASHMEM void touch_button_inst_up()
@@ -523,7 +531,7 @@ FLASHMEM void print_drumpads() {
 
 FLASHMEM void clear_inst_header()
 {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(18 * CHAR_width_small - 1, 16 * CHAR_height_small - 1,
     18 * CHAR_width_small - 2, 4 * CHAR_height_small + 3,
     COLOR_BACKGROUND);
@@ -585,7 +593,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
         }
 
         // Draw full white key red
-        display.console = true;
+        checkWebRemote();
         display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
           layout.whiteW, KEY_HEIGHT_WHITE, RED);
 
@@ -610,7 +618,7 @@ FLASHMEM void handleTouchVirtualKeyboard()
       }
       else if (isKeyRelease) {
         ts.virtual_keyboard_state_white &= ~(1 << i);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(layout.whiteX[i], VIRT_KEYB_YPOS,
           layout.whiteW, KEY_HEIGHT_WHITE,
           dark_keyboard ? GREY3 : COLOR_SYSTEXT);
@@ -677,14 +685,14 @@ FLASHMEM void handleTouchVirtualKeyboard()
           }
         }
 
-        display.console = true;
+        checkWebRemote();
         display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
           layout.blackW, layout.blackH, RED);
         display.console = false;
       }
       else if (isKeyRelease) {
         ts.virtual_keyboard_state_black &= ~(1 << b);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(layout.blackX[b], VIRT_KEYB_YPOS,
           layout.blackW, layout.blackH, COLOR_BACKGROUND);
         display.console = false;

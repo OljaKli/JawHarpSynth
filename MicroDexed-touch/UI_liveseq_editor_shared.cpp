@@ -3,12 +3,17 @@
 #include "touch.h"
 #include "UI.h"
 
-extern bool remote_active;
-#ifdef ESP_DISPLAY
+extern void checkWebRemote();
+
+#if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
+
+
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 
 uint16_t velocityToColor(uint8_t vel) {
@@ -18,18 +23,18 @@ uint16_t velocityToColor(uint8_t vel) {
 }
 
 FLASHMEM void drawVelocitySlider(uint8_t currentVelocity) {
-    if (remote_active) display.console = true;
+   checkWebRemote();
     display.fillRect(VEL_TEXT_X - 5, VEL_SLIDER_Y - 3, VEL_SLIDER_W + 45, VEL_SLIDER_H + 6, COLOR_BACKGROUND);
     display.setTextSize(1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setCursor(VEL_TEXT_X, VEL_SLIDER_Y + 1);
     display.print("VEL");
-    if (remote_active) display.console = true;
+   checkWebRemote();
     display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, VEL_SLIDER_W, VEL_SLIDER_H, GREY3);
     uint16_t fillWidth = (currentVelocity * VEL_SLIDER_W) / 127;
     if (fillWidth > 0) {
         uint16_t color = velocityToColor(currentVelocity);
-        if (remote_active) display.console = true;
+       checkWebRemote();
         display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, fillWidth, VEL_SLIDER_H, color);
     }
     uint16_t markerX = VEL_SLIDER_X + fillWidth;

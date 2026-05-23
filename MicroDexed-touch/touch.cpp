@@ -2,10 +2,12 @@
 #include "sequencer.h"
 #include "livesequencer.h"
 #include <LCDMenuLib2.h>
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include <Audio.h>
 #include "template_mixer.hpp"
@@ -16,10 +18,14 @@
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
 
+
+extern void checkWebRemote();
 extern config_t configuration;
 extern uint8_t selected_instance_id;
 extern LCDMenuLib2 LCDML;
@@ -81,6 +87,12 @@ FLASHMEM void updateTouchScreen() {
       ts.p = touch.getPoint();
       ts.p.x = map(ts.p.x, 205, 3860, 0, TFT_HEIGHT);
       ts.p.y = map(ts.p.y, 310, 3720, 0, TFT_WIDTH);
+#endif
+
+#if defined RA_DISPLAY    
+
+    // TS_Point p = touch.getPoint();
+       
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
@@ -145,7 +157,7 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
       clear_x = DISPLAY_WIDTH - CHAR_width_small * old_len;
       clear_width = CHAR_width_small * (old_len - l);
     }
-    display.console = true;
+    checkWebRemote();
     display.fillRect(clear_x, y_pos, clear_width, CHAR_height_small, COLOR_BACKGROUND);
   }
 
@@ -156,7 +168,7 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   case 1: x_pos = DISPLAY_WIDTH - CHAR_width_small * l; break;
   case 2:
     if (l != old_len) {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(0, y_pos, DISPLAY_WIDTH, CHAR_height_small, COLOR_BACKGROUND);
     }
     x_pos = (DISPLAY_WIDTH - CHAR_width_small * l) / 2;
@@ -681,9 +693,9 @@ FLASHMEM void handle_touchscreen_pattern_editor()
       {
         seq.cycle_touch_element = 0;
         draw_button_on_grid(45, 1, "", "", 99); // print keyboard icon
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, CHAR_height_small * 12 + 1, DISPLAY_WIDTH, 1, COLOR_BACKGROUND);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(215, 48, 97, 42, COLOR_BACKGROUND);
         display.console = false;
         seq_pattern_editor_update_dynamic_elements();
@@ -692,11 +704,11 @@ FLASHMEM void handle_touchscreen_pattern_editor()
       {
         seq.cycle_touch_element = 1;
         draw_button_on_grid(45, 1, back_text, "TO SEQ", 0);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(216, CHAR_height_small * 6, 95, CHAR_height_small * 6 + 1, COLOR_BACKGROUND);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, CHAR_height_small * 10 + 1, 195, CHAR_height_small * 2 + 1, COLOR_BACKGROUND);
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, CHAR_height_small * 10 + 1, 2, CHAR_height_small * 12 + 1, COLOR_BACKGROUND);
         display.console = false;
         update_step_rec_buttons();
@@ -769,7 +781,7 @@ FLASHMEM void handle_touchscreen_microsynth()
 {
   if (TouchButton::isPressed(GRID.X[5], GRID.Y[0]))
   {
-    display.console = true;
+    checkWebRemote();
     display.fillRect(0, VIRT_KEYB_YPOS - 6 * CHAR_height_small, DISPLAY_WIDTH,
       DISPLAY_HEIGHT - VIRT_KEYB_YPOS + 6 * CHAR_height_small, COLOR_BACKGROUND);
     display.console = false;
@@ -944,16 +956,16 @@ FLASHMEM void print_file_manager_active_border()
   // active_window   0 = left window (SDCARD) , 1 = PSRAM OR SDCARD2
   if (fm.active_window == 0)
   {
-    display.console = true;
+    checkWebRemote();
     display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, GREY2);
-    display.console = true;
+    checkWebRemote();
     display.drawRect(0, 0, CHAR_width_small * 27, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
   else
   {
-    display.console = true;
+    checkWebRemote();
     display.drawRect(0, 0, CHAR_width_small * 27, CHAR_height_small * 23, GREY2);
-    display.console = true;
+    checkWebRemote();
     display.drawRect(CHAR_width_small * 27, 0, CHAR_width_small * 26 + 2, CHAR_height_small * 23, COLOR_SYSTEXT);
   }
 
@@ -987,7 +999,7 @@ FLASHMEM void print_destination_card_info()
       xoffset = 0;
     }
 
-    display.console = true;
+    checkWebRemote();
     display.fillRect(CHAR_width_small + xoffset * CHAR_width_small, 3 * 11 - 1, CHAR_width_small * 26 - 6, 13 * 11, COLOR_BACKGROUND);
     display.setTextSize(1);
 
@@ -1026,7 +1038,7 @@ FLASHMEM void filemanager_update_sdcards()
   fm.sd_selected_file = 0;
   fm.sd_mode = FM_BROWSE_FILES;
   sd_go_parent_folder();
-  display.console = true;
+  checkWebRemote();
   display.fillRect(27 * CHAR_width_small, 7, CHAR_width_small * 26, 170, COLOR_BACKGROUND);
 
   if (fm.SD_CARD_READER_EXT) {
@@ -1616,12 +1628,12 @@ FLASHMEM void _multiband_button(uint8_t x, uint8_t y, uint8_t offset_y)
 static const uint32_t MENU_TAP_THRESHOLD_MS = 1500;   // 1.5 seconds
 static const int MENU_DRAG_THRESHOLD = 5;             // pixels of movement to be considered a drag
 
-static int menuTouchedAbsIndex = -1;
-static uint32_t menuTouchStartTime = 0;
-static bool menuDragActive = false;
-static int menuDragStartCursorAbs = 0;
-static int menuDragMaxDelta = 0;                      // max pixel movement during the gesture
-static int menuDragLastY = 0;
+// static int menuTouchedAbsIndex = -1;
+// static uint32_t menuTouchStartTime = 0;
+// static bool menuDragActive = false;
+// static int menuDragStartCursorAbs = 0;
+// static int menuDragMaxDelta = 0;                      // max pixel movement during the gesture
+// static int menuDragLastY = 0;
 
 
 static void moveCursorBy(int steps) {
@@ -1633,14 +1645,15 @@ static void moveCursorBy(int steps) {
   }
 }
 
-static void setCursorAbs(int absIdx) {
-  int total = LCDML.MENU_getChilds();
-  int max = total - 1;
-  if (absIdx < 0) absIdx = 0;
-  if (absIdx > max) absIdx = max;
-  int current = LCDML.MENU_getCursorPosAbs();
-  if (absIdx != current) moveCursorBy(absIdx - current);
-}
+// static void setCursorAbs(int absIdx) {
+//   int total = LCDML.MENU_getChilds();
+//   int max = total - 1;
+//   if (absIdx < 0) absIdx = 0;
+//   if (absIdx > max) absIdx = max;
+//   int current = LCDML.MENU_getCursorPosAbs();
+//   if (absIdx != current) moveCursorBy(absIdx - current);
+// }
+
 #endif
 
 
@@ -1759,7 +1772,7 @@ FLASHMEM void handle_touchscreen_menu()
 
       if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
       {
-        display.console = true;
+        checkWebRemote();
         display.fillRect(0, GRID.Y[3], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[3], COLOR_BACKGROUND);
         display.console = false;
         ts.keyb_in_menu_activated = !ts.keyb_in_menu_activated;
@@ -2089,7 +2102,7 @@ FLASHMEM void handle_touchscreen_test_touchscreen()
   {
     if (check_button_on_grid(42, 1))
       sub_touchscreen_test_page_init();
-    display.console = true;
+    checkWebRemote();
     display.fillRect(ts.p.x, ts.p.y, 2, 2, COLOR_SYSTEXT);
     display.console = false;
   }
@@ -2201,4 +2214,10 @@ FLASHMEM void handle_touchscreen_msp()
 
     print_msp_velocity_to_filter_button();
   }
+}
+
+FLASHMEM void handle_touchscreen_sd_content_not_found() {
+    if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+        LCDML.MENU_goRoot();  // Go to main menu root
+    }
 }
