@@ -2,7 +2,7 @@
 
 #ifndef _GSLX680_H_
 #define _GSLX680_H_
-
+#include "Arduino.h"
 
 #define SCREEN_MAX_X 		800
 #define SCREEN_MAX_Y 		480
@@ -15,7 +15,7 @@ struct fw_data
 
 //#include <avr/pgmspace.h>
 
-const struct fw_data GSLX680_FW[] = {
+PROGMEM const struct fw_data GSLX680_FW[] = {
 //GSL_1680E+1688E+2681B+2682B_V1.3.4_2013.02.28
 {0xf0,0x2},
 {0x00,0x00000000},

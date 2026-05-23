@@ -132,11 +132,13 @@ FLASHMEM void GSL1680::reset()
         Wire.write(REG[i]);
         Wire.write(DATA[i]);
         int r = Wire.endTransmission();
-#ifdef DEBUG
+
         if (r != 0) {
+            #ifdef DEBUG
             LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(REG[i], HEX);
+            #endif
         }
-#endif
+
         delay(TIMER[i]);
     }
 
@@ -171,11 +173,13 @@ FLASHMEM void GSL1680::startchip()
     Wire.write(0x00);   //DATA
 
     int r = Wire.endTransmission();
-#ifdef DEBUG
+
     if (r != 0) {
+#ifdef DEBUG
         LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(0xE0, HEX);
-    }
 #endif
+    }
+
 }
 
 void GSL1680::sleep()
@@ -195,11 +199,13 @@ void GSL1680::datasend(uint8_t REG, uint8_t DATA[], uint16_t NB)
     }
 
     int r = Wire.endTransmission();
-#ifdef DEBUG
+
     if (r != 0) {
+        #ifdef DEBUG
         LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(REG, HEX);
+        #endif
     }
-#endif
+
 
 }
 

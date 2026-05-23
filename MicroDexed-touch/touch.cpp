@@ -1636,14 +1636,14 @@ static const int MENU_DRAG_THRESHOLD = 5;             // pixels of movement to b
 // static int menuDragLastY = 0;
 
 
-static void moveCursorBy(int steps) {
-  if (steps > 0) {
-    for (int i = 0; i < steps; ++i) LCDML.BT_down();
-  }
-  else if (steps < 0) {
-    for (int i = 0; i < -steps; ++i) LCDML.BT_up();
-  }
-}
+// static void moveCursorBy(int steps) {
+//   if (steps > 0) {
+//     for (int i = 0; i < steps; ++i) LCDML.BT_down();
+//   }
+//   else if (steps < 0) {
+//     for (int i = 0; i < -steps; ++i) LCDML.BT_up();
+//   }
+// }
 
 // static void setCursorAbs(int absIdx) {
 //   int total = LCDML.MENU_getChilds();
