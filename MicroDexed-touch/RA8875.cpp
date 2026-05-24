@@ -1274,22 +1274,22 @@ FLASHMEM void RA8875::_textPosition(int16_t x, int16_t y, bool update)
 		USE: xxx.getCursor(myX,myY);
 */
 /**************************************************************************/
-FLASHMEM void RA8875::getCursor(int16_t& x, int16_t& y)
-{
-	if (bitRead(_TXTparameters, 7) == 1) {
-		getCursorFast(x, y);
-	}
-	else {
-		uint8_t t1, t2, t3, t4;
-		t1 = _readRegister(RA8875_F_CURXL);
-		t2 = _readRegister(RA8875_F_CURXH);
-		t3 = _readRegister(RA8875_F_CURYL);
-		t4 = _readRegister(RA8875_F_CURYH);
-		x = (t2 << 8) | (t1 & 0xFF);
-		y = (t4 << 8) | (t3 & 0xFF);
-		if (_portrait && _use_default) swapvals(x, y);
-	}
-}
+// FLASHMEM void RA8875::getCursor(int16_t& x, int16_t& y)
+// {
+// 	if (bitRead(_TXTparameters, 7) == 1) {
+// 		getCursorFast(x, y);
+// 	}
+// 	else {
+// 		uint8_t t1, t2, t3, t4;
+// 		t1 = _readRegister(RA8875_F_CURXL);
+// 		t2 = _readRegister(RA8875_F_CURXH);
+// 		t3 = _readRegister(RA8875_F_CURYL);
+// 		t4 = _readRegister(RA8875_F_CURYH);
+// 		x = (t2 << 8) | (t1 & 0xFF);
+// 		y = (t4 << 8) | (t3 & 0xFF);
+// 		if (_portrait && _use_default) swapvals(x, y);
+// 	}
+// }
 
 /**************************************************************************/
 /*!
@@ -1301,23 +1301,23 @@ FLASHMEM void RA8875::getCursor(int16_t& x, int16_t& y)
 		USE: xxx.getCursor(myX,myY);
 */
 /**************************************************************************/
-FLASHMEM void RA8875::getCursorFast(int16_t& x, int16_t& y)
-{
-	x = _cursorX;
-	y = _cursorY;
-	if (_portrait && _use_default) swapvals(x, y);
-}
+// FLASHMEM void RA8875::getCursorFast(int16_t& x, int16_t& y)
+// {
+// 	x = _cursorX;
+// 	y = _cursorY;
+// 	if (_portrait && _use_default) swapvals(x, y);
+// }
 
 int16_t RA8875::getCursorX(void)
 {
-	if (_portrait && _use_default) return _cursorY;
-	return _cursorX;
+	if (_portrait && _use_default) return _cursorY/2;
+	return _cursorX/2;
 }
 
 int16_t RA8875::getCursorY(void)
 {
-	if (_portrait && _use_default) return _cursorX;
-	return _cursorY;
+	if (_portrait && _use_default) return _cursorX/2;
+	return _cursorY/2;
 }
 
 /**************************************************************************/

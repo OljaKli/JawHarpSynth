@@ -275,7 +275,7 @@ void setCGRAMAsDefaultFont(void);
 	void 		showCursor(enum RA8875tcursor c, bool blink);//show cursor(NOCURSOR,IBEAM,UNDER,BLOCK), default blinking
 	void    	setCursor(int16_t x, int16_t y);
 	void 		getCursor(int16_t& x, int16_t& y);//from the RA8875 registers
-	void 		getCursorFast(int16_t& x, int16_t& y);//from library (faster)
+	//void 		getCursorFast(int16_t& x, int16_t& y);//from library (faster)
 	int16_t		getCursorX(void);
 	int16_t		getCursorY(void);
 	void 		setGraphicCursor(uint8_t cur);//0...7 Select a custom graphic cursor (you should upload first)

@@ -16981,7 +16981,7 @@ FLASHMEM void print_braids_static_texts()
   seq.edit_state = 0;
 
   setCursor_textGrid_small(1, 1);
-  display.setTextColor(RED);
+  display.setTextColor(RED,COLOR_BACKGROUND);
   display.print(F("BRAIDS"));
 
   setCursor_textGrid_small(31, 1);
@@ -18577,7 +18577,7 @@ FLASHMEM void print_msp_zone_text(uint8_t zone, bool fullrefresh_values) {
     display.setCursor(display.getCursorX() - 1, display.getCursorY());
     display.write(22);
   }
-
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   // Volume
   sub_MultiSample_setColor(zone, 4);
   show_smallfont_noGrid((display_index + yoffset) * (CHAR_height_small + 2),
