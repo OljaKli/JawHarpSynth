@@ -1589,7 +1589,7 @@ FLASHMEM void RA8875::_textWrite(const char* buffer, uint16_t len)
 
 
 	uint16_t i;
-	if (len == 0) len = strlen(buffer);//try get the info from the buffer
+	//if (len == 0) len = strlen(buffer);//try get the info from the buffer
 	if (len == 0) return;//better stop here, the string it really empty!
 
 	uint8_t interlineOffset = 0;
@@ -1597,124 +1597,24 @@ FLASHMEM void RA8875::_textWrite(const char* buffer, uint16_t len)
 	if (remote_active)
 		skipfillrect_webremote = true;
 
-	//phtodo
-
-	if (textsize_x == 1)
-		fillRect(_cursorX / 2, _cursorY / 2, strlen(buffer) * 6, 8, _backColor);
+if (textsize_x == 1)
+		fillRect(_cursorX / 2, _cursorY / 2, len * 6, 8, _backColor);
 	else
-		fillRect(_cursorX / 2, _cursorY / 2, strlen(buffer) * 12, 16, _backColor);
+		fillRect(_cursorX / 2, _cursorY / 2, len * 12, 16, _backColor);
+
 	setColor(_TXTForeColor, _TXTBackColor);
 
 	if (remote_active)
 		skipfillrect_webremote = false;
 
-
+//phtodo
 	//Loop trough every char and write them one by one...
 	for (i = 0;i < len;i++) {
 		_charWrite(buffer[i], interlineOffset);					// internal,ROM fonts
 	}//end loop
 }
 
-// #define SCRATCH_PHYS_X  660
-// #define SCRATCH_PHYS_Y  0
 
-// FLASHMEM void RA8875::_textWrite(const char* buffer, uint16_t len)
-// {
-//     if (remote_active)
-//     {
-//         uint8_t colors[8];
-//         uint8_t nbBytes = fillSysexDataColor(colors, 2, _TXTForeColor, _TXTBackColor);
-//         uint8_t sizeMsg = 2 * 2 + 1 + nbBytes + 1 + len;
-//         uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
-//         if (sysexDrawString == NULL)
-//         {
-// #ifdef DEBUG
-//             LOG.println("malloc failed");
-// #endif
-//         }
-//         else
-//         {
-//             fillSysexData(sysexDrawString, 2, _cursorX / 2, _cursorY / 2);
-//             sysexDrawString[4] = nbBytes;
-//             memcpy(sysexDrawString + 4 + 1, colors, nbBytes);
-//             sysexDrawString[4 + 1 + nbBytes] = textsize_x;
-//             memcpy(sysexDrawString + 4 + 1 + nbBytes + 1, buffer, len);
-//             sendSysEx(72, sizeMsg, sysexDrawString, true);
-//             free(sysexDrawString);
-//         }
-//         console = false;
-//     }
-
-//     if (len == 0) len = strlen(buffer);
-//     if (len == 0) return;
-
-//     const bool    big     = (textsize_x != 1);
-
-//     // Logical pixels (what fillRect expects)
-//     const int16_t glyphH  = big ? 14 : 7;    // logical px — the real glyph rows
-//     const int16_t cellW   = big ? 16 : 8;    // logical px — HW cell width (32/16 physical)
-//     const int16_t charAdv = big ? (_customCharAdvance + 12) : _customCharAdvance;
-//     // charAdv is already physical, convert to logical for fillRect
-//     const int16_t charAdvL = charAdv / 2;
-
-//     // _cursorX/_cursorY are physical
-//     const int16_t destY = _cursorY;
-//           int16_t destX = _cursorX;
-
-//     uint8_t savedFNCR1 = _FNCR1_Reg;
-//     _FNCR1_Reg |= (1 << 6);
-//     _writeRegister(RA8875_FNCR1, _FNCR1_Reg);
-
-//     if (remote_active) skipfillrect_webremote = true;
-
-//     for (uint16_t i = 0; i < len; i++)
-//     {
-//         const char c = buffer[i];
-//         if (c == 13) continue;
-
-//         // No fillRect anywhere — scratch gets fully overwritten by
-//         // opaque text engine, destination gets atomically overwritten
-//         // by BTE. No intermediate blank state anywhere.
-//         setColor(_TXTForeColor, _TXTBackColor);
-//         _setTextMode(true);
-
-// // Force opaque — setColor/setTextColor may have set bit 6
-//         _FNCR1_Reg &= ~(1 << 6);
-//         _writeRegister(RA8875_FNCR1, _FNCR1_Reg);
-
-//         _textPosition(SCRATCH_PHYS_X, SCRATCH_PHYS_Y, false);
-//         writeCommand(RA8875_MRWC);
-//         _writeData((uint8_t)c);
-//         _waitBusy(0x80);
-
-// // Wait for vertical blank before BTE copy so the scanline
-//         // never catches the destination mid-transfer
-//         // RA8875 status bit 5: 0 = display in active period, 1 = non-display (vblank)
-//         // uint32_t t = millis();
-//         // while (!(readStatus() & (1 << 5))) {
-//         //     if (millis() - t > 20) break;  // safety timeout ~1 frame
-//         // }
-
-//         BTE_move(
-//             SCRATCH_PHYS_X,
-//             SCRATCH_PHYS_Y,
-//             cellW  * 2,
-//             glyphH * 2,
-//             destX,
-//             destY,
-//             1, 1
-//         );
-
-//         destX += charAdv;
-//     }
-
-//     if (remote_active) skipfillrect_webremote = false;
-
-//     _FNCR1_Reg = savedFNCR1;
-//     _writeRegister(RA8875_FNCR1, _FNCR1_Reg);
-
-//     _cursorX = destX;
-// }
 
 FLASHMEM void RA8875::_charWrite(const char c, uint8_t offset) {
 	if (c == 13) {   // carriage return – ignore
@@ -3106,6 +3006,8 @@ void RA8875::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color
 /**************************************************************************/
 void RA8875::fillWindow(uint16_t color)
 {
+if (remote_active)  //always do fillscreen when connected
+    console = true;
 
 	if (console && remote_active)
 	{
@@ -3131,7 +3033,6 @@ void RA8875::fillWindow(uint16_t color)
 #if defined(USE_RA8875_SEPARATE_TEXT_COLOR)
 	_TXTrecoverColor = true;
 #endif
-
 
 }
 

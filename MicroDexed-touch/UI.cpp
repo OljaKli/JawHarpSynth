@@ -164,7 +164,7 @@ uint8_t fade_text = 255;
 bool lastWasCustomSample = false;
 bool drumScreenActive = false;
 
-bool  force_menu_full_redraw = true;
+bool force_menu_full_redraw = true;
 
 #ifdef MIDI_ACTIVITY_LIGHTS
 uint8_t LED_MIDI_IN = 40;
@@ -4580,7 +4580,7 @@ FLASHMEM void lcdml_menu_control(void)
       // enable/disable remote display
       remote_active = (remote_MIDI_CC_value == 1 ? true : false);
       display.console = remote_active;
-
+ 
       // if sequencer is running, alert remote
       if (seq.running)
       {
@@ -5402,7 +5402,8 @@ FLASHMEM void lcdml_menu_clear(void)
 FLASHMEM void lcdml_menu_display(void)
 {
   disableDirectMIDIinput = false;
-
+static bool back_to_main_menu=false;
+static bool in_sub_menu=false;
 #if defined ESP_DISPLAY
   sendGlowClear();
 #endif
@@ -5430,7 +5431,12 @@ FLASHMEM void lcdml_menu_display(void)
       {
         // this is displayed when no header is available
        // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
+       if (back_to_main_menu)
+       {
          force_menu_full_redraw=true;
+         back_to_main_menu=false;
+          in_sub_menu=false;
+       }
         x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = 0;
         last_menu_depth = LCDML.MENU_getLayer();
         checkWebRemote();
@@ -5439,7 +5445,13 @@ FLASHMEM void lcdml_menu_display(void)
       }
       else if (LCDML.MENU_getLayer() > last_menu_depth)
       {
-        force_menu_full_redraw=true;
+        if (in_sub_menu==false)
+        {
+ force_menu_full_redraw=true;
+         back_to_main_menu=true;
+          in_sub_menu=true;
+        }
+       
         display.setCursor(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7);
         display.setTextColor(RED, COLOR_BACKGROUND);
         display.print(">");
@@ -12600,7 +12612,7 @@ FLASHMEM void print_epiano_static_texts()
   display.setTextSize(1);
   generic_active_function = 0;
   setCursor_textGrid_small(1, 1);
-  display.setTextColor(RED);
+  display.setTextColor(RED,COLOR_BACKGROUND);
   display.print(F("ELECTRIC PIANO"));
   display.setTextColor(COLOR_SYSTEXT);
   display.setTextColor(GREY1);
@@ -18577,7 +18589,7 @@ FLASHMEM void print_msp_zone_text(uint8_t zone, bool fullrefresh_values) {
     display.setCursor(display.getCursorX() - 1, display.getCursorY());
     display.write(22);
   }
-  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+ 
   // Volume
   sub_MultiSample_setColor(zone, 4);
   show_smallfont_noGrid((display_index + yoffset) * (CHAR_height_small + 2),
@@ -18766,7 +18778,7 @@ extern void print_msp_velocity_to_filter_button();
 
 FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
-  static uint8_t last_multisample = 0;
+  static uint8_t last_multisample = 222;
   static uint8_t last_scroll_offset = 0;
   static uint8_t last_selected_zone = 255;
   static uint8_t last_selected_track = 0;
@@ -18832,11 +18844,18 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
     display.print(F("TUNE"));
     display.setCursor(36 * CHAR_width_small + 2, (6) * (CHAR_height_small + 2) - 2);
     display.print(F("FILENAME"));
-
+  
+   display.setTextSize(2);
+  display.setTextColor(GREY2, COLOR_BACKGROUND);
+      setCursor_textGrid(3, 1);
+      display.print(F("["));
+      setCursor_textGrid(15, 1);
+      display.print(F("]"));
+ display.setTextSize(1);
     print_msp_all_zones();
 
     // Initialize state tracking
-    last_multisample = seq.active_multisample;
+   // last_multisample = seq.active_multisample;
     last_scroll_offset = msp_scroll_offset;
     last_selected_zone = (generic_temp_select_menu > 2 && generic_temp_select_menu <= 18) ? generic_temp_select_menu - 3 : 255;
     last_selected_track = seq.selected_track;
@@ -19087,7 +19106,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
     // 1. Multisample changed
     if (seq.active_multisample != last_multisample) {
       print_msp_all_zones();
-      last_multisample = seq.active_multisample;
+    
       last_scroll_offset = msp_scroll_offset;
       last_selected_zone = (generic_temp_select_menu > 2 && generic_temp_select_menu <= 18) ? generic_temp_select_menu - 3 : 255;
       last_selected_track = seq.selected_track;
@@ -19160,15 +19179,14 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
       if (generic_temp_select_menu == 0)
         setModeColor(0);
       print_formatted_number(seq.active_multisample + 1, 2, 0, 2);
-      setCursor_textGrid(3, 1);
-      display.setTextColor(GREY2, COLOR_BACKGROUND);
-      display.print(F("["));
-      setCursor_textGrid(15, 1);
-      display.print(F("]"));
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+   
+if (seq.active_multisample != last_multisample) 
+{
+ display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
       show(1, 4, 11, msp[seq.active_multisample].name);
-
+        last_multisample = seq.active_multisample;
+}
       setModeColor(1);
       display.setTextSize(1);
       setCursor_textGrid_small(9, 4);
@@ -19185,7 +19203,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 #if defined ESP_DISPLAY
     sendVolumeIconsMode(true);
 #endif
-
+ last_multisample=209;
     encoderDir[ENC_R].reset();
     encoderDir[ENC_L].reset();
     unregisterTouchHandler();
@@ -27739,7 +27757,7 @@ FLASHMEM void UI_func_granular(uint8_t param)
 
     // Header
     setCursor_textGrid_small(0, 0);
-    display.setTextColor(RED);
+    display.setTextColor(RED,COLOR_BACKGROUND);
     display.print(F("GRANULAR SYNTH"));
 
     // Waveform

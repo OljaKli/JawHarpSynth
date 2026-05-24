@@ -384,6 +384,8 @@ bool _doubleBufferText;
 		return 1;
 	}
 
+
+
 	virtual size_t write(const uint8_t* buffer, size_t size) {
 		if (_use_default) {
 			_textWrite((const char*)buffer, size);
