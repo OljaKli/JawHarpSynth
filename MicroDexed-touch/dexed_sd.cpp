@@ -153,6 +153,9 @@ extern uint8_t sidechain_steps;
 File json;
 char filename[CONFIG_FILENAME_LEN];
 const char* sError = "*ERROR*";
+// Single shared JSON document in BSS — all load/save functions are sequential so one instance is safe.
+//static StaticJsonDocument<JSON_BUFFER_SIZE> g_json_doc;
+static StaticJsonDocument<JSON_BUFFER_SIZE> DMAMEM g_json_doc; //phtodo
 
 #include "livesequencer.h"
 #include "ui_livesequencer.h"
@@ -619,7 +622,7 @@ FLASHMEM bool load_sd_envelopes_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -677,7 +680,7 @@ FLASHMEM bool save_sd_envelopes_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG - 1; i++)
       {
@@ -728,7 +731,7 @@ FLASHMEM bool load_sd_drummappings_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -794,7 +797,7 @@ FLASHMEM bool save_sd_drummappings_json(uint8_t number)
       json = SD.open(filename, FILE_WRITE);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         for (uint8_t i = 0; i < NUM_CUSTOM_MIDI_MAPPINGS; i++)
         {
           data_json["type"][i] = custom_midi_map[i].type;
@@ -866,7 +869,7 @@ FLASHMEM bool load_sd_drumsettings_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -988,7 +991,7 @@ FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
       json = SD.open(filename, FILE_WRITE);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         data_json["drums_volume"] = seq.drums_volume;
         for (uint8_t i = 0; i < NUM_DRUMSET_CONFIG - 1; i++)
         {
@@ -1055,6 +1058,10 @@ FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
 /******************************************************************************
    SD VOICECONFIG
  ******************************************************************************/
+// Shared JSON document kept in BSS (not on the stack) so repeated calls
+// from within load_sd_performance_json don't overflow the call stack.
+
+
 FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
 {
   if (sd_card_internal > 0)
@@ -1075,7 +1082,7 @@ FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -1167,7 +1174,7 @@ FLASHMEM bool load_sd_voiceconfig_minimal_boot_json(uint8_t vc, uint8_t instance
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -1213,7 +1220,7 @@ FLASHMEM bool save_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["pool"] = configuration.dexed[instance_id].pool;
       data_json["bank"] = configuration.dexed[instance_id].bank;
       data_json["voice"] = configuration.dexed[instance_id].voice;
@@ -1298,7 +1305,7 @@ FLASHMEM bool load_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -1393,7 +1400,7 @@ FLASHMEM bool save_sd_microsynth_json(uint8_t ms, uint8_t instance_id)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["sound_intensity"] = microsynth[instance_id].sound_intensity;
       data_json["wave"] = microsynth[instance_id].wave;
       data_json["coarse"] = microsynth[instance_id].coarse;
@@ -1484,7 +1491,7 @@ FLASHMEM bool load_sd_fx_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -1588,7 +1595,7 @@ FLASHMEM bool save_sd_fx_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       for (uint8_t i = 0; i < NUM_DEXED; i++)
       {
         data_json["filter_cutoff"][i] = configuration.fx.filter_cutoff[i];
@@ -1678,7 +1685,7 @@ FLASHMEM bool load_sd_epiano_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -1752,7 +1759,7 @@ FLASHMEM bool save_sd_epiano_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["decay"] = configuration.epiano.decay;
       data_json["release"] = configuration.epiano.release;
       data_json["hardness"] = configuration.epiano.hardness;
@@ -1826,7 +1833,7 @@ FLASHMEM void writeChunk(const char* filename, int chunkNumber, const int& NUM_E
   if (json) {
     const uint16_t eventsWritten = chunkNumber * NUM_EVENTS_PER_FILE;
     const uint16_t numChunkEvents = min(numEvents - eventsWritten, NUM_EVENTS_PER_FILE);
-    StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+    auto& doc = g_json_doc; doc.clear();
     doc["number_of_events"] = numChunkEvents;
     //Serial.printf("save: %i chunk events\n", numChunkEvents);
     // Serial.printf("has %i events\n", numChunkEvents);
@@ -1888,7 +1895,7 @@ static void convert_old_layer_mute_event(LiveSequencer::MidiEvent& e) {
 FLASHMEM void readChunk(const char* filename, LiveSequencer::EventVector& list, bool isSongChunk = false) {
   if (SD.exists(filename)) {
     // Serial.printf("success\n", c, filename);
-    StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+    auto& doc = g_json_doc; doc.clear();
     json = SD.open(filename, FILE_READ);
     doc.clear();
     deserializeJson(doc, json);
@@ -1933,7 +1940,7 @@ FLASHMEM bool save_sd_livesequencer_json(uint8_t number)
     uint16_t numPatternEvents = data->eventsList.size();
 
     if (json) {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["num_bars"] = data->numberOfBars;
       data_json["num_tracks"] = LiveSequencer::LIVESEQUENCER_NUM_TRACKS;
       data_json["hasTrackInstruments"] = true; // has individual track instrument mapping
@@ -2029,7 +2036,7 @@ FLASHMEM bool load_sd_livesequencer_json(uint8_t number)
         int numPatternChunks = 0;
         uint16_t chunksize = 0;
         uint8_t lastSongPattern = 0;
-        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        auto& doc = g_json_doc; doc.clear();
         std::vector<int> numSongPatternEvents;
         {
           doc.clear();
@@ -2176,7 +2183,7 @@ FLASHMEM bool save_sd_gridsong_json(uint8_t number)
       SD.remove(filename);
       File json = SD.open(filename, FILE_WRITE);
       if (json) {
-        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        auto& doc = g_json_doc; doc.clear();
         doc["track"] = track + 1;
         JsonArray stepsArr = doc.createNestedArray("steps");
 
@@ -2238,7 +2245,7 @@ FLASHMEM bool load_sd_gridsong_json(uint8_t number)
 
       File json = SD.open(filename, FILE_READ);
       if (json) {
-        StaticJsonDocument<JSON_BUFFER_SIZE> doc;
+        auto& doc = g_json_doc; doc.clear();
         DeserializationError err = deserializeJson(doc, json);
         json.close();
 
@@ -2296,7 +2303,7 @@ FLASHMEM bool load_sd_sys_json(void)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -2420,7 +2427,7 @@ FLASHMEM bool save_sd_sys_json(void)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["vol"] = configuration.sys.vol;
       data_json["dexed_engine_type"] = configuration.sys.dexed_engine_type;
       data_json["mono"] = configuration.sys.mono;
@@ -2523,7 +2530,7 @@ FLASHMEM void load_sd_noisemaker_json(void)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -2676,7 +2683,7 @@ FLASHMEM void save_sd_noisemaker_json(void)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       data_json["category"] = nm_params.category;
       data_json["mode"] = nm_params.mode;
@@ -2834,7 +2841,7 @@ FLASHMEM bool get_sd_braids_name(uint8_t number, uint8_t mode)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -2885,7 +2892,7 @@ FLASHMEM bool load_sd_braids_json(uint8_t number, uint8_t braidsmode)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -2979,7 +2986,7 @@ FLASHMEM bool save_sd_braids_json(uint8_t number, uint8_t braidsmode)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["vol"] = braids_osc.sound_intensity;
       data_json["algo"] = braids_osc.algo;
       data_json["color"] = braids_osc.color;
@@ -3061,7 +3068,7 @@ FLASHMEM bool load_sd_multiband_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -3141,7 +3148,7 @@ FLASHMEM bool save_sd_multiband_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       data_json["master_gain"] = MultiBandUIparams.master_gain;
       data_json["master_mix"] = MultiBandUIparams.master_mix;
@@ -3221,7 +3228,9 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+       
+        auto& data_json = g_json_doc; data_json.clear();
+       
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -3232,6 +3241,9 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
         LOG.println();
 #endif
         unload_all_custom_samples();
+        // Clear stale PSRAM/DRAM state that can persist across warm resets
+        memset(customSamples, 0, sizeof(CustomSample) * NUM_CUSTOM_SAMPLES);
+       // Serial.println("SMP: unload done");
 
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
@@ -3358,7 +3370,7 @@ FLASHMEM bool save_sd_samples_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       int json_index = 0; // Separate index for JSON array
       for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
@@ -3476,7 +3488,7 @@ FLASHMEM bool load_sd_slices_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -3515,7 +3527,7 @@ FLASHMEM bool save_sd_slices_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       data_json["slices_scrollspeed"] = slices_scrollspeed;
       data_json["slices_autoalign"] = slices_autoalign;
@@ -3571,7 +3583,7 @@ FLASHMEM bool load_sd_sidechain_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -3630,7 +3642,7 @@ FLASHMEM bool save_sd_sidechain_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       data_json["active"] = sidechain_active;
 
@@ -3694,7 +3706,7 @@ FLASHMEM bool load_sd_granular_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -3749,7 +3761,7 @@ FLASHMEM bool save_sd_granular_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       // Save granular parameters
 
@@ -3810,7 +3822,7 @@ FLASHMEM bool load_sd_chain_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -3863,7 +3875,7 @@ FLASHMEM bool save_sd_chain_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       for (uint8_t i = 0; i < rows; i++)
       {
         for (uint8_t j = 0; j < columns; j++)
@@ -3907,7 +3919,7 @@ FLASHMEM bool load_sd_transpose_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -3960,7 +3972,7 @@ FLASHMEM bool save_sd_transpose_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       for (uint8_t i = 0; i < rows; i++)
       {
         for (uint8_t j = 0; j < columns; j++)
@@ -4004,7 +4016,7 @@ FLASHMEM bool load_sd_song_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -4060,7 +4072,7 @@ FLASHMEM bool save_sd_song_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       for (uint8_t i = 0; i < rows; i++)
       {
         for (uint8_t j = 0; j < columns; j++)
@@ -4108,7 +4120,7 @@ FLASHMEM bool save_sd_seq_sub_vel_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       for (uint8_t i = 0; i < rows; i++)
       {
         for (uint8_t j = 0; j < columns; j++)
@@ -4162,7 +4174,7 @@ FLASHMEM bool save_sd_seq_sub_patterns_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       for (uint8_t i = 0; i < rows; i++)
       {
         for (uint8_t j = 0; j < columns; j++)
@@ -4271,7 +4283,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
     json = SD.open(filename, FILE_WRITE);
     if (json)
     {
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       data_json["seq_tempo_ms"] = seq.tempo_ms;
       data_json["pattern_len_dec"] = seq.pattern_len_dec;
       data_json["clock"] = seq.clock;
@@ -4421,7 +4433,7 @@ FLASHMEM void get_sd_performance_name_json(uint8_t number)
       // ... and if: load
 
       json = SD.open(filename);
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
       if (json)
       {
         deserializeJson(data_json, json);
@@ -4478,7 +4490,7 @@ FLASHMEM bool load_sd_seq_sub_vel_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -4545,7 +4557,7 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
 
         json.close();
@@ -4667,7 +4679,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -5324,7 +5336,7 @@ FLASHMEM bool save_sd_multisample_presets_json(uint8_t number) {
     json = SD.open(filename, FILE_WRITE);
     if (json) {
       char zone_filename[CONFIG_FILENAME_LEN];
-      StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+      auto& data_json = g_json_doc; data_json.clear();
 
       for (uint8_t i = 0; i < NUM_MULTISAMPLES; i++) {
         data_json[i]["name"] = msp[i].name;
@@ -5401,7 +5413,7 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number) {
 
       json = SD.open(filename);
       if (json) {
-        StaticJsonDocument<JSON_BUFFER_SIZE> data_json;
+        auto& data_json = g_json_doc; data_json.clear();
         DeserializationError error = deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();

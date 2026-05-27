@@ -4,16 +4,20 @@
 #include "config.h"
 
 
-#if defined ESP_DISPLAY
+#ifdef RA_DISPLAY
+#include <GSL1680.h>
+extern GSL1680 touch;
+#elif CAPACITIVE_TOUCH_DISPLAY
+#include "Adafruit_FT6206.h"
+extern Adafruit_FT6206 touch;
+#elif defined ESP_DISPLAY
 #include "esp_touch.h"
 extern esp_touchscreen touch;
 #elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 extern XPT2046_Touchscreen touch;
-#elif defined CAPACITIVE_TOUCH_DISPLAY
-#include "Adafruit_FT6206.h"
-extern Adafruit_FT6206 touch;
 #endif
+
 
 enum Dexed_ADSR {
   DXD_ATTACK = 0,
@@ -135,5 +139,6 @@ void handle_touchscreen_drums();
 void handle_load_performance();
 void handle_touchscreen_granular();
 void handle_touchscreen_msp();
+void handle_touchscreen_sd_content_not_found();
 
 #endif

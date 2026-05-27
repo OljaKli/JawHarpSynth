@@ -1,16 +1,24 @@
 #include "touchbutton.h"
 #include "touch.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
+
+
+extern void checkWebRemote();
+
 extern ts_t ts;
 extern uint8_t numTouchPoints;
 
@@ -80,21 +88,21 @@ FLASHMEM ColorCombo TouchButton::getColors(Color color) {
 }
 
 FLASHMEM void TouchButton::clearButton(uint16_t x, uint16_t y, uint16_t color) {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, color);
 }
 
 FLASHMEM void TouchButton::draw(const std::string label, const std::string sub, Color color) {
   drawButton(x, y, label.c_str(), sub.c_str(), color);
   uint16_t barColor = isSelected ? COLOR_SYSTEXT : colorMap[color].bg;
-  display.console = true;
+  checkWebRemote();
   display.fillRect(x, (y + BUTTON_SIZE_Y - 2), BUTTON_SIZE_X, 2, barColor);
 }
 
 FLASHMEM void TouchButton::drawVirtualKeyboardButton(uint16_t x, uint16_t y) {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(x, y, BUTTON_SIZE_X, 16, GREY3);
-  display.console = true;
+  checkWebRemote();
   display.fillRect(x, y + 16, BUTTON_SIZE_X, 36 - 16, COLOR_BACKGROUND);
   display.setTextSize(1);
   display.setTextColor(GREY1, GREY3);
@@ -102,7 +110,7 @@ FLASHMEM void TouchButton::drawVirtualKeyboardButton(uint16_t x, uint16_t y) {
   display.print(F("V.KEYB"));
 
   for (uint8_t i = 0; i < 7; i++) {//draw white keys
-    display.console = true;
+    checkWebRemote();
     display.fillRect(x + 7 * i, y + 17, 6, 18, COLOR_SYSTEXT); // pianoroll white key
   }
   for (uint8_t i = 0; i < 6; i++) {
@@ -118,7 +126,7 @@ FLASHMEM void TouchButton::drawButton(uint16_t x, uint16_t y, const std::string 
   display.setTextSize(1);
   display.setTextColor(c.text, c.bg);
 
-  display.console = true;
+  checkWebRemote();
   display.fillRect(x, y, BUTTON_SIZE_X, BUTTON_SIZE_Y, c.bg);
 
   display.setCursor(x + 5, y + 5);

@@ -1,13 +1,18 @@
 #include "scope.h"
 //#include "UI.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#include "config.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
@@ -55,19 +60,19 @@ void Realtime_Scope::draw_scope(uint16_t x, int y, uint8_t w, uint8_t h)
   }
 
 //Check if the entire scope buffer is empty (no audio)
-// bool allZero = true;
-// for (uint16_t i = 0; i < w/2; i++) {
-//    if (abs(scopebuffer[i] - halfHeight) > 1) {
-//         allZero = false;
-//         break;
-//     }
-// }
-// if (allZero) {
-//     // Nothing to draw – skip sending
-//     updateBuffer = true;
-//     scope_is_drawing = false;
-//     return;
-// }
+bool allZero = true;
+for (uint16_t i = 0; i < w/2; i++) {
+   if (abs(scopebuffer[i] - halfHeight) > 1) {
+        allZero = false;
+        break;
+    }
+}
+if (allZero) {
+    // Nothing to draw – skip sending
+    updateBuffer = true;
+    scope_is_drawing = false;
+    return;
+}
 
 #if defined ESP_DISPLAY
   // Send Y‑values to ESP in a single packet

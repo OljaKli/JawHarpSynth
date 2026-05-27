@@ -15,7 +15,8 @@
 #include <Audio.h>
 #include "UI_liveseq_editor_shared.h"
 
-extern bool remote_active;
+extern void checkWebRemote();
+
 extern uint8_t sd_card_internal;
 static elapsedMillis timeSinceOpened;
 static constexpr uint8_t NUM_DRUMSET_ACTIVE = NUM_DRUMSET_CONFIG - 1;  // exclude the empty last sample
@@ -33,8 +34,10 @@ extern int numTouchPoints;
 extern LCDMenuLib2 LCDML;
 extern sequencer_t seq;
 
-#ifdef ESP_DISPLAY
+#if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
@@ -117,7 +120,7 @@ void updateStartStopButton();
 // Show a temporary text message at the top of the screen
 FLASHMEM void showMessage(const char* msg) {
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    if (remote_active) display.console = true;
+   checkWebRemote();
     display.fillRect(0, 0, DISPLAY_WIDTH, 20, COLOR_BACKGROUND);
     display.setTextSize(1);
     uint16_t textWidth = strlen(msg) * CHAR_width_small;
@@ -429,7 +432,7 @@ FLASHMEM void drawDrumList() {
                 uint8_t candidateNote = drum_config[idx].midinote;
                 bool isSelected = (currentNote == candidateNote);
                 uint16_t bg = isSelected ? MIDDLEGREEN : DX_DARKCYAN;
-                if (remote_active) display.console = true;
+               checkWebRemote();
                 display.fillRect(x, y, SELECTION_CELL_W - 2, SELECTION_CELL_H - 2, bg);
                 display.setTextColor(COLOR_SYSTEXT, bg);
                 display.setCursor(x + 4, y + 6);
@@ -450,7 +453,7 @@ FLASHMEM void drawDrumList() {
             }
             else {
                 // Clear this cell (no sample)
-                if (remote_active) display.console = true;
+               checkWebRemote();
                 display.fillRect(x, y, SELECTION_CELL_W - 2, SELECTION_CELL_H - 2, COLOR_BACKGROUND);
             }
         }
@@ -517,19 +520,19 @@ FLASHMEM void drawCopyButton() {
     }
 }
 
- static uint8_t lastIndicatorStep = 255;
- static uint8_t lastDisplayedBar = 255;
+//  static uint8_t lastIndicatorStep = 255;
+//  static uint8_t lastDisplayedBar = 255;
 
 FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     LiveSequencer::LiveSeqData* data = getData();
     uint16_t y = GRID_START_Y + NUM_DRUM_SLOTS * CELL_H + 4;
     static uint8_t lastStep = 255;
     static uint8_t lastDisplayedBar = 255;
-    static bool lastRunning = false;
+    //static bool lastRunning = false;
 
     bool runningNow = data->isRunning;
     //bool justStarted = (runningNow && !lastRunning);
-    lastRunning = runningNow;
+    //lastRunning = runningNow;
 
     // Handle pending first-step draw (set by start button)
     if (pendingFirstStepDraw && runningNow) {
@@ -537,7 +540,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
         
         for (uint8_t step = 0; step < 2; step++) {
             uint16_t x = GRID_START_X + step * CELL_W;
-            if (remote_active) display.console = true;
+            checkWebRemote();
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
         }
         // Draw step 0 explicitly
@@ -545,7 +548,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
         bool isPlayingCurrentBar = (data->currentPattern == (uint32_t)currentBar);
         uint16_t cursorColor = isPlayingCurrentBar ? RED : GREY1;
         uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, cursorColor);
         lastStep = currentStep;
         lastDisplayedBar = currentBar;
@@ -556,7 +559,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     if (forceFullRedraw || currentBar != lastDisplayedBar) {
         for (uint8_t step = 0; step < STEPS_PER_BAR; step++) {
             uint16_t x = GRID_START_X + step * CELL_W;
-            if (remote_active) display.console = true;
+           checkWebRemote();
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
         }
         lastStep = 255;
@@ -567,7 +570,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     if (!runningNow) {
         if (lastStep != 255) {
             uint16_t x = GRID_START_X + lastStep * CELL_W;
-            if (remote_active) display.console = true;
+            checkWebRemote();
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, GREY3);
             lastStep = 255;
         }
@@ -582,7 +585,7 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     // If we are at the very beginning (lastStep == 255) and not handled by pending, draw current step
     if (lastStep == 255) {
         uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, isPlayingCurrentBar ? RED : GREY2);
         lastStep = currentStep;
         return;
@@ -591,11 +594,11 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     if (wrap) {
         if (lastStep != 255) {
             uint16_t xPrev = GRID_START_X + lastStep * CELL_W;
-            if (remote_active) display.console = true;
+           checkWebRemote();
             display.fillRect(xPrev, y, CELL_W - 1, CELL_H - 1, GREY3);
         }
         uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, isPlayingCurrentBar ? RED : GREY2);
         lastStep = currentStep;
         return;
@@ -604,11 +607,11 @@ FLASHMEM void drawRunningIndicator(bool forceFullRedraw) {
     if (currentStep == lastStep && !forceFullRedraw) return;
     if (lastStep != 255 && lastStep != currentStep) {
         uint16_t xPrev = GRID_START_X + lastStep * CELL_W;
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.fillRect(xPrev, y, CELL_W - 1, CELL_H - 1, GREY3);
     }
     uint16_t xCurr = GRID_START_X + currentStep * CELL_W;
-    if (remote_active) display.console = true;
+    checkWebRemote();
     display.fillRect(xCurr, y, CELL_W - 1, CELL_H - 1, isPlayingCurrentBar ? RED : GREY2);
     lastStep = currentStep;
 }
@@ -617,13 +620,13 @@ FLASHMEM void redrawCell(uint8_t slot, uint8_t step) {
     uint16_t x = GRID_START_X + step * CELL_W;
     uint16_t y = GRID_START_Y + slot * CELL_H;
     uint16_t bgColor = ((step / 4) % 2 == 0) ? GREY3 : GREY2;
-    if (remote_active) display.console = true;
+   checkWebRemote();
     display.fillRect(x, y, CELL_W - 1, CELL_H - 1, bgColor);
     if (noteGrid[slot][step]) {
         uint8_t vel = noteVelocity[slot][step];
         if (vel == 0) vel = 100;
         uint16_t noteColor = velocityToColor(vel);
-        if (remote_active) display.console = true;
+       checkWebRemote();
         display.fillRect(x, y, CELL_W - 1, CELL_H - 1, noteColor);
     }
 }
@@ -674,7 +677,7 @@ FLASHMEM void drawGridUI() {
 
     for (uint8_t slot = 0; slot < NUM_DRUM_SLOTS; slot++) {
         uint8_t y = GRID_START_Y + slot * CELL_H;
-        if (remote_active) display.console = true;
+       checkWebRemote();
         display.fillRect(0, y, LABEL_WIDTH, CELL_H - 1, DX_DARKCYAN);
         display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
         display.setCursor(2, y + 3);
@@ -696,13 +699,13 @@ FLASHMEM void drawGridUI() {
         for (uint8_t step = 0; step < STEPS_PER_BAR; step++) {
             uint16_t x = GRID_START_X + step * CELL_W;
             uint16_t bgColor = ((step / 4) % 2 == 0) ? GREY3 : GREY2;
-            if (remote_active) display.console = true;
+           checkWebRemote();
             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, bgColor);
             if (noteGrid[slot][step]) {
                 uint8_t vel = noteVelocity[slot][step];
                 if (vel == 0) vel = 100;
                 uint16_t noteColor = velocityToColor(vel);
-                if (remote_active) display.console = true;
+               checkWebRemote();
                 display.fillRect(x, y, CELL_W - 1, CELL_H - 1, noteColor);
             }
         }
@@ -1049,7 +1052,7 @@ FLASHMEM void UI_func_drum_pattern_editor(uint8_t param) {
         drawRunningIndicator(); // only updates if step changed
 
         static uint8_t lastPlaybackBar = 0xFF;
-        static bool lastRunningState = false;
+       // static bool lastRunningState = false;
         LiveSequencer::LiveSeqData* data = getData();
 
         if (data->isRunning) {

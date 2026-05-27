@@ -6,10 +6,12 @@
 #include "drums.h"
 #include "sequencer.h"
 #include <LCDMenuLib2.h>
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "UI.h"
 
@@ -39,7 +41,19 @@ extern void handleStart();
 extern void handleStop();
 extern void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL);
 extern LCDMenuLib2 LCDML;
+
+
+
+#if defined ESP_DISPLAY
+extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
+#else
 extern ILI9341_t3n display;
+#endif
+
+
+
 extern sequencer_t seq;
 extern int apc_scroll_counter;
 extern char apc_scrolltext[16];

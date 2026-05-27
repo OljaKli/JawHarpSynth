@@ -28,6 +28,8 @@ public:
 
 #if defined ESP_DISPLAY
   GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, espdisplay& display);
+#elif defined (RA_DISPLAY)
+ GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, RA8875& display);
 #else
   GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, ILI9341_t3n& display);
 #endif
@@ -91,7 +93,6 @@ private:
   FLASHMEM void insertGridRow();
   FLASHMEM void removeGridRow();
   FLASHMEM void slowRect(uint16_t x, uint8_t y, uint16_t color);
-  FLASHMEM void checkWebRemote();
   FLASHMEM uint8_t selectedTrackLayerLimit() const;
   FLASHMEM bool selectedCellHasContent() const;
   FLASHMEM bool layerIsActive(uint8_t layer) const;
@@ -111,9 +112,11 @@ private:
   LiveSequencer::LiveSeqData& data;
 
 #if defined ESP_DISPLAY
-  espdisplay& display;
+espdisplay& display;
+#elif defined (RA_DISPLAY)
+RA8875& display;
 #else
-  ILI9341_t3n& display;
+ILI9341_t3n& display;
 #endif
 
   Callbacks callbacks{};

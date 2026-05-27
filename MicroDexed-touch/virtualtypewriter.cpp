@@ -1,17 +1,25 @@
 #include "virtualtypewriter.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "touch.h"
 
 extern ts_t ts;
+
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
+
+extern void checkWebRemote();
+
 extern uint8_t numTouchPoints;
 
 // Keyboard layout
@@ -72,7 +80,7 @@ FLASHMEM void virtual_typewriter_init(int8_t pos) {
 }
 
 FLASHMEM void draw_key(uint16_t px, uint8_t py, const char *label, bool pressed, uint8_t key_w = VK_KEY_W) {
-      display.console = true;
+      checkWebRemote();
     display.fillRect(px, py, key_w, VK_KEY_H, pressed ? RED : DX_DARKCYAN);
     uint16_t textX = px + (key_w - strlen(label)*CHAR_width)/2;
     display.setCursor(textX > px ? textX : px+2, py + 8);
@@ -297,7 +305,7 @@ FLASHMEM void virtual_typewriter_update_display() {
         int8_t pos = edit_pos_global + offset;
         
         if (pos >= 0 && pos < edit_len_global) {
-             display.console = true;
+             checkWebRemote();
             display.fillRect(
                 vtw_x * CHAR_width + (pos * CHAR_width),
                 3 * CHAR_height + 1,
@@ -309,7 +317,7 @@ FLASHMEM void virtual_typewriter_update_display() {
     // Draw cursor at current position
     if (edit_pos_global >= 0 && edit_pos_global < edit_len_global) {
         uint16_t cursor_color = edit_mode_global ? RED : COLOR_PITCHSMP;
-         display.console = true;
+         checkWebRemote();
         display.fillRect(
             vtw_x * CHAR_width + (edit_pos_global * CHAR_width),
             3 * CHAR_height + 1,

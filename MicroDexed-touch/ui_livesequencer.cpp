@@ -1,9 +1,11 @@
 #include "ui_livesequencer.h"
 #include "LCDMenuLib2.h"
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "sequencer.h"
 #include "livesequencer.h"
@@ -18,9 +20,12 @@ extern sequencer_t seq;
 extern LCDMenuLib2 LCDML;
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
+extern void checkWebRemote();
 extern ts_t ts;
 extern bool remote_active;
 bool openingScreen = false;
@@ -913,7 +918,7 @@ FLASHMEM void UI_LiveSequencer::drawUpdates(uint16_t flags) {
 }
 
 FLASHMEM void UI_LiveSequencer::clearBottomArea(void) {
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, GRID.Y[2], DISPLAY_WIDTH, DISPLAY_HEIGHT - GRID.Y[2], COLOR_BACKGROUND);
 
 
@@ -1198,9 +1203,7 @@ FLASHMEM void UI_LiveSequencer::processBar(const float progress, const uint16_t 
 }
 
 FLASHMEM void UI_LiveSequencer::drawPerformanceName(void) {
-  if (remote_active) {
-    display.console = true;
-  }
+  checkWebRemote();
 
   const uint16_t textX = GRID.X[2];
   const uint16_t textY = GRID.Y[0] + 6;
@@ -1215,9 +1218,7 @@ FLASHMEM void UI_LiveSequencer::drawPerformanceName(void) {
 }
 
 FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
-  if (remote_active) {
-    display.console = true;
-  }
+  checkWebRemote();
 
   if (guiFlags & drawCpuLoad && !gridEditor.isActive()) {
     static constexpr float size = 2 * TouchButton::BUTTON_SIZE_X + TouchButton::BUTTON_SPACING;
@@ -1230,13 +1231,9 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
     else if (cpuLoad > 75) {
       color = COLOR_ARP;
     }
-    if (remote_active) {
-      display.console = true;
-    }
+    checkWebRemote();
     display.drawLine(GRID.X[2], 0, GRID.X[2] + barWidth, 0, color);
-    if (remote_active) {
-      display.console = true;
-    }
+    checkWebRemote();
     display.drawLine(GRID.X[2] + barWidth, 0, GRID.X[4] - TouchButton::BUTTON_SPACING, 0, GREY2);
   }
 
@@ -1342,7 +1339,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
             const uint16_t xStart = GRID.X[trackIndex];
             const uint16_t yStart = GRID.Y[2 + layer] + TouchButton::BUTTON_SIZE_Y / 2;
             const int8_t thisYFill = -int8_t((pbValue - 64) / 4);
-            display.console = true;
+            checkWebRemote();
             display.fillRect(xStart, GRID.Y[2 + layer], 3, TouchButton::BUTTON_SIZE_Y, TouchButton::getColors(color).bg); // clear whole bar
             display.fillRect(xStart, std::min(yStart, uint16_t(yStart + thisYFill)), 3, std::abs(thisYFill), COLOR_PITCHSMP);
           }
@@ -1351,7 +1348,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
           const uint16_t xStart = GRID.X[trackIndex] + TouchButton::BUTTON_SIZE_X - 3;
           const uint16_t yStart = GRID.Y[2 + layer];
           const uint16_t yFill = std::min(barHeight, TouchButton::BUTTON_SIZE_Y);
-          display.console = true;
+          checkWebRemote();
           display.fillRect(xStart, yStart, 3, TouchButton::BUTTON_SIZE_Y - yFill, TouchButton::getColors(color).bg);
           display.fillRect(xStart, yStart + (TouchButton::BUTTON_SIZE_Y - yFill), 3, yFill, COLOR_SYSTEXT);
         }
@@ -1364,7 +1361,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         b->drawNow();
       }
 
-      display.console = true;
+      checkWebRemote();
       display.fillRect(0, GRID.Y[2] + TouchButton::BUTTON_SIZE_Y, DISPLAY_WIDTH, 4, MIDDLEGREEN);
 
       refreshToolsElements(static_cast<Tools>(currentTools));

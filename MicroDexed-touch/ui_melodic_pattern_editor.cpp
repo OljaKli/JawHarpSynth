@@ -11,7 +11,9 @@
 #include <elapsedMillis.h>
 #include "UI_liveseq_editor_shared.h"
 
-extern bool remote_active;
+
+extern void checkWebRemote();
+
 // Virtual keyboard area starts at the control buttons row (y ~80)
 static constexpr uint16_t VIRT_KEYB_TOP = 80;
 static elapsedMillis timeSinceOpened;
@@ -25,8 +27,10 @@ extern int numTouchPoints;
 extern LCDMenuLib2 LCDML;
 extern sequencer_t seq;
 
-#ifdef ESP_DISPLAY
+#if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
@@ -199,18 +203,18 @@ FLASHMEM void drawLayer() {
 
 
 FLASHMEM void drawVelocitySlider_melodic() {
-    if (remote_active) display.console = true;
+    checkWebRemote();
     display.fillRect(VEL_TEXT_X - 5, VEL_SLIDER_Y - 3, VEL_SLIDER_W + 45, VEL_SLIDER_H + 6, COLOR_BACKGROUND);
     display.setTextSize(1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setCursor(VEL_TEXT_X, VEL_SLIDER_Y + 1);
     display.print("VEL");
-    if (remote_active) display.console = true;
+    checkWebRemote();
     display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, VEL_SLIDER_W, VEL_SLIDER_H, GREY3);
     uint16_t fillWidth = (currentVelocity * VEL_SLIDER_W) / 127;
     if (fillWidth > 0) {
         uint16_t color = velocityToColor(currentVelocity);
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, fillWidth, VEL_SLIDER_H, color);
     }
     uint16_t markerX = VEL_SLIDER_X + fillWidth;
@@ -231,7 +235,7 @@ FLASHMEM void setVelocityFromTouch_melodic(int16_t x) {
 }
 
 FLASHMEM void redrawGridAndButtons() {
-
+  
     // Redraw all grid cells
     for (uint8_t bar = 0; bar < NUM_BARS; bar++) {
         for (uint8_t step = 0; step < STEPS_PER_BAR; step++) {
@@ -340,7 +344,7 @@ FLASHMEM void redrawCell_melodic(uint8_t bar, uint8_t step, bool highlight) {
     uint16_t y = GRID_START_Y + bar * CELL_H;
     uint16_t bgColor = ((step / 4) % 2 == 0) ? GREY3 : GREY2;
 
-    if (remote_active) display.console = true;
+    checkWebRemote();
     display.fillRect(x, y, CELL_W - 1, CELL_H - 1, bgColor);
 
     uint8_t note = noteGrid[activeLayer][bar][step];
@@ -348,25 +352,25 @@ FLASHMEM void redrawCell_melodic(uint8_t bar, uint8_t step, bool highlight) {
         uint8_t vel = velGrid[activeLayer][bar][step];
         if (vel == 0) vel = currentVelocity;
         uint16_t noteColor = velocityToColor(vel);
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.fillRect(x, y, CELL_W - 1, CELL_H - 1, noteColor);
     }
 
     // Draw note name (short)
     std::string name = noteNumberToString(note);
     display.setTextSize(1);  //note color
-    if (remote_active) display.console = true;
+    checkWebRemote();
     display.setTextColor(COLOR_BACKGROUND, (note != 0) ? velocityToColor(velGrid[activeLayer][bar][step]) : bgColor);
     uint8_t xOffset = (name.length() == 2) ? 4 : 1;
     display.setCursor(x + xOffset, y + CELL_H / 2 - 4);
     display.print(name.c_str());
 
     if (highlight) {
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.drawRect(x, y, CELL_W - 1, CELL_H - 1, COLOR_SYSTEXT);
     }
     if (bar == selectedBar && step == selectedStep && !highlight) {
-        if (remote_active) display.console = true;
+        checkWebRemote();
         display.drawRect(x, y, CELL_W - 1, CELL_H - 1, COLOR_SYSTEXT);
     }
 }
@@ -431,7 +435,7 @@ FLASHMEM void drawCopyButton_melodic() {
 FLASHMEM void drawGridUI_melodic() {
     LiveSequencer::LiveSeqData* data = liveSeq.getData();
     // Clear grid area only, keep top bar and slider
-    if (remote_active) display.console = true;
+    checkWebRemote();
     display.fillRect(0, GRID_START_Y - 2, DISPLAY_WIDTH, NUM_BARS * CELL_H + 4, COLOR_BACKGROUND);
 
     drawLayer();
@@ -591,7 +595,6 @@ FLASHMEM void handleMainTouch_melodic(int16_t x, int16_t y) {
     }
 }
 
-
 // ----------------------------------------------------------------------
 // LCDML entry point
 // ----------------------------------------------------------------------
@@ -710,7 +713,7 @@ FLASHMEM void UI_func_melodic_pattern_editor(uint8_t param) {
                             // Draw the new cell in red (playing note highlight)
                             uint16_t x = GRID_START_X + step * CELL_W;
                             uint16_t y = GRID_START_Y + bar * CELL_H;
-                            if (remote_active) display.console = true;
+                            checkWebRemote();
                             display.fillRect(x, y, CELL_W - 1, CELL_H - 1, RED);
                             // Overwrite the note name (if any) in black
                             uint8_t note = noteGrid[activeLayer][bar][step];

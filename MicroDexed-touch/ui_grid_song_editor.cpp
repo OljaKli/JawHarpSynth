@@ -6,13 +6,17 @@
 
 #include <Arduino.h>
 
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 #include "touch.h"
 #include "sequencer.h"
+
+extern void checkWebRemote();
 
 extern ts_t ts;
 extern uint8_t numTouchPoints;
@@ -21,6 +25,11 @@ extern sequencer_t seq;
 
 #if defined ESP_DISPLAY
 FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, espdisplay& disp)
+  : liveSeq(sequencer), data(d), display(disp) {
+  initButtons();
+}
+#elif defined (RA_DISPLAY)
+FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, RA8875& disp)
   : liveSeq(sequencer), data(d), display(disp) {
   initButtons();
 }
@@ -1127,12 +1136,6 @@ FLASHMEM void GridSongEditorUI::removeGridRow() {
   if (liveSeq.removeGridRow(data.selectedGridStep)) {
     needsRedraw = true;
     data.redraw_grid_buttons = true;
-  }
-}
-
-FLASHMEM void GridSongEditorUI::checkWebRemote() {
-  if (remote_active) {
-    display.console = true;
   }
 }
 

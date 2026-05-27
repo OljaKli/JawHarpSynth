@@ -2,16 +2,20 @@
 #include "screensaver.h"
 #include "UI.h"
 
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
 
 #include "midi_devices.h"
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
@@ -20,6 +24,95 @@ uint8_t screensaver_brightness = 255;
 uint16_t screensaver_counthue = 0;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 extern bool remote_active;
+
+#if defined RA_DISPLAY
+FLASHMEM void boot_animation() {
+    display.setTextSize(2);
+    display.fillScreen(0);
+    randomSeed(analogRead(0));
+    
+    // ---- Adjust these to fill your screen ----
+    const int charSpacing = 12;          // extra pixels between chars (try 8..15)
+    const int startX = 10;               // left margin – increase if text is cut off
+    // -----------------------------------------
+    display.setFontSpacing(charSpacing);
+    
+    const int cols = 14, rows = 10;
+    const int cellW = 16 + charSpacing;  // logical width per character
+    const int cellH = 21;
+    const int startY = 18;
+    
+    // ---- NEW: limit the X position for the word start (0..maxStartX) ----
+    const int maxStartX = cols - 10;     // so that the 10‑char word fits entirely
+    // --------------------------------------------------------------------
+    
+    char chars[cols * rows];
+    char text1[] = "WELCOME TO";
+    char text2[] = "MICRODEXED";
+    uint8_t pos_x1 = random(maxStartX + 1);   // now limited
+    uint8_t pos_y1 = random(4) + 1;
+    uint8_t pos_x2 = random(maxStartX + 1);   // limited
+    uint8_t pos_y2 = random(4) + 5;
+    uint8_t fade_point = 60;
+    uint8_t hue = random(2);
+    
+    // Initial random characters
+    for (int i = 0; i < cols * rows; i++)
+        chars[i] = 32 + random(92 - 32);
+    
+    for (uint8_t f = 0; f < 122; f++) {
+        uint16_t grayColor = ColorHSV(0, 0, 255 - f * 2);
+        uint16_t wordColor = ColorHSV(hue * 110, f * 3.8, 254);
+        uint16_t fadeColor = ColorHSV(hue * 110, fade_point * 3.8, 254 + fade_point - (f * 1.9));
+        
+        // Update character values (morphing)
+        for (int idx = 0; idx < cols * rows; idx++) {
+            int x = idx % cols, y = idx / cols;
+            bool inWord1 = (y == pos_y1 && x >= pos_x1 && x < pos_x1 + 10);
+            bool inWord2 = (y == pos_y2 && x >= pos_x2 && x < pos_x2 + 10);
+            if ((inWord1 || inWord2) && f < fade_point) {
+                char target = inWord1 ? text1[x - pos_x1] : text2[x - pos_x2];
+                if (chars[idx] > target) chars[idx]--;
+                else if (chars[idx] < target) chars[idx]++;
+            } else {
+                if ((chars[idx] > 32 && random(2) != 0) || (f >= fade_point && chars[idx] > 32 && random(7) != 1))
+                    chars[idx]--;
+            }
+        }
+        
+        // Draw all characters – group colour changes to minimise SPI
+        uint16_t lastColor = 0xFFFF;
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                int idx = y * cols + x;
+                // Optional: skip drawing if x would be off-screen (if startX + x*cellW >= display.width())
+                int cursorX = startX + x * cellW;
+                // if (cursorX >= display.width()) continue;   // optional clip
+                
+                bool inWord1 = (y == pos_y1 && x >= pos_x1 && x < pos_x1 + 10);
+                bool inWord2 = (y == pos_y2 && x >= pos_x2 && x < pos_x2 + 10);
+                
+                uint16_t color;
+                if ((inWord1 || inWord2) && f < fade_point)
+                    color = wordColor;
+                else if (inWord1 || inWord2)
+                    color = fadeColor;
+                else
+                    color = grayColor;
+                
+                // Only call setTextColor when the colour actually changes
+                if (color != lastColor) {
+                    display.setTextColor(color, 0);  // opaque black background
+                    lastColor = color;
+                }
+                display.setCursor(cursorX, startY + y * cellH);
+                display.print(chars[idx]);
+            }
+        }
+    }
+}
+
+#else
 
 FLASHMEM void boot_animation()
 {
@@ -94,6 +187,7 @@ FLASHMEM void boot_animation()
     delay(30);
   }
 }
+#endif
 
 #ifndef ESP_DISPLAY
 
@@ -1353,7 +1447,7 @@ FLASHMEM void CM5_frame_II() {
 
 // External declarations for global variables
 extern bool remote_active;
-extern void check_remote();
+extern void checkWebRemote();
 // Assuming display is defined elsewhere with appropriate methods
 
 AsteroidsScreensaver::AsteroidsScreensaver() : score(0), activeAsteroids(0) {}
@@ -1570,7 +1664,7 @@ FLASHMEM void AsteroidsScreensaver::drawAsteroid(Asteroid& a, uint16_t color) {
     int x1 = a.centerX + (a.relX[next] * cosRot - a.relY[next] * sinRot);
     int y1 = a.centerY + (a.relX[next] * sinRot + a.relY[next] * cosRot);
 
-    check_remote();
+    checkWebRemote();
 
     display.drawLine(x0, y0, x1, y1, color);
   }
@@ -2107,16 +2201,16 @@ FLASHMEM void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
   float rightY = ship.y + sin(ship.angle - 2.5 * PI / 3) * ship.size;
 
   // Draw ship
-  check_remote();
+  checkWebRemote();
   display.drawLine(noseX, noseY, leftX, leftY, color);
 
-  check_remote();
+  checkWebRemote();
   display.drawLine(noseX, noseY, rightX, rightY, color);
 
-  check_remote();
+  checkWebRemote();
   display.drawLine(leftX, leftY, ship.x, ship.y, color);
 
-  check_remote();
+  checkWebRemote();
   display.drawLine(rightX, rightY, ship.x, ship.y, color);
 
   // Draw thrusters if active
@@ -2133,7 +2227,7 @@ FLASHMEM void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
     // Draw flame with appropriate color
     uint16_t flameColor = (color == 0x0000) ? COLOR_BACKGROUND : RED;
 
-    check_remote();
+    checkWebRemote();
     display.drawLine(rearX, rearY, flameX, flameY, flameColor);
   }
 }
@@ -2143,7 +2237,7 @@ FLASHMEM void AsteroidsScreensaver::drawShot(LaserShot& shot) {
   float backX = shot.x - shot.vx * 0.6f;
   float backY = shot.y - shot.vy * 0.6f;
 
-  check_remote();
+  checkWebRemote();
   display.drawLine(backX, backY, shot.x, shot.y, RED);
 }
 
@@ -2166,15 +2260,15 @@ FLASHMEM void AsteroidsScreensaver::drawFuelGauge() {
     else gaugeColor = RED;
 
     // Draw filled portion
-    check_remote();
+    checkWebRemote();
     display.fillRect(gaugeX + 1, gaugeY + 1, fillWidth, gaugeHeight - 2, gaugeColor);
 
-    check_remote();
+    checkWebRemote();
     display.fillRect(gaugeX + 1 + fillWidth, gaugeY + 1, gaugeWidth - fillWidth - 1, gaugeHeight - 2, COLOR_BACKGROUND);
 
   }
 
-  check_remote();
+  checkWebRemote();
   // Draw gauge outline
   display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
 }
@@ -2197,18 +2291,16 @@ FLASHMEM void AsteroidsScreensaver::drawShieldGauge() {
     else gaugeColor = RED;
 
     // Draw filled portion
-    check_remote();
+    checkWebRemote();
     display.fillRect(gaugeX + 1, gaugeY + 1, fillWidth, gaugeHeight - 2, gaugeColor);
 
-    check_remote();
+    checkWebRemote();
     display.fillRect(gaugeX + 1 + fillWidth, gaugeY + 1, gaugeWidth - fillWidth - 1, gaugeHeight - 2, COLOR_BACKGROUND);
 
   }
 
   // Draw gauge outline
-  if (remote_active) {
-    display.console = true;
-  }
+ checkWebRemote();
   display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
 
 }
@@ -2299,7 +2391,7 @@ FLASHMEM void AsteroidsScreensaver::erasePreviousState() {
       float prevBackY = ship.shots[i].prevY - ship.shots[i].vy * 0.6f;
 
       // Erase the previous shot segment
-      check_remote();
+      checkWebRemote();
       display.drawLine(prevBackX, prevBackY, ship.shots[i].prevX, ship.shots[i].prevY, 0x0000);
     }
   }

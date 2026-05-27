@@ -57,11 +57,14 @@ MCP23017 mcp(0x20);
 
 #include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
 
-#ifndef ESP_DISPLAY
-#include "ILI9341_t3n.h"
-#else 
+#ifdef ESP_DISPLAY
 #include "esp32.h"
+#elif defined (RA_DISPLAY)
+#include "RA8875.h"
+#else
+#include "ILI9341_t3n.h"
 #endif
+
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
 #include "UI.h"
@@ -94,16 +97,15 @@ using namespace TeensyTimerTool;
 #include "livesequencer.h"
 #include <vector>
 
-//#include "D50Synth.h"
-
-#ifdef CAPACITIVE_TOUCH_DISPLAY
+#ifdef RA_DISPLAY
+#include <GSL1680.h>
+#elif CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 #elif defined ESP_DISPLAY
 #include "esp_touch.h"
 #elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
 #endif
-
 
 #ifdef COMPILE_FOR_SDCARD
 #include <TeensyVariablePlayback.h>
@@ -121,10 +123,6 @@ uint8_t APC_TONAL_SCROLL_OFFSET = 64;
 uint8_t APC_PREVIOUS_NOTE = 254;
 uint8_t APC_MODE = APC_OFF;
 #endif
-
-// D50Synth d50Synth; 
-// struct d50_config_s d50;
-
 
 // Allocate the delay lines for left and right channels
 short braids_l_delayline[BRAIDS_FLANGE_DELAY_LENGTH];
@@ -161,7 +159,9 @@ uint8_t gate_state_old[2];
 
 bool suppressReload; //liveseq
 
-#ifdef CAPACITIVE_TOUCH_DISPLAY
+#ifdef RA_DISPLAY
+extern GSL1680 touch;
+#elif CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY
 extern esp_touchscreen touch;
@@ -341,6 +341,8 @@ PitchSamplePlayer WAV_preview_PSRAM;
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
+#elif defined (RA_DISPLAY)
+extern RA8875 display;
 #else
 extern ILI9341_t3n display;
 #endif
@@ -408,10 +410,6 @@ AudioAnalyzePeak mb_after_r;
 
 AudioConnection patchCord_l(finalized_mixer_l, 0, i2s1, 1);
 AudioConnection patchCord_r(finalized_mixer_r, 0, i2s1, 0);
-
-// Connect D50 to audio output
-// AudioConnection patchCorda1(*d50Synth.getOutputMixer(), 0, i2s1, 0);
-// AudioConnection patchCorda2(*d50Synth.getOutputMixer(), 1, i2s1, 1);
 
 // WAV/AUDIO Recording
 AudioRecordQueue record_queue_l;
@@ -1382,12 +1380,26 @@ FLASHMEM void setup()
 #endif
 #endif
 
+#if !defined ESP_DISPLAY && !defined RA_DISPLAY
   // Init display
-#ifndef ESP_DISPLAY
   SPI.begin();
 #endif
 
-  display.begin();
+
+#if defined RA_DISPLAY
+display.begin(RA8875_800x480);
+display.loadMDTfontToCGRAM();
+display.setCGRAMAsDefaultFont();
+
+delay(2);
+
+display.backlight(true);
+delay (2);
+display.setRotation(2);
+
+#else
+ display.begin();
+#endif
 
   // invert display colors
 #ifndef ESP_DISPLAY
@@ -1397,7 +1409,11 @@ FLASHMEM void setup()
 #endif
 #endif
 
-#if defined GENERIC_DISPLAY
+
+#ifdef RA_DISPLAY
+ touch.begin();
+ touch_ic_found = true;
+#elif defined GENERIC_DISPLAY
   touch.begin();
   touch_ic_found = true;
 #endif
@@ -1670,8 +1686,6 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
 #endif
 
-
-
   AudioNoInterrupts();
   // Start SD card
   sd_card_internal = check_internal_sd_card();
@@ -1806,11 +1820,6 @@ FLASHMEM void setup()
   master_mixer_l.gain(MASTER_MIX_CH_GRANULAR, VOL_MAX_FLOAT);
 #endif
 
-#ifdef BITCRUSH
-  master_mixer_r.gain(MASTER_MIX_CH_BITCRUSH, 0.6);
-  master_mixer_l.gain(MASTER_MIX_CH_BITCRUSH, 0.6);
-#endif
-
   master_mixer_r.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
   master_mixer_l.gain(MASTER_MIX_CH_SIDECHAIN, VOL_MAX_FLOAT);
 
@@ -1925,7 +1934,7 @@ FLASHMEM void setup()
   }
   display.setTextSize(2);
   AudioInterrupts();
-  display.console = true;
+  checkWebRemote();
   display.fillRect(0, CHAR_height, DISPLAY_WIDTH, CHAR_height * 4, COLOR_BACKGROUND);
   display.console = false;
 #endif
@@ -2879,12 +2888,12 @@ FLASHMEM void show_chord()
 
     if (seq.arr_split_note == 0 || seq.note_in > seq.arr_split_note)
     {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(CHAR_width_small + seq.note_in * 3.55, 110, 4, 4, RED);
     }
     else if (chord_input[3] != 0)
     {
-      display.console = true;
+      checkWebRemote();
       display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
     }
 
@@ -3055,6 +3064,11 @@ extern void sendEditMode(bool);
 extern void processIncomingSerial();
 #endif
 
+void checkWebRemote()
+{
+if ( remote_active)
+display.console = true;
+}
 
 void loop()
 {
@@ -3466,7 +3480,7 @@ void loop()
     {
       for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
       {
-        display.console = true;
+        checkWebRemote();
         if (midi_decay_timer_dexed > MIDI_DECAY_TIMER && midi_decay_dexed[instance_id] > 0)
         {
           midi_decay_dexed[instance_id]--;
@@ -3489,7 +3503,7 @@ void loop()
     {
       for (uint8_t instance_id = 0; instance_id < NUM_MICROSYNTH; instance_id++)
       {
-        display.console = true;
+        checkWebRemote();
         if (midi_decay_timer_microsynth > MIDI_DECAY_TIMER && midi_decay_microsynth[instance_id] > 1)
         {
           midi_decay_microsynth[instance_id]--;
@@ -3499,7 +3513,7 @@ void loop()
         // if value is 0 then no drawing should happen - so stop at 1
         if (midi_decay_microsynth[instance_id] == 1)
         {
-          display.console = true;
+          checkWebRemote();
           display.fillRect(13 * 6 + (instance_id * 12), 17, 5, 1, COLOR_BACKGROUND);
           midi_decay_microsynth[instance_id] = 0;
         }
@@ -3572,7 +3586,7 @@ void loop()
 
     if (LCDML.FUNC_getID() == 255)
     {
-      display.console = true;
+      checkWebRemote();
       TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
       ui_save_notification_icon = false;
       display.console = false;
@@ -3580,7 +3594,7 @@ void loop()
     else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_system_settings) ||
       LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_test_touchscreen))
     {
-      display.console = true;
+      checkWebRemote();
       TouchButton::clearButton(GRID.X[0], GRID.Y[5], COLOR_BACKGROUND);
 
       ui_save_notification_icon = false;
@@ -4688,11 +4702,6 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
       granularPoly.noteOff(inNumber);
     }
 #endif
-
-    //if (d50.midi_channel == 0 || (inChannel + 1) == d50.midi_channel) {
-       // d50Synth.noteOff(inNumber);
-    //}
-
   }
 }
 
@@ -5613,8 +5622,6 @@ FLASHMEM void handleStart(void)
       TouchButton::drawButton(GRID.X[5], GRID.Y[3], "SEQ.", "STOP", TouchButton::BUTTON_RED);
 
   }
-
-
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor))
   {
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
@@ -6648,6 +6655,67 @@ FLASHMEM void generate_version_string(char* buffer, uint8_t len)
 #endif
 }
 
+#include <string.h>
+#include <stdio.h>  // for snprintf
+
+static size_t lastMsgLen = 0;
+
+// Core function that does the actual drawing and erasing
+FLASHMEM void bootMessageCore(const char* msg, int num, const char* suffix) {
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+    display.setCursor(0, 0);
+    
+    size_t totalLen = 0;
+    
+    // Print main message
+    display.print(msg);
+    totalLen += strlen(msg);
+    
+    // Print integer if present (num != -1 sentinel)
+    if (num != -1) {
+        char numBuf[12];
+        itoa(num, numBuf, 10);
+        display.print(numBuf);
+        totalLen += strlen(numBuf);
+    }
+    
+    // Print suffix string if present
+    if (suffix != nullptr) {
+        display.print(suffix);
+        totalLen += strlen(suffix);
+    }
+    
+    // Erase leftover characters from previous message
+    if (lastMsgLen > totalLen) {
+        for (size_t i = totalLen; i < lastMsgLen; i++) {
+            display.print(' ');
+        }
+    }
+    
+    lastMsgLen = totalLen;
+}
+
+// Overload 1: just a string
+void bootMessage(const char* msg) {
+    bootMessageCore(msg, -1, nullptr);
+}
+
+// Overload 2: string + integer
+void bootMessage(const char* msg, int num) {
+    bootMessageCore(msg, num, nullptr);
+}
+
+// Overload 3: string + integer + string suffix
+void bootMessage(const char* msg, int num, const char* suffix) {
+    bootMessageCore(msg, num, suffix);
+}
+
+// Overload 4: string + string suffix (no integer)
+void bootMessage(const char* msg, const char* suffix) {
+    bootMessageCore(msg, -1, suffix);
+}
+
 FLASHMEM uint8_t check_internal_sd_card(void)
 {
   uint8_t ret = 0;
@@ -6658,6 +6726,8 @@ FLASHMEM uint8_t check_internal_sd_card(void)
   // Sometimes fails after re-programming - try a few times if needed
   for (int i = 0;i < 5 && !sdok;i++)
   {
+   bootMessage("SD CARD ACCESS # ", i, "/5");
+   
     delay(200);
     sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);
   }
