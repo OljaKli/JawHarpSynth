@@ -54,6 +54,7 @@
 
 #include "ui_liveseq_pianoroll.h"
 #include "ui_livesequencer.h"
+#include "ui_ra_panel.h"
 #include "livesequencer.h"
 #include "virtualkeyboard.h"
 #include <synth_braids.h>
@@ -3349,6 +3350,9 @@ FLASHMEM boolean key_right()
   if (joysticks[0].getAxis(0) == GAMEPAD_RIGHT_0 && joysticks[0].getAxis(1) == GAMEPAD_RIGHT_1)
     return true;
 
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  if (ra_panel_virt_right) { ra_panel_virt_right = false; return true; }
+#endif
   return false;
 }
 
@@ -3373,6 +3377,9 @@ FLASHMEM boolean key_left()
   if (joysticks[0].getAxis(0) == GAMEPAD_LEFT_0 && joysticks[0].getAxis(1) == GAMEPAD_LEFT_1)
     return true;
 
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  if (ra_panel_virt_left) { ra_panel_virt_left = false; return true; }
+#endif
   return false;
 }
 
@@ -3398,6 +3405,9 @@ FLASHMEM boolean key_up()
   if (joysticks[0].getAxis(0) == GAMEPAD_UP_0 && joysticks[0].getAxis(1) == GAMEPAD_UP_1)
     return true;
 
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  if (ra_panel_virt_up) { ra_panel_virt_up = false; return true; }
+#endif
   return false;
 }
 
@@ -3423,6 +3433,9 @@ FLASHMEM boolean key_down()
   if (joysticks[0].getAxis(0) == GAMEPAD_DOWN_0 && joysticks[0].getAxis(1) == GAMEPAD_DOWN_1)
     return true;
 
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  if (ra_panel_virt_down) { ra_panel_virt_down = false; return true; }
+#endif
   return false;
 }
 
@@ -4518,6 +4531,29 @@ FLASHMEM void lcdml_menu_control(void)
       button[ENC_R] = LOW;
       break;
     }
+  }
+#endif
+
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  if (ra_panel_enc_l != 0) {
+    g_LCDML_CONTROL_Encoder_position[ENC_L] = ra_panel_enc_l;
+    ra_panel_enc_l = 0;
+  }
+  if (ra_panel_enc_r != 0) {
+    g_LCDML_CONTROL_Encoder_position[ENC_R] = -ra_panel_enc_r;
+    ra_panel_enc_r = 0;
+  }
+  if (ra_panel_btn_l) { LCDML.BT_quit(); encoderDir[ENC_L].ButtonShort(true); ra_panel_btn_l = false; }
+  if (ra_panel_btn_r) { LCDML.BT_enter(); encoderDir[ENC_R].ButtonShort(true); ra_panel_btn_r = false; }
+  // Virtual L/R are handled here — outside the gamepad_millis gate — so fast repeat
+  // from the joystick isn't throttled by gamepad_speed.
+  if (ra_panel_virt_right || ra_panel_virt_left) {
+    const bool xy = !seq.edit_state && (
+      LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) ||
+      LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) ||
+      LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker));
+    if (ra_panel_virt_right) { ra_panel_virt_right = false; if (xy) g_LCDML_CONTROL_Encoder_position[ENC_L] = -4; else g_LCDML_CONTROL_Encoder_position[ENC_R] = -4; }
+    if (ra_panel_virt_left)  { ra_panel_virt_left  = false; if (xy) g_LCDML_CONTROL_Encoder_position[ENC_L] =  4; else g_LCDML_CONTROL_Encoder_position[ENC_R] =  4; }
   }
 #endif
 
