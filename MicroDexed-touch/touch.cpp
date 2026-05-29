@@ -480,7 +480,7 @@ FLASHMEM void handle_generic_virtual_typewriter_touch() {
 
 #include "voice_categories.h"
 
-extern FLASHMEM void  print_dexed_bank_and_voice();
+extern FLASHMEM void  print_dexed_bank_and_voice(bool changed);
 
 FLASHMEM void mode_switch_dexed_voice_prep()
 {
@@ -488,7 +488,7 @@ FLASHMEM void mode_switch_dexed_voice_prep()
     seq.edit_state = 0;
   if (generic_temp_select_menu > 5)
     generic_temp_select_menu = 3;
-  print_dexed_bank_and_voice();
+  print_dexed_bank_and_voice(false);
 }
 
 FLASHMEM void handle_touchscreen_voice_select()

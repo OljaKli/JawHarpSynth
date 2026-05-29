@@ -1391,6 +1391,7 @@ FLASHMEM void setup()
 display.begin(RA8875_800x480);
 display.loadMDTfontToCGRAM();
 display.setCGRAMAsDefaultFont();
+display.setDoubleBufferText(true);
 
 delay(2);
 
@@ -3073,7 +3074,7 @@ display.console = true;
 
 void loop()
 {
-
+//display.fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, BTE_SCRATCH_MAX_W, BTE_SCRATCH_MAX_H, RA8875_RED);
 #if defined ESP_DISPLAY
   static uint8_t lastEditState = 0;
   if (seq.edit_state != lastEditState) {

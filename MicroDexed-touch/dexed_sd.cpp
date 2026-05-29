@@ -141,7 +141,6 @@ extern void set_sample_env_decay(uint8_t sample, uint8_t value);
 extern void set_sample_env_sustain(uint8_t sample, uint8_t value);
 extern void set_sample_env_release(uint8_t sample, uint8_t value);
 
-
 extern multisample_t msp[NUM_MULTISAMPLES];
 extern multisample_zone_t msz[NUM_MULTISAMPLES][NUM_MULTISAMPLE_ZONES];
 

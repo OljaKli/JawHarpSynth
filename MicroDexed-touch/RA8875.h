@@ -69,7 +69,6 @@ enum RA8875fontSource { INTFONT = 0, EXTFONT };//0,1
 enum RA8875fontCoding { ISO_IEC_8859_1, ISO_IEC_8859_2, ISO_IEC_8859_3, ISO_IEC_8859_4 };
 enum RA8875extRomType { GT21L16T1W, GT21H16T1W, GT23L16U2W, GT30L16U2W, GT30H24T3Y, GT23L24T3Y, GT23L24M1Z, GT23L32S4W, GT30H32S4W, GT30L32S4W, ER3303_1, ER3304_1, ER3301_1 };
 enum RA8875extRomCoding { GB2312, GB12345, BIG5, UNICODE, ASCII, UNIJIS, JIS0208, LATIN };
-enum RA8875extRomFamily { STANDARD, ARIAL, ROMAN, BOLD };
 enum RA8875boolean { LAYER1, LAYER2, TRANSPARENT, LIGHTEN, OR, AND, FLOATING };
 enum RA8875writes { L1 = 0, L2, CGRAM, PATTERN, CURSOR };
 enum RA8875scrollMode { SIMULTANEOUS, LAYER1ONLY, LAYER2ONLY, BUFFERED };
@@ -105,14 +104,11 @@ typedef struct {
 #include "ILI9341_fonts.h"
 
 #ifdef __cplusplus
-#include "_includes/RA8875_CPU_commons.h"
+#include "RA8875_CPU_commons.h"
 
-#include "_includes/font.h"
-#include "_includes/RA8875Registers.h"
-#include "_includes/RA8875ColorPresets.h"
-#include "_settings/RA8875UserSettings.h"
-
-
+#include "font.h"
+#include "RA8875Registers.h"
+#include "RA8875UserSettings.h"
 
 class RA8875 : public Print
 {
@@ -296,12 +292,10 @@ void setCGRAMAsDefaultFont(void);
 	uint8_t 	getFontHeight(boolean inRows = false);
 
 	//----------FONT -------------------------------------------------------------------------
-	void		setExternalFontRom(enum RA8875extRomType ert, enum RA8875extRomCoding erc, enum RA8875extRomFamily erf = STANDARD);
 	void 		setFont(enum RA8875fontSource s);//INTFONT,EXTFONT (if you have a chip installed)
 	//void 		setFont(const struct FONT_DEF *	fnt);
 	void		setFont(const tFont* font);
 	void 		setIntFontCoding(enum RA8875fontCoding f);
-	void		setExtFontFamily(enum RA8875extRomFamily erf, boolean setReg = true);
 
 	//-------------- GRAPHIC POSITION --------------------------------------------------------------
 	void    	setXY(int16_t x, int16_t y);//graphic set location
@@ -323,21 +317,22 @@ void setCGRAMAsDefaultFont(void);
 	void    	drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
 	void    	fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
 
-	inline __attribute__((always_inline)) void drawArc(uint16_t cx, uint16_t cy, uint16_t radius, uint16_t thickness, float start, float end, uint16_t color) {
-		if (start == 0 && end == _arcAngle_max) {
-			_drawArc_helper(cx, cy, radius, thickness, 0, _arcAngle_max, color);
-		}
-		else {
-			_drawArc_helper(cx, cy, radius, thickness, start + (_arcAngle_offset / (float)360) * _arcAngle_max, end + (_arcAngle_offset / (float)360) * _arcAngle_max, color);
-		}
-	}
 
-	void setDoubleBufferText(bool enable);   // enable/disable flicker‑free text
 
+#define BTE_SCRATCH_Y       10  
+#define BTE_SCRATCH_X       340     
+
+void setDoubleBufferText(bool enable);
 bool _doubleBufferText;
-	void drawTextDoubleBuffered(int16_t x, int16_t y, const char* text,
-                            uint16_t fgColor, uint16_t bgColor,
-                            uint8_t scaleX = 1, uint8_t scaleY = 1);
+
+void drawTextDoubleBuffered(int16_t x, int16_t y, const char* text,
+                             uint16_t fgColor, uint16_t bgColor,
+                             uint8_t scaleX = 1, uint8_t scaleY = 1);
+void drawStringPerCharacter(int16_t x, int16_t y,
+                                             const char* text,
+                                             uint16_t fgColor, uint16_t bgColor,
+                                             uint8_t scaleX, uint8_t scaleY);
+
 
 	//-------------- LAYERS --------------------------------------------------------------------------
 	void 		useLayers(boolean on);//mainly used to turn of layers!
@@ -384,8 +379,6 @@ bool _doubleBufferText;
 		return 1;
 	}
 
-
-
 	virtual size_t write(const uint8_t* buffer, size_t size) {
 		if (_use_default) {
 			_textWrite((const char*)buffer, size);
@@ -396,18 +389,14 @@ bool _doubleBufferText;
 		return size;
 	}
 
-
 	using Print::write;
 
 protected:
 	uint32_t textcolorPrexpanded, textbgcolorPrexpanded;
-	boolean wrap; // If set, 'wrap' text at right edge of display
 	const ILI9341_t3_font_t* font;
-
 	int16_t  _clipx1, _clipy1, _clipx2, _clipy2;
 	int16_t  _originx, _originy;
 	int16_t  _displayclipx1, _displayclipy1, _displayclipx2, _displayclipy2;
-
 
 	//=====================
 	volatile bool 				  _textMode;
@@ -440,8 +429,6 @@ protected:
 	static RA8875* _active_touch_objects[3];
 	volatile uint8_t 			 _RA8875_INTS = 0b00000000;//container for INT states
 
-
-
 #ifdef SPI_HAS_TRANSACTION
 	volatile uint32_t 			_SPITransactionSpeed; //holder for SPI speed
 	uint32_t					_SPIMaxSpeed;         // Max Speed defined in either begin or presets...
@@ -453,52 +440,22 @@ protected:
 #if defined(__MK64FX512__) || defined(__MK66FX1M0__)  || defined(__IMXRT1062__) || defined(__MKL26Z64__)
 	SPIClass* _pspi;	// which SPI are we using...
 #endif
-#elif defined(ENERGIA)
-	uint8_t _cs;
-#else
-#if defined(___DUESTUFF)
-#if defined(_FASTSSPORT)
-	uint32_t 		  _cs, cspinmask;
-#else
-	uint8_t 		  _cs;
-#endif
-#elif defined(ESP8266)	
-#if defined(_FASTSSPORT)
-	uint32_t 		  _cs;
-#else
-	uint8_t 		  _cs;
-#endif
-#elif defined(SPARK)
-#if defined(_FASTSSPORT)
-	uint32_t 		  _cs;
-#else
-	uint8_t 		  _cs;
-#endif
-#else
-#if defined(_FASTSSPORT)
-	uint8_t 		  _cs, cspinmask;
-#else
-	uint8_t 		  _cs;
-#endif
-#endif
 #endif
 private:
 	//HACK
 
 	uint8_t _customCharAdvance;   // desired pixel advance per character (0 = use hardware default)
-	
 	uint8_t _use_tfont = 0;
 	uint8_t  _use_int_font = 0;
 	uint8_t _use_default = 1;
 	uint8_t textsize, textsize_x, textsize_y;
 	uint16_t textcolor, textbgcolor;
-	//anti-alias font
-	uint8_t fontbpp = 1;
-	uint8_t fontbppindex = 0;
-	uint8_t fontbppmask = 1;
-	uint8_t fontppb = 8;
-	uint8_t* fontalphalut;
-	float fontalphamx = 1;
+	// uint8_t fontbpp = 1;
+	// uint8_t fontbppindex = 0;
+	// uint8_t fontbppmask = 1;
+	// uint8_t fontppb = 8;
+	// uint8_t* fontalphalut;
+	// float fontalphamx = 1;
 
 	uint8_t							_rst;
 	uint8_t							_intPin;
@@ -513,44 +470,8 @@ private:
 	uint32_t fetchbits_signed(const uint8_t* p, uint32_t index, uint32_t required);
 	void 	 _fontWrite(const uint8_t* buffer, uint16_t len);
 
-	/**
-	 * Found in a pull request for the Adafruit framebuffer library. Clever!
-	 * https://github.com/tricorderproject/arducordermini/pull/1/files#diff-d22a481ade4dbb4e41acc4d7c77f683d
-	 * Converts  0000000000000000rrrrrggggggbbbbb
-	 *     into  00000gggggg00000rrrrr000000bbbbb
-	 * with mask 00000111111000001111100000011111
-	 * This is useful because it makes space for a parallel fixed-point multiply
-	 * This implements the linear interpolation formula: result = bg * (1.0 - alpha) + fg * alpha
-	 * This can be factorized into: result = bg + (fg - bg) * alpha
-	 * alpha is in Q1.5 format, so 0.0 is represented by 0, and 1.0 is represented by 32
-	 * @param	fg		Color to draw in RGB565 (16bit)
-	 * @param	bg		Color to draw over in RGB565 (16bit)
-	 * @param	alpha	Alpha in range 0-255
-	 **/
-	uint16_t alphaBlendRGB565(uint32_t fg, uint32_t bg, uint8_t alpha)
-		__attribute__((always_inline)) {
-		alpha = (alpha + 4) >> 3; // from 0-255 to 0-31
-		bg = (bg | (bg << 16)) & 0b00000111111000001111100000011111;
-		fg = (fg | (fg << 16)) & 0b00000111111000001111100000011111;
-		uint32_t result = ((((fg - bg) * alpha) >> 5) + bg) & 0b00000111111000001111100000011111;
-		return (uint16_t)((result >> 16) | result); // contract result
-	}
+	//uint32_t fetchpixel(const uint8_t* p, uint32_t index, uint32_t x);
 
-	/**
-	 * Same as above, but fg and bg are premultiplied, and alpah is already in range 0-31
-	 */
-	uint16_t alphaBlendRGB565Premultiplied(uint32_t fg, uint32_t bg, uint8_t alpha)
-		__attribute__((always_inline)) {
-		uint32_t result = ((((fg - bg) * alpha) >> 5) + bg) & 0b00000111111000001111100000011111;
-		return (uint16_t)((result >> 16) | result); // contract result
-	}
-
-	uint32_t fetchpixel(const uint8_t* p, uint32_t index, uint32_t x);
-
-
-#if defined(USE_RA8875_KEYMATRIX)
-	bool						_keyMatrixEnabled;
-#endif
 	//system vars -------------------------------------------
 	bool							_inited;//true when init has been ended
 	bool							_sleep;
@@ -573,7 +494,6 @@ private:
 	//text vars-------------------------------------------------		
 	uint8_t							_FNTspacing;
 	uint8_t							_FNTinterline;
-	enum RA8875extRomFamily 		_EXTFNTfamily;
 	enum RA8875extRomType 			_EXTFNTrom;
 	enum RA8875extRomCoding 		_EXTFNTcoding;
 	enum RA8875tsize				_EXTFNTsize;//X16,X24,X32
@@ -592,10 +512,7 @@ private:
 	//color space-----------------------------
 	uint8_t							_color_bpp;//8=256, 16=64K colors
 	uint8_t							_brightness;
-	//various
-	float 							_arcAngle_max;
-	int 							_arcAngle_offset;
-	int								_angle_offset;
+
 	// Register containers -----------------------------------------
 	// this needed to  prevent readRegister from chip that it's slow.
 
@@ -610,7 +527,7 @@ private:
 	void 		_setSysClock(uint8_t pll1, uint8_t pll2, uint8_t pixclk);
 	//      TEXT writing stuff-------------------------------------------
 	void    	_textWrite(const char* buffer, uint16_t len = 0);//thanks to Paul Stoffregen for the initial version of this one
-	void 		_charWrite(const char c, uint8_t offset);
+	void 		_charWrite(const char c);
 	void 		_charWriteR(const char c, uint8_t offset, uint16_t fcolor, uint16_t bcolor);
 	int 		_getCharCode(uint8_t ch);
 #if defined(_RA8875_TXTRNDOPTIMIZER)
@@ -630,24 +547,14 @@ private:
 	void 		_setTextMode(bool m);
 	void 		_scanDirection(boolean invertH, boolean invertV);
 	// 		helpers-----------------------------
-
 	void 		_circle_helper(int16_t x0, int16_t y0, int16_t r, uint16_t color, bool filled);
 	void 		_rect_helper(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color, bool filled);
-	void 		_roundRect_helper(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r, uint16_t color, bool filled);
 	float		_check_area(int16_t Ax, int16_t Ay, int16_t Bx, int16_t By, int16_t Cx, int16_t Cy);
 	void 		_triangle_helper(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color, bool filled);
-	void 		_ellipseCurve_helper(int16_t xCenter, int16_t yCenter, int16_t longAxis, int16_t shortAxis, uint8_t curvePart, uint16_t color, bool filled);
-	void 		_drawArc_helper(uint16_t cx, uint16_t cy, uint16_t radius, uint16_t thickness, float startAngle, float endAngle, uint16_t color);
 	void 		_line_addressing(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
-	void 		_curve_addressing(int16_t x0, int16_t y0, int16_t x1, int16_t y1);
-	float 		_cosDeg_helper(float angle);
-	float 		_sinDeg_helper(float angle);
 #if defined(_RA8875_TXTRNDOPTIMIZER)
 	void 		_charLineRender(bool lineBuffer[], int charW, int16_t x, int16_t y, int16_t currentYposition, uint16_t fcolor);
 #endif
-
-
-
 
 	//convert a 16bit color(565) into 8bit color(332) as requested by RA8875 datasheet
 	//inline __attribute__((always_inline))
@@ -713,8 +620,6 @@ private:
 	boolean 	_waitPoll(uint8_t r, uint8_t f, uint8_t timeout = 15);//from adafruit add settable timeout
 	void 		_waitBusy(uint8_t res = 0x80);//0x80, 0x40(BTE busy), 0x01(DMA busy)
 
-
-
 #if defined(_FASTCPU)
 	//inline __attribute__((always_inline)) 
 	void _slowDownSPI(bool slow, uint32_t slowSpeed = 10000000UL)
@@ -729,7 +634,6 @@ private:
 #endif
 	}
 #endif
-
 
 };
 #endif // __cplusplus

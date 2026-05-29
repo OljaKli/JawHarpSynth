@@ -125,7 +125,7 @@ FLASHMEM void RA8875::setCGRAMAsDefaultFont(void) {
 	_customCharAdvance = 12;
 
 	//  Disable hardware auto‑increment after each character
-    //  (MWCR0 bit1 = 1 means "no auto increment")
+	//  (MWCR0 bit1 = 1 means "no auto increment")
 	uint8_t mwcr0 = _readRegister(RA8875_MWCR0);
 	mwcr0 |= (1 << 1);
 	_writeRegister(RA8875_MWCR0, mwcr0);
@@ -134,7 +134,24 @@ FLASHMEM void RA8875::setCGRAMAsDefaultFont(void) {
 
 FLASHMEM void RA8875::fillRectRainbow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t last_h)
 {
-	;
+	int z = 0;
+	do
+	{
+		uint16_t color = ColorHSV((100 - h + z), 200, 200);
+		drawFastHLine(x, y - h + z, w, color);
+		z++;
+	} while (z < h - last_h);
+
+	// FILL_RECT_RAINBOW command in MicroDexed-WebRemote.
+	if (console && remote_active)
+	{
+		static uint8_t sysex[8] = {
+		  0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+		};
+
+		fillSysexData(sysex, 4, x, y - h, w, h);
+		sendSysEx(95, 8, sysex, true);
+	}
 }
 FLASHMEM void RA8875::invertDisplay(bool)
 {
@@ -173,7 +190,7 @@ FLASHMEM void RA8875::begin(const enum RA8875sizes s, uint8_t colors, uint32_t S
 	*/
 
 #if defined(USE_RA8875_SEPARATE_TEXT_COLOR)
-	_TXTForeColor = _RA8875_DEFAULTTXTFRGRND;
+	_TXTForeColor = COLOR_SYSTEXT;
 #if defined(_RA8875_DEFAULTTXTBKGRND)
 	_TXTBackColor = _RA8875_DEFAULTTXTBKGRND;
 #else
@@ -209,11 +226,6 @@ FLASHMEM void RA8875::begin(const enum RA8875sizes s, uint8_t colors, uint32_t S
 	_EXTFNTrom = _DFT_RA8875_EXTFONTROMTYPE;
 	_EXTFNTcoding = _DFT_RA8875_EXTFONTROMCODING;
 	_FNTinterline = 0;
-	_EXTFNTfamily = STANDARD;
-	_FNTcursorType = NOCURSOR;
-	_arcAngle_max = ARC_ANGLE_MAX;
-	_arcAngle_offset = ARC_ANGLE_OFFSET;
-	_angle_offset = ANGLE_OFFSET;
 	_color_bpp = 16;
 	_colorIndex = 0;
 
@@ -234,16 +246,13 @@ FLASHMEM void RA8875::begin(const enum RA8875sizes s, uint8_t colors, uint32_t S
 	RA8875_WIDTH = _width;
 	RA8875_HEIGHT = _height;
 	_activeWindowXL = 0;
-	_activeWindowXR = RA8875_WIDTH;
+	_activeWindowXR = RA8875_WIDTH-1;
 	_activeWindowYT = 0;
-	_activeWindowYB = RA8875_HEIGHT;
+	_activeWindowYB = RA8875_HEIGHT-1;
 
 	//hack
 	_cursorY = 0;
 	_cursorY = 0;
-	// textsize = 2;
-	// setTextSize(2);
-	wrap = true;
 	font = NULL;
 	setClipRect();
 	setOrigin();
@@ -451,17 +460,12 @@ FLASHMEM void RA8875::_initialize()
 #if defined(USE_RA8875_SEPARATE_TEXT_COLOR)
 	setForegroundColor(_TXTForeColor);
 	setBackgroundColor(_TXTBackColor);
-#else
-	setForegroundColor(_RA8875_DEFAULTTXTFRGRND);
-	setBackgroundColor(_RA8875_DEFAULTTXTBKGRND);
 #endif
 	_backTransparent = false;
 	_FNCR1_Reg &= ~(1 << 6);//clear
 #else
 #if defined(USE_RA8875_SEPARATE_TEXT_COLOR)
 	setForegroundColor(_TXTForeColor);
-#else
-	setForegroundColor(_RA8875_DEFAULTTXTFRGRND);
 #endif
 	_backTransparent = true;
 	_FNCR1_Reg |= (1 << 6);//set
@@ -663,8 +667,8 @@ FLASHMEM void RA8875::setActiveWindow(int16_t XL, int16_t XR, int16_t YT, int16_
 {
 	if (_portrait) { swapvals(XL, YT); swapvals(XR, YB); }
 
-	if (XR >= RA8875_WIDTH) XR = RA8875_WIDTH;
-	if (YB >= RA8875_HEIGHT) YB = RA8875_HEIGHT;
+	if (XR >= RA8875_WIDTH-1) XR = RA8875_WIDTH-1;
+	if (YB >= RA8875_HEIGHT-1) YB = RA8875_HEIGHT-1;
 
 	_activeWindowXL = XL; _activeWindowXR = XR;
 	_activeWindowYT = YT; _activeWindowYB = YB;
@@ -678,8 +682,8 @@ FLASHMEM void RA8875::setActiveWindow(int16_t XL, int16_t XR, int16_t YT, int16_
 /**************************************************************************/
 FLASHMEM void RA8875::setActiveWindow(void)
 {
-	_activeWindowXL = 0; _activeWindowXR = RA8875_WIDTH;
-	_activeWindowYT = 0; _activeWindowYB = RA8875_HEIGHT;
+	_activeWindowXL = 0; _activeWindowXR = RA8875_WIDTH-1;
+	_activeWindowYT = 0; _activeWindowYB = RA8875_HEIGHT-1;
 	if (_portrait) { swapvals(_activeWindowXL, _activeWindowYT); swapvals(_activeWindowXR, _activeWindowYB); }
 	_updateActiveWindow(true);
 }
@@ -949,131 +953,13 @@ FLASHMEM void RA8875::setIntFontCoding(enum RA8875fontCoding f)
 	// _writeRegister(RA8875_FNCR0, _FNCR0_Reg);
 }
 
-/**************************************************************************/
-/*!
-		External Font Rom setup
-		This will not phisically change the register but should be called before setFont(EXTFONT)!
-		You should use this values accordly Font ROM datasheet!
-		Parameters:
-		ert: ROM Type          (GT21L16T1W, GT21H16T1W, GT23L16U2W, GT30H24T3Y, GT23L24T3Y, GT23L24M1Z, GT23L32S4W, GT30H32S4W)
-		erc: ROM Font Encoding (GB2312, GB12345, BIG5, UNICODE, ASCII, UNIJIS, JIS0208, LATIN)
-		erf: ROM Font Family   (STANDARD, ARIAL, ROMAN, BOLD)
-*/
-/**************************************************************************/
-FLASHMEM void RA8875::setExternalFontRom(enum RA8875extRomType ert, enum RA8875extRomCoding erc, enum RA8875extRomFamily erf)
-{
-	// if (!_textMode) _setTextMode(true);
-	// _SFRSET_Reg = _readRegister(RA8875_FNCR0);;//just to preserve the reg in case something wrong
-	// uint8_t temp = 0b00000000;
-	// switch (ert) { //type of rom
-	// case GT21L16T1W:
-	// case GT21H16T1W:
-	// 	temp &= 0x1F;
-	// 	break;
-	// case GT23L16U2W:
-	// case GT30L16U2W:
-	// case ER3301_1:
-	// 	temp &= 0x1F; temp |= 0x20;
-	// 	break;
-	// case GT23L24T3Y:
-	// case GT30H24T3Y:
-	// case ER3303_1://encoding GB12345
-	// 	temp &= 0x1F; temp |= 0x40;
-	// 	break;
-	// case GT23L24M1Z:
-	// 	temp &= 0x1F; temp |= 0x60;
-	// 	break;
-	// case GT23L32S4W:
-	// case GT30H32S4W:
-	// case GT30L32S4W:
-	// case ER3304_1://encoding GB2312
-	// 	temp &= 0x1F; temp |= 0x80;
-	// 	break;
-	// default:
-	// 	_TXTparameters &= ~(1 << 0);//wrong type, better avoid for future
-	// 	return;//cannot continue, exit
-	// }
-	// _EXTFNTrom = ert;
-	// switch (erc) {	//check rom font coding
-	// case GB2312:
-	// 	temp &= 0xE3;
-	// 	break;
-	// case GB12345:
-	// 	temp &= 0xE3; temp |= 0x04;
-	// 	break;
-	// case BIG5:
-	// 	temp &= 0xE3; temp |= 0x08;
-	// 	break;
-	// case UNICODE:
-	// 	temp &= 0xE3; temp |= 0x0C;
-	// 	break;
-	// case ASCII:
-	// 	temp &= 0xE3; temp |= 0x10;
-	// 	break;
-	// case UNIJIS:
-	// 	temp &= 0xE3; temp |= 0x14;
-	// 	break;
-	// case JIS0208:
-	// 	temp &= 0xE3; temp |= 0x18;
-	// 	break;
-	// case LATIN:
-	// 	temp &= 0xE3; temp |= 0x1C;
-	// 	break;
-	// default:
-	// 	_TXTparameters &= ~(1 << 0);//wrong coding, better avoid for future
-	// 	return;//cannot continue, exit
-	// }
-	// _EXTFNTcoding = erc;
-	// _SFRSET_Reg = temp;
-	// setExtFontFamily(erf, false);
-	// _TXTparameters |= (1 << 0); //bit set 0
 
-	//_writeRegister(RA8875_SFRSET,_SFRSET_Reg);//0x2F
-	//delay(4);
-}
 
 FLASHMEM void RA8875::fontRomSpeed(uint8_t sp)
 {
 	_writeRegister(0x28, sp);
 }
 
-/**************************************************************************/
-/*!
-		select the font family for the external Font Rom Chip
-		Parameters:
-		erf: STANDARD, ARIAL, ROMAN, BOLD
-		setReg:
-		true(send phisically the register, useful when you change
-		family after set setExternalFontRom)
-		false:(change only the register container, useful during config)
-		NOTE: works only when external font rom it's active
-*/
-/**************************************************************************/
-FLASHMEM void RA8875::setExtFontFamily(enum RA8875extRomFamily erf, boolean setReg)
-{
-	// if (_FNTsource == EXTFONT) {//only on EXTFONT ROM fonts!
-	// 	_EXTFNTfamily = erf;
-	// 	_SFRSET_Reg &= ~(0x03); // clear bits from 0 to 1
-	// 	switch (erf) {	//check rom font family
-	// 	case STANDARD:
-	// 		_SFRSET_Reg &= 0xFC;
-	// 		break;
-	// 	case ARIAL:
-	// 		_SFRSET_Reg &= 0xFC; _SFRSET_Reg |= 0x01;
-	// 		break;
-	// 	case ROMAN:
-	// 		_SFRSET_Reg &= 0xFC; _SFRSET_Reg |= 0x02;
-	// 		break;
-	// 	case BOLD:
-	// 		_SFRSET_Reg |= ((1 << 1) | (1 << 0)); // set bits 1 and 0
-	// 		break;
-	// 	default:
-	// 		_EXTFNTfamily = STANDARD; _SFRSET_Reg &= 0xFC;
-	// 		return;
-	// 	}
-	// 	if (setReg) _writeRegister(RA8875_SFRSET, _SFRSET_Reg);
-	// }
-}
 
 
 /**************************************************************************/
@@ -1310,14 +1196,14 @@ FLASHMEM void RA8875::_textPosition(int16_t x, int16_t y, bool update)
 
 int16_t RA8875::getCursorX(void)
 {
-	if (_portrait && _use_default) return _cursorY/2;
-	return _cursorX/2;
+	if (_portrait && _use_default) return _cursorY / 2;
+	return _cursorX / 2;
 }
 
 int16_t RA8875::getCursorY(void)
 {
-	if (_portrait && _use_default) return _cursorX/2;
-	return _cursorY/2;
+	if (_portrait && _use_default) return _cursorX / 2;
+	return _cursorY / 2;
 }
 
 /**************************************************************************/
@@ -1555,9 +1441,283 @@ FLASHMEM void RA8875::setFontSpacing(uint8_t spc)
 
 }
 
+void RA8875::setDoubleBufferText(bool enable)
+{
+	_doubleBufferText = enable;
+}
+
+// ---------------------------------------------------------------------------
+// Flicker-free text via off-screen scratch strip + single BTE blit.
+//
+// x, y       : top-left destination in screen pixels (already divided by 2)
+// text       : buffer (does NOT need to be null-terminated; len chars used)
+// scaleX/Y   : pixel multiplier per font pixel, matching _scaleX/_scaleY
+//              (1=1×, 2=2×, 3=3×, 4=4×— same values setFontScale uses)
+//
+// Coordinate mapping mirrors _textWrite exactly:
+//   setCursor(lx, ly) stores _cursorX = lx*2, _cursorY = ly*2
+//   _textWrite passes _cursorX/2, _cursorY/2  → here that is x, y.
+//
+// Character advance per call mirrors _charWrite:
+//   textsize_x==1: _cursorX += _customCharAdvance      (12 units = 6 px)
+//   textsize_x==2: _cursorX += _customCharAdvance + 12 (24 units = 12 px)
+// We reproduce that as charStepPx = 6 * scaleX  (5px glyph + 1px gap, scaled)
+// which matches: scale 2 → 12 px/char, scale 4 → 24 px/char.  Correct.
+//
+// Background rect in original _textWrite:
+//   textsize_x==1: len*6 wide, 8 tall
+//   textsize_x==2: len*12 wide, 16 tall
+// We use the same dimensions, also matching scaleX/Y:
+//   bgW = len * 6 * (scaleX/2)  — but scaleX==2 → len*6, scaleX==4 → len*12 ✓
+//   bgH = 8 * (scaleY/2)        — scaleY==2 → 8,          scaleY==4 → 16   ✓
+// ---------------------------------------------------------------------------
+
+// Logical pixel equivalents of the scratch strip hardware coordinates.
+// fillRect() and drawPixel() take logical coords (hardware / 2).
+// #define BTE_SCRATCH_X_LOG  (BTE_SCRATCH_X / 2)
+// #define BTE_SCRATCH_Y_LOG  (BTE_SCRATCH_Y / 2)
+
+// FLASHMEM void RA8875::drawTextDoubleBuffered(int16_t x, int16_t y,
+//                                               const char* text,
+//                                               uint16_t fgColor, uint16_t bgColor,
+//                                               uint8_t scaleX, uint8_t scaleY)
+// {
+//     uint8_t len = 0;
+//     while (text[len] && len < 255) len++;
+//     if (len == 0) return;
+
+//     // --- Pixel geometry matching _textWrite exactly ---
+//     // scaleX==2 (textsize_x==1): 6 logical px/char step, 8 logical px bg height
+//     // scaleX==4 (textsize_x==2): 12 logical px/char step, 16 logical px bg height
+//     const uint8_t charStepPx = 6 * (scaleX / 2);  // logical pixels per char
+//     const uint8_t bgH        = 8 * (scaleY / 2);  // logical pixels tall
+
+//     uint16_t bgW = (uint16_t)len * charStepPx;     // logical pixels wide
+//     if (bgW > BTE_SCRATCH_MAX_W / 2) bgW = BTE_SCRATCH_MAX_W / 2;  // clamp to logical
+//     if (bgH > BTE_SCRATCH_MAX_H / 2) return;       // safety guard
+
+//     // === Step 1: render into off-screen scratch strip ===
+//     // All drawing calls use LOGICAL coordinates (hardware coords / 2).
+//     if (_textMode) _setTextMode(false);
+
+//     // Background fill — logical coords
+//     fillRect(BTE_SCRATCH_X_LOG, BTE_SCRATCH_Y_LOG, bgW, bgH, bgColor);
+
+//     // Render each glyph
+//     for (uint8_t ci = 0; ci < len; ci++) {
+//         uint8_t ch = (uint8_t)text[ci];
+//         if (ch == 13 || ch >= 128) continue;
+
+//         const uint8_t* src = &mdtfont[ch * 5];
+
+//         // Glyph top-left in LOGICAL coords
+//         int16_t gx = BTE_SCRATCH_X_LOG + (int16_t)ci * charStepPx;
+//         int16_t gy = BTE_SCRATCH_Y_LOG;
+
+//         if (gx + (int16_t)(5 * scaleX / 2) > BTE_SCRATCH_X_LOG + (int16_t)(BTE_SCRATCH_MAX_W / 2)) break;
+
+//         for (uint8_t row = 0; row < 7; row++) {
+//             for (uint8_t col = 0; col < 5; col++) {
+//                 if (src[col] & (1 << row)) {
+//                     // Pixel top-left in LOGICAL coords
+//                     int16_t px = gx + (int16_t)col * (scaleX / 2);
+//                     int16_t py = gy + (int16_t)row * (scaleY / 2);
+//                     // fillRect with logical size scaleX/2 × scaleY/2
+//                     if (scaleX <= 2 && scaleY <= 2) {
+//                         drawPixel(px, py, fgColor);  // logical coords
+//                     } else {
+//                         fillRect(px, py, scaleX / 2, scaleY / 2, fgColor);  // logical coords
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     // === Step 2: BTE blit scratch → visible destination ===
+//     // BTE registers take RAW HARDWARE PIXELS — no multiplication, use constants directly.
+//     // Destination x, y also need to be raw hardware pixels: multiply logical x,y by 2.
+//     _waitBusy(0x40);
+//     BTE_moveFrom(BTE_SCRATCH_X,  BTE_SCRATCH_Y);         // raw hw coords
+//     BTE_size(bgW * 2, bgH * 2);                          // raw hw size
+//     BTE_moveTo(x * 2, y * 2);                            // x,y came in as logical → ×2 for hw
+//     BTE_ropcode(0xC2);
+//     _writeRegister(RA8875_BECR0, 0x80);
+//     _waitBusy(0x40);  // wait for BTE to complete before returning
+// }
+
+
+// FLASHMEM void RA8875::drawTextDoubleBuffered(int16_t x, int16_t y,
+//                                               const char* text,
+//                                               uint16_t fgColor, uint16_t bgColor,
+//                                               uint8_t scaleX, uint8_t scaleY)
+// {
+//     uint8_t len = 0;
+//     while (text[len] && len < 255) len++;
+//     if (len == 0) return;
+
+//     int16_t savedCursorX = _cursorX;
+//     int16_t savedCursorY = _cursorY;
+//     uint8_t savedFNCR1   = _FNCR1_Reg;
+//     bool    savedTransp  = _backTransparent;
+
+//     // Step 1: fill background in scratch
+//     if (textsize_x == 1)
+//         fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, len * 6, 8, bgColor);
+//     else
+//         fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, len * 12, 16, bgColor);
+
+//     // Step 2: set fg color into hardware registers (same as _textWrite's setColor call)
+//     // then enable transparent bg so hardware text only draws fg pixels over our fill
+//     setForegroundColor(fgColor);
+//     _FNCR1_Reg |= (1 << 6);  // transparent background
+//     _writeRegister(RA8875_FNCR1, _FNCR1_Reg);
+
+//     // Step 3: hardware text write into scratch
+//     _cursorX = BTE_SCRATCH_X * 2;
+//     _cursorY = BTE_SCRATCH_Y * 2;
+//     for (uint8_t i = 0; i < len; i++)
+//         _charWrite(text[i]);
+
+//     // Restore color state
+//     _FNCR1_Reg       = savedFNCR1;
+//     _backTransparent = savedTransp;
+//     _writeRegister(RA8875_FNCR1, _FNCR1_Reg);
+
+//     // Step 4: BTE blit scratch → destination
+//     uint16_t bteW = (textsize_x == 1) ? len * 6 * 2 : len * 12 * 2;
+//     uint8_t  bteH = (textsize_x == 1) ? 8 * 2       : 16 * 2;
+
+//     _waitBusy(0x40);
+//     BTE_moveFrom(BTE_SCRATCH_X * 2, BTE_SCRATCH_Y * 2);
+//     BTE_size    (bteW,              bteH);
+//     BTE_moveTo  (x * 2,             y * 2);
+//     BTE_ropcode (0xC2);
+//     _writeRegister(RA8875_BECR0, 0x80);
+//     _waitBusy(0x40);
+
+//     _cursorX = savedCursorX + (_cursorX - BTE_SCRATCH_X * 2);
+//     _cursorY = savedCursorY;
+// }
+
+FLASHMEM void RA8875::drawTextDoubleBuffered(int16_t x, int16_t y,
+	const char* text,
+	uint16_t fgColor, uint16_t bgColor,
+	uint8_t scaleX, uint8_t scaleY)
+{
+	uint8_t len = 0;
+	while (text[len] && len < 255) len++;
+	if (len == 0) return;
+
+	// Character dimensions (pixels, not doubled)
+	uint8_t charW = (textsize_x == 1) ? 6 : 12;
+	uint8_t charH = (textsize_x == 1) ? 8 : 16;
+
+	// Save state
+
+	uint8_t savedFNCR1 = _FNCR1_Reg;
+	bool    savedTransp = _backTransparent;
+
+	// Draw characters one by one and copy each to destination
+	
+	setForegroundColor(fgColor);
+    setBackgroundColor(bgColor);
+    _FNCR1_Reg &= ~(1 << 6);          // disable transparent background
+    _writeRegister(RA8875_FNCR1, _FNCR1_Reg);
+    _backTransparent = false;
+
+	for (uint8_t i = 0; i < len; i++)
+	{
+
+		// Position cursor within scratch buffer
+		_cursorX = (BTE_SCRATCH_X * 2);
+		_cursorY = BTE_SCRATCH_Y * 2;
+		// Draw the character (transparent background)
+
+	// Step 2: Set hardware colors and disable transparent background
+
+
+		_charWrite(text[i]);
+		
+		// BTE copy this character's area from scratch to destination
+		_waitBusy(0x40);
+		BTE_moveFrom((BTE_SCRATCH_X * 2), BTE_SCRATCH_Y * 2);
+		BTE_size(charW*2, charH * 2);
+		BTE_moveTo((x * 2) + ( (charW*i)*2) , y * 2);
+		BTE_ropcode(0xC2);
+		_writeRegister(RA8875_BECR0, 0x80);
+		_waitBusy(0x40);
+
+	}
+	// Restore color state
+	_FNCR1_Reg = savedFNCR1;
+	_backTransparent = savedTransp;
+	_writeRegister(RA8875_FNCR1, _FNCR1_Reg);
+//fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, 16, 32, COLOR_BACKGROUND); 
+
+}
+
+
+FLASHMEM void RA8875::drawStringPerCharacter(int16_t x, int16_t y,
+                                             const char* text,
+                                             uint16_t fgColor, uint16_t bgColor,
+                                             uint8_t scaleX, uint8_t scaleY)
+{
+    uint8_t len = 0;
+    while (text[len] && len < 255) len++;
+    if (len == 0) return;
+
+    const uint8_t glyphW = 5;
+    const uint8_t glyphH = 7;
+    const uint8_t charStep = glyphW + 1;   // logical pixels per character cell
+    uint16_t cellW = charStep * scaleX;
+    uint16_t cellH = glyphH * scaleY;
+
+    uint8_t i = 0;
+    while (i < len) {
+        uint8_t ch = (uint8_t)text[i];
+
+        // Optimize runs of spaces with a single fillRect
+        if (ch == 32) {
+            uint8_t runStart = i;
+            while (i < len && (uint8_t)text[i] == 32) i++;
+            uint8_t runLength = i - runStart;
+            int16_t spaceX = x + runStart * charStep * scaleX;
+            uint16_t spaceW = runLength * charStep * scaleX;
+            fillRect(spaceX, y, spaceW, cellH, bgColor);
+            continue;
+        }
+
+        // Non‑space character: draw background for the whole cell (one rect)
+        int16_t charX = x + i * charStep * scaleX;
+        fillRect(charX, y, cellW, cellH, bgColor);
+
+        // Draw foreground runs (only set pixels)
+        const uint8_t* glyph = &mdtfont[ch * 5];
+        for (uint8_t row = 0; row < glyphH; row++) {
+            int16_t yRow = y + row * scaleY;
+            uint8_t col = 0;
+            while (col < glyphW) {
+                if (glyph[col] & (1 << row)) {
+                    uint8_t runStartCol = col;
+                    uint8_t runLen = 0;
+                    while (col < glyphW && (glyph[col] & (1 << row))) {
+                        runLen++;
+                        col++;
+                    }
+                    int16_t rectX = charX + runStartCol * scaleX;
+                    fillRect(rectX, yRow, runLen * scaleX, scaleY, fgColor);
+                } else {
+                    col++;
+                }
+            }
+        }
+        i++;
+    }
+}
+
 FLASHMEM void RA8875::_textWrite(const char* buffer, uint16_t len)
 {
-	// text write
+	if (len == 0) return;
 
 	if (remote_active)
 	{
@@ -1565,62 +1725,73 @@ FLASHMEM void RA8875::_textWrite(const char* buffer, uint16_t len)
 		uint8_t nbBytes = fillSysexDataColor(colors, 2, _TXTForeColor, _TXTBackColor);
 		uint8_t sizeMsg = 2 * 2 + 1 + nbBytes + 1 + len;
 		uint8_t* sysexDrawString = (uint8_t*)malloc(sizeMsg);
-		if (sysexDrawString == NULL)
+		if (sysexDrawString != NULL)
 		{
-#ifdef DEBUG
-			LOG.println("malloc failed");
-#endif
-		}
-		else
-		{
-			// fillSysexData(sysexDrawString, 2, cursor_x, cursor_y , _cursorX, _cursorY);
 			fillSysexData(sysexDrawString, 2, _cursorX / 2, _cursorY / 2);
 			sysexDrawString[4] = nbBytes;
 			memcpy(sysexDrawString + 4 + 1, colors, nbBytes);
 			sysexDrawString[4 + 1 + nbBytes] = textsize_x;
 			memcpy(sysexDrawString + 4 + 1 + nbBytes + 1, buffer, len);
-
 			sendSysEx(72, sizeMsg, sysexDrawString, true);
-
 			free(sysexDrawString);
 		}
 		console = false;
 	}
 
+	// if (_backColor == COLOR_BACKGROUND)
+	// 	_doubleBufferText = false;
+	//  else
+	// 	_doubleBufferText = true;
 
-	uint16_t i;
-	//if (len == 0) len = strlen(buffer);//try get the info from the buffer
-	if (len == 0) return;//better stop here, the string it really empty!
+	// --- flicker-free path ---
+	// if (_doubleBufferText) {
+	// 	drawTextDoubleBuffered(_cursorX / 2, _cursorY / 2,
+	// 		buffer,
+	// 		_TXTForeColor, _backColor,
+	// 		_scaleX, _scaleY);
+	// 	// Advance _cursorX to match what the old char-by-char loop would have done
+	// 	if (textsize_x == 1)
+	// 		_cursorX += len * _customCharAdvance;
+	// 	else
+	// 		_cursorX += len * (_customCharAdvance + 12);
+	// 	return;
+	// }
 
-	uint8_t interlineOffset = 0;
+	// if (_doubleBufferText) {
+	// 	drawStringPerCharacter(_cursorX / 2, _cursorY / 2,
+	// 		buffer,
+	// 		_TXTForeColor, _backColor,
+	// 		_scaleX/2, _scaleY/2);
 
-	if (remote_active)
-		skipfillrect_webremote = true;
+	// 	// Advance _cursorX to match what the old char-by-char loop would have done
+	// 	if (textsize_x == 1)
+	// 		_cursorX += len * _customCharAdvance;
+	// 	else
+	// 		_cursorX += len * (_customCharAdvance + 12);
+	// 	return;
+	// }
 
-if (textsize_x == 1)
+
+	// --- original path (kept unchanged for fallback) ---
+
+	if (remote_active) skipfillrect_webremote = true;
+
+	if (textsize_x == 1)
 		fillRect(_cursorX / 2, _cursorY / 2, len * 6, 8, _backColor);
 	else
 		fillRect(_cursorX / 2, _cursorY / 2, len * 12, 16, _backColor);
 
 	setColor(_TXTForeColor, _TXTBackColor);
+	if (remote_active) skipfillrect_webremote = false;
 
-	if (remote_active)
-		skipfillrect_webremote = false;
-
-//phtodo
-	//Loop trough every char and write them one by one...
-	for (i = 0;i < len;i++) {
-		_charWrite(buffer[i], interlineOffset);					// internal,ROM fonts
-	}//end loop
+	for (uint8_t i = 0; i < len; i++) {
+		_charWrite(buffer[i]);
+	}
 }
 
 
-
-FLASHMEM void RA8875::_charWrite(const char c, uint8_t offset) {
-	if (c == 13) {   // carriage return – ignore
-		return;
-	}
-
+FLASHMEM void RA8875::_charWrite(const char c) {
+	
 	// Normal character: set hardware cursor to current logical position
 	if (!_textMode) _setTextMode(true);
 	_textPosition(_cursorX, _cursorY, false);
@@ -1638,7 +1809,6 @@ FLASHMEM void RA8875::_charWrite(const char c, uint8_t offset) {
 	//phtodo
 
 }
-
 
 /**************************************************************************/
 /*!	PRIVATE
@@ -1705,97 +1875,7 @@ int16_t RA8875::_STRlen_helper(const char* buffer, uint16_t len)
 	}
 }
 
-
-
 #if defined(_RA8875_TXTRNDOPTIMIZER)
-
-/**************************************************************************/
-/*!	PRIVATE
-		Here's the char render engine for uncompressed fonts, it actually render a single char.
-		It's actually 2 functions, this one take care of every glyph line
-		and perform some optimization second one paint concurrent pixels in chunks.
-		To show how optimizations works try uncomment RA8875_VISPIXDEBUG in settings.
-		Please do not steal this part of code!
-*/
-/**************************************************************************/
-// FLASHMEM void RA8875::_drawChar_unc(int16_t x, int16_t y, int charW, int index, uint16_t fcolor)
-// {
-// 	//start by getting some glyph data...
-// #if defined(_FORCE_PROGMEM__)
-// #if defined(ESP8266)
-// 	const uint8_t* charGlyp = FPSTR(&_currentFont->chars[index].image->data);//char data
-// 	int			  totalBytes = FPSTR(&_currentFont->chars[index].image->image_datalen);
-// #else
-// 	const uint8_t* charGlyp = PROGMEM_read(&_currentFont->chars[index].image->data);//char data
-// 	int			  totalBytes = PROGMEM_read(&_currentFont->chars[index].image->image_datalen);
-// #endif
-// #else
-// 	const uint8_t* charGlyp = _currentFont->chars[index].image->data;
-// 	int			  totalBytes = _currentFont->chars[index].image->image_datalen;
-// #endif
-// 	int i;
-// 	uint8_t temp = 0;
-// 	//some basic variable...
-// 	uint8_t currentXposition = 0;//the current position of the writing cursor in the x axis, from 0 to charW
-// 	uint8_t currentYposition = 1;//the current position of the writing cursor in the y axis, from 1 to _FNTheight
-// 	int currentByte = 0;//the current byte in reading (from 0 to totalBytes)
-// 	bool lineBuffer[charW];//the temporary line buffer (will be _FNTheight each char)
-// 	int lineChecksum = 0;//part of the optimizer
-// 	/*
-// 	uint8_t bytesInLine = 0;
-// 	//try to understand how many bytes in a line
-// 	if (charW % 8 == 0) {	// divisible by 8
-// 		bytesInLine = charW / 8;
-// 	} else {						// when it's divisible by 8?
-// 		bytesInLine = charW;
-// 		while (bytesInLine % 8) { bytesInLine--;}
-// 		bytesInLine = bytesInLine / 8;
-// 	}
-// 	*/
-// 	//the main loop that will read all bytes of the glyph
-// 	while (currentByte < totalBytes) {
-// 		//read n byte
-// #if defined(_FORCE_PROGMEM__)
-// #if defined(ESP8266)
-// 		temp = FPSTR(&charGlyp[currentByte]);
-// #else
-// 		temp = PROGMEM_read(&charGlyp[currentByte]);
-// #endif
-// #else
-// 		temp = charGlyp[currentByte];
-// #endif
-// 		for (i = 7; i >= 0; i--) {
-// 			//----------------------------------- exception
-// 			if (currentXposition >= charW) {
-// 				//line buffer has been filled!
-// 				currentXposition = 0;//reset the line x position
-// 				if (lineChecksum < 1) {//empty line
-// #if defined(RA8875_VISPIXDEBUG)
-// 					drawRect(x, y + (currentYposition * _scaleY), charW * _scaleX, _scaleY, RA8875_BLUE);
-// #endif
-// 				}
-// 				else if (lineChecksum == charW) {//full line
-// #if !defined(RA8875_VISPIXDEBUG)
-// 					fillRect(
-// #else
-// 					drawRect(
-// #endif
-// 						x, y + (currentYposition * _scaleY), charW * _scaleX, _scaleY, fcolor);
-// 				}
-// 				else { //line render
-// 					_charLineRender(lineBuffer, charW, x, y, currentYposition, fcolor);
-// 				}
-// 				currentYposition++;//next line
-// 				lineChecksum = 0;//reset checksum
-// 			}//end exception
-// 			//-------------------------------------------------------
-// 			lineBuffer[currentXposition] = bitRead(temp, i);//continue fill line buffer
-// 			lineChecksum += lineBuffer[currentXposition];
-// 			currentXposition++;
-// 		}
-// 		currentByte++;
-// 	}
-// }
 
 /**************************************************************************/
 /*!	PRIVATE
@@ -2108,7 +2188,6 @@ FLASHMEM void RA8875::setColor(uint16_t fcolor, uint16_t bcolor, bool bcolorTras
 	}
 }
 
-
 /*
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 +								DRAW STUFF											 +
@@ -2368,7 +2447,6 @@ void  RA8875::BTE_move(int16_t SourceX, int16_t SourceY, int16_t Width, int16_t 
 
 /**************************************************************************/
 /*! TESTING
-
 */
 /**************************************************************************/
 FLASHMEM void RA8875::BTE_size(int16_t w, int16_t h)
@@ -2380,12 +2458,6 @@ FLASHMEM void RA8875::BTE_size(int16_t w, int16_t h)
 	_writeRegister(RA8875_BEHR0, h & 0xFF);//BET area height literacy
 	_writeRegister(RA8875_BEHR0 + 1, h >> 8);//BET area height literacy	   
 }
-
-/**************************************************************************/
-/*!
-
-*/
-/**************************************************************************/
 
 FLASHMEM void RA8875::BTE_moveFrom(int16_t SX, int16_t SY)
 {
@@ -2435,7 +2507,6 @@ FLASHMEM void RA8875::BTE_enable(bool on)
 	_waitBusy(0x40);
 }
 
-
 /**************************************************************************/
 /*! TESTING
 	Select BTE mode (CONT (continuous) or RECT)
@@ -2463,8 +2534,6 @@ FLASHMEM void RA8875::BTE_layer(enum RA8875btelayer sd, uint8_t l)
 	_writeData(temp);
 	//_writeRegister(RA8875_VSBE1,temp);  
 }
-
-
 
 /*
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2699,7 +2768,6 @@ FLASHMEM void RA8875::writeTo(enum RA8875writes d)
 	//_writeRegister(RA8875_MWCR1,temp);   
 }
 
-
 /*
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 +						GEOMETRIC PRIMITIVE  STUFF									 +
@@ -2812,7 +2880,6 @@ void RA8875::drawPixels(uint16_t p[], uint16_t count, int16_t x, int16_t y)
 	_endSend();
 }
 
-
 /**************************************************************************/
 /*!
 	  Get a pixel color from screen
@@ -2841,7 +2908,6 @@ uint16_t RA8875::getPixel(int16_t x, int16_t y)
 	_endSend();
 	return color;
 }
-
 
 /**************************************************************************/
 /*!
@@ -2892,7 +2958,6 @@ void RA8875::drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t c
 	_waitPoll(RA8875_DCR, RA8875_DCR_LINESQUTRI_STATUS, _RA8875_WAITPOLL_TIMEOUT_DCR_LINESQUTRI_STATUS);
 
 }
-
 
 void RA8875::drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) {
 	drawLine(x, y, x, y + h - 1, color);
@@ -2983,8 +3048,6 @@ void RA8875::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color
 	}
 }
 
-
-
 /**************************************************************************/
 /*!
 	  write a filled rectangle wither user colors array
@@ -3006,8 +3069,8 @@ void RA8875::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color
 /**************************************************************************/
 void RA8875::fillWindow(uint16_t color)
 {
-if (remote_active)  //always do fillscreen when connected
-    console = true;
+	if (remote_active)  //always do fillscreen when connected
+		console = true;
 
 	if (console && remote_active)
 	{
@@ -3035,8 +3098,6 @@ if (remote_active)  //always do fillscreen when connected
 #endif
 
 }
-
-
 
 /**************************************************************************/
 /*!
@@ -3079,6 +3140,24 @@ void RA8875::drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 
 void RA8875::fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color)
 {
+
+	 if (remote_active)
+  {
+    static uint8_t sysexFillCircle[11] = {
+      0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x0, 0x0, // could be unknow color
+    };
+
+    fillSysexData(sysexFillCircle, 3, x0, y0, r);
+    uint8_t colors[4];
+    uint8_t nbBytes = fillSysexDataColor(colors, 1, color);
+    sysexFillCircle[6] = nbBytes;
+    memcpy(sysexFillCircle + 6 + 1, colors, nbBytes);
+
+    sendSysEx(97, 6 + 1 + nbBytes, sysexFillCircle, true);
+    console = false;
+  }
+  
 	x0 = x0 * 2;
 	y0 = y0 * 2;
 	r = r * 2;
@@ -3186,13 +3265,13 @@ void RA8875::_updateActiveWindow(bool full)
 		// X
 		_writeRegister(RA8875_HSAW0, 0x00);
 		_writeRegister(RA8875_HSAW0 + 1, 0x00);
-		_writeRegister(RA8875_HEAW0, (RA8875_WIDTH) & 0xFF);
-		_writeRegister(RA8875_HEAW0 + 1, (RA8875_WIDTH) >> 8);
+		_writeRegister(RA8875_HEAW0, (RA8875_WIDTH-1) & 0xFF);
+		_writeRegister(RA8875_HEAW0 + 1, (RA8875_WIDTH-1) >> 8);
 		// Y 
 		_writeRegister(RA8875_VSAW0, 0x00);
 		_writeRegister(RA8875_VSAW0 + 1, 0x00);
-		_writeRegister(RA8875_VEAW0, (RA8875_HEIGHT) & 0xFF);
-		_writeRegister(RA8875_VEAW0 + 1, (RA8875_HEIGHT) >> 8);
+		_writeRegister(RA8875_VEAW0, (RA8875_HEIGHT-1) & 0xFF);
+		_writeRegister(RA8875_VEAW0 + 1, (RA8875_HEIGHT-1) >> 8);
 	}
 	else {
 		// X
@@ -3229,27 +3308,6 @@ void RA8875::_line_addressing(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
 	_writeRegister(RA8875_DLVER0, y1 & 0xFF);
 	_writeRegister(RA8875_DLVER0 + 1, y1 >> 8);
 }
-
-/**************************************************************************/
-/*!
-		curve addressing helper
-		[private]
-*/
-/**************************************************************************/
-void RA8875::_curve_addressing(int16_t x0, int16_t y0, int16_t x1, int16_t y1)
-{
-	//center
-	_writeRegister(RA8875_DEHR0, x0 & 0xFF);
-	_writeRegister(RA8875_DEHR0 + 1, x0 >> 8);
-	_writeRegister(RA8875_DEVR0, y0 & 0xFF);
-	_writeRegister(RA8875_DEVR0 + 1, y0 >> 8);
-	//long,short ax
-	_writeRegister(RA8875_ELL_A0, x1 & 0xFF);
-	_writeRegister(RA8875_ELL_A0 + 1, x1 >> 8);
-	_writeRegister(RA8875_ELL_B0, y1 & 0xFF);
-	_writeRegister(RA8875_ELL_B0 + 1, y1 >> 8);
-}
-
 
 /*
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -3360,33 +3418,6 @@ void RA8875::clearInternalInt(enum RA8875intlist b)
 
 /**************************************************************************/
 /*!
-	RA8875 can use the INT pin for many purposes.
-	This function just tell the CPU to use a pin for listen to RA8875 pin,
-	no matter if we will use ISR or DigitalRead
-------------------------------
-Bit:	Called by:		In use:
---------------------------------
-0: 		isr triggered	[*]
-1: 		Resistive TS	[*]
-2: 		KeyScan			[*]
-3: 		DMA
-4: 		BTE
-5: 		-na-
-6: 		-na-
-7: 		-na-
---------------------------------
-	Parameters:
-	INTpin: it's the pin where we listen to ISR
-	INTnum: it's the INT related to pin. On some processor it's not needed
-	This last parameter it's used only when decide to use an ISR.
-*/
-/**************************************************************************/
-
-
-
-
-/**************************************************************************/
-/*!
 		Check the [interrupt register] for an interrupt,
 		if found it will reset it.
 		bit
@@ -3411,8 +3442,6 @@ bool RA8875::_checkInterrupt(uint8_t _bit, bool _clear)
 	}
 	return false;
 }
-
-
 
 /*
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -3485,8 +3514,6 @@ void RA8875::sleep(boolean sleep)
 		}
 	}
 }
-
-
 
 /*
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -3596,9 +3623,9 @@ void RA8875::writeCommand(const uint8_t d)
 
 void RA8875::_fontWrite(const uint8_t* buffer, uint16_t len)
 {
-	
+
 	if (_use_default) {
-		
+
 		_textWrite((const char*)buffer, len);
 		//Serial.printf("Default: %c, %d, %d\n", c, _cursorX, _cursorY);
 		return;
@@ -3616,21 +3643,21 @@ FLASHMEM void RA8875::setFont(const ILI9341_t3_font_t& f) {
 
 	font = &f;
 
-	fontbpp = 1;
+	//fontbpp = 1;
 	// Calculate additional metrics for Anti-Aliased font support (BDF extn v2.3)
-	if (font && font->version == 23) {
-		fontbpp = (font->reserved & 0b000011) + 1;
-		fontbppindex = (fontbpp >> 2) + 1;
-		fontbppmask = (1 << (fontbppindex + 1)) - 1;
-		fontppb = 8 / fontbpp;
-		fontalphamx = 31 / ((1 << fontbpp) - 1);
-		// Ensure text and bg color are different. Note: use setTextColor to set actual bg color
-		if (_TXTForeColor == _TXTBackColor) _TXTBackColor = (_TXTForeColor == 0x0000) ? 0xFFFF : 0x0000;
-	}
+	// if (font && font->version == 23) {
+	// 	fontbpp = (font->reserved & 0b000011) + 1;
+	// 	fontbppindex = (fontbpp >> 2) + 1;
+	// 	fontbppmask = (1 << (fontbppindex + 1)) - 1;
+	// 	fontppb = 8 / fontbpp;
+	// 	fontalphamx = 31 / ((1 << fontbpp) - 1);
+	// 	// Ensure text and bg color are different. Note: use setTextColor to set actual bg color
+	// 	if (_TXTForeColor == _TXTBackColor) _TXTBackColor = (_TXTForeColor == 0x0000) ? 0xFFFF : 0x0000;
+	// }
 }
 
 void RA8875::setTextSize(uint8_t s_x, uint8_t s_y) {
-	
+
 	if (s_x == 1)
 	{
 		setFontScale(1, 1);
@@ -3642,7 +3669,6 @@ void RA8875::setTextSize(uint8_t s_x, uint8_t s_y) {
 		textsize_x = 2;
 	}
 }
-
 
 void RA8875::Pixel(int16_t x, int16_t y, uint16_t color)
 {
@@ -3658,7 +3684,6 @@ void RA8875::Pixel(int16_t x, int16_t y, uint16_t color)
 	writeCommand(RA8875_MRWC);
 	drawPixel(x, y, color);
 }
-
 
 uint32_t RA8875::fetchbit(const uint8_t* p, uint32_t index)
 {
@@ -3697,22 +3722,21 @@ uint32_t RA8875::fetchbits_signed(const uint8_t* p, uint32_t index, uint32_t req
 	return (int32_t)val;
 }
 
-uint32_t RA8875::fetchpixel(const uint8_t* p, uint32_t index, uint32_t x)
-{
-	// The byte
-	uint8_t b = p[index >> 3];
-	// Shift to LSB position and mask to get value
-	uint8_t s = ((fontppb - (x % fontppb) - 1) * fontbpp);
-	// Mask and return
-	return (b >> s) & fontbppmask;
-}
+// uint32_t RA8875::fetchpixel(const uint8_t* p, uint32_t index, uint32_t x)
+// {
+// 	// The byte
+// 	uint8_t b = p[index >> 3];
+// 	// Shift to LSB position and mask to get value
+// 	uint8_t s = ((fontppb - (x % fontppb) - 1) * fontbpp);
+// 	// Mask and return
+// 	return (b >> s) & fontbppmask;
+// }
 
 void RA8875::write16BitColor(uint16_t color, bool last_pixel) {
 
 	writeData16(color);
 
 }
-
 
 // append sysex data to buffer for sending in a bundled fashion
 // a size field added to split the messages on receiver side.
@@ -3751,8 +3775,6 @@ FLASHMEM void RA8875::fillSysexData(uint8_t arr[], uint8_t nbArg, ...)
 	}
 }
 
-
-
 FLASHMEM uint8_t RA8875::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
 {
 	va_list args;
@@ -3790,7 +3812,6 @@ FLASHMEM uint8_t RA8875::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
 		case COLOR_PITCHSMP:
 			colorCode = 6;
 			break;
-
 		case RED:
 			colorCode = 7;
 			break;
@@ -3800,7 +3821,6 @@ FLASHMEM uint8_t RA8875::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
 		case YELLOW:
 			colorCode = 9;
 			break;
-
 		case GREEN:
 			colorCode = 10;
 			break;
@@ -3810,7 +3830,6 @@ FLASHMEM uint8_t RA8875::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
 		case DARKGREEN:
 			colorCode = 12;
 			break;
-
 		case GREY1:
 			colorCode = 13;
 			break;
@@ -3883,7 +3902,6 @@ FLASHMEM uint8_t RA8875::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...)
 
 	return pos;
 }
-
 
 // send sysex bundled.
 FLASHMEM void RA8875::flushSysEx() {

@@ -134,9 +134,9 @@ FLASHMEM void GSL1680::reset()
         int r = Wire.endTransmission();
 
         if (r != 0) {
-            #ifdef DEBUG
+#ifdef DEBUG
             LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(REG[i], HEX);
-            #endif
+#endif
         }
 
         delay(TIMER[i]);
@@ -201,9 +201,9 @@ void GSL1680::datasend(uint8_t REG, uint8_t DATA[], uint16_t NB)
     int r = Wire.endTransmission();
 
     if (r != 0) {
-        #ifdef DEBUG
+#ifdef DEBUG
         LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(REG, HEX);
-        #endif
+#endif
     }
 
 

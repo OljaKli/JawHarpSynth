@@ -11,7 +11,6 @@
 #include <elapsedMillis.h>
 #include "UI_liveseq_editor_shared.h"
 
-
 extern void checkWebRemote();
 
 // Virtual keyboard area starts at the control buttons row (y ~80)
@@ -36,8 +35,8 @@ extern ILI9341_t3n display;
 #endif
 
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
-
 static bool lastRunningState = false;
+
 // ----------------------------------------------------------------------
 // Constants – 4 rows (bars) × 16 steps, full width, compact cells
 // ----------------------------------------------------------------------
@@ -88,14 +87,12 @@ static uint8_t currentHighlightedStep = 0xFF;
 // Forward declarations
 // ----------------------------------------------------------------------
 
-
 void loadGrid_melodic();
 void writeGrid_melodic();
 void redrawCell_melodic(uint8_t bar, uint8_t step, bool highlight = false);
 void setCellNote_melodic(uint8_t bar, uint8_t step, uint8_t note);
 void redraw_melodic();
 void handleMainTouch_melodic(int16_t x, int16_t y);
-
 
 // ----------------------------------------------------------------------
 // Helper functions

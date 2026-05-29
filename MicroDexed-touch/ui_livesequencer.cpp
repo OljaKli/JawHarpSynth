@@ -65,7 +65,7 @@ FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
 FLASHMEM void UI_LiveSequencer::drawTrackSubtext(uint8_t track) {
   display.fillRect(GRID.X[SCREEN_TRACK_INDEX(track)], GRID.Y[1] + TouchButton::BUTTON_SIZE_Y + 3, TouchButton::BUTTON_SIZE_X, CHAR_height_small, COLOR_BACKGROUND);
   display.setTextSize(1);
-  display.setTextColor((track == data.activeTrack) ? GREY1 : GREY2);
+  display.setTextColor((track == data.activeTrack) ? GREY1 : GREY2, COLOR_BACKGROUND);
   display.setCursor(GRID.X[SCREEN_TRACK_INDEX(track)], GRID.Y[1] + TouchButton::BUTTON_SIZE_Y + 3);
 
   const uint8_t denom = data.trackSettings[track].quantizeDenom;

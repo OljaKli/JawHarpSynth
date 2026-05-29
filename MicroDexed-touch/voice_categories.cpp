@@ -36,7 +36,7 @@ extern void print_voice_select_default_help();
 extern void printLiveModButtons();
 extern void drawVoiceNameButton();
 extern void UI_update_instance_icons();
-extern void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+//extern void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 extern void draw_algo(bool force);
 extern void reset_live_modifiers();
 extern void print_formatted_number(uint16_t number, uint8_t length);
