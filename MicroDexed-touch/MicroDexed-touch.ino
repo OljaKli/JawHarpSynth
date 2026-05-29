@@ -68,6 +68,7 @@ MCP23017 mcp(0x20);
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
 #include "UI.h"
+#include "ui_ra_panel.h"
 #include "touch.h"
 #include "USBHost_t36.h"
 #include "MD_REncoder.h"
@@ -3197,6 +3198,9 @@ void loop()
   {
     touchReadTimer = 0;
     updateTouchScreen();
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+    ra_panel_handle_touch();
+#endif
     const TouchFn touchHandler = getCurrentTouchHandler();
     if (touchHandler) {
       touchHandler();
@@ -6023,6 +6027,13 @@ FLASHMEM void check_configuration_sys(void)
   setup_screensaver();
 
   configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed, 60, 500);
+
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  for (uint8_t i = 0; i < 8; i++) {
+    if (configuration.sys.ra_btn_target[i] >= RA_NUM_TARGETS)
+      configuration.sys.ra_btn_target[i] = i;  // default: slot i → target i
+  }
+#endif
 }
 
 FLASHMEM void check_configuration_fx(void)

@@ -1098,6 +1098,9 @@ typedef struct sys_s
   uint8_t dac_cv_4;
   uint8_t dac_cv_transpose;
   bool dac_5v;
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  uint8_t ra_btn_target[8];  // index into TARGETS[] for each panel button slot
+#endif
 } sys_t;
 
 typedef struct storage_file_s
