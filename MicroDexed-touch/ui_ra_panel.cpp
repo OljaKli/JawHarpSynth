@@ -39,56 +39,56 @@ static constexpr uint16_t PANEL_X  = 325;
 static constexpr uint16_t PANEL_W  = 70;
 
 // Engine button grid: 4 rows × 2 cols  (Y=5–99)
-static constexpr uint16_t BTN_W      = 34;
-static constexpr uint16_t BTN_H      = 22;
+static constexpr uint8_t BTN_W      = 34;
+static constexpr uint8_t BTN_H      = 22;
 static constexpr uint16_t BTN_COL0   = 325;
 static constexpr uint16_t BTN_COL1   = 361;
-static constexpr uint16_t BTN_ROWS[4]= { 5, 29, 53, 77 };
+static constexpr uint8_t BTN_ROWS[4]= { 5, 29, 53, 77 };
 
 // Gamepad zone starts here
-static constexpr uint16_t GP_Y0 = 100;
+static constexpr uint8_t GP_Y0 = 100;
 
 // ── L / R buttons — sit above the joystick in the 44 px gap (Y=100–143) ──
 // Circles are visual only; touch zones are rectangles for easy tapping.
 static constexpr uint16_t BTN_L_CX   = 337;
 static constexpr uint16_t BTN_R_CX   = 367;
-static constexpr uint16_t BTN_LR_CY  = 122;   // centre Y of both circles
-static constexpr uint16_t BTN_RL_R   = 12;    // visual radius
+static constexpr uint8_t BTN_LR_CY  = 122;   // centre Y of both circles
+static constexpr uint8_t BTN_RL_R   = 12;    // visual radius
 
 // Touch-zone boundaries (rectangular, extended downward and R extended right)
-static constexpr uint16_t BTN_ZONE_TOP = GP_Y0;                          // 100
-static constexpr uint16_t BTN_ZONE_BOT = 144;  // = JOY_CTR_Y-JOY_RING_R-4 (joystick clear top)
+static constexpr uint8_t BTN_ZONE_TOP = GP_Y0;                          // 100
+static constexpr uint8_t BTN_ZONE_BOT = 144;  // = JOY_CTR_Y-JOY_RING_R-4 (joystick clear top)
 static constexpr uint16_t BTN_LR_MID   = (BTN_L_CX + BTN_R_CX) / 2;    // 352
 
 // ── Joystick (Y=144–206 cleared; center Y=175) ───────────────────────────
 // JOY_PAD_R <= JOY_CTR_X - PANEL_X - JOY_THUMB_R = 352-325-9 = 18 -> use 18
 static constexpr uint16_t JOY_CTR_X     = 352;
-static constexpr uint16_t JOY_CTR_Y     = 175;
-static constexpr uint16_t JOY_RING_R    = 27;
-static constexpr uint16_t JOY_PAD_R     = 18;
-static constexpr uint16_t JOY_THUMB_R   = 9;
-static constexpr uint16_t JOY_THRESH      = 12;
-static constexpr uint16_t JOY_LOCK_THRESH = 8;    // px to commit to an axis
-static constexpr uint16_t JOY_DOT_R       = 3;    // cardinal dot radius
-static constexpr uint16_t JOY_DOT_DIST    = 22;   // dot distance from centre (< RING_R to clear vol bar)
+static constexpr uint8_t JOY_CTR_Y     = 175;
+static constexpr uint8_t JOY_RING_R    = 27;
+static constexpr uint8_t JOY_PAD_R     = 18;
+static constexpr uint8_t JOY_THUMB_R   = 9;
+static constexpr uint8_t JOY_THRESH      = 12;
+static constexpr uint8_t JOY_LOCK_THRESH = 8;    // px to commit to an axis
+static constexpr uint8_t JOY_DOT_R       = 3;    // cardinal dot radius
+static constexpr uint8_t JOY_DOT_DIST    = 22;   // dot distance from centre (< RING_R to clear vol bar)
 static constexpr uint16_t JOY_HOLD_DELAY       = 400;  // ms before repeat starts
-static constexpr uint16_t JOY_REPEAT_RATE      = 120;  // ms between normal repeat steps
+static constexpr uint8_t JOY_REPEAT_RATE      = 120;  // ms between normal repeat steps
 static constexpr uint16_t JOY_ACCEL_DELAY      = 1000; // ms hold before fast repeat (L/R only)
-static constexpr uint16_t JOY_REPEAT_RATE_FAST = 40;   // ms between fast repeat steps
+static constexpr uint8_t JOY_REPEAT_RATE_FAST = 40;   // ms between fast repeat steps
 
 // ── Vertical volume bar — right dead-zone, beside all controls ───────────
 // X=388-394 flush with panel right border; ring right edge 379, R button right 379
 static constexpr uint16_t VOL_V_X   = 388;  // right edge 394 = panel/button right border
-static constexpr uint16_t VOL_V_W   = 7;
+static constexpr uint8_t VOL_V_W   = 7;
 static constexpr uint16_t VOL_V_TOP = GP_Y0;    // 100
-static constexpr uint16_t VOL_V_BOT = 238;      // aligns with VOLUME label bottom (Y=228+8)
+static constexpr uint8_t VOL_V_BOT = 238;      // aligns with VOLUME label bottom (Y=228+8)
 static constexpr uint16_t VOL_V_H   = VOL_V_BOT - VOL_V_TOP;
 
 // ── Volume slider — bottom of panel (Y=210–225) ──────────────────────────
-static constexpr uint16_t VOL_SL_Y    = 210;
-static constexpr uint16_t SL_H        = 16;
-static constexpr uint16_t SL_THUMB_W  = 8;
-static constexpr uint16_t SL_THUMB_H  = 12;
+static constexpr uint8_t VOL_SL_Y    = 210;
+static constexpr uint8_t SL_H        = 16;
+static constexpr uint8_t SL_THUMB_W  = 8;
+static constexpr uint8_t SL_THUMB_H  = 12;
 static constexpr uint16_t SL_TRACK_X  = PANEL_X;
 // Track and clear stop at VOL_V_X so the slider never writes into the bar column
 static constexpr uint16_t SL_MIN_X    = PANEL_X;                        // 325
@@ -96,9 +96,9 @@ static constexpr uint16_t SL_MIN_X    = PANEL_X;                        // 325
 // SL_MAX_X = 2*JOY_CTR_X - SL_THUMB_W - SL_MIN_X = 2*352-8-325 = 371
 static constexpr uint16_t SL_MAX_X    = 2 * JOY_CTR_X - SL_THUMB_W - SL_MIN_X; // 371
 static constexpr int16_t  SL_CTR_X    = (int16_t)((SL_MIN_X + SL_MAX_X) / 2);
-static constexpr uint16_t SL_DEAD_ZONE = 6;
-static constexpr uint16_t SL_RATE_SLOW = 150;
-static constexpr uint16_t SL_RATE_FAST = 40;
+static constexpr uint8_t SL_DEAD_ZONE = 6;
+static constexpr uint8_t SL_RATE_SLOW = 150;
+static constexpr uint8_t SL_RATE_FAST = 40;
 
 static constexpr uint16_t LONG_PRESS_MS = 500;
 
