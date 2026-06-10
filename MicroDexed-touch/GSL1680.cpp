@@ -58,38 +58,17 @@ FLASHMEM void displaybootmessage()
 
 FLASHMEM void GSL1680::begin()
 {
-    //    bootMessage("INIT TOUCH");
-    //     delay(10);
 
-    bootMessage("GSL1680: Start boot up sequence");
-
-    // pinMode(WAKE, OUTPUT);          //
-    // digitalWrite(WAKE, LOW);        //
-    // pinMode(TFT_TOUCH_IRQ, INPUT);  // Startup sequence PIN part
-
-    // delay(30);
-    //bootMessage("TOGGLE WAKE");
-    // digitalWrite(WAKE, HIGH);
-    // delay(50);
-    // digitalWrite(WAKE, LOW);
-    // delay(50);
-    // digitalWrite(WAKE, HIGH);
-    //delay(5);
-
+    bootMessage("GSL1680: Startup sequence");
     Wire.begin();
     Wire.setClock(500000);
     //Wire.setDefaultTimeout(2000);
 
     // CTP startup sequence
-    bootMessage("GSL1680:Clear reg");
     clear_reg();
-    bootMessage("GSL1680:Reset chip");
     reset();
-    bootMessage("GSL1680: Load FW");
     loadfw();
-    bootMessage("GSL1680: Reset chip 2");
     reset();
-    bootMessage("GSL1680: Startup Chip");
     startchip();
     bootMessage("GSL1680: Boot up complete");
     Wire.setClock(200000);

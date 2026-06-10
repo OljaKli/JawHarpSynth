@@ -173,27 +173,27 @@ struct BtnTarget {
 //       Add a default initialiser to sys_t::ra_btn_target in config.h to fix this.
 static const BtnTarget TARGETS[RA_NUM_TARGETS] = {
   // ── Slots 0-7: factory button layout ────────────────────────────────────
-  { "DXD",  "FM",   UI_func_voice_select          },  //  0  left  row 1
+  { "DEXED",  "VOICE",   UI_func_voice_select          },  //  0  left  row 1
   { "BRDS", "",     UI_func_braids                },  //  1  right row 1
-  { "GRAN", "",     UI_func_granular              },  //  2  left  row 2
-  { "EPNO", "",     UI_func_epiano                },  //  3  right row 2
-  { "DRUM", "",     UI_func_drums                 },  //  4  left  row 3
-  { "MSP",  "",     UI_func_MultiSamplePlay       },  //  5  right row 3
+  { "GRANR", "SYNTH",     UI_func_granular              },  //  2  left  row 2
+  { "ELEC", "PIANO",     UI_func_epiano                },  //  3  right row 2
+  { "DRUM", "EDITR",     UI_func_drums                 },  //  4  left  row 3
+  { "MULTI",  "SMP",     UI_func_MultiSamplePlay       },  //  5  right row 3
   { "SEQ",  "SNG",  UI_func_song                  },  //  6  left  row 4
   { "LIVE", "SEQ",  UI_func_livesequencer         },  //  7  right row 4
   // ── Mixer / voices ──────────────────────────────────────────────────────
-  { "MIXR", "",     UI_func_mixer                 },  //  8
+  { "MAIN", "MIXER",     UI_func_mixer                 },  //  8
   { "VCE",  "EDT",  UI_func_voice_editor          },  //  9
   { "VCE",  "GRP",  UI_func_voice_group_config    },  // 10
   { "ARP",  "",     UI_func_arpeggio              },  // 11
   // ── Dexed sub-pages ─────────────────────────────────────────────────────
-  { "DXD",  "SET",  UI_func_dexed_setup           },  // 12
-  { "DXD",  "CTL",  UI_func_dexed_controllers     },  // 13
-  { "DXD",  "AUD",  UI_func_dexed_audio           },  // 14
+  { "DEXED",  "SETUP",  UI_func_dexed_setup           },  // 12
+  { "DEXED",  "CONTL",  UI_func_dexed_controllers     },  // 13
+  { "DEXED",  "AUDIO",  UI_func_dexed_audio           },  // 14
   // ── Effects ─────────────────────────────────────────────────────────────
   { "MFXS", "",     UI_func_master_effects        },  // 15
-  { "MBND", "DYN",  UI_func_multiband_dynamics    },  // 16
-  { "SDCH", "",     UI_func_sidechain             },  // 17
+  { "MULTI", "BAND",  UI_func_multiband_dynamics    },  // 16
+  { "SIDE", "CHAIN",     UI_func_sidechain             },  // 17
   { "FILT", "CUT",  UI_func_filter_cutoff         },  // 18
   { "FILT", "RES",  UI_func_filter_resonance      },  // 19
   // ── Sequencer ───────────────────────────────────────────────────────────
@@ -208,8 +208,8 @@ static const BtnTarget TARGETS[RA_NUM_TARGETS] = {
   { "CHRD", "ARR",  UI_func_chord_arranger        },  // 28
   { "LIVE", "GFX",  UI_func_liveseq_graphic       },  // 29
   // ── Instruments ─────────────────────────────────────────────────────────
-  { "MSYN", "",     UI_func_microsynth            },  // 30
-  { "NOIS", "",     UI_func_noisemaker            },  // 31
+  { "MICRO", "SYNTH",     UI_func_microsynth            },  // 30
+  { "NOISE", "MAKER",     UI_func_noisemaker            },  // 31
   { "SLCE", "",     UI_func_slice_editor          },  // 32
   // ── Utilities ───────────────────────────────────────────────────────────
   { "RCRD", "",     UI_func_recorder              },  // 33
@@ -229,6 +229,11 @@ static const BtnTarget TARGETS[RA_NUM_TARGETS] = {
 };
 
 static constexpr uint8_t NUM_BTNS = 8;  // number of physical button slots on the panel
+
+
+// Per‑button last drawn state (for incremental updates)
+static uint8_t last_btn_target[NUM_BTNS] = {0};
+static bool    last_btn_active[NUM_BTNS] = {false};
 
 static inline uint16_t btn_col(uint8_t i) { return (i & 1) ? BTN_COL1 : BTN_COL0; }
 static inline uint16_t btn_row(uint8_t i) { return BTN_ROWS[i >> 1]; }
@@ -272,7 +277,7 @@ static void gp_draw_l(bool pressed) {
   display.fillCircle(BTN_L_CX, BTN_LR_CY, BTN_RL_R, bg);
   display.setTextSize(1);
   display.setTextColor(COLOR_SYSTEXT, bg);
-  display.setCursor(BTN_L_CX - 3, BTN_LR_CY - 4);
+  display.setCursor(BTN_L_CX - 2, BTN_LR_CY - 3);
   display.print("L");
 }
 
@@ -284,7 +289,7 @@ static void gp_draw_r(bool pressed) {
   display.fillCircle(BTN_R_CX, BTN_LR_CY, BTN_RL_R, bg);
   display.setTextSize(1);
   display.setTextColor(COLOR_SYSTEXT, bg);
-  display.setCursor(BTN_R_CX - 3, BTN_LR_CY - 4);
+  display.setCursor(BTN_R_CX - 2, BTN_LR_CY - 3);
   display.print("R");
 }
 
@@ -446,17 +451,32 @@ FLASHMEM void ra_panel_draw() {
   last_vol_fill_h = 0xFFFF;
   gp_draw_vol_bar(true);
 
+// Initialise per‑button state
+for (uint8_t i = 0; i < NUM_BTNS; i++) {
+    last_btn_target[i] = configuration.sys.ra_btn_target[i];
+    last_btn_active[i] = (i == active);
+}
+last_active_btn = active;
+
   last_seq_running = seq.running;
   last_edit_mode   = (seq.edit_state == 1);
   panel_drawn = true;
+
 }
 
 // ── Public: redraw engine buttons only (called when active page changes) ──
 FLASHMEM void ra_panel_update_buttons() {
-  const uint8_t active = active_button_index();
-  for (uint8_t i = 0; i < NUM_BTNS; i++)
-    draw_engine_button(i, i == active);
-  last_active_btn = active;
+    const uint8_t active = active_button_index();
+    for (uint8_t i = 0; i < NUM_BTNS; i++) {
+        const uint8_t target = configuration.sys.ra_btn_target[i];
+        const bool active_flag = (i == active);
+        if (target != last_btn_target[i] || active_flag != last_btn_active[i]) {
+            draw_engine_button(i, active_flag);
+            last_btn_target[i] = target;
+            last_btn_active[i] = active_flag;
+        }
+    }
+    last_active_btn = active;
 }
 
 // ── Zone predicates ───────────────────────────────────────────────────────
@@ -490,64 +510,60 @@ static inline bool in_joystick(uint16_t x, uint16_t y) {
 
 // ── Public: touch handler — call every TOUCH_MAX_REFRESH_RATE_MS ─────────
 void ra_panel_handle_touch() {
-  static uint8_t last_func_id_panel = 255;
-  static uint8_t redraw_delay       = 0;
-  const uint8_t  cur_func_id        = (uint8_t)(LCDML.FUNC_getID() & 0xFF);
+  static bool panel_initialised = false;
 
-  if (cur_func_id != last_func_id_panel) {
-    panel_drawn        = false;
-    last_func_id_panel = cur_func_id;
-    redraw_delay       = 4;
-  }
-  if (!panel_drawn) {
-    if (redraw_delay > 0) {
-      redraw_delay--;
-    } else {
-      static bool cleared_once = false;
-      if (!cleared_once) {
-        // Clear the full panel column once at startup before first draw,
-        // so no stale pixels from boot remain. Subsequent redraws handle
-        // their own clearing per-element.
-        checkWebRemote();
-        display.fillRect(PANEL_X, 0, PANEL_W, 240, COLOR_BACKGROUND);
-        cleared_once = true;
-      }
-      ra_panel_draw();
-    }
+  // ── One‑time panel initialisation (draw once, then never again) ──────
+  if (!panel_initialised) {
+    checkWebRemote();
+    display.fillRect(PANEL_X, 0, PANEL_W, 240, COLOR_BACKGROUND);
+    ra_panel_draw();                // draws everything once
+    panel_initialised = true;
   }
 
+// Check for external volume changes from left encoder
+static uint8_t last_volume = 0xFF;
+if (configuration.sys.vol != last_volume) {
+    last_volume = configuration.sys.vol;
+    gp_draw_vol_bar();
+}
+
+  // ── Update only the engine buttons when the active page changes ──────
   const uint8_t cur_active = active_button_index();
-  if (cur_active != last_active_btn)
-    ra_panel_update_buttons();
+  if (cur_active != last_active_btn) {
+    ra_panel_update_buttons();     // redraws only the changed engine buttons
+    last_active_btn = cur_active;
+  }
 
-  // Refresh L colour when sequencer changes externally
+  // ── Refresh L button colour when sequencer state changes ─────────────
   if (seq.running != last_seq_running && !btn_l_held) {
     gp_draw_l(false);
     last_seq_running = seq.running;
   }
 
-  // Refresh R colour when seq.edit_state changes
+  // ── Refresh R button colour when edit mode changes ───────────────────
   const bool cur_edit_mode = (seq.edit_state == 1);
   if (cur_edit_mode != last_edit_mode && !btn_r_held) {
     gp_draw_r(false);
     last_edit_mode = cur_edit_mode;
   }
 
+  // ── Clear save‑flash when timer expires ──────────────────────────────
+ if (flash_btn != 255 && millis() >= flash_end_ms) {
+    const uint8_t was = flash_btn;
+    flash_btn = 255;
+    draw_engine_button(was, active_button_index() == was);
+    // Update stored state after flash clears
+    last_btn_target[was] = configuration.sys.ra_btn_target[was];
+    last_btn_active[was] = (was == active_button_index());
+}
+
+  // ── Touch state ──────────────────────────────────────────────────────
   const bool     down    = (numTouchPoints > 0);
   const bool     pressed = down && !was_down;
   const uint16_t px      = ts.p.x;
   const uint16_t py      = ts.p.y;
 
-  // Clear save-flash when timer expires
-  if (flash_btn != 255 && millis() >= flash_end_ms) {
-    const uint8_t was = flash_btn;
-    flash_btn = 255;
-    draw_engine_button(was, active_button_index() == was);
-  }
-
-  // ── Engine buttons ────────────────────────────────────────────────────
-  // Short tap: navigate to the assigned page.
-  // Long press (500 ms): save the currently active page to that slot and flash red briefly.
+  // ── Engine buttons: long‑press assignment & short‑tap navigation ─────
   if (pressed && in_panel(px, py) && in_eng_btn_zone(py)) {
     for (uint8_t i = 0; i < NUM_BTNS; i++) {
       const uint16_t bx = btn_col(i);
@@ -559,24 +575,27 @@ void ra_panel_handle_touch() {
       }
     }
   }
-  // Long-press threshold reached: match current LCDML function against TARGETS[], save and flash
-  if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS)) {
-    const uint8_t   i      = eng_held_idx;
-    eng_held_idx           = 255;
-    const auto      cur_id = LCDML.FUNC_getID();
+  // Long‑press threshold reached: assign current page to button
+if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS)) {
+    const uint8_t i = eng_held_idx;
+    eng_held_idx = 255;
+    const auto cur_id = LCDML.FUNC_getID();
     for (uint8_t t = 0; t < RA_NUM_TARGETS; t++) {
-      if (cur_id == LCDML.OTHER_getIDFromFunction(TARGETS[t].fn)) {
-        configuration.sys.ra_btn_target[i] = t;
-        save_sys_flag = true;
-        save_sys      = 0;
-        flash_btn     = i;
-        flash_end_ms  = millis() + 600;
-        draw_engine_button(i, false);
-        break;
-      }
+        if (cur_id == LCDML.OTHER_getIDFromFunction(TARGETS[t].fn)) {
+            configuration.sys.ra_btn_target[i] = t;
+            save_sys_flag = true;
+            save_sys = 0;
+            flash_btn = i;
+            flash_end_ms = millis() + 600;
+            draw_engine_button(i, false);
+            // Update the stored state
+            last_btn_target[i] = t;
+            last_btn_active[i] = (i == active_button_index());
+            break;
+        }
     }
-  }
-  // Short tap fires on finger lift (eng_held_idx is cleared by long-press, so this is mutually exclusive)
+}
+  // Short tap on engine button (finger lift)
   if (eng_held_idx != 255 && !down) {
     LCDML.OTHER_jumpToFunc(TARGETS[configuration.sys.ra_btn_target[eng_held_idx]].fn);
     eng_held_idx = 255;
@@ -593,7 +612,7 @@ void ra_panel_handle_touch() {
     gp_draw_r(false);
   }
 
-  // ── L button (short press = back; long press = seq start/stop) ────────
+  // ── L button (short = back, long = seq start/stop) ───────────────────
   if (pressed && in_btn_l(px, py)) {
     btn_l_held       = true;
     btn_l_long_fired = false;

@@ -391,9 +391,7 @@ void virtual_typewriter_init(int8_t pos);
 
 bool virtual_typewriter_touchloop(char* out_key);
 void virtual_typewriter_update_display();
-// void drawVoiceNameButton();
-// void UI_update_instance_icons();
-// void draw_favorite_icon(uint8_t pool, uint8_t bank, uint8_t voice, uint8_t instance);
+
 extern void save_voice_name_and_exit();
 
 extern uint8_t edit_pos_global;
@@ -543,7 +541,7 @@ FLASHMEM void handle_touchscreen_voice_select()
   }
 
   // VOICE NAME BUTTON HANDLER
-  else if (!category_mode_active && TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
+  else if (!category_mode_active && TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
     seq.cycle_touch_element = 2;
 #if defined GLOW
     remove_glow();
@@ -594,7 +592,7 @@ FLASHMEM void handle_touchscreen_voice_select()
         set_algo(value);
         draw_algo();
       }
-      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23)) {
+      else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23)) {
         // Voice editor button
         LCDML.FUNC_setGBAToLastFunc();
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);

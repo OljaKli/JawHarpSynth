@@ -1389,9 +1389,9 @@ FLASHMEM void setup()
 
 #if defined RA_DISPLAY
 display.begin(RA8875_800x480);
-display.loadMDTfontToCGRAM();
-display.setCGRAMAsDefaultFont();
-display.setDoubleBufferText(true);
+ display.loadMDTfontToCGRAM();
+ display.setCGRAMAsDefaultFont();
+
 
 delay(2);
 
