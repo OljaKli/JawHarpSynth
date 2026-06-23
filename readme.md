@@ -80,9 +80,7 @@ by fellpower (german language)
 
 <a href="https://liberapay.com/positionhigh/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
 
-## or PayPal:
-
-[Donate](https://www.paypal.com/donate/?hosted_button_id=5565UW72LDFML)
+## or PayPal: [Donate](https://www.paypal.com/donate/?hosted_button_id=5565UW72LDFML)
 
 
 ### User Chat groups
