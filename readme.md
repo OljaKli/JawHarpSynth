@@ -82,6 +82,10 @@ by fellpower (german language)
 
 ## or PayPal: [Donate](https://www.paypal.com/donate/?hosted_button_id=5565UW72LDFML)
 
+<br>
+<img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/QR-Code.png" >
+
+<p>
 
 ### User Chat groups
 
