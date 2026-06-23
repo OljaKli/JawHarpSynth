@@ -17,7 +17,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.954"
+#define MIN_VERSION_ESP_DISPLAY "1.9.956"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2

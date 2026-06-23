@@ -76,9 +76,14 @@ by fellpower (german language)
 [https://www.youtube.com/playlist?list=PLHTypoMU1QoGOXPli8bjR6MknPiQpubHl
 ](https://www.youtube.com/playlist?list=PLHTypoMU1QoGOXPli8bjR6MknPiQpubHl)
 
-## If you want to donate to this project, please check out this link:
+## If you want to donate to this project, please check out this link (Liberapay):
 
 <a href="https://liberapay.com/positionhigh/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
+
+## or PayPal:
+
+[Donate](https://www.paypal.com/donate/?hosted_button_id=5565UW72LDFML)
+
 
 ### User Chat groups
 

@@ -4303,9 +4303,11 @@ void processIncomingSerial() {
       touchIndex = 0;
     }
 
-    else if (data == 0xAE && touchIndex == 0) {
-      redraw_current_page_or_fallback();
-    }
+    // else if (data == 0xAE && touchIndex == 0) {
+    //   //  force_menu_full_redraw=true;
+    //   //  redraw_current_page_or_fallback();
+    // }
+
     else if (data == 0xBB && inTouchPacket) {
 
       if (packetType == CMD_MIDI_DATA && touchIndex >= 1) {
@@ -4314,7 +4316,7 @@ void processIncomingSerial() {
           processMidiDataFromESP(&touchBuffer[1], len);
         }
       }
-      if (packetType == 0xAA && touchIndex == 2) {
+     else if (packetType == 0xAA && touchIndex == 2) {
         uint16_t esp_touch_x = touchBuffer[0];
         uint16_t esp_touch_y = touchBuffer[1];
         touchX = esp_touch_x;
@@ -4324,8 +4326,15 @@ void processIncomingSerial() {
         remote_touched = true;
 
       }
+       else if (packetType == 0xAC && touchIndex == 1) {
+        // Function ID jump
+        esp_function_id = touchBuffer[0];
+        function_jump_pending = true;
+      }
+      
       else if (packetType == 0xAE && touchIndex == 0) {
-        redraw_current_page_or_fallback();
+         force_menu_full_redraw=true;
+         redraw_current_page_or_fallback();
       }
       else if (packetType == 0xAB && touchIndex == 1) {
         uint8_t btn = touchBuffer[0];
@@ -4337,11 +4346,7 @@ void processIncomingSerial() {
           esp_press_start = millis();
         }
       }
-      else if (packetType == 0xAC && touchIndex == 1) {
-        // Function ID jump
-        esp_function_id = touchBuffer[0];
-        function_jump_pending = true;
-      }
+     
       else if (packetType == 0xAD && touchIndex == 0) {
         // Screensaver stop command
         remote_touched = true;
@@ -23066,9 +23071,13 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     }
 
     // Top row buttons
-    //TouchButton::drawButton(GRID.X[4], GRID.Y[0], "SET AS", "FAV", TouchButton::BUTTON_ACTIVE);
-    TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
 
+     draw_favorite_icon(configuration.dexed[selected_instance_id].pool,
+      configuration.dexed[selected_instance_id].bank,
+      configuration.dexed[selected_instance_id].voice,
+      selected_instance_id);
+
+    TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[0]);
     TouchButton::drawButton(GRID.X[5], GRID.Y[1], "VOICE", "CAT", TouchButton::BUTTON_NORMAL);
 
     print_voice_settings_in_dexed_voice_select(true, true);
@@ -23076,11 +23085,6 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
     printLiveModButtons();
     drawVoiceNameButton();
     UI_update_instance_icons();
-
-    // draw_favorite_icon(configuration.dexed[selected_instance_id].pool,
-    //   configuration.dexed[selected_instance_id].bank,
-    //   configuration.dexed[selected_instance_id].voice,
-    //   selected_instance_id);
 
     display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
     display.setTextSize(1);
