@@ -35,67 +35,67 @@ volatile bool   ra_panel_btn_l = false;
 volatile bool   ra_panel_btn_r = false;
 
 // ── Panel geometry ────────────────────────────────────────────────────────
-static constexpr uint16_t PANEL_X  = 325;
-static constexpr uint16_t PANEL_W  = 70;
+static constexpr uint16_t PANEL_X = 325;
+static constexpr uint16_t PANEL_W = 70;
 
 // Engine button grid: 4 rows × 2 cols  (Y=5–99)
-static constexpr uint8_t BTN_W      = 34;
-static constexpr uint8_t BTN_H      = 22;
-static constexpr uint16_t BTN_COL0   = 325;
-static constexpr uint16_t BTN_COL1   = 361;
-static constexpr uint8_t BTN_ROWS[4]= { 5, 29, 53, 77 };
+static constexpr uint8_t BTN_W = 34;
+static constexpr uint8_t BTN_H = 22;
+static constexpr uint16_t BTN_COL0 = 325;
+static constexpr uint16_t BTN_COL1 = 361;
+static constexpr uint8_t BTN_ROWS[4] = { 5, 29, 53, 77 };
 
 // Gamepad zone starts here
 static constexpr uint8_t GP_Y0 = 100;
 
 // ── L / R buttons — sit above the joystick in the 44 px gap (Y=100–143) ──
 // Circles are visual only; touch zones are rectangles for easy tapping.
-static constexpr uint16_t BTN_L_CX   = 337;
-static constexpr uint16_t BTN_R_CX   = 367;
-static constexpr uint8_t BTN_LR_CY  = 122;   // centre Y of both circles
-static constexpr uint8_t BTN_RL_R   = 12;    // visual radius
+static constexpr uint16_t BTN_L_CX = 337;
+static constexpr uint16_t BTN_R_CX = 367;
+static constexpr uint8_t BTN_LR_CY = 122;   // centre Y of both circles
+static constexpr uint8_t BTN_RL_R = 12;    // visual radius
 
 // Touch-zone boundaries (rectangular, extended downward and R extended right)
 static constexpr uint8_t BTN_ZONE_TOP = GP_Y0;                          // 100
 static constexpr uint8_t BTN_ZONE_BOT = 144;  // = JOY_CTR_Y-JOY_RING_R-4 (joystick clear top)
-static constexpr uint16_t BTN_LR_MID   = (BTN_L_CX + BTN_R_CX) / 2;    // 352
+static constexpr uint16_t BTN_LR_MID = (BTN_L_CX + BTN_R_CX) / 2;    // 352
 
 // ── Joystick (Y=144–206 cleared; center Y=175) ───────────────────────────
 // JOY_PAD_R <= JOY_CTR_X - PANEL_X - JOY_THUMB_R = 352-325-9 = 18 -> use 18
-static constexpr uint16_t JOY_CTR_X     = 352;
-static constexpr uint8_t JOY_CTR_Y     = 175;
-static constexpr uint8_t JOY_RING_R    = 27;
-static constexpr uint8_t JOY_PAD_R     = 18;
-static constexpr uint8_t JOY_THUMB_R   = 9;
-static constexpr uint8_t JOY_THRESH      = 12;
+static constexpr uint16_t JOY_CTR_X = 352;
+static constexpr uint8_t JOY_CTR_Y = 175;
+static constexpr uint8_t JOY_RING_R = 27;
+static constexpr uint8_t JOY_PAD_R = 18;
+static constexpr uint8_t JOY_THUMB_R = 9;
+static constexpr uint8_t JOY_THRESH = 12;
 static constexpr uint8_t JOY_LOCK_THRESH = 8;    // px to commit to an axis
-static constexpr uint8_t JOY_DOT_R       = 3;    // cardinal dot radius
-static constexpr uint8_t JOY_DOT_DIST    = 22;   // dot distance from centre (< RING_R to clear vol bar)
-static constexpr uint16_t JOY_HOLD_DELAY       = 400;  // ms before repeat starts
-static constexpr uint8_t JOY_REPEAT_RATE      = 120;  // ms between normal repeat steps
-static constexpr uint16_t JOY_ACCEL_DELAY      = 1000; // ms hold before fast repeat (L/R only)
+static constexpr uint8_t JOY_DOT_R = 3;    // cardinal dot radius
+static constexpr uint8_t JOY_DOT_DIST = 22;   // dot distance from centre (< RING_R to clear vol bar)
+static constexpr uint16_t JOY_HOLD_DELAY = 400;  // ms before repeat starts
+static constexpr uint8_t JOY_REPEAT_RATE = 120;  // ms between normal repeat steps
+static constexpr uint16_t JOY_ACCEL_DELAY = 1000; // ms hold before fast repeat (L/R only)
 static constexpr uint8_t JOY_REPEAT_RATE_FAST = 40;   // ms between fast repeat steps
 
 // ── Vertical volume bar — right dead-zone, beside all controls ───────────
 // X=388-394 flush with panel right border; ring right edge 379, R button right 379
-static constexpr uint16_t VOL_V_X   = 388;  // right edge 394 = panel/button right border
-static constexpr uint8_t VOL_V_W   = 7;
+static constexpr uint16_t VOL_V_X = 388;  // right edge 394 = panel/button right border
+static constexpr uint8_t VOL_V_W = 7;
 static constexpr uint16_t VOL_V_TOP = GP_Y0;    // 100
 static constexpr uint8_t VOL_V_BOT = 238;      // aligns with VOLUME label bottom (Y=228+8)
-static constexpr uint16_t VOL_V_H   = VOL_V_BOT - VOL_V_TOP;
+static constexpr uint16_t VOL_V_H = VOL_V_BOT - VOL_V_TOP;
 
 // ── Volume slider — bottom of panel (Y=210–225) ──────────────────────────
-static constexpr uint8_t VOL_SL_Y    = 210;
-static constexpr uint8_t SL_H        = 16;
-static constexpr uint8_t SL_THUMB_W  = 8;
-static constexpr uint8_t SL_THUMB_H  = 12;
-static constexpr uint16_t SL_TRACK_X  = PANEL_X;
+static constexpr uint8_t VOL_SL_Y = 210;
+static constexpr uint8_t SL_H = 16;
+static constexpr uint8_t SL_THUMB_W = 8;
+static constexpr uint8_t SL_THUMB_H = 12;
+static constexpr uint16_t SL_TRACK_X = PANEL_X;
 // Track and clear stop at VOL_V_X so the slider never writes into the bar column
-static constexpr uint16_t SL_MIN_X    = PANEL_X;                        // 325
+static constexpr uint16_t SL_MIN_X = PANEL_X;                        // 325
 // Thumb travels SL_MIN_X..SL_MAX_X; choose SL_MAX_X so thumb centre at mid = JOY_CTR_X
 // SL_MAX_X = 2*JOY_CTR_X - SL_THUMB_W - SL_MIN_X = 2*352-8-325 = 371
-static constexpr uint16_t SL_MAX_X    = 2 * JOY_CTR_X - SL_THUMB_W - SL_MIN_X; // 371
-static constexpr int16_t  SL_CTR_X    = (int16_t)((SL_MIN_X + SL_MAX_X) / 2);
+static constexpr uint16_t SL_MAX_X = 2 * JOY_CTR_X - SL_THUMB_W - SL_MIN_X; // 371
+static constexpr int16_t  SL_CTR_X = (int16_t)((SL_MIN_X + SL_MAX_X) / 2);
 static constexpr uint8_t SL_DEAD_ZONE = 6;
 static constexpr uint8_t SL_RATE_SLOW = 150;
 static constexpr uint8_t SL_RATE_FAST = 40;
@@ -103,54 +103,54 @@ static constexpr uint8_t SL_RATE_FAST = 40;
 static constexpr uint16_t LONG_PRESS_MS = 500;
 
 // Colours
-static constexpr uint16_t COL_ACTIVE  = RED;
+static constexpr uint16_t COL_ACTIVE = RED;
 static constexpr uint16_t COL_PRESSED = DX_DARKCYAN;
 
 // ── State ─────────────────────────────────────────────────────────────────
-volatile bool ra_panel_virt_up    = false;
-volatile bool ra_panel_virt_down  = false;
-volatile bool ra_panel_virt_left  = false;
+volatile bool ra_panel_virt_up = false;
+volatile bool ra_panel_virt_down = false;
+volatile bool ra_panel_virt_left = false;
 volatile bool ra_panel_virt_right = false;
 
 // Volume slider
 static int16_t  sl_thumb_x = SL_CTR_X;
-static bool     sl_active  = false;
-static int16_t  sl_last_x  = 0;
+static bool     sl_active = false;
+static int16_t  sl_last_x = 0;
 static uint32_t sl_rate_ms = 0;
 
 // Volume bar incremental state — 0xFFFF forces a full redraw on first call
 static uint16_t last_vol_fill_h = 0xFFFF;
 
 // Joystick
-static int16_t  joy_tx      = JOY_CTR_X;
-static int16_t  joy_ty      = JOY_CTR_Y;
-static bool     joy_active      = false;
+static int16_t  joy_tx = JOY_CTR_X;
+static int16_t  joy_ty = JOY_CTR_Y;
+static bool     joy_active = false;
 static bool     joy_axis_locked = false; // once set, thumb is clamped to one axis
-static bool     joy_axis_is_vert= false; // true = vertical axis locked
-static bool     joy_fired_once  = false; // fired initial step for current deflection
-static uint32_t joy_hold_ms     = 0;     // time joystick first deflected in this stroke
-static uint32_t joy_rate_ms     = 0;     // time of last repeat fire
+static bool     joy_axis_is_vert = false; // true = vertical axis locked
+static bool     joy_fired_once = false; // fired initial step for current deflection
+static uint32_t joy_hold_ms = 0;     // time joystick first deflected in this stroke
+static uint32_t joy_rate_ms = 0;     // time of last repeat fire
 
 // R button (enter/confirm)
 static bool btn_r_held = false;
 
 // L button (short=back, long=seq toggle)
-static bool     btn_l_held       = false;
+static bool     btn_l_held = false;
 static bool     btn_l_long_fired = false;
 static uint32_t btn_l_press_time = 0;
 
 // Bookkeeping
-static bool     was_down         = false;
-static bool     panel_drawn      = false;
-static uint8_t  last_active_btn  = 255;
+static bool     was_down = false;
+static bool     panel_drawn = false;
+static uint8_t  last_active_btn = 255;
 static bool     last_seq_running = false;
-static bool     last_edit_mode   = false;
+static bool     last_edit_mode = false;
 
 // Engine button long-press / assign
-static uint8_t  eng_held_idx  = 255;  // which engine button is held (255 = none)
+static uint8_t  eng_held_idx = 255;  // which engine button is held (255 = none)
 static uint32_t eng_press_time = 0;
-static uint8_t  flash_btn     = 255;  // button showing save-flash (255 = none)
-static uint32_t flash_end_ms  = 0;
+static uint8_t  flash_btn = 255;  // button showing save-flash (255 = none)
+static uint32_t flash_end_ms = 0;
 
 // ── Assignable target descriptors ────────────────────────────────────────
 // All pages that can be assigned to a panel button.
@@ -159,8 +159,8 @@ static uint32_t flash_end_ms  = 0;
 // fn: LCDML function pointer used for navigation (OTHER_jumpToFunc) and
 //     identification (OTHER_getIDFromFunction / FUNC_getID comparison).
 struct BtnTarget {
-  const char*  label;
-  const char*  sub;
+  const char* label;
+  const char* sub;
   void (*fn)(uint8_t);
 };
 
@@ -232,8 +232,8 @@ static constexpr uint8_t NUM_BTNS = 8;  // number of physical button slots on th
 
 
 // Per‑button last drawn state (for incremental updates)
-static uint8_t last_btn_target[NUM_BTNS] = {0};
-static bool    last_btn_active[NUM_BTNS] = {false};
+static uint8_t last_btn_target[NUM_BTNS] = { 0 };
+static bool    last_btn_active[NUM_BTNS] = { false };
 
 static inline uint16_t btn_col(uint8_t i) { return (i & 1) ? BTN_COL1 : BTN_COL0; }
 static inline uint16_t btn_row(uint8_t i) { return BTN_ROWS[i >> 1]; }
@@ -252,10 +252,10 @@ static uint8_t active_button_index() {
 
 // ── Drawing ───────────────────────────────────────────────────────────────
 static void draw_engine_button(uint8_t idx, bool active) {
-  const uint16_t x  = btn_col(idx);
-  const uint16_t y  = btn_row(idx);
+  const uint16_t x = btn_col(idx);
+  const uint16_t y = btn_row(idx);
   const uint16_t bg = (flash_btn == idx) ? COL_ACTIVE
-                    : active             ? DX_DARKCYAN : GREY3;
+    : active ? DX_DARKCYAN : GREY3;
   checkWebRemote();
   display.fillRect(x, y, BTN_W, BTN_H, bg);
   display.setTextSize(1);
@@ -341,11 +341,13 @@ static void gp_draw_vol_bar(bool force = false) {
     display.fillRect(VOL_V_X, VOL_V_TOP, VOL_V_W, VOL_V_H, GREY4);
     if (fill_h > 0)
       display.fillRect(VOL_V_X, VOL_V_BOT - fill_h, VOL_V_W, fill_h, DX_DARKCYAN);
-  } else if (fill_h > last_vol_fill_h) {
+  }
+  else if (fill_h > last_vol_fill_h) {
     // Volume increased — extend cyan upward
     const uint16_t new_h = fill_h - last_vol_fill_h;
     display.fillRect(VOL_V_X, VOL_V_BOT - fill_h, VOL_V_W, new_h, DX_DARKCYAN);
-  } else {
+  }
+  else {
     // Volume decreased — erase vacated strip with grey
     const uint16_t erase_h = last_vol_fill_h - fill_h;
     display.fillRect(VOL_V_X, VOL_V_BOT - last_vol_fill_h, VOL_V_W, erase_h, GREY4);
@@ -358,10 +360,10 @@ static void gp_draw_vol_bar(bool force = false) {
 // Called inside gp_draw_joystick_full and gp_move_thumb (before drawing the thumb).
 static void gp_draw_dir_dots() {
   const uint16_t d = JOY_DOT_DIST;
-  display.fillCircle(JOY_CTR_X,     JOY_CTR_Y - d, JOY_DOT_R, GREY3);
-  display.fillCircle(JOY_CTR_X,     JOY_CTR_Y + d, JOY_DOT_R, GREY3);
-  display.fillCircle(JOY_CTR_X - d, JOY_CTR_Y,     JOY_DOT_R, GREY3);
-  display.fillCircle(JOY_CTR_X + d, JOY_CTR_Y,     JOY_DOT_R, GREY3);
+  display.fillCircle(JOY_CTR_X, JOY_CTR_Y - d, JOY_DOT_R, GREY3);
+  display.fillCircle(JOY_CTR_X, JOY_CTR_Y + d, JOY_DOT_R, GREY3);
+  display.fillCircle(JOY_CTR_X - d, JOY_CTR_Y, JOY_DOT_R, GREY3);
+  display.fillCircle(JOY_CTR_X + d, JOY_CTR_Y, JOY_DOT_R, GREY3);
 }
 
 // Full redraw — only called on panel init (inside ra_panel_draw).
@@ -370,7 +372,7 @@ static void gp_draw_joystick_full() {
   const uint16_t clear_y = JOY_CTR_Y - JOY_RING_R - 4;
   const uint16_t clear_h = (JOY_RING_R + 4) * 2;
   display.fillRect(PANEL_X, clear_y, PANEL_W, clear_h, COLOR_BACKGROUND);
-  display.drawCircle(JOY_CTR_X * 2, JOY_CTR_Y * 2, JOY_RING_R * 2,       GREY3);
+  display.drawCircle(JOY_CTR_X * 2, JOY_CTR_Y * 2, JOY_RING_R * 2, GREY3);
   display.drawCircle(JOY_CTR_X * 2, JOY_CTR_Y * 2, (JOY_RING_R - 1) * 2, GREY3);
   gp_draw_dir_dots();
   checkWebRemote();
@@ -386,22 +388,22 @@ static void gp_move_thumb(int16_t new_tx, int16_t new_ty) {
   const int16_t old_dx = joy_tx - (int16_t)JOY_CTR_X;
   const int16_t old_dy = joy_ty - (int16_t)JOY_CTR_Y;
   // With cross-shape movement one component is always 0, so abs sum == the real distance.
-  const int16_t old_d  = abs(old_dx) + abs(old_dy);
+  const int16_t old_d = abs(old_dx) + abs(old_dy);
 
   checkWebRemote();
   display.fillCircle(joy_tx, joy_ty, JOY_THUMB_R, COLOR_BACKGROUND);
 
   // Restore ring only when old thumb reached into it (last ~7 px of travel).
   if (old_d >= (int16_t)(JOY_RING_R - JOY_THUMB_R)) {
-    display.drawCircle(JOY_CTR_X * 2, JOY_CTR_Y * 2, JOY_RING_R * 2,       GREY3);
+    display.drawCircle(JOY_CTR_X * 2, JOY_CTR_Y * 2, JOY_RING_R * 2, GREY3);
     display.drawCircle(JOY_CTR_X * 2, JOY_CTR_Y * 2, (JOY_RING_R - 1) * 2, GREY3);
   }
   // Restore only the single dot in the direction of travel, when covered.
   if (old_d >= (int16_t)(JOY_DOT_DIST - JOY_THUMB_R)) {
-    if      (old_dx < 0) display.fillCircle(JOY_CTR_X - (int16_t)JOY_DOT_DIST, JOY_CTR_Y,                              JOY_DOT_R, GREY3);
-    else if (old_dx > 0) display.fillCircle(JOY_CTR_X + (int16_t)JOY_DOT_DIST, JOY_CTR_Y,                              JOY_DOT_R, GREY3);
-    else if (old_dy < 0) display.fillCircle(JOY_CTR_X,                          JOY_CTR_Y - (int16_t)JOY_DOT_DIST, JOY_DOT_R, GREY3);
-    else if (old_dy > 0) display.fillCircle(JOY_CTR_X,                          JOY_CTR_Y + (int16_t)JOY_DOT_DIST, JOY_DOT_R, GREY3);
+    if (old_dx < 0) display.fillCircle(JOY_CTR_X - (int16_t)JOY_DOT_DIST, JOY_CTR_Y, JOY_DOT_R, GREY3);
+    else if (old_dx > 0) display.fillCircle(JOY_CTR_X + (int16_t)JOY_DOT_DIST, JOY_CTR_Y, JOY_DOT_R, GREY3);
+    else if (old_dy < 0) display.fillCircle(JOY_CTR_X, JOY_CTR_Y - (int16_t)JOY_DOT_DIST, JOY_DOT_R, GREY3);
+    else if (old_dy > 0) display.fillCircle(JOY_CTR_X, JOY_CTR_Y + (int16_t)JOY_DOT_DIST, JOY_DOT_R, GREY3);
   }
 
   joy_tx = new_tx;
@@ -411,8 +413,8 @@ static void gp_move_thumb(int16_t new_tx, int16_t new_ty) {
 
 // Returns 0=none, 1=up, 2=down, 3=left, 4=right
 static uint8_t joy_current_dir() {
-  const int16_t dx  = joy_tx - (int16_t)JOY_CTR_X;
-  const int16_t dy  = joy_ty - (int16_t)JOY_CTR_Y;
+  const int16_t dx = joy_tx - (int16_t)JOY_CTR_X;
+  const int16_t dy = joy_ty - (int16_t)JOY_CTR_Y;
   const int16_t adx = abs(dx);
   const int16_t ady = abs(dy);
   if (adx < (int16_t)JOY_THRESH && ady < (int16_t)JOY_THRESH) return 0;
@@ -451,32 +453,32 @@ FLASHMEM void ra_panel_draw() {
   last_vol_fill_h = 0xFFFF;
   gp_draw_vol_bar(true);
 
-// Initialise per‑button state
-for (uint8_t i = 0; i < NUM_BTNS; i++) {
+  // Initialise per‑button state
+  for (uint8_t i = 0; i < NUM_BTNS; i++) {
     last_btn_target[i] = configuration.sys.ra_btn_target[i];
     last_btn_active[i] = (i == active);
-}
-last_active_btn = active;
+  }
+  last_active_btn = active;
 
   last_seq_running = seq.running;
-  last_edit_mode   = (seq.edit_state == 1);
+  last_edit_mode = (seq.edit_state == 1);
   panel_drawn = true;
 
 }
 
 // ── Public: redraw engine buttons only (called when active page changes) ──
 FLASHMEM void ra_panel_update_buttons() {
-    const uint8_t active = active_button_index();
-    for (uint8_t i = 0; i < NUM_BTNS; i++) {
-        const uint8_t target = configuration.sys.ra_btn_target[i];
-        const bool active_flag = (i == active);
-        if (target != last_btn_target[i] || active_flag != last_btn_active[i]) {
-            draw_engine_button(i, active_flag);
-            last_btn_target[i] = target;
-            last_btn_active[i] = active_flag;
-        }
+  const uint8_t active = active_button_index();
+  for (uint8_t i = 0; i < NUM_BTNS; i++) {
+    const uint8_t target = configuration.sys.ra_btn_target[i];
+    const bool active_flag = (i == active);
+    if (target != last_btn_target[i] || active_flag != last_btn_active[i]) {
+      draw_engine_button(i, active_flag);
+      last_btn_target[i] = target;
+      last_btn_active[i] = active_flag;
     }
-    last_active_btn = active;
+  }
+  last_active_btn = active;
 }
 
 // ── Zone predicates ───────────────────────────────────────────────────────
@@ -490,13 +492,13 @@ static inline bool in_eng_btn_zone(uint16_t y) { return y < GP_Y0; }
 // R extends all the way to the panel right edge; L takes the left half.
 static inline bool in_btn_l(uint16_t x, uint16_t y) {
   return in_panel(x, y)
-      && y >= BTN_ZONE_TOP && y < BTN_ZONE_BOT
-      && x < BTN_LR_MID;
+    && y >= BTN_ZONE_TOP && y < BTN_ZONE_BOT
+    && x < BTN_LR_MID;
 }
 static inline bool in_btn_r(uint16_t x, uint16_t y) {
   return in_panel(x, y)
-      && y >= BTN_ZONE_TOP && y < BTN_ZONE_BOT
-      && x >= BTN_LR_MID;
+    && y >= BTN_ZONE_TOP && y < BTN_ZONE_BOT
+    && x >= BTN_LR_MID;
 }
 
 static inline bool in_vol_sl(uint16_t x, uint16_t y) {
@@ -505,27 +507,28 @@ static inline bool in_vol_sl(uint16_t x, uint16_t y) {
 static inline bool in_joystick(uint16_t x, uint16_t y) {
   const int32_t dx = (int16_t)x - JOY_CTR_X;
   const int32_t dy = (int16_t)y - JOY_CTR_Y;
-  return (dx*dx + dy*dy) <= (int32_t)JOY_RING_R * JOY_RING_R;
+  return (dx * dx + dy * dy) <= (int32_t)JOY_RING_R * JOY_RING_R;
 }
+
+bool ra_panel_initialised = false;
 
 // ── Public: touch handler — call every TOUCH_MAX_REFRESH_RATE_MS ─────────
 void ra_panel_handle_touch() {
-  static bool panel_initialised = false;
 
   // ── One‑time panel initialisation (draw once, then never again) ──────
-  if (!panel_initialised) {
+  if (!ra_panel_initialised) {
     checkWebRemote();
     display.fillRect(PANEL_X, 0, PANEL_W, 240, COLOR_BACKGROUND);
     ra_panel_draw();                // draws everything once
-    panel_initialised = true;
+    ra_panel_initialised = true;
   }
 
-// Check for external volume changes from left encoder
-static uint8_t last_volume = 0xFF;
-if (configuration.sys.vol != last_volume) {
+  // Check for external volume changes from left encoder
+  static uint8_t last_volume = 0xFF;
+  if (configuration.sys.vol != last_volume) {
     last_volume = configuration.sys.vol;
     gp_draw_vol_bar();
-}
+  }
 
   // ── Update only the engine buttons when the active page changes ──────
   const uint8_t cur_active = active_button_index();
@@ -548,20 +551,20 @@ if (configuration.sys.vol != last_volume) {
   }
 
   // ── Clear save‑flash when timer expires ──────────────────────────────
- if (flash_btn != 255 && millis() >= flash_end_ms) {
+  if (flash_btn != 255 && millis() >= flash_end_ms) {
     const uint8_t was = flash_btn;
     flash_btn = 255;
     draw_engine_button(was, active_button_index() == was);
     // Update stored state after flash clears
     last_btn_target[was] = configuration.sys.ra_btn_target[was];
     last_btn_active[was] = (was == active_button_index());
-}
+  }
 
   // ── Touch state ──────────────────────────────────────────────────────
-  const bool     down    = (numTouchPoints > 0);
+  const bool     down = (numTouchPoints > 0);
   const bool     pressed = down && !was_down;
-  const uint16_t px      = ts.p.x;
-  const uint16_t py      = ts.p.y;
+  const uint16_t px = ts.p.x;
+  const uint16_t py = ts.p.y;
 
   // ── Engine buttons: long‑press assignment & short‑tap navigation ─────
   if (pressed && in_panel(px, py) && in_eng_btn_zone(py)) {
@@ -569,32 +572,32 @@ if (configuration.sys.vol != last_volume) {
       const uint16_t bx = btn_col(i);
       const uint16_t by = btn_row(i);
       if (px >= bx && px < bx + BTN_W && py >= by && py < by + BTN_H) {
-        eng_held_idx   = i;
+        eng_held_idx = i;
         eng_press_time = millis();
         break;
       }
     }
   }
   // Long‑press threshold reached: assign current page to button
-if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS)) {
+  if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS)) {
     const uint8_t i = eng_held_idx;
     eng_held_idx = 255;
     const auto cur_id = LCDML.FUNC_getID();
     for (uint8_t t = 0; t < RA_NUM_TARGETS; t++) {
-        if (cur_id == LCDML.OTHER_getIDFromFunction(TARGETS[t].fn)) {
-            configuration.sys.ra_btn_target[i] = t;
-            save_sys_flag = true;
-            save_sys = 0;
-            flash_btn = i;
-            flash_end_ms = millis() + 600;
-            draw_engine_button(i, false);
-            // Update the stored state
-            last_btn_target[i] = t;
-            last_btn_active[i] = (i == active_button_index());
-            break;
-        }
+      if (cur_id == LCDML.OTHER_getIDFromFunction(TARGETS[t].fn)) {
+        configuration.sys.ra_btn_target[i] = t;
+        save_sys_flag = true;
+        save_sys = 0;
+        flash_btn = i;
+        flash_end_ms = millis() + 600;
+        draw_engine_button(i, false);
+        // Update the stored state
+        last_btn_target[i] = t;
+        last_btn_active[i] = (i == active_button_index());
+        break;
+      }
     }
-}
+  }
   // Short tap on engine button (finger lift)
   if (eng_held_idx != 255 && !down) {
     LCDML.OTHER_jumpToFunc(TARGETS[configuration.sys.ra_btn_target[eng_held_idx]].fn);
@@ -608,13 +611,13 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
   }
   if (btn_r_held && !down) {
     ra_panel_btn_r = true;
-    btn_r_held     = false;
+    btn_r_held = false;
     gp_draw_r(false);
   }
 
   // ── L button (short = back, long = seq start/stop) ───────────────────
   if (pressed && in_btn_l(px, py)) {
-    btn_l_held       = true;
+    btn_l_held = true;
     btn_l_long_fired = false;
     btn_l_press_time = millis();
     gp_draw_l(true);
@@ -628,7 +631,7 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
     }
     if (!down) {
       if (!btn_l_long_fired) ra_panel_btn_l = true;
-      btn_l_held       = false;
+      btn_l_held = false;
       last_seq_running = seq.running;
       gp_draw_l(false);
     }
@@ -636,24 +639,24 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
 
   // ── Volume slider ─────────────────────────────────────────────────────
   if (pressed && in_vol_sl(px, py)) {
-    sl_active  = true;
-    sl_last_x  = px;
+    sl_active = true;
+    sl_last_x = px;
     sl_rate_ms = millis();
   }
   if (sl_active) {
     if (down) {
-      const int16_t raw     = sl_thumb_x + ((int16_t)px - sl_last_x);
+      const int16_t raw = sl_thumb_x + ((int16_t)px - sl_last_x);
       const int16_t clamped = raw < (int16_t)SL_MIN_X ? (int16_t)SL_MIN_X
-                            : raw > (int16_t)SL_MAX_X ? (int16_t)SL_MAX_X : raw;
+        : raw >(int16_t)SL_MAX_X ? (int16_t)SL_MAX_X : raw;
       sl_last_x += clamped - sl_thumb_x;  // only advance by actual movement; discards out-of-range excess
       move_sl_thumb(clamped);
     }
     if (!down) sl_active = false;
   }
   {
-    const int16_t  offset   = sl_thumb_x - SL_CTR_X;
+    const int16_t  offset = sl_thumb_x - SL_CTR_X;
     const uint32_t interval = sl_rate_interval(offset);
-    const uint32_t now      = millis();
+    const uint32_t now = millis();
     if (interval > 0 && now - sl_rate_ms >= interval) {
       const int8_t step = (offset > 0) ? 1 : -1;
       configuration.sys.vol = (uint8_t)constrain((int)configuration.sys.vol + step, VOLUME_MIN, VOLUME_MAX);
@@ -668,17 +671,17 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
 
   // ── Joystick ─────────────────────────────────────────────────────────
   if (pressed && in_joystick(px, py)) {
-    joy_active      = true;
+    joy_active = true;
     joy_axis_locked = false;
-    joy_rate_ms     = millis();
+    joy_rate_ms = millis();
   }
   if (joy_active) {
     if (down) {
       int16_t dx = (int16_t)px - (int16_t)JOY_CTR_X;
       int16_t dy = (int16_t)py - (int16_t)JOY_CTR_Y;
-      if (dx >  (int16_t)JOY_PAD_R) dx =  (int16_t)JOY_PAD_R;
+      if (dx > (int16_t)JOY_PAD_R) dx = (int16_t)JOY_PAD_R;
       if (dx < -(int16_t)JOY_PAD_R) dx = -(int16_t)JOY_PAD_R;
-      if (dy >  (int16_t)JOY_PAD_R) dy =  (int16_t)JOY_PAD_R;
+      if (dy > (int16_t)JOY_PAD_R) dy = (int16_t)JOY_PAD_R;
       if (dy < -(int16_t)JOY_PAD_R) dy = -(int16_t)JOY_PAD_R;
       // Unlock if thumb returns to centre dead zone, allowing a new axis to be chosen
       if (joy_axis_locked && abs(dx) < (int16_t)JOY_LOCK_THRESH && abs(dy) < (int16_t)JOY_LOCK_THRESH)
@@ -686,7 +689,7 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
       // Lock to dominant axis once threshold is reached
       if (!joy_axis_locked && (abs(dx) >= (int16_t)JOY_LOCK_THRESH || abs(dy) >= (int16_t)JOY_LOCK_THRESH)) {
         joy_axis_is_vert = (abs(dy) >= abs(dx));
-        joy_axis_locked  = true;
+        joy_axis_locked = true;
       }
       if (joy_axis_locked) {
         if (joy_axis_is_vert) dx = 0;
@@ -695,7 +698,7 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
       gp_move_thumb((int16_t)JOY_CTR_X + dx, (int16_t)JOY_CTR_Y + dy);
     }
     if (!down) {
-      joy_active      = false;
+      joy_active = false;
       joy_axis_locked = false;
     }
   }
@@ -703,29 +706,30 @@ if (eng_held_idx != 255 && down && (millis() - eng_press_time >= LONG_PRESS_MS))
   // Direction fire: immediate on first deflection, repeat after hold delay
   {
     const uint8_t  cur_dir = joy_current_dir();
-    const uint32_t now     = millis();
+    const uint32_t now = millis();
     if (cur_dir != 0) {
       if (!joy_fired_once) {
         switch (cur_dir) {
-          case 1: ra_panel_virt_up    = true; break;
-          case 2: ra_panel_virt_down  = true; break;
-          case 3: ra_panel_virt_left  = true; break;
-          case 4: ra_panel_virt_right = true; break;
+        case 1: ra_panel_virt_up = true; break;
+        case 2: ra_panel_virt_down = true; break;
+        case 3: ra_panel_virt_left = true; break;
+        case 4: ra_panel_virt_right = true; break;
         }
         joy_fired_once = true;
-        joy_hold_ms    = now;
-        joy_rate_ms    = now;
-      } else if (now - joy_hold_ms >= JOY_HOLD_DELAY) {
+        joy_hold_ms = now;
+        joy_rate_ms = now;
+      }
+      else if (now - joy_hold_ms >= JOY_HOLD_DELAY) {
         // L/R accelerate after JOY_ACCEL_DELAY; U/D always use normal rate
-        const bool is_horiz  = (cur_dir == 3 || cur_dir == 4);
-        const bool accel     = is_horiz && (now - joy_hold_ms >= JOY_ACCEL_DELAY);
-        const uint16_t rate  = accel ? JOY_REPEAT_RATE_FAST : JOY_REPEAT_RATE;
+        const bool is_horiz = (cur_dir == 3 || cur_dir == 4);
+        const bool accel = is_horiz && (now - joy_hold_ms >= JOY_ACCEL_DELAY);
+        const uint16_t rate = accel ? JOY_REPEAT_RATE_FAST : JOY_REPEAT_RATE;
         if (now - joy_rate_ms >= rate) {
           switch (cur_dir) {
-            case 1: ra_panel_virt_up    = true; break;
-            case 2: ra_panel_virt_down  = true; break;
-            case 3: ra_panel_virt_left  = true; break;
-            case 4: ra_panel_virt_right = true; break;
+          case 1: ra_panel_virt_up = true; break;
+          case 2: ra_panel_virt_down = true; break;
+          case 3: ra_panel_virt_left = true; break;
+          case 4: ra_panel_virt_right = true; break;
           }
           joy_rate_ms = now;
         }

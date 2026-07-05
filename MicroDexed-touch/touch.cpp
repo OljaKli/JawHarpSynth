@@ -91,8 +91,8 @@ FLASHMEM void updateTouchScreen() {
 
 #if defined RA_DISPLAY    
 
-    // TS_Point p = touch.getPoint();
-       
+      // TS_Point p = touch.getPoint();
+
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
@@ -1766,7 +1766,7 @@ FLASHMEM void handle_touchscreen_menu()
           draw_menu_ui_icons();
         }
         ts.touch_ui_drawn_in_menu = true;
-  }
+      }
 
       if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
       {
@@ -1857,7 +1857,7 @@ FLASHMEM void handle_touchscreen_menu()
     if (ts.keyb_in_menu_activated) {
       handleTouchVirtualKeyboard();
     }
-    }
+  }
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
@@ -2215,7 +2215,7 @@ FLASHMEM void handle_touchscreen_msp()
 }
 
 FLASHMEM void handle_touchscreen_sd_content_not_found() {
-    if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
-        LCDML.MENU_goRoot();  // Go to main menu root
-    }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+    LCDML.MENU_goRoot();  // Go to main menu root
+  }
 }

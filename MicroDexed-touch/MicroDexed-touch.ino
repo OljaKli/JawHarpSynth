@@ -1151,7 +1151,7 @@ bool espAlive = false;
 uint32_t lastESPHandshakeTime = 0;
 
 FLASHMEM void sendVersion() {
-  const char* version = VERSION;  
+  const char* version = VERSION;
   uint8_t len = strlen(version);
   uint8_t payload[1 + len];
   payload[0] = len;
@@ -1388,19 +1388,16 @@ FLASHMEM void setup()
 
 
 #if defined RA_DISPLAY
-display.begin(RA8875_800x480);
- display.loadMDTfontToCGRAM();
- display.setCGRAMAsDefaultFont();
+  display.begin(RA8875_800x480);
+  display.setCGRAMAsDefaultFont();
+  delay(2);
 
-
-delay(2);
-
-display.backlight(true);
-delay (2);
-display.setRotation(2);
+  display.backlight(true);
+  delay(2);
+  display.setRotation(2);
 
 #else
- display.begin();
+  display.begin();
 #endif
 
   // invert display colors
@@ -1413,8 +1410,8 @@ display.setRotation(2);
 
 
 #ifdef RA_DISPLAY
- touch.begin();
- touch_ic_found = true;
+  touch.begin();
+  touch_ic_found = true;
 #elif defined GENERIC_DISPLAY
   touch.begin();
   touch_ic_found = true;
@@ -3068,13 +3065,13 @@ extern void processIncomingSerial();
 
 void checkWebRemote()
 {
-if ( remote_active)
-display.console = true;
+  if (remote_active)
+    display.console = true;
 }
 
 void loop()
 {
-//display.fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, BTE_SCRATCH_MAX_W, BTE_SCRATCH_MAX_H, RA8875_RED);
+  //display.fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, BTE_SCRATCH_MAX_W, BTE_SCRATCH_MAX_H, RA8875_RED);
 #if defined ESP_DISPLAY
   static uint8_t lastEditState = 0;
   if (seq.edit_state != lastEditState) {
@@ -3165,7 +3162,7 @@ void loop()
       sd_filemanager();
     }
   }
-  
+
 
 #if 1//defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
   // MIDI input handling
@@ -5633,10 +5630,10 @@ FLASHMEM void handleStart(void)
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
   }
 
-   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drum_pattern_editor))
-   {
-pendingFirstStepDraw = true;
-   }
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drum_pattern_editor))
+  {
+    pendingFirstStepDraw = true;
+  }
 
 
 #if defined BUTTON_LEDS && defined MCP_23017
@@ -6675,58 +6672,58 @@ static size_t lastMsgLen = 0;
 
 // Core function that does the actual drawing and erasing
 FLASHMEM void bootMessageCore(const char* msg, int num, const char* suffix) {
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    display.setCursor(0, 0);
-    
-    size_t totalLen = 0;
-    
-    // Print main message
-    display.print(msg);
-    totalLen += strlen(msg);
-    
-    // Print integer if present (num != -1 sentinel)
-    if (num != -1) {
-        char numBuf[12];
-        itoa(num, numBuf, 10);
-        display.print(numBuf);
-        totalLen += strlen(numBuf);
+  display.setTextSize(2);
+  display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+  display.setCursor(0, 0);
+
+  size_t totalLen = 0;
+
+  // Print main message
+  display.print(msg);
+  totalLen += strlen(msg);
+
+  // Print integer if present (num != -1 sentinel)
+  if (num != -1) {
+    char numBuf[12];
+    itoa(num, numBuf, 10);
+    display.print(numBuf);
+    totalLen += strlen(numBuf);
+  }
+
+  // Print suffix string if present
+  if (suffix != nullptr) {
+    display.print(suffix);
+    totalLen += strlen(suffix);
+  }
+
+  // Erase leftover characters from previous message
+  if (lastMsgLen > totalLen) {
+    for (size_t i = totalLen; i < lastMsgLen; i++) {
+      display.print(' ');
     }
-    
-    // Print suffix string if present
-    if (suffix != nullptr) {
-        display.print(suffix);
-        totalLen += strlen(suffix);
-    }
-    
-    // Erase leftover characters from previous message
-    if (lastMsgLen > totalLen) {
-        for (size_t i = totalLen; i < lastMsgLen; i++) {
-            display.print(' ');
-        }
-    }
-    
-    lastMsgLen = totalLen;
+  }
+
+  lastMsgLen = totalLen;
 }
 
 // Overload 1: just a string
 void bootMessage(const char* msg) {
-    bootMessageCore(msg, -1, nullptr);
+  bootMessageCore(msg, -1, nullptr);
 }
 
 // Overload 2: string + integer
 void bootMessage(const char* msg, int num) {
-    bootMessageCore(msg, num, nullptr);
+  bootMessageCore(msg, num, nullptr);
 }
 
 // Overload 3: string + integer + string suffix
 void bootMessage(const char* msg, int num, const char* suffix) {
-    bootMessageCore(msg, num, suffix);
+  bootMessageCore(msg, num, suffix);
 }
 
 // Overload 4: string + string suffix (no integer)
 void bootMessage(const char* msg, const char* suffix) {
-    bootMessageCore(msg, -1, suffix);
+  bootMessageCore(msg, -1, suffix);
 }
 
 FLASHMEM uint8_t check_internal_sd_card(void)
@@ -6739,8 +6736,8 @@ FLASHMEM uint8_t check_internal_sd_card(void)
   // Sometimes fails after re-programming - try a few times if needed
   for (int i = 0;i < 5 && !sdok;i++)
   {
-   bootMessage("SD CARD ACCESS # ", i, "/5");
-   
+    bootMessage("SD CARD ACCESS # ", i, "/5");
+
     delay(200);
     sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);
   }

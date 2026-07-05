@@ -4316,7 +4316,7 @@ void processIncomingSerial() {
           processMidiDataFromESP(&touchBuffer[1], len);
         }
       }
-     else if (packetType == 0xAA && touchIndex == 2) {
+      else if (packetType == 0xAA && touchIndex == 2) {
         uint16_t esp_touch_x = touchBuffer[0];
         uint16_t esp_touch_y = touchBuffer[1];
         touchX = esp_touch_x;
@@ -4326,15 +4326,15 @@ void processIncomingSerial() {
         remote_touched = true;
 
       }
-       else if (packetType == 0xAC && touchIndex == 1) {
+      else if (packetType == 0xAC && touchIndex == 1) {
         // Function ID jump
         esp_function_id = touchBuffer[0];
         function_jump_pending = true;
       }
-      
+
       else if (packetType == 0xAE && touchIndex == 0) {
-         force_menu_full_redraw=true;
-         redraw_current_page_or_fallback();
+        force_menu_full_redraw = true;
+        redraw_current_page_or_fallback();
       }
       else if (packetType == 0xAB && touchIndex == 1) {
         uint8_t btn = touchBuffer[0];
@@ -4346,7 +4346,7 @@ void processIncomingSerial() {
           esp_press_start = millis();
         }
       }
-     
+
       else if (packetType == 0xAD && touchIndex == 0) {
         // Screensaver stop command
         remote_touched = true;
@@ -5445,8 +5445,6 @@ FLASHMEM void lcdml_menu_clear(void)
 FLASHMEM void lcdml_menu_display(void)
 {
   disableDirectMIDIinput = false;
-  static bool back_to_main_menu = false;
-  static bool in_sub_menu = false;
 #if defined ESP_DISPLAY
   sendGlowClear();
 #endif
@@ -5454,6 +5452,19 @@ FLASHMEM void lcdml_menu_display(void)
   // Run the update logic if the library signals a change OR a full redraw is pending
   if (LCDML.DISP_checkMenuUpdate() || force_menu_full_redraw)
   {
+    // ---- Detect layer change or return from a user function ----
+    static uint8_t last_layer = 0;
+    static uint8_t last_func_id = 254;  // 254 ensures first menu display triggers redraw
+    uint8_t current_layer = LCDML.MENU_getLayer();
+    uint8_t current_func_id = LCDML.FUNC_getID();
+
+    if (current_layer != last_layer || current_func_id != last_func_id) {
+      force_menu_full_redraw = true;
+      last_layer = current_layer;
+      last_func_id = current_func_id;
+    }
+    // ------------------------------------------------------------
+
     char content_text[_LCDML_DISP_cols];
     LCDMenuLib2_menu* tmp;
     uint8_t scroll = LCDML.MENU_getScroll();
@@ -5466,58 +5477,42 @@ FLASHMEM void lcdml_menu_display(void)
 
     if ((tmp = LCDML.MENU_getDisplayedObj()) != NULL)
     {
-      // Display a header with the parent element name
+      // ---- Draw header ----
       display.setTextSize(1);
       display.setTextColor(GREY1, COLOR_BACKGROUND);
 
-      if (LCDML.MENU_getLayer() == 0)
+      if (current_layer == 0)
       {
-        // this is displayed when no header is available
-       // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = CHAR_width;
-        if (back_to_main_menu)
-        {
-          force_menu_full_redraw = true;
-          back_to_main_menu = false;
-          in_sub_menu = false;
-        }
-        x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = 0;
-        last_menu_depth = LCDML.MENU_getLayer();
+        // Root menu: clear header area
         checkWebRemote();
-        display.fillRect(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7, 90, 7, COLOR_BACKGROUND);
+        display.fillRect(0, 7, 90, 7, COLOR_BACKGROUND);
         display.console = false;
+        x_pos_menu_header_layer[0] = 0;
       }
-      else if (LCDML.MENU_getLayer() > last_menu_depth)
+      else if (current_layer > 0 && force_menu_full_redraw)
       {
-        if (in_sub_menu == false)
-        {
-          force_menu_full_redraw = true;
-          back_to_main_menu = true;
-          in_sub_menu = true;
-        }
-
-        display.setCursor(x_pos_menu_header_layer[LCDML.MENU_getLayer()], 7);
+        // Submenu: draw parent name with '>' prefix
+        uint8_t x_pos = x_pos_menu_header_layer[current_layer];
+        display.setCursor(x_pos, 7);
         display.setTextColor(RED, COLOR_BACKGROUND);
         display.print(">");
         display.setTextColor(GREY1, COLOR_BACKGROUND);
         LCDML_getContent(content_text, LCDML.MENU_getParentID());
         show_uppercase_no_grid(7, display.getCursorX(), strlen(content_text), content_text);
-        // x_pos_menu_header_layer[LCDML.MENU_getLayer() + 1] = display.getCursorX();
-       // if (ts.keyb_in_menu_activated == false)
-        //  helptext_l(back_text);
       }
+
       draw_back_touchbutton();
       display.setTextSize(2);
       seq.edit_state = false;
       generic_active_function = 0;
 
-      // ── Menu lines ──────────────────────────────────────────────
+      // ---- Menu lines ----
       do
       {
         if (tmp->checkCondition())
         {
           if (tmp->checkType_menu() == true)
           {
-            // Repaint line if: forced redraw, scroll changed, or cursor moved
             bool need_draw = force_menu_full_redraw
               || scrolled
               || n == cursor
@@ -5537,8 +5532,6 @@ FLASHMEM void lcdml_menu_display(void)
           }
           else if (tmp->checkType_dynParam())
           {
-            // Dynamic parameter callbacks – they should also be forced to paint
-            // when force_menu_full_redraw is true. See note below.
             tmp->callback(n);
           }
           i++;
@@ -5546,7 +5539,7 @@ FLASHMEM void lcdml_menu_display(void)
         }
       } while (((tmp = tmp->getSibling(1)) != NULL) && (i < maxi));
 
-      // Clear trailing lines only on a full repaint
+      // Clear trailing lines on full redraw or scroll
       if ((scrolled || force_menu_full_redraw) && i < _LCDML_DISP_rows)
       {
         checkWebRemote();
@@ -5559,9 +5552,10 @@ FLASHMEM void lcdml_menu_display(void)
 
     prev_scroll = scroll;
     prev_cursor = cursor;
-    force_menu_full_redraw = false;   // one‑shot: redraw done
+    force_menu_full_redraw = false;
   }
 
+  // Draw scrollbar if cursor changed
   if (LCDML.DISP_checkMenuCursorUpdate())
   {
     drawScrollbar((_LCDML_DISP_cols - 2) * CHAR_width + CHAR_width_small,
@@ -18852,11 +18846,11 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
     seq.selected_track = 0;
     msp_scroll_offset = 0;
 
-          if (seq.active_multisample == NUM_MULTISAMPLES)
-          {
-              last_multisample = 255;   // invalidate to force name redraw
- seq.active_multisample = 0;
-            }
+    if (seq.active_multisample == NUM_MULTISAMPLES)
+    {
+      last_multisample = 255;   // invalidate to force name redraw
+      seq.active_multisample = 0;
+    }
 
     display.fillScreen(COLOR_BACKGROUND);
 
@@ -19272,7 +19266,7 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
 
       if (seq.active_multisample != last_multisample)
       {
-    
+
 
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
@@ -23072,7 +23066,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
     // Top row buttons
 
-     draw_favorite_icon(configuration.dexed[selected_instance_id].pool,
+    draw_favorite_icon(configuration.dexed[selected_instance_id].pool,
       configuration.dexed[selected_instance_id].bank,
       configuration.dexed[selected_instance_id].voice,
       selected_instance_id);
@@ -26140,9 +26134,19 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
   }
 }
 
+#if defined RA_DISPLAY
+extern bool ra_panel_initialised;
+#endif
+
 FLASHMEM void sub_touchscreen_test_page_init()
 {
+#if defined RA_DISPLAY
+  display.fillRect(0, 0, 400, 240, COLOR_BACKGROUND);
+  ra_panel_initialised = false;
+#else
   display.fillScreen(COLOR_BACKGROUND);
+#endif
+
   encoderDir[ENC_R].reset();
   helptext_r(F("CLEAR"));
   helptext_l(back_text);
@@ -26161,6 +26165,10 @@ FLASHMEM void sub_touchscreen_test_page_init()
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   draw_button_on_grid(42, 1, "CLEAR", "SCRN", 0);
 };
+
+#if defined RA_DISPLAY
+extern bool ra_panel_initialised;
+#endif
 
 FLASHMEM void UI_func_test_touchscreen(uint8_t param)
 {
@@ -26181,7 +26189,14 @@ FLASHMEM void UI_func_test_touchscreen(uint8_t param)
     encoderDir[ENC_R].reset();
     unregisterTouchHandler();
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+#if defined RA_DISPLAY
+    display.fillRect(0, 0, 400, 240, COLOR_BACKGROUND);
+    ra_panel_initialised = false;
+#else
     display.fillScreen(COLOR_BACKGROUND);
+#endif
+
   }
 }
 
