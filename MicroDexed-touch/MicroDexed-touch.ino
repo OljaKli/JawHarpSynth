@@ -1190,37 +1190,39 @@ void sendVolumeIconsMode(bool volumeIcons) {
 bool handshakeComplete = false;   // true when both versions received and compatible
 #endif
 
-// uint8_t psramspeed = 0;
-// FLASHMEM void update_psram_speed(int speed_mhz) {
-//   // What clocks exist:
-//   static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
 
-//   // See what the closest setting might be:
-//   uint8_t clk_save = 0, divider_save = 0;
-//   int min_delta = speed_mhz;
-//   for (uint8_t clk = 0; clk < 4; clk++) {
-//     uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
-//     int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
-//     if ((delta < min_delta) && (divider < 8)) {
-//       min_delta = delta;
-//       clk_save = clk;
-//       divider_save = divider;
-//     }
-//   }
+uint8_t psramspeed = 0;
 
-//   // first turn off FLEXSPI2
-//   CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+FLASHMEM void update_psram_speed(int speed_mhz) {
+  // What clocks exist:
+  static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
 
-//   divider_save--; // 0 biased.
-//   psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
+  // See what the closest setting might be:
+  uint8_t clk_save = 0, divider_save = 0;
+  int min_delta = speed_mhz;
+  for (uint8_t clk = 0; clk < 4; clk++) {
+    uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
+    int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
+    if ((delta < min_delta) && (divider < 8)) {
+      min_delta = delta;
+      clk_save = clk;
+      divider_save = divider;
+    }
+  }
 
-//   // Set the clock settings.
-//   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-//     | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
+  // first turn off FLEXSPI2
+  CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
 
-//   // Turn FlexSPI2 clock back on
-//   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-// }
+  divider_save--; // 0 biased.
+  psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
+
+  // Set the clock settings.
+  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+    | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
+
+  // Turn FlexSPI2 clock back on
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+}
 
 
 FLASHMEM void setup()
@@ -1228,20 +1230,17 @@ FLASHMEM void setup()
 
 #ifdef PSRAM
 
-  //#ifndef LARGEPSRAM
-    //**************************
+  #ifndef LARGEPSRAM
     //Reset QSPI clock from 88Mhz to 132 Mhz.
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
     | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-  //**************************
 
-
-//   update_psram_speed(132);
-// #else
-//   update_psram_speed(120);
-// #endif
+   update_psram_speed(132);
+ #else
+   update_psram_speed(120);
+ #endif
 
 #endif
 

@@ -1,14 +1,14 @@
 #include "livesequencer.h"
+#include "TeensyTimerTool.h"
 #include "config.h"
 #include "sequencer.h"
+#include "ui_liveseq_pianoroll.h"
+#include "ui_livesequencer.h"
 #include <algorithm>
 #include <array>
 #include <cstring>
-#include "TeensyTimerTool.h"
-#include "ui_livesequencer.h"
-#include "ui_liveseq_pianoroll.h"
 #include <map>
-
+#include <random>
 
 #ifdef GRANULAR
 #include "granular.h"
@@ -23,7 +23,7 @@ extern microsynth_t microsynth[NUM_MICROSYNTH];
 extern multisample_s msp[NUM_MULTISAMPLES];
 extern braids_t braids_osc;
 extern uint8_t microsynth_selected_instance;
-extern uint8_t selected_instance_id; // dexed
+extern uint8_t selected_instance_id;   // dexed
 bool openendFromLiveSequencer;
 
 extern void handleNoteOnInput(byte, byte, byte, byte);
@@ -32,19 +32,20 @@ extern void handleNoteOff(byte, byte, byte, byte);
 extern void handleAfterTouch(byte, byte);
 extern void midiPitchBend(int pitch, uint8_t channel, uint8_t device);
 extern int toPitchBend(uint8_t lsb, uint8_t msb);
-extern void midiControlChange(uint8_t control, uint8_t value, uint8_t channel, uint8_t device);
+extern void midiControlChange(uint8_t control, uint8_t value, uint8_t channel,
+                              uint8_t device);
 extern void handleStart();
 extern void handleStop();
 
 using namespace TeensyTimerTool;
 
-PeriodicTimer tickTimer(TMR1);   // only 16bit needed
-OneShotTimer arpTimer(TCK);      // one tick timer of 20
-OneShotTimer liveTimer(TCK);     // one tick timer of 20
-PeriodicTimer countInTimer(TCK); // one tick timer of 20
+PeriodicTimer tickTimer(TMR1);     // only 16bit needed
+OneShotTimer arpTimer(TCK);        // one tick timer of 20
+OneShotTimer liveTimer(TCK);       // one tick timer of 20
+PeriodicTimer countInTimer(TCK);   // one tick timer of 20
 
-UI_LiveSequencer* ui_liveSeq;
-UI_LiveSeq_PianoRoll* ui_pianoRoll;
+UI_LiveSequencer *ui_liveSeq;
+UI_LiveSeq_PianoRoll *ui_pianoRoll;
 
 FLASHMEM LiveSequencer::LiveSequencer() {
   ui_liveSeq = new UI_LiveSequencer(*this, data);
@@ -61,22 +62,26 @@ FLASHMEM LiveSequencer::LiveSequencer() {
 
   // Allocate gridSongSteps in PSRAM
 #ifdef PSRAM
-  data.gridSongSteps = static_cast<uint8_t*>(extmem_malloc(data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS));
+  data.gridSongSteps = static_cast<uint8_t *>(extmem_malloc(
+      data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS));
   if (data.gridSongSteps) {
-    memset(data.gridSongSteps, 0, data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS);
-  }
-  else {
+    memset(data.gridSongSteps, 0,
+           data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS *
+               LIVESEQUENCER_NUM_LAYERS);
+  } else {
     // Fallback to internal RAM if PSRAM allocation fails
-    data.gridSongSteps = new uint8_t[data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS]();
+    data.gridSongSteps =
+        new uint8_t[data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS *
+                    LIVESEQUENCER_NUM_LAYERS]();
   }
 #else
-  data.gridSongSteps = new uint8_t[data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS * LIVESEQUENCER_NUM_LAYERS]();
+  data.gridSongSteps = new uint8_t[data.GRIDSONGLEN * LIVESEQUENCER_NUM_TRACKS *
+                                   LIVESEQUENCER_NUM_LAYERS]();
 #endif
 
   updateTrackChannels(true);
   data.processMidiIn = false;
 }
-
 
 // Add destructor to free memory
 // FLASHMEM LiveSequencer::~LiveSequencer() {
@@ -90,7 +95,6 @@ FLASHMEM LiveSequencer::LiveSequencer() {
 //     }
 // }
 
-
 FLASHMEM void UI_func_livesequencer(uint8_t param) {
   ui_liveSeq->processLCDM();
 }
@@ -99,7 +103,7 @@ FLASHMEM void handle_touchscreen_live_sequencer(void) {
   ui_liveSeq->handleTouchscreen();
 }
 
-FLASHMEM LiveSequencer::LiveSeqData* LiveSequencer::getData(void) {
+FLASHMEM LiveSequencer::LiveSeqData *LiveSequencer::getData(void) {
   return &data;
 }
 
@@ -162,7 +166,11 @@ FLASHMEM void LiveSequencer::onStopped(void) {
 FLASHMEM void LiveSequencer::onStarted(void) {
   data.isStarting = true;
   data.recordedToSong = false;
-  data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.source == EventSource::EVENT_SONG; }), data.eventsList.end());
+  data.eventsList.erase(
+      std::remove_if(
+          data.eventsList.begin(), data.eventsList.end(),
+          [](MidiEvent &e) { return e.source == EventSource::EVENT_SONG; }),
+      data.eventsList.end());
   playIterator = data.eventsList.end();
 }
 
@@ -173,7 +181,8 @@ FLASHMEM void LiveSequencer::allNotesOff(void) {
 }
 
 FLASHMEM void LiveSequencer::allTrackNotesOff(const uint8_t track) {
-  for (uint8_t layer = 0; layer < data.trackSettings[track].layerCount; layer++) {
+  for (uint8_t layer = 0; layer < data.trackSettings[track].layerCount;
+       layer++) {
     allLayerNotesOff(track, layer);
   }
 }
@@ -187,15 +196,16 @@ FLASHMEM void LiveSequencer::resetTrackControllers(uint8_t track) {
 
   // Collect unique CCs for the current track
   std::unordered_set<uint8_t> uniqueCCs;
-  for (const auto& event : data.eventsList) {
+  for (const auto &event : data.eventsList) {
     if (event.track == track && event.event == midi::ControlChange) {
       // Note: maybe we should also check if event.source == EVENT_PATTERN
       uniqueCCs.insert(event.note_in);
     }
   }
 
-  // Reset collected CCs to default value. In future add default values for specific CCs like #7 in sys config.
-  for (const auto& cc : uniqueCCs) {
+  // Reset collected CCs to default value. In future add default values for
+  // specific CCs like #7 in sys config.
+  for (const auto &cc : uniqueCCs) {
     // WARNING: this may affect internal automation. Needs more testing!
     midiControlChange(cc, 0, channel, device);
   }
@@ -211,31 +221,45 @@ FLASHMEM void LiveSequencer::resetControllers() {
 
 FLASHMEM uint8_t LiveSequencer::mapQuantizeDenom(uint8_t denom) {
   switch (denom) {
-  case 1:  return 0;   // NONE
-  case 4:  return 4;   // 1/4
-  case 8:  return 8;   // 1/8
-  case 12: return 12;  // 1/8T
-  case 16: return 16;  // 1/16
-  case 24: return 24;  // 1/16T
-  case 32: return 32;  // 1/32
-  case 64: return 64;  // 1/64
-  default: return 0;   // fallback: no quantize
+  case 1:
+    return 0;   // NONE
+  case 4:
+    return 4;   // 1/4
+  case 8:
+    return 8;   // 1/8
+  case 12:
+    return 12;   // 1/8T
+  case 16:
+    return 16;   // 1/16
+  case 24:
+    return 24;   // 1/16T
+  case 32:
+    return 32;   // 1/32
+  case 64:
+    return 64;   // 1/64
+  default:
+    return 0;   // fallback: no quantize
   }
 }
 
-FLASHMEM void LiveSequencer::allLayerNotesOff(const uint8_t track, const uint8_t layer) {
+FLASHMEM void LiveSequencer::allLayerNotesOff(const uint8_t track,
+                                              const uint8_t layer) {
   for (auto note : data.tracks[track].activeNotes[layer]) {
-    handleNoteOff(data.tracks[track].channel, note, 0, data.trackSettings[track].device);
+    handleNoteOff(data.tracks[track].channel, note, 0,
+                  data.trackSettings[track].device);
   }
   data.tracks[track].activeNotes[layer].clear();
 }
 
 FLASHMEM void LiveSequencer::printEvent(int i, MidiEvent e) {
-  DBG_LOG(printf("[%i]: %i:%04i {%s} (%i):%i, %s, %i, %i\n", i, e.patternNumber, e.patternMs, getEventSource(e.source).c_str(), e.track, e.layer, getEventName(e.event).c_str(), e.note_in, e.note_in_velocity));
+  DBG_LOG(printf("[%i]: %i:%04i {%s} (%i):%i, %s, %i, %i\n", i, e.patternNumber,
+                 e.patternMs, getEventSource(e.source).c_str(), e.track,
+                 e.layer, getEventName(e.event).c_str(), e.note_in,
+                 e.note_in_velocity));
 }
 
-FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent& e, uint8_t denom) {
-  bool overflow = false; // overflow if event rounded to start of next pattern
+FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent &e, uint8_t denom) {
+  bool overflow = false;   // overflow if event rounded to start of next pattern
 
   if (denom > 1) {
     const uint16_t quantizeMs = data.patternLengthMs / denom;
@@ -259,21 +283,25 @@ FLASHMEM bool LiveSequencer::timeQuantization(MidiEvent& e, uint8_t denom) {
 }
 
 FLASHMEM void LiveSequencer::printEvents() {
-  DBG_LOG(printf("--- %i pattern events (%i bytes with one be %i bytes)\n", data.eventsList.size(), data.eventsList.size() * sizeof(MidiEvent), sizeof(MidiEvent)));
+  DBG_LOG(printf("--- %i pattern events (%i bytes with one be %i bytes)\n",
+                 data.eventsList.size(),
+                 data.eventsList.size() * sizeof(MidiEvent),
+                 sizeof(MidiEvent)));
   uint i = 0;
-  for (auto& e : data.eventsList) {
+  for (auto &e : data.eventsList) {
     printEvent(i++, e);
   }
-  DBG_LOG(printf("--- song events on %i layers until pattern %i\n", data.songLayerCount, data.lastSongEventPattern));
+  DBG_LOG(printf("--- song events on %i layers until pattern %i\n",
+                 data.songLayerCount, data.lastSongEventPattern));
   for (int i = 0; i <= data.lastSongEventPattern; i++) {
-    for (auto& e : data.songEvents[i]) {
+    for (auto &e : data.songEvents[i]) {
       printEvent(i++, e);
     }
   }
 }
 
 FLASHMEM void LiveSequencer::onArpSourceChanged(void) {
-  // for now the best way to avoid pending notes / arp keys 
+  // for now the best way to avoid pending notes / arp keys
   if (data.isRunning && data.arpSettings.enabled) {
     stop();
     start();
@@ -282,9 +310,13 @@ FLASHMEM void LiveSequencer::onArpSourceChanged(void) {
 
 FLASHMEM void LiveSequencer::refreshSongLength(void) {
   uint8_t lastSongPattern = 0;
-  for (auto& e : data.songEvents) {
+  for (auto &e : data.songEvents) {
     // remove all invalidated song events and repopulate song length
-    e.second.erase(std::remove_if(e.second.begin(), e.second.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), e.second.end());
+    e.second.erase(std::remove_if(e.second.begin(), e.second.end(),
+                                  [](MidiEvent &e) {
+                                    return e.event == midi::InvalidType;
+                                  }),
+                   e.second.end());
 
     if (e.second.size()) {
       if (e.first > lastSongPattern) {
@@ -302,40 +334,40 @@ FLASHMEM void LiveSequencer::onSongStopped(void) {
     data.currentGridStep = data.gridPlaybackStartStep;
     // data.redraw_grid_header = true;
     ui_liveSeq->requestGridEditorRedraw();
+  } else if (data.recordedToSong) {
+    data.songLayerCount++;
+    ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawSongLayers);
+    data.recordedToSong = false;
   }
-  else
-    if (data.recordedToSong) {
-      data.songLayerCount++;
-      ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawSongLayers);
-      data.recordedToSong = false;
-    }
 
   refreshSongLength();
   applySongStartLayerMutes();
 }
 
 FLASHMEM void LiveSequencer::startCountIn(void) {
-  handleNoteOn(drum_midi_channel, 82, 127, DEVICE_INTERNAL); // casta
+  handleNoteOn(drum_midi_channel, 82, 127, DEVICE_INTERNAL);   // casta
   data.remainingCountIns = 4;
   const int intervalMS = data.patternLengthMs / 4;
 
-  countInTimer.begin([this, intervalMS] {
-    if (data.remainingCountIns > 1) {
-      handleNoteOn(drum_midi_channel, 73, 127, DEVICE_INTERNAL); // rim
-      ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawTopButtons);
-    }
-    else {
-      countInTimer.stop();
-      handleStart();
-    }
-    data.remainingCountIns--;
-    }, intervalMS * 1000);
+  countInTimer.begin(
+      [this, intervalMS] {
+        if (data.remainingCountIns > 1) {
+          handleNoteOn(drum_midi_channel, 73, 127, DEVICE_INTERNAL);   // rim
+          ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawTopButtons);
+        } else {
+          countInTimer.stop();
+          handleStart();
+        }
+        data.remainingCountIns--;
+      },
+      intervalMS * 1000);
 }
 
 FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
   if (data.songLayerCount > 0) {
     for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
-      data.tracks[track].layerMutes = data.trackSettings[track].songStartLayerMutes;
+      data.tracks[track].layerMutes =
+          data.trackSettings[track].songStartLayerMutes;
     }
     ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons);
   }
@@ -343,7 +375,9 @@ FLASHMEM void LiveSequencer::applySongStartLayerMutes(void) {
 
 extern custom_midi_map_t custom_midi_map[NUM_CUSTOM_MIDI_MAPPINGS];
 
-FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType event, uint8_t note, uint8_t velocity) {
+FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel,
+                                             midi::MidiType event, uint8_t note,
+                                             uint8_t velocity) {
 
   if (data.processMidiIn) {
     bool skip = false;
@@ -354,12 +388,22 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
 
     ui_pianoRoll->handleKeyChanged(note, event, velocity);
     // velocity adjustment for keyboard events (live playing or recording)
-    const uint8_t velocitySetting = data.trackSettings[data.activeTrack].velocityLevel;
-    const uint8_t velocityActive = (velocitySetting == 0) ? velocity : velocitySetting * 1.27f; // 100% * 1.27 = 127
+    const uint8_t velocitySetting =
+        data.trackSettings[data.activeTrack].velocityLevel;
+    const uint8_t velocityActive =
+        (velocitySetting == 0) ? velocity
+                               : velocitySetting * 1.27f;   // 100% * 1.27 = 127
 
     if ((data.isRecording && data.isRunning) || data.remainingCountIns > 0) {
       const EventSource source = data.isSongMode ? EVENT_SONG : EVENT_PATTERN;
-      MidiEvent newEvent = { source, uint16_t(data.patternTimer), data.currentPattern, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, event, note, velocityActive };
+      MidiEvent newEvent = {source,
+                            uint16_t(data.patternTimer),
+                            data.currentPattern,
+                            data.activeTrack,
+                            data.trackSettings[data.activeTrack].layerCount,
+                            event,
+                            note,
+                            velocityActive};
 
       if (data.isSongMode) {
         if (data.songLayerCount < LIVESEQUENCER_NUM_LAYERS) {
@@ -367,16 +411,19 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           newEvent.layer = data.songLayerCount;
           uint8_t patternCount = data.songPatternCount;
           if (newEvent.event == midi::NoteOn) {
-            if (timeQuantization(newEvent, data.trackSettings[data.activeTrack].quantizeGrid)) {
-              patternCount++; // event rounded up to start of next song pattern
+            if (timeQuantization(
+                    newEvent,
+                    data.trackSettings[data.activeTrack].quantizeGrid)) {
+              patternCount++;   // event rounded up to start of next song
+                                // pattern
             }
           }
           data.recordedToSong = true;
           data.songEvents[patternCount].emplace_back(newEvent);
         }
-      }
-      else {
-        if (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS) {
+      } else {
+        if (data.trackSettings[data.activeTrack].layerCount <
+            LIVESEQUENCER_NUM_LAYERS) {
           switch (newEvent.event) {
           default:
             // ignore all other types
@@ -387,20 +434,18 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           case midi::ControlChange:
             // Record MIDI CC
 
-            for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++)
-            {
-              if (note == custom_midi_map[c].in)
-              {
+            for (uint8_t c = 0; c < NUM_CUSTOM_MIDI_MAPPINGS; c++) {
+              if (note == custom_midi_map[c].in) {
                 skip = true;
                 break;
               }
 
-            } // while LiveSeq is recording and a custom MIDI mapped SEQ stop command comes it, MDT crashes
-            
-            if (!skip)
-            {
-              newEvent.note_in = note;              // Controller number
-              newEvent.note_in_velocity = velocity; // Controller value
+            }   // while LiveSeq is recording and a custom MIDI mapped SEQ stop
+                // command comes it, MDT crashes
+
+            if (!skip) {
+              newEvent.note_in = note;                // Controller number
+              newEvent.note_in_velocity = velocity;   // Controller value
               data.pendingEvents.emplace_back(newEvent);
             }
 
@@ -408,15 +453,16 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
 
           case midi::PitchBend:
             // Record Pitch Bend
-            newEvent.note_in = note;              // LSB
-            newEvent.note_in_velocity = velocity; // MSB
+            newEvent.note_in = note;                // LSB
+            newEvent.note_in_velocity = velocity;   // MSB
             data.pendingEvents.emplace_back(newEvent);
             break;
 
           case midi::NoteOn:
             static constexpr int ROUND_UP_MS = 100;
             // round up events just at end probably meant to be played at start
-            if (newEvent.patternNumber == (data.numberOfBars - 1) && newEvent.patternMs > (data.patternLengthMs - ROUND_UP_MS)) {
+            if (newEvent.patternNumber == (data.numberOfBars - 1) &&
+                newEvent.patternMs > (data.patternLengthMs - ROUND_UP_MS)) {
               newEvent.patternNumber = 0;
               newEvent.patternMs = 0;
             }
@@ -427,7 +473,9 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
             // check if it has a corresponding NoteOn
             const auto on = data.notesOn.find(note);
             if (on != data.notesOn.end()) {
-              timeQuantization(on->second, data.trackSettings[data.activeTrack].quantizeGrid);
+              timeQuantization(
+                  on->second,
+                  data.trackSettings[data.activeTrack].quantizeGrid);
               // if so, insert NoteOn and this NoteOff to pending
               data.pendingEvents.emplace_back(on->second);
               data.pendingEvents.emplace_back(newEvent);
@@ -441,7 +489,9 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
 
     // forward incoming midi event to correct channel
     // ALWAYS route to currently active track, regardless of input channel
-    const bool arpSamplesKeyboard = data.isRunning && (data.arpSettings.enabled) && (data.arpSettings.source == 0);
+    const bool arpSamplesKeyboard = data.isRunning &&
+                                    (data.arpSettings.enabled) &&
+                                    (data.arpSettings.source == 0);
     if (arpSamplesKeyboard) {
       switch (event) {
       case midi::NoteOn:
@@ -457,17 +507,19 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
       default:
         break;
       }
-    }
-    else {
+    } else {
       midi::Channel ch = data.tracks[data.activeTrack].channel;
       uint8_t device = data.trackSettings[data.activeTrack].device;
       switch (event) {
       case midi::ControlChange:
-        midiControlChange(note, velocity, ch, device); // note is controller number, velocity is value
+        midiControlChange(
+            note, velocity, ch,
+            device);   // note is controller number, velocity is value
         break;
 
       case midi::PitchBend:
-        midiPitchBend(toPitchBend(note, velocity), ch, device); // note is LSB, velocity is MSB
+        midiPitchBend(toPitchBend(note, velocity), ch,
+                      device);   // note is LSB, velocity is MSB
         break;
 
       case midi::AfterTouchChannel:
@@ -478,7 +530,8 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
         pressedKeys.insert(note);
         DBG_LOG(printf("noteOn on ch%i of device %i\n", ch, device));
 
-        if (data.activeTrack == SONG_MODE_NOTES_TRACK && openendFromLiveSequencer) {
+        if (data.activeTrack == SONG_MODE_NOTES_TRACK &&
+            openendFromLiveSequencer) {
           ch = data.tracks[data.stepRecordTargetTrack].channel;
           device = data.trackSettings[data.stepRecordTargetTrack].device;
         }
@@ -487,7 +540,8 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
 
         if (data.lastPlayedNote != note) {
           data.lastPlayedNote = note;
-          ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLastPlayedNote);
+          ui_liveSeq->drawUpdates(
+              UI_LiveSequencer::GuiUpdates::drawLastPlayedNote);
         }
         break;
 
@@ -496,7 +550,8 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
           DBG_LOG(printf("noteOff on ch%i of device %i\n", ch, device));
           pressedKeys.erase(note);
 
-          if (data.activeTrack == SONG_MODE_NOTES_TRACK && openendFromLiveSequencer) {
+          if (data.activeTrack == SONG_MODE_NOTES_TRACK &&
+              openendFromLiveSequencer) {
             ch = data.tracks[data.stepRecordTargetTrack].channel;
             device = data.trackSettings[data.stepRecordTargetTrack].device;
           }
@@ -512,26 +567,34 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel, midi::MidiType e
     // REMOVED: The else block that showed the direct mapping warning
     // } else {
     //   ui_liveSeq->showDirectMappingWarning(inChannel);
-    //   DBG_LOG(printf("LiveSeq: drop event as directly assigned to an instrument\n"));
+    //   DBG_LOG(printf("LiveSeq: drop event as directly assigned to an
+    //   instrument\n"));
     // }
-  }
-  else {
+  } else {
     DBG_LOG(printf("LiveSeq: drop event as not active\n"));
   }
 }
 
 FLASHMEM void LiveSequencer::fillTrackLayer(void) {
-  if (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS) {
-    const float msIncrement = data.patternLengthMs / float(data.fillNotes.number);
+  if (data.trackSettings[data.activeTrack].layerCount <
+      LIVESEQUENCER_NUM_LAYERS) {
+    const float msIncrement =
+        data.patternLengthMs / float(data.fillNotes.number);
     const uint8_t msOffset = round(data.fillNotes.offset * msIncrement / 8.0f);
-    const uint16_t noteLength = round(msIncrement / 2.0f); // ...
+    const uint16_t noteLength = round(msIncrement / 2.0f);   // ...
     const uint8_t velocity = uint8_t(data.fillNotes.velocityLevel * 1.27F);
     for (uint8_t bar = 0; bar < data.numberOfBars; bar++) {
       for (uint16_t note = 0; note < data.fillNotes.number; note++) {
         const uint16_t noteOnTime = round(note * msIncrement) + msOffset;
         const uint16_t noteOffTime = noteOnTime + noteLength;
-        data.pendingEvents.emplace_back(MidiEvent{ EVENT_PATTERN, noteOnTime, bar, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, midi::NoteOn, data.lastPlayedNote, velocity });
-        data.pendingEvents.emplace_back(MidiEvent{ EVENT_PATTERN, noteOffTime, bar, data.activeTrack, data.trackSettings[data.activeTrack].layerCount, midi::NoteOff, data.lastPlayedNote, 0 });
+        data.pendingEvents.emplace_back(
+            MidiEvent{EVENT_PATTERN, noteOnTime, bar, data.activeTrack,
+                      data.trackSettings[data.activeTrack].layerCount,
+                      midi::NoteOn, data.lastPlayedNote, velocity});
+        data.pendingEvents.emplace_back(
+            MidiEvent{EVENT_PATTERN, noteOffTime, bar, data.activeTrack,
+                      data.trackSettings[data.activeTrack].layerCount,
+                      midi::NoteOff, data.lastPlayedNote, 0});
       }
     }
     if (data.isRunning == false) {
@@ -550,12 +613,12 @@ FLASHMEM void LiveSequencer::changeNumberOfBars(uint8_t num) {
 FLASHMEM void LiveSequencer::deleteLiveSequencerData(void) {
   allNotesOff();
   if (data.isRunning) {
-    stop(); // stop so we can delete invalidated events
+    stop();   // stop so we can delete invalidated events
   }
   data.pendingEvents.clear();
-  for (auto& e : data.eventsList) {
+  for (auto &e : data.eventsList) {
     if (e.source == EVENT_PATTERN) {
-      e.event = midi::InvalidType; // mark as invalid
+      e.event = midi::InvalidType;   // mark as invalid
     }
   }
 
@@ -576,9 +639,9 @@ FLASHMEM void LiveSequencer::deleteAllSongEvents(void) {
   data.lastSongEventPattern = 0;
   data.songLayerCount = 0;
 
-  for (auto& e : data.eventsList) {
+  for (auto &e : data.eventsList) {
     if (e.source == EVENT_SONG) {
-      e.event = midi::InvalidType; // mark as invalid
+      e.event = midi::InvalidType;   // mark as invalid
     }
   }
   for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
@@ -589,10 +652,10 @@ FLASHMEM void LiveSequencer::deleteAllSongEvents(void) {
 
 FLASHMEM void LiveSequencer::songLayerAction(uint8_t layer, LayerMode action) {
   if ((layer == 0) && (action == LayerMode::LAYER_MERGE)) {
-    return; // avoid merge up top layer
+    return;   // avoid merge up top layer
   }
-  for (auto& e : data.songEvents) {
-    for (auto& a : e.second) {
+  for (auto &e : data.songEvents) {
+    for (auto &a : e.second) {
       performLayerAction(action, a, layer);
     }
   }
@@ -601,36 +664,44 @@ FLASHMEM void LiveSequencer::songLayerAction(uint8_t layer, LayerMode action) {
   ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawSongLayers);
 }
 
-FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, LayerMode action, bool& clearLayer) {
+FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer,
+                                              LayerMode action,
+                                              bool &clearLayer) {
   if ((layer == 0) && (action == LayerMode::LAYER_MERGE)) {
-    return false; // avoid merge up top layer
+    return false;   // avoid merge up top layer
   }
 
-  clearLayer = (action == LayerMode::LAYER_MERGE) || (action == LayerMode::LAYER_DELETE);
+  clearLayer =
+      (action == LayerMode::LAYER_MERGE) || (action == LayerMode::LAYER_DELETE);
 
   if (clearLayer == false) {
     // TODO: reset CC / PB for track?
-    //resetTrackControllers(track);
-    if (action == LayerMode::LAYER_CLEAR_CC || action == LayerMode::LAYER_CLEAR_PB) {
-      const midi::MidiType targetEvent = (action == LayerMode::LAYER_CLEAR_CC) ? midi::ControlChange : midi::PitchBend;
-      for (auto& e : data.eventsList) {
-        if ((e.track == track) && (e.layer == layer) && (e.event == targetEvent)) {
-          e.event = midi::InvalidType; // mark as invalid
+    // resetTrackControllers(track);
+    if (action == LayerMode::LAYER_CLEAR_CC ||
+        action == LayerMode::LAYER_CLEAR_PB) {
+      const midi::MidiType targetEvent = (action == LayerMode::LAYER_CLEAR_CC)
+                                             ? midi::ControlChange
+                                             : midi::PitchBend;
+      for (auto &e : data.eventsList) {
+        if ((e.track == track) && (e.layer == layer) &&
+            (e.event == targetEvent)) {
+          e.event = midi::InvalidType;   // mark as invalid
         }
       }
-      DBG_LOG(printf("Cleared %s on T%u L%u\n", action == LayerMode::LAYER_CLEAR_CC ? "CC" : "PB", track, layer));
-    }
-    else if (action == LayerMode::LAYER_HEAL_NOTES) {
+      DBG_LOG(printf("Cleared %s on T%u L%u\n",
+                     action == LayerMode::LAYER_CLEAR_CC ? "CC" : "PB", track,
+                     layer));
+    } else if (action == LayerMode::LAYER_HEAL_NOTES) {
       const uint16_t healed = healHungNotesInLayer(track, layer);
-      DBG_LOG(printf("Healed %u hung/orphan events on T%u L%u P%u\n", healed, track, layer, data.currentPattern));
+      DBG_LOG(printf("Healed %u hung/orphan events on T%u L%u P%u\n", healed,
+                     track, layer, data.currentPattern));
       (void)healed;
     }
-  }
-  else {
+  } else {
     // play noteOff for active layer notes
     allLayerNotesOff(track, layer);
 
-    for (auto& e : data.eventsList) {
+    for (auto &e : data.eventsList) {
       if (e.track == track) {
         performLayerAction(action, e, layer);
       }
@@ -638,18 +709,25 @@ FLASHMEM bool LiveSequencer::trackLayerAction(uint8_t track, uint8_t layer, Laye
 
     // handle layer mutes. example with layer 2 deleted
     // old: 0010 1101
-    // new: 0001 0101 -> lower layers stay same, higher layers shifted down by one
+    // new: 0001 0101 -> lower layers stay same, higher layers shifted down by
+    // one
     const uint8_t bitmask = pow(2, layer) - 1;
-    const uint8_t layerMutesLo = data.tracks[track].layerMutes & bitmask;         // 0010 1101 &  0000 0011 = 0000 0001
-    const uint8_t layerMutesHi = (data.tracks[track].layerMutes >> 1) & ~bitmask; // 0001 0110 & ~0000 0011 = 0001 0100
-    data.tracks[track].layerMutes = (layerMutesLo | layerMutesHi);                // 0000 0001 |  0001 0100 = 0001 0101
+    const uint8_t layerMutesLo =
+        data.tracks[track].layerMutes &
+        bitmask;   // 0010 1101 &  0000 0011 = 0000 0001
+    const uint8_t layerMutesHi =
+        (data.tracks[track].layerMutes >> 1) &
+        ~bitmask;   // 0001 0110 & ~0000 0011 = 0001 0100
+    data.tracks[track].layerMutes =
+        (layerMutesLo | layerMutesHi);   // 0000 0001 |  0001 0100 = 0001 0101
     data.trackSettings[track].layerCount--;
   }
   ui_liveSeq->drawTrackLayers(track);
   return true;
 }
 
-FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent& e, uint8_t layer) {
+FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent &e,
+                                                uint8_t layer) {
   if (e.layer == layer) {
     switch (action) {
     case LayerMode::LAYER_MERGE:
@@ -660,7 +738,7 @@ FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent& e, 
       break;
 
     case LayerMode::LAYER_DELETE:
-      e.event = midi::InvalidType; // mark layer notes to delete later
+      e.event = midi::InvalidType;   // mark layer notes to delete later
       break;
 
     default:
@@ -677,10 +755,9 @@ FLASHMEM void LiveSequencer::performLayerAction(LayerMode action, MidiEvent& e, 
 FLASHMEM void LiveSequencer::loadNextEvent(int timeMs) {
   if (data.isRunning) {
     if (timeMs > 0) {
-      //LOG.printf("trigger in %ims\n", timeMs);
+      // LOG.printf("trigger in %ims\n", timeMs);
       liveTimer.trigger(timeMs * 1000);
-    }
-    else {
+    } else {
       playNextEvent();
     }
   }
@@ -691,24 +768,26 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
   bool isMuted = false;
   if (playIterator->source == EVENT_PATTERN) {
     if (data.useGridSongMode && !data.seq_started_from_pattern_mode) {
-      isMuted = !data.gridStep(data.currentGridStep, playIterator->track, playIterator->layer);
-    }
-    else {
-      isMuted = (data.tracks[playIterator->track].layerMutes & (1 << playIterator->layer));
+      isMuted = !data.gridStep(data.currentGridStep, playIterator->track,
+                               playIterator->layer);
+    } else {
+      isMuted = (data.tracks[playIterator->track].layerMutes &
+                 (1 << playIterator->layer));
     }
   }
-
 
   if (isMuted) {
     // Just advance to next event without playing ANYTHING
 
     // Advance iterator and schedule next event
     if (++playIterator != data.eventsList.end()) {
-      const unsigned long now = ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
-      int timeToNextEvent = timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
+      const unsigned long now =
+          ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
+      int timeToNextEvent =
+          timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
       loadNextEvent(timeToNextEvent);
     }
-    return; // EXIT WITHOUT PROCESSING THE MUTED EVENT
+    return;   // EXIT WITHOUT PROCESSING THE MUTED EVENT
   }
 
   // Only process events that are NOT muted
@@ -717,47 +796,65 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
 
   switch (playIterator->event) {
   case midi::PitchBend:
-    midiPitchBend(toPitchBend(playIterator->note_in, playIterator->note_in_velocity), channel, device);
-    data.tracks[playIterator->track].pitchBend[playIterator->layer] = { true, playIterator->note_in_velocity };
+    midiPitchBend(
+        toPitchBend(playIterator->note_in, playIterator->note_in_velocity),
+        channel, device);
+    data.tracks[playIterator->track].pitchBend[playIterator->layer] = {
+        true, playIterator->note_in_velocity};
     break;
 
   case midi::ControlChange:
-    midiControlChange(playIterator->note_in, playIterator->note_in_velocity, channel, device);
+    midiControlChange(playIterator->note_in, playIterator->note_in_velocity,
+                      channel, device);
     switch (playIterator->note_in) {
     case AutomationType::TYPE_MUTE_ON:
     case AutomationType::TYPE_MUTE_OFF:
       const uint8_t muteLayer = playIterator->note_in_velocity;
 #ifdef DEBUG
-      DBG_LOG(printf("track %i layer %i %s\n", muteLayer, playIterator->track, playIterator->note_in == AutomationType::TYPE_MUTE_ON ? "MUTE" : "UNMUTE"));
+      DBG_LOG(printf("track %i layer %i %s\n", muteLayer, playIterator->track,
+                     playIterator->note_in == AutomationType::TYPE_MUTE_ON
+                         ? "MUTE"
+                         : "UNMUTE"));
 #endif
-      setLayerMuted(playIterator->track, muteLayer, playIterator->note_in == AutomationType::TYPE_MUTE_ON);
+      setLayerMuted(playIterator->track, muteLayer,
+                    playIterator->note_in == AutomationType::TYPE_MUTE_ON);
       break;
     }
     break;
 
   case midi::NoteOff:
-    if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
+    if (data.arpSettings.enabled &&
+        (data.arpSettings.source - 1) == playIterator->track) {
       activeArpKeys.erase(playIterator->note_in);
       data.arpSettings.keysChanged = true;
-    }
-    else {
-      const auto it = data.tracks[playIterator->track].activeNotes[playIterator->layer].find(playIterator->note_in);
-      if (it != data.tracks[playIterator->track].activeNotes[playIterator->layer].end()) {
-        data.tracks[playIterator->track].activeNotes[playIterator->layer].erase(it);
+    } else {
+      const auto it = data.tracks[playIterator->track]
+                          .activeNotes[playIterator->layer]
+                          .find(playIterator->note_in);
+      if (it != data.tracks[playIterator->track]
+                    .activeNotes[playIterator->layer]
+                    .end()) {
+        data.tracks[playIterator->track].activeNotes[playIterator->layer].erase(
+            it);
       }
-      handleNoteOff(channel, playIterator->note_in, playIterator->note_in_velocity, device);
+      handleNoteOff(channel, playIterator->note_in,
+                    playIterator->note_in_velocity, device);
     }
     break;
 
   case midi::NoteOn:
-    if (data.arpSettings.enabled && (data.arpSettings.source - 1) == playIterator->track) {
+    if (data.arpSettings.enabled &&
+        (data.arpSettings.source - 1) == playIterator->track) {
       activeArpKeys.insert(playIterator->note_in);
       data.arpSettings.keysChanged = true;
-    }
-    else {
-      data.tracks[playIterator->track].activeNotes[playIterator->layer].insert(playIterator->note_in);
-      const uint8_t velocitySetting = data.trackSettings[playIterator->track].velocityLevel;
-      const uint8_t velocityActive = (velocitySetting == 0) ? playIterator->note_in_velocity : velocitySetting * 1.27f;
+    } else {
+      data.tracks[playIterator->track].activeNotes[playIterator->layer].insert(
+          playIterator->note_in);
+      const uint8_t velocitySetting =
+          data.trackSettings[playIterator->track].velocityLevel;
+      const uint8_t velocityActive = (velocitySetting == 0)
+                                         ? playIterator->note_in_velocity
+                                         : velocitySetting * 1.27f;
       handleNoteOn(channel, playIterator->note_in, velocityActive, device);
     }
     break;
@@ -771,14 +868,16 @@ FLASHMEM void LiveSequencer::playNextEvent(void) {
   }
 
   if (++playIterator != data.eventsList.end()) {
-    const unsigned long now = ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
-    int timeToNextEvent = timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
+    const unsigned long now =
+        ((data.currentPattern * data.patternLengthMs) + data.patternTimer);
+    int timeToNextEvent =
+        timeToMs(playIterator->patternNumber, playIterator->patternMs) - now;
     loadNextEvent(timeToNextEvent);
   }
 }
 
-
-inline uint32_t LiveSequencer::timeToMs(uint8_t patternNumber, uint16_t patternMs) const {
+inline uint32_t LiveSequencer::timeToMs(uint8_t patternNumber,
+                                        uint16_t patternMs) const {
   return (patternNumber * data.patternLengthMs) + patternMs;
 }
 
@@ -787,40 +886,50 @@ FLASHMEM void LiveSequencer::checkLoadNewArpNotes(void) {
 
   if (data.arpSettings.latch) {
     reloadArpNotes = data.arpSettings.keysChanged && activeArpKeys.size();
-  }
-  else {
-    reloadArpNotes = data.arpSettings.keysChanged; // TODO: maybe immediadely stop playing with no latch?
+  } else {
+    reloadArpNotes =
+        data.arpSettings.keysChanged;   // TODO: maybe immediadely stop playing
+                                        // with no latch?
   }
   data.arpSettings.keysChanged = false;
 
   if (reloadArpNotes) {
-    data.arpSettings.arpNotesIn.assign(activeArpKeys.begin(), activeArpKeys.end());
+    data.arpSettings.arpNotesIn.assign(activeArpKeys.begin(),
+                                       activeArpKeys.end());
   }
 
   if (reloadArpNotes || data.arpSettings.arpSettingsChanged) {
     data.arpSettings.arpSettingsChanged = false;
-    data.arpSettings.arpNotes.assign(data.arpSettings.arpNotesIn.begin(), data.arpSettings.arpNotesIn.end());
+    data.arpSettings.arpNotes.assign(data.arpSettings.arpNotesIn.begin(),
+                                     data.arpSettings.arpNotesIn.end());
     const uint8_t numNotes = data.arpSettings.arpNotes.size();
 
     for (uint octave = 1; octave < data.arpSettings.octaves; octave++) {
       for (uint number = 0; number < numNotes; number++) {
-        data.arpSettings.arpNotes.emplace_back(data.arpSettings.arpNotes[number] + (octave * 12));
+        data.arpSettings.arpNotes.emplace_back(
+            data.arpSettings.arpNotes[number] + (octave * 12));
       }
     }
 
     switch (data.arpSettings.mode) {
     case ArpMode::ARP_RANDOM:
-      std::random_shuffle(data.arpSettings.arpNotes.begin(), data.arpSettings.arpNotes.end());
+      static std::default_random_engine rng(std::random_device{}());
+      std::shuffle(data.arpSettings.arpNotes.begin(),
+                   data.arpSettings.arpNotes.end(), rng);
+      // std::random_shuffle(data.arpSettings.arpNotes.begin(),
+      // data.arpSettings.arpNotes.end());
       break;
     case ArpMode::ARP_DOWN:
     case ArpMode::ARP_DOWNUP:
     case ArpMode::ARP_DOWNUP_P:
-      std::sort(data.arpSettings.arpNotes.begin(), data.arpSettings.arpNotes.end(), std::greater<>());
+      std::sort(data.arpSettings.arpNotes.begin(),
+                data.arpSettings.arpNotes.end(), std::greater<>());
       break;
     case ArpMode::ARP_UP:
     case ArpMode::ARP_UPDOWN:
     case ArpMode::ARP_UPDOWN_P:
-      std::sort(data.arpSettings.arpNotes.begin(), data.arpSettings.arpNotes.end(), std::less<>());
+      std::sort(data.arpSettings.arpNotes.begin(),
+                data.arpSettings.arpNotes.end(), std::less<>());
       break;
     default:
       break;
@@ -839,7 +948,8 @@ FLASHMEM void LiveSequencer::setArpEnabled(bool enabled) {
   }
 }
 
-FLASHMEM bool sortedArpNote(const LiveSequencer::ArpNote& n1, const LiveSequencer::ArpNote& n2) {
+FLASHMEM bool sortedArpNote(const LiveSequencer::ArpNote &n1,
+                            const LiveSequencer::ArpNote &n2) {
   return (n1.offDelay < n2.offDelay);
 }
 
@@ -851,16 +961,20 @@ FLASHMEM void LiveSequencer::playNextArpNote(void) {
     const uint8_t loadPerBar = data.arpSettings.loadPerBar;
     const float arpIntervalMs = data.patternLengthMs / float(arpAmount);
     uint8_t arpIndex = (nowMs + (arpIntervalMs / 2)) / arpIntervalMs;
-    if (((arpIndex * loadPerBar) % arpAmount) == 0) { // check if reload pressed keys
+    if (((arpIndex * loadPerBar) % arpAmount) ==
+        0) {   // check if reload pressed keys
       checkLoadNewArpNotes();
     }
 
     if (data.arpSettings.arpNotes.empty()) {
-      data.arpSettings.delayToNextArpOnMs = data.patternLengthMs / loadPerBar; // bypass loading timer until next pattern start
-    }
-    else {
-      ArpNote newArp; // play a new note...
-      newArp.track = (data.arpSettings.source == 0) ? data.activeTrack : (data.arpSettings.source - 1);
+      data.arpSettings.delayToNextArpOnMs =
+          data.patternLengthMs /
+          loadPerBar;   // bypass loading timer until next pattern start
+    } else {
+      ArpNote newArp;   // play a new note...
+      newArp.track = (data.arpSettings.source == 0)
+                         ? data.activeTrack
+                         : (data.arpSettings.source - 1);
 
       if (data.arpSettings.mode != ArpMode::ARP_CHORD) {
         newArp.notes.emplace_back(*data.arpSettings.arpIt);
@@ -877,13 +991,18 @@ FLASHMEM void LiveSequencer::playNextArpNote(void) {
                 doubleEndNote = true;
               case ArpMode::ARP_DOWNUP:
               case ArpMode::ARP_UPDOWN:
-                std::reverse(data.arpSettings.arpNotes.begin(), data.arpSettings.arpNotes.end());
+                std::reverse(data.arpSettings.arpNotes.begin(),
+                             data.arpSettings.arpNotes.end());
                 if (doubleEndNote == false) {
                   data.arpSettings.arpIt++;
                 }
                 break;
               case ArpMode::ARP_RANDOM:
-                std::random_shuffle(data.arpSettings.arpNotes.begin(), data.arpSettings.arpNotes.end());
+                static std::default_random_engine rng(std::random_device{}());
+                std::shuffle(data.arpSettings.arpNotes.begin(),
+                             data.arpSettings.arpNotes.end(), rng);
+                //  std::random_shuffle(data.arpSettings.arpNotes.begin(),
+                //  data.arpSettings.arpNotes.end());
                 break;
               default:
                 break;
@@ -891,8 +1010,7 @@ FLASHMEM void LiveSequencer::playNextArpNote(void) {
             }
           }
         }
-      }
-      else {
+      } else {
         for (uint8_t note : data.arpSettings.arpNotes) {
           newArp.notes.emplace_back(note);
         }
@@ -907,52 +1025,58 @@ FLASHMEM void LiveSequencer::playNextArpNote(void) {
       uint16_t nextArpEventOnTimeMs = uint16_t(++arpIndex * arpIntervalMs);
       if (arpIndex & 0x01) {
         // swing: odd beats NoteOn is variable
-        nextArpEventOnTimeMs += round(data.arpSettings.swing * arpIntervalMs / 20.0); // swing from -8 to +8;
+        nextArpEventOnTimeMs += round(data.arpSettings.swing * arpIntervalMs /
+                                      20.0);   // swing from -8 to +8;
       }
       data.arpSettings.delayToNextArpOnMs = (nextArpEventOnTimeMs - nowMs);
     }
-  }
-  else {
+  } else {
     // finish and erase elapsed note
     for (auto it = activeArps.begin(); it != activeArps.end();) {
       if (it->offDelay == 0) {
         playArp(midi::NoteOff, *it);
         activeArps.erase(it);
-      }
-      else {
+      } else {
         ++it;
       }
     }
   }
   uint16_t delayToNextTimerCall = data.arpSettings.delayToNextArpOnMs;
 
-  if (activeArps.size() && (activeArps.front().offDelay < data.arpSettings.delayToNextArpOnMs)) {
+  if (activeArps.size() &&
+      (activeArps.front().offDelay < data.arpSettings.delayToNextArpOnMs)) {
     // next call will be a finishing note
     delayToNextTimerCall = activeArps.front().offDelay;
   }
-  const uint16_t delayToNextPatternStart = uint16_t(data.patternLengthMs - nowMs);
-  const bool nextIsPatternStart = (delayToNextTimerCall >= delayToNextPatternStart);
+  const uint16_t delayToNextPatternStart =
+      uint16_t(data.patternLengthMs - nowMs);
+  const bool nextIsPatternStart =
+      (delayToNextTimerCall >= delayToNextPatternStart);
 
   if (nextIsPatternStart) {
     delayToNextTimerCall = delayToNextPatternStart;
   }
 
-  for (auto& n : activeArps) {
+  for (auto &n : activeArps) {
     n.offDelay -= std::min(delayToNextTimerCall, n.offDelay);
   }
-  data.arpSettings.delayToNextArpOnMs -= std::min(delayToNextTimerCall, data.arpSettings.delayToNextArpOnMs);
+  data.arpSettings.delayToNextArpOnMs -=
+      std::min(delayToNextTimerCall, data.arpSettings.delayToNextArpOnMs);
   if (nextIsPatternStart == false) {
-    //DBG_LOG(printf("@%i:\ttrigger again in %ims\n", nowMs, delayToNextTimerCall));
-    // delay all arp events by 1ms to make sure when in track source mode, quantized notes are already on when sampling
+    // DBG_LOG(printf("@%i:\ttrigger again in %ims\n", nowMs,
+    // delayToNextTimerCall));
+    //  delay all arp events by 1ms to make sure when in track source mode,
+    //  quantized notes are already on when sampling
     arpTimer.trigger((delayToNextTimerCall + 1) * 1000);
   }
 }
 
-FLASHMEM void LiveSequencer::playArp(const midi::MidiType type, const ArpNote arp) {
+FLASHMEM void LiveSequencer::playArp(const midi::MidiType type,
+                                     const ArpNote arp) {
   const midi::Channel channel = data.tracks[arp.track].channel;
   const midi::Channel device = data.trackSettings[arp.track].device;
 
-  for (auto& n : arp.notes) {
+  for (auto &n : arp.notes) {
     switch (type) {
     case midi::NoteOn:
       handleNoteOn(channel, n, data.arpSettings.velocityLevel * 1.27f, device);
@@ -969,26 +1093,27 @@ FLASHMEM void LiveSequencer::playArp(const midi::MidiType type, const ArpNote ar
     /*const uint8_t layer = data.trackSettings[data.activeTrack].layerCount;
     if(data.isRecording && layer < LIVESEQUENCER_NUM_LAYERS) {
       const EventSource source = data.isSongMode ? EVENT_SONG : EVENT_PATTERN;
-      const MidiEvent newEvent = { source, uint16_t(data.patternTimer), data.currentPattern, data.activeTrack, layer, type, n, data.arpSettings.velocity };
-      data.pendingEvents.emplace_back(newEvent);
+      const MidiEvent newEvent = { source, uint16_t(data.patternTimer),
+    data.currentPattern, data.activeTrack, layer, type, n,
+    data.arpSettings.velocity }; data.pendingEvents.emplace_back(newEvent);
     }*/
   }
 }
 
 void LiveSequencer::notifyLayerGridChanged() {
-    if (ui_liveSeq) {
-        ui_liveSeq->drawUpdates(UI_LiveSequencer::drawLayerButtons);
-    }
+  if (ui_liveSeq) {
+    ui_liveSeq->drawUpdates(UI_LiveSequencer::drawLayerButtons);
+  }
 }
 
 void LiveSequencer::notifyLayerButtonsChanged() {
-    if (ui_liveSeq) {
-        ui_liveSeq->drawUpdates(UI_LiveSequencer::drawLayerButtons);
-    }
+  if (ui_liveSeq) {
+    ui_liveSeq->drawUpdates(UI_LiveSequencer::drawLayerButtons);
+  }
 }
 
 FLASHMEM void LiveSequencer::initOnce(void) {
-  
+
   tickTimer.begin([] { TeensyTimerTool::tick(); }, 0.1ms);
   liveTimer.begin([this] { playNextEvent(); });
   arpTimer.begin([this] { playNextArpNote(); });
@@ -1004,11 +1129,11 @@ FLASHMEM void LiveSequencer::initOnce(void) {
 }
 
 FLASHMEM void LiveSequencer::init(void) {
-  data.patternLengthMs = (4 * 1000 * 60) / seq.bpm; // for a 4/4 signature
+  data.patternLengthMs = (4 * 1000 * 60) / seq.bpm;   // for a 4/4 signature
   checkBpmChanged();
   updateTrackChannels();
   DBG_LOG(printf("init has %i events\n", data.eventsList.size()));
-  //printEvents();
+  // printEvents();
 
   data.performanceName = seq.name;
   refreshSongLength();
@@ -1016,23 +1141,25 @@ FLASHMEM void LiveSequencer::init(void) {
 
 FLASHMEM void LiveSequencer::onGuiInit(void) {
   init();
-  //AddMetronome(); //moved to a button in pattern tools since this creates the metronome just by entering liveseq while recording is running 
-  //and the user probably does not know where the sound is coming from after leaving the liveseq page 
+  // AddMetronome(); //moved to a button in pattern tools since this creates the
+  // metronome just by entering liveseq while recording is running and the user
+  // probably does not know where the sound is coming from after leaving the
+  // liveseq page
 }
 
 FLASHMEM void LiveSequencer::checkBpmChanged(void) {
   if (seq.bpm != data.currentBpm) {
-    data.patternLengthMs = (4 * 1000 * 60) / seq.bpm; // for a 4/4 signature
+    data.patternLengthMs = (4 * 1000 * 60) / seq.bpm;   // for a 4/4 signature
     DBG_LOG(printf("bpm changed from %i to %i\n", data.currentBpm, seq.bpm));
     float resampleFactor = data.currentBpm / float(seq.bpm);
     data.currentBpm = seq.bpm;
     // resample pattern events - not lossless
-    for (auto& e : data.eventsList) {
+    for (auto &e : data.eventsList) {
       e.patternMs = round(resampleFactor * e.patternMs);
     }
     // resample song events - not lossless
-    for (auto& e : data.songEvents) {
-      for (auto& a : e.second) {
+    for (auto &e : data.songEvents) {
+      for (auto &a : e.second) {
         a.patternMs = round(resampleFactor * a.patternMs);
       }
     }
@@ -1050,28 +1177,32 @@ FLASHMEM void LiveSequencer::addPendingNotes(bool incrementLayer) {
       it->second.patternMs = data.patternLengthMs - 1;
       data.pendingEvents.emplace_back(it->second);
       data.notesOn.erase(it++);
-    }
-    else {
-      ++it; // ignore notesOn at 0.0000, those were round up just before
+    } else {
+      ++it;   // ignore notesOn at 0.0000, those were round up just before
     }
   }
 
   // then add all notes to events and sort
   if (data.pendingEvents.size()) {
 
-    for (auto& e : data.pendingEvents) {
+    for (auto &e : data.pendingEvents) {
       data.eventsList.emplace_back(e);
     }
     data.pendingEvents.clear();
     sortEvents();
 
-    const bool canIncrementLayer = (data.trackSettings[data.activeTrack].layerCount < LIVESEQUENCER_NUM_LAYERS);
+    const bool canIncrementLayer =
+        (data.trackSettings[data.activeTrack].layerCount <
+         LIVESEQUENCER_NUM_LAYERS);
 
     if (canIncrementLayer && incrementLayer) {
-      setLayerMuted(data.activeTrack, data.trackSettings[data.activeTrack].layerCount, false); // new layer is unmuted
+      setLayerMuted(data.activeTrack,
+                    data.trackSettings[data.activeTrack].layerCount,
+                    false);   // new layer is unmuted
       data.trackSettings[data.activeTrack].layerCount++;
     }
-    ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons | UI_LiveSequencer::GuiUpdates::drawTrackButtons);
+    ui_liveSeq->drawUpdates(UI_LiveSequencer::GuiUpdates::drawLayerButtons |
+                            UI_LiveSequencer::GuiUpdates::drawTrackButtons);
   }
 }
 
@@ -1079,14 +1210,12 @@ FLASHMEM void LiveSequencer::sortEvents(void) {
 
   std::sort(data.eventsList.begin(), data.eventsList.end(), sortMidiEvent);
   ui_pianoRoll->onEventsChanged();
-
 }
 
 FLASHMEM void LiveSequencer::requestSortEvents(void) {
   if (data.isRunning) {
     sortRequested = true;
-  }
-  else {
+  } else {
     sortEvents();
   }
 }
@@ -1110,11 +1239,11 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
     if (data.isSongMode && data.isRecording && !data.useGridSongMode) {
       // save current song start layer mutes
       for (uint8_t track = 0; track < LIVESEQUENCER_NUM_TRACKS; track++) {
-        data.trackSettings[track].songStartLayerMutes = data.tracks[track].layerMutes;
+        data.trackSettings[track].songStartLayerMutes =
+            data.tracks[track].layerMutes;
       }
     }
-  }
-  else {
+  } else {
     // Advance pattern counter
     if ((data.currentPattern + 1) == data.numberOfBars) {
       data.currentPattern = 0;
@@ -1128,28 +1257,25 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
 
         if (atEnd && data.gridLoopEnabled) {
           data.currentGridStep = data.gridPlaybackStartStep;
-        }
-        else {
+        } else {
           data.currentGridStep++;
         }
 
         ui_liveSeq->onGridStepChanged();
 
-        // Trigger UI redraw 
+        // Trigger UI redraw
         ui_liveSeq->requestGridEditorRedraw();
-      }
-      else  if (data.isSongMode && !data.useGridSongMode) {
+      } else if (data.isSongMode && !data.useGridSongMode) {
         // Traditional song mode
-        if ((data.isRecording == false) && (data.songPatternCount == data.lastSongEventPattern)) {
+        if ((data.isRecording == false) &&
+            (data.songPatternCount == data.lastSongEventPattern)) {
           data.songPatternCount = 0;
-        }
-        else {
+        } else {
           data.songPatternCount++;
         }
       }
 
-    }
-    else {
+    } else {
       data.currentPattern++;
     }
   }
@@ -1165,14 +1291,19 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
     }
 
     // then remove all invalidated notes
-    data.eventsList.erase(std::remove_if(data.eventsList.begin(), data.eventsList.end(), [](MidiEvent& e) { return e.event == midi::InvalidType; }), data.eventsList.end());
+    data.eventsList.erase(std::remove_if(data.eventsList.begin(),
+                                         data.eventsList.end(),
+                                         [](MidiEvent &e) {
+                                           return e.event == midi::InvalidType;
+                                         }),
+                          data.eventsList.end());
     ui_pianoRoll->onEventsChanged();
 
     // for song mode, add song events for this pattern
     if (data.isSongMode) {
       if (!data.useGridSongMode) {
         // Traditional song mode: load events from songEvents
-        for (auto& e : data.songEvents[data.songPatternCount]) {
+        for (auto &e : data.songEvents[data.songPatternCount]) {
           data.eventsList.emplace_back(e);
         }
         sortEvents();
@@ -1180,19 +1311,18 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
           // load previously saved song start layer mutes
           applySongStartLayerMutes();
         }
-      }
-      else {
-        // Grid song mode: pattern events should already be there, just sort them
-        // The grid filtering will happen in playNextEvent()
+      } else {
+        // Grid song mode: pattern events should already be there, just sort
+        // them The grid filtering will happen in playNextEvent()
         sortEvents();
 
 #ifdef DEBUG
-        DBG_LOG(printf("Grid mode: Starting pattern cycle for grid step %i with %i events\n",
-          data.currentGridStep + 1, data.eventsList.size()));
+        DBG_LOG(printf("Grid mode: Starting pattern cycle for grid step %i "
+                       "with %i events\n",
+                       data.currentGridStep + 1, data.eventsList.size()));
 #endif
       }
-    }
-    else {
+    } else {
       // insert pending events and sort
       addPendingNotes();
 
@@ -1205,59 +1335,44 @@ FLASHMEM void LiveSequencer::handlePatternBegin(void) {
 
     // finally load for first event
     if (data.eventsList.size() > 0) {
-      //printEvents();
+      // printEvents();
       playIterator = data.eventsList.begin();
-      loadNextEvent(timeToMs(playIterator->patternNumber, playIterator->patternMs));
+      loadNextEvent(
+          timeToMs(playIterator->patternNumber, playIterator->patternMs));
     }
   }
 
   // restart arp on pattern start
   if (data.arpSettings.enabled) {
     if (data.arpSettings.arpNotes.size() && data.arpSettings.freerun == false) {
-      data.arpSettings.arpSettingsChanged = true; // force reload
+      data.arpSettings.arpSettingsChanged = true;   // force reload
     }
     playNextArpNote();
   }
 }
 
-FLASHMEM void selectDexed0() {
-  selected_instance_id = 0;
-}
+FLASHMEM void selectDexed0() { selected_instance_id = 0; }
 
-FLASHMEM void selectDexed1() {
-  selected_instance_id = 1;
-}
+FLASHMEM void selectDexed1() { selected_instance_id = 1; }
 
-FLASHMEM void selectDexed2() {
-  selected_instance_id = 2;
-}
+FLASHMEM void selectDexed2() { selected_instance_id = 2; }
 
-FLASHMEM void selectDexed3() {
-  selected_instance_id = 3;
-}
+FLASHMEM void selectDexed3() { selected_instance_id = 3; }
 
-FLASHMEM void selectMs0() {
-  microsynth_selected_instance = 0;
-}
+FLASHMEM void selectMs0() { microsynth_selected_instance = 0; }
 
-FLASHMEM void selectMs1() {
-  microsynth_selected_instance = 1;
-}
+FLASHMEM void selectMs1() { microsynth_selected_instance = 1; }
 
-FLASHMEM void selectMsp0() {
-  seq.active_multisample = 0;
-}
+FLASHMEM void selectMsp0() { seq.active_multisample = 0; }
 
-FLASHMEM void selectMsp1() {
-  seq.active_multisample = 1;
-}
+FLASHMEM void selectMsp1() { seq.active_multisample = 1; }
 
-FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool isMuted, bool recordToSong) {
+FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer,
+                                           bool isMuted, bool recordToSong) {
   if (isMuted) {
     data.tracks[track].layerMutes |= (1 << layer);
     allLayerNotesOff(track, layer);
-  }
-  else {
+  } else {
     data.tracks[track].layerMutes &= ~(1 << layer);
   }
   ui_liveSeq->drawSingleLayer(track, layer);
@@ -1265,23 +1380,34 @@ FLASHMEM void LiveSequencer::setLayerMuted(uint8_t track, uint8_t layer, bool is
   if (recordToSong) {
     if (data.songLayerCount < LIVESEQUENCER_NUM_LAYERS) {
       data.recordedToSong = true;
-      const AutomationType type = isMuted ? AutomationType::TYPE_MUTE_ON : AutomationType::TYPE_MUTE_OFF;
-      MidiEvent e = { EVENT_SONG, uint16_t(data.patternTimer), data.currentPattern, track, data.songLayerCount, midi::MidiType::ControlChange, type, layer };
+      const AutomationType type = isMuted ? AutomationType::TYPE_MUTE_ON
+                                          : AutomationType::TYPE_MUTE_OFF;
+      MidiEvent e = {EVENT_SONG,
+                     uint16_t(data.patternTimer),
+                     data.currentPattern,
+                     track,
+                     data.songLayerCount,
+                     midi::MidiType::ControlChange,
+                     type,
+                     layer};
       uint8_t patternCount = data.songPatternCount;
       if (timeQuantization(e, mapQuantizeDenom(data.songMuteQuantizeDenom))) {
-        patternCount++; // event rounded up to start of next song pattern
+        patternCount++;   // event rounded up to start of next song pattern
       }
       data.songEvents[patternCount].emplace_back(e);
-      DBG_LOG(printf("record muted %i at %i of song pattern count %i\n", isMuted, timeToMs(data.currentPattern, data.patternTimer), data.songPatternCount));
+      DBG_LOG(printf("record muted %i at %i of song pattern count %i\n",
+                     isMuted, timeToMs(data.currentPattern, data.patternTimer),
+                     data.songPatternCount));
     }
   }
 }
 
 FLASHMEM void LiveSequencer::setActiveTrack(uint8_t track) {
-  for (uint8_t key : pressedKeys) { // noteOff all pressed keys before switching active track
+  for (uint8_t key : pressedKeys) {   // noteOff all pressed keys before
+                                      // switching active track
     handleMidiEvent(0xFF, midi::NoteOff, key, 127);
   }
-  data.pendingEvents.clear(); // avoid wrong track events / layer issue
+  data.pendingEvents.clear();   // avoid wrong track events / layer issue
   data.activeTrack = track;
   ui_liveSeq->updateTrackChannelSetupButtons(track);
 }
@@ -1300,11 +1426,11 @@ FLASHMEM void LiveSequencer::AddMetronome(void) {
         data.activeTrack = i;
         data.fillNotes.number = 8;
         data.fillNotes.offset = 0;
-        data.lastPlayedNote = 78; // hats
+        data.lastPlayedNote = 78;   // hats
         fillTrackLayer();
         data.fillNotes.number = 1;
         data.fillNotes.offset = 0;
-        data.lastPlayedNote = 48; // kick
+        data.lastPlayedNote = 48;   // kick
         fillTrackLayer();
         if (data.isRunning == false) {
           // only merge if not added to pending in fillTrackLayer above
@@ -1321,8 +1447,11 @@ FLASHMEM void LiveSequencer::AddMetronome(void) {
   }
 }
 
-FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDevice, uint8_t newInstrumentOrChannel) {
-  DBG_LOG(printf("change track %i to device %i and instrument/channel %i\n", track, newDevice, newInstrumentOrChannel));
+FLASHMEM void
+LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDevice,
+                                     uint8_t newInstrumentOrChannel) {
+  DBG_LOG(printf("change track %i to device %i and instrument/channel %i\n",
+                 track, newDevice, newInstrumentOrChannel));
   allTrackNotesOff(track);
   data.trackSettings[track].device = newDevice;
 
@@ -1339,7 +1468,8 @@ FLASHMEM void LiveSequencer::changeTrackInstrument(uint8_t track, uint8_t newDev
 }
 
 FLASHMEM void LiveSequencer::loadOldTrackInstruments(void) {
-  const uint8_t loadTrackNumber = std::min(uint8_t(NUM_SEQ_TRACKS), LIVESEQUENCER_NUM_TRACKS);
+  const uint8_t loadTrackNumber =
+      std::min(uint8_t(NUM_SEQ_TRACKS), LIVESEQUENCER_NUM_TRACKS);
   for (uint8_t i = 0; i < loadTrackNumber; i++) {
     data.trackSettings[i].device = DEVICE_INTERNAL;
 
@@ -1398,7 +1528,7 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
     getInstrumentName(device, instrument, temp_char, data.tracks[i].name);
 
     if (initial) {
-      data.trackSettings[i].quantizeDenom = 1; // default: no quantization
+      data.trackSettings[i].quantizeDenom = 1;   // default: no quantization
     }
     switch (device) {
     case DEVICE_INTERNAL:
@@ -1407,26 +1537,32 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
         data.tracks[i].channel = static_cast<midi::Channel>(drum_midi_channel);
         data.tracks[i].screen = UI_func_drums;
         if (initial) {
-          data.trackSettings[i].quantizeDenom = 16; // default: drum quantize to 1/16
+          data.trackSettings[i].quantizeDenom =
+              16;   // default: drum quantize to 1/16
         }
         break;
 
       case INSTR_DX1:
       case INSTR_DX2:
-        data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[instrument - 1].midi_channel);
+        data.tracks[i].channel = static_cast<midi::Channel>(
+            configuration.dexed[instrument - 1].midi_channel);
         data.tracks[i].screen = UI_func_voice_select;
-        data.tracks[i].screenSetupFn = (instrument == INSTR_DX1) ? (SetupFn)selectDexed0 : (SetupFn)selectDexed1;
+        data.tracks[i].screenSetupFn = (instrument == INSTR_DX1)
+                                           ? (SetupFn)selectDexed0
+                                           : (SetupFn)selectDexed1;
         break;
 
-#if (NUM_DEXED>2)
+#if (NUM_DEXED > 2)
       case INSTR_DX3:
-        data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[2].midi_channel);
+        data.tracks[i].channel =
+            static_cast<midi::Channel>(configuration.dexed[2].midi_channel);
         data.tracks[i].screen = UI_func_voice_select;
         data.tracks[i].screenSetupFn = (SetupFn)selectDexed2;
         break;
 
       case INSTR_DX4:
-        data.tracks[i].channel = static_cast<midi::Channel>(configuration.dexed[3].midi_channel);
+        data.tracks[i].channel =
+            static_cast<midi::Channel>(configuration.dexed[3].midi_channel);
         data.tracks[i].screen = UI_func_voice_select;
         data.tracks[i].screenSetupFn = (SetupFn)selectDexed3;
         break;
@@ -1434,20 +1570,24 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
 
 #ifdef GRANULAR
       case INSTR_GRA:
-        data.tracks[i].channel = static_cast<midi::Channel>(granular_params.midi_channel);
+        data.tracks[i].channel =
+            static_cast<midi::Channel>(granular_params.midi_channel);
         data.tracks[i].screen = UI_func_granular;
         break;
 #endif
       case INSTR_EP:
-        data.tracks[i].channel = static_cast<midi::Channel>(configuration.epiano.midi_channel);
+        data.tracks[i].channel =
+            static_cast<midi::Channel>(configuration.epiano.midi_channel);
         data.tracks[i].screen = UI_func_epiano;
         break;
 
       case INSTR_MS1:
       case INSTR_MS2:
-        data.tracks[i].channel = microsynth[instrument - INSTR_MS1].midi_channel;
+        data.tracks[i].channel =
+            microsynth[instrument - INSTR_MS1].midi_channel;
         data.tracks[i].screen = UI_func_microsynth;
-        data.tracks[i].screenSetupFn = (instrument == INSTR_MS1) ? (SetupFn)selectMs0 : (SetupFn)selectMs1;
+        data.tracks[i].screenSetupFn =
+            (instrument == INSTR_MS1) ? (SetupFn)selectMs0 : (SetupFn)selectMs1;
         break;
 
       case INSTR_BRD:
@@ -1464,11 +1604,13 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
       case INSTR_MSP2:
         data.tracks[i].channel = msp[instrument - INSTR_MSP1].midi_channel;
         data.tracks[i].screen = UI_func_MultiSamplePlay;
-        data.tracks[i].screenSetupFn = (instrument == INSTR_MSP1) ? (SetupFn)selectMsp0 : (SetupFn)selectMsp1;
+        data.tracks[i].screenSetupFn = (instrument == INSTR_MSP1)
+                                           ? (SetupFn)selectMsp0
+                                           : (SetupFn)selectMsp1;
         break;
 
       default:
-        data.tracks[i].channel = 99; // probably unused
+        data.tracks[i].channel = 99;   // probably unused
         break;
       }
       break;
@@ -1476,19 +1618,22 @@ FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
     case DEVICE_MIDI_USB:
     case DEVICE_MIDI_DIN:
     case DEVICE_MIDI_INT:
-      data.tracks[i].channel = static_cast<midi::Channel>((instrument % 16) + 1);
+      data.tracks[i].channel =
+          static_cast<midi::Channel>((instrument % 16) + 1);
       break;
 
     default:
-      data.tracks[i].channel = 99; // probably unused
+      data.tracks[i].channel = 99;   // probably unused
       break;
     }
 
-    data.trackSettings[i].quantizeGrid = mapQuantizeDenom(data.trackSettings[i].quantizeDenom);
+    data.trackSettings[i].quantizeGrid =
+        mapQuantizeDenom(data.trackSettings[i].quantizeDenom);
   }
 }
 
-FLASHMEM void LiveSequencer::getDeviceName(uint8_t device, char* name, char* sub) const {
+FLASHMEM void LiveSequencer::getDeviceName(uint8_t device, char *name,
+                                           char *sub) const {
   switch (device) {
   case DEVICE_INTERNAL:
     sprintf(name, "DEVICE");
@@ -1517,7 +1662,9 @@ FLASHMEM void LiveSequencer::getDeviceName(uint8_t device, char* name, char* sub
   }
 }
 
-FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device, uint8_t instrument, char* name, char* sub) const {
+FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device,
+                                               uint8_t instrument, char *name,
+                                               char *sub) const {
   switch (device) {
   case DEVICE_INTERNAL:
     sprintf(name, "INSTR");
@@ -1617,27 +1764,32 @@ FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
   data.pendingEvents.emplace_back(noteOn);
   data.pendingEvents.emplace_back(noteOff);
   if (data.isRunning == false) {
-    addPendingNotes(false); // do not increment layer count
+    addPendingNotes(false);   // do not increment layer count
   }
 }
 
-
 FLASHMEM void LiveSequencer::flushPendingEvents() {
 
-   addPendingNotes(false);   // merge pending events without incrementing layer count
-   requestSortEvents();      // ensure the merged events are sorted
-
+  addPendingNotes(
+      false);   // merge pending events without incrementing layer count
+  requestSortEvents();   // ensure the merged events are sorted
 }
 
-FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t& lowestNote, uint8_t& highestNote, uint8_t patternFrom, uint8_t patternTo) {
+FLASHMEM std::vector<LiveSequencer::NotePair>
+LiveSequencer::getNotePairsFromTrack(uint8_t track, uint8_t &lowestNote,
+                                     uint8_t &highestNote, uint8_t patternFrom,
+                                     uint8_t patternTo) {
   std::vector<LiveSequencer::NotePair> result;
   uint8_t lowestFound = 0xFF;
   uint8_t highestFound = 0x00;
 
-  for (EventVector::iterator itOn = data.eventsList.begin(); itOn != data.eventsList.end(); itOn++) {
+  for (EventVector::iterator itOn = data.eventsList.begin();
+       itOn != data.eventsList.end(); itOn++) {
     if (itOn->track == track && itOn->event == midi::NoteOn) {
-      for (EventVector::iterator itOff = itOn; itOff != data.eventsList.end(); itOff++) {
-        const bool isWithinY = (itOn->note_in >= lowestNote) && (itOn->note_in <= highestNote);
+      for (EventVector::iterator itOff = itOn; itOff != data.eventsList.end();
+           itOff++) {
+        const bool isWithinY =
+            (itOn->note_in >= lowestNote) && (itOn->note_in <= highestNote);
         if (isWithinY) {
           const bool sameNote = itOff->note_in == itOn->note_in;
           const bool sameTrack = itOff->track == itOn->track;
@@ -1645,13 +1797,13 @@ FLASHMEM std::vector<LiveSequencer::NotePair> LiveSequencer::getNotePairsFromTra
           const bool isNoteOff = itOff->event == midi::NoteOff;
 
           if (sameTrack && sameLayer && sameNote && isNoteOff) {
-            const bool isInside = (patternTo >= itOn->patternNumber) && (patternFrom <= itOff->patternNumber);
+            const bool isInside = (patternTo >= itOn->patternNumber) &&
+                                  (patternFrom <= itOff->patternNumber);
             if (isInside) {
-              NotePair p = {
-                .noteOn = *itOn,
-                .noteOff = *itOff,
-                .isMuted = (data.tracks[track].layerMutes & (1 << itOn->layer)) > 0
-              };
+              NotePair p = {.noteOn = *itOn,
+                            .noteOff = *itOff,
+                            .isMuted = (data.tracks[track].layerMutes &
+                                        (1 << itOn->layer)) > 0};
               highestFound = std::max(highestFound, itOn->note_in);
               lowestFound = std::min(lowestFound, itOn->note_in);
               result.emplace_back(p);
@@ -1725,11 +1877,13 @@ FLASHMEM bool LiveSequencer::insertGridRow(uint8_t step) {
   }
 
   const size_t stride = GRID_ROW_STRIDE;
-  uint8_t* const rowPtr = data.gridSongSteps + static_cast<size_t>(step) * stride;
+  uint8_t *const rowPtr =
+      data.gridSongSteps + static_cast<size_t>(step) * stride;
   const bool shiftedContent = lastOccupied >= static_cast<int>(step);
 
   if (shiftedContent) {
-    const size_t rowsToMove = static_cast<size_t>(lastOccupied - static_cast<int>(step) + 1);
+    const size_t rowsToMove =
+        static_cast<size_t>(lastOccupied - static_cast<int>(step) + 1);
     memmove(rowPtr + stride, rowPtr, rowsToMove * stride);
   }
 
@@ -1751,15 +1905,15 @@ FLASHMEM bool LiveSequencer::removeGridRow(uint8_t step) {
 
   const int lastOccupied = lastOccupiedGridRow();
   const size_t stride = GRID_ROW_STRIDE;
-  uint8_t* const dest = data.gridSongSteps + static_cast<size_t>(step) * stride;
+  uint8_t *const dest = data.gridSongSteps + static_cast<size_t>(step) * stride;
 
   if (lastOccupied > static_cast<int>(step)) {
-    const size_t rowsToMove = static_cast<size_t>(lastOccupied - static_cast<int>(step));
+    const size_t rowsToMove =
+        static_cast<size_t>(lastOccupied - static_cast<int>(step));
     memmove(dest, dest + stride, rowsToMove * stride);
-    uint8_t* const zeroRow = dest + rowsToMove * stride;
+    uint8_t *const zeroRow = dest + rowsToMove * stride;
     memset(zeroRow, 0, stride);
-  }
-  else {
+  } else {
     memset(dest, 0, stride);
   }
 
@@ -1773,7 +1927,8 @@ FLASHMEM bool LiveSequencer::isGridRowEmpty(uint8_t step) const {
     return true;
   }
 
-  const uint8_t* const rowPtr = data.gridSongSteps + static_cast<size_t>(step) * GRID_ROW_STRIDE;
+  const uint8_t *const rowPtr =
+      data.gridSongSteps + static_cast<size_t>(step) * GRID_ROW_STRIDE;
   for (size_t i = 0; i < GRID_ROW_STRIDE; ++i) {
     if (rowPtr[i] != 0) {
       return false;
@@ -1787,7 +1942,8 @@ FLASHMEM int LiveSequencer::lastOccupiedGridRow() const {
     return -1;
   }
 
-  for (int step = static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1; step >= 0; --step) {
+  for (int step = static_cast<int>(LiveSeqData::GRIDSONGLEN) - 1; step >= 0;
+       --step) {
     if (!isGridRowEmpty(static_cast<uint8_t>(step))) {
       return step;
     }
@@ -1795,32 +1951,35 @@ FLASHMEM int LiveSequencer::lastOccupiedGridRow() const {
   return -1;
 }
 
-FLASHMEM void LiveSequencer::adjustGridMarkersAfterInsert(uint8_t step, bool shiftedContent) {
+FLASHMEM void LiveSequencer::adjustGridMarkersAfterInsert(uint8_t step,
+                                                          bool shiftedContent) {
   if (!shiftedContent) {
     return;
   }
 
-  auto incrementIfNeeded = [&](uint8_t& marker) {
+  auto incrementIfNeeded = [&](uint8_t &marker) {
     if (marker >= step && marker < (LiveSeqData::GRIDSONGLEN - 1)) {
       marker++;
     }
-    };
+  };
 
   incrementIfNeeded(data.currentGridStep);
 
-  // Keep the viewport anchored only when we inserted above it; inserting at the first
-  // visible row should reveal the new empty row instead of scrolling past it.
-  if (data.gridStepOffset > step && data.gridStepOffset < (LiveSeqData::GRIDSONGLEN - 1)) {
+  // Keep the viewport anchored only when we inserted above it; inserting at the
+  // first visible row should reveal the new empty row instead of scrolling past
+  // it.
+  if (data.gridStepOffset > step &&
+      data.gridStepOffset < (LiveSeqData::GRIDSONGLEN - 1)) {
     data.gridStepOffset++;
   }
 }
 
 FLASHMEM void LiveSequencer::adjustGridMarkersAfterRemove(uint8_t step) {
-  auto decrementIfNeeded = [&](uint8_t& marker) {
+  auto decrementIfNeeded = [&](uint8_t &marker) {
     if (marker > step) {
       marker--;
     }
-    };
+  };
 
   decrementIfNeeded(data.currentGridStep);
   if (data.gridStepOffset > 0 && data.gridStepOffset > step) {
@@ -1829,11 +1988,11 @@ FLASHMEM void LiveSequencer::adjustGridMarkersAfterRemove(uint8_t step) {
 }
 
 FLASHMEM void LiveSequencer::clampGridMarkers() {
-  auto clampMarker = [&](uint8_t& marker) {
+  auto clampMarker = [&](uint8_t &marker) {
     if (marker >= LiveSeqData::GRIDSONGLEN) {
       marker = LiveSeqData::GRIDSONGLEN - 1;
     }
-    };
+  };
 
   clampMarker(data.gridPlaybackStartStep);
   clampMarker(data.gridPlaybackEndStep);
@@ -1876,8 +2035,11 @@ FLASHMEM void LiveSequencer::sanitizeGridSongSteps() {
     }
 
     for (uint8_t step = 0; step < LiveSeqData::GRIDSONGLEN; ++step) {
-      uint8_t* const rowTrack = data.gridSongSteps + static_cast<size_t>(step) * stride + track * trackStride;
-      for (uint8_t layer = validLayers; layer < LIVESEQUENCER_NUM_LAYERS; ++layer) {
+      uint8_t *const rowTrack = data.gridSongSteps +
+                                static_cast<size_t>(step) * stride +
+                                track * trackStride;
+      for (uint8_t layer = validLayers; layer < LIVESEQUENCER_NUM_LAYERS;
+           ++layer) {
         rowTrack[layer] = 0;
       }
     }
@@ -1887,24 +2049,24 @@ FLASHMEM void LiveSequencer::sanitizeGridSongSteps() {
 FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
   // Check if the track and layer are valid
   if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS) {
-    return true; // Invalid track or layer, consider it empty
+    return true;   // Invalid track or layer, consider it empty
   }
 
   // Check pattern events for this track and layer
-  for (const auto& event : data.eventsList) {
-    if (event.track == track &&
-      event.layer == layer &&
-      event.event != midi::InvalidType) {
-      return false; // Found at least one valid event in this track-layer
+  for (const auto &event : data.eventsList) {
+    if (event.track == track && event.layer == layer &&
+        event.event != midi::InvalidType) {
+      return false;   // Found at least one valid event in this track-layer
     }
   }
 
-  // Also check if there are any active notes in this track-layer (for real-time playing)
+  // Also check if there are any active notes in this track-layer (for real-time
+  // playing)
   if (!data.tracks[track].activeNotes[layer].empty()) {
     return false;
   }
 
-  return true; // No events found for this track-layer combination
+  return true;   // No events found for this track-layer combination
 }
 
 /**
@@ -1912,10 +2074,13 @@ FLASHMEM bool LiveSequencer::isTrackLayerEmpty(uint8_t track, uint8_t layer) {
  * Note Off before the pattern ends. Returned entries originate in this
  * pattern; notes that started in earlier patterns are not reported.
  */
-FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLayer(uint8_t track, uint8_t layer, uint8_t patternNumber) {
+FLASHMEM std::vector<LiveSequencer::HungNote>
+LiveSequencer::detectHungNotesInLayer(uint8_t track, uint8_t layer,
+                                      uint8_t patternNumber) {
   std::vector<HungNote> hungNotes;
 
-  if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS || patternNumber >= 255) {
+  if (track >= LIVESEQUENCER_NUM_TRACKS || layer >= LIVESEQUENCER_NUM_LAYERS ||
+      patternNumber >= 255) {
     return hungNotes;
   }
 
@@ -1926,7 +2091,7 @@ FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLa
 
   // Track active notes and capture their metadata in a single pass.
   for (size_t idx = 0; idx < data.eventsList.size(); ++idx) {
-    const MidiEvent& event = data.eventsList[idx];
+    const MidiEvent &event = data.eventsList[idx];
 
     if (event.track != track || event.layer != layer) {
       continue;
@@ -1937,14 +2102,16 @@ FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLa
     }
 
     const uint8_t note = event.note_in;
-    const bool isNoteOn = (event.event == midi::NoteOn && event.note_in_velocity > 0);
-    const bool isNoteOff = (event.event == midi::NoteOff) || (event.event == midi::NoteOn && event.note_in_velocity == 0);
+    const bool isNoteOn =
+        (event.event == midi::NoteOn && event.note_in_velocity > 0);
+    const bool isNoteOff =
+        (event.event == midi::NoteOff) ||
+        (event.event == midi::NoteOn && event.note_in_velocity == 0);
 
     if (isNoteOn) {
       activeMask[note >> 3] |= (1u << (note & 7u));
       noteOnIndices[note] = idx;
-    }
-    else if (isNoteOff) {
+    } else if (isNoteOff) {
       activeMask[note >> 3] &= ~(1u << (note & 7u));
     }
   }
@@ -1966,69 +2133,68 @@ FLASHMEM std::vector<LiveSequencer::HungNote> LiveSequencer::detectHungNotesInLa
 }
 
 /**
- * Detects orphan MIDI events (Note Offs without matching Note Ons, or vice versa)
- * within a specific pattern, filtered to a specific track/layer.
- * Returns vector of OrphanEvent structures.
+ * Detects orphan MIDI events (Note Offs without matching Note Ons, or vice
+ * versa) within a specific pattern, filtered to a specific track/layer. Returns
+ * vector of OrphanEvent structures.
  *
  * Scope: Selected pattern, track, and layer only.
  */
-FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t layer) {
-  uint16_t healedCount = 0;  // dropped + fixed
+FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track,
+                                                      uint8_t layer) {
+  uint16_t healedCount = 0;   // dropped + fixed
 
   // Find the pattern containing events for this track+layer
   // In pattern mode, each track+layer has events in exactly one pattern
   uint8_t pattern = 255;
-  for (const auto& event : data.eventsList) {
+  for (const auto &event : data.eventsList) {
     if (event.track == track && event.layer == layer) {
       pattern = event.patternNumber;
       break;
     }
   }
   if (pattern == 255) {
-    return 0;  // No events for this track+layer
+    return 0;   // No events for this track+layer
   }
 
   unsigned long patternEndMs = data.patternLengthMs;
   uint16_t minGapMs = (uint16_t)((HUNG_NOTE_MIN_GAP_TICKS * 1000) / 480);
-  if (minGapMs == 0) minGapMs = 1;
+  if (minGapMs == 0)
+    minGapMs = 1;
 
   std::vector<MidiEvent> noteOffsToAdd;
 
   // First fix hung notes (missing NoteOffs)
-  std::vector<HungNote> hungNotes = detectHungNotesInLayer(track, layer, pattern);
-  for (const auto& hung : hungNotes) {
-    MidiEvent* noteOnEvent = nullptr;
+  std::vector<HungNote> hungNotes =
+      detectHungNotesInLayer(track, layer, pattern);
+  for (const auto &hung : hungNotes) {
+    MidiEvent *noteOnEvent = nullptr;
     const size_t eventsSize = data.eventsList.size();
     if (hung.noteOnIndex < eventsSize) {
-      MidiEvent& candidate = data.eventsList[hung.noteOnIndex];
-      if (candidate.patternNumber == pattern &&
-        candidate.track == track &&
-        candidate.layer == layer &&
-        candidate.note_in == hung.note &&
-        candidate.event == midi::NoteOn &&
-        candidate.note_in_velocity > 0) {
+      MidiEvent &candidate = data.eventsList[hung.noteOnIndex];
+      if (candidate.patternNumber == pattern && candidate.track == track &&
+          candidate.layer == layer && candidate.note_in == hung.note &&
+          candidate.event == midi::NoteOn && candidate.note_in_velocity > 0) {
         noteOnEvent = &candidate;
       }
     }
 
     if (!noteOnEvent) {
-      for (auto& event : data.eventsList) {
-        if (event.patternNumber == pattern &&
-          event.track == track &&
-          event.layer == layer &&
-          event.note_in == hung.note &&
-          event.event == midi::NoteOn &&
-          event.note_in_velocity > 0) {
+      for (auto &event : data.eventsList) {
+        if (event.patternNumber == pattern && event.track == track &&
+            event.layer == layer && event.note_in == hung.note &&
+            event.event == midi::NoteOn && event.note_in_velocity > 0) {
           noteOnEvent = &event;
           break;
         }
       }
     }
-    if (!noteOnEvent) continue;
+    if (!noteOnEvent)
+      continue;
 
-    const unsigned long lateBoundary = (patternEndMs > static_cast<unsigned long>(minGapMs + 1))
-      ? (patternEndMs - static_cast<unsigned long>(minGapMs) - 1u)
-      : 0u;
+    const unsigned long lateBoundary =
+        (patternEndMs > static_cast<unsigned long>(minGapMs + 1))
+            ? (patternEndMs - static_cast<unsigned long>(minGapMs) - 1u)
+            : 0u;
     if (noteOnEvent->patternMs >= lateBoundary) {
       noteOnEvent->patternMs = static_cast<uint16_t>(lateBoundary);
     }
@@ -2036,7 +2202,8 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
     MidiEvent noteOff;
     noteOff.source = noteOnEvent->source;
     noteOff.patternNumber = pattern;
-    noteOff.patternMs = patternEndMs > 0 ? static_cast<uint16_t>(patternEndMs - 1u) : 0;
+    noteOff.patternMs =
+        patternEndMs > 0 ? static_cast<uint16_t>(patternEndMs - 1u) : 0;
     noteOff.track = track;
     noteOff.layer = layer;
     noteOff.event = midi::NoteOff;
@@ -2048,7 +2215,7 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
   }
 
   // Append synthesized NoteOffs before orphan sweep so stacks balance
-  for (const auto& noteOff : noteOffsToAdd) {
+  for (const auto &noteOff : noteOffsToAdd) {
     data.eventsList.push_back(noteOff);
   }
 
@@ -2056,40 +2223,41 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
   std::vector<size_t> orphanIndices;
   static constexpr size_t MAX_PENDING = 16;
   std::array<uint8_t, 128> stackDepth{};
-  std::array<std::array<const MidiEvent*, MAX_PENDING>, 128> pendingNoteOns{};
+  std::array<std::array<const MidiEvent *, MAX_PENDING>, 128> pendingNoteOns{};
   std::vector<OrphanEvent> orphans;
   orphans.reserve(4);
 
-  for (const auto& event : data.eventsList) {
-    if (event.patternNumber != pattern || event.track != track || event.layer != layer) {
+  for (const auto &event : data.eventsList) {
+    if (event.patternNumber != pattern || event.track != track ||
+        event.layer != layer) {
       continue;
     }
 
-    const bool isNoteOn = (event.event == midi::NoteOn && event.note_in_velocity > 0);
-    const bool isNoteOff = (event.event == midi::NoteOff) || (event.event == midi::NoteOn && event.note_in_velocity == 0);
+    const bool isNoteOn =
+        (event.event == midi::NoteOn && event.note_in_velocity > 0);
+    const bool isNoteOff =
+        (event.event == midi::NoteOff) ||
+        (event.event == midi::NoteOn && event.note_in_velocity == 0);
     const uint8_t note = event.note_in;
 
     if (isNoteOn) {
-      uint8_t& depth = stackDepth[note];
+      uint8_t &depth = stackDepth[note];
       if (depth < MAX_PENDING) {
         pendingNoteOns[note][depth] = &event;
         depth++;
-      }
-      else {
+      } else {
         OrphanEvent orphan{};
         orphan.note = note;
         orphan.eventTime = event.patternMs;
         orphan.isNoteOff = false;
         orphans.push_back(orphan);
       }
-    }
-    else if (isNoteOff) {
-      uint8_t& depth = stackDepth[note];
+    } else if (isNoteOff) {
+      uint8_t &depth = stackDepth[note];
       if (depth > 0) {
         depth--;
         pendingNoteOns[note][depth] = nullptr;
-      }
-      else {
+      } else {
         OrphanEvent orphan{};
         orphan.note = note;
         orphan.eventTime = event.patternMs;
@@ -2102,8 +2270,9 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
   for (uint8_t note = 0; note < 128; ++note) {
     uint8_t depth = stackDepth[note];
     for (uint8_t i = 0; i < depth; ++i) {
-      const MidiEvent* pending = pendingNoteOns[note][i];
-      if (!pending) continue;
+      const MidiEvent *pending = pendingNoteOns[note][i];
+      if (!pending)
+        continue;
       OrphanEvent orphan{};
       orphan.note = note;
       orphan.eventTime = pending->patternMs;
@@ -2117,12 +2286,18 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
     orphanIndices.reserve(orphans.size());
     const size_t eventsSize = data.eventsList.size();
     for (size_t idx = 0; idx < eventsSize; ++idx) {
-      const auto& event = data.eventsList[idx];
-      if (event.patternNumber != pattern || event.track != track || event.layer != layer) continue;
+      const auto &event = data.eventsList[idx];
+      if (event.patternNumber != pattern || event.track != track ||
+          event.layer != layer)
+        continue;
 
-      const bool isNoteOff = (event.event == midi::NoteOff) || (event.event == midi::NoteOn && event.note_in_velocity == 0);
-      for (const auto& orphan : orphans) {
-        if (event.note_in == orphan.note && event.patternMs == orphan.eventTime && isNoteOff == orphan.isNoteOff) {
+      const bool isNoteOff =
+          (event.event == midi::NoteOff) ||
+          (event.event == midi::NoteOn && event.note_in_velocity == 0);
+      for (const auto &orphan : orphans) {
+        if (event.note_in == orphan.note &&
+            event.patternMs == orphan.eventTime &&
+            isNoteOff == orphan.isNoteOff) {
           orphanIndices.push_back(idx);
           healedCount++;
           break;
@@ -2132,7 +2307,8 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
   }
 
   if (!orphanIndices.empty()) {
-    std::sort(orphanIndices.begin(), orphanIndices.end(), std::greater<size_t>());
+    std::sort(orphanIndices.begin(), orphanIndices.end(),
+              std::greater<size_t>());
     for (size_t idx : orphanIndices) {
       data.eventsList.erase(data.eventsList.begin() + idx);
     }
@@ -2141,8 +2317,7 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track, uint8_t lay
   if (healedCount) {
     requestSortEvents();
   }
-  DBG_LOG(printf("healHungNotesInLayer T%u L%u: healed %u events\n", track, layer, healedCount));
+  DBG_LOG(printf("healHungNotesInLayer T%u L%u: healed %u events\n", track,
+                 layer, healedCount));
   return healedCount;
 }
-
-

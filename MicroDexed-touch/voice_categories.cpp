@@ -226,7 +226,7 @@ FLASHMEM bool load_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData*
         data->custom_categories[v][0] = '\0';
     }
 
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/categories.json"),
+    snprintf(filename, sizeof(filename), "/%s/%d/%d/categories.json",
         DEXED_CONFIG_PATH, pool, bank);
 
     if (sd_card_internal > 0 && SD.exists(filename)) {
@@ -277,8 +277,8 @@ FLASHMEM bool save_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData*
     pool = constrain(pool, 0, DEXED_POOLS - 1);
     bank = constrain(bank, 0, MAX_BANKS - 1);
 
-    snprintf_P(folder, sizeof(folder), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, pool, bank);
-    // snprintf_P(filename, sizeof(filename), PSTR("%s/categories.json"), folder);
+    snprintf(folder, sizeof(folder), "/%s/%d/%d", DEXED_CONFIG_PATH, pool, bank);
+    // snprintf(filename, sizeof(filename), "%s/categories.json", folder);
     strlcpy(filename, folder, sizeof(filename));
     strlcat(filename, "/categories.json", sizeof(filename));
 

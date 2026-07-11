@@ -1586,7 +1586,7 @@ struct OnePoleSmooth {
 // Map knob 0..100 to ~20..18000 Hz exponentially
 FLASHMEM  inline float knob_to_cutoff_hz(uint8_t knob01_100) {
   const float minHz = 20.0f, maxHz = 18000.0f;
-  float t = std::clamp(knob01_100 / 100.0f, 0.0f, 1.0f);
+  float t = nm_clamp(knob01_100 / 100.0f, 0.0f, 1.0f);
   // exponential between min and max
   return minHz * powf(maxHz / minHz, t);
 }
@@ -1732,8 +1732,8 @@ public:
   LadderFilter() : cutoff(1000.0f), resonance(0.1f) {}
 
   void set(float cutoff_hz, float reso) {
-    cutoff = std::clamp(cutoff_hz, 10.0f, SAMPLE_RATE * 0.45f);
-    resonance = std::clamp(reso, 0.0f, 4.0f);
+    cutoff = nm_clamp(cutoff_hz, 10.0f, SAMPLE_RATE * 0.45f);
+    resonance = nm_clamp(reso, 0.0f, 4.0f);
     float wd = 2.0f * PI * cutoff;
     float T = 1.0f / SAMPLE_RATE;
     float wa = (2.0f / T) * tanf(wd * T / 2.0f); // bilinear transform
@@ -1811,8 +1811,8 @@ FLASHMEM void generateSynth(const NoiseMakerParams& p, int16_t* psram_buffer, ui
 
   const float pulse_width_base = p.synth_pulse_width / 100.0f;
   const float sweep_range = 0.3f; // A fixed sweep amount, e.g., +/- 20%
-  const float start_duty = std::clamp(pulse_width_base - sweep_range, 0.0f, 1.0f);
-  const float end_duty = std::clamp(pulse_width_base + sweep_range, 0.0f, 1.0f);
+  const float start_duty = nm_clamp(pulse_width_base - sweep_range, 0.0f, 1.0f);
+  const float end_duty = nm_clamp(pulse_width_base + sweep_range, 0.0f, 1.0f);
 
   for (uint32_t i = 0; i < n; i++) {
 
@@ -1931,12 +1931,12 @@ FLASHMEM void generateSynth(const NoiseMakerParams& p, int16_t* psram_buffer, ui
 
     // Write to buffer
     if (stereo) {
-      psram_buffer[i * channels] = static_cast<int16_t>(std::clamp(outL, -1.0f, 1.0f) * 32767.0f);
-      psram_buffer[i * channels + 1] = static_cast<int16_t>(std::clamp(outR, -1.0f, 1.0f) * 32767.0f);
+      psram_buffer[i * channels] = static_cast<int16_t>(nm_clamp(outL, -1.0f, 1.0f) * 32767.0f);
+      psram_buffer[i * channels + 1] = static_cast<int16_t>(nm_clamp(outR, -1.0f, 1.0f) * 32767.0f);
     }
     else {
       float mono = 0.5f * (outL + outR);
-      psram_buffer[i] = static_cast<int16_t>(std::clamp(mono, -1.0f, 1.0f) * 32767.0f);
+      psram_buffer[i] = static_cast<int16_t>(nm_clamp(mono, -1.0f, 1.0f) * 32767.0f);
     }
   }
 }
