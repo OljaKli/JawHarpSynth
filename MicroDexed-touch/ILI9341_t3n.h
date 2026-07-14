@@ -1,4 +1,4 @@
-#ifndef ESP_DISPLAY
+#if !defined ESP_DISPLAY && !defined RA_DISPLAY
 
 //***************************************************
 // https://github.com/kurte/ILI9341_t3n

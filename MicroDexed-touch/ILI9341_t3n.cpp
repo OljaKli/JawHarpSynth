@@ -622,7 +622,7 @@ FLASHMEM void ILI9341_t3n::begin(uint32_t spi_clock)
 {
   // verify SPI pins are valid;
   // allow user to say use current ones...
-  _SPI_CLOCK = spi_clock; // #define ILI9341_SPICLOCK 30000000
+  _SPI_CLOCK = spi_clock;           // #define ILI9341_SPICLOCK 30000000
 
 #if defined GENERIC_DISPLAY
   _SPI_CLOCK_READ = spi_clock_read; // #define ILI9341_SPICLOCK_READ 2000000

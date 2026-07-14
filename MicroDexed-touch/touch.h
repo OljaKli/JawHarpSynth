@@ -7,7 +7,7 @@
 #ifdef RA_DISPLAY
 #include <GSL1680.h>
 extern GSL1680 touch;
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY

@@ -28,13 +28,13 @@
 
 #ifdef RA_DISPLAY
 #include <GSL1680.h>
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 #elif defined ESP_DISPLAY
 #include "esp_touch.h"
 #elif defined GENERIC_DISPLAY
 #include "XPT2046_Touchscreen.h"
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 #endif
 

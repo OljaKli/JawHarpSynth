@@ -28,7 +28,7 @@ public:
 
 #if defined ESP_DISPLAY
   GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, espdisplay& display);
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
  GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, RA8875& display);
 #else
   GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& data, ILI9341_t3n& display);
@@ -113,7 +113,7 @@ private:
 
 #if defined ESP_DISPLAY
 espdisplay& display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 RA8875& display;
 #else
 ILI9341_t3n& display;

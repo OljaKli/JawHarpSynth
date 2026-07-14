@@ -59,7 +59,7 @@ MCP23017 mcp(0x20);
 
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -68,7 +68,11 @@ MCP23017 mcp(0x20);
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
 #include "UI.h"
+
+#ifdef RA_DISPLAY
 #include "ui_ra_panel.h"
+#endif
+
 #include "touch.h"
 #include "USBHost_t36.h"
 #include "MD_REncoder.h"
@@ -100,7 +104,7 @@ using namespace TeensyTimerTool;
 
 #ifdef RA_DISPLAY
 #include <GSL1680.h>
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 #elif defined ESP_DISPLAY
 #include "esp_touch.h"
@@ -162,7 +166,7 @@ bool suppressReload; //liveseq
 
 #ifdef RA_DISPLAY
 extern GSL1680 touch;
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY
 extern esp_touchscreen touch;
@@ -305,7 +309,8 @@ PitchSamplePlayer* Drum[NUM_DRUMS];
 // Voice group configuration: per-group voice budgets and allocation strategies
 voice_group_config_t sample_voice_group_config[NUM_DRUMS];
 
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+//#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+#if defined(COMPILE_FOR_PSRAM)
 #include "effect_delay_ext8.h"
 #endif
 
@@ -342,7 +347,7 @@ PitchSamplePlayer WAV_preview_PSRAM;
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -1230,17 +1235,17 @@ FLASHMEM void setup()
 
 #ifdef PSRAM
 
-  #ifndef LARGEPSRAM
-    //Reset QSPI clock from 88Mhz to 132 Mhz.
+#ifndef LARGEPSRAM
+  //Reset QSPI clock from 88Mhz to 132 Mhz.
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
     | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
 
-   update_psram_speed(132);
- #else
-   update_psram_speed(120);
- #endif
+  update_psram_speed(132);
+#else
+  update_psram_speed(120);
+#endif
 
 #endif
 
@@ -2065,30 +2070,30 @@ FLASHMEM void handle_touchscreen_midi_channel_page()
     print_midi_channel_activity(39, 7, microdexed_peak_2.read());
     print_midi_channel_activity(39, 8, microdexed_peak_3.read());
 #endif
-    print_midi_channel_activity(39, 9, (ep_peak_l.read() + ep_peak_r.read()) / 2);
+    print_midi_channel_activity(39, 10, (ep_peak_l.read() + ep_peak_r.read()) / 2);
     if (microsynth_peak_osc_0.available())
-      print_midi_channel_activity(39, 11, microsynth_peak_osc_0.read());
-    else
-      print_midi_channel_activity(39, 11, 0);
-    if (microsynth_peak_osc_1.available())
-      print_midi_channel_activity(39, 12, microsynth_peak_osc_1.read());
+      print_midi_channel_activity(39, 12, microsynth_peak_osc_0.read());
     else
       print_midi_channel_activity(39, 12, 0);
+    if (microsynth_peak_osc_1.available())
+      print_midi_channel_activity(39, 13, microsynth_peak_osc_1.read());
+    else
+      print_midi_channel_activity(39, 13, 0);
 
     if (braids_peak_l.available() && braids_peak_r.available())
       print_midi_channel_activity(39, 14, (braids_peak_l.read() + braids_peak_r.read()) / 2);
     else
       print_midi_channel_activity(39, 14, 0);
 
-    print_midi_channel_activity(39, 16, ts.msp_peak[0]);
-    print_midi_channel_activity(39, 17, ts.msp_peak[1]);
+    print_midi_channel_activity(39, 15, ts.msp_peak[0]);
+    print_midi_channel_activity(39, 16, ts.msp_peak[1]);
     ts.msp_peak[0] = ts.msp_peak[0] / 1.05;
     ts.msp_peak[1] = ts.msp_peak[1] / 1.05;
 
     if (drum_mixer_peak_r.available() && drum_mixer_peak_l.available())
-      print_midi_channel_activity(39, 18, (drum_mixer_peak_l.read() + drum_mixer_peak_r.read()) / 2);
+      print_midi_channel_activity(39, 17, (drum_mixer_peak_l.read() + drum_mixer_peak_r.read()) / 2);
     else
-      print_midi_channel_activity(39, 18, 0);
+      print_midi_channel_activity(39, 17, 0);
 
     //// sample slices activity is missing here phtodo
 

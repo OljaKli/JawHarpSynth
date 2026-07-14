@@ -236,7 +236,7 @@ void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
 
   default:
 #ifdef DEBUG
-    LOG.printf_P(PSTR("Unknown device for PB: %d"), device);
+    LOG.printf("Unknown device for PB: %d", device);
 #endif
     break;
   }
@@ -269,7 +269,7 @@ FLASHMEM void midiControlChange(uint8_t control, uint8_t value, uint8_t channel,
 
   default:
 #ifdef DEBUG
-    LOG.printf_P(PSTR("Unknown device for CC: %d"), device);
+    LOG.printf("Unknown device for CC: %d", device);
 #endif
     break;
   }
@@ -588,7 +588,7 @@ return;
     break;
   }
 #ifdef DEBUG
-  LOG.printf_P(PSTR("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d"), text, midi_device, inChannel, inData1, inData2);
+  LOG.printf("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d", text, midi_device, inChannel, inData1, inData2);
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
@@ -1500,7 +1500,7 @@ void OnRawPress(uint8_t keycode)
     if (keyboard1.getModifiers() != keyboard_modifiers)
     {
 #ifdef SHOW_KEYBOARD_DATA
-      LOG.printf_P(PSTR("Mods mismatch: %x != %x\n"), keyboard_modifiers, keyboard1.getModifiers());
+      LOG.printf("Mods mismatch: %x != %x\n", keyboard_modifiers, keyboard1.getModifiers());
 #endif
       keyboard_modifiers = keyboard1.getModifiers();
       Keyboard.set_modifier(keyboard_modifiers);

@@ -54,7 +54,11 @@
 
 #include "ui_liveseq_pianoroll.h"
 #include "ui_livesequencer.h"
+
+#ifdef RA_DISPLAY
 #include "ui_ra_panel.h"
+#endif
+
 #include "livesequencer.h"
 #include "virtualkeyboard.h"
 #include <synth_braids.h>
@@ -179,7 +183,7 @@ PsramLoader sampleLoader(psram_free_bytes);
 #if defined ESP_DISPLAY
 espdisplay display(0);
 extern void sendVolumeIconsMode(bool);
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 
 RA8875 display = RA8875(TFT_CS, 255, TFT_MOSI, TFT_SCK, TFT_MISO);
 // CS RST mosi_pin sclk miso_pin
@@ -254,7 +258,7 @@ GSL1680 touch;
 esp_touchscreen touch(0);
 #elif defined GENERIC_DISPLAY
 XPT2046_Touchscreen touch(TFT_TOUCH_CS);
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 Adafruit_FT6206 touch = Adafruit_FT6206();
 #endif
 
@@ -24191,7 +24195,7 @@ FLASHMEM void UI_func_sysex_send_bank(uint8_t param)
         bank_number = constrain(bank_number + e.dir, 0, MAX_BANKS - 1);
         get_bank_name(configuration.dexed[selected_instance_id].pool, bank_number, tmp_bank_name);
 #ifdef DEBUG
-        LOG.printf_P(PSTR("send bank sysex %d - bank:[%s]\n"), bank_number, tmp_bank_name);
+        LOG.printf("send bank sysex %d - bank:[%s]\n", bank_number, tmp_bank_name);
 #endif
         show(2, 1, 2, bank_number);
         show(2, 4, 10, tmp_bank_name);
@@ -26622,8 +26626,8 @@ FLASHMEM void fill_msz(char filename[], const uint8_t preset_number, const uint8
     }
     uint8_t midi_root = (root_note[ms.MatchLength - 1 - 1] - '0' + 1) * 12 + offset;
 #ifdef DEBUG
-    LOG.printf_P(PSTR("root note found: %s\n"), root_note);
-    LOG.printf_P(PSTR("midi root note found: %d\n"), midi_root);
+    LOG.printf("root note found: %s\n", root_note);
+    LOG.printf("midi root note found: %d\n", midi_root);
 #endif
     msz[preset_number][zone_number].rootnote = midi_root;
 
