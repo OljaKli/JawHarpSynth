@@ -54,6 +54,7 @@ extern sequencer_t seq;
 extern int apc_scroll_counter;
 extern char apc_scrolltext[16];
 extern uint8_t apc_scroll_message;
+uint8_t apc_scroll_message_old; // used to avoid flicker when changing pattern
 extern bool apc_shift_key;
 extern int temp_int;
 uint8_t apc_out_channel;
@@ -376,11 +377,12 @@ FLASHMEM void apc_insert_pattern_step(uint8_t inData1)
 FLASHMEM void apc_drawString_Background()
 {
   uint8_t len = strlen(apc_scrolltext);
-  if (apc_scroll_counter == 0)
+  if (/*apc_scroll_counter == 0*/ !apc_scroll_message_old && apc_scroll_message) //avoid flicker
   {
     apc_clear_grid();
     delay(50);
   }
+  apc_scroll_message_old = apc_scroll_message;
 
   if(apc_scroll_message == true) // scroll text with normal font 5x7, for welcome message
   {
@@ -436,6 +438,7 @@ FLASHMEM void  apc_print_pattern_number()
 {
   snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("%02d"), seq.active_pattern);
   apc_scroll_counter = 0;
+  apc_scroll_message_old = apc_scroll_message;
   apc_scroll_message = 2; // use 2 instead of true, to print pattern number without scrolling it
 }
 
