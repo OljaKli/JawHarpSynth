@@ -568,11 +568,11 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
 {
   uint8_t x, y, mx, my, my_clrvertline /*max x, max y, and max y for clearing 1st vertical line in scrolling mode */;
   const unsigned char * ptr_font;
-  if(apc_scroll_message == true) // For welcome message at startup use big font
+  if(apc_scroll_message == true) // For welcome message at startup use big font 5x7
   {
     mx = 5; my = 7; my_clrvertline = my; ptr_font = &font[0];
   }
-  else // for value 2 use smaller font, for pattern number, no scroll
+  else // for value 2 of apc_scroll_message, use smaller font for pattern number, no scroll needed
   {
     mx = 3; my = 5; my_clrvertline = my+1; ptr_font = &apc_console_font_3x5[0];
   }

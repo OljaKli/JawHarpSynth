@@ -383,16 +383,21 @@ FLASHMEM void apc_drawString_Background()
   }
 
   if(apc_scroll_message == true) // scroll text with normal font 5x7, for welcome message
+  {
     for (uint8_t i = 0; i < len; i++)
     {
       apc_drawChar(8 + i * 6 - apc_scroll_counter, apc_scrolltext[i]);
     }
+    delay(60);
+  }
   else // it's 2 which means no scroll performed, because smaller font 3x5 is used
+  {
     for (uint8_t i = 0; i < len; i++)
     {
       apc_drawChar(i * 4, apc_scrolltext[i]);
     }
-  delay(60);
+    delay(30); //smaller delay needed when not scrolling
+  }
 
   if (apc_scroll_message && apc_scroll_counter < len * 6 + 8)
     apc_scroll_counter++;
