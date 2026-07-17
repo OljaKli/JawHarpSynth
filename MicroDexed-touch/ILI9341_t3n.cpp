@@ -170,7 +170,7 @@ extern void apc(uint8_t a, uint8_t b, uint8_t c);
 FLASHMEM void apc_drawChar(int xoff, unsigned char c)
 {
   uint8_t x, y, mx, my, my_clrvertline /*max x, max y, and max y for clearing 1st vertical line in scrolling mode */;
-  uint8_t x3=0, y3=0;
+  uint8_t x3=0, y3=0; //these are needed for scaling font 5x7 to 3x5
 
   if(apc_scroll_message == true) // For welcome message at startup use big font 5x7
   {
@@ -194,7 +194,7 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
       else
         if (x + xoff >= 0 && x + xoff <= my && x == mx)
           apc((64 - 8 - 8 * y3 + x3 + xoff), 0, 6);
-      if(apc_scroll_message == 2) //scale down on x
+      if(apc_scroll_message == 2) //scale on x the font 5x7 to 3x5
       {
         if(x==0) x++;
         if(x==2) x++;
@@ -202,9 +202,9 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
       x3++;
     }
     y3++;
-    if(apc_scroll_message == 2) //scale down on y
+    if(apc_scroll_message == 2) //scale on y the font 5x7 to 3x5
     {
-       if(c<'a')
+      if(c<'a')
        {if(y==1) y++;}
       else
       {if(y==2) y++;}

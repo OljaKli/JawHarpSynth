@@ -59,7 +59,11 @@ PROGMEM const unsigned char font[] = {
     0x08, 0x08, 0x08, 0x08, 0x08, // -
     0x00, 0x60, 0x60, 0x00, 0x00, // .
     0x20, 0x10, 0x08, 0x04, 0x02, // /
+#if 0
     0x7F, 0x51, 0x49, 0x45, 0x7F, // 0
+#else //don't strike-through the 0 anymore, it turns to 8 at scale-down to 3x5
+    0x7F, 0x41, 0x41, 0x41, 0x7F, // 0
+#endif
     0x40, 0x41, 0x7F, 0x40, 0x40, // 1
     0x79, 0x49, 0x49, 0x49, 0x4F, // 2
     0x49, 0x49, 0x49, 0x49, 0x7F, // 3
@@ -144,121 +148,50 @@ PROGMEM const unsigned char font[] = {
 #if defined APC
 extern uint8_t apc_scroll_message; //used to detect the size of font
 
-/* 
-Font reused from https://github.com/filmote/Font3x5/blob/master/src/fonts/Font3x5.cpp
-
-BSD 3-Clause License
-
-Copyright (c) 2018, Filmote
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-* Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-* Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-* Neither the name of the copyright holder nor the names of its
-  contributors may be used to endorse or promote products derived from
-  this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-*/
-PROGMEM const unsigned char apc_console_font_3x5[] = {
-  // #48 Number '0'.
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-  0x11,  // â–‘â–‘â–‘â–“â–‘â–‘â–‘â–“
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-
-  // #49 Number '1'.
-  0x00,  // â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-  0x00,  // â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–‘
-
-  // #50 Number '2'.
-  0x1D,  // â–‘â–‘â–‘â–“â–“â–“â–‘â–“
-  0x15,  // â–‘â–‘â–‘â–“â–‘â–“â–‘â–“
-  0x17,  // â–‘â–‘â–‘â–“â–‘â–“â–“â–“
-
-  // #51 Number '3'.
-  0x11,  // â–‘â–‘â–‘â–“â–‘â–‘â–‘â–“
-  0x15,  // â–‘â–‘â–‘â–“â–‘â–“â–‘â–“
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-
-  // #52 Number '4'.
-  0x07,  // â–‘â–‘â–‘â–‘â–‘â–“â–“â–“
-  0x04,  // â–‘â–‘â–‘â–‘â–‘â–“â–‘â–‘
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-
-  // #53 Number '5'.
-  0x17,  // â–‘â–‘â–‘â–“â–‘â–“â–“â–“
-  0x15,  // â–‘â–‘â–‘â–“â–‘â–“â–‘â–“
-  0x1D,  // â–‘â–‘â–‘â–“â–“â–“â–‘â–“
-
-  // #54 Number '6'.
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-  0x15,  // â–‘â–‘â–‘â–“â–‘â–“â–‘â–“
-  0x1D,  // â–‘â–‘â–‘â–“â–“â–“â–‘â–“
-
-  // #55 Number '7'.
-  0x01,  // â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–“
-  0x01,  // â–‘â–‘â–‘â–‘â–‘â–‘â–‘â–“
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-
-  // #56 Number '8'.
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-  0x15,  // â–‘â–‘â–‘â–“â–‘â–“â–‘â–“
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-
-  // #57 Number '9'.
-  0x17,  // â–‘â–‘â–‘â–“â–‘â–“â–“â–“
-  0x15,  // â–‘â–‘â–‘â–“â–‘â–“â–‘â–“
-  0x1F,  // â–‘â–‘â–‘â–“â–“â–“â–“â–“
-
-};
 extern void apc(uint8_t a, uint8_t b, uint8_t c);
 // Draw a character on apc
 FLASHMEM void apc_drawChar(int xoff, unsigned char c)
 {
   uint8_t x, y, mx, my, my_clrvertline /*max x, max y, and max y for clearing 1st vertical line in scrolling mode */;
-  const unsigned char * ptr_font;
-  uint8_t font_start;
+  uint8_t x3=0, y3=0; //these are needed for scaling font 5x7 to 3x5
+
   if(apc_scroll_message == true) // For welcome message at startup use big font 5x7
   {
-    mx = 5; my = 7; my_clrvertline = my; ptr_font = &font[0]; font_start=0;
+    mx = 5; my = 7; my_clrvertline = my;
   }
   else // for value 2 of apc_scroll_message, use smaller font for pattern number, no scroll needed
   {
-    mx = 3; my = 5; my_clrvertline = my+1; ptr_font = &apc_console_font_3x5[0]; font_start='0';
+    mx = 5; my = 7; my_clrvertline = my+1;
   }
   for (y = 0; y <= my; y++)
   {
-    for (x = 0; x <= mx; x++)
+    for (x = 0,x3=0; x <= mx; x++)
     {
       if (x + xoff >= 0 && x + xoff <= my_clrvertline && x < mx)
       {
-        if (bitRead(ptr_font[(c-font_start) * mx + x ], y) == 1)
-          apc((64 - 8 - 8 * y + x + xoff), 5, 6);
+        if (bitRead(font[c * mx + x ], y) == 1)
+          apc((64 - 8 - 8 * y3 + x3 + xoff), 5, 6);
         else
-          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+          apc((64 - 8 - 8 * y3 + x3 + xoff), 0, 6);
       }
       else
         if (x + xoff >= 0 && x + xoff <= my && x == mx)
-          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+          apc((64 - 8 - 8 * y3 + x3 + xoff), 0, 6);
+      if(apc_scroll_message == 2) //scale on x the font 5x7 to 3x5
+      {
+        if(x==0) x++;
+        if(x==2) x++;
+      }
+      x3++;
+    }
+    y3++;
+    if(apc_scroll_message == 2) //scale on y the font 5x7 to 3x5
+    {
+      if(c<'a')
+       {if(y==1) y++;}
+      else
+      {if(y==2) y++;}
+      if(y==3) y++;
     }
   }
 }
