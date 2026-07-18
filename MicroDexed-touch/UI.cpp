@@ -109,7 +109,7 @@ bool edit_mode_global;
 #if defined APC
 #include "apc.h"
 extern uint8_t APC_MODE;
-extern bool apc_scroll_message;
+extern uint8_t apc_scroll_message;
 #endif
 
 extern void checkWebRemote();
