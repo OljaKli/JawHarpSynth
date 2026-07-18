@@ -153,8 +153,12 @@ File json;
 char filename[CONFIG_FILENAME_LEN];
 const char* sError = "*ERROR*";
 // Single shared JSON document in BSS — all load/save functions are sequential so one instance is safe.
-//static StaticJsonDocument<JSON_BUFFER_SIZE> g_json_doc;
+
+#if defined COMPILE_FOR_PROGMEM
+static StaticJsonDocument<JSON_BUFFER_SIZE> g_json_doc;
+#else
 static StaticJsonDocument<JSON_BUFFER_SIZE> DMAMEM g_json_doc; //phtodo
+#endif
 
 #include "livesequencer.h"
 #include "ui_livesequencer.h"
