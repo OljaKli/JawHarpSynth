@@ -75,11 +75,7 @@ PROGMEM const unsigned char font[] = {
     0x08, 0x08, 0x08, 0x08, 0x08, // -
     0x00, 0x60, 0x60, 0x00, 0x00, // .
     0x20, 0x10, 0x08, 0x04, 0x02, // /
-#if 0
     0x7F, 0x51, 0x49, 0x45, 0x7F, // 0
-#else //don't strike-through the 0 anymore, it turns to 8 at scale-down to 3x5
-    0x7F, 0x41, 0x41, 0x41, 0x7F, // 0
-#endif
     0x40, 0x41, 0x7F, 0x40, 0x40, // 1
     0x79, 0x49, 0x49, 0x49, 0x4F, // 2
     0x49, 0x49, 0x49, 0x49, 0x7F, // 3
@@ -184,9 +180,17 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
   {
     for (x = 0,x3=0; x <= mx; x++)
     {
+      uint16_t fontidx = c * mx + x;
+      uint16_t fontbyt = font[fontidx];
+      if(apc_scroll_message == 2) //special tweaks for font 5x7 to be scalled well to 3x5
+      {
+        if(c == '0' && fontbyt != 0x7F) fontbyt = 0x41; // clear slash from 0
+        //if(c == '1' && fontbyt != 0x7F)   fontbyt &= ~0x40; //1 is a stick
+        if(fontidx == '1' * mx)         fontbyt = 0x41;   //for 1: add top left dot, keep the base
+      }
       if (x + xoff >= 0 && x + xoff <= my_clrvertline && x < mx)
       {
-        if (bitRead(font[c * mx + x ], y) == 1)
+        if (bitRead(fontbyt, y) == 1)
           apc((64 - 8 - 8 * y3 + x3 + xoff), 5, 6);
         else
           apc((64 - 8 - 8 * y3 + x3 + xoff), 0, 6);
