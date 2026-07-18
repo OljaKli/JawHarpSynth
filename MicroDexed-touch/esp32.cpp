@@ -170,6 +170,7 @@ FLASHMEM void apc_drawChar(int xoff, unsigned char c)
         if(c == '0' && fontbyt != 0x7F) fontbyt = 0x41; // clear slash from 0
         //if(c == '1' && fontbyt != 0x7F)   fontbyt &= ~0x40; //1 is a stick
         if(fontidx == '1' * mx)         fontbyt = 0x41;   //for 1: add top left dot, keep the base
+        if(fontidx == '7' * mx + 2)     fontbyt = 0x79;   //for 7: add missing dot at middle
       }
       if (x + xoff >= 0 && x + xoff <= my_clrvertline && x < mx)
       {
