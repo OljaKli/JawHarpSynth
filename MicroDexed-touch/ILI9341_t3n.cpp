@@ -159,27 +159,61 @@ PROGMEM const unsigned char font[] = {
 
 
 #if defined APC
+extern uint8_t apc_scroll_message; //used to detect the size of font
+
 extern void apc(uint8_t a, uint8_t b, uint8_t c);
 // Draw a character on apc
 FLASHMEM void apc_drawChar(int xoff, unsigned char c)
 {
-  uint8_t x, y;
+  uint8_t x, y, mx, my, my_clrvertline /*max x, max y, and max y for clearing 1st vertical line in scrolling mode */;
+  uint8_t x3=0, y3=0; //these are needed for scaling font 5x7 to 3x5
 
-  for (y = 0; y < 8; y++)
+  if(apc_scroll_message == true) // For welcome message at startup use big font 5x7
   {
-    for (x = 0; x < 6; x++)
+    mx = 5; my = 7; my_clrvertline = my;
+  }
+  else // for value 2 of apc_scroll_message, use smaller font for pattern number, no scroll needed
+  {
+    mx = 5; my = 7; my_clrvertline = my+1;
+  }
+  for (y = 0; y <= my; y++)
+  {
+    for (x = 0,x3=0; x <= mx; x++)
     {
-      if (x + xoff >= 0 && x + xoff < 8 && x < 5)
+      uint16_t fontidx = c * mx + x;
+      uint16_t fontbyt = font[fontidx];
+      if(apc_scroll_message == 2) //special tweaks for font 5x7 to be scalled well to 3x5
       {
-        if (bitRead(font[c * 5 + x], y) == 1)
-
-          apc((64 - 8 - 8 * y + x + xoff), 5, 6);
+        if(c == '0' && fontbyt != 0x7F) fontbyt = 0x41; // clear slash from 0
+        //if(c == '1' && fontbyt != 0x7F)   fontbyt &= ~0x40; //1 is a stick
+        if(fontidx == '1' * mx)         fontbyt = 0x41;   //for 1: add top left dot, keep the base
+        if(fontidx == '7' * mx + 2)     fontbyt = 0x79;   //for 7: add missing dot at middle
+      }
+      if (x + xoff >= 0 && x + xoff <= my_clrvertline && x < mx)
+      {
+        if (bitRead(fontbyt, y) == 1)
+          apc((64 - 8 - 8 * y3 + x3 + xoff), 5, 6);
         else
-          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+          apc((64 - 8 - 8 * y3 + x3 + xoff), 0, 6);
       }
       else
-        if (x + xoff >= 0 && x + xoff < 8 && x == 5)
-          apc((64 - 8 - 8 * y + x + xoff), 0, 6);
+        if (x + xoff >= 0 && x + xoff <= my && x == mx)
+          apc((64 - 8 - 8 * y3 + x3 + xoff), 0, 6);
+      if(apc_scroll_message == 2) //scale on x the font 5x7 to 3x5
+      {
+        if(x==0) x++;
+        if(x==2) x++;
+      }
+      x3++;
+    }
+    y3++;
+    if(apc_scroll_message == 2) //scale on y the font 5x7 to 3x5
+    {
+      if(c<'a')
+       {if(y==1) y++;}
+      else
+      {if(y==2) y++;}
+      if(y==3) y++;
     }
   }
 }

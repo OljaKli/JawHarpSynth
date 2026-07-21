@@ -2710,7 +2710,7 @@ uint8_t LED_MIDI_OUT_counter = 0;
 
 #if defined APC
 extern void apc_drawString_Background();
-bool apc_scroll_message = true;
+uint8_t apc_scroll_message = true;
 bool apc_welcome_message = true;
 int apc_scroll_counter = 0;
 char apc_scrolltext[16];

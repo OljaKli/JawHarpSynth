@@ -53,7 +53,7 @@ extern ILI9341_t3n display;
 extern sequencer_t seq;
 extern int apc_scroll_counter;
 extern char apc_scrolltext[16];
-extern bool apc_scroll_message;
+extern uint8_t apc_scroll_message;
 extern bool apc_shift_key;
 extern int temp_int;
 uint8_t apc_out_channel;
@@ -378,15 +378,32 @@ FLASHMEM void apc_drawString_Background()
   uint8_t len = strlen(apc_scrolltext);
   if (apc_scroll_counter == 0)
   {
-    apc_clear_grid();
+    if(apc_scroll_message == true)
+      apc_clear_grid();
+    else // it's 2 which means no scroll performed, smaller font 3x5 is used
+    { // therefore clear only right vertical line, keep buttom lines for eye comfort, also no flicker
+      for (uint8_t i = 0; i < 6; i++)
+        apc(23 +i * 8, 0, 6);
+    }
     delay(50);
   }
 
-  for (uint8_t i = 0; i < len; i++)
+  if(apc_scroll_message == true) // scroll text with normal font 5x7, for welcome message
   {
-    apc_drawChar(8 + i * 6 - apc_scroll_counter, apc_scrolltext[i]);
+    for (uint8_t i = 0; i < len; i++)
+    {
+      apc_drawChar(8 + i * 6 - apc_scroll_counter, apc_scrolltext[i]);
+    }
+    delay(60);
   }
-  delay(60);
+  else // it's 2 which means no scroll performed, because smaller font 3x5 is used
+  {
+    for (uint8_t i = 0; i < len; i++)
+    {
+      apc_drawChar(i * 4, apc_scrolltext[i]);
+    }
+    delay(30); //smaller delay needed when not scrolling
+  }
 
   if (apc_scroll_message && apc_scroll_counter < len * 6 + 8)
     apc_scroll_counter++;
@@ -423,9 +440,9 @@ FLASHMEM void apc_drawString_Background()
 
 FLASHMEM void  apc_print_pattern_number()
 {
-  snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("P%02d"), seq.active_pattern);
+  snprintf_P(apc_scrolltext, sizeof(apc_scrolltext), PSTR("%02d"), seq.active_pattern);
   apc_scroll_counter = 0;
-  apc_scroll_message = true;
+  apc_scroll_message = 2; // use 2 instead of true, to print pattern number without scrolling it
 }
 
 FLASHMEM void  check_and_clear_row3()
