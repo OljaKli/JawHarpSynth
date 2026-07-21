@@ -5617,6 +5617,7 @@ FLASHMEM void handleStart(void)
     {
       APC_BUTTONS_RIGHT[2] = true;
       apc_print_right_buttons();
+      apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
     }
 #endif
 
@@ -5701,6 +5702,7 @@ FLASHMEM void handleStop(void)
       {
         APC_BUTTONS_RIGHT[2] = false;
         apc_print_right_buttons();
+        apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
       }
 #endif
 

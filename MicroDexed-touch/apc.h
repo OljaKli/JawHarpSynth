@@ -46,9 +46,25 @@ Differences summary between Akai APC Mini Mk2 and Mk1:
 #if (APC != 1) //regular apc mini mk2
 #define APC_MINI_BUTTON_RIGHT_FIRST  112 //1st scene/vertical button
 #define APC_MINI_BUTTON_BOTTOM_FIRST 100 //1st track/horizontal button
+#define APC_MINI_BUTTON_BOTTOM_VOLUME        (APC_MINI_BUTTON_BOTTOM_FIRST+0) //100, volume sample
+#define APC_MINI_BUTTON_BOTTOM_PAN           (APC_MINI_BUTTON_BOTTOM_FIRST+1) //101, panorama sample
+#define APC_MINI_BUTTON_BOTTOM_SEND          (APC_MINI_BUTTON_BOTTOM_FIRST+2) //102, send reverb,delay1,delay2 sample
+#define APC_MINI_BUTTON_BOTTOM_DEVICE        (APC_MINI_BUTTON_BOTTOM_FIRST+3) //103, device pitch,cutoff,reso sample
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P8     (APC_MINI_BUTTON_BOTTOM_FIRST+4) //104, pad +8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M8     (APC_MINI_BUTTON_BOTTOM_FIRST+5) //105, pad -8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M1     (APC_MINI_BUTTON_BOTTOM_FIRST+6) //106, pad -1
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P1     (APC_MINI_BUTTON_BOTTOM_FIRST+7) //107, pad +1
 #else // for Akai APC Mini Mk1
 #define APC_MINI_BUTTON_RIGHT_FIRST   82 //1st scene/vertical button
 #define APC_MINI_BUTTON_BOTTOM_FIRST  64 //1st track/horizontal button
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P8     (APC_MINI_BUTTON_BOTTOM_FIRST+0) //64, pad +8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M8     (APC_MINI_BUTTON_BOTTOM_FIRST+1) //65, pad -8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M1     (APC_MINI_BUTTON_BOTTOM_FIRST+2) //66, pad -1
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P1     (APC_MINI_BUTTON_BOTTOM_FIRST+3) //67, pad +1
+#define APC_MINI_BUTTON_BOTTOM_VOLUME        (APC_MINI_BUTTON_BOTTOM_FIRST+4) //68, volume sample
+#define APC_MINI_BUTTON_BOTTOM_PAN           (APC_MINI_BUTTON_BOTTOM_FIRST+5) //69, panorama sample
+#define APC_MINI_BUTTON_BOTTOM_SEND          (APC_MINI_BUTTON_BOTTOM_FIRST+6) //70, send reverb,delay1,delay2 sample
+#define APC_MINI_BUTTON_BOTTOM_DEVICE        (APC_MINI_BUTTON_BOTTOM_FIRST+7) //71, device pitch,cutoff,reso sample
 #endif
 
 #define APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR APC_MINI_BUTTON_RIGHT_FIRST     //112 or 82
@@ -64,10 +80,6 @@ Differences summary between Akai APC Mini Mk2 and Mk1:
 #define APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL  (APC_MINI_BUTTON_RIGHT_FIRST+6) //118 or 88
 #define APC_MINI_BUTTON_RIGHT_DISAB2_PADSEL  (APC_MINI_BUTTON_RIGHT_FIRST+7) //119 or 89
 
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P8     (APC_MINI_BUTTON_BOTTOM_FIRST+4) //104 or 68, pad +8
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M8     (APC_MINI_BUTTON_BOTTOM_FIRST+5) //105 or 69, pad -8
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M1     (APC_MINI_BUTTON_BOTTOM_FIRST+6) //106 or 70, pad -1
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P1     (APC_MINI_BUTTON_BOTTOM_FIRST+7) //107 or 71, pad +1
 
 #ifndef apc_h_
 #define apc_h_
@@ -75,6 +87,17 @@ extern bool APC_BUTTONS_RIGHT[8];
 void apc(uint8_t a, uint8_t b, uint8_t c);
 void apc_clear_grid();
 void apc_clear_right_buttons();
+void apc_clear_bottom_buttons();
+typedef enum {APC_EDIT_VOLUME=0,
+      APC_EDIT_PAN=10,
+      APC_EDIT_SEND_REV=20,
+      APC_EDIT_SEND_DLAY1=21,
+      APC_EDIT_SEND_DLAY2=22,
+      APC_EDIT_DEV_PITCH=30,
+      APC_EDIT_DEV_CUTOFF=31,
+      APC_EDIT_DEV_RESO=32,
+      EDIT_INIT_INVALID} enum_apcmixmod_t;
+void apc_set_bottom_button(int8_t volpansenddev);
 void print_apc_source_selection_pads();
 void apc_print_right_buttons();
 void apc_trigger_print_in_lcd(void);

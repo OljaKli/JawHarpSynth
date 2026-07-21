@@ -11901,6 +11901,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
     if (apc_scroll_message == false)
       apc_clear_grid();
     apc_print_right_buttons();
+    apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
 
 #endif
     registerTouchHandler(handle_touchscreen_pattern_editor);
@@ -12048,6 +12049,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
           APC_BUTTONS_RIGHT[6] = false;
           APC_BUTTONS_RIGHT[7] = false;
           apc_print_right_buttons();
+          apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
         }
 #endif
       }

@@ -24,6 +24,7 @@ extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
 extern uint8_t APC_PREVIOUS_NOTE;
 extern uint8_t APC_MODE;
+enum_apcmixmod_t apc_mixmod = EDIT_INIT_INVALID;
 extern bool APC_BUTTONS_RIGHT[8];
 extern void print_current_sample_and_pitch_buffer();
 extern void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps);
@@ -129,6 +130,55 @@ FLASHMEM void apc_clear_right_buttons()
 {
   for (uint8_t i = 0; i < 8; i++)
     apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //LUC starting with 112 or 82
+}
+
+FLASHMEM void apc_clear_bottom_buttons()
+{
+  for (uint8_t i = 0; i < 8; i++) //clear bottom row under the grid
+    apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1);
+  
+  apc_mixmod = EDIT_INIT_INVALID;
+}
+
+FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
+{
+  int new_mixmod;
+
+  switch(volpansenddev)
+  {
+    case APC_EDIT_VOLUME:
+    case APC_EDIT_PAN:
+      new_mixmod = volpansenddev;
+      break;
+    case APC_EDIT_SEND_REV:
+      if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_SEND_REV;
+      break;
+    case APC_EDIT_DEV_PITCH:
+      if(APC_EDIT_DEV_PITCH <= apc_mixmod && apc_mixmod < APC_EDIT_DEV_RESO)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_DEV_PITCH;
+      break;
+    default:
+      new_mixmod = (int)apc_mixmod;
+      break;
+  }
+  
+  //10 = the step between categories, max 5 (half) enums per category are allowed
+  //  in order to detect a change
+  if(abs(new_mixmod - (int)apc_mixmod) >= 5)
+  {
+    for(int i=0;i<4;i++)
+      if(i == new_mixmod/10)
+        apc(APC_MINI_BUTTON_BOTTOM_VOLUME + i, 1, 1); //set corresponding light
+      else
+        apc(APC_MINI_BUTTON_BOTTOM_VOLUME + i, 0, 1); //clear the others
+  }
+  else { /* no change of bottom led */ }
+  apc_mixmod = (enum_apcmixmod_t)new_mixmod;
 }
 
 FLASHMEM void apc_print_right_buttons()
@@ -256,14 +306,70 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
         if(activeSample < sizeof(drum_config)/sizeof(drum_config[0])) //better check array out of bound, it may cause crash otherwise
         {
-          drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
+          switch(apc_mixmod) {
+            case APC_EDIT_VOLUME:
+              drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
+              break;
+            case APC_EDIT_PAN:
+              drum_config[activeSample].pan = (int8_t)((((int32_t)in2 - 64)*1571)/1000);// panning (-99 to 99), translate midi 0-127 to -99..99
+              break;
+            case APC_EDIT_SEND_REV:
+              drum_config[activeSample].reverb_send = (uint8_t)((int32_t)(in2*788)/1000);// reverb (0 - 100), translate midi 0-127 to 0-100
+              break;
+            case APC_EDIT_SEND_DLAY1:
+              drum_config[activeSample].delay1 = (uint8_t)((int32_t)(in2*788)/1000);// delay1 (0 - 100), translate midi 0-127 to 0-100
+              break;
+            case APC_EDIT_SEND_DLAY2:
+              drum_config[activeSample].delay2 = (uint8_t)((int32_t)(in2*788)/1000);// delay1 (0 - 100), translate midi 0-127 to 0-100
+              break;
+            case APC_EDIT_DEV_PITCH:
+              drum_config[activeSample].pitch = (uint8_t)((int32_t)(in2*788)/500);// pitch (0 - 200), translate midi 0-127 to 0-200
+              break;
+            case APC_EDIT_DEV_CUTOFF:
+              drum_config[activeSample].filter_freq = (uint8_t)((int32_t)(in2*788)/1000);// Filter cutoff (0 - 100), translate midi 0-127 to 0-100
+              break;
+            case APC_EDIT_DEV_RESO:
+              drum_config[activeSample].filter_q = (uint8_t)((int32_t)(in2*788)/1000);// Filter reso (0 - 100), translate midi 0-127 to 0-100
+              break;
+            case EDIT_INIT_INVALID:
+            default:
+              break;
+        }
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums)) &&
-               (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
+              (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
             //TODO refresh entire screen if other fader is moved (new activeSample).
             //For now just avoid to display volume for other sample, but even this doesn't work if sample bank is changed.
           {
-            //refresh sample volume on the Drums page, for the selected sample, it's 1st param
-            print_small_scaled_bar(0, 3 /*y discovered by trial and error*/, drum_config[activeSample].vol_max, 0, 200, 1/*I put 1 for select_id, don't know what else to put. */, 1, NULL);
+            switch(apc_mixmod) {
+              case APC_EDIT_VOLUME:
+              //refresh sample volume on the Drums page, for the selected sample, it's 1st param
+                print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_PAN:
+                print_small_scaled_bar(0, 4, drum_config[activeSample].pan, -99, 99, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_SEND_REV:
+                print_small_scaled_bar(0, 5, drum_config[activeSample].reverb_send, 0, 100, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_SEND_DLAY1:
+                print_small_scaled_bar(0, 6, drum_config[activeSample].delay1, 0, 100, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_SEND_DLAY2:
+                print_small_scaled_bar(0, 7, drum_config[activeSample].delay2, 0, 100, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_DEV_PITCH:
+                print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_DEV_CUTOFF:
+                print_small_scaled_bar(0, 18, drum_config[activeSample].filter_freq, 0, 100, 1/*default select_id*/, 1, NULL);
+                break;
+              case APC_EDIT_DEV_RESO:
+                print_small_scaled_bar(0, 19, drum_config[activeSample].filter_q, 0, 100, 1/*default select_id*/, 1, NULL);
+                break;
+              case EDIT_INIT_INVALID:
+              default:
+                break;
+            }
           }
         }
         else
@@ -381,7 +487,7 @@ FLASHMEM void apc_drawString_Background()
     if(apc_scroll_message == true)
       apc_clear_grid();
     else // it's 2 which means no scroll performed, smaller font 3x5 is used
-    { // therefore clear only right vertical line, keep buttom lines for eye comfort, also no flicker
+    { // therefore clear only right vertical line, keep bottom lines for eye comfort, also no flicker
       for (uint8_t i = 0; i < 6; i++)
         apc(23 +i * 8, 0, 6);
     }
@@ -581,7 +687,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       handleStop();
   }
 
-  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR && apc_shift_key) //switch to pattern editor LUC 112 or 82
+  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR && apc_shift_key) //switch to pattern editor (112 or 82)
   {
     APC_MODE = APC_PATTERN_EDITOR;
     apc_clear_grid();
@@ -590,13 +696,16 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     seq_printAllVelocitySteps();
     apc_print_volume_pads();
     print_apc_source_selection_pads();
+    apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
   }
 
-  else if (inData1 == APC_MINI_BUTTON_RIGHT_SONG_EDITOR && apc_shift_key) //switch to song editor LUC 113 or 83
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_SONG_EDITOR && apc_shift_key) //switch to song editor (113 or 83)
   {
     APC_MODE = APC_SONG;
     // LCDML.OTHER_jumpToFunc(UI_func_song);
     //print_chain_matrix_in_song_page();
+    //apc_clear_grid(); //this wasn't before, but it cause side effects when back to pattern
+    apc_clear_bottom_buttons();
     apc_song();
   }
 
@@ -604,9 +713,10 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   {
     APC_MODE = APC_MUTE_MATRIX;
     apc_clear_grid();
+    apc_clear_bottom_buttons();
     apc_mute_matrix();
   }
-
+  
   if (APC_MODE == APC_MUTE_MATRIX)
   {
     if (inData1 > 23 && inData1 < 64 - 8)
@@ -688,6 +798,14 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_VOLUME && apc_shift_key) //Volume edit
+      apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_PAN && apc_shift_key) //Pan edit
+      apc_set_bottom_button((int8_t)APC_EDIT_PAN);
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SEND && apc_shift_key) //Send edit
+      apc_set_bottom_button((int8_t)APC_EDIT_SEND_REV); // REVERB always the 1st as ref
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_DEVICE && apc_shift_key) //Device edit
+      apc_set_bottom_button((int8_t)APC_EDIT_DEV_PITCH); //PITCH always the 1st as ref
 
     if (APC_SAMPLE_SCROLL_OFFSET < 10)
       APC_SAMPLE_SCROLL_OFFSET = 10;
