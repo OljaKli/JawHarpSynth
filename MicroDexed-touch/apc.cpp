@@ -306,70 +306,52 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
         if(activeSample < sizeof(drum_config)/sizeof(drum_config[0])) //better check array out of bound, it may cause crash otherwise
         {
-          switch(apc_mixmod) {
-            case APC_EDIT_VOLUME:
-              drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
-              break;
-            case APC_EDIT_PAN:
-              drum_config[activeSample].pan = (int8_t)((((int32_t)in2 - 64)*1571)/1000);// panning (-99 to 99), translate midi 0-127 to -99..99
-              break;
-            case APC_EDIT_SEND_REV:
-              drum_config[activeSample].reverb_send = (uint8_t)((int32_t)(in2*788)/1000);// reverb (0 - 100), translate midi 0-127 to 0-100
-              break;
-            case APC_EDIT_SEND_DLAY1:
-              drum_config[activeSample].delay1 = (uint8_t)((int32_t)(in2*788)/1000);// delay1 (0 - 100), translate midi 0-127 to 0-100
-              break;
-            case APC_EDIT_SEND_DLAY2:
-              drum_config[activeSample].delay2 = (uint8_t)((int32_t)(in2*788)/1000);// delay1 (0 - 100), translate midi 0-127 to 0-100
-              break;
-            case APC_EDIT_DEV_PITCH:
-              drum_config[activeSample].pitch = (uint8_t)((int32_t)(in2*788)/500);// pitch (0 - 200), translate midi 0-127 to 0-200
-              break;
-            case APC_EDIT_DEV_CUTOFF:
-              drum_config[activeSample].filter_freq = (uint8_t)((int32_t)(in2*788)/1000);// Filter cutoff (0 - 100), translate midi 0-127 to 0-100
-              break;
-            case APC_EDIT_DEV_RESO:
-              drum_config[activeSample].filter_q = (uint8_t)((int32_t)(in2*788)/1000);// Filter reso (0 - 100), translate midi 0-127 to 0-100
-              break;
-            case EDIT_INIT_INVALID:
-            default:
-              break;
-        }
+          bool refresh_drum;
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums)) &&
               (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
             //TODO refresh entire screen if other fader is moved (new activeSample).
             //For now just avoid to display volume for other sample, but even this doesn't work if sample bank is changed.
-          {
-            switch(apc_mixmod) {
-              case APC_EDIT_VOLUME:
+            refresh_drum = true;
+          else refresh_drum = false;
+
+          uint8_t scale_0_100 = (uint8_t)((int32_t)(in2*788)/1000); // translate midi 0-127 to 0-100
+          switch(apc_mixmod) {
+            case APC_EDIT_VOLUME:
+              drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
               //refresh sample volume on the Drums page, for the selected sample, it's 1st param
-                print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_PAN:
-                print_small_scaled_bar(0, 4, drum_config[activeSample].pan, -99, 99, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_SEND_REV:
-                print_small_scaled_bar(0, 5, drum_config[activeSample].reverb_send, 0, 100, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_SEND_DLAY1:
-                print_small_scaled_bar(0, 6, drum_config[activeSample].delay1, 0, 100, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_SEND_DLAY2:
-                print_small_scaled_bar(0, 7, drum_config[activeSample].delay2, 0, 100, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_DEV_PITCH:
-                print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_DEV_CUTOFF:
-                print_small_scaled_bar(0, 18, drum_config[activeSample].filter_freq, 0, 100, 1/*default select_id*/, 1, NULL);
-                break;
-              case APC_EDIT_DEV_RESO:
-                print_small_scaled_bar(0, 19, drum_config[activeSample].filter_q, 0, 100, 1/*default select_id*/, 1, NULL);
-                break;
-              case EDIT_INIT_INVALID:
-              default:
-                break;
-            }
+              if (refresh_drum) print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_PAN:
+              drum_config[activeSample].pan = (int8_t)((((int32_t)in2 - 64)*1571)/1000);// panning (-99 to 99), translate midi 0-127 to -99..99
+              if (refresh_drum) print_small_scaled_bar(0, 4, drum_config[activeSample].pan, -99, 99, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_SEND_REV:
+              drum_config[activeSample].reverb_send = scale_0_100;// reverb (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 5, drum_config[activeSample].reverb_send, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_SEND_DLAY1:
+              drum_config[activeSample].delay1 = scale_0_100;// delay1 (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 6, drum_config[activeSample].delay1, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_SEND_DLAY2:
+              drum_config[activeSample].delay2 = scale_0_100;// delay1 (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 7, drum_config[activeSample].delay2, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_DEV_PITCH:
+              drum_config[activeSample].pitch = (uint8_t)((int32_t)(in2*788)/500);// pitch (0 - 200), translate midi 0-127 to 0-200
+              if (refresh_drum) print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_DEV_CUTOFF:
+              drum_config[activeSample].filter_freq = scale_0_100;// Filter cutoff (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 18, drum_config[activeSample].filter_freq, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_DEV_RESO:
+              drum_config[activeSample].filter_q = scale_0_100;// Filter reso (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 19, drum_config[activeSample].filter_q, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case EDIT_INIT_INVALID:
+            default:
+              break;
           }
         }
         else
@@ -704,7 +686,6 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     APC_MODE = APC_SONG;
     // LCDML.OTHER_jumpToFunc(UI_func_song);
     //print_chain_matrix_in_song_page();
-    //apc_clear_grid(); //this wasn't before, but it cause side effects when back to pattern
     apc_clear_bottom_buttons();
     apc_song();
   }
