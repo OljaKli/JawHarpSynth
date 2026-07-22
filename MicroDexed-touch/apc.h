@@ -9,28 +9,6 @@ One advantage over Akai APC Mini Mk2 is that Mk1 needs only one midi channel, no
 Very helpful was the detailed APC Mk1 picture from
  https://github.com/TomasHubelbauer/akai-apc-mini 
 
-Unfortunately, it crashes at inserting/removing steps, in pattern mode.
-It also crashes at changing APC mode with Shift key and CLIP_STOP/SOLO/REC_ARM.
-What works:
-- play/pause with REC_ARM key
-- pattern is shown, when changed view from MDT screen
-- changing to other pattern with CLIP_STOP/SOLO
-- editing pattern velocities, with middle rows pads and sliders
-- sample triggering in pattern, with 2nd row from buttom
-- changing sample with track row (VOLUME, PAN, SEND, DEVICE)
-- changing sample level in pattern with faders (no support for pad brightness in Mk1)
-- song mode is shown, when changed view from MDT screen
-- mute matrix works too, when changed view from MDT screen.
-- screensaver
-
-I manually patched the original 1.9.8.6 APC hex with the Tracks/Scenes/Shift MIDI Note codes,
- so that the provided hex provides also USB BUS Power to APC Mk1:
-  mdt_PSRAM-CAPACITIVE_TOUCH-APCMK1_1_9_8_6patchedWithHexEditor.hex
-Explained reason of patching, extract from MDT manual:
-"Connect the APC to the MDT USB HOST Port. It should power up by the power provided from the Teensy Micro USB Port if you have
-loaded a binary firmware from the Codeberg MDT Homepage. It will not power up, when you have compiled the code from source. This is
-because some low level modification to the USB Host Library was needed to make it startup without any external power source."
-
 Differences summary between Akai APC Mini Mk2 and Mk1:
 | MIDI Diffs      |   APC Mini MK2    |   APC Mini MK1      |
 |-----------------|-------------------|---------------------|
@@ -87,6 +65,9 @@ extern bool APC_BUTTONS_RIGHT[8];
 void apc(uint8_t a, uint8_t b, uint8_t c);
 void apc_clear_grid();
 void apc_clear_right_buttons();
+
+#define APC_VOLPANSENDDEV /* deleting this should save almost 1kB flash code */
+#ifdef APC_VOLPANSENDDEV
 void apc_clear_bottom_buttons();
 typedef enum {APC_EDIT_VOLUME=0,
       APC_EDIT_PAN=10,
@@ -96,8 +77,9 @@ typedef enum {APC_EDIT_VOLUME=0,
       APC_EDIT_DEV_PITCH=30,
       APC_EDIT_DEV_CUTOFF=31,
       APC_EDIT_DEV_RESO=32,
-      EDIT_INIT_INVALID} enum_apcmixmod_t;
+      APC_EDIT_INIT_INVALID} enum_apcmixmod_t;
 void apc_set_bottom_button(int8_t volpansenddev);
+#endif /* ifdef APC_VOLPANSENDDEV */
 void print_apc_source_selection_pads();
 void apc_print_right_buttons();
 void apc_trigger_print_in_lcd(void);
