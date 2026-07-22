@@ -150,8 +150,16 @@ FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
   switch(volpansenddev)
   {
     case APC_EDIT_VOLUME:
+      if(APC_EDIT_VOLUME <= apc_mixmod && apc_mixmod < APC_EDIT_VOL_ENVATT)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_VOLUME;
+      break;
     case APC_EDIT_PAN:
-      new_mixmod = volpansenddev;
+      if(APC_EDIT_PAN <= apc_mixmod && apc_mixmod < APC_EDIT_PAN_ENVDECAY)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_PAN;
       break;
     case APC_EDIT_SEND_REV:
       if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2)
@@ -172,7 +180,7 @@ FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
   
   //10 = the step between categories, max 5 (half) enums per category are allowed
   //  in order to detect a change
-  if(abs(new_mixmod - (int)apc_mixmod) >= 5)
+  if(abs(new_mixmod - (int)apc_mixmod) >= /*5*/ APC_EDIT_PAN/2)
   {
     for(int i=0;i<4;i++)
       if(i == new_mixmod/10)
@@ -326,9 +334,21 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
               //refresh sample volume on the Drums page, for the selected sample, it's 1st param
               if (refresh_drum) print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
               break;
+            case APC_EDIT_VOL_ENVATT:
+              drum_config[activeSample].env_attack = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 11, drum_config[activeSample].env_attack, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
             case APC_EDIT_PAN:
               drum_config[activeSample].pan = (int8_t)((((int32_t)in2 - 64)*1571)/1000);// panning (-99 to 99), translate midi 0-127 to -99..99
               if (refresh_drum) print_small_scaled_bar(0, 4, drum_config[activeSample].pan, -99, 99, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_PAN_ENVHOLD:
+              drum_config[activeSample].env_hold = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 12, drum_config[activeSample].env_hold, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_PAN_ENVDECAY:
+              drum_config[activeSample].env_decay = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 13, drum_config[activeSample].env_decay, 0, 100, 1/*default select_id*/, 1, NULL);
               break;
             case APC_EDIT_SEND_REV:
               drum_config[activeSample].reverb_send = scale_0_100;// reverb (0 - 100), translate midi 0-127 to 0-100
@@ -796,13 +816,13 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       inChannel = 99;
     }
 #ifdef APC_VOLPANSENDDEV
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_VOLUME && apc_shift_key) //Volume edit
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_VOLUME) //Volume edit
       apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_PAN && apc_shift_key) //Pan edit
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_PAN) //Pan edit
       apc_set_bottom_button((int8_t)APC_EDIT_PAN);
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SEND && apc_shift_key) //Send edit
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SEND) //Send edit
       apc_set_bottom_button((int8_t)APC_EDIT_SEND_REV); // REVERB always the 1st as ref
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_DEVICE && apc_shift_key) //Device edit
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_DEVICE) //Device edit
       apc_set_bottom_button((int8_t)APC_EDIT_DEV_PITCH); //PITCH always the 1st as ref
 #endif /* ifdef APC_VOLPANSENDDEV */
 

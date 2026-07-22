@@ -70,7 +70,10 @@ void apc_clear_right_buttons();
 #ifdef APC_VOLPANSENDDEV
 void apc_clear_bottom_buttons();
 typedef enum {APC_EDIT_VOLUME=0,
+      APC_EDIT_VOL_ENVATT=1,
       APC_EDIT_PAN=10,
+      APC_EDIT_PAN_ENVHOLD=11,
+      APC_EDIT_PAN_ENVDECAY=12,
       APC_EDIT_SEND_REV=20,
       APC_EDIT_SEND_DLAY1=21,
       APC_EDIT_SEND_DLAY2=22,
