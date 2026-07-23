@@ -66,20 +66,39 @@ void apc(uint8_t a, uint8_t b, uint8_t c);
 void apc_clear_grid();
 void apc_clear_right_buttons();
 
-#define APC_VOLPANSENDDEV /* deleting this should save almost 1kB flash code */
+#define APC_VOLPANSENDDEV1 /* deleting this should save almost 1kB flash code */
 #ifdef APC_VOLPANSENDDEV
+/* In pattern mode, use Shift with the arrow buttons to switch control to 
+Attack, Hold/Decay, Sustain, Release for the drum sample with the corresponding fader.
+Switch between Hold/Decay by repeating Shift+down-arrow.
+Or press (without shift) Volume to switch control to sample volume,
+or press Pan for sample panorama.
+Press Send multiple times to change send level for reverb, delay1, delay2.
+Press Device multiple times to change pitch, filter cutoff, resonance.
+*/
 void apc_clear_bottom_buttons();
-typedef enum {APC_EDIT_VOLUME=0,
-      APC_EDIT_VOL_ENVATT=1,
-      APC_EDIT_PAN=10,
-      APC_EDIT_PAN_ENVHOLD=11,
-      APC_EDIT_PAN_ENVDECAY=12,
-      APC_EDIT_SEND_REV=20,
-      APC_EDIT_SEND_DLAY1=21,
-      APC_EDIT_SEND_DLAY2=22,
-      APC_EDIT_DEV_PITCH=30,
-      APC_EDIT_DEV_CUTOFF=31,
-      APC_EDIT_DEV_RESO=32,
+#define APC_EDIT_OFFSET 10 /* the mega offset for 2 adjacent buttons, it's big to have more mini-offsets when pressing same button multiple times */
+typedef enum {
+#if (APC != 1) //regular apc mini mk2 starts Volume/Pan/Send/Device and arrows (P8,M8,P1,M1)
+      APC_EDIT_VOLUME    = 0,
+      APC_EDIT_P8_ENVATT = APC_EDIT_OFFSET * 4,
+#else //APC Mk1 starts with arrows (P8,M8,P1,M1) and then Volume/Pan/Send/Device
+      APC_EDIT_VOLUME    = APC_EDIT_OFFSET * 4,
+      APC_EDIT_P8_ENVATT = 0,
+#endif
+      APC_EDIT_PAN        = APC_EDIT_VOLUME + APC_EDIT_OFFSET,
+      APC_EDIT_SEND_REV   = APC_EDIT_VOLUME + APC_EDIT_OFFSET * 2,
+      APC_EDIT_SEND_DLAY1 = APC_EDIT_SEND_REV + 1,
+      APC_EDIT_SEND_DLAY2 = APC_EDIT_SEND_REV + 2,
+      APC_EDIT_DEV_PITCH  = APC_EDIT_VOLUME + APC_EDIT_OFFSET * 3,
+      APC_EDIT_DEV_CUTOFF = APC_EDIT_DEV_PITCH + 1,
+      APC_EDIT_DEV_RESO   = APC_EDIT_DEV_PITCH + 2,
+
+      APC_EDIT_M8_ENVHOLD = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET,
+      APC_EDIT_M8_ENVDEC  = APC_EDIT_M8_ENVHOLD + 1,
+      APC_EDIT_M1_ENVSUS  = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET * 2,
+      APC_EDIT_P1_ENVREL  = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET * 3,
+
       APC_EDIT_INIT_INVALID} enum_apcmixmod_t;
 void apc_set_bottom_button(int8_t volpansenddev);
 #endif /* ifdef APC_VOLPANSENDDEV */
