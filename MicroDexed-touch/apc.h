@@ -66,8 +66,6 @@ void apc(uint8_t a, uint8_t b, uint8_t c);
 void apc_clear_grid();
 void apc_clear_right_buttons();
 
-#define APC_VOLPANSENDDEV1 /* deleting this should save almost 1kB flash code */
-#ifdef APC_VOLPANSENDDEV
 /* In pattern mode, use Shift with the arrow buttons to switch control to 
 Attack, Hold/Decay, Sustain, Release for the drum sample with the corresponding fader.
 Switch between Hold/Decay by repeating Shift+down-arrow.
@@ -101,7 +99,6 @@ typedef enum {
 
       APC_EDIT_INIT_INVALID} enum_apcmixmod_t;
 void apc_set_bottom_button(int8_t volpansenddev);
-#endif /* ifdef APC_VOLPANSENDDEV */
 void print_apc_source_selection_pads();
 void apc_print_right_buttons();
 void apc_trigger_print_in_lcd(void);

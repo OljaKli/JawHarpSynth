@@ -24,9 +24,7 @@ extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
 extern uint8_t APC_PREVIOUS_NOTE;
 extern uint8_t APC_MODE;
-#ifdef APC_VOLPANSENDDEV
 enum_apcmixmod_t apc_mixmod = APC_EDIT_INIT_INVALID;
-#endif /* ifdef APC_VOLPANSENDDEV */
 extern bool APC_BUTTONS_RIGHT[8];
 extern void print_current_sample_and_pitch_buffer();
 extern void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps);
@@ -134,7 +132,6 @@ FLASHMEM void apc_clear_right_buttons()
     apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //starting with 112 or 82
 }
 
-#ifdef APC_VOLPANSENDDEV
 FLASHMEM void apc_clear_bottom_buttons()
 {
   for (uint8_t i = 0; i < 8; i++) //clear bottom row under the grid
@@ -192,7 +189,6 @@ FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
   else { /* no change of bottom led */ }
   apc_mixmod = (enum_apcmixmod_t)new_mixmod;
 }
-#endif /* ifdef APC_VOLPANSENDDEV */
 
 FLASHMEM void apc_print_right_buttons()
 {
@@ -328,7 +324,6 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
           else refresh_drum = false;
 
           uint8_t scale_0_100  = (uint8_t)((int32_t)(in2*788)/1000);        // translate midi 0-127 to 0..100
-#ifdef APC_VOLPANSENDDEV
           int8_t scale_m99_99 = (int8_t)((((int32_t)in2 - 64)*1571)/1000); // translate midi 0-127 to -99..99
           switch(apc_mixmod) {
             case APC_EDIT_VOLUME:
@@ -388,11 +383,10 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
             default:
               break;
           }
-#else //original base use of sliders, only for sample volume
-          drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
-          //refresh sample volume on the Drums page, for the selected sample, it's 1st param
-          if (refresh_drum) print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
-#endif /* ifdef APC_VOLPANSENDDEV */
+// #else //original base use of sliders, only for sample volume
+//           drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
+//           //refresh sample volume on the Drums page, for the selected sample, it's 1st param
+//           if (refresh_drum) print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
         }
         else
           activeSample = old_activeSample; //restore previous valid value
@@ -718,9 +712,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     seq_printAllVelocitySteps();
     apc_print_volume_pads();
     print_apc_source_selection_pads();
-#ifdef APC_VOLPANSENDDEV
     apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
-#endif /* ifdef APC_VOLPANSENDDEV */
   }
 
   else if (inData1 == APC_MINI_BUTTON_RIGHT_SONG_EDITOR && apc_shift_key) //switch to song editor (113 or 83)
@@ -728,9 +720,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     APC_MODE = APC_SONG;
     // LCDML.OTHER_jumpToFunc(UI_func_song);
     //print_chain_matrix_in_song_page();
-#ifdef APC_VOLPANSENDDEV
     apc_clear_bottom_buttons();
-#endif /* ifdef APC_VOLPANSENDDEV */
     apc_song();
   }
 
@@ -738,9 +728,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   {
     APC_MODE = APC_MUTE_MATRIX;
     apc_clear_grid();
-#ifdef APC_VOLPANSENDDEV
     apc_clear_bottom_buttons();
-#endif /* ifdef APC_VOLPANSENDDEV */
     apc_mute_matrix();
   }
   
@@ -769,7 +757,6 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   }
   else if (APC_MODE == APC_PATTERN_EDITOR)
   {
-#ifdef APC_VOLPANSENDDEV
     if (inData1 == APC_MINI_BUTTON_BOTTOM_VOLUME) //Volume edit
       apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
     else if (inData1 == APC_MINI_BUTTON_BOTTOM_PAN) //Pan edit
@@ -787,7 +774,6 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P1 && apc_shift_key) //track8 , 107 or 71
       apc_set_bottom_button((int8_t)APC_EDIT_P1_ENVREL);
     else
-#endif /* ifdef APC_VOLPANSENDDEV */
     if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P1) //track8 pad++ , 107 or 71
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
