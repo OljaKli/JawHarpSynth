@@ -635,15 +635,16 @@ LCDML_add(61, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
 LCDML_add(62, LCDML_0, 18, "Extras/Test", NULL);
 LCDML_add(63, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
 LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(65, LCDML_0_18, 3, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(66, LCDML_0_18, 4, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(67, LCDML_0_18, 5, "Test PSRAM", UI_func_test_psram);
-LCDML_add(68, LCDML_0, 19, "Info", UI_func_information);
-LCDML_addAdvanced(69, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(72, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(73, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_add(65, LCDML_0_18, 3, "MDT Arranger", UI_func_mdt_arranger);
+LCDML_add(66, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(67, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(68, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
+LCDML_add(69, LCDML_0, 19, "Info", UI_func_information);
+LCDML_addAdvanced(70, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(72, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(73, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(74, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -18043,6 +18044,39 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
   }
 }
 
+FLASHMEM void UI_func_mdt_arranger(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    // setup function
+    registerScope(250, 0, 62, 50);
+    encoderDir[ENC_R].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    seq.edit_state = 0;
+    generic_menu = 0;
+
+    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
+      LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
+    {
+      generic_temp_select_menu = 0;
+    }
+
+  }
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+   /// add loop code here
+
+  }
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+    display.fillScreen(COLOR_BACKGROUND);
+    unregisterTouchHandler();
+    unregisterScope();
+    encoderDir[ENC_R].reset();
+  }
+}
 
 FLASHMEM void show_empty_folder_notice() {
   if (fm.sd_sum_files == 0)
