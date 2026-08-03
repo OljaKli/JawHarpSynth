@@ -24,6 +24,9 @@ extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_TONAL_SCROLL_OFFSET;
 extern uint8_t APC_PREVIOUS_NOTE;
 extern uint8_t APC_MODE;
+#ifdef APC_VOLPANSENDDEV
+enum_apcmixmod_t apc_mixmod = APC_EDIT_INIT_INVALID;
+#endif /* ifdef APC_VOLPANSENDDEV */
 extern bool APC_BUTTONS_RIGHT[8];
 extern void print_current_sample_and_pitch_buffer();
 extern void print_track_steps_detailed(int xpos, int ypos, uint8_t currentstep, bool init, bool allsteps);
@@ -83,7 +86,7 @@ FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 
 FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
 {
-#if (APC != 1) //LUC regular apc mini mk2
+#if (APC != 1) // regular apc mini mk2
   if (in < 10)
     apc(pos, 0, 6);
   else if (in < 40)
@@ -128,17 +131,77 @@ FLASHMEM void apc_clear_grid()
 FLASHMEM void apc_clear_right_buttons()
 {
   for (uint8_t i = 0; i < 8; i++)
-    apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //LUC starting with 112 or 82
+    apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //starting with 112 or 82
 }
+
+#ifdef APC_VOLPANSENDDEV
+FLASHMEM void apc_clear_bottom_buttons()
+{
+  for (uint8_t i = 0; i < 8; i++) //clear bottom row under the grid
+    apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1);
+  
+  apc_mixmod = APC_EDIT_INIT_INVALID;
+}
+
+FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
+{
+  int new_mixmod;
+
+  switch(volpansenddev)
+  {
+    case APC_EDIT_VOLUME:
+    case APC_EDIT_PAN:
+    case APC_EDIT_P8_ENVATT:
+    case APC_EDIT_M1_ENVSUS:
+    case APC_EDIT_P1_ENVREL:
+      new_mixmod = volpansenddev; // these buttons have only one function
+      break;
+    case APC_EDIT_M8_ENVHOLD:
+      if(APC_EDIT_M8_ENVHOLD <= apc_mixmod && apc_mixmod < APC_EDIT_M8_ENVDEC)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_M8_ENVHOLD;
+      break;
+    case APC_EDIT_SEND_REV:
+      if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_SEND_REV;
+      break;
+    case APC_EDIT_DEV_PITCH:
+      if(APC_EDIT_DEV_PITCH <= apc_mixmod && apc_mixmod < APC_EDIT_DEV_RESO)
+        new_mixmod = (int8_t)apc_mixmod + 1;
+      else
+        new_mixmod = APC_EDIT_DEV_PITCH;
+      break;
+    default:
+      new_mixmod = (int)apc_mixmod;
+      break;
+  }
+  
+  //10 = the step between categories, max 5 (half) enums per category are allowed
+  //  in order to detect a change
+  if(abs(new_mixmod - (int)apc_mixmod) >= /*5*/ APC_EDIT_OFFSET/2)
+  {
+    for(int i=0;i<8;i++)
+      if(i == new_mixmod/10)
+        apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 1, 1); //set corresponding light
+      else
+        apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1); //clear the others
+  }
+  else { /* no change of bottom led */ }
+  apc_mixmod = (enum_apcmixmod_t)new_mixmod;
+}
+#endif /* ifdef APC_VOLPANSENDDEV */
 
 FLASHMEM void apc_print_right_buttons()
 {
   for (uint8_t i = 0; i < 8; i++)
   {
     if (APC_BUTTONS_RIGHT[i])
-      apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 1, 1); //LUC starting with 112 or 82
+      apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 1, 1); //starting with 112 or 82
     else
-      apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //LUC starting with 112 or 82
+      apc(APC_MINI_BUTTON_RIGHT_FIRST + i, 0, 1); //starting with 112 or 82
   }
 }
 
@@ -256,15 +319,80 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
         if(activeSample < sizeof(drum_config)/sizeof(drum_config[0])) //better check array out of bound, it may cause crash otherwise
         {
-          drum_config[activeSample].vol_max = (uint8_t)((int32_t)(in2*788)/1000);// max. Volume (0 - 100), translate midi 0-127 to 0-100
+          bool refresh_drum;
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums)) &&
-               (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
+              (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
             //TODO refresh entire screen if other fader is moved (new activeSample).
             //For now just avoid to display volume for other sample, but even this doesn't work if sample bank is changed.
-          {
-            //refresh sample volume on the Drums page, for the selected sample, it's 1st param
-            print_small_scaled_bar(0, 3 /*y discovered by trial and error*/, drum_config[activeSample].vol_max, 0, 200, 1/*I put 1 for select_id, don't know what else to put. */, 1, NULL);
+            refresh_drum = true;
+          else refresh_drum = false;
+
+          uint8_t scale_0_100  = (uint8_t)((int32_t)(in2*788)/1000);        // translate midi 0-127 to 0..100
+#ifdef APC_VOLPANSENDDEV
+          int8_t scale_m99_99 = (int8_t)((((int32_t)in2 - 64)*1571)/1000); // translate midi 0-127 to -99..99
+          switch(apc_mixmod) {
+            case APC_EDIT_VOLUME:
+              drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
+              //refresh sample volume on the Drums page, for the selected sample, it's 1st param
+              if (refresh_drum) print_small_scaled_bar(0, 3, scale_0_100, 0, 200, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_P8_ENVATT:
+              drum_config[activeSample].env_attack = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 11, drum_config[activeSample].env_attack, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_PAN:
+              drum_config[activeSample].pan = scale_m99_99;// panning (-99 to 99), translate midi 0-127 to -99..99
+              if (refresh_drum) print_small_scaled_bar(0, 4, scale_m99_99, -99, 99, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_M8_ENVHOLD:
+              drum_config[activeSample].env_hold = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 12, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_M8_ENVDEC:
+              drum_config[activeSample].env_decay = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 13, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_M1_ENVSUS:
+              drum_config[activeSample].env_sustain = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 14, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_P1_ENVREL:
+              drum_config[activeSample].env_release = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 15, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_SEND_REV:
+              drum_config[activeSample].reverb_send = scale_0_100;// reverb (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 5, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_SEND_DLAY1:
+              drum_config[activeSample].delay1 = scale_0_100;// delay1 (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 6, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_SEND_DLAY2:
+              drum_config[activeSample].delay2 = scale_0_100;// delay1 (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 7, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_DEV_PITCH:
+              drum_config[activeSample].pitch = (uint8_t)((int32_t)(in2*788)/500);// pitch (0 - 200), translate midi 0-127 to 0-200
+              if (refresh_drum) print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_DEV_CUTOFF:
+              drum_config[activeSample].filter_freq = scale_0_100;// Filter cutoff (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 18, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_DEV_RESO:
+              drum_config[activeSample].filter_q = scale_0_100;// Filter reso (0 - 100), translate midi 0-127 to 0-100
+              if (refresh_drum) print_small_scaled_bar(0, 19, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              break;
+            case APC_EDIT_INIT_INVALID:
+            default:
+              break;
           }
+#else //original base use of sliders, only for sample volume
+          drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
+          //refresh sample volume on the Drums page, for the selected sample, it's 1st param
+          if (refresh_drum) print_small_scaled_bar(0, 3, drum_config[activeSample].vol_max, 0, 200, 1/*default select_id*/, 1, NULL);
+#endif /* ifdef APC_VOLPANSENDDEV */
         }
         else
           activeSample = old_activeSample; //restore previous valid value
@@ -381,7 +509,7 @@ FLASHMEM void apc_drawString_Background()
     if(apc_scroll_message == true)
       apc_clear_grid();
     else // it's 2 which means no scroll performed, smaller font 3x5 is used
-    { // therefore clear only right vertical line, keep buttom lines for eye comfort, also no flicker
+    { // therefore clear only right vertical line, keep bottom lines for eye comfort, also no flicker
       for (uint8_t i = 0; i < 6; i++)
         apc(23 +i * 8, 0, 6);
     }
@@ -458,11 +586,11 @@ FLASHMEM void  check_and_clear_row3()
 
 FLASHMEM void apc_pattern_change(uint8_t inData1)
 {
-  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_UP) //LUC 112 or 82
+  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_UP) //112 or 82
   {
     seq.active_pattern = constrain(seq.active_pattern + 1, 0, NUM_SEQ_PATTERN - 1);
   }
-  else if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_DOWN) //LUC 113 or 83
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_DOWN) //113 or 83
   {
     seq.active_pattern = constrain(seq.active_pattern - 1, 0, NUM_SEQ_PATTERN - 1);
   }
@@ -573,7 +701,7 @@ FLASHMEM void apc_song()
 FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 {
 
-  if (inData1 == APC_MINI_BUTTON_RIGHT_SEQ_START_STOP && !apc_shift_key) //start/stop LUC 114 or 84
+  if (inData1 == APC_MINI_BUTTON_RIGHT_SEQ_START_STOP && !apc_shift_key) //start/stop 114 or 84
   {
     if (!seq.running)
       handleStart();
@@ -581,7 +709,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       handleStop();
   }
 
-  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR && apc_shift_key) //switch to pattern editor LUC 112 or 82
+  if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR && apc_shift_key) //switch to pattern editor (112 or 82)
   {
     APC_MODE = APC_PATTERN_EDITOR;
     apc_clear_grid();
@@ -590,23 +718,32 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     seq_printAllVelocitySteps();
     apc_print_volume_pads();
     print_apc_source_selection_pads();
+#ifdef APC_VOLPANSENDDEV
+    apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
+#endif /* ifdef APC_VOLPANSENDDEV */
   }
 
-  else if (inData1 == APC_MINI_BUTTON_RIGHT_SONG_EDITOR && apc_shift_key) //switch to song editor LUC 113 or 83
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_SONG_EDITOR && apc_shift_key) //switch to song editor (113 or 83)
   {
     APC_MODE = APC_SONG;
     // LCDML.OTHER_jumpToFunc(UI_func_song);
     //print_chain_matrix_in_song_page();
+#ifdef APC_VOLPANSENDDEV
+    apc_clear_bottom_buttons();
+#endif /* ifdef APC_VOLPANSENDDEV */
     apc_song();
   }
 
-  else if (inData1 == APC_MINI_BUTTON_RIGHT_MUTE_MATRIX && apc_shift_key) //switch to mute matrix LUC 114 or 84
+  else if (inData1 == APC_MINI_BUTTON_RIGHT_MUTE_MATRIX && apc_shift_key) //switch to mute matrix 114 or 84
   {
     APC_MODE = APC_MUTE_MATRIX;
     apc_clear_grid();
+#ifdef APC_VOLPANSENDDEV
+    apc_clear_bottom_buttons();
+#endif /* ifdef APC_VOLPANSENDDEV */
     apc_mute_matrix();
   }
-
+  
   if (APC_MODE == APC_MUTE_MATRIX)
   {
     if (inData1 > 23 && inData1 < 64 - 8)
@@ -632,7 +769,26 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
   }
   else if (APC_MODE == APC_PATTERN_EDITOR)
   {
-    if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P1) //track8 pad++ , LUC 107 or 71
+#ifdef APC_VOLPANSENDDEV
+    if (inData1 == APC_MINI_BUTTON_BOTTOM_VOLUME) //Volume edit
+      apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_PAN) //Pan edit
+      apc_set_bottom_button((int8_t)APC_EDIT_PAN);
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SEND) //Send edit
+      apc_set_bottom_button((int8_t)APC_EDIT_SEND_REV); // REVERB always the 1st as ref
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_DEVICE) //Device edit
+      apc_set_bottom_button((int8_t)APC_EDIT_DEV_PITCH); //PITCH always the 1st as ref
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P8 && apc_shift_key) //track5 , 104 or 68
+      apc_set_bottom_button((int8_t)APC_EDIT_P8_ENVATT);
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M8 && apc_shift_key) //track6 , 105 or 69
+      apc_set_bottom_button((int8_t)APC_EDIT_M8_ENVHOLD); //HOLD always the 1st as ref
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M1 && apc_shift_key) //track7 , 106 or 70
+      apc_set_bottom_button((int8_t)APC_EDIT_M1_ENVSUS);
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P1 && apc_shift_key) //track8 , 107 or 71
+      apc_set_bottom_button((int8_t)APC_EDIT_P1_ENVREL);
+    else
+#endif /* ifdef APC_VOLPANSENDDEV */
+    if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P1) //track8 pad++ , 107 or 71
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -644,7 +800,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M1) //track7 pad-- , LUC 106 or 70
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M1) //track7 pad-- , 106 or 70
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -658,7 +814,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M8) //track8 pad -8 , LUC 105 or 69
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_M8) //track6 pad -8 , 105 or 69
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -676,7 +832,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       }
       inChannel = 99;
     }
-    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P8) //track7 pad +8 , LUC 104 or 68
+    else if (inData1 == APC_MINI_BUTTON_BOTTOM_SAMPLE_P8) //track5 pad +8 , 104 or 68
     {
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
       {
@@ -702,29 +858,29 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       APC_TONAL_SCROLL_OFFSET = 160;
     // }
 
-    if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_UP || inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_DOWN) //pattern change LUC 112 or 82 / 113 or 83
+    if (inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_UP || inData1 == APC_MINI_BUTTON_RIGHT_PATTERN_DOWN) //pattern change 112 or 82 / 113 or 83
       if (!apc_shift_key)
         apc_pattern_change(inData1);
 
-    if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_UPPER || inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_LOWER) // LUC 115 or 85 / 116 or 86
+    if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_UPPER || inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_LOWER) // 115 or 85 / 116 or 86
     {
       APC_BUTTONS_RIGHT[0] = false;
       APC_BUTTONS_RIGHT[1] = false;
       APC_BUTTONS_RIGHT[6] = false;
     }
-    if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_UPPER) //velocity upper row LUC 115 or 85
+    if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_UPPER) //velocity upper row 115 or 85
     {
       APC_BUTTONS_RIGHT[3] = true;
       APC_BUTTONS_RIGHT[4] = false;
     }
-    else if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_LOWER) //velocity lower row LUC 116 or 86
+    else if (inData1 == APC_MINI_BUTTON_RIGHT_VELOCITY_LOWER) //velocity lower row 116 or 86
     {
       APC_BUTTONS_RIGHT[3] = false;
       APC_BUTTONS_RIGHT[4] = true;
     }
-    else  if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL || inData1 == APC_MINI_BUTTON_RIGHT_DISAB1_PADSEL || inData1 == APC_MINI_BUTTON_RIGHT_DISAB2_PADSEL) //enable/disable pad select mode LUC 118/117/119
+    else  if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL || inData1 == APC_MINI_BUTTON_RIGHT_DISAB1_PADSEL || inData1 == APC_MINI_BUTTON_RIGHT_DISAB2_PADSEL) //enable/disable pad select mode 118/117/119
     {
-      if ((APC_BUTTONS_RIGHT[6] && inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL/* LUC 118*/) || (APC_BUTTONS_RIGHT[6] && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)))
+      if ((APC_BUTTONS_RIGHT[6] && inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL/* 118*/) || (APC_BUTTONS_RIGHT[6] && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)))
       {
         APC_BUTTONS_RIGHT[5] = false;
         APC_BUTTONS_RIGHT[6] = false;
@@ -733,7 +889,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       else
         if (APC_PREVIOUS_NOTE != 254)
         {
-          if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL) //LUC 118 or 88
+          if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL) //118 or 88
             APC_BUTTONS_RIGHT[6] = true;
 
           if (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)
@@ -780,7 +936,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
 
       seq_printAllVelocitySteps();
     }
-    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST + 3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST + 8))) //update scrolling pad view LUC 103 or 67 / 108 or 72
+    else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST + 3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST + 8))) //update scrolling pad view 103 or 67 / 108 or 72
     {
       apc_print_volume_pads();
     }
