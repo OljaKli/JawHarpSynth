@@ -315,74 +315,77 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         activeSample = in1 - 48 + APC_SAMPLE_SCROLL_OFFSET - 10;
         if(activeSample < sizeof(drum_config)/sizeof(drum_config[0])) //better check array out of bound, it may cause crash otherwise
         {
-          bool refresh_drum;
+          int16_t position_y, input_value, limit_min = 0, limit_max = 100;
           if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drums)) &&
               (last_activeSample_selected_by_sample_pad == activeSample+10)) //10 is the same offset from line above, where activeSample is set. Better would be to compare with the index of sample displayed on screen, not activeSample
             //TODO refresh entire screen if other fader is moved (new activeSample).
             //For now just avoid to display volume for other sample, but even this doesn't work if sample bank is changed.
-            refresh_drum = true;
-          else refresh_drum = false;
-
+            position_y = 1;
+          else position_y = 0;
           uint8_t scale_0_100  = (uint8_t)((int32_t)(in2*788)/1000);        // translate midi 0-127 to 0..100
-          int8_t scale_m99_99 = (int8_t)((((int32_t)in2 - 64)*1571)/1000); // translate midi 0-127 to -99..99
+          int8_t scale_m99_99 = (int8_t)((((int32_t)in2 - 64)*1571)/1000) + 1; // translate midi 0-127 to -99..99
+          input_value = scale_0_100;
           switch(apc_mixmod) {
             case APC_EDIT_VOLUME:
-              drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
+              drum_config[activeSample].vol_max = scale_0_100;
               //refresh sample volume on the Drums page, for the selected sample, it's 1st param
-              if (refresh_drum) print_small_scaled_bar(0, 3, scale_0_100, 0, 200, 1/*default select_id*/, 1, NULL);
+              if (position_y) {position_y = 3; limit_max = 200; }
               break;
             case APC_EDIT_P8_ENVATT:
-              drum_config[activeSample].env_attack = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 11, drum_config[activeSample].env_attack, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].env_attack = scale_0_100;
+              if (position_y) position_y = 11;
               break;
             case APC_EDIT_PAN:
-              drum_config[activeSample].pan = scale_m99_99;// panning (-99 to 99), translate midi 0-127 to -99..99
-              if (refresh_drum) print_small_scaled_bar(0, 4, scale_m99_99, -99, 99, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].pan = scale_m99_99;
+              if (position_y) {position_y = 4; input_value = scale_m99_99; limit_min = -99; limit_max = 99; }
               break;
             case APC_EDIT_M8_ENVHOLD:
-              drum_config[activeSample].env_hold = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 12, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].env_hold = scale_0_100;
+              if (position_y) position_y = 12;
               break;
             case APC_EDIT_M8_ENVDEC:
-              drum_config[activeSample].env_decay = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 13, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].env_decay = scale_0_100;
+              if (position_y) position_y = 13;
               break;
             case APC_EDIT_M1_ENVSUS:
-              drum_config[activeSample].env_sustain = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 14, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].env_sustain = scale_0_100;
+              if (position_y) position_y = 14;
               break;
             case APC_EDIT_P1_ENVREL:
-              drum_config[activeSample].env_release = scale_0_100;//  (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 15, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].env_release = scale_0_100;
+              if (position_y) position_y = 15;
               break;
             case APC_EDIT_SEND_REV:
-              drum_config[activeSample].reverb_send = scale_0_100;// reverb (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 5, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].reverb_send = scale_0_100;
+              if (position_y) position_y = 5;
               break;
             case APC_EDIT_SEND_DLAY1:
-              drum_config[activeSample].delay1 = scale_0_100;// delay1 (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 6, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].delay1 = scale_0_100;
+              if (position_y) position_y = 6;
               break;
             case APC_EDIT_SEND_DLAY2:
-              drum_config[activeSample].delay2 = scale_0_100;// delay1 (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 7, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].delay2 = scale_0_100;
+              if (position_y) position_y = 7;
               break;
             case APC_EDIT_DEV_PITCH:
-              drum_config[activeSample].pitch = (uint8_t)((int32_t)(in2*788)/500);// pitch (0 - 200), translate midi 0-127 to 0-200
-              if (refresh_drum) print_small_scaled_bar(0, 8, drum_config[activeSample].pitch, 0, 200, 1/*default select_id*/, 1, NULL);
+              scale_0_100 = (uint8_t)((int32_t)(in2*788)/500);// pitch (0 - 200), translate midi 0-127 to 0-200
+              drum_config[activeSample].pitch = scale_0_100;
+              if (position_y) {position_y = 8; input_value = scale_0_100; limit_max = 200; }
               break;
             case APC_EDIT_DEV_CUTOFF:
-              drum_config[activeSample].filter_freq = scale_0_100;// Filter cutoff (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 18, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].filter_freq = scale_0_100;
+              if (position_y) position_y = 18;
               break;
             case APC_EDIT_DEV_RESO:
-              drum_config[activeSample].filter_q = scale_0_100;// Filter reso (0 - 100), translate midi 0-127 to 0-100
-              if (refresh_drum) print_small_scaled_bar(0, 19, scale_0_100, 0, 100, 1/*default select_id*/, 1, NULL);
+              drum_config[activeSample].filter_q = scale_0_100;
+              if (position_y) position_y = 19;
               break;
             case APC_EDIT_INIT_INVALID:
             default:
+              position_y = 0;
               break;
           }
+          if (position_y) print_small_scaled_bar(0, position_y, input_value, limit_min, limit_max, 1/*default select_id*/, 1, NULL);
 // #else //original base use of sliders, only for sample volume
 //           drum_config[activeSample].vol_max = scale_0_100;// max. Volume (0 - 100), translate midi 0-127 to 0-100
 //           //refresh sample volume on the Drums page, for the selected sample, it's 1st param
