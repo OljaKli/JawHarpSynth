@@ -1,5 +1,5 @@
 #ifndef _MICROSYNTH_H_
-#define _MICROSYNTH_h_
+#define _MICROSYNTH_H_
 
 #include "Arduino.h"
 

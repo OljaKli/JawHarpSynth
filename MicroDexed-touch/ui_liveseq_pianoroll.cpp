@@ -13,6 +13,7 @@
 #include "ui_livesequencer.h"
 #include "MD_REncoder.h"
 #include <map>
+#include <algorithm>
 
 extern LCDMenuLib2 LCDML;
 #if defined ESP_DISPLAY
