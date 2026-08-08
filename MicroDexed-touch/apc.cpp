@@ -62,6 +62,7 @@ extern void  print_chain_matrix_in_song_page();
 static int trigger_print_sample_or_step;
 static uint8_t last_activeSample_selected_by_sample_pad;
 static uint8_t apc_state_source_selection_pads; /* bitfield, 1 bit for every pad, to avoid sending same midi output to apc twice. */
+static uint16_t apc_state_print_volume_pads; /* bitfield, 2 bits for every pad, to avoid sending same midi output to apc twice. */
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -111,7 +112,19 @@ FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
     intensity = 6;
 #endif
   
-  apc(pos, colour, intensity);
+  if(pos < 8) //print volume pads
+  {
+    uint8_t last_intensity = (apc_state_print_volume_pads >> (pos<<1)) & 3u;
+    uint8_t intensity2 = (colour = 0 )?0:intensity;
+    if((intensity2 & 3u) != last_intensity)
+    {
+      apc(pos, colour, intensity);
+      apc_state_print_volume_pads &= (uint16_t)(~(3u << (pos<<1))); //delete previous intensity
+      apc_state_print_volume_pads |= ((intensity2 & 3u) << (pos<<1));  //save actual intensity
+    }
+  }
+  else
+    apc(pos, colour, intensity);
 }
 
 extern void apc_drawChar(int x, unsigned char c);
@@ -240,6 +253,7 @@ FLASHMEM void print_apc_source_selection_pads()
     else  // tonal instrument
     {
       apc_state_source_selection_pads = 0;
+      apc_state_print_volume_pads = 0;
       for (uint8_t i = 0; i < 24; i++)
       {
         if (i == temp_int - APC_TONAL_SCROLL_OFFSET && APC_BUTTONS_RIGHT[6])
