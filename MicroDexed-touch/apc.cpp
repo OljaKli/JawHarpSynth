@@ -59,10 +59,9 @@ extern bool apc_shift_key;
 extern int temp_int;
 uint8_t apc_out_channel;
 extern void  print_chain_matrix_in_song_page();
-static int trigger_print_sample_or_step;
+static sint16_t trigger_print_sample_or_step;
 static uint8_t last_activeSample_selected_by_sample_pad;
-static uint8_t apc_state_source_selection_pads; /* bitfield, 1 bit for every pad, to avoid sending same midi output to apc twice. */
-static uint16_t apc_state_print_volume_pads; /* bitfield, 2 bits for every pad, to avoid sending same midi output to apc twice. */
+static uint8_t apc_trigger_print_source_selection_volume;
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -86,60 +85,37 @@ FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 
 FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
 {
-  /* Moving all faders for velocity doesn't freeze, but moving for sample volume is freezing. So leave this unchanged. */
-  uint8_t colour = col;
-  uint8_t intensity = 6;
 #if (APC != 1) // regular apc mini mk2
   if (in < 10)
-    colour = 0;
+    apc(pos, 0, 6);
   else if (in < 40)
-    intensity = 1;
+    apc(pos, col, 1);
   else  if (in < 60)
-    intensity = 2;
+    apc(pos, col, 2);
   else  if (in < 70)
-    intensity = 3;
+    apc(pos, col, 3);
   else  if (in < 80)
-    intensity = 4;
+    apc(pos, col, 4);
   else  if (in < 100)
-    intensity = 5;
+    apc(pos, col, 5);
   else
-    intensity = 6;
+    apc(pos, col, 6);
 #else
   //no brightness for APC Mini Mk1, send only on or off, to avoid freeze at slider move (sometimes still freezes when abusing slider)
   if (in < 10)
-    colour = 0;
+    apc(pos, 0, 6);
   else if (in > 40)
-    intensity = 6;
+    apc(pos, col, 6);
 #endif
-  
-  if(pos < 8) //print volume pads
-  {
-    uint8_t last_intensity = (apc_state_print_volume_pads >> (pos<<1)) & 3u;
-    uint8_t intensity2 = (colour = 0 )?0:intensity;
-    if((intensity2 & 3u) != last_intensity)
-    {
-      apc(pos, colour, intensity);
-      apc_state_print_volume_pads &= (uint16_t)(~(3u << (pos<<1))); //delete previous intensity
-      apc_state_print_volume_pads |= ((intensity2 & 3u) << (pos<<1));  //save actual intensity
-    }
-  }
-  else
-    apc(pos, colour, intensity);
 }
 
 extern void apc_drawChar(int x, unsigned char c);
 
-FLASHMEM void apc_print_volume_pads(uint8_t pad1_8)
+FLASHMEM void apc_print_volume_pads()
 {
   if (apc_scroll_message == false)
   {
-    uint8_t i_start, i_end;
-    if(pad1_8 >= 8) {
-      i_start = 0; i_end = 8;
-    } else {
-      i_start = pad1_8; i_end = pad1_8 + 1;
-    }
-    for (uint8_t i = i_start; i < i_end; i++)  //Velocity Pads
+    for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
         sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max, i, 5); //5=colour red for Mk2
   }
@@ -236,24 +212,14 @@ FLASHMEM void print_apc_source_selection_pads()
       {
         if (i == activeSample - APC_SAMPLE_SCROLL_OFFSET + 10 && APC_BUTTONS_RIGHT[6])
         {
-          if((apc_state_source_selection_pads & (1u<<i)) != 0u) { // if bit is 1
-            apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 11); //11 means blinking 1/24 for Mini Mk2
-            apc_state_source_selection_pads &= (uint8_t)(~(1u<<i)); //set bit to 0 for blinking, edit mode
-          }
+          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 11); //11 means blinking 1/24 for Mini Mk2
         }
         else
-        {
-          if((apc_state_source_selection_pads & (1u<<i)) == 0u) { // if bit is 0
-            apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 6); //6 means full brightness for Mini Mk2
-            apc_state_source_selection_pads |= (1u<<i); //set bit to 1 for full brightness, no edit mode
-          }
-        }
+          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 6); //6 means full brightness for Mini Mk2
       }
     }
     else  // tonal instrument
     {
-      apc_state_source_selection_pads = 0;
-      apc_state_print_volume_pads = 0;
       for (uint8_t i = 0; i < 24; i++)
       {
         if (i == temp_int - APC_TONAL_SCROLL_OFFSET && APC_BUTTONS_RIGHT[6])
@@ -265,6 +231,8 @@ FLASHMEM void print_apc_source_selection_pads()
   }
 }
 
+/* This seems to be to only function called cyclically in the Arduino loop().
+   Use it wisely, move here stuff which takes too much time to run in midi interrupt. */
 FLASHMEM void apc_trigger_print_in_lcd(void)
 {
   if(trigger_print_sample_or_step)
@@ -292,6 +260,14 @@ FLASHMEM void apc_trigger_print_in_lcd(void)
       {/* Not implemented. This is to refresh the lcd-top-left note, with new note selected in APC, for piano roll. */}
     }
     trigger_print_sample_or_step = 0;
+  }
+  
+  if(apc_trigger_print_source_selection_volume)
+    apc_trigger_print_source_selection_volume--;
+  if((apc_trigger_print_source_selection_volume == 1u) && (APC_BUTTONS_RIGHT[6]))  //sample select mode
+  {
+    apc_print_volume_pads();
+    print_apc_source_selection_pads();
   }
 }
 
@@ -428,9 +404,6 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         }
         else
           activeSample = old_activeSample; //restore previous valid value
-        if(apc_mixmod == APC_EDIT_VOLUME)
-          apc_print_volume_pads(i);
-        print_apc_source_selection_pads();
       }
       if (APC_BUTTONS_RIGHT[3]) //edit velocity 1st row (1-8)
       {
@@ -453,8 +426,9 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
   if ((APC_BUTTONS_RIGHT[6])  //sample select mode
       && (activeSample < sizeof(drum_config)/sizeof(drum_config[0]))) //better check array out of bound, it may cause crash otherwise
   {
-    //apc_print_volume_pads();
-    //print_apc_source_selection_pads();
+    /* Refresh the 2 bottom rows of APC 255 times slower (max for uint8_t) 
+        to avoid MDT freeze when moving all faders in sample edit mode. */
+    apc_trigger_print_source_selection_volume = 255u;
   }
 }
 
@@ -530,7 +504,7 @@ FLASHMEM void apc_insert_pattern_step(uint8_t inData1)
       }
     }
     seq_printAllSeqSteps();
-    apc_print_volume_pads(8);
+    apc_print_volume_pads();
     pattern_editor_play_current_step(input_step);
   }
   apc_print_right_buttons();
@@ -582,7 +556,7 @@ FLASHMEM void apc_drawString_Background()
       apc_print_right_buttons();
       seq_printAllSeqSteps();
       seq_printAllVelocitySteps();
-      apc_print_volume_pads(8);
+      apc_print_volume_pads();
       print_apc_source_selection_pads();
     }
 
@@ -751,7 +725,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     apc_print_right_buttons();
     seq_printAllSeqSteps();
     seq_printAllVelocitySteps();
-    apc_print_volume_pads(8);
+    apc_print_volume_pads();
     print_apc_source_selection_pads();
     apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
   }
@@ -936,7 +910,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       inChannel = drum_midi_channel;
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
-      apc_print_volume_pads(inData1 - 8);
+      apc_print_volume_pads();
       trigger_print_sample_or_step = -1; //new sample selected for pattern drum mode, to be refreshed on lcd
       last_activeSample_selected_by_sample_pad = activeSample; //needed to avoid update of volume gauge, when other fader is moved, in Drums screen
     }
@@ -944,7 +918,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     {
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
-      apc_print_volume_pads(8);
+      apc_print_volume_pads();
       trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
     }
     else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
@@ -965,7 +939,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     }
     else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST + 3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST + 8))) //update scrolling pad view 103 or 67 / 108 or 72
     {
-      apc_print_volume_pads(8);
+      apc_print_volume_pads();
     }
     else
     {

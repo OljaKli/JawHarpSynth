@@ -358,7 +358,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 {
 if (semaphore_midi_in_busy)
 return;
-//semaphore_midi_in_busy=1;
+semaphore_midi_in_busy=1;
 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
@@ -737,7 +737,7 @@ FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* mi
 {
 if (semaphore_midi_in_busy)
 return;
-//semaphore_midi_in_busy=1;
+semaphore_midi_in_busy=1;
 
   handleSystemExclusive(data, len);
 #ifdef DEBUG
@@ -798,7 +798,7 @@ FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, 
   //char text[10];
 if (semaphore_midi_in_busy)
 return;
-//semaphore_midi_in_busy=1;
+semaphore_midi_in_busy=1;
 
   switch (event)
   {
@@ -912,7 +912,7 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
   //char text[16];
 if (semaphore_midi_in_busy)
 return;
-//semaphore_midi_in_busy =1;
+semaphore_midi_in_busy =1;
 
   switch (event)
   {
