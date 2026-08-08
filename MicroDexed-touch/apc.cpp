@@ -61,6 +61,7 @@ uint8_t apc_out_channel;
 extern void  print_chain_matrix_in_song_page();
 static int trigger_print_sample_or_step;
 static uint8_t last_activeSample_selected_by_sample_pad;
+static uint8_t apc_state_source_selection_pads; /* bitfield, 1 bit for every pad, to avoid sending same midi output to apc twice. */
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -84,28 +85,33 @@ FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 
 FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
 {
+  /* Moving all faders for velocity doesn't freeze, but moving for sample volume is freezing. So leave this unchanged. */
+  uint8_t colour = col;
+  uint8_t intensity = 6;
 #if (APC != 1) // regular apc mini mk2
   if (in < 10)
-    apc(pos, 0, 6);
+    colour = 0;
   else if (in < 40)
-    apc(pos, col, 1);
+    intensity = 1;
   else  if (in < 60)
-    apc(pos, col, 2);
+    intensity = 2;
   else  if (in < 70)
-    apc(pos, col, 3);
+    intensity = 3;
   else  if (in < 80)
-    apc(pos, col, 4);
+    intensity = 4;
   else  if (in < 100)
-    apc(pos, col, 5);
+    intensity = 5;
   else
-    apc(pos, col, 6);
+    intensity = 6;
 #else
   //no brightness for APC Mini Mk1, send only on or off, to avoid freeze at slider move (sometimes still freezes when abusing slider)
   if (in < 10)
-    apc(pos, 0, 6);
+    colour = 0;
   else if (in > 40)
-    apc(pos, col, 6);
+    intensity = 6;
 #endif
+  
+  apc(pos, colour, intensity);
 }
 
 extern void apc_drawChar(int x, unsigned char c);
@@ -207,31 +213,33 @@ FLASHMEM void apc_print_right_buttons()
   }
 }
 
-FLASHMEM void print_apc_source_selection_pads(uint8_t pad1_8)
+FLASHMEM void print_apc_source_selection_pads()
 {
   if (apc_scroll_message == false)
   {
-    uint8_t i_start, i_end;
-    if(pad1_8 >= 8) {
-      i_start = 0; i_end = 8;
-    } else {
-      i_start = pad1_8; i_end = pad1_8 + 1;
-    }
-      
     if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
     {
-      for (uint8_t i = i_start; i < i_end; i++)
+      for (uint8_t i = 0; i < 8; i++)
       {
         if (i == activeSample - APC_SAMPLE_SCROLL_OFFSET + 10 && APC_BUTTONS_RIGHT[6])
         {
-          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 11); //11 means blinking 1/24 for Mini Mk2
+          if((apc_state_source_selection_pads & (1u<<i)) != 0u) { // if bit is 1
+            apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 11); //11 means blinking 1/24 for Mini Mk2
+            apc_state_source_selection_pads &= (uint8_t)(~(1u<<i)); //set bit to 0 for blinking, edit mode
+          }
         }
         else
-          apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 6); //6 means full brightness for Mini Mk2
+        {
+          if((apc_state_source_selection_pads & (1u<<i)) == 0u) { // if bit is 0
+            apc(8 + i, 8 + i + APC_SAMPLE_SCROLL_OFFSET, 6); //6 means full brightness for Mini Mk2
+            apc_state_source_selection_pads |= (1u<<i); //set bit to 1 for full brightness, no edit mode
+          }
+        }
       }
     }
     else  // tonal instrument
     {
+      apc_state_source_selection_pads = 0;
       for (uint8_t i = 0; i < 24; i++)
       {
         if (i == temp_int - APC_TONAL_SCROLL_OFFSET && APC_BUTTONS_RIGHT[6])
@@ -408,7 +416,7 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
           activeSample = old_activeSample; //restore previous valid value
         if(apc_mixmod == APC_EDIT_VOLUME)
           apc_print_volume_pads(i);
-        print_apc_source_selection_pads(i);
+        print_apc_source_selection_pads();
       }
       if (APC_BUTTONS_RIGHT[3]) //edit velocity 1st row (1-8)
       {
@@ -561,7 +569,7 @@ FLASHMEM void apc_drawString_Background()
       seq_printAllSeqSteps();
       seq_printAllVelocitySteps();
       apc_print_volume_pads(8);
-      print_apc_source_selection_pads(8);
+      print_apc_source_selection_pads();
     }
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
@@ -730,7 +738,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     seq_printAllSeqSteps();
     seq_printAllVelocitySteps();
     apc_print_volume_pads(8);
-    print_apc_source_selection_pads(8);
+    print_apc_source_selection_pads();
     apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
   }
 

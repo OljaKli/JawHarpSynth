@@ -12114,7 +12114,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
-      print_apc_source_selection_pads(8);
+      print_apc_source_selection_pads();
 #endif
     print_shortcut_navigator();
     display.setTextSize(2);

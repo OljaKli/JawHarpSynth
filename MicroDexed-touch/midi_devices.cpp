@@ -290,7 +290,7 @@ extern void apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern void apc_trigger_print_in_lcd(void);
 extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_MODE;
-extern void print_apc_source_selection_pads(uint8_t pad1_8);
+extern void print_apc_source_selection_pads();
 extern void apc_fader_control(uint8_t in1, uint8_t in2);
 
 extern void start_MIDI_input_timer();
@@ -467,7 +467,7 @@ return;
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
-      print_apc_source_selection_pads(8);
+      print_apc_source_selection_pads();
 #endif
 
 #ifdef DEBUG
