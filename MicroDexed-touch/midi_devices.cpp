@@ -86,7 +86,7 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
-volatile int32_t semaphore_midi_in_busy;
+volatile bool semaphore_midi_in_busy;
 extern uint8_t chord_input[4];
 
 /* #ifdef MIDI_DEVICE_USB

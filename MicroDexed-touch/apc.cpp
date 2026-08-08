@@ -59,8 +59,9 @@ extern bool apc_shift_key;
 extern int temp_int;
 uint8_t apc_out_channel;
 extern void  print_chain_matrix_in_song_page();
-static int trigger_print_sample_or_step;
+static sint16_t trigger_print_sample_or_step;
 static uint8_t last_activeSample_selected_by_sample_pad;
+static uint8_t apc_trigger_print_source_selection_volume;
 
 FLASHMEM void set_apc_velocity_pad(uint8_t inData1)
 {
@@ -230,6 +231,8 @@ FLASHMEM void print_apc_source_selection_pads()
   }
 }
 
+/* This seems to be to only function called cyclically in the Arduino loop().
+   Use it wisely, move here stuff which takes too much time to run in midi interrupt. */
 FLASHMEM void apc_trigger_print_in_lcd(void)
 {
   if(trigger_print_sample_or_step)
@@ -257,6 +260,14 @@ FLASHMEM void apc_trigger_print_in_lcd(void)
       {/* Not implemented. This is to refresh the lcd-top-left note, with new note selected in APC, for piano roll. */}
     }
     trigger_print_sample_or_step = 0;
+  }
+  
+  if(apc_trigger_print_source_selection_volume)
+    apc_trigger_print_source_selection_volume--;
+  if((apc_trigger_print_source_selection_volume == 1u) && (APC_BUTTONS_RIGHT[6]))  //sample select mode
+  {
+    apc_print_volume_pads();
+    print_apc_source_selection_pads();
   }
 }
 
@@ -415,8 +426,9 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
   if ((APC_BUTTONS_RIGHT[6])  //sample select mode
       && (activeSample < sizeof(drum_config)/sizeof(drum_config[0]))) //better check array out of bound, it may cause crash otherwise
   {
-    apc_print_volume_pads();
-    print_apc_source_selection_pads();
+    /* Refresh the 2 bottom rows of APC 255 times slower (max for uint8_t) 
+        to avoid MDT freeze when moving all faders in sample edit mode. */
+    apc_trigger_print_source_selection_volume = 255u;
   }
 }
 
