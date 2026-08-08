@@ -110,11 +110,17 @@ FLASHMEM void sub_print_volume_pad(uint8_t in, uint8_t pos, uint8_t col)
 
 extern void apc_drawChar(int x, unsigned char c);
 
-FLASHMEM void apc_print_volume_pads()
+FLASHMEM void apc_print_volume_pads(uint8_t pad1_8)
 {
   if (apc_scroll_message == false)
   {
-    for (uint8_t i = 0; i < 8; i++)  //Velocity Pads
+    uint8_t i_start, i_end;
+    if(pad1_8 >= 8) {
+      i_start = 0; i_end = 8;
+    } else {
+      i_start = pad1_8; i_end = pad1_8 + 1;
+    }
+    for (uint8_t i = i_start; i < i_end; i++)  //Velocity Pads
       if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3) //sample or sliced
         sub_print_volume_pad(drum_config[APC_SAMPLE_SCROLL_OFFSET + i - 10].vol_max, i, 5); //5=colour red for Mk2
   }
@@ -201,13 +207,20 @@ FLASHMEM void apc_print_right_buttons()
   }
 }
 
-FLASHMEM void print_apc_source_selection_pads()
+FLASHMEM void print_apc_source_selection_pads(uint8_t pad1_8)
 {
   if (apc_scroll_message == false)
   {
+    uint8_t i_start, i_end;
+    if(pad1_8 >= 8) {
+      i_start = 0; i_end = 8;
+    } else {
+      i_start = pad1_8; i_end = pad1_8 + 1;
+    }
+      
     if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
     {
-      for (uint8_t i = 0; i < 8; i++)
+      for (uint8_t i = i_start; i < i_end; i++)
       {
         if (i == activeSample - APC_SAMPLE_SCROLL_OFFSET + 10 && APC_BUTTONS_RIGHT[6])
         {
@@ -393,6 +406,9 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
         }
         else
           activeSample = old_activeSample; //restore previous valid value
+        if(apc_mixmod == APC_EDIT_VOLUME)
+          apc_print_volume_pads(i);
+        print_apc_source_selection_pads(i);
       }
       if (APC_BUTTONS_RIGHT[3]) //edit velocity 1st row (1-8)
       {
@@ -415,8 +431,8 @@ FLASHMEM void apc_fader_control(uint8_t in1, uint8_t in2)
   if ((APC_BUTTONS_RIGHT[6])  //sample select mode
       && (activeSample < sizeof(drum_config)/sizeof(drum_config[0]))) //better check array out of bound, it may cause crash otherwise
   {
-    apc_print_volume_pads();
-    print_apc_source_selection_pads();
+    //apc_print_volume_pads();
+    //print_apc_source_selection_pads();
   }
 }
 
@@ -492,7 +508,7 @@ FLASHMEM void apc_insert_pattern_step(uint8_t inData1)
       }
     }
     seq_printAllSeqSteps();
-    apc_print_volume_pads();
+    apc_print_volume_pads(8);
     pattern_editor_play_current_step(input_step);
   }
   apc_print_right_buttons();
@@ -544,8 +560,8 @@ FLASHMEM void apc_drawString_Background()
       apc_print_right_buttons();
       seq_printAllSeqSteps();
       seq_printAllVelocitySteps();
-      apc_print_volume_pads();
-      print_apc_source_selection_pads();
+      apc_print_volume_pads(8);
+      print_apc_source_selection_pads(8);
     }
 
     if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor))
@@ -713,8 +729,8 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     apc_print_right_buttons();
     seq_printAllSeqSteps();
     seq_printAllVelocitySteps();
-    apc_print_volume_pads();
-    print_apc_source_selection_pads();
+    apc_print_volume_pads(8);
+    print_apc_source_selection_pads(8);
     apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
   }
 
@@ -898,7 +914,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       inChannel = drum_midi_channel;
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
-      apc_print_volume_pads();
+      apc_print_volume_pads(inData1 - 8);
       trigger_print_sample_or_step = -1; //new sample selected for pattern drum mode, to be refreshed on lcd
       last_activeSample_selected_by_sample_pad = activeSample; //needed to avoid update of volume gauge, when other fader is moved, in Drums screen
     }
@@ -906,7 +922,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     {
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
-      apc_print_volume_pads();
+      apc_print_volume_pads(8);
       trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
     }
     else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
@@ -927,7 +943,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
     }
     else if ((inData1 > (APC_MINI_BUTTON_BOTTOM_FIRST + 3) && inData1 < (APC_MINI_BUTTON_BOTTOM_FIRST + 8))) //update scrolling pad view 103 or 67 / 108 or 72
     {
-      apc_print_volume_pads();
+      apc_print_volume_pads(8);
     }
     else
     {

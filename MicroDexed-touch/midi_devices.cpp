@@ -86,7 +86,7 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
-volatile int32_t semaphore_midi_in_busy;
+volatile bool semaphore_midi_in_busy;
 extern uint8_t chord_input[4];
 
 /* #ifdef MIDI_DEVICE_USB
@@ -290,7 +290,7 @@ extern void apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 extern void apc_trigger_print_in_lcd(void);
 extern uint8_t APC_SAMPLE_SCROLL_OFFSET;
 extern uint8_t APC_MODE;
-extern void print_apc_source_selection_pads();
+extern void print_apc_source_selection_pads(uint8_t pad1_8);
 extern void apc_fader_control(uint8_t in1, uint8_t in2);
 
 extern void start_MIDI_input_timer();
@@ -358,7 +358,7 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 {
 if (semaphore_midi_in_busy)
 return;
-semaphore_midi_in_busy=1;
+//semaphore_midi_in_busy=1;
 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
@@ -467,7 +467,7 @@ return;
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
-      print_apc_source_selection_pads();
+      print_apc_source_selection_pads(8);
 #endif
 
 #ifdef DEBUG
@@ -737,7 +737,7 @@ FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* mi
 {
 if (semaphore_midi_in_busy)
 return;
-semaphore_midi_in_busy=1;
+//semaphore_midi_in_busy=1;
 
   handleSystemExclusive(data, len);
 #ifdef DEBUG
@@ -798,7 +798,7 @@ FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, 
   //char text[10];
 if (semaphore_midi_in_busy)
 return;
-semaphore_midi_in_busy=1;
+//semaphore_midi_in_busy=1;
 
   switch (event)
   {
@@ -912,7 +912,7 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
   //char text[16];
 if (semaphore_midi_in_busy)
 return;
-semaphore_midi_in_busy =1;
+//semaphore_midi_in_busy =1;
 
   switch (event)
   {

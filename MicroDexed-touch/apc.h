@@ -99,10 +99,10 @@ typedef enum {
 
       APC_EDIT_INIT_INVALID} enum_apcmixmod_t;
 void apc_set_bottom_button(int8_t volpansenddev);
-void print_apc_source_selection_pads();
+void print_apc_source_selection_pads(uint8_t pad1_8);
 void apc_print_right_buttons();
 void apc_trigger_print_in_lcd(void);
-void apc_print_volume_pads();
+void apc_print_volume_pads(uint8_t pad1_8);
 void apc_NoteOn(byte inChannel, byte inData1, byte inData2);
 void apc_fader_control(uint8_t in1, uint8_t in2);
 #endif

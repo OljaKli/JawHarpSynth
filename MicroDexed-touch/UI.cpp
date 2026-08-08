@@ -11801,7 +11801,7 @@ FLASHMEM void _seq_pattern_change()
 #if defined APC
   if (APC_MODE == APC_PATTERN_EDITOR)
   {
-    apc_print_volume_pads();
+    apc_print_volume_pads(8);
     check_and_clear_row3();
   }
 #endif
@@ -11942,7 +11942,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
       seq_printAllSeqSteps();
       seq_printAllVelocitySteps();
 #if defined APC
-      apc_print_volume_pads();
+      apc_print_volume_pads(8);
 #endif
     }
 
@@ -12105,7 +12105,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
         seq_printAllVelocitySteps();
 #if defined APC
         if (APC_MODE == APC_PATTERN_EDITOR)
-          apc_print_volume_pads();
+          apc_print_volume_pads(8);
 
 #endif
       }
@@ -12114,7 +12114,7 @@ FLASHMEM void UI_func_seq_pattern_editor(uint8_t param)
 
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
-      print_apc_source_selection_pads();
+      print_apc_source_selection_pads(8);
 #endif
     print_shortcut_navigator();
     display.setTextSize(2);
