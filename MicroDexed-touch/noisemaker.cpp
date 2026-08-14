@@ -9,6 +9,7 @@
 #include <Audio.h>
 #include "offline_reverb.h"
 #include "PitchSamplePlayer.h"
+#include <algorithm>
 extern PitchSamplePlayer WAV_preview_PSRAM;
 
 OfflineReverb noiseReverb;

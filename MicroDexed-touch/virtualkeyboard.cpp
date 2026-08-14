@@ -40,7 +40,7 @@ extern microsynth_t microsynth[NUM_MICROSYNTH];
 extern braids_t braids_osc;
 extern uint8_t microsynth_selected_instance;
 extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
-extern int numTouchPoints;
+extern uint8_t numTouchPoints;
 extern void set_sample_pitch(uint8_t sample, float playbackspeed);
 extern float get_sample_p_offset(uint8_t sample);
 extern void handleNoteOn_MIDI_DEVICE_DIN(byte inChannel, byte inNumber, byte inVelocity);

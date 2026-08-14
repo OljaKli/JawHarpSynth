@@ -216,7 +216,7 @@ bool remote_touched;
 extern int menuhelper_previous_val;
 bool check_and_confirm_midi_channels;
 
-extern AudioFilterStateVariable global_delay_filter[NUM_DEXED];
+extern AudioFilterStateVariable global_delay_filter[2];
 extern AudioMixer<4> global_delay_filter_mixer[NUM_DEXED];
 
 bool multiband_confirm = false;
@@ -4148,7 +4148,7 @@ extern void All_Button_LEDS(bool state);
 
 uint8_t touchX = 0;
 uint8_t touchY = 0;
-extern int numTouchPoints;
+extern uint8_t numTouchPoints;
 
 #if defined ESP_DISPLAY
 uint8_t esp_function_id = 255;
@@ -7210,7 +7210,7 @@ FLASHMEM void addSampleParameterEditor_uint8_t(const char* name, int16_t limit_m
     renderer);
 }
 
-extern voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+extern voice_group_config_t sample_voice_group_config[NUM_VOICE_GROUPS];
 
 FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr, void (* const renderer)(Editor* param, bool refresh) = NULL)
 {
@@ -8087,7 +8087,7 @@ FLASHMEM void UI_func_voice_group_config(uint8_t param)
 
     // Update status bar (voices used counter)
     uint8_t total_voices_used = 0;
-    for (uint8_t i = 0; i < NUM_DRUMS; i++) {
+    for (uint8_t i = 0; i < NUM_VOICE_GROUPS; i++) {
       if (sample_voice_group_config[i].max_voices > 0) {
         total_voices_used += sample_voice_group_config[i].max_voices;
       }
@@ -15592,7 +15592,7 @@ FLASHMEM void print_delay_multiplier(uint8_t instance, uint8_t param)
   set_global_delay_filter(instance);
 }
 
-extern AudioEffectGate* Gate[NUM_DEXED];
+extern AudioEffectGate* Gate[2];
 
 FLASHMEM void update_selective_values_master_effects()
 {
