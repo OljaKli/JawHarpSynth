@@ -24,6 +24,16 @@ extern RA8875 display;
 extern ILI9341_t3n display;
 #endif
 
+#ifdef OLED_DISPLAYS
+#include <Adafruit_SSD1306.h>
+extern Adafruit_SSD1306 oled_display;
+
+#if defined MCP_23017
+#include "MCP23017.h"
+extern MCP23017 mcp;
+#endif
+
+#endif
 
 extern void checkWebRemote();
 extern config_t configuration;
@@ -184,7 +194,49 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   }
   else {
     display.print((const char*)str);
+
   }
+
+#ifdef OLED_DISPLAYS
+if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_file_manager)) {
+
+SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+  switch (position) {
+  case 0:
+    mcp.write1(OLED_CS_L, LOW);
+    mcp.write1(OLED_CS_R, HIGH);
+    delay(1);
+    oled_display.clearDisplay();
+    oled_display.setCursor(0, 0);
+    if (is_flash) {
+    oled_display.println((const __FlashStringHelper*)str);
+} else {
+    oled_display.println((const char*)str);
+}
+    oled_display.display();
+    mcp.write1(OLED_CS_L, HIGH);
+    break;
+
+  case 1:
+    mcp.write1(OLED_CS_R, LOW);
+    mcp.write1(OLED_CS_L, HIGH);
+     delay(1);
+    oled_display.clearDisplay();
+    oled_display.setCursor(0, 0);
+    if (is_flash) {
+    oled_display.println((const __FlashStringHelper*)str);
+} else {
+    oled_display.println((const char*)str);
+}
+    oled_display.display();
+    break;
+  }
+}
+ mcp.write1(OLED_CS_L, HIGH);
+ mcp.write1(OLED_CS_R, HIGH);
+SPI.endTransaction();
+
+#endif
 
   ts.old_helptext_length[position] = l;
 }
@@ -214,7 +266,6 @@ FLASHMEM void helptext_r(const __FlashStringHelper* str) {
 FLASHMEM void helptext_c(const __FlashStringHelper* str) {
   helptext_impl(str, 2, true);
 }
-
 
 extern void clear_bottom_half_screen_without_backbutton();
 
@@ -2217,5 +2268,85 @@ FLASHMEM void handle_touchscreen_msp()
 FLASHMEM void handle_touchscreen_sd_content_not_found() {
   if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
     LCDML.MENU_goRoot();  // Go to main menu root
+  }
+}
+
+extern void draw_song_arranger_switch_button();
+extern void draw_song_arranger_button_states();
+extern bool song_arranger_blink_state;
+
+FLASHMEM void handle_touchscreen_song_arranger() {
+  // Blink timer for queued part
+  static elapsedMillis blinkTimer = 0;
+  const uint16_t BLINK_INTERVAL = 250; // ms
+
+  if (blinkTimer >= BLINK_INTERVAL) {
+    blinkTimer = 0;
+    song_arranger_blink_state = !song_arranger_blink_state;
+    // If there is a queued part, redraw to show the new blink state
+    if (seq.song_arranger_part_change_pending && seq.song_arranger_requested_part < 10) {
+      draw_song_arranger_button_states();
+    }
+  }
+
+  // 1. If sequencer requested a redraw (part change applied), do it now
+  if (seq.song_arranger_need_redraw_buttons) {
+    seq.song_arranger_need_redraw_buttons = false;
+    draw_song_arranger_button_states();
+  }
+
+  // 2. Touch release reset
+  if (numTouchPoints == 0) {
+    TouchButton::isAreaPressed(0, 0, 0, 0);
+    return;
+  }
+  if (ts.p.x == 0 && ts.p.y == 0) return;
+  if (ts.p.x > DISPLAY_WIDTH || ts.p.y > DISPLAY_HEIGHT) return;
+
+  // 3. Enable/disable button
+  uint16_t btn_x = GRID.X[5];
+  uint16_t btn_y = GRID.Y[0];
+  if (TouchButton::isAreaPressed(btn_x, btn_y, TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y)) {
+    seq.song_arranger_active = !seq.song_arranger_active;
+    draw_song_arranger_enable_button();
+    if (!seq.song_arranger_active) {
+      if (seq.running) handleStop();
+      seq.song_arranger_playing = false;
+      seq.song_arranger_current_part = 99;
+      seq.song_arranger_next_part = 99;
+      seq.song_arranger_part_change_pending = false;
+      seq.song_arranger_requested_part = 99;
+      draw_song_arranger_buttons(); // reset all to base colors
+    }
+    else {
+      draw_song_arranger_buttons(); // redraw in case states changed
+    }
+    return;
+  }
+
+  // 4. Switch mode button
+  uint16_t sw_x = GRID.X[4];
+  uint16_t sw_y = GRID.Y[0];
+  if (TouchButton::isAreaPressed(sw_x, sw_y, TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y)) {
+    seq.song_arranger_switch_mode = !seq.song_arranger_switch_mode;
+    draw_song_arranger_switch_button();
+    return;
+  }
+
+  // 5. Part buttons
+  const uint8_t BTN_W = TouchButton::BUTTON_SIZE_X;
+  const uint8_t BTN_H = TouchButton::BUTTON_SIZE_Y;
+  const uint8_t SPACING = TouchButton::BUTTON_SPACING;
+
+  for (uint8_t row = 0; row < 2; row++) {
+    for (uint8_t col = 0; col < 5; col++) {
+      uint8_t part_index = row * 5 + col;
+      uint16_t x = col * (BTN_W + SPACING);
+      uint16_t y = row * (BTN_H + SPACING) + 60;
+      if (TouchButton::isAreaPressed(x, y, BTN_W, BTN_H)) {
+        handle_song_arranger_touch(part_index);
+        return;
+      }
+    }
   }
 }

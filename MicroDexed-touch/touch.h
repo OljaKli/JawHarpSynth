@@ -107,6 +107,7 @@ FLASHMEM void helptext_l(const __FlashStringHelper* str);
 FLASHMEM void helptext_r(const __FlashStringHelper* str);
 FLASHMEM void helptext_c(const __FlashStringHelper* str);
 
+void handle_touchscreen_song_arranger(void);
 void update_latch_button();
 void draw_back_touchbutton();
 void draw_loop_buttons();

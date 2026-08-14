@@ -30,6 +30,9 @@
 #ifndef DEXED_SYSEX_H_INCLUDED
 #define DEXED_SYSEX_H_INCLUDED
 
+bool load_sd_song_arranger_json(uint8_t number);
+bool save_sd_song_arranger_json(uint8_t number);
+
 extern uint8_t sd_card_internal;
 extern AudioSynthDexed* MicroDexed[NUM_DEXED];
 extern void show_patch(uint8_t instance_id);

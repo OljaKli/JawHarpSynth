@@ -62,7 +62,6 @@ uint16_t sysex_len = SYSEX_HEADER_SIZE;
 
 #include "mdtfont.c"
 
-
 FLASHMEM void mdtCharToCGRAM(const uint8_t* src5, uint8_t dst16[16]) {
 	memset(dst16, 0, 16);
 	// src5: 5 bytes, each byte is a column, bit0=top row, bit6=bottom row
