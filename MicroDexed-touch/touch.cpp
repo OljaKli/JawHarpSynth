@@ -4,7 +4,7 @@
 #include <LCDMenuLib2.h>
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -18,7 +18,7 @@
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -91,8 +91,8 @@ FLASHMEM void updateTouchScreen() {
 
 #if defined RA_DISPLAY    
 
-    // TS_Point p = touch.getPoint();
-       
+      // TS_Point p = touch.getPoint();
+
 #endif
 
 #ifdef CAPACITIVE_TOUCH_DISPLAY
@@ -391,9 +391,7 @@ void virtual_typewriter_init(int8_t pos);
 
 bool virtual_typewriter_touchloop(char* out_key);
 void virtual_typewriter_update_display();
-// void drawVoiceNameButton();
-// void UI_update_instance_icons();
-// void draw_favorite_icon(uint8_t pool, uint8_t bank, uint8_t voice, uint8_t instance);
+
 extern void save_voice_name_and_exit();
 
 extern uint8_t edit_pos_global;
@@ -480,7 +478,7 @@ FLASHMEM void handle_generic_virtual_typewriter_touch() {
 
 #include "voice_categories.h"
 
-extern FLASHMEM void  print_dexed_bank_and_voice();
+extern FLASHMEM void  print_dexed_bank_and_voice(bool changed);
 
 FLASHMEM void mode_switch_dexed_voice_prep()
 {
@@ -488,7 +486,7 @@ FLASHMEM void mode_switch_dexed_voice_prep()
     seq.edit_state = 0;
   if (generic_temp_select_menu > 5)
     generic_temp_select_menu = 3;
-  print_dexed_bank_and_voice();
+  print_dexed_bank_and_voice(false);
 }
 
 FLASHMEM void handle_touchscreen_voice_select()
@@ -543,7 +541,7 @@ FLASHMEM void handle_touchscreen_voice_select()
   }
 
   // VOICE NAME BUTTON HANDLER
-  else if (!category_mode_active && TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
+  else if (!category_mode_active && TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23) && seq.cycle_touch_element == 0) {
     seq.cycle_touch_element = 2;
 #if defined GLOW
     remove_glow();
@@ -594,7 +592,7 @@ FLASHMEM void handle_touchscreen_voice_select()
         set_algo(value);
         draw_algo();
       }
-      else if (TouchButton::isPressed(GRID.X[5], GRID.Y[5] - 23)) {
+      else if (TouchButton::isPressed(GRID.X[4], GRID.Y[5] - 23)) {
         // Voice editor button
         LCDML.FUNC_setGBAToLastFunc();
         LCDML.OTHER_jumpToFunc(UI_func_voice_editor);
@@ -1768,7 +1766,7 @@ FLASHMEM void handle_touchscreen_menu()
           draw_menu_ui_icons();
         }
         ts.touch_ui_drawn_in_menu = true;
-  }
+      }
 
       if (TouchButton::isPressed(GRID.X[5], GRID.Y[2]))
       {
@@ -1859,7 +1857,7 @@ FLASHMEM void handle_touchscreen_menu()
     if (ts.keyb_in_menu_activated) {
       handleTouchVirtualKeyboard();
     }
-    }
+  }
   display.setTextSize(2);
   display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
@@ -2217,7 +2215,7 @@ FLASHMEM void handle_touchscreen_msp()
 }
 
 FLASHMEM void handle_touchscreen_sd_content_not_found() {
-    if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
-        LCDML.MENU_goRoot();  // Go to main menu root
-    }
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+    LCDML.MENU_goRoot();  // Go to main menu root
+  }
 }

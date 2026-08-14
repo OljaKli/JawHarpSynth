@@ -7,7 +7,7 @@ extern void checkWebRemote();
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -23,18 +23,18 @@ uint16_t velocityToColor(uint8_t vel) {
 }
 
 FLASHMEM void drawVelocitySlider(uint8_t currentVelocity) {
-   checkWebRemote();
+    checkWebRemote();
     display.fillRect(VEL_TEXT_X - 5, VEL_SLIDER_Y - 3, VEL_SLIDER_W + 45, VEL_SLIDER_H + 6, COLOR_BACKGROUND);
     display.setTextSize(1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setCursor(VEL_TEXT_X, VEL_SLIDER_Y + 1);
     display.print("VEL");
-   checkWebRemote();
+    checkWebRemote();
     display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, VEL_SLIDER_W, VEL_SLIDER_H, GREY3);
     uint16_t fillWidth = (currentVelocity * VEL_SLIDER_W) / 127;
     if (fillWidth > 0) {
         uint16_t color = velocityToColor(currentVelocity);
-       checkWebRemote();
+        checkWebRemote();
         display.fillRect(VEL_SLIDER_X, VEL_SLIDER_Y, fillWidth, VEL_SLIDER_H, color);
     }
     uint16_t markerX = VEL_SLIDER_X + fillWidth;
@@ -43,7 +43,7 @@ FLASHMEM void drawVelocitySlider(uint8_t currentVelocity) {
     display.printf("%3d", currentVelocity);
 }
 
-FLASHMEM void setVelocityFromTouch(int16_t x, uint8_t &currentVelocity) {
+FLASHMEM void setVelocityFromTouch(int16_t x, uint8_t& currentVelocity) {
     if (x < VEL_SLIDER_X) x = VEL_SLIDER_X;
     if (x > VEL_SLIDER_X + VEL_SLIDER_W) x = VEL_SLIDER_X + VEL_SLIDER_W;
     uint8_t newVel = ((x - VEL_SLIDER_X) * 127) / VEL_SLIDER_W;
@@ -57,7 +57,8 @@ FLASHMEM void setVelocityFromTouch(int16_t x, uint8_t &currentVelocity) {
 FLASHMEM void drawStartStopButton(uint16_t x, uint16_t y, bool isRunning) {
     if (isRunning) {
         TouchButton::drawButton(x, y, "STOP", "SEQ", TouchButton::BUTTON_RED);
-    } else {
+    }
+    else {
         TouchButton::drawButton(x, y, "START", "SEQ", TouchButton::BUTTON_ACTIVE);
     }
 }
@@ -71,7 +72,8 @@ FLASHMEM void drawLayerButton(uint16_t x, uint16_t y, uint8_t activeLayer) {
 FLASHMEM void drawCopyPasteButton(uint16_t x, uint16_t y, bool copyModeActive) {
     if (copyModeActive) {
         TouchButton::drawButton(x, y, "PASTE", "PAT", TouchButton::BUTTON_ACTIVE);
-    } else {
+    }
+    else {
         TouchButton::drawButton(x, y, "COPY", "PAT", TouchButton::BUTTON_ACTIVE);
     }
 }

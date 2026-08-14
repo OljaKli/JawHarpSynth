@@ -1,7 +1,6 @@
 #ifndef FONT5X7_H
 #define FONT5X7_H
 #include <Arduino.h>
-// Standard ASCII 5x7 font
 
 PROGMEM const uint8_t mdtfont[] = {
 
@@ -134,4 +133,5 @@ PROGMEM const uint8_t mdtfont[] = {
     0x08, 0x08, 0x2A, 0x1C, 0x08, // ->
     0x08, 0x1C, 0x2A, 0x08, 0x08, // <-
 };
+
 #endif // FONT5X7_H

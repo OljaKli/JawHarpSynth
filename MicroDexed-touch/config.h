@@ -321,10 +321,6 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define TFT_TOUCH_CS 38
 #endif
 
-// #if defined RA_DISPLAY
-// #define WAKE_PIN 38
-// #endif
-
 #define VOICE_SELECTION_MS 60000
 #define BACK_FROM_VOLUME_MS 2000
 #define MESSAGE_WAIT_TIME 1000
@@ -408,8 +404,6 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define SLICES_CONFIG_NAME "slices"
 #define ENVELOPES_CONFIG_NAME "envelope"
 #define MAX_PERF_MOD 50
-
- 
 
 // SD CARD
 #define MAX_FILES 150
@@ -1098,6 +1092,9 @@ typedef struct sys_s
   uint8_t dac_cv_4;
   uint8_t dac_cv_transpose;
   bool dac_5v;
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  uint8_t ra_btn_target[8];  // index into TARGETS[] for each panel button slot
+#endif
 } sys_t;
 
 typedef struct storage_file_s

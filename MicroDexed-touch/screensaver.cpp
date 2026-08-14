@@ -4,7 +4,7 @@
 
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -14,7 +14,7 @@
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -27,89 +27,90 @@ extern bool remote_active;
 
 #if defined RA_DISPLAY
 FLASHMEM void boot_animation() {
-    display.setTextSize(2);
-    display.fillScreen(0);
-    randomSeed(analogRead(0));
-    
-    // ---- Adjust these to fill your screen ----
-    const int charSpacing = 12;          // extra pixels between chars (try 8..15)
-    const int startX = 10;               // left margin – increase if text is cut off
-    // -----------------------------------------
-    display.setFontSpacing(charSpacing);
-    
-    const int cols = 14, rows = 10;
-    const int cellW = 16 + charSpacing;  // logical width per character
-    const int cellH = 21;
-    const int startY = 18;
-    
-    // ---- NEW: limit the X position for the word start (0..maxStartX) ----
-    const int maxStartX = cols - 10;     // so that the 10‑char word fits entirely
-    // --------------------------------------------------------------------
-    
-    char chars[cols * rows];
-    char text1[] = "WELCOME TO";
-    char text2[] = "MICRODEXED";
-    uint8_t pos_x1 = random(maxStartX + 1);   // now limited
-    uint8_t pos_y1 = random(4) + 1;
-    uint8_t pos_x2 = random(maxStartX + 1);   // limited
-    uint8_t pos_y2 = random(4) + 5;
-    uint8_t fade_point = 60;
-    uint8_t hue = random(2);
-    
-    // Initial random characters
-    for (int i = 0; i < cols * rows; i++)
-        chars[i] = 32 + random(92 - 32);
-    
-    for (uint8_t f = 0; f < 122; f++) {
-        uint16_t grayColor = ColorHSV(0, 0, 255 - f * 2);
-        uint16_t wordColor = ColorHSV(hue * 110, f * 3.8, 254);
-        uint16_t fadeColor = ColorHSV(hue * 110, fade_point * 3.8, 254 + fade_point - (f * 1.9));
-        
-        // Update character values (morphing)
-        for (int idx = 0; idx < cols * rows; idx++) {
-            int x = idx % cols, y = idx / cols;
-            bool inWord1 = (y == pos_y1 && x >= pos_x1 && x < pos_x1 + 10);
-            bool inWord2 = (y == pos_y2 && x >= pos_x2 && x < pos_x2 + 10);
-            if ((inWord1 || inWord2) && f < fade_point) {
-                char target = inWord1 ? text1[x - pos_x1] : text2[x - pos_x2];
-                if (chars[idx] > target) chars[idx]--;
-                else if (chars[idx] < target) chars[idx]++;
-            } else {
-                if ((chars[idx] > 32 && random(2) != 0) || (f >= fade_point && chars[idx] > 32 && random(7) != 1))
-                    chars[idx]--;
-            }
-        }
-        
-        // Draw all characters – group colour changes to minimise SPI
-        uint16_t lastColor = 0xFFFF;
-        for (int y = 0; y < rows; y++) {
-            for (int x = 0; x < cols; x++) {
-                int idx = y * cols + x;
-                // Optional: skip drawing if x would be off-screen (if startX + x*cellW >= display.width())
-                int cursorX = startX + x * cellW;
-                // if (cursorX >= display.width()) continue;   // optional clip
-                
-                bool inWord1 = (y == pos_y1 && x >= pos_x1 && x < pos_x1 + 10);
-                bool inWord2 = (y == pos_y2 && x >= pos_x2 && x < pos_x2 + 10);
-                
-                uint16_t color;
-                if ((inWord1 || inWord2) && f < fade_point)
-                    color = wordColor;
-                else if (inWord1 || inWord2)
-                    color = fadeColor;
-                else
-                    color = grayColor;
-                
-                // Only call setTextColor when the colour actually changes
-                if (color != lastColor) {
-                    display.setTextColor(color, 0);  // opaque black background
-                    lastColor = color;
-                }
-                display.setCursor(cursorX, startY + y * cellH);
-                display.print(chars[idx]);
-            }
-        }
+  display.setTextSize(2);
+  display.fillScreen(0);
+  randomSeed(analogRead(0));
+
+  // ---- Adjust these to fill your screen ----
+  const int charSpacing = 12;          // extra pixels between chars (try 8..15)
+  const int startX = 10;               // left margin – increase if text is cut off
+  // -----------------------------------------
+  display.setFontSpacing(charSpacing);
+
+  const int cols = 14, rows = 10;
+  const int cellW = 16 + charSpacing;  // logical width per character
+  const int cellH = 21;
+  const int startY = 18;
+
+  // ---- NEW: limit the X position for the word start (0..maxStartX) ----
+  const int maxStartX = cols - 10;     // so that the 10‑char word fits entirely
+  // --------------------------------------------------------------------
+
+  char chars[cols * rows];
+  char text1[] = "WELCOME TO";
+  char text2[] = "MICRODEXED";
+  uint8_t pos_x1 = random(maxStartX + 1);   // now limited
+  uint8_t pos_y1 = random(4) + 1;
+  uint8_t pos_x2 = random(maxStartX + 1);   // limited
+  uint8_t pos_y2 = random(4) + 5;
+  uint8_t fade_point = 60;
+  uint8_t hue = random(2);
+
+  // Initial random characters
+  for (int i = 0; i < cols * rows; i++)
+    chars[i] = 32 + random(92 - 32);
+
+  for (uint8_t f = 0; f < 122; f++) {
+    uint16_t grayColor = ColorHSV(0, 0, 255 - f * 2);
+    uint16_t wordColor = ColorHSV(hue * 110, f * 3.8, 254);
+    uint16_t fadeColor = ColorHSV(hue * 110, fade_point * 3.8, 254 + fade_point - (f * 1.9));
+
+    // Update character values (morphing)
+    for (int idx = 0; idx < cols * rows; idx++) {
+      int x = idx % cols, y = idx / cols;
+      bool inWord1 = (y == pos_y1 && x >= pos_x1 && x < pos_x1 + 10);
+      bool inWord2 = (y == pos_y2 && x >= pos_x2 && x < pos_x2 + 10);
+      if ((inWord1 || inWord2) && f < fade_point) {
+        char target = inWord1 ? text1[x - pos_x1] : text2[x - pos_x2];
+        if (chars[idx] > target) chars[idx]--;
+        else if (chars[idx] < target) chars[idx]++;
+      }
+      else {
+        if ((chars[idx] > 32 && random(2) != 0) || (f >= fade_point && chars[idx] > 32 && random(7) != 1))
+          chars[idx]--;
+      }
     }
+
+    // Draw all characters – group colour changes to minimise SPI
+    uint16_t lastColor = 0xFFFF;
+    for (int y = 0; y < rows; y++) {
+      for (int x = 0; x < cols; x++) {
+        int idx = y * cols + x;
+        // Optional: skip drawing if x would be off-screen (if startX + x*cellW >= display.width())
+        int cursorX = startX + x * cellW;
+        // if (cursorX >= display.width()) continue;   // optional clip
+
+        bool inWord1 = (y == pos_y1 && x >= pos_x1 && x < pos_x1 + 10);
+        bool inWord2 = (y == pos_y2 && x >= pos_x2 && x < pos_x2 + 10);
+
+        uint16_t color;
+        if ((inWord1 || inWord2) && f < fade_point)
+          color = wordColor;
+        else if (inWord1 || inWord2)
+          color = fadeColor;
+        else
+          color = grayColor;
+
+        // Only call setTextColor when the colour actually changes
+        if (color != lastColor) {
+          display.setTextColor(color, 0);  // opaque black background
+          lastColor = color;
+        }
+        display.setCursor(cursorX, startY + y * cellH);
+        display.print(chars[idx]);
+      }
+    }
+  }
 }
 
 #else
@@ -875,7 +876,7 @@ FLASHMEM void cube_screensaver()
 
   static float time = 0.0f;
   time += 0.05f; // Adjust this value to control animation speed
-  
+
   // Smooth oscillation between 2 and 7 using sine wave
   scaler = 4.5f + 2.5f * sinf(time); // 4.5 ± 2.5 = range [2, 7]
 }
@@ -894,6 +895,9 @@ copyright 2007 Mike Edwards
  */
 
  //using the algorithm from http://freespace.virgin.net/hugo.elias/models/m_perlin.html
+
+//common:
+
 
 float Noise2(float x, float y)
 {
@@ -943,6 +947,253 @@ float LinearInterpolate(float a, float b, float x)
   return(a * (1 - x) + b * x);
 }
 float  persistence;
+
+#if defined RA_DISPLAY
+
+// Single octave of our fast integer noise (range roughly -1..1)
+static float single_octave(float x, float y) {
+  int ix = (int)floorf(x);
+  int iy = (int)floorf(y);
+  float fx = x - ix;
+  float fy = y - iy;
+
+  // Hash function (same as before)
+  auto hash = [](int a, int b) -> uint32_t {
+    uint32_t n = a + b * 57;
+    n = (n << 13) ^ n;
+    return (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
+    };
+
+  uint32_t h00 = hash(ix, iy);
+  uint32_t h10 = hash(ix + 1, iy);
+  uint32_t h01 = hash(ix, iy + 1);
+  uint32_t h11 = hash(ix + 1, iy + 1);
+
+  // Map hash to [-1, 1]
+  auto to_float = [](uint32_t h) -> float {
+    return ((h % 1024) / 512.0f) - 1.0f;
+    };
+
+  float v00 = to_float(h00);
+  float v10 = to_float(h10);
+  float v01 = to_float(h01);
+  float v11 = to_float(h11);
+
+  // Smooth interpolation
+  float sx = fx * fx * (3 - 2 * fx);
+  float sy = fy * fy * (3 - 2 * fy);
+
+  float v0 = v00 * (1 - sx) + v10 * sx;
+  float v1 = v01 * (1 - sx) + v11 * sx;
+  return v0 * (1 - sy) + v1 * sy;
+}
+
+// Fractal Brownian Motion (fBm) – exactly like the original but faster
+float PerlinNoise2(float x, float y, float persistence, int octaves) {
+  float total = 0.0f;
+  float frequency = 1.0f;
+  float amplitude = 1.0f;
+  float maxValue = 0.0f;
+
+  for (int i = 0; i < octaves; i++) {
+    total += single_octave(x * frequency, y * frequency) * amplitude;
+    maxValue += amplitude;
+    amplitude *= persistence;
+    frequency *= 2.0f;
+  }
+  // Normalise to roughly [-1, 1] (original Perlin noise also does this)
+  return total / maxValue;
+}
+
+
+// Clipping boundaries for your 640×480 area
+#define TERRAIN_CLIP_X_MIN 0
+#define TERRAIN_CLIP_X_MAX 639/2   // 640 - 1
+#define TERRAIN_CLIP_Y_MIN 0
+#define TERRAIN_CLIP_Y_MAX 479/2   // 480 - 1
+
+// Helper: compute outcode for Cohen–Sutherland
+static int terrain_outcode(int16_t x, int16_t y) {
+  int code = 0;
+  if (x < TERRAIN_CLIP_X_MIN) code |= 1;      // left
+  else if (x > TERRAIN_CLIP_X_MAX) code |= 2; // right
+  if (y < TERRAIN_CLIP_Y_MIN) code |= 4;      // bottom
+  else if (y > TERRAIN_CLIP_Y_MAX) code |= 8; // top
+  return code;
+}
+
+// Clipped line drawing for terrain – only draws inside 640×480
+void drawlineClipped(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color) {
+  int outcode0 = terrain_outcode(x0, y0);
+  int outcode1 = terrain_outcode(x1, y1);
+  bool accept = false;
+
+  while (true) {
+    if (!(outcode0 | outcode1)) {
+      // Both endpoints inside – accept
+      accept = true;
+      break;
+    }
+    else if (outcode0 & outcode1) {
+      // Both outside on the same side – reject completely
+      break;
+    }
+    else {
+      // Need to clip
+      int outcodeOut = outcode0 ? outcode0 : outcode1;
+      int16_t x, y;
+
+      // Find intersection with clipping boundary
+      if (outcodeOut & 1) { // left
+        x = TERRAIN_CLIP_X_MIN;
+        y = y0 + (int32_t)(y1 - y0) * (TERRAIN_CLIP_X_MIN - x0) / (x1 - x0);
+      }
+      else if (outcodeOut & 2) { // right
+        x = TERRAIN_CLIP_X_MAX;
+        y = y0 + (int32_t)(y1 - y0) * (TERRAIN_CLIP_X_MAX - x0) / (x1 - x0);
+      }
+      else if (outcodeOut & 4) { // bottom
+        y = TERRAIN_CLIP_Y_MIN;
+        x = x0 + (int32_t)(x1 - x0) * (TERRAIN_CLIP_Y_MIN - y0) / (y1 - y0);
+      }
+      else { // top
+        y = TERRAIN_CLIP_Y_MAX;
+        x = x0 + (int32_t)(x1 - x0) * (TERRAIN_CLIP_Y_MAX - y0) / (y1 - y0);
+      }
+
+      // Replace the outside point with the intersection
+      if (outcodeOut == outcode0) {
+        x0 = x; y0 = y;
+        outcode0 = terrain_outcode(x0, y0);
+      }
+      else {
+        x1 = x; y1 = y;
+        outcode1 = terrain_outcode(x1, y1);
+      }
+    }
+  }
+  if (accept) {
+    // Draw the clipped line using your existing macro
+    display.drawLine(x0, y0, x1, y1, color);
+  }
+}
+
+// Use the actual drawing area size
+#define DISPLAY_WIDTH_TERRAIN  640/2
+#define DISPLAY_HEIGHT_TERRAIN 480/2
+
+void terrain_project(float ax, float ay, float az, float* bx, float* by)
+{
+  // Three‑point perspective, centered in 640×480 area
+  *bx = ax / (p * ax + q * ay + r * az + 1) + ((DISPLAY_WIDTH / 2));
+  *by = ay / (p * ax + q * ay + r * az + 1) + ((DISPLAY_HEIGHT / 2.2));
+
+
+}
+using namespace std;
+int fly = 1;
+
+class Terrain {
+public:
+  int cols, rows;
+  int scl = 29;                         // from speed optimisation
+  int xoffset = DISPLAY_WIDTH_TERRAIN / 2;
+  int octaves;
+  float yy = 3.0;                        // adjust as needed to fill screen
+  float ang = -0.045;
+
+
+  void setup() {
+    fly = 1;
+    cols = DISPLAY_WIDTH_TERRAIN / scl;   // 640/32 = 20
+    rows = DISPLAY_HEIGHT_TERRAIN / scl + 12; // 480/32+12 = 27
+    octaves = 3;
+  }
+
+
+  void draw(int yOffset)
+  {
+    float d_x1 = 0;
+    float d_x2 = 0;
+    float d_y1 = 0;
+    float d_y2 = 0;
+    int col;
+    uint8_t z_shift = 0;
+    for (int y = yOffset; y < rows; y++) {
+      // darken at horizon a bit
+      uint8_t brightness = screensaver_brightness;
+      float factor = (y - yOffset) * 0.05;
+      brightness *= min(factor, 1.0);
+
+      for (int x = 0; x < cols + 4; x++) {
+        for (uint8_t d = 0; d < 2; d++) {
+          if (d == 0)
+          {
+            col = COLOR_BACKGROUND;
+            z_shift = 1;
+          }
+          else
+          {
+            col = ColorHSV(screensaver_counthue, 254, brightness);
+            z_shift = 0;
+          }
+          a1x = x * scl - xoffset;
+          a1y = y * yy;
+          a1z = PerlinNoise2((float)x, y - fly + z_shift, persistence, octaves);
+          rotatex(&a1x, &a1y, &a1z, ang);
+          terrain_project(a1x, a1y, a1z, &b1x, &b1y);
+          d_x1 = b1x;
+          d_y1 = b1y;
+          a1x = (x + 1) * scl - xoffset;
+          a1y = y * yy;
+          a1z = PerlinNoise2((float)(x + 1), y - fly + z_shift, persistence, octaves);
+          rotatex(&a1x, &a1y, &a1z, ang);
+          terrain_project(a1x, a1y, a1z, &b1x, &b1y);
+          d_x2 = b1x;
+          d_y2 = b1y;
+          drawlineClipped(d_x1, d_y1, d_x2, d_y2, col);
+          a1y = y * yy + yy;
+          a1z = PerlinNoise2((float)(x + 1), (y + 1 - fly + z_shift), persistence, octaves);
+          rotatex(&a1x, &a1y, &a1z, ang);
+          terrain_project(a1x, a1y, a1z, &b1x, &b1y);
+          d_x1 = b1x;
+          d_y1 = b1y;
+          drawlineClipped(d_x1, d_y1, d_x2, d_y2, col);
+        }
+      }
+      check_midi_devices();
+    }
+    fly = fly + 1;
+  }
+};
+
+
+Terrain terrain;
+int yTerrainOffset = 0;
+
+FLASHMEM void terrain_init()
+{
+  terrain.setup();
+  if (rand() & 0x01) {
+    yTerrainOffset = 3;
+    splash_draw_header();
+    splash_draw_D();
+    splash_draw_X(1);
+    splash_draw_reverseD();
+  }
+  else {
+    yTerrainOffset = 0;
+    draw_logo2(20);
+  }
+}
+FLASHMEM void terrain_frame()
+{
+  terrain.draw(yTerrainOffset);
+}
+
+
+#else
+
 float PerlinNoise2(float x, float y, float persistance, int octaves)
 {
   float frequency, amplitude;
@@ -1063,6 +1314,7 @@ FLASHMEM void terrain_frame()
 {
   terrain.draw(yTerrainOffset);
 }
+#endif
 
 class PatternFlock {
 public:
@@ -1138,8 +1390,6 @@ FLASHMEM void flock_frame()
   flock_instance.drawFrame();
 }
 
-
-
 class GameOfLife {
 private:
   uint16_t col = COLOR_SYSTEXT;
@@ -1173,8 +1423,9 @@ public:
     delete[] newGrid;
   }
 
-  FLASHMEM void initialize() {
+    void gol_initialize() {
     randomSeed(analogRead(0));
+      col = ColorHSV(screensaver_counthue, 254, 254);
     for (uint16_t x = 0; x < GRID_WIDTH; x++) {
       for (uint16_t y = 0; y < GRID_HEIGHT; y++) {
         // Random initialization - about 15% of cells alive
@@ -1185,7 +1436,7 @@ public:
   }
 
   FLASHMEM void update() {
-    col = ColorHSV(screensaver_counthue, 254, 254);
+  
     computeNextGeneration();
   }
 
@@ -1195,7 +1446,7 @@ public:
     if (size != CELL_SIZE) {
       CELL_SIZE = size;
       resetGridDimensions();
-      initialize();
+      gol_initialize();
     }
   }
 
@@ -1222,7 +1473,7 @@ private:
     }
   }
 
-   void computeNextGeneration() {
+  void computeNextGeneration() {
     // Compute next generation
     for (uint16_t x = 0; x < GRID_WIDTH; x++) {
       for (uint16_t y = 0; y < GRID_HEIGHT; y++) {
@@ -1281,7 +1532,7 @@ GameOfLife life;
 FLASHMEM void gol_setup() {
   // Initialize your display here
 
-  life.initialize();
+  life.gol_initialize();
 }
 
 FLASHMEM void gol_loop() {
@@ -1294,7 +1545,7 @@ FLASHMEM void gol_loop() {
 uint32_t ar_bits[6] = { 0 }; // 6x32 bits = 192 bits, enough for 18x34 (612 bits needed)
 uint8_t pixel;
 uint8_t w = 16;
-uint8_t spacer=4;
+uint8_t spacer = 4;
 #define RNUM_SEED 0xBAD
 static uint16_t rnum = RNUM_SEED;
 
@@ -1396,7 +1647,7 @@ FLASHMEM void paintCM5_II(int x, int y) {
   uint8_t i, j;
   uint8_t ledsize = 6;
 
-  for (i = 0; i < w ; i++) {
+  for (i = 0; i < w; i++) {
     for (j = 0; j < 32; j++) {
       bool pixel = get_pixel(i, j);
       if (j % 2 == 0) {
@@ -1436,7 +1687,7 @@ FLASHMEM void CM5_frame_II() {
     }
   }
 
- paintCM5_II(0, 2);
+  paintCM5_II(0, 2);
   delay(150);
   check_midi_devices();
 
@@ -1451,6 +1702,10 @@ extern void checkWebRemote();
 // Assuming display is defined elsewhere with appropriate methods
 
 AsteroidsScreensaver::AsteroidsScreensaver() : score(0), activeAsteroids(0) {}
+
+#if defined RA_DISPLAY
+uint8_t textcounter = 0;
+#endif
 
 FLASHMEM void AsteroidsScreensaver::begin() {
   randomSeed(analogRead(0));
@@ -1488,7 +1743,7 @@ FLASHMEM void AsteroidsScreensaver::begin() {
 }
 
 FLASHMEM void AsteroidsScreensaver::update() {
-   // Ensure ship is initialized
+  // Ensure ship is initialized
   if (ship.x == 0 && ship.y == 0) {
     ship.x = DISPLAY_WIDTH / 2;
     ship.y = DISPLAY_HEIGHT / 2;
@@ -1544,10 +1799,24 @@ FLASHMEM void AsteroidsScreensaver::update() {
   ship.wasHit = false;
 
   // Draw score at top middle
+
+#if defined RA_DISPLAY
+  textcounter++;
+
+  if (textcounter % 5 == 0)
+    drawFuelGauge();
+  drawShieldGauge();
+  if (textcounter > 25)
+  {
+    drawScore();
+    textcounter = 0;
+
+  }
+#else
   drawScore();
-  // Draw gauges
   drawFuelGauge();
   drawShieldGauge();
+#endif
 
   if (remote_active) {
     display.flushSysEx();
@@ -1666,7 +1935,12 @@ FLASHMEM void AsteroidsScreensaver::drawAsteroid(Asteroid& a, uint16_t color) {
 
     checkWebRemote();
 
+#if defined RA_DISPLAY
+    drawlineClipped(x0, y0, x1, y1, color);
+#else
     display.drawLine(x0, y0, x1, y1, color);
+#endif
+
   }
 }
 
@@ -2201,17 +2475,35 @@ FLASHMEM void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
   float rightY = ship.y + sin(ship.angle - 2.5 * PI / 3) * ship.size;
 
   // Draw ship
+
+
   checkWebRemote();
+#if defined RA_DISPLAY
+  drawlineClipped(noseX, noseY, leftX, leftY, color);
+#else
   display.drawLine(noseX, noseY, leftX, leftY, color);
+#endif
 
   checkWebRemote();
+#if defined RA_DISPLAY
+  drawlineClipped(noseX, noseY, rightX, rightY, color);
+#else
   display.drawLine(noseX, noseY, rightX, rightY, color);
+#endif
 
   checkWebRemote();
+#if defined RA_DISPLAY
+  drawlineClipped(leftX, leftY, ship.x, ship.y, color);
+#else
   display.drawLine(leftX, leftY, ship.x, ship.y, color);
+#endif
 
   checkWebRemote();
+#if defined RA_DISPLAY
+  drawlineClipped(rightX, rightY, ship.x, ship.y, color);
+#else
   display.drawLine(rightX, rightY, ship.x, ship.y, color);
+#endif
 
   // Draw thrusters if active
   if (ship.thrusting) {
@@ -2228,7 +2520,11 @@ FLASHMEM void AsteroidsScreensaver::drawSpaceship(uint16_t color) {
     uint16_t flameColor = (color == 0x0000) ? COLOR_BACKGROUND : RED;
 
     checkWebRemote();
+#if defined RA_DISPLAY
+    drawlineClipped(rearX, rearY, flameX, flameY, flameColor);
+#else
     display.drawLine(rearX, rearY, flameX, flameY, flameColor);
+#endif
   }
 }
 
@@ -2238,7 +2534,11 @@ FLASHMEM void AsteroidsScreensaver::drawShot(LaserShot& shot) {
   float backY = shot.y - shot.vy * 0.6f;
 
   checkWebRemote();
+#if defined RA_DISPLAY
+  drawlineClipped(backX, backY, shot.x, shot.y, RED);
+#else
   display.drawLine(backX, backY, shot.x, shot.y, RED);
+#endif
 }
 
 FLASHMEM void AsteroidsScreensaver::drawFuelGauge() {
@@ -2300,7 +2600,7 @@ FLASHMEM void AsteroidsScreensaver::drawShieldGauge() {
   }
 
   // Draw gauge outline
- checkWebRemote();
+  checkWebRemote();
   display.drawRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight, COLOR_SYSTEXT);
 
 }

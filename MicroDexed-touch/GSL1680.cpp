@@ -23,7 +23,7 @@ extern ts_t ts;
 
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -31,7 +31,7 @@ extern ts_t ts;
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -58,38 +58,17 @@ FLASHMEM void displaybootmessage()
 
 FLASHMEM void GSL1680::begin()
 {
-    //    bootMessage("INIT TOUCH");
-    //     delay(10);
 
-    bootMessage("GSL1680: Start boot up sequence");
-
-    // pinMode(WAKE, OUTPUT);          //
-    // digitalWrite(WAKE, LOW);        //
-    // pinMode(TFT_TOUCH_IRQ, INPUT);  // Startup sequence PIN part
-
-    // delay(30);
-    //bootMessage("TOGGLE WAKE");
-    // digitalWrite(WAKE, HIGH);
-    // delay(50);
-    // digitalWrite(WAKE, LOW);
-    // delay(50);
-    // digitalWrite(WAKE, HIGH);
-    //delay(5);
-
+    bootMessage("GSL1680: Startup sequence");
     Wire.begin();
     Wire.setClock(500000);
     //Wire.setDefaultTimeout(2000);
 
     // CTP startup sequence
-    bootMessage("GSL1680:Clear reg");
     clear_reg();
-    bootMessage("GSL1680:Reset chip");
     reset();
-    bootMessage("GSL1680: Load FW");
     loadfw();
-    bootMessage("GSL1680: Reset chip 2");
     reset();
-    bootMessage("GSL1680: Startup Chip");
     startchip();
     bootMessage("GSL1680: Boot up complete");
     Wire.setClock(200000);
@@ -134,9 +113,9 @@ FLASHMEM void GSL1680::reset()
         int r = Wire.endTransmission();
 
         if (r != 0) {
-            #ifdef DEBUG
+#ifdef DEBUG
             LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(REG[i], HEX);
-            #endif
+#endif
         }
 
         delay(TIMER[i]);
@@ -201,9 +180,9 @@ void GSL1680::datasend(uint8_t REG, uint8_t DATA[], uint16_t NB)
     int r = Wire.endTransmission();
 
     if (r != 0) {
-        #ifdef DEBUG
+#ifdef DEBUG
         LOG.print("i2c write error: "); LOG.print(r); LOG.print(" "); LOG.println(REG, HEX);
-        #endif
+#endif
     }
 
 

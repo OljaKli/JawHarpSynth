@@ -9,28 +9,6 @@ One advantage over Akai APC Mini Mk2 is that Mk1 needs only one midi channel, no
 Very helpful was the detailed APC Mk1 picture from
  https://github.com/TomasHubelbauer/akai-apc-mini 
 
-Unfortunately, it crashes at inserting/removing steps, in pattern mode.
-It also crashes at changing APC mode with Shift key and CLIP_STOP/SOLO/REC_ARM.
-What works:
-- play/pause with REC_ARM key
-- pattern is shown, when changed view from MDT screen
-- changing to other pattern with CLIP_STOP/SOLO
-- editing pattern velocities, with middle rows pads and sliders
-- sample triggering in pattern, with 2nd row from buttom
-- changing sample with track row (VOLUME, PAN, SEND, DEVICE)
-- changing sample level in pattern with faders (no support for pad brightness in Mk1)
-- song mode is shown, when changed view from MDT screen
-- mute matrix works too, when changed view from MDT screen.
-- screensaver
-
-I manually patched the original 1.9.8.6 APC hex with the Tracks/Scenes/Shift MIDI Note codes,
- so that the provided hex provides also USB BUS Power to APC Mk1:
-  mdt_PSRAM-CAPACITIVE_TOUCH-APCMK1_1_9_8_6patchedWithHexEditor.hex
-Explained reason of patching, extract from MDT manual:
-"Connect the APC to the MDT USB HOST Port. It should power up by the power provided from the Teensy Micro USB Port if you have
-loaded a binary firmware from the Codeberg MDT Homepage. It will not power up, when you have compiled the code from source. This is
-because some low level modification to the USB Host Library was needed to make it startup without any external power source."
-
 Differences summary between Akai APC Mini Mk2 and Mk1:
 | MIDI Diffs      |   APC Mini MK2    |   APC Mini MK1      |
 |-----------------|-------------------|---------------------|
@@ -46,9 +24,25 @@ Differences summary between Akai APC Mini Mk2 and Mk1:
 #if (APC != 1) //regular apc mini mk2
 #define APC_MINI_BUTTON_RIGHT_FIRST  112 //1st scene/vertical button
 #define APC_MINI_BUTTON_BOTTOM_FIRST 100 //1st track/horizontal button
+#define APC_MINI_BUTTON_BOTTOM_VOLUME        (APC_MINI_BUTTON_BOTTOM_FIRST+0) //100, volume sample
+#define APC_MINI_BUTTON_BOTTOM_PAN           (APC_MINI_BUTTON_BOTTOM_FIRST+1) //101, panorama sample
+#define APC_MINI_BUTTON_BOTTOM_SEND          (APC_MINI_BUTTON_BOTTOM_FIRST+2) //102, send reverb,delay1,delay2 sample
+#define APC_MINI_BUTTON_BOTTOM_DEVICE        (APC_MINI_BUTTON_BOTTOM_FIRST+3) //103, device pitch,cutoff,reso sample
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P8     (APC_MINI_BUTTON_BOTTOM_FIRST+4) //104, pad +8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M8     (APC_MINI_BUTTON_BOTTOM_FIRST+5) //105, pad -8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M1     (APC_MINI_BUTTON_BOTTOM_FIRST+6) //106, pad -1
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P1     (APC_MINI_BUTTON_BOTTOM_FIRST+7) //107, pad +1
 #else // for Akai APC Mini Mk1
 #define APC_MINI_BUTTON_RIGHT_FIRST   82 //1st scene/vertical button
 #define APC_MINI_BUTTON_BOTTOM_FIRST  64 //1st track/horizontal button
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P8     (APC_MINI_BUTTON_BOTTOM_FIRST+0) //64, pad +8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M8     (APC_MINI_BUTTON_BOTTOM_FIRST+1) //65, pad -8
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M1     (APC_MINI_BUTTON_BOTTOM_FIRST+2) //66, pad -1
+#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P1     (APC_MINI_BUTTON_BOTTOM_FIRST+3) //67, pad +1
+#define APC_MINI_BUTTON_BOTTOM_VOLUME        (APC_MINI_BUTTON_BOTTOM_FIRST+4) //68, volume sample
+#define APC_MINI_BUTTON_BOTTOM_PAN           (APC_MINI_BUTTON_BOTTOM_FIRST+5) //69, panorama sample
+#define APC_MINI_BUTTON_BOTTOM_SEND          (APC_MINI_BUTTON_BOTTOM_FIRST+6) //70, send reverb,delay1,delay2 sample
+#define APC_MINI_BUTTON_BOTTOM_DEVICE        (APC_MINI_BUTTON_BOTTOM_FIRST+7) //71, device pitch,cutoff,reso sample
 #endif
 
 #define APC_MINI_BUTTON_RIGHT_PATTERN_EDITOR APC_MINI_BUTTON_RIGHT_FIRST     //112 or 82
@@ -64,10 +58,6 @@ Differences summary between Akai APC Mini Mk2 and Mk1:
 #define APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL  (APC_MINI_BUTTON_RIGHT_FIRST+6) //118 or 88
 #define APC_MINI_BUTTON_RIGHT_DISAB2_PADSEL  (APC_MINI_BUTTON_RIGHT_FIRST+7) //119 or 89
 
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P8     (APC_MINI_BUTTON_BOTTOM_FIRST+4) //104 or 68, pad +8
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M8     (APC_MINI_BUTTON_BOTTOM_FIRST+5) //105 or 69, pad -8
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_M1     (APC_MINI_BUTTON_BOTTOM_FIRST+6) //106 or 70, pad -1
-#define APC_MINI_BUTTON_BOTTOM_SAMPLE_P1     (APC_MINI_BUTTON_BOTTOM_FIRST+7) //107 or 71, pad +1
 
 #ifndef apc_h_
 #define apc_h_
@@ -75,6 +65,40 @@ extern bool APC_BUTTONS_RIGHT[8];
 void apc(uint8_t a, uint8_t b, uint8_t c);
 void apc_clear_grid();
 void apc_clear_right_buttons();
+
+/* In pattern mode, use Shift with the arrow buttons to switch control to 
+Attack, Hold/Decay, Sustain, Release for the drum sample with the corresponding fader.
+Switch between Hold/Decay by repeating Shift+down-arrow.
+Or press (without shift) Volume to switch control to sample volume,
+or press Pan for sample panorama.
+Press Send multiple times to change send level for reverb, delay1, delay2.
+Press Device multiple times to change pitch, filter cutoff, resonance.
+*/
+void apc_clear_bottom_buttons();
+#define APC_EDIT_OFFSET 10 /* the mega offset for 2 adjacent buttons, it's big to have more mini-offsets when pressing same button multiple times */
+typedef enum {
+#if (APC != 1) //regular apc mini mk2 starts Volume/Pan/Send/Device and arrows (P8,M8,P1,M1)
+      APC_EDIT_VOLUME    = 0,
+      APC_EDIT_P8_ENVATT = APC_EDIT_OFFSET * 4,
+#else //APC Mk1 starts with arrows (P8,M8,P1,M1) and then Volume/Pan/Send/Device
+      APC_EDIT_VOLUME    = APC_EDIT_OFFSET * 4,
+      APC_EDIT_P8_ENVATT = 0,
+#endif
+      APC_EDIT_PAN        = APC_EDIT_VOLUME + APC_EDIT_OFFSET,
+      APC_EDIT_SEND_REV   = APC_EDIT_VOLUME + APC_EDIT_OFFSET * 2,
+      APC_EDIT_SEND_DLAY1 = APC_EDIT_SEND_REV + 1,
+      APC_EDIT_SEND_DLAY2 = APC_EDIT_SEND_REV + 2,
+      APC_EDIT_DEV_PITCH  = APC_EDIT_VOLUME + APC_EDIT_OFFSET * 3,
+      APC_EDIT_DEV_CUTOFF = APC_EDIT_DEV_PITCH + 1,
+      APC_EDIT_DEV_RESO   = APC_EDIT_DEV_PITCH + 2,
+
+      APC_EDIT_M8_ENVHOLD = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET,
+      APC_EDIT_M8_ENVDEC  = APC_EDIT_M8_ENVHOLD + 1,
+      APC_EDIT_M1_ENVSUS  = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET * 2,
+      APC_EDIT_P1_ENVREL  = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET * 3,
+
+      APC_EDIT_INIT_INVALID} enum_apcmixmod_t;
+void apc_set_bottom_button(int8_t volpansenddev);
 void print_apc_source_selection_pads();
 void apc_print_right_buttons();
 void apc_trigger_print_in_lcd(void);

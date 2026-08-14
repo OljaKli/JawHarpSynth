@@ -59,7 +59,7 @@ MCP23017 mcp(0x20);
 
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -68,6 +68,11 @@ MCP23017 mcp(0x20);
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
 #include "UI.h"
+
+#ifdef RA_DISPLAY
+#include "ui_ra_panel.h"
+#endif
+
 #include "touch.h"
 #include "USBHost_t36.h"
 #include "MD_REncoder.h"
@@ -99,7 +104,7 @@ using namespace TeensyTimerTool;
 
 #ifdef RA_DISPLAY
 #include <GSL1680.h>
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 #elif defined ESP_DISPLAY
 #include "esp_touch.h"
@@ -161,7 +166,7 @@ bool suppressReload; //liveseq
 
 #ifdef RA_DISPLAY
 extern GSL1680 touch;
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY
 extern esp_touchscreen touch;
@@ -304,7 +309,8 @@ PitchSamplePlayer* Drum[NUM_DRUMS];
 // Voice group configuration: per-group voice budgets and allocation strategies
 voice_group_config_t sample_voice_group_config[NUM_VOICE_GROUPS];
 
-#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+//#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
+#if defined(COMPILE_FOR_PSRAM)
 #include "effect_delay_ext8.h"
 #endif
 
@@ -341,7 +347,7 @@ PitchSamplePlayer WAV_preview_PSRAM;
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -1150,7 +1156,7 @@ bool espAlive = false;
 uint32_t lastESPHandshakeTime = 0;
 
 FLASHMEM void sendVersion() {
-  const char* version = VERSION;  
+  const char* version = VERSION;
   uint8_t len = strlen(version);
   uint8_t payload[1 + len];
   payload[0] = len;
@@ -1189,37 +1195,39 @@ void sendVolumeIconsMode(bool volumeIcons) {
 bool handshakeComplete = false;   // true when both versions received and compatible
 #endif
 
-// uint8_t psramspeed = 0;
-// FLASHMEM void update_psram_speed(int speed_mhz) {
-//   // What clocks exist:
-//   static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
 
-//   // See what the closest setting might be:
-//   uint8_t clk_save = 0, divider_save = 0;
-//   int min_delta = speed_mhz;
-//   for (uint8_t clk = 0; clk < 4; clk++) {
-//     uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
-//     int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
-//     if ((delta < min_delta) && (divider < 8)) {
-//       min_delta = delta;
-//       clk_save = clk;
-//       divider_save = divider;
-//     }
-//   }
+uint8_t psramspeed = 0;
 
-//   // first turn off FLEXSPI2
-//   CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+FLASHMEM void update_psram_speed(int speed_mhz) {
+  // What clocks exist:
+  static const int flexspio2_clock_speeds[] = { 396, 720, 665, 528 };
 
-//   divider_save--; // 0 biased.
-//   psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
+  // See what the closest setting might be:
+  uint8_t clk_save = 0, divider_save = 0;
+  int min_delta = speed_mhz;
+  for (uint8_t clk = 0; clk < 4; clk++) {
+    uint8_t divider = (flexspio2_clock_speeds[clk] + (speed_mhz / 2)) / speed_mhz;
+    int delta = abs(speed_mhz - flexspio2_clock_speeds[clk] / divider);
+    if ((delta < min_delta) && (divider < 8)) {
+      min_delta = delta;
+      clk_save = clk;
+      divider_save = divider;
+    }
+  }
 
-//   // Set the clock settings.
-//   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
-//     | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
+  // first turn off FLEXSPI2
+  CCM_CCGR7 &= ~CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
 
-//   // Turn FlexSPI2 clock back on
-//   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-// }
+  divider_save--; // 0 biased.
+  psramspeed = flexspio2_clock_speeds[clk_save] / (divider_save + 1);
+
+  // Set the clock settings.
+  CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
+    | CCM_CBCMR_FLEXSPI2_PODF(divider_save) | CCM_CBCMR_FLEXSPI2_CLK_SEL(clk_save);
+
+  // Turn FlexSPI2 clock back on
+  CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
+}
 
 
 FLASHMEM void setup()
@@ -1227,20 +1235,17 @@ FLASHMEM void setup()
 
 #ifdef PSRAM
 
-  //#ifndef LARGEPSRAM
-    //**************************
-    //Reset QSPI clock from 88Mhz to 132 Mhz.
+#ifndef LARGEPSRAM
+  //Reset QSPI clock from 88Mhz to 132 Mhz.
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_OFF);
   CCM_CBCMR = (CCM_CBCMR & ~(CCM_CBCMR_FLEXSPI2_PODF_MASK | CCM_CBCMR_FLEXSPI2_CLK_SEL_MASK))
     | CCM_CBCMR_FLEXSPI2_PODF(4) | CCM_CBCMR_FLEXSPI2_CLK_SEL(2); // 528/5 = 132 MHz
   CCM_CCGR7 |= CCM_CCGR7_FLEXSPI2(CCM_CCGR_ON);
-  //**************************
 
-
-//   update_psram_speed(132);
-// #else
-//   update_psram_speed(120);
-// #endif
+  update_psram_speed(132);
+#else
+  update_psram_speed(120);
+#endif
 
 #endif
 
@@ -1387,18 +1392,16 @@ FLASHMEM void setup()
 
 
 #if defined RA_DISPLAY
-display.begin(RA8875_800x480);
-display.loadMDTfontToCGRAM();
-display.setCGRAMAsDefaultFont();
+  display.begin(RA8875_800x480);
+  display.setCGRAMAsDefaultFont();
+  delay(2);
 
-delay(2);
-
-display.backlight(true);
-delay (2);
-display.setRotation(2);
+  display.backlight(true);
+  delay(2);
+  display.setRotation(2);
 
 #else
- display.begin();
+  display.begin();
 #endif
 
   // invert display colors
@@ -1411,8 +1414,8 @@ display.setRotation(2);
 
 
 #ifdef RA_DISPLAY
- touch.begin();
- touch_ic_found = true;
+  touch.begin();
+  touch_ic_found = true;
 #elif defined GENERIC_DISPLAY
   touch.begin();
   touch_ic_found = true;
@@ -2067,30 +2070,30 @@ FLASHMEM void handle_touchscreen_midi_channel_page()
     print_midi_channel_activity(39, 7, microdexed_peak_2.read());
     print_midi_channel_activity(39, 8, microdexed_peak_3.read());
 #endif
-    print_midi_channel_activity(39, 9, (ep_peak_l.read() + ep_peak_r.read()) / 2);
+    print_midi_channel_activity(39, 10, (ep_peak_l.read() + ep_peak_r.read()) / 2);
     if (microsynth_peak_osc_0.available())
-      print_midi_channel_activity(39, 11, microsynth_peak_osc_0.read());
-    else
-      print_midi_channel_activity(39, 11, 0);
-    if (microsynth_peak_osc_1.available())
-      print_midi_channel_activity(39, 12, microsynth_peak_osc_1.read());
+      print_midi_channel_activity(39, 12, microsynth_peak_osc_0.read());
     else
       print_midi_channel_activity(39, 12, 0);
+    if (microsynth_peak_osc_1.available())
+      print_midi_channel_activity(39, 13, microsynth_peak_osc_1.read());
+    else
+      print_midi_channel_activity(39, 13, 0);
 
     if (braids_peak_l.available() && braids_peak_r.available())
       print_midi_channel_activity(39, 14, (braids_peak_l.read() + braids_peak_r.read()) / 2);
     else
       print_midi_channel_activity(39, 14, 0);
 
-    print_midi_channel_activity(39, 16, ts.msp_peak[0]);
-    print_midi_channel_activity(39, 17, ts.msp_peak[1]);
+    print_midi_channel_activity(39, 15, ts.msp_peak[0]);
+    print_midi_channel_activity(39, 16, ts.msp_peak[1]);
     ts.msp_peak[0] = ts.msp_peak[0] / 1.05;
     ts.msp_peak[1] = ts.msp_peak[1] / 1.05;
 
     if (drum_mixer_peak_r.available() && drum_mixer_peak_l.available())
-      print_midi_channel_activity(39, 18, (drum_mixer_peak_l.read() + drum_mixer_peak_r.read()) / 2);
+      print_midi_channel_activity(39, 17, (drum_mixer_peak_l.read() + drum_mixer_peak_r.read()) / 2);
     else
-      print_midi_channel_activity(39, 18, 0);
+      print_midi_channel_activity(39, 17, 0);
 
     //// sample slices activity is missing here phtodo
 
@@ -2707,7 +2710,7 @@ uint8_t LED_MIDI_OUT_counter = 0;
 
 #if defined APC
 extern void apc_drawString_Background();
-bool apc_scroll_message = true;
+uint8_t apc_scroll_message = true;
 bool apc_welcome_message = true;
 int apc_scroll_counter = 0;
 char apc_scrolltext[16];
@@ -3066,13 +3069,13 @@ extern void processIncomingSerial();
 
 void checkWebRemote()
 {
-if ( remote_active)
-display.console = true;
+  if (remote_active)
+    display.console = true;
 }
 
 void loop()
 {
-
+  //display.fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, BTE_SCRATCH_MAX_W, BTE_SCRATCH_MAX_H, RA8875_RED);
 #if defined ESP_DISPLAY
   static uint8_t lastEditState = 0;
   if (seq.edit_state != lastEditState) {
@@ -3164,6 +3167,7 @@ void loop()
     }
   }
 
+
 #if 1//defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
   // MIDI input handling
   check_midi_devices();
@@ -3197,6 +3201,9 @@ void loop()
   {
     touchReadTimer = 0;
     updateTouchScreen();
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+    ra_panel_handle_touch();
+#endif
     const TouchFn touchHandler = getCurrentTouchHandler();
     if (touchHandler) {
       touchHandler();
@@ -5610,6 +5617,7 @@ FLASHMEM void handleStart(void)
     {
       APC_BUTTONS_RIGHT[2] = true;
       apc_print_right_buttons();
+      apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
     }
 #endif
 
@@ -5627,10 +5635,10 @@ FLASHMEM void handleStart(void)
     display.fillRect(36 * CHAR_width_small, CHAR_height_small, button_size_x * CHAR_width_small, CHAR_height_small * button_size_y, COLOR_BACKGROUND); // clear scope
   }
 
-   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drum_pattern_editor))
-   {
-pendingFirstStepDraw = true;
-   }
+  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_drum_pattern_editor))
+  {
+    pendingFirstStepDraw = true;
+  }
 
 
 #if defined BUTTON_LEDS && defined MCP_23017
@@ -5694,6 +5702,7 @@ FLASHMEM void handleStop(void)
       {
         APC_BUTTONS_RIGHT[2] = false;
         apc_print_right_buttons();
+        apc_set_bottom_button((int8_t)APC_EDIT_VOLUME);
       }
 #endif
 
@@ -6023,6 +6032,13 @@ FLASHMEM void check_configuration_sys(void)
   setup_screensaver();
 
   configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed, 60, 500);
+
+#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+  for (uint8_t i = 0; i < 8; i++) {
+    if (configuration.sys.ra_btn_target[i] >= RA_NUM_TARGETS)
+      configuration.sys.ra_btn_target[i] = i;  // default: slot i → target i
+  }
+#endif
 }
 
 FLASHMEM void check_configuration_fx(void)
@@ -6662,58 +6678,58 @@ static size_t lastMsgLen = 0;
 
 // Core function that does the actual drawing and erasing
 FLASHMEM void bootMessageCore(const char* msg, int num, const char* suffix) {
-    display.setTextSize(2);
-    display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    display.setCursor(0, 0);
-    
-    size_t totalLen = 0;
-    
-    // Print main message
-    display.print(msg);
-    totalLen += strlen(msg);
-    
-    // Print integer if present (num != -1 sentinel)
-    if (num != -1) {
-        char numBuf[12];
-        itoa(num, numBuf, 10);
-        display.print(numBuf);
-        totalLen += strlen(numBuf);
+  display.setTextSize(2);
+  display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+  display.setCursor(0, 0);
+
+  size_t totalLen = 0;
+
+  // Print main message
+  display.print(msg);
+  totalLen += strlen(msg);
+
+  // Print integer if present (num != -1 sentinel)
+  if (num != -1) {
+    char numBuf[12];
+    itoa(num, numBuf, 10);
+    display.print(numBuf);
+    totalLen += strlen(numBuf);
+  }
+
+  // Print suffix string if present
+  if (suffix != nullptr) {
+    display.print(suffix);
+    totalLen += strlen(suffix);
+  }
+
+  // Erase leftover characters from previous message
+  if (lastMsgLen > totalLen) {
+    for (size_t i = totalLen; i < lastMsgLen; i++) {
+      display.print(' ');
     }
-    
-    // Print suffix string if present
-    if (suffix != nullptr) {
-        display.print(suffix);
-        totalLen += strlen(suffix);
-    }
-    
-    // Erase leftover characters from previous message
-    if (lastMsgLen > totalLen) {
-        for (size_t i = totalLen; i < lastMsgLen; i++) {
-            display.print(' ');
-        }
-    }
-    
-    lastMsgLen = totalLen;
+  }
+
+  lastMsgLen = totalLen;
 }
 
 // Overload 1: just a string
 void bootMessage(const char* msg) {
-    bootMessageCore(msg, -1, nullptr);
+  bootMessageCore(msg, -1, nullptr);
 }
 
 // Overload 2: string + integer
 void bootMessage(const char* msg, int num) {
-    bootMessageCore(msg, num, nullptr);
+  bootMessageCore(msg, num, nullptr);
 }
 
 // Overload 3: string + integer + string suffix
 void bootMessage(const char* msg, int num, const char* suffix) {
-    bootMessageCore(msg, num, suffix);
+  bootMessageCore(msg, num, suffix);
 }
 
 // Overload 4: string + string suffix (no integer)
 void bootMessage(const char* msg, const char* suffix) {
-    bootMessageCore(msg, -1, suffix);
+  bootMessageCore(msg, -1, suffix);
 }
 
 FLASHMEM uint8_t check_internal_sd_card(void)
@@ -6726,8 +6742,8 @@ FLASHMEM uint8_t check_internal_sd_card(void)
   // Sometimes fails after re-programming - try a few times if needed
   for (int i = 0;i < 5 && !sdok;i++)
   {
-   bootMessage("SD CARD ACCESS # ", i, "/5");
-   
+    bootMessage("SD CARD ACCESS # ", i, "/5");
+
     delay(200);
     sdok = card_internal.init(SPI_HALF_SPEED, BUILTIN_SDCARD);
   }

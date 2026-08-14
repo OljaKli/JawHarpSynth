@@ -11,7 +11,7 @@
 <br><p>
 <img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/Capacitive_Touch/pcb28-32.jpg" >
 <br>
-(PCB BASED FRONT/BACK PANEL, DISPLAY SIZE LEFT 2.8" and RIGHT 3.2")
+(RA8875 5", PCB BASED FRONT/BACK PANEL 3.2")
 <br><p>
 ## This is MicroDexed with TFT Touch Display, graphic UI and sequencer
 
@@ -76,9 +76,14 @@ by fellpower (german language)
 [https://www.youtube.com/playlist?list=PLHTypoMU1QoGOXPli8bjR6MknPiQpubHl
 ](https://www.youtube.com/playlist?list=PLHTypoMU1QoGOXPli8bjR6MknPiQpubHl)
 
-## If you want to donate to this project, please check out this link:
+## If you want to donate to this project, please check out this link (Liberapay):
 
 <a href="https://liberapay.com/positionhigh/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
+
+## or PayPal: [Donate](https://www.paypal.com/donate/?hosted_button_id=5565UW72LDFML)
+<br>
+<img src="https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/QR-Code.png" >
+<p>
 
 ### User Chat groups
 

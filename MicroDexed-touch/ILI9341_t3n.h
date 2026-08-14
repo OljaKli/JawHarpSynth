@@ -1,4 +1,4 @@
-#ifndef ESP_DISPLAY
+#if !defined ESP_DISPLAY && !defined RA_DISPLAY
 
 //***************************************************
 // https://github.com/kurte/ILI9341_t3n
@@ -97,7 +97,6 @@
 
 #define ILI9341_GMCTRP1 0xE0
 #define ILI9341_GMCTRN1 0xE1
-
 
 #define CL(_r, _g, _b) ((((_r)&0xF8) << 8) | (((_g)&0xFC) << 3) | ((_b) >> 3))
 

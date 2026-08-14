@@ -2,7 +2,7 @@
 #include "LCDMenuLib2.h"
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -20,7 +20,7 @@ extern sequencer_t seq;
 extern LCDMenuLib2 LCDML;
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -65,7 +65,7 @@ FLASHMEM void UI_LiveSequencer::checkApplyTrackInstrument(void) {
 FLASHMEM void UI_LiveSequencer::drawTrackSubtext(uint8_t track) {
   display.fillRect(GRID.X[SCREEN_TRACK_INDEX(track)], GRID.Y[1] + TouchButton::BUTTON_SIZE_Y + 3, TouchButton::BUTTON_SIZE_X, CHAR_height_small, COLOR_BACKGROUND);
   display.setTextSize(1);
-  display.setTextColor((track == data.activeTrack) ? GREY1 : GREY2);
+  display.setTextColor((track == data.activeTrack) ? GREY1 : GREY2, COLOR_BACKGROUND);
   display.setCursor(GRID.X[SCREEN_TRACK_INDEX(track)], GRID.Y[1] + TouchButton::BUTTON_SIZE_Y + 3);
 
   const uint8_t denom = data.trackSettings[track].quantizeDenom;

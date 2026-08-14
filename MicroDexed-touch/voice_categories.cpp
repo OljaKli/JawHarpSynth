@@ -14,7 +14,7 @@
 #include "UI.h"
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -24,7 +24,7 @@
 
 #if defined ESP_DISPLAY
 extern espdisplay display;
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 extern RA8875 display;
 #else
 extern ILI9341_t3n display;
@@ -36,7 +36,7 @@ extern void print_voice_select_default_help();
 extern void printLiveModButtons();
 extern void drawVoiceNameButton();
 extern void UI_update_instance_icons();
-extern void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
+//extern void draw_favorite_icon(uint8_t p, uint8_t b, uint8_t v, uint8_t instance_id);
 extern void draw_algo(bool force);
 extern void reset_live_modifiers();
 extern void print_formatted_number(uint16_t number, uint8_t length);
@@ -226,7 +226,7 @@ FLASHMEM bool load_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData*
         data->custom_categories[v][0] = '\0';
     }
 
-    snprintf_P(filename, sizeof(filename), PSTR("/%s/%d/%d/categories.json"),
+    snprintf(filename, sizeof(filename), "/%s/%d/%d/categories.json",
         DEXED_CONFIG_PATH, pool, bank);
 
     if (sd_card_internal > 0 && SD.exists(filename)) {
@@ -277,8 +277,8 @@ FLASHMEM bool save_bank_categories(uint8_t pool, uint8_t bank, BankCategoryData*
     pool = constrain(pool, 0, DEXED_POOLS - 1);
     bank = constrain(bank, 0, MAX_BANKS - 1);
 
-    snprintf_P(folder, sizeof(folder), PSTR("/%s/%d/%d"), DEXED_CONFIG_PATH, pool, bank);
-    // snprintf_P(filename, sizeof(filename), PSTR("%s/categories.json"), folder);
+    snprintf(folder, sizeof(folder), "/%s/%d/%d", DEXED_CONFIG_PATH, pool, bank);
+    // snprintf(filename, sizeof(filename), "%s/categories.json", folder);
     strlcpy(filename, folder, sizeof(filename));
     strlcat(filename, "/categories.json", sizeof(filename));
 

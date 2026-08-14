@@ -25,7 +25,7 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#define _LCDML_DISP_cnt 73
+#define _LCDML_DISP_cnt 74
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1100  
@@ -36,7 +36,7 @@
 #include "touchbutton.h"
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -94,6 +94,7 @@ void UI_func_drum_pattern_editor(uint8_t param);
 void UI_func_melodic_pattern_editor(uint8_t param);
 void UI_func_cv_page(uint8_t param);
 void UI_func_chord_arranger(uint8_t param);
+void UI_func_mdt_arranger(uint8_t param);
 void UI_func_noisemaker(uint8_t param);
 void UI_func_master_effects(uint8_t param);
 void UI_func_braids(uint8_t param);

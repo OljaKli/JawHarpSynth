@@ -7,7 +7,7 @@
 #ifdef RA_DISPLAY
 #include <GSL1680.h>
 extern GSL1680 touch;
-#elif CAPACITIVE_TOUCH_DISPLAY
+#elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY
@@ -43,7 +43,7 @@ typedef struct ts_s
   uint8_t current_virtual_keyboard_display_mode = 0;   // 0=keys 1=pads 
   uint8_t previous_virtual_keyboard_display_mode = 99; // 0=keys 1=pads 
   uint8_t virtual_keyboard_view_mode = 0;   // 0=10 keys, 1=15 keys, 2=20 keys
-  
+
   TS_Point p;
 
   uint32_t virtual_keyboard_state_white = 0;
@@ -89,7 +89,7 @@ static constexpr int TOUCH_MAX_REFRESH_RATE_MS = 10;
 
 typedef void (*TouchFn)();
 
-void draw_back_touchbutton();          
+void draw_back_touchbutton();
 
 void registerTouchHandler(TouchFn touchFn);
 void unregisterTouchHandler(void);

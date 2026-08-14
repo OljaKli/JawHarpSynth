@@ -1,6 +1,6 @@
 /*!
  * @file Adafruit_FT6206.cpp
- * PZD
+ *
  * @mainpage Adafruit FT2606 Library
  *
  * @section intro_sec Introduction

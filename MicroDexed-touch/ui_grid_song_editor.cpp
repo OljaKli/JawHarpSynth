@@ -8,7 +8,7 @@
 
 #ifdef ESP_DISPLAY
 #include "esp32.h"
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
@@ -28,7 +28,7 @@ FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequen
   : liveSeq(sequencer), data(d), display(disp) {
   initButtons();
 }
-#elif defined (RA_DISPLAY)
+#elif defined RA_DISPLAY
 FLASHMEM GridSongEditorUI::GridSongEditorUI(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d, RA8875& disp)
   : liveSeq(sequencer), data(d), display(disp) {
   initButtons();

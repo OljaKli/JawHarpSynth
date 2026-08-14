@@ -86,8 +86,7 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
-int8_t counter_ignore_fader_apc;
-uint8_t fader_previous_apc;
+volatile bool semaphore_midi_in_busy;
 extern uint8_t chord_input[4];
 
 /* #ifdef MIDI_DEVICE_USB
@@ -236,7 +235,7 @@ void midiPitchBend(int pitch, uint8_t channel, uint8_t device) {
 
   default:
 #ifdef DEBUG
-    LOG.printf_P(PSTR("Unknown device for PB: %d"), device);
+    LOG.printf("Unknown device for PB: %d", device);
 #endif
     break;
   }
@@ -269,7 +268,7 @@ FLASHMEM void midiControlChange(uint8_t control, uint8_t value, uint8_t channel,
 
   default:
 #ifdef DEBUG
-    LOG.printf_P(PSTR("Unknown device for CC: %d"), device);
+    LOG.printf("Unknown device for CC: %d", device);
 #endif
     break;
   }
@@ -277,7 +276,7 @@ FLASHMEM void midiControlChange(uint8_t control, uint8_t value, uint8_t channel,
 
 #if defined APC
 
-#if (APC != 1) //LUC regular apc mini mk2
+#if (APC != 1) // regular apc mini mk2
 #define APC_MINI_BUTTON_SHIFT 122
 #else
 #define APC_MINI_BUTTON_SHIFT 98
@@ -299,7 +298,7 @@ extern void stop_MIDI_input_timer();
 
 FLASHMEM void apc(uint8_t a, uint8_t b, uint8_t c)
 {
-#if (APC != 1) //LUC regular apc mini mk2
+#if (APC != 1) // regular apc mini mk2
   midi_usb_1.sendNoteOn(a, b, c);
 #else
   static uint8_t a_old = 255, b_old = 255;
@@ -328,7 +327,7 @@ FLASHMEM void apc(uint8_t a, uint8_t b, uint8_t c)
     //increment colour for blink mode request (1,3,5 to 2,4,6), 11 is blink for Mk2
     //avoid blink if colour is 0 (OFF) or if colour is already blinking (even number)
     b += ((c == 11) && b && (b & 1u)) ? 1 : 0;
-    midi_usb_1.sendNoteOn(a, b, 0); //LUC apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
+    midi_usb_1.sendNoteOn(a, b, 0); // apc mini mk1 doesn't have brightness control, so set channel to 0, only channel 0 is used
   }
   else {
     a_old = a; b_old = b;
@@ -357,6 +356,9 @@ extern bool chord_autostart;
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
+if (semaphore_midi_in_busy)
+return;
+semaphore_midi_in_busy=1;
 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
@@ -430,7 +432,7 @@ return;
 
     if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
     {
-      if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
+      if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key  122 or 98
         apc_shift_key = true;
       if (APC_MODE == APC_PATTERN_EDITOR)
       {
@@ -503,7 +505,7 @@ return;
     }
 
 #if defined APC
-    if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key LUC 122 or 98
+    if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key  122 or 98
       apc_shift_key = false;
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
@@ -530,28 +532,10 @@ return;
 #if defined APC
     if (APC_MODE == APC_PATTERN_EDITOR)
     {
-      if (counter_ignore_fader_apc <= 0)
+      if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used
       {
-        if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used
-        {
-          apc_fader_control(inData1, inData2);
-          if (fader_previous_apc != inData1) //put delay if other fader is moved
-#if (APC != 1) //LUC regular apc mini mk2
-            counter_ignore_fader_apc = 0; //Before compared with 30, put to 0 to avoid delay.
-#else
-            /* Test conditions: seq stop, sample pad blinking. Test: move all APC faders.
-              With counter 1 it freezes after some attempts, with 10 freeze after more attempts, with 30 it's harder to freeze.
-              Only the UI freezes.
-              If seq stopped and I move all faders crazily, it freezes and I'm unable to change screen, start sequencer.
-              If seq started and I move all faders crazily, it freezes and I'm unable to change screen, stop sequencer. It keeps playing infinitely! */
-            counter_ignore_fader_apc = 30;
-          else
-            counter_ignore_fader_apc = 1; //needed because MDT got frozen when moving 4 faders
-#endif
-          fader_previous_apc = inData1;
-        }
+        apc_fader_control(inData1, inData2);
       }
-      else counter_ignore_fader_apc--; //dirty fix delay to ignore some received fader messages, to avoid spam, to reduce chance of freeze
     }
 #endif
 
@@ -588,7 +572,7 @@ return;
     break;
   }
 #ifdef DEBUG
-  LOG.printf_P(PSTR("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d"), text, midi_device, inChannel, inData1, inData2);
+  LOG.printf("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d", text, midi_device, inChannel, inData1, inData2);
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
@@ -733,6 +717,7 @@ return;
 #ifdef DEBUG
   LOG.println();
 #endif
+semaphore_midi_in_busy=0;
 }
 
 int toPitchBend(uint8_t lsb, uint8_t msb) {
@@ -750,6 +735,10 @@ void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_devic
 
 FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
 {
+if (semaphore_midi_in_busy)
+return;
+semaphore_midi_in_busy=1;
+
   handleSystemExclusive(data, len);
 #ifdef DEBUG
   LOG.printf_P(PSTR("[%s] SysEx"), midi_device);
@@ -801,11 +790,15 @@ FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* mi
 #ifdef DEBUG
   LOG.println();
 #endif
+semaphore_midi_in_busy=0;
 }
 
 FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::MidiType event)
 {
   //char text[10];
+if (semaphore_midi_in_busy)
+return;
+semaphore_midi_in_busy=1;
 
   switch (event)
   {
@@ -911,11 +904,15 @@ FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, 
 #ifdef DEBUG
   LOG.println();
 #endif
+semaphore_midi_in_busy=0;
 }
 
 void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 {
   //char text[16];
+if (semaphore_midi_in_busy)
+return;
+semaphore_midi_in_busy =1;
 
   switch (event)
   {
@@ -996,6 +993,7 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 #ifdef DEBUG
   LOG.println();
 #endif
+semaphore_midi_in_busy=0;
 }
 
 ///* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
@@ -1063,6 +1061,7 @@ void handleNoteOn_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byte inVelo
 
 void handleNoteOff_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
+  semaphore_midi_in_busy=0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_DIN, midi::NoteOff);
 }
 
@@ -1184,6 +1183,7 @@ void handleNoteOn_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNoteNumber, byte i
 
 void handleNoteOff_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
+  semaphore_midi_in_busy=0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_USB_HOST, midi::NoteOff);
 }
 
@@ -1305,6 +1305,7 @@ void handleNoteOn_MIDI_DEVICE_USB(byte inChannel, byte inNoteNumber, byte inVelo
 
 void handleNoteOff_MIDI_DEVICE_USB(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
+  semaphore_midi_in_busy=0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_USB, midi::NoteOff);
 }
 
@@ -1500,7 +1501,7 @@ void OnRawPress(uint8_t keycode)
     if (keyboard1.getModifiers() != keyboard_modifiers)
     {
 #ifdef SHOW_KEYBOARD_DATA
-      LOG.printf_P(PSTR("Mods mismatch: %x != %x\n"), keyboard_modifiers, keyboard1.getModifiers());
+      LOG.printf("Mods mismatch: %x != %x\n", keyboard_modifiers, keyboard1.getModifiers());
 #endif
       keyboard_modifiers = keyboard1.getModifiers();
       Keyboard.set_modifier(keyboard_modifiers);

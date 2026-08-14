@@ -41,7 +41,7 @@ public:
   void notifyLeftEncoderShort();
 
   TouchButton* patternEditorButton = nullptr;   // unified pattern editor button
-  
+
 private:
   uint16_t msCount = 0;
   bool isVisible = false;
