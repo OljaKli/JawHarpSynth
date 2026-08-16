@@ -3142,7 +3142,7 @@ extern void OLED_status();
 void loop()
 {
 #if defined OLED_DISPLAYS
-  OLED_status();
+  //OLED_status();
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG

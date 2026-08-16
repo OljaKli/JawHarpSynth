@@ -246,4 +246,9 @@ int16_t ui_get_led_ring_value();
 int16_t ui_get_led_ring_min();
 int16_t ui_get_led_ring_max();
 
+extern uint8_t chord_arranger_key_state[128];
+extern bool chord_arranger_keyboard_dirty;
+void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote);
+uint16_t getNotePixelX(uint8_t note);
+
 #endif //_UI_H_

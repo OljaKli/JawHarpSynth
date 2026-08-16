@@ -171,6 +171,10 @@ bool drumScreenActive = false;
 
 bool force_menu_full_redraw = true;
 
+// Chord Arranger: live key‑press state (0 = off, 1 = on)
+uint8_t chord_arranger_key_state[128] = {0};
+bool chord_arranger_keyboard_dirty = false;
+
 #ifdef MIDI_ACTIVITY_LIGHTS
 uint8_t LED_MIDI_IN = 40;
 uint8_t LED_MIDI_OUT = 36;
@@ -3740,6 +3744,10 @@ FLASHMEM void setModeColor(uint8_t selected_option)
   }
 }
 
+//#if defined LED_RINGS || defined LED_DEBUG
+bool led_ring_preview_mode = false;
+//#endif
+
 #if defined GLOW
 extern int glow_menu_item;
 #endif
@@ -3748,8 +3756,6 @@ extern int glow_menu_item;
 extern int glow_input_value;
 extern int glow_limit_min;
 extern int glow_limit_max;
-extern bool led_preview_mode;
-
 
 extern float get_led_brightness_factor(uint8_t relIdx, uint8_t gradient);
 
@@ -4538,7 +4544,7 @@ void update_left_led_ring() {
     maxVal = 15;
   }
 
-  if (value == lastShownValue && !led_preview_mode) return;
+  if (value == lastShownValue && !led_ring_preview_mode) return;
 
   uint8_t start = configuration.sys.led_ring_start_offset;
   uint8_t grad = configuration.sys.led_brightness_gradient;
@@ -18461,18 +18467,41 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
     chord_input[1] = 0;
     chord_input[2] = 0;
     chord_input[3] = 0;
-    // virtual_keyboard_smart_preselect_mode();
-    // seq.cycle_touch_element = 1;
-    // drawVirtualKeyboard();
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
-    for (uint8_t oct = 0; oct < 8; oct++)
-    {
-      print_sampler_keyboard(oct * 7 + 1, 95);
-      display.setCursor(CHAR_width_small + oct * 42, 137);
-      display.print(oct);
+    // for (uint8_t oct = 0; oct < 8; oct++)
+    // {
+    //   print_sampler_keyboard(oct * 7 + 1, 95);
+    //   display.setCursor(CHAR_width_small + oct * 42, 137);
+    //   display.print(oct);
+    // }
+
+        for (uint8_t oct = 0; oct < 8; oct++) {
+        draw_chord_arranger_keyboard(oct * 7 + 1, 95, oct * 12);
     }
+
+    // Draw the split‑point and zone indicators
+    draw_chord_arranger_indicators();
+
+
+// Draw the split‑point line (separates chord and live‑play areas)
+display.fillRect(CHAR_width_small, 110, seq.arr_split_note * 3.55, 4, DARKGREEN);
+display.fillRect(CHAR_width_small + seq.arr_split_note * 3.55, 110, 320 - seq.arr_split_note * 2, 4, COLOR_BACKGROUND);
+
+// Draw song‑part range indicator (small coloured bar below the keys)
+if (seq.song_arranger_active) {
+    uint8_t base = seq.song_arranger_base_note;
+    for (uint8_t i = 0; i < 10; i++) {
+        uint8_t note = base + i;
+        // Approximate x position: each octave is 42px (7 white keys * 6px)
+        int xPos = CHAR_width_small + (note / 12) * 42 + (note % 12) * 5;
+        display.fillRect(xPos, 110 + 10, 5, 4, COLOR_ARP);
+    }
+}
+
+// Navigation button (static, drawn once)
+TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", "ARR", TouchButton::BUTTON_NORMAL);
 
     seq.edit_state = 0;
     generic_menu = 0;
@@ -18887,6 +18916,72 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
     }
   }
 }
+
+FLASHMEM uint16_t getNotePixelX(uint8_t note) {
+    const uint8_t whiteOffsets[7] = {0, 2, 4, 5, 7, 9, 11};
+    const uint8_t blackOffsets[5] = {1, 3, 6, 8, 10};
+    const uint8_t offset[5] = {1, 2, 2, 4, 6};
+
+    uint8_t oct = note / 12;
+    uint8_t semitone = note % 12;
+    uint16_t baseX = (oct * 7 + 1) * CHAR_width_small;
+
+    for (uint8_t i = 0; i < 7; i++) {
+        if (whiteOffsets[i] == semitone) {
+            return baseX + 6 * i; // left edge of white key
+        }
+    }
+    for (uint8_t i = 0; i < 5; i++) {
+        if (blackOffsets[i] == semitone) {
+            return baseX + 4 * semitone - offset[i];
+        }
+    }
+    return baseX; // fallback
+}
+
+FLASHMEM void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote) {
+    uint8_t offset[5] = { 1, 2, 2, 4, 6 };
+    int offcount = 0;
+    const uint8_t whiteOffsets[7] = {0, 2, 4, 5, 7, 9, 11};
+
+    // Draw white keys
+    for (uint8_t i = 0; i < 7; i++) {
+        uint8_t note = startNote + whiteOffsets[i];
+        uint16_t color;
+        if (chord_arranger_key_state[note]) {
+            color = GREEN;
+        } else if (seq.song_arranger_active && note >= seq.song_arranger_base_note && note < seq.song_arranger_base_note + 10) {
+            color = COLOR_ARP;
+        } else {
+            color = COLOR_SYSTEXT;
+        }
+        int xPos = x * CHAR_width_small + 6 * i;
+        if (xPos < DISPLAY_WIDTH - 8)
+            display.fillRect(xPos, y + 23, 5, 15, color);
+    }
+
+    // Draw black keys
+    offcount = 0;
+    for (uint8_t i = 0; i < 12; i++) {
+        if (seq.piano[i] == 1) {
+            uint8_t note = startNote + i;
+            uint16_t color;
+            if (chord_arranger_key_state[note]) {
+                color = GREEN;
+            } else if (seq.song_arranger_active && note >= seq.song_arranger_base_note && note < seq.song_arranger_base_note + 10) {
+                color = COLOR_ARP;
+            } else {
+                color = COLOR_BACKGROUND;
+            }
+            int xPos = x * CHAR_width_small + 4 * i - offset[offcount];
+            if (xPos < DISPLAY_WIDTH - 10)
+                display.fillRect(xPos, y + 23, 4, 8, color);
+            offcount++;
+            if (offcount == 5) offcount = 0;
+        }
+    }
+}
+
 
 FLASHMEM void print_note_name_and_octave(uint8_t note)
 {
@@ -22324,47 +22419,47 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           // New LED ring cases (23‑32)
         case 23:
           configuration.sys.led_ring_start_offset = constrain(configuration.sys.led_ring_start_offset + e.dir, 0, 23);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 24:
           configuration.sys.left_volume_color_scheme = constrain(configuration.sys.left_volume_color_scheme + e.dir, 0, 10);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 25:
           configuration.sys.left_volume_custom_start = constrain(configuration.sys.left_volume_custom_start + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 26:
           configuration.sys.left_volume_custom_end = constrain(configuration.sys.left_volume_custom_end + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 27:
           configuration.sys.left_seq_color_scheme = constrain(configuration.sys.left_seq_color_scheme + e.dir, 0, 10);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 28:
           configuration.sys.left_seq_custom_start = constrain(configuration.sys.left_seq_custom_start + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 29:
           configuration.sys.left_seq_custom_end = constrain(configuration.sys.left_seq_custom_end + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 30:
           configuration.sys.right_edit_color_scheme = constrain(configuration.sys.right_edit_color_scheme + e.dir, 0, 10);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 31:
           configuration.sys.right_edit_custom_start = constrain(configuration.sys.right_edit_custom_start + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 32:
           configuration.sys.right_edit_custom_end = constrain(configuration.sys.right_edit_custom_end + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         case 33:
           configuration.sys.led_brightness_gradient = constrain(configuration.sys.led_brightness_gradient + e.dir, 0, 100);
-          led_preview_mode = true;
+          led_ring_preview_mode = true;
           break;
         }
       }
@@ -22381,7 +22476,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
   if (LCDML.FUNC_close())
   {
 #if defined LED_RINGS || defined LED_DEBUG
-    led_preview_mode = false;
+    led_ring_preview_mode = false;
     update_left_led_ring();
     update_right_led_ring();
 #endif

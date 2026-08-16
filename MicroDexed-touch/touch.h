@@ -142,4 +142,6 @@ void handle_touchscreen_granular();
 void handle_touchscreen_msp();
 void handle_touchscreen_sd_content_not_found();
 
+void draw_chord_arranger_indicators(void);
+
 #endif

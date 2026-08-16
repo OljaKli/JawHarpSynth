@@ -38,7 +38,7 @@ extern LEDRingSmall LEDRing_r;
 extern int glow_input_value;
 extern int glow_limit_min;
 extern int glow_limit_max;
-extern bool led_preview_mode;
+extern bool led_ring_preview_mode;
 extern bool ui_has_editors();
 #endif
 
@@ -46,9 +46,7 @@ extern bool ui_has_editors();
 extern int glow_menu_item;
 #endif
 
-//#if defined LED_RINGS || defined LED_DEBUG
-bool led_preview_mode = false;
-//#endif
+
 
 extern LCDMenuLib2 LCDML;
 extern sequencer_t seq;

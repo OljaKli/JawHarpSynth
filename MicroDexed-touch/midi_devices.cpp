@@ -362,8 +362,32 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
-  if (disableDirectMIDIinput)
+  // ---- Song Arranger trigger notes (MIDI notes base..base+9) ----
+  if (seq.song_arranger_active) {
+    if (inData1 >= seq.song_arranger_base_note && inData1 < seq.song_arranger_base_note + 10) {
+      if (event == midi::NoteOn && inData2 > 0) {
+        seq.song_arranger_requested_part = inData1 - seq.song_arranger_base_note;
+        seq.song_arranger_part_change_pending = true;
+      }
+      // Do not process this note further – not chord, not instrument.
+      return;
+    }
+  }
+
+  // ---- Update chord arranger key state (visual feedback) ----
+  if (event == midi::NoteOn && inData2 > 0) {
+    chord_arranger_key_state[inData1] = 1;
+    chord_arranger_keyboard_dirty = true;
+  }
+  else if (event == midi::NoteOff || (event == midi::NoteOn && inData2 == 0)) {
+    chord_arranger_key_state[inData1] = 0;
+    chord_arranger_keyboard_dirty = true;
+  }
+
+  if (disableDirectMIDIinput) {
+    semaphore_midi_in_busy = 0;
     return;
+  }
 
 #ifdef DEBUG
   char text[10];

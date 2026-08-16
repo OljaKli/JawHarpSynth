@@ -559,6 +559,7 @@ FLASHMEM void UI_func_song_arranger(uint8_t param) {
         display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
         draw_song_arranger_buttons();
+        TouchButton::drawButton(GRID.X[3], GRID.Y[0], "CHORD", "ARR", TouchButton::BUTTON_NORMAL);
         draw_song_arranger_enable_button();    // at GRID.X[5]
         draw_song_arranger_switch_button();    // at GRID.X[4]
         draw_song_arranger_config_grid();
