@@ -891,7 +891,10 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
         APC_BUTTONS_RIGHT[7] = false;
       }
       else
-        if (APC_PREVIOUS_NOTE != 254)
+        if ((APC_PREVIOUS_NOTE != 254) ||
+            /* Without this, edit mode can't be set for pattern piano roll mode, unless at least once was set edit mode for pattern drum mode. 
+               Also APC_PREVIOUS_NOTE is not needed for pattern piano roll mode, edit mode is entered only with APC right side buttons. */
+            ((seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2))) // tonal instrument
         {
           if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL) //118 or 88
             APC_BUTTONS_RIGHT[6] = true;
@@ -922,7 +925,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
-      trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
+      trigger_print_sample_or_step = APC_TONAL_SCROLL_OFFSET + inData1; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
     }
     else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
     {
