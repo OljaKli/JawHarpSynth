@@ -138,57 +138,67 @@ FLASHMEM void apc_clear_bottom_buttons()
   for (uint8_t i = 0; i < 8; i++) //clear bottom row under the grid
     apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1);
   
-  apc_mixmod = APC_EDIT_INIT_INVALID;
+  if(apc_mixmod < APC_EDIT_INIT_INVALID)
+    //apc_mixmod = (enum_apcmixmod_t)((uint8_t)apc_mixmod + APC_EDIT_INIT_INVALID); // not yet implemented: don't change to APC_EDIT_VOLUME, keep the last selected
+    apc_mixmod = APC_EDIT_INIT_INVALID;
 }
 
 FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
 {
   int new_mixmod;
-
-  switch(volpansenddev)
-  {
-    case APC_EDIT_VOLUME:
-    case APC_EDIT_PAN:
-    case APC_EDIT_P8_ENVATT:
-    case APC_EDIT_M1_ENVSUS:
-    case APC_EDIT_P1_ENVREL:
-      new_mixmod = volpansenddev; // these buttons have only one function
-      break;
-    case APC_EDIT_M8_ENVHOLD:
-      if(APC_EDIT_M8_ENVHOLD <= apc_mixmod && apc_mixmod < APC_EDIT_M8_ENVDEC)
-        new_mixmod = (int8_t)apc_mixmod + 1;
-      else
-        new_mixmod = APC_EDIT_M8_ENVHOLD;
-      break;
-    case APC_EDIT_SEND_REV:
-      if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2)
-        new_mixmod = (int8_t)apc_mixmod + 1;
-      else
-        new_mixmod = APC_EDIT_SEND_REV;
-      break;
-    case APC_EDIT_DEV_PITCH:
-      if(APC_EDIT_DEV_PITCH <= apc_mixmod && apc_mixmod < APC_EDIT_DEV_RESO)
-        new_mixmod = (int8_t)apc_mixmod + 1;
-      else
-        new_mixmod = APC_EDIT_DEV_PITCH;
-      break;
-    default:
-      new_mixmod = (int)apc_mixmod;
-      break;
-  }
   
-  //10 = the step between categories, max 5 (half) enums per category are allowed
-  //  in order to detect a change
-  if(abs(new_mixmod - (int)apc_mixmod) >= /*5*/ APC_EDIT_OFFSET/2)
+  if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
   {
-    for(int i=0;i<8;i++)
-      if(i == new_mixmod/10)
-        apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 1, 1); //set corresponding light
-      else
-        apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1); //clear the others
+    switch(volpansenddev)
+    {
+      case APC_EDIT_VOLUME:
+      case APC_EDIT_PAN:
+      case APC_EDIT_P8_ENVATT:
+      case APC_EDIT_M1_ENVSUS:
+      case APC_EDIT_P1_ENVREL:
+        new_mixmod = volpansenddev; // these buttons have only one function
+        break;
+      case APC_EDIT_M8_ENVHOLD:
+        if(APC_EDIT_M8_ENVHOLD <= apc_mixmod && apc_mixmod < APC_EDIT_M8_ENVDEC && apc_mixmod < APC_EDIT_INIT_INVALID)
+          new_mixmod = (int8_t)apc_mixmod + 1;
+        else
+          new_mixmod = APC_EDIT_M8_ENVHOLD;
+        break;
+      case APC_EDIT_SEND_REV:
+        if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2 && apc_mixmod < APC_EDIT_INIT_INVALID)
+          new_mixmod = (int8_t)apc_mixmod + 1;
+        else
+          new_mixmod = APC_EDIT_SEND_REV;
+        break;
+      case APC_EDIT_DEV_PITCH:
+        if(APC_EDIT_DEV_PITCH <= apc_mixmod && apc_mixmod < APC_EDIT_DEV_RESO && apc_mixmod < APC_EDIT_INIT_INVALID)
+          new_mixmod = (int8_t)apc_mixmod + 1;
+        else
+          new_mixmod = APC_EDIT_DEV_PITCH;
+        break;
+      default:
+        new_mixmod = (int)apc_mixmod;
+        break;
+    }
+    
+    //10 = the step between categories, max 5 (half) enums per category are allowed
+    //  in order to detect a change
+    if(abs(new_mixmod - (int)apc_mixmod) >= /*5*/ APC_EDIT_OFFSET/2 || apc_mixmod >= APC_EDIT_INIT_INVALID)
+    {
+      for(int i=0;i<8;i++)
+        if(i == new_mixmod/10)
+          apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 1, 1); //set corresponding light
+        else
+          apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1); //clear the others
+    }
+    else { /* no change of bottom led */ }
+    apc_mixmod = (enum_apcmixmod_t)new_mixmod;
   }
-  else { /* no change of bottom led */ }
-  apc_mixmod = (enum_apcmixmod_t)new_mixmod;
+  else /* No use of bottom buttons volpansenddev when editing pattern piano roll (tonal instrument),
+          they are only for drums. */
+  {
+    apc_clear_bottom_buttons();
+  }
 }
 
 FLASHMEM void apc_print_right_buttons()
@@ -606,6 +616,15 @@ FLASHMEM void apc_pattern_change(uint8_t inData1)
   {
     seq.active_pattern = constrain(seq.active_pattern - 1, 0, NUM_SEQ_PATTERN - 1);
   }
+  
+  if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
+  {
+    if(apc_mixmod >= APC_EDIT_INIT_INVALID)
+      //apc_set_bottom_button(/*APC_EDIT_VOLUME*/ apc_mixmod); // not yet implemented: don't change to APC_EDIT_VOLUME, keep the last selected
+      apc_set_bottom_button(APC_EDIT_VOLUME);
+  }
+  else
+    apc_clear_bottom_buttons(); // no need / no meaning of drum editing in pattern piano roll mode (tonal instrument)
 
   APC_BUTTONS_RIGHT[0] = true;
   APC_BUTTONS_RIGHT[1] = true;

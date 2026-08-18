@@ -75,7 +75,10 @@ Press Send multiple times to change send level for reverb, delay1, delay2.
 Press Device multiple times to change pitch, filter cutoff, resonance.
 */
 void apc_clear_bottom_buttons();
-#define APC_EDIT_OFFSET 10 /* the mega offset for 2 adjacent buttons, it's big to have more mini-offsets when pressing same button multiple times */
+/* The mega offset for 2 adjacent buttons, it's big 10 to have more mini-offsets
+  when pressing same button multiple times.
+  For e.g. when pressing DEVICE multiple times, it can switch up to 5 subfunctions, currently 3.  */
+#define APC_EDIT_OFFSET 10
 typedef enum {
 #if (APC != 1) //regular apc mini mk2 starts Volume/Pan/Send/Device and arrows (P8,M8,P1,M1)
       APC_EDIT_VOLUME    = 0,
@@ -97,7 +100,9 @@ typedef enum {
       APC_EDIT_M1_ENVSUS  = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET * 2,
       APC_EDIT_P1_ENVREL  = APC_EDIT_P8_ENVATT + APC_EDIT_OFFSET * 3,
 
-      APC_EDIT_INIT_INVALID} enum_apcmixmod_t;
+      APC_EDIT_INIT_INVALID = APC_EDIT_OFFSET * 8,
+      APC_EDIT_INIT_INVALID_ENVREL = APC_EDIT_P1_ENVREL + APC_EDIT_INIT_INVALID,
+    } enum_apcmixmod_t;
 void apc_set_bottom_button(int8_t volpansenddev);
 void print_apc_source_selection_pads();
 void apc_print_right_buttons();
