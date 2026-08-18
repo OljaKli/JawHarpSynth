@@ -250,10 +250,13 @@ FLASHMEM void apc_trigger_print_in_lcd(void)
           print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, false, true); //refresh all drum steps, unable to refresh the new step only
         else  // tonal instrument
         { // Inst Track or Chord or Arp
-	          /* Disabled because not working, APC-entered-steps are visible only in velocity row, not in piano roll.
-	             Also since 1.9.9.0, it doesn't display entered steps in pattern piano roll, with encoder; it works with step record mode with virtual keyboard.
-            print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, trigger_print_sample_or_step-1000, true); 
-	           */
+          uint8_t active_step = trigger_print_sample_or_step - 1000;
+          if(active_step >= 8) /* Revert the top APC rows, 1st row will be for 1st 8 steps in pattern piano roll. */
+            active_step -= 8;
+          else
+            active_step += 8;
+          /* In pattern piano roll mode, highlight the step on MDT display according to selection from the 2 APC top rows. */
+          print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, active_step /*seq.menu - 3*/, false); 
         }
       }
       else
