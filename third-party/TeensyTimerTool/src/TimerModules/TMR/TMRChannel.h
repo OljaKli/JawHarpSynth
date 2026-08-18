@@ -11,9 +11,6 @@ namespace TeensyTimerTool
     class TMRChannel : public ITimerChannel
     {
      public:
-
-        using ITimerChannel::setPrescaler;
-
         inline TMRChannel(IMXRT_TMR_CH_t *regs, callback_t *cbStorage);
         inline virtual ~TMRChannel();
 
@@ -27,7 +24,7 @@ namespace TeensyTimerTool
         inline errorCode setPeriod(float us) override;
         inline errorCode setNextPeriod(float us) override;
         inline void setPrescaler(uint32_t psc); // psc 0..7 -> prescaler: 1..128
-        
+
      protected:
         IMXRT_TMR_CH_t *regs;
         callback_t **pCallback = nullptr;

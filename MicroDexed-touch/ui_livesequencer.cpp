@@ -672,7 +672,7 @@ toolsPages[TOOLS_PATTERN].push_back(patternEditorButton);
     }, [this](auto* b) { // clickedHandler
       liveSeq.setArpEnabled(!data.arpSettings.enabled);
       b->drawNow();
-      }));
+    }));
   toolsPages[TOOLS_ARP].push_back(new ValueButtonVector<uint8_t>(&currentValue, GRID.X[1], GRID.Y[3], data.arpSettings.amount, { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64 }, 8,
     [](auto* b, auto* v) { // drawHandler
       b->draw("SPEED", v->toString(), TouchButton::BUTTON_ACTIVE);
@@ -873,7 +873,6 @@ FLASHMEM void UI_LiveSequencer::processLCDM(void) {
         drawGUI(guiUpdateFlags);
       }
     }
-
   }
 
   // ****** STABLE END *********
@@ -1371,7 +1370,7 @@ FLASHMEM void UI_LiveSequencer::drawGUI(uint16_t& guiFlags) {
         b->drawNow();
       }
     }
-    if (guiFlags & drawSongLayers && !gridEditor.isActive()) {
+    if ((currentTools == TOOLS_SONG) && (guiFlags & drawSongLayers) && !gridEditor.isActive()) {
       TouchButton::Color color = TouchButton::BUTTON_ACTIVE;
       handleLayerEditButtonColor(songLayerMode, color);
       for (int songLayer = 0; songLayer < data.songLayerCount; songLayer++) {

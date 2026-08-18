@@ -55,6 +55,8 @@ struct ScopeSettings {
   bool onlyDrawWhenRunning;
 };
 
+
+
 void splash_draw_header();
 void splash_draw_D();
 void splash_draw_reverseD();
@@ -86,6 +88,16 @@ ScopeSettings& getCurrentScopeSettings(void);
 void update_display_functions_while_seq_running();
 void loadDexedOrigADSR(int instance);
 
+// Song Arranger
+void UI_func_song_arranger(uint8_t param);
+void draw_song_arranger_buttons(void);
+void draw_song_arranger_config_grid(void);
+void draw_song_arranger_enable_button(void);
+void handle_song_arranger_touch(uint8_t button_index);
+void init_song_arranger(void);
+uint16_t get_song_arranger_color_for_chain(uint8_t chain);
+uint8_t get_song_arranger_part_for_song_step(uint8_t step);
+
 void UI_func_dexed_audio(uint8_t param);
 void UI_func_dexed_controllers(uint8_t param);
 void UI_func_dexed_setup(uint8_t param);
@@ -94,7 +106,6 @@ void UI_func_drum_pattern_editor(uint8_t param);
 void UI_func_melodic_pattern_editor(uint8_t param);
 void UI_func_cv_page(uint8_t param);
 void UI_func_chord_arranger(uint8_t param);
-void UI_func_mdt_arranger(uint8_t param);
 void UI_func_noisemaker(uint8_t param);
 void UI_func_master_effects(uint8_t param);
 void UI_func_braids(uint8_t param);
@@ -230,5 +241,14 @@ void chain_editor_draw_ui();
 void chain_editor_create_new_chain(uint8_t structure_type);
 void chain_editor_midi_record_func();
 
+bool ui_has_editors();
+int16_t ui_get_led_ring_value();
+int16_t ui_get_led_ring_min();
+int16_t ui_get_led_ring_max();
+
+extern uint8_t chord_arranger_key_state[128];
+extern bool chord_arranger_keyboard_dirty;
+void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote);
+uint16_t getNotePixelX(uint8_t note);
 
 #endif //_UI_H_

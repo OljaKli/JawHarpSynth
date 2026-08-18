@@ -219,7 +219,6 @@ void notifyLayerButtonsChanged();
     // volatile
     bool processMidiIn;
     std::string performanceName;
-    std::unordered_set<uint8_t> instrumentChannels;
     Track tracks[LIVESEQUENCER_NUM_TRACKS];
     ArpSettings arpSettings;
     uint8_t lastSongEventPattern; // because using unordered map above we need to know last index to be able to know song length (eg. for song loop)
@@ -254,13 +253,12 @@ void notifyLayerButtonsChanged();
 #else
     static const uint8_t GRIDSONGLEN = 32;
 #endif
-  bool useGridSongMode = false;  // false = live recording mode, true = grid mode
-  bool seq_started_from_pattern_mode = false;
-  //uint8_t  gridSongSteps[GRIDSONGLEN][LIVESEQUENCER_NUM_TRACKS][LIVESEQUENCER_NUM_LAYERS]; // GRIDSONGLEN song steps, 12 tracks, 4 layers
-  uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
-  uint8_t gridPlaybackStartStep = 0;           // first grid row to play (0-indexed)
-  uint8_t gridPlaybackEndStep = GRIDSONGLEN - 1; // last grid row to play (0-indexed)
-  bool gridLoopEnabled = false;
+    bool useGridSongMode = false;  // false = live recording mode, true = grid mode
+    bool seq_started_from_pattern_mode = false;
+    uint8_t* gridSongSteps = nullptr;  // Pointer to PSRAM allocation
+    uint8_t gridPlaybackStartStep = 0;           // first grid row to play (0-indexed)
+    uint8_t gridPlaybackEndStep = GRIDSONGLEN - 1; // last grid row to play (0-indexed)
+    bool gridLoopEnabled = false;
     uint8_t currentGridStep = 0;
     uint8_t gridStepOffset = 0;  // for scrolling through steps
     uint8_t selectedGridStep = 0;
@@ -277,7 +275,6 @@ void notifyLayerButtonsChanged();
       return gridSongSteps[step * (LiveSequencer::LIVESEQUENCER_NUM_TRACKS * LiveSequencer::LIVESEQUENCER_NUM_LAYERS) +
         track * LiveSequencer::LIVESEQUENCER_NUM_LAYERS + layer];
     }
-
   };
 
   LiveSequencer();
@@ -348,7 +345,6 @@ private:
   void checkLoadNewArpNotes(void);
   void onSongStopped(void);
   void updateTrackChannels(bool initial = false);
-  void updateInstrumentChannels(void);
   void addPendingNotes(bool incrementLayer = true);
   void refreshSongLength(void);
   void applySongStartLayerMutes(void);

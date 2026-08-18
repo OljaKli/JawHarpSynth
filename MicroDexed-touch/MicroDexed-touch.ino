@@ -37,6 +37,19 @@ MCP4728 dac;
 
 #define NOTESTEP_CV  34.38f
 
+#ifdef OLED_DISPLAYS
+#include "Adafruit_SSD1306.h"
+//Adafruit_SSD1306 oled_display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+Adafruit_SSD1306 oled_display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET, OLED_CS);
+#endif
+
+#ifdef LED_RINGS
+#include "LEDRingSmall.h"
+LEDRingSmall LEDRing_l(ISSI3746_SJ4 | ISSI3746_SJ5);
+LEDRingSmall LEDRing_r(ISSI3746_SJ1 | ISSI3746_SJ8);
+
+#endif
+
 #ifdef  SECOND_SD
 SDClass SD_EXTERNAL;
 #endif
@@ -307,7 +320,7 @@ AudioPlaySdResmp* Drum[NUM_DRUMS];
 PitchSamplePlayer* Drum[NUM_DRUMS];
 
 // Voice group configuration: per-group voice budgets and allocation strategies
-voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+voice_group_config_t sample_voice_group_config[NUM_VOICE_GROUPS];
 
 //#if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
 #if defined(COMPILE_FOR_PSRAM)
@@ -994,7 +1007,8 @@ bool touch_ic_found = false;
 //   // force millis() to be 300 to skip startup delays
 //   systick_millis_count = 300;
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+
 
 void setled(uint8_t pin, bool state)
 {
@@ -1003,7 +1017,6 @@ void setled(uint8_t pin, bool state)
 
 FLASHMEM void set_custom_enc_colors()
 {
-
   mcp.write1(RGB_LED_L_RED, !bitRead(configuration.sys.rgb_enc_color_def, 0));
   mcp.write1(RGB_LED_L_GREEN, !bitRead(configuration.sys.rgb_enc_color_def, 1));
   mcp.write1(RGB_LED_L_BLUE, !bitRead(configuration.sys.rgb_enc_color_def, 2));
@@ -1059,6 +1072,8 @@ FLASHMEM void All_Button_LEDS(bool state)
 {
   if (state)
   {
+
+#if !defined OLED_DISPLAYS
     setled(LED_UP, HIGH);
 
     if (configuration.sys.sus_pedal)
@@ -1068,11 +1083,13 @@ FLASHMEM void All_Button_LEDS(bool state)
 
     setled(LED_LEFT, HIGH);
     setled(LED_RIGHT, HIGH);
-    setled(LED_SEL, HIGH);
-    setled(LED_START, HIGH);
 
     setled(LED_BUT_B, HIGH);
     setled(LED_BUT_A, HIGH);
+#endif
+    setled(LED_SEL, HIGH);
+    setled(LED_START, HIGH);
+
 
 #ifdef MCP_CV       
     // digitalWrite(GATE_OUT, HIGH);
@@ -1081,6 +1098,8 @@ FLASHMEM void All_Button_LEDS(bool state)
 
   }
   else {
+
+#if !defined OLED_DISPLAYS  
     if (!(configuration.sys.ext_clock && cv_clock))
       setled(LED_UP, LOW);
 
@@ -1091,14 +1110,16 @@ FLASHMEM void All_Button_LEDS(bool state)
 
     setled(LED_LEFT, LOW);
     setled(LED_RIGHT, LOW);
-    setled(LED_SEL, LOW);
 
     setled(LED_BUT_B, LOW);
-    if (seq.running == false)
-      setled(LED_START, LOW);
 
     //if (seq.edit_state==0)
     setled(LED_BUT_A, LOW);
+#endif
+
+    setled(LED_SEL, LOW);
+    if (seq.running == false)
+      setled(LED_START, LOW);
 
 #ifdef MCP_CV       
     // digitalWrite(GATE_OUT, LOW);
@@ -1230,6 +1251,10 @@ FLASHMEM void update_psram_speed(int speed_mhz) {
 }
 
 
+#if defined OLED_DISPLAYS 
+extern void init_oled_displays();
+#endif
+
 FLASHMEM void setup()
 {
 
@@ -1270,7 +1295,7 @@ FLASHMEM void setup()
   pinMode(GATE_OUT, OUTPUT);
 #endif
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
 
   Wire.begin();
   Wire.setClock(400000);
@@ -1296,6 +1321,31 @@ FLASHMEM void setup()
 #endif
 
 #endif
+
+
+#ifdef LED_RINGS
+  LEDRing_l.LEDRingSmall_Reset();
+  delay(20);
+  LEDRing_r.LEDRingSmall_Reset();
+  delay(20);
+
+  LEDRing_l.LEDRingSmall_Configuration(0x01); //Normal operation
+  LEDRing_l.LEDRingSmall_PWMFrequencyEnable(1);
+  LEDRing_l.LEDRingSmall_SpreadSpectrum(0b0010110);
+  LEDRing_l.LEDRingSmall_GlobalCurrent(0x10);
+  LEDRing_l.LEDRingSmall_SetScaling(0xFF);
+  LEDRing_l.LEDRingSmall_PWM_MODE();
+
+  LEDRing_r.LEDRingSmall_Configuration(0x01); //Normal operation
+  LEDRing_r.LEDRingSmall_PWMFrequencyEnable(1);
+  LEDRing_r.LEDRingSmall_SpreadSpectrum(0b0010110);
+  LEDRing_r.LEDRingSmall_GlobalCurrent(0x10);
+  LEDRing_r.LEDRingSmall_SetScaling(0xFF);
+  LEDRing_r.LEDRingSmall_PWM_MODE();
+
+#endif
+
+
 
 #ifdef MIDI_ACTIVITY_LIGHTS
   pinMode(LED_MIDI_IN, OUTPUT);
@@ -1379,10 +1429,8 @@ FLASHMEM void setup()
   pinMode(BI_RIGHT, INPUT_PULLUP);
   pinMode(BI_SELECT, INPUT_PULLUP);
   pinMode(BI_START, INPUT_PULLUP);
-#ifndef REDUCED_BUTTON_INTERFACE_ESP
   pinMode(BI_BUTTON_A, INPUT_PULLUP);
   pinMode(BI_BUTTON_B, INPUT_PULLUP);
-#endif
 #endif
 
 #if !defined ESP_DISPLAY && !defined RA_DISPLAY
@@ -1746,10 +1794,8 @@ FLASHMEM void setup()
 
 
 #ifdef ONBOARD_BUTTON_INTERFACE
-#ifndef REDUCED_BUTTON_INTERFACE_ESP
   if (digitalRead(BI_BUTTON_A) == false || digitalRead(BI_BUTTON_B) == false) // is pushed
     bootup_performance_loading = false;
-#endif
 #endif
 
 #ifdef ESP_DISPLAY
@@ -2015,6 +2061,11 @@ FLASHMEM void setup()
   digitalWrite(LED_MIDI_IN, LOW);
   digitalWrite(LED_MIDI_OUT, LOW);
 #endif
+
+#if defined OLED_DISPLAYS 
+init_oled_displays();
+#endif
+
 }
 
 #ifdef COMPILE_FOR_PSRAM
@@ -2717,6 +2768,7 @@ char apc_scrolltext[16];
 #endif
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+
 uint8_t RGB_state = 199;
 FLASHMEM void setRGBencoderColor()
 {
@@ -3073,9 +3125,36 @@ void checkWebRemote()
     display.console = true;
 }
 
+#if defined LED_RINGS || defined LED_DEBUG
+extern void update_right_led_ring();
+extern void update_left_led_ring();
+#if defined LED_DEBUG
+extern void draw_ring_simulator();
+
+#endif
+#endif
+
+#if defined OLED_DISPLAYS
+extern elapsedMillis OLEDTimer;
+extern void OLED_status();
+#endif
+
 void loop()
 {
-  //display.fillRect(BTE_SCRATCH_X, BTE_SCRATCH_Y, BTE_SCRATCH_MAX_W, BTE_SCRATCH_MAX_H, RA8875_RED);
+#if defined OLED_DISPLAYS
+  //OLED_status();
+#endif
+
+#if defined LED_RINGS || defined LED_DEBUG
+  if (touchReadTimer >= 5) {
+    update_right_led_ring();
+    update_left_led_ring();
+#if  defined LED_DEBUG
+    draw_ring_simulator();
+#endif
+  }
+#endif
+
 #if defined ESP_DISPLAY
   static uint8_t lastEditState = 0;
   if (seq.edit_state != lastEditState) {
@@ -3104,7 +3183,7 @@ void loop()
     if (trs_pedal != trs_pedal_previous)
     {
       set_trs_pedal();
-#if  defined BUTTON_LEDS && defined MCP_23017
+#if  defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
       setled(LED_DOWN, trs_pedal);
 #endif
 
@@ -3141,7 +3220,7 @@ void loop()
         midi_bpm_counter = 0;
       }
       midi_bpm_counter++;
-#if  defined BUTTON_LEDS && defined MCP_23017
+#if  defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
       setled(LED_UP, cv_clock);
 #endif
       cv_clock_previous = cv_clock;
@@ -3374,7 +3453,8 @@ void loop()
       dac_state = 0;
     }
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+
     setRGBencoderColor();
 #endif
 
@@ -6246,6 +6326,20 @@ FLASHMEM void init_configuration(void)
   configuration.epiano.midi_channel = EP_MIDI_CHANNEL_DEFAULT;
 
   set_volume(configuration.sys.vol, configuration.sys.mono);
+
+#if defined LED_RINGS || defined LED_DEBUG
+  configuration.sys.led_ring_start_offset = 12;
+  configuration.sys.left_volume_color_scheme = 10;
+  configuration.sys.left_volume_custom_start = 63;
+  configuration.sys.left_volume_custom_end = 73;
+  configuration.sys.left_seq_color_scheme = 10;
+  configuration.sys.left_seq_custom_start = 34;
+  configuration.sys.left_seq_custom_end = 41;
+  configuration.sys.right_edit_color_scheme = 10;
+  configuration.sys.right_edit_custom_start = 0;
+  configuration.sys.right_edit_custom_end = 2;
+  configuration.sys.led_brightness_gradient = 80;
+#endif
 }
 
 /******************************************************************************
@@ -6606,7 +6700,8 @@ FLASHMEM void set_sys_params(void)
   display.brightness(configuration.sys.brightness);
 #endif
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+
   set_custom_enc_colors();
 #endif
 

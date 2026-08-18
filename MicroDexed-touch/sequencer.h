@@ -58,6 +58,17 @@ static const float tune_frequencies2_PGM[128] = {
     5274.0409, 5587.6517, 5919.9108, 6271.9270, 6644.8752, 7040.0000, 7458.6202, 7902.1328,
     8372.0181, 8869.8442, 9397.2726, 9956.0635, 10548.0818, 11175.3034, 11839.8215, 12543.8540 };
 
+// Song Arranger - song section data structure
+typedef struct song_arranger_part_s {
+    char name[16];              // Part name (e.g., "Intro", "Verse 1")
+    uint8_t start_step;         // Song step where this part starts (0-63)
+    uint8_t end_step;           // Song step where this part ends (0-63)
+    uint8_t continue_step;      // Song step to continue after part ends (0-63, 99 = end song)
+    uint16_t color;             // Color for this part (for highlighting)
+    bool active;                // Whether this part is defined
+    uint8_t midi_note;          // MIDI note for this part (for keyboard mapping)
+} song_arranger_part_t;
+
 typedef struct sequencer_s
 {
     bool quicknav_song_to_pattern_jump = false;
@@ -333,7 +344,33 @@ typedef struct sequencer_s
     uint8_t pat_chance[NUM_SEQ_PATTERN];
     uint8_t pat_vel_variation[NUM_SEQ_PATTERN];
 
+
+// Song Arranger
+song_arranger_part_t song_arranger_parts[10];  // 10 song sections
+bool song_arranger_active;                   // Master on/off switch
+bool song_arranger_playing;                  // Is arranger currently controlling playback
+uint8_t song_arranger_current_part;                   // Currently playing part (0-9, 99 = none)
+uint8_t song_arranger_next_part;                      // Next part queued (0-9, 99 = none)
+uint8_t song_arranger_part_chain_counter;             // Internal chain step counter for current part
+bool song_arranger_part_chain_started;                // Flag to prevent re-triggering
+uint8_t song_arranger_requested_part;                 // Part requested by touch (0-9, 99 = none)
+bool song_arranger_part_change_pending;               // True when a part change is queued
+uint8_t song_arranger_last_song_step;                 // Last song step for arranger mode
+uint8_t song_arranger_base_note;                      // Base MIDI note for the first part (Intro)
+uint8_t song_arranger_switch_mode;  // 0 = next pattern, 1 = next song step
+bool song_arranger_need_redraw_buttons;
+
 } sequencer_t;
+
+// Song Arranger functions
+extern void init_song_arranger(void);
+
+uint16_t get_song_arranger_color_for_chain(uint8_t chain);
+uint8_t get_song_arranger_part_for_song_step(uint8_t step);
+void draw_song_arranger_buttons(void);
+void draw_song_arranger_config_grid(void);
+void draw_song_arranger_enable_button(void);
+void handle_song_arranger_touch(uint8_t button_index);
 
 void sequencer(void);
 void sequencer_part2(void);

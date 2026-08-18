@@ -383,9 +383,6 @@ FLASHMEM void LiveSequencer::handleMidiEvent(uint8_t inChannel,
     bool skip = false;
     DBG_LOG(printf("got midi note %i\n", note));
 
-    // REMOVED: Channel filtering - now all MIDI input is processed
-    // if (data.instrumentChannels.count(inChannel) == 0) {
-
     ui_pianoRoll->handleKeyChanged(note, event, velocity);
     // velocity adjustment for keyboard events (live playing or recording)
     const uint8_t velocitySetting =
@@ -1515,7 +1512,6 @@ FLASHMEM void LiveSequencer::loadOldTrackInstruments(void) {
 }
 
 FLASHMEM void LiveSequencer::updateTrackChannels(bool initial) {
-  updateInstrumentChannels();
   char temp_char[10];
 
   for (uint8_t i = 0; i < LIVESEQUENCER_NUM_TRACKS; i++) {
@@ -1736,25 +1732,6 @@ FLASHMEM void LiveSequencer::getInstrumentName(uint8_t device,
     sprintf(sub, " ");
     break;
   }
-}
-
-FLASHMEM void LiveSequencer::updateInstrumentChannels(void) {
-  data.instrumentChannels.clear();
-  data.instrumentChannels.insert(drum_midi_channel);
-  for (int i = 0; i < NUM_DEXED; i++) {
-    data.instrumentChannels.insert(configuration.dexed[i].midi_channel);
-  }
-#ifdef GRANULAR
-  data.instrumentChannels.insert(granular_params.midi_channel);
-#endif
-  data.instrumentChannels.insert(configuration.epiano.midi_channel);
-  for (int i = 0; i < NUM_MICROSYNTH; i++) {
-    data.instrumentChannels.insert(microsynth[i].midi_channel);
-  }
-  for (int i = 0; i < NUM_MULTISAMPLES; i++) {
-    data.instrumentChannels.insert(msp[i].midi_channel);
-  }
-  data.instrumentChannels.insert(braids_osc.midi_channel);
 }
 
 FLASHMEM void LiveSequencer::addNotePair(MidiEvent noteOn, MidiEvent noteOff) {
@@ -2321,3 +2298,4 @@ FLASHMEM uint16_t LiveSequencer::healHungNotesInLayer(uint8_t track,
                  layer, healedCount));
   return healedCount;
 }
+

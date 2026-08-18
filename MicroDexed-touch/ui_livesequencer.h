@@ -25,7 +25,6 @@ public:
 
   UI_LiveSequencer(LiveSequencer& sequencer, LiveSequencer::LiveSeqData& d);
   void init(void);
-  void showDirectMappingWarning(uint8_t inChannel);
   void processLCDM(void);
   void handleTouchscreen(void);
   void onStopped(void);

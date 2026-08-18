@@ -356,14 +356,38 @@ extern bool chord_autostart;
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
-if (semaphore_midi_in_busy)
-return;
-semaphore_midi_in_busy=1;
+  if (semaphore_midi_in_busy)
+    return;
+  semaphore_midi_in_busy = 1;
 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
-if (disableDirectMIDIinput)
-return;
+  // ---- Song Arranger trigger notes (MIDI notes base..base+9) ----
+  if (seq.song_arranger_active) {
+    if (inData1 >= seq.song_arranger_base_note && inData1 < seq.song_arranger_base_note + 10) {
+      if (event == midi::NoteOn && inData2 > 0) {
+        seq.song_arranger_requested_part = inData1 - seq.song_arranger_base_note;
+        seq.song_arranger_part_change_pending = true;
+      }
+      // Do not process this note further – not chord, not instrument.
+      return;
+    }
+  }
+
+  // ---- Update chord arranger key state (visual feedback) ----
+  if (event == midi::NoteOn && inData2 > 0) {
+    chord_arranger_key_state[inData1] = 1;
+    chord_arranger_keyboard_dirty = true;
+  }
+  else if (event == midi::NoteOff || (event == midi::NoteOn && inData2 == 0)) {
+    chord_arranger_key_state[inData1] = 0;
+    chord_arranger_keyboard_dirty = true;
+  }
+
+  if (disableDirectMIDIinput) {
+    semaphore_midi_in_busy = 0;
+    return;
+  }
 
 #ifdef DEBUG
   char text[10];
@@ -580,43 +604,43 @@ return;
 #endif
 
   // MIDI THRU (only for non _internal MDT)
-   if (configuration.sys.soft_midi_thru == 1 && !_internal)
+  if (configuration.sys.soft_midi_thru == 1 && !_internal)
   {
     // Determine input source
-    bool from_usb   = (strcmp(MIDI_BY_USB, midi_device) == 0);
-    bool from_din   = (strcmp(MIDI_BY_DIN, midi_device) == 0);
-    bool from_host  = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
+    bool from_usb = (strcmp(MIDI_BY_USB, midi_device) == 0);
+    bool from_din = (strcmp(MIDI_BY_DIN, midi_device) == 0);
+    bool from_host = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
 
 #ifdef MIDI_DEVICE_USB
     // USB output (onboard)
     if ((from_din && configuration.sys.thru_din_to_usb) ||
-        (from_host && configuration.sys.thru_host_to_usb))
+      (from_host && configuration.sys.thru_host_to_usb))
     {
       switch (event)
       {
-        case midi::NoteOn:
-          usbMIDI.sendNoteOn(inData1, inData2, inChannel);
-          break;
-        case midi::NoteOff:
-          usbMIDI.sendNoteOff(inData1, inData2, inChannel);
-          break;
-        case midi::ControlChange:
-          usbMIDI.sendControlChange(inData1, inData2, inChannel);
-          break;
-        case midi::AfterTouchChannel:
-          usbMIDI.sendAfterTouch(inData1, inChannel);
-          break;
-        case midi::PitchBend:
-          usbMIDI.sendPitchBend(inData1, inChannel);
-          break;
-        case midi::ProgramChange:
-          usbMIDI.sendProgramChange(inData1, inChannel);
-          break;
-        case midi::AfterTouchPoly:
-          usbMIDI.sendAfterTouch(inData1, inData2, inChannel);
-          break;
-        default:
-          break;
+      case midi::NoteOn:
+        usbMIDI.sendNoteOn(inData1, inData2, inChannel);
+        break;
+      case midi::NoteOff:
+        usbMIDI.sendNoteOff(inData1, inData2, inChannel);
+        break;
+      case midi::ControlChange:
+        usbMIDI.sendControlChange(inData1, inData2, inChannel);
+        break;
+      case midi::AfterTouchChannel:
+        usbMIDI.sendAfterTouch(inData1, inChannel);
+        break;
+      case midi::PitchBend:
+        usbMIDI.sendPitchBend(inData1, inChannel);
+        break;
+      case midi::ProgramChange:
+        usbMIDI.sendProgramChange(inData1, inChannel);
+        break;
+      case midi::AfterTouchPoly:
+        usbMIDI.sendAfterTouch(inData1, inData2, inChannel);
+        break;
+      default:
+        break;
       }
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_USB"));
@@ -627,34 +651,34 @@ return;
 #ifdef MIDI_DEVICE_DIN
     // DIN output
     if ((from_usb && configuration.sys.thru_usb_to_din) ||
-        (from_host && configuration.sys.thru_host_to_din))
+      (from_host && configuration.sys.thru_host_to_din))
     {
       switch (event)
       {
-        case midi::NoteOn:
-          midi_serial.sendNoteOn(inData1, inData2, inChannel);
-          break;
-        case midi::NoteOff:
-          midi_serial.sendNoteOff(inData1, inData2, inChannel);
-          break;
-        case midi::ControlChange:
-          midi_serial.sendControlChange(inData1, inData2, inChannel);
-          break;
-        case midi::AfterTouchChannel:
-          midi_serial.sendAfterTouch(inData1, inChannel);
-          break;
-        case midi::PitchBend:
-          // PitchBend is 14‑bit; we have LSB in inData1, MSB in inData2
-          midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel);
-          break;
-        case midi::ProgramChange:
-          midi_serial.sendProgramChange(inData1, inChannel);
-          break;
-        case midi::AfterTouchPoly:
-          midi_serial.sendAfterTouch(inData1, inData2, inChannel);
-          break;
-        default:
-          break;
+      case midi::NoteOn:
+        midi_serial.sendNoteOn(inData1, inData2, inChannel);
+        break;
+      case midi::NoteOff:
+        midi_serial.sendNoteOff(inData1, inData2, inChannel);
+        break;
+      case midi::ControlChange:
+        midi_serial.sendControlChange(inData1, inData2, inChannel);
+        break;
+      case midi::AfterTouchChannel:
+        midi_serial.sendAfterTouch(inData1, inChannel);
+        break;
+      case midi::PitchBend:
+        // PitchBend is 14‑bit; we have LSB in inData1, MSB in inData2
+        midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel);
+        break;
+      case midi::ProgramChange:
+        midi_serial.sendProgramChange(inData1, inChannel);
+        break;
+      case midi::AfterTouchPoly:
+        midi_serial.sendAfterTouch(inData1, inData2, inChannel);
+        break;
+      default:
+        break;
       }
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_DIN"));
@@ -665,47 +689,47 @@ return;
 #ifdef MIDI_DEVICE_USB_HOST
     // USB Host output (all three devices)
     if ((from_usb && configuration.sys.thru_usb_to_host) ||
-        (from_din && configuration.sys.thru_din_to_host))
+      (from_din && configuration.sys.thru_din_to_host))
     {
       switch (event)
       {
-        case midi::NoteOn:
-          midi_usb_1.sendNoteOn(inData1, inData2, inChannel);
-          midi_usb_2.sendNoteOn(inData1, inData2, inChannel);
-          midi_usb_3.sendNoteOn(inData1, inData2, inChannel);
-          break;
-        case midi::NoteOff:
-          midi_usb_1.sendNoteOff(inData1, inData2, inChannel);
-          midi_usb_2.sendNoteOff(inData1, inData2, inChannel);
-          midi_usb_3.sendNoteOff(inData1, inData2, inChannel);
-          break;
-        case midi::ControlChange:
-          midi_usb_1.sendControlChange(inData1, inData2, inChannel);
-          midi_usb_2.sendControlChange(inData1, inData2, inChannel);
-          midi_usb_3.sendControlChange(inData1, inData2, inChannel);
-          break;
-        case midi::AfterTouchChannel:
-          midi_usb_1.sendAfterTouch(inData1, inChannel);
-          midi_usb_2.sendAfterTouch(inData1, inChannel);
-          midi_usb_3.sendAfterTouch(inData1, inChannel);
-          break;
-        case midi::PitchBend:
-          midi_usb_1.sendPitchBend(inData1, inChannel);
-          midi_usb_2.sendPitchBend(inData1, inChannel);
-          midi_usb_3.sendPitchBend(inData1, inChannel);
-          break;
-        case midi::ProgramChange:
-          midi_usb_1.sendProgramChange(inData1, inChannel);
-          midi_usb_2.sendProgramChange(inData1, inChannel);
-          midi_usb_3.sendProgramChange(inData1, inChannel);
-          break;
-        case midi::AfterTouchPoly:
-          midi_usb_1.sendAfterTouch(inData1, inData2, inChannel);
-          midi_usb_2.sendAfterTouch(inData1, inData2, inChannel);
-          midi_usb_3.sendAfterTouch(inData1, inData2, inChannel);
-          break;
-        default:
-          break;
+      case midi::NoteOn:
+        midi_usb_1.sendNoteOn(inData1, inData2, inChannel);
+        midi_usb_2.sendNoteOn(inData1, inData2, inChannel);
+        midi_usb_3.sendNoteOn(inData1, inData2, inChannel);
+        break;
+      case midi::NoteOff:
+        midi_usb_1.sendNoteOff(inData1, inData2, inChannel);
+        midi_usb_2.sendNoteOff(inData1, inData2, inChannel);
+        midi_usb_3.sendNoteOff(inData1, inData2, inChannel);
+        break;
+      case midi::ControlChange:
+        midi_usb_1.sendControlChange(inData1, inData2, inChannel);
+        midi_usb_2.sendControlChange(inData1, inData2, inChannel);
+        midi_usb_3.sendControlChange(inData1, inData2, inChannel);
+        break;
+      case midi::AfterTouchChannel:
+        midi_usb_1.sendAfterTouch(inData1, inChannel);
+        midi_usb_2.sendAfterTouch(inData1, inChannel);
+        midi_usb_3.sendAfterTouch(inData1, inChannel);
+        break;
+      case midi::PitchBend:
+        midi_usb_1.sendPitchBend(inData1, inChannel);
+        midi_usb_2.sendPitchBend(inData1, inChannel);
+        midi_usb_3.sendPitchBend(inData1, inChannel);
+        break;
+      case midi::ProgramChange:
+        midi_usb_1.sendProgramChange(inData1, inChannel);
+        midi_usb_2.sendProgramChange(inData1, inChannel);
+        midi_usb_3.sendProgramChange(inData1, inChannel);
+        break;
+      case midi::AfterTouchPoly:
+        midi_usb_1.sendAfterTouch(inData1, inData2, inChannel);
+        midi_usb_2.sendAfterTouch(inData1, inData2, inChannel);
+        midi_usb_3.sendAfterTouch(inData1, inData2, inChannel);
+        break;
+      default:
+        break;
       }
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_USB_HOST"));
@@ -717,7 +741,7 @@ return;
 #ifdef DEBUG
   LOG.println();
 #endif
-semaphore_midi_in_busy=0;
+  semaphore_midi_in_busy = 0;
 }
 
 int toPitchBend(uint8_t lsb, uint8_t msb) {
@@ -735,9 +759,9 @@ void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_devic
 
 FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
 {
-if (semaphore_midi_in_busy)
-return;
-semaphore_midi_in_busy=1;
+  if (semaphore_midi_in_busy)
+    return;
+  semaphore_midi_in_busy = 1;
 
   handleSystemExclusive(data, len);
 #ifdef DEBUG
@@ -745,15 +769,15 @@ semaphore_midi_in_busy=1;
 #endif
 
   // MIDI THRU
-   if (configuration.sys.soft_midi_thru == 1)
+  if (configuration.sys.soft_midi_thru == 1)
   {
-    bool from_usb   = (strcmp(MIDI_BY_USB, midi_device) == 0);
-    bool from_din   = (strcmp(MIDI_BY_DIN, midi_device) == 0);
-    bool from_host  = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
+    bool from_usb = (strcmp(MIDI_BY_USB, midi_device) == 0);
+    bool from_din = (strcmp(MIDI_BY_DIN, midi_device) == 0);
+    bool from_host = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
 
 #ifdef MIDI_DEVICE_USB
     if ((from_din && configuration.sys.thru_din_to_usb) ||
-        (from_host && configuration.sys.thru_host_to_usb))
+      (from_host && configuration.sys.thru_host_to_usb))
     {
       usbMIDI.sendSysEx(len, data);
 #ifdef DEBUG
@@ -764,7 +788,7 @@ semaphore_midi_in_busy=1;
 
 #ifdef MIDI_DEVICE_DIN
     if ((from_usb && configuration.sys.thru_usb_to_din) ||
-        (from_host && configuration.sys.thru_host_to_din))
+      (from_host && configuration.sys.thru_host_to_din))
     {
       midi_serial.sendSysEx(len, data);
 #ifdef DEBUG
@@ -775,7 +799,7 @@ semaphore_midi_in_busy=1;
 
 #ifdef MIDI_DEVICE_USB_HOST
     if ((from_usb && configuration.sys.thru_usb_to_host) ||
-        (from_din && configuration.sys.thru_din_to_host))
+      (from_din && configuration.sys.thru_din_to_host))
     {
       midi_usb_1.sendSysEx(len, data);
       midi_usb_2.sendSysEx(len, data);
@@ -790,15 +814,15 @@ semaphore_midi_in_busy=1;
 #ifdef DEBUG
   LOG.println();
 #endif
-semaphore_midi_in_busy=0;
+  semaphore_midi_in_busy = 0;
 }
 
 FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::MidiType event)
 {
   //char text[10];
-if (semaphore_midi_in_busy)
-return;
-semaphore_midi_in_busy=1;
+  if (semaphore_midi_in_busy)
+    return;
+  semaphore_midi_in_busy = 1;
 
   switch (event)
   {
@@ -822,29 +846,29 @@ semaphore_midi_in_busy=1;
 #endif
 
   // MIDI THRU
-    if (configuration.sys.soft_midi_thru == 1)
+  if (configuration.sys.soft_midi_thru == 1)
   {
-    bool from_usb   = (strcmp(MIDI_BY_USB, midi_device) == 0);
-    bool from_din   = (strcmp(MIDI_BY_DIN, midi_device) == 0);
-    bool from_host  = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
+    bool from_usb = (strcmp(MIDI_BY_USB, midi_device) == 0);
+    bool from_din = (strcmp(MIDI_BY_DIN, midi_device) == 0);
+    bool from_host = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
 
 #ifdef MIDI_DEVICE_USB
     if ((from_din && configuration.sys.thru_din_to_usb) ||
-        (from_host && configuration.sys.thru_host_to_usb))
+      (from_host && configuration.sys.thru_host_to_usb))
     {
       switch (event)
       {
-        case midi::TimeCodeQuarterFrame:
-          usbMIDI.sendTimeCodeQuarterFrame(0xF1, inData1);
-          break;
-        case midi::SongSelect:
-          usbMIDI.sendSongSelect(inData1);
-          break;
-        case midi::TuneRequest:
-          usbMIDI.sendTuneRequest();
-          break;
-        default:
-          break;
+      case midi::TimeCodeQuarterFrame:
+        usbMIDI.sendTimeCodeQuarterFrame(0xF1, inData1);
+        break;
+      case midi::SongSelect:
+        usbMIDI.sendSongSelect(inData1);
+        break;
+      case midi::TuneRequest:
+        usbMIDI.sendTuneRequest();
+        break;
+      default:
+        break;
       }
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_USB"));
@@ -854,21 +878,21 @@ semaphore_midi_in_busy=1;
 
 #ifdef MIDI_DEVICE_DIN
     if ((from_usb && configuration.sys.thru_usb_to_din) ||
-        (from_host && configuration.sys.thru_host_to_din))
+      (from_host && configuration.sys.thru_host_to_din))
     {
       switch (event)
       {
-        case midi::TimeCodeQuarterFrame:
-          midi_serial.sendTimeCodeQuarterFrame(inData1);
-          break;
-        case midi::SongSelect:
-          midi_serial.sendSongSelect(inData1);
-          break;
-        case midi::TuneRequest:
-          midi_serial.sendTuneRequest();
-          break;
-        default:
-          break;
+      case midi::TimeCodeQuarterFrame:
+        midi_serial.sendTimeCodeQuarterFrame(inData1);
+        break;
+      case midi::SongSelect:
+        midi_serial.sendSongSelect(inData1);
+        break;
+      case midi::TuneRequest:
+        midi_serial.sendTuneRequest();
+        break;
+      default:
+        break;
       }
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_DIN"));
@@ -878,21 +902,21 @@ semaphore_midi_in_busy=1;
 
 #ifdef MIDI_DEVICE_USB_HOST
     if ((from_usb && configuration.sys.thru_usb_to_host) ||
-        (from_din && configuration.sys.thru_din_to_host))
+      (from_din && configuration.sys.thru_din_to_host))
     {
       switch (event)
       {
-        case midi::TimeCodeQuarterFrame:
-          midi_usb_1.sendTimeCodeQuarterFrame(0xF1, inData1);
-          break;
-        case midi::SongSelect:
-          midi_usb_1.sendSongSelect(inData1);
-          break;
-        case midi::TuneRequest:
-          midi_usb_1.sendTuneRequest();
-          break;
-        default:
-          break;
+      case midi::TimeCodeQuarterFrame:
+        midi_usb_1.sendTimeCodeQuarterFrame(0xF1, inData1);
+        break;
+      case midi::SongSelect:
+        midi_usb_1.sendSongSelect(inData1);
+        break;
+      case midi::TuneRequest:
+        midi_usb_1.sendTuneRequest();
+        break;
+      default:
+        break;
       }
 #ifdef DEBUG
       LOG.print(F(" THRU->MIDI_USB_HOST"));
@@ -904,15 +928,15 @@ semaphore_midi_in_busy=1;
 #ifdef DEBUG
   LOG.println();
 #endif
-semaphore_midi_in_busy=0;
+  semaphore_midi_in_busy = 0;
 }
 
 void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 {
   //char text[16];
-if (semaphore_midi_in_busy)
-return;
-semaphore_midi_in_busy =1;
+  if (semaphore_midi_in_busy)
+    return;
+  semaphore_midi_in_busy = 1;
 
   switch (event)
   {
@@ -948,15 +972,15 @@ semaphore_midi_in_busy =1;
   // #endif
 
     // MIDI THRU
-    if (configuration.sys.soft_midi_thru == 1)
+  if (configuration.sys.soft_midi_thru == 1)
   {
-    bool from_usb   = (strcmp(MIDI_BY_USB, midi_device) == 0);
-    bool from_din   = (strcmp(MIDI_BY_DIN, midi_device) == 0);
-    bool from_host  = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
+    bool from_usb = (strcmp(MIDI_BY_USB, midi_device) == 0);
+    bool from_din = (strcmp(MIDI_BY_DIN, midi_device) == 0);
+    bool from_host = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
 
 #ifdef MIDI_DEVICE_USB
     if ((from_din && configuration.sys.thru_din_to_usb) ||
-        (from_host && configuration.sys.thru_host_to_usb))
+      (from_host && configuration.sys.thru_host_to_usb))
     {
       usbMIDI.sendRealTime(event);
 #ifdef DEBUG
@@ -967,7 +991,7 @@ semaphore_midi_in_busy =1;
 
 #ifdef MIDI_DEVICE_DIN
     if ((from_usb && configuration.sys.thru_usb_to_din) ||
-        (from_host && configuration.sys.thru_host_to_din))
+      (from_host && configuration.sys.thru_host_to_din))
     {
       midi_serial.sendRealTime(event);
 #ifdef DEBUG
@@ -978,7 +1002,7 @@ semaphore_midi_in_busy =1;
 
 #ifdef MIDI_DEVICE_USB_HOST
     if ((from_usb && configuration.sys.thru_usb_to_host) ||
-        (from_din && configuration.sys.thru_din_to_host))
+      (from_din && configuration.sys.thru_din_to_host))
     {
       midi_usb_1.sendRealTime(event);
       midi_usb_2.sendRealTime(event);
@@ -993,7 +1017,7 @@ semaphore_midi_in_busy =1;
 #ifdef DEBUG
   LOG.println();
 #endif
-semaphore_midi_in_busy=0;
+  semaphore_midi_in_busy = 0;
 }
 
 ///* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
@@ -1061,7 +1085,7 @@ void handleNoteOn_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byte inVelo
 
 void handleNoteOff_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
-  semaphore_midi_in_busy=0; //always allow note off, to avoid hang notes on
+  semaphore_midi_in_busy = 0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_DIN, midi::NoteOff);
 }
 
@@ -1183,7 +1207,7 @@ void handleNoteOn_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNoteNumber, byte i
 
 void handleNoteOff_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
-  semaphore_midi_in_busy=0; //always allow note off, to avoid hang notes on
+  semaphore_midi_in_busy = 0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_USB_HOST, midi::NoteOff);
 }
 
@@ -1305,7 +1329,7 @@ void handleNoteOn_MIDI_DEVICE_USB(byte inChannel, byte inNoteNumber, byte inVelo
 
 void handleNoteOff_MIDI_DEVICE_USB(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
-  semaphore_midi_in_busy=0; //always allow note off, to avoid hang notes on
+  semaphore_midi_in_busy = 0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_USB, midi::NoteOff);
 }
 

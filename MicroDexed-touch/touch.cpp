@@ -24,6 +24,16 @@ extern RA8875 display;
 extern ILI9341_t3n display;
 #endif
 
+#ifdef OLED_DISPLAYS
+#include <Adafruit_SSD1306.h>
+extern Adafruit_SSD1306 oled_display;
+
+#if defined MCP_23017
+#include "MCP23017.h"
+extern MCP23017 mcp;
+#endif
+
+#endif
 
 extern void checkWebRemote();
 extern config_t configuration;
@@ -54,9 +64,10 @@ fm_t fm;                         // file manager
 bool loop_start_button = false;
 bool loop_end_button = false;
 bool isButtonTouched = false;
-int numTouchPoints = 0;
+uint8_t numTouchPoints = 0;
 
 extern bool wakeScreenFlag;
+extern bool chord_arranger_keyboard_dirty;
 
 #if defined APC
 extern void apc_mute_matrix();
@@ -184,7 +195,51 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   }
   else {
     display.print((const char*)str);
+
   }
+
+#ifdef OLED_DISPLAYS
+  if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_file_manager)) {
+
+    SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+    switch (position) {
+    case 0:
+      mcp.write1(OLED_CS_L, LOW);
+      mcp.write1(OLED_CS_R, HIGH);
+      delay(1);
+      oled_display.clearDisplay();
+      oled_display.setCursor(0, 0);
+      if (is_flash) {
+        oled_display.println((const __FlashStringHelper*)str);
+      }
+      else {
+        oled_display.println((const char*)str);
+      }
+      oled_display.display();
+      mcp.write1(OLED_CS_L, HIGH);
+      break;
+
+    case 1:
+      mcp.write1(OLED_CS_R, LOW);
+      mcp.write1(OLED_CS_L, HIGH);
+      delay(1);
+      oled_display.clearDisplay();
+      oled_display.setCursor(0, 0);
+      if (is_flash) {
+        oled_display.println((const __FlashStringHelper*)str);
+      }
+      else {
+        oled_display.println((const char*)str);
+      }
+      oled_display.display();
+      break;
+    }
+  }
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, HIGH);
+  SPI.endTransaction();
+
+#endif
 
   ts.old_helptext_length[position] = l;
 }
@@ -214,7 +269,6 @@ FLASHMEM void helptext_r(const __FlashStringHelper* str) {
 FLASHMEM void helptext_c(const __FlashStringHelper* str) {
   helptext_impl(str, 2, true);
 }
-
 
 extern void clear_bottom_half_screen_without_backbutton();
 
@@ -1529,6 +1583,55 @@ bool chord_autostart = false;
 extern void preview_chord_suggestion(uint8_t s);
 extern SuggestedChord suggestions[6];
 
+FLASHMEM void draw_chord_arranger_indicators() {
+    const uint8_t leftmostNote = 0;   // first note displayed (C-1)
+    const uint8_t rightmostNote = 95; // last note displayed (B7) – 8 octaves * 12 - 1
+    const uint8_t indicatorY = 110;   // y position where the split line is drawn (same as original)
+    const uint8_t indicatorHeight = 4;
+
+    // 1. Draw the chord zone (left of split) in DARKGREEN
+    if (seq.arr_split_note > 0 && seq.arr_split_note > leftmostNote) {
+        uint16_t leftX = getNotePixelX(leftmostNote);
+        uint16_t rightX = getNotePixelX(seq.arr_split_note - 1) + 5; // right edge of last chord note
+        if (rightX > leftX) {
+            display.fillRect(leftX, indicatorY, rightX - leftX, indicatorHeight, DARKGREEN);
+        }
+    }
+
+    // 2. Clear the live zone (right of split) to background color
+    if (seq.arr_split_note > 0 && seq.arr_split_note <= rightmostNote) {
+        uint16_t leftX = getNotePixelX(seq.arr_split_note);
+        uint16_t rightX = getNotePixelX(rightmostNote) + 5;
+        if (rightX > leftX) {
+            display.fillRect(leftX, indicatorY, rightX - leftX, indicatorHeight, COLOR_BACKGROUND);
+        }
+    } else if (seq.arr_split_note == 0 || seq.arr_split_note > rightmostNote) {
+        // No split or split beyond displayed range → clear the whole indicator area
+        uint16_t leftX = getNotePixelX(leftmostNote);
+        uint16_t rightX = getNotePixelX(rightmostNote) + 5;
+        display.fillRect(leftX, indicatorY, rightX - leftX, indicatorHeight, COLOR_BACKGROUND);
+    }
+
+    // 3. Split-point vertical line (if split is within displayed range)
+    if (seq.arr_split_note > 0 && seq.arr_split_note >= leftmostNote && seq.arr_split_note <= rightmostNote + 1) {
+        uint16_t splitX = getNotePixelX(seq.arr_split_note);
+        display.drawLine(splitX, indicatorY, splitX, 118, DARKGREEN); // from y=110 down to the keys
+    }
+
+    // 4. Song-part trigger keys (small rectangles at the top of the keyboard, y=110)
+    if (seq.song_arranger_active) {
+        uint8_t base = seq.song_arranger_base_note;
+        for (uint8_t i = 0; i < 10; i++) {
+            uint8_t note = base + i;
+            if (note >= leftmostNote && note <= rightmostNote) {
+                uint16_t xPos = getNotePixelX(note);
+                // Draw a small vertical bar (or filled rectangle) at the indicator position
+                display.fillRect(xPos, indicatorY, 5, indicatorHeight, COLOR_ARP);
+            }
+        }
+    }
+}
+
 FLASHMEM void handle_touchscreen_chord_arranger()
 {
   if (numTouchPoints > 0)
@@ -1550,6 +1653,29 @@ FLASHMEM void handle_touchscreen_chord_arranger()
       chord_autostart = !chord_autostart;
 
     TouchButton::drawButton(GRID.X[5], GRID.Y[1] + 16, "AUTO", "START", chord_autostart ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+
+    if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+      LCDML.OTHER_jumpToFunc(UI_func_song_arranger);
+      return;
+    }
+
+    // Redraw the keyboard if a note state changed (dirty flag)
+ if (chord_arranger_keyboard_dirty) {
+    chord_arranger_keyboard_dirty = false;
+
+    // Clear keyboard and indicator areas
+    display.fillRect(0, 95, DISPLAY_WIDTH, 133 - 95, COLOR_BACKGROUND);
+    display.fillRect(0, 88, DISPLAY_WIDTH, 7, COLOR_BACKGROUND);
+
+    // Redraw keyboard
+    for (uint8_t oct = 0; oct < 8; oct++) {
+        draw_chord_arranger_keyboard(oct * 7 + 1, 95, oct * 12);
+    }
+
+    // Redraw indicators (they were erased)
+    draw_chord_arranger_indicators();
+}
+
   }
 }
 
@@ -1594,7 +1720,7 @@ FLASHMEM void draw_menu_ui_icons()
 
   TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
 #endif
-}
+    }
 extern elapsedMillis save_sys;
 extern bool  is_offline_mode;
 extern void  toggleOutputMode();
@@ -1736,16 +1862,16 @@ FLASHMEM void handle_touchscreen_menu()
               }
               else {
                 for (int i = 0; i < -steps; i++) LCDML.BT_up();
-              }
-            }
+  }
+}
             LCDML.BT_enter();
           }
           // If it was a drag, do nothing (cursor already at final position)
-        }
+  }
 
         touchActive = false;
         dragMode = false;
-      }
+}
     }
 #endif
 
@@ -2218,4 +2344,90 @@ FLASHMEM void handle_touchscreen_sd_content_not_found() {
   if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
     LCDML.MENU_goRoot();  // Go to main menu root
   }
+}
+
+extern void draw_song_arranger_switch_button();
+extern void draw_song_arranger_button_states();
+extern bool song_arranger_blink_state;
+
+FLASHMEM void handle_touchscreen_song_arranger() {
+  // Blink timer for queued part
+  static elapsedMillis blinkTimer = 0;
+  const uint16_t BLINK_INTERVAL = 250; // ms
+
+  if (blinkTimer >= BLINK_INTERVAL) {
+    blinkTimer = 0;
+    song_arranger_blink_state = !song_arranger_blink_state;
+    // If there is a queued part, redraw to show the new blink state
+    if (seq.song_arranger_part_change_pending && seq.song_arranger_requested_part < 10) {
+      draw_song_arranger_button_states();
+    }
+  }
+
+  // 1. If sequencer requested a redraw (part change applied), do it now
+  if (seq.song_arranger_need_redraw_buttons) {
+    seq.song_arranger_need_redraw_buttons = false;
+    draw_song_arranger_button_states();
+  }
+
+  // 2. Touch release reset
+  if (numTouchPoints == 0) {
+    TouchButton::isAreaPressed(0, 0, 0, 0);
+    return;
+  }
+  if (ts.p.x == 0 && ts.p.y == 0) return;
+  if (ts.p.x > DISPLAY_WIDTH || ts.p.y > DISPLAY_HEIGHT) return;
+
+  // 3. Enable/disable button
+  uint16_t btn_x = GRID.X[5];
+  uint16_t btn_y = GRID.Y[0];
+  if (TouchButton::isAreaPressed(btn_x, btn_y, TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y)) {
+    seq.song_arranger_active = !seq.song_arranger_active;
+    draw_song_arranger_enable_button();
+    if (!seq.song_arranger_active) {
+      if (seq.running) handleStop();
+      seq.song_arranger_playing = false;
+      seq.song_arranger_current_part = 99;
+      seq.song_arranger_next_part = 99;
+      seq.song_arranger_part_change_pending = false;
+      seq.song_arranger_requested_part = 99;
+      draw_song_arranger_buttons(); // reset all to base colors
+    }
+    else {
+      draw_song_arranger_buttons(); // redraw in case states changed
+    }
+    return;
+  }
+
+  // 4. Switch mode button
+  uint16_t sw_x = GRID.X[4];
+  uint16_t sw_y = GRID.Y[0];
+  if (TouchButton::isAreaPressed(sw_x, sw_y, TouchButton::BUTTON_SIZE_X, TouchButton::BUTTON_SIZE_Y)) {
+    seq.song_arranger_switch_mode = !seq.song_arranger_switch_mode;
+    draw_song_arranger_switch_button();
+    return;
+  }
+
+  // 5. Part buttons
+  const uint8_t BTN_W = TouchButton::BUTTON_SIZE_X;
+  const uint8_t BTN_H = TouchButton::BUTTON_SIZE_Y;
+  const uint8_t SPACING = TouchButton::BUTTON_SPACING;
+
+  for (uint8_t row = 0; row < 2; row++) {
+    for (uint8_t col = 0; col < 5; col++) {
+      uint8_t part_index = row * 5 + col;
+      uint16_t x = col * (BTN_W + SPACING);
+      uint16_t y = row * (BTN_H + SPACING) + 60;
+      if (TouchButton::isAreaPressed(x, y, BTN_W, BTN_H)) {
+        handle_song_arranger_touch(part_index);
+        return;
+      }
+    }
+  }
+
+  if (TouchButton::isPressed(GRID.X[3], GRID.Y[0])) {
+    LCDML.OTHER_jumpToFunc(UI_func_chord_arranger);
+    return;
+  }
+
 }

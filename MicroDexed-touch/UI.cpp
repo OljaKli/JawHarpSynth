@@ -6,7 +6,7 @@
    Dexed ist heavily based on https://github.com/google/music-synthesizer-for-android
 
    (c)2018-2021 H. Wirtz <wirtz@parasitstudio.de>
-   (c)2021      H. Wirtz <wirtz@parasitstudio.de>, M. Koslowski <positionhigh@gmx.de>
+   (c)2022-2026 H. Wirtz <wirtz@parasitstudio.de>, M. Koslowski <positionhigh@gmx.de>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
    Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#ifndef _UI_HPP_
+//#ifndef _UI_HPP_
 #define _UI_HPP_
 
 #include "UI.h"
@@ -171,6 +171,10 @@ bool drumScreenActive = false;
 
 bool force_menu_full_redraw = true;
 
+// Chord Arranger: live key‑press state (0 = off, 1 = on)
+uint8_t chord_arranger_key_state[128] = {0};
+bool chord_arranger_keyboard_dirty = false;
+
 #ifdef MIDI_ACTIVITY_LIGHTS
 uint8_t LED_MIDI_IN = 40;
 uint8_t LED_MIDI_OUT = 36;
@@ -216,7 +220,7 @@ bool remote_touched;
 extern int menuhelper_previous_val;
 bool check_and_confirm_midi_channels;
 
-extern AudioFilterStateVariable global_delay_filter[NUM_DEXED];
+extern AudioFilterStateVariable global_delay_filter[2];
 extern AudioMixer<4> global_delay_filter_mixer[NUM_DEXED];
 
 bool multiband_confirm = false;
@@ -635,7 +639,7 @@ LCDML_add(61, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
 LCDML_add(62, LCDML_0, 18, "Extras/Test", NULL);
 LCDML_add(63, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
 LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(65, LCDML_0_18, 3, "MDT Arranger", UI_func_mdt_arranger);
+LCDML_add(65, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
 LCDML_add(66, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
 LCDML_add(67, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
 LCDML_add(68, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
@@ -1863,6 +1867,156 @@ FLASHMEM void edit_song_loop()
   }
 }
 
+// FLASHMEM void print_chain_matrix_in_song_page()
+// {
+//   if (seq.tracktype_or_instrument_assign > 0 && seq.tracktype_or_instrument_assign < 3) // select track for instrument assignment
+//   {
+//     sub_song_print_instruments(DARKGREEN, COLOR_BACKGROUND);
+//   }
+
+//   else if (seq.tracktype_or_instrument_assign > 4 && seq.tracktype_or_instrument_assign < 7) // select track for tracktype assignment
+//   {
+//     sub_song_print_tracktypes();
+//   }
+
+//   if (seq.tracktype_or_instrument_assign < 2 || seq.tracktype_or_instrument_assign == 6 || seq.tracktype_or_instrument_assign == 10 ||
+//     seq.tracktype_or_instrument_assign == 11 || seq.tracktype_or_instrument_assign == 8) // normal mode: show song grid, chain..
+//   {
+//     bool drawtrack[NUM_SEQ_TRACKS] = { false, false, false, false, false, false, false, false };
+//     if (seq.cursor_scroll == 0 || seq.cursor_scroll == 15 || seq.tracktype_or_instrument_assign == 6 ||
+//       seq.tracktype_or_instrument_assign == 11)
+//       song_page_full_draw_pattern_complete = false;
+
+//     if (seq.cursor_scroll < 16 && song_page_full_draw_pattern_complete && seq.tracktype_or_instrument_assign != 1)
+//     {
+//       if (seq.selected_track == 0)
+//       {
+//         drawtrack[7] = true;
+//         drawtrack[0] = true;
+//         drawtrack[1] = true;
+//       }
+//       else if (seq.selected_track == 7)
+//       {
+//         drawtrack[6] = true;
+//         drawtrack[7] = true;
+//         drawtrack[0] = true;
+//       }
+//       else
+//       {
+//         drawtrack[seq.selected_track] = true;
+//         drawtrack[seq.selected_track + 1] = true;
+//         drawtrack[seq.selected_track - 1] = true;
+//       }
+//     }
+//     else
+//     { // draw everything
+//       drawtrack[0] = true;
+//       drawtrack[1] = true;
+//       drawtrack[2] = true;
+//       drawtrack[3] = true;
+//       drawtrack[4] = true;
+//       drawtrack[5] = true;
+//       drawtrack[6] = true;
+//       drawtrack[7] = true;
+
+//     }
+
+//     for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
+//     {
+//       for (uint8_t y = 0; y < 16; y++) // visible song steps
+//       {
+//         uint8_t lineheight = 10;
+
+//         if (seq.cycle_touch_element < 7 || seq.tracktype_or_instrument_assign == 11)
+//         {
+//           if (drawtrack[x])
+//           {
+//             if ((y == seq.cursor_scroll && x == seq.selected_track) || seq.tracktype_or_instrument_assign == 11 ||
+//               (y == seq.cursor_scroll && x == 0 && seq.loop_edit_step == 1) || //is in loop edit, change trk0 to default state
+//               (y == seq.cursor_scroll && x == seq.previous_track) ||
+//               (y == seq.cursor_scroll_previous && x == seq.selected_track) ||
+//               seq.cursor_scroll == 15 || // not optimized when scrolling out of initial visible range (first 16 steps)
+//               (seq.cursor_scroll == 0 && song_page_full_draw_pattern_complete == false) || //not optimized when scrolling screen back
+//               seq.quicknav_pattern_to_song_jump) //returned from pattern editor to song view
+//             {
+//               display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
+
+//               if (seq.tracktype_or_instrument_assign == 11 && y >= seq.cursor_scroll && y <= seq.cursor_scroll + (seq.loop_end - seq.loop_start))
+//                 display.setTextColor(COLOR_SYSTEXT, RED); //copy mode
+//               else if ((seq.tracktype_or_instrument_assign == 10 && y + seq.scrollpos >= seq.loop_start && y + seq.scrollpos <= seq.loop_end) ||
+//                 (seq.tracktype_or_instrument_assign == 11 && y + seq.scrollpos >= seq.loop_start && y + seq.scrollpos <= seq.loop_end))
+
+//                 display.setTextColor(COLOR_SYSTEXT, DARKGREEN); //copy mode
+
+//               else if (seq.tracktype_or_instrument_assign == 10 || seq.tracktype_or_instrument_assign == 11) // dim down non copied lines to make more clear what is happening
+//                 display.setTextColor(GREY3, COLOR_BACKGROUND);
+//               else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+//                 set_track_type_color_inverted(x);
+//               else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state && seq.cycle_touch_element == 5 && seq.loop_edit_step == 0)
+//                 display.setTextColor(COLOR_SYSTEXT, RED);
+//               else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state && seq.cycle_touch_element != 5 && seq.loop_edit_step == 0)
+//                 display.setTextColor(RED, COLOR_BACKGROUND);
+//               else
+//                 set_track_type_color(x);
+
+//               if (seq.edit_state && seq.cycle_touch_element == 5 && x == seq.selected_track && y == seq.cursor_scroll) // is in song edit mode
+//               {
+//                 if (temp_int_song_page == NUM_CHAINS)
+//                 {
+//                   temp_int_song_page = 99; // Select empty step/chain
+//                   seq.song[x][y + seq.scrollpos] = temp_int_song_page;
+//                   temp_int_song_page = NUM_CHAINS;
+//                 }
+//                 else
+//                   seq.song[x][y + seq.scrollpos] = temp_int_song_page;
+//               }
+
+//               if (seq.song[x][y + seq.scrollpos] < 99)
+//               {
+//                 print_formatted_number(seq.song[x][y + seq.scrollpos], 2);
+//                 if (y == seq.cursor_scroll && x == seq.selected_track)
+//                 {
+//                   display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
+//                   print_formatted_number(seq.song[x][y + seq.scrollpos], 2, x, seq.scrollpos, 1, true);
+//                 }
+
+// #if defined APC
+//                 if (APC_MODE == APC_SONG)
+//                 {
+//                   if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+//                     handleNoteOn(11, 64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 1);
+//                   else
+//                     handleNoteOn(6, 64 - 8 + x - (y * 8), seq.song[x][y + seq.scrollpos] * 3 + 1, 1);
+//                 }
+// #endif
+//               }
+//               else
+//               {
+//                 display.print(F("--"));
+//                 if (y == seq.cursor_scroll && x == seq.selected_track)
+//                 {
+//                   display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
+//                   print_formatted_number(0, 2, x, seq.scrollpos, 1, false);
+//                 }
+// #if defined APC
+//                 if (APC_MODE == APC_SONG)
+//                 {
+//                   if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
+//                     handleNoteOn(11, 64 - 8 + x - (y * 8), 5, 1);
+//                   else
+//                     handleNoteOn(6, 64 - 8 + x - (y * 8), 0, 1);
+//                 }
+// #endif
+//               }
+//             }
+//           }
+//         }
+//       }
+//     }
+//   }
+//   song_page_full_draw_pattern_complete = true;
+// }
+
 FLASHMEM void print_chain_matrix_in_song_page()
 {
   if (seq.tracktype_or_instrument_assign > 0 && seq.tracktype_or_instrument_assign < 3) // select track for instrument assignment
@@ -1914,7 +2068,28 @@ FLASHMEM void print_chain_matrix_in_song_page()
       drawtrack[5] = true;
       drawtrack[6] = true;
       drawtrack[7] = true;
+    }
 
+    // Track scroll changes to conditionally redraw backgrounds
+    static uint8_t last_scrollpos = 255;
+    bool scroll_changed = (seq.scrollpos != last_scrollpos);
+    if (scroll_changed) {
+      last_scrollpos = seq.scrollpos;
+    }
+
+    // Pre-calculate background colors for each row (only if arranger active)
+    uint16_t row_bg_color[16];
+    for (uint8_t y = 0; y < 16; y++) {
+      row_bg_color[y] = COLOR_BACKGROUND;
+      if (seq.song_arranger_active) {
+        uint8_t current_step = y + seq.scrollpos;
+        if (current_step < SONG_LENGTH) {
+          uint8_t part = get_song_arranger_part_for_song_step(current_step);
+          if (part < 10) {
+            row_bg_color[y] = seq.song_arranger_parts[part].color;
+          }
+        }
+      }
     }
 
     for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
@@ -1922,11 +2097,22 @@ FLASHMEM void print_chain_matrix_in_song_page()
       for (uint8_t y = 0; y < 16; y++) // visible song steps
       {
         uint8_t lineheight = 10;
+        uint16_t x_pos = 6 * CHAR_width_small + (2 * CHAR_width) * x;
+        uint16_t y_pos = y * lineheight + CHAR_height_small * 8;
+        uint8_t text_width = 2 * CHAR_width;
+        uint16_t bg_color = row_bg_color[y];
 
         if (seq.cycle_touch_element < 7 || seq.tracktype_or_instrument_assign == 11)
         {
           if (drawtrack[x])
           {
+            // ====== Draw background ONLY when scroll changed or full redraw needed ======
+            if (scroll_changed || song_page_full_draw_pattern_complete == false) {
+              checkWebRemote();
+              display.fillRect(x_pos, y_pos, text_width, lineheight, bg_color);
+            }
+            // ========================================================================
+
             if ((y == seq.cursor_scroll && x == seq.selected_track) || seq.tracktype_or_instrument_assign == 11 ||
               (y == seq.cursor_scroll && x == 0 && seq.loop_edit_step == 1) || //is in loop edit, change trk0 to default state
               (y == seq.cursor_scroll && x == seq.previous_track) ||
@@ -1935,16 +2121,14 @@ FLASHMEM void print_chain_matrix_in_song_page()
               (seq.cursor_scroll == 0 && song_page_full_draw_pattern_complete == false) || //not optimized when scrolling screen back
               seq.quicknav_pattern_to_song_jump) //returned from pattern editor to song view
             {
-              display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
+              display.setCursor(x_pos, y_pos);
 
               if (seq.tracktype_or_instrument_assign == 11 && y >= seq.cursor_scroll && y <= seq.cursor_scroll + (seq.loop_end - seq.loop_start))
                 display.setTextColor(COLOR_SYSTEXT, RED); //copy mode
               else if ((seq.tracktype_or_instrument_assign == 10 && y + seq.scrollpos >= seq.loop_start && y + seq.scrollpos <= seq.loop_end) ||
                 (seq.tracktype_or_instrument_assign == 11 && y + seq.scrollpos >= seq.loop_start && y + seq.scrollpos <= seq.loop_end))
-
                 display.setTextColor(COLOR_SYSTEXT, DARKGREEN); //copy mode
-
-              else if (seq.tracktype_or_instrument_assign == 10 || seq.tracktype_or_instrument_assign == 11) // dim down non copied lines to make more clear what is happening
+              else if (seq.tracktype_or_instrument_assign == 10 || seq.tracktype_or_instrument_assign == 11) // dim down non copied lines
                 display.setTextColor(GREY3, COLOR_BACKGROUND);
               else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state == false && seq.loop_edit_step == 0 && seq.tracktype_or_instrument_assign == 0)
                 set_track_type_color_inverted(x);
@@ -1953,7 +2137,14 @@ FLASHMEM void print_chain_matrix_in_song_page()
               else if (y == seq.cursor_scroll && x == seq.selected_track && seq.edit_state && seq.cycle_touch_element != 5 && seq.loop_edit_step == 0)
                 display.setTextColor(RED, COLOR_BACKGROUND);
               else
-                set_track_type_color(x);
+              {
+                if (bg_color != COLOR_BACKGROUND) {
+                  display.setTextColor(COLOR_SYSTEXT, bg_color);
+                }
+                else {
+                  set_track_type_color(x);
+                }
+              }
 
               if (seq.edit_state && seq.cycle_touch_element == 5 && x == seq.selected_track && y == seq.cursor_scroll) // is in song edit mode
               {
@@ -1972,7 +2163,7 @@ FLASHMEM void print_chain_matrix_in_song_page()
                 print_formatted_number(seq.song[x][y + seq.scrollpos], 2);
                 if (y == seq.cursor_scroll && x == seq.selected_track)
                 {
-                  display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
+                  display.setCursor(x_pos, y_pos);
                   print_formatted_number(seq.song[x][y + seq.scrollpos], 2, x, seq.scrollpos, 1, true);
                 }
 
@@ -1991,7 +2182,7 @@ FLASHMEM void print_chain_matrix_in_song_page()
                 display.print(F("--"));
                 if (y == seq.cursor_scroll && x == seq.selected_track)
                 {
-                  display.setCursor(6 * CHAR_width_small + (2 * CHAR_width) * x, y * lineheight + CHAR_height_small * 8);
+                  display.setCursor(x_pos, y_pos);
                   print_formatted_number(0, 2, x, seq.scrollpos, 1, false);
                 }
 #if defined APC
@@ -3347,7 +3538,7 @@ FLASHMEM boolean key_right()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_RIGHT) == false)
   {
-#if defined BUTTON_LEDS && defined MCP_23017
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
     setled(LED_RIGHT, HIGH);
 #endif
     return true;
@@ -3374,7 +3565,7 @@ FLASHMEM boolean key_left()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_LEFT) == false)
   {
-#if defined BUTTON_LEDS && defined MCP_23017
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
     setled(LED_LEFT, HIGH);
 #endif
     return true;
@@ -3402,7 +3593,7 @@ FLASHMEM boolean key_up()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_UP) == false)
   {
-#if defined BUTTON_LEDS && defined MCP_23017
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
     setled(LED_UP, HIGH);
 #endif
     return true;
@@ -3430,7 +3621,7 @@ FLASHMEM boolean key_down()
 #ifdef ONBOARD_BUTTON_INTERFACE
   if (digitalRead(BI_DOWN) == false)
   {
-#if defined BUTTON_LEDS && defined MCP_23017
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
     setled(LED_DOWN, HIGH);
 #endif
     return true;
@@ -3553,6 +3744,63 @@ FLASHMEM void setModeColor(uint8_t selected_option)
   }
 }
 
+//#if defined LED_RINGS || defined LED_DEBUG
+bool led_ring_preview_mode = false;
+//#endif
+
+#if defined GLOW
+extern int glow_menu_item;
+#endif
+
+#if defined LED_RINGS || defined LED_DEBUG
+extern int glow_input_value;
+extern int glow_limit_min;
+extern int glow_limit_max;
+
+extern float get_led_brightness_factor(uint8_t relIdx, uint8_t gradient);
+
+static const char* scheme_names[] = {
+  "GREEN", "BLUE", "RED", "RAINBOW", "WARM",
+  "COOL", "PURPLE", "GOLD", "FIRE", "OCEAN", "CUSTOM"
+};
+#define NUM_SCHEMES 11
+
+ extern void get_led_color(uint8_t ring, uint8_t scheme, float pos, uint8_t& r, uint8_t& g, uint8_t& b);
+static void draw_led_gradient_preview(uint8_t ring, uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+  uint8_t scheme, uint8_t custom_start, uint8_t custom_end,
+  uint8_t gradient) {
+  for (uint16_t i = 0; i < w; i++) {
+    // Map pixel position to LED index 0..23 (continuous)
+    float pos = (float)i / (w - 1);
+    uint8_t ledIdx = (uint8_t)(pos * 23.0f);   // 0..23
+    float ledPos = (float)ledIdx / 23.0f;      // for colour interpolation within the scheme
+
+    uint8_t r, g, b;
+    if (scheme == 10) {
+      float h_start = (float)custom_start * 3.59f;
+      float h_end = (float)custom_end * 3.59f;
+      float hue = h_start + (h_end - h_start) * ledPos;
+      uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+      r = (color >> 11) & 0x1F; r <<= 3;
+      g = (color >> 5) & 0x3F; g <<= 2;
+      b = color & 0x1F; b <<= 3;
+    }
+    else {
+      get_led_color(ring, scheme, ledPos, r, g, b);
+    }
+
+    // Apply brightness gradient based on LED index
+    float factor = get_led_brightness_factor(ledIdx, gradient);
+    r = (uint8_t)(r * factor);
+    g = (uint8_t)(g * factor);
+    b = (uint8_t)(b * factor);
+    uint16_t color = RGB24toRGB565(r, g, b);
+    display.drawLine(x + i, y, x + i, y + h, color);
+  }
+}
+
+#endif
+
 // only used for displaying value as a bar-graph display without numeric value, borders or other extras
 FLASHMEM void print_fast_level_indicator(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max)
 {
@@ -3577,6 +3825,12 @@ extern void set_glow_panbar(uint8_t x, uint8_t y, int glow_input_value, int menu
 // also automagically shows a pan bar (marker line instead of filled bar), if min is smaller than zero.
 FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, int16_t limit_min, int16_t limit_max, int16_t selected_option, boolean show_bar, const char* zero_name = NULL)
 {
+
+#if defined LED_RINGS || defined LED_DEBUG
+  glow_input_value = input_value;
+  glow_limit_min = limit_min;
+  glow_limit_max = limit_max;
+#endif
 
   setCursor_textGrid_small(x, y);
 #if defined GLOW
@@ -3879,6 +4133,13 @@ private:
 
 public:
 
+#if defined LED_RINGS || defined LED_DEBUG
+  int16_t getLEDRingValue();
+  int16_t getLEDRingMin();
+  int16_t getLEDRingMax();
+  bool hasEditors() const { return num_editors > 0; }
+#endif
+
   bool instance_select_flag;
 
   // clear, but dont reset this UI.
@@ -4133,6 +4394,242 @@ public:
 } ui;
 
 
+#if defined LED_RINGS
+#include "LEDRingSmall.h"
+extern LEDRingSmall LEDRing_l;
+extern LEDRingSmall LEDRing_r;
+
+// int16_t UI::getLEDRingValue() {
+//   if (num_editors == 0) return 0;
+//   return editors[generic_temp_select_menu].get();
+// }
+// int16_t UI::getLEDRingMin() {
+//   if (num_editors == 0) return 0;
+//   return editors[generic_temp_select_menu].limit_min;
+// }
+// int16_t UI::getLEDRingMax() {
+//   if (num_editors == 0) return 0;
+//   return editors[generic_temp_select_menu].limit_max;
+// }
+
+
+int16_t UI::getLEDRingValue() {
+    if (num_editors == 0) return 0;
+    return editors[generic_temp_select_menu].get();
+}
+int16_t UI::getLEDRingMin() {
+    if (num_editors == 0) return 0;
+    return editors[generic_temp_select_menu].limit_min;
+}
+int16_t UI::getLEDRingMax() {
+    if (num_editors == 0) return 0;
+    return editors[generic_temp_select_menu].limit_max;
+}
+
+extern void setLEDRing(uint8_t ring, uint8_t led, uint8_t r, uint8_t g, uint8_t b);
+
+#endif
+
+#if defined LED_RINGS || defined LED_DEBUG
+#define LED_RING_START_OFFSET 12   // start at bottom‑center (LED12)
+
+FLASHMEM void update_right_led_ring() {
+  static int16_t lastShownValue = -1;
+
+  if (!seq.edit_state) {
+    if (lastShownValue != -1) {
+      lastShownValue = -1;
+      for (uint8_t i = 0; i < 24; i++) setLEDRing(1, i, 0, 0, 0);
+    }
+    return;
+  }
+
+  // Determine current value from the active editor (or glow)
+  int16_t value = 0, minVal = 0, maxVal = 100;
+  bool hasValue = false;
+  if (ui.hasEditors()) {
+    value = ui.getLEDRingValue();
+    minVal = ui.getLEDRingMin();
+    maxVal = ui.getLEDRingMax();
+    hasValue = true;
+  }
+  else if (glow_menu_item != 9999 && glow_limit_max > glow_limit_min) {
+    value = glow_input_value;
+    minVal = glow_limit_min;
+    maxVal = glow_limit_max;
+    hasValue = true;
+  }
+  if (!hasValue) {
+    if (lastShownValue != -1) {
+      lastShownValue = -1;
+      for (uint8_t i = 0; i < 24; i++) setLEDRing(1, i, 0, 0, 0);
+    }
+    return;
+  }
+
+  if (value == lastShownValue) return;
+
+  uint8_t start = configuration.sys.led_ring_start_offset;
+  uint8_t grad = configuration.sys.led_brightness_gradient;
+  uint8_t scheme = configuration.sys.right_edit_color_scheme;
+  uint8_t custom_start = configuration.sys.right_edit_custom_start;
+  uint8_t custom_end = configuration.sys.right_edit_custom_end;
+
+  uint8_t lit = map(value, minVal, maxVal, 0, 24);
+  if (lit > 24) lit = 24;
+
+  for (uint8_t i = 0; i < 24; i++) {
+    uint8_t logicalIdx = 23 - i;               // reverse order (so bar starts at start offset)
+    uint8_t physIdx = (start + logicalIdx) % 24;
+    uint8_t r, g, b;
+    if (i < lit) {
+      float pos = (float)i / 23.0f;
+      if (scheme == 10) {
+        float h_start = (float)custom_start * 3.59f;
+        float h_end = (float)custom_end * 3.59f;
+        float hue = h_start + (h_end - h_start) * pos;
+        uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+        r = (color >> 11) & 0x1F; r <<= 3;
+        g = (color >> 5) & 0x3F; g <<= 2;
+        b = color & 0x1F; b <<= 3;
+      }
+      else {
+        get_led_color(1, scheme, pos, r, g, b);
+      }
+    }
+    else {
+      r = g = b = 0;
+    }
+    // Apply brightness gradient – invert the relative index so offset is brightest
+    uint8_t relIdx = (physIdx - start + 24) % 24;
+    uint8_t invRelIdx = 23 - relIdx;  // invert: relIdx=0 -> 23, relIdx=23 -> 0
+    float factor = get_led_brightness_factor(invRelIdx, grad);
+    r = (uint8_t)(r * factor);
+    g = (uint8_t)(g * factor);
+    b = (uint8_t)(b * factor);
+    setLEDRing(1, physIdx, r, g, b);
+  }
+
+  lastShownValue = value;
+}
+
+
+void update_left_led_ring() {
+  static int16_t lastShownValue = -1;
+
+  // Determine which mode to show:
+  // - Show volume if sequencer is stopped OR the user is on the master volume page
+  // - Otherwise show sequencer step (when running and not on volume page)
+  bool show_volume = true;
+  if (seq.running && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_volume)) {
+    show_volume = false;
+  }
+
+  // Select colour scheme and custom start/end based on mode
+  uint8_t scheme;
+  uint8_t custom_start, custom_end;
+  int16_t value, maxVal;
+  if (show_volume) {
+    scheme = configuration.sys.left_volume_color_scheme;
+    custom_start = configuration.sys.left_volume_custom_start;
+    custom_end = configuration.sys.left_volume_custom_end;
+    value = configuration.sys.vol;
+    maxVal = 100;
+  }
+  else {
+    scheme = configuration.sys.left_seq_color_scheme;
+    custom_start = configuration.sys.left_seq_custom_start;
+    custom_end = configuration.sys.left_seq_custom_end;
+    value = seq.step;
+    maxVal = 15;
+  }
+
+  if (value == lastShownValue && !led_ring_preview_mode) return;
+
+  uint8_t start = configuration.sys.led_ring_start_offset;
+  uint8_t grad = configuration.sys.led_brightness_gradient;
+
+  // Helper to get colour for a given LED index and position
+  auto getColor = [&](uint8_t ledIndex, float pos) {
+    uint8_t r, g, b;
+    if (scheme == 10) {
+      float h_start = (float)custom_start * 3.59f;
+      float h_end = (float)custom_end * 3.59f;
+      float hue = h_start + (h_end - h_start) * pos;
+      uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+      r = (color >> 11) & 0x1F; r <<= 3;
+      g = (color >> 5) & 0x3F; g <<= 2;
+      b = color & 0x1F; b <<= 3;
+    }
+    else {
+      get_led_color(0, scheme, pos, r, g, b);
+    }
+    return std::tuple<uint8_t, uint8_t, uint8_t>{r, g, b};
+    };
+
+  if (show_volume) {
+    // Volume mode: bar graph (reverse direction so bar grows from start offset)
+    uint8_t lit = map(value, 0, maxVal, 0, 24);
+    for (uint8_t i = 0; i < 24; i++) {
+      uint8_t logicalIdx = 23 - i;               // reverse order
+      uint8_t physIdx = (start + logicalIdx) % 24;
+      uint8_t r, g, b;
+      if (i < lit) {
+        float pos = (float)i / 23.0f;
+        std::tie(r, g, b) = getColor(i, pos);
+      }
+      else {
+        r = g = b = 0;
+      }
+      // Apply brightness gradient – invert the relative index so offset is brightest
+      uint8_t relIdx = (physIdx - start + 24) % 24;
+      uint8_t invRelIdx = 23 - relIdx;  // invert: relIdx=0 -> 23, relIdx=23 -> 0
+      float factor = get_led_brightness_factor(invRelIdx, grad);
+      r = (uint8_t)(r * factor);
+      g = (uint8_t)(g * factor);
+      b = (uint8_t)(b * factor);
+      setLEDRing(0, physIdx, r, g, b);
+    }
+  }
+  else {
+    // Sequencer step mode: glow always starts at LED 0 (top-centre) and moves forward
+    const float ledPerStep = 24.0f / 16.0f;
+    const float radiusLEDs = 3.0f * ledPerStep;
+    float centerPhys = (float)value * ledPerStep;   // centre in physical LED space (no offset)
+    centerPhys = fmodf(centerPhys, 24.0f);
+    if (centerPhys < 0) centerPhys += 24.0f;
+
+    for (uint8_t i = 0; i < 24; i++) {
+      uint8_t physIdx = i;                         // forward order, always from LED 0
+      // Circular distance from centre in physical space
+      float diff = fabsf((float)physIdx - centerPhys);
+      diff = fminf(diff, 24.0f - diff);
+      float brightness = 1.0f - (diff / radiusLEDs);
+      brightness = fmaxf(brightness, 0.0f);
+      float pos = (float)i / 23.0f;
+      uint8_t r, g, b;
+      std::tie(r, g, b) = getColor(i, pos);
+      r = (uint8_t)(r * brightness);
+      g = (uint8_t)(g * brightness);
+      b = (uint8_t)(b * brightness);
+      // Apply brightness gradient – invert the relative index so offset is brightest
+      uint8_t relIdx = (physIdx - start + 24) % 24;
+      uint8_t invRelIdx = 23 - relIdx;  // invert: relIdx=0 -> 23, relIdx=23 -> 0
+      float factor = get_led_brightness_factor(invRelIdx, grad);
+      r = (uint8_t)(r * factor);
+      g = (uint8_t)(g * factor);
+      b = (uint8_t)(b * factor);
+      setLEDRing(0, 23 - physIdx, r, g, b);
+    }
+  }
+
+  lastShownValue = value;
+}
+
+
+#endif
+
+
 #ifdef MUSIKANDMORE
 extern int analog_volume_value;
 extern int analog_volume_value_previous;
@@ -4148,7 +4645,7 @@ extern void All_Button_LEDS(bool state);
 
 uint8_t touchX = 0;
 uint8_t touchY = 0;
-extern int numTouchPoints;
+extern uint8_t numTouchPoints;
 
 #if defined ESP_DISPLAY
 uint8_t esp_function_id = 255;
@@ -4503,12 +5000,9 @@ FLASHMEM void lcdml_menu_control(void)
     break;
 
   case 15: // enc r
-    //phtodo xxxxxxxxxxxxxxxxxxx
     LCDML.BT_enter();
     encoderDir[ENC_R].ButtonShort(true);
     esp_buttonNumber = 99;
-    //phtodo xxxxxxxxxxxxxxxxxxxxxxxxx
-
     break;
 
   default:
@@ -4696,10 +5190,9 @@ FLASHMEM void lcdml_menu_control(void)
       buttons = GAMEPAD_START;
   }
 
-#ifndef REDUCED_BUTTON_INTERFACE_ESP
   if (digitalRead(BI_BUTTON_A) == false)
   {
-#if defined BUTTON_LEDS && defined MCP_23017
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
     setled(LED_BUT_A, HIGH);
 #endif
     // buttons = buttons + GAMEPAD_BUTTON_A;
@@ -4707,13 +5200,13 @@ FLASHMEM void lcdml_menu_control(void)
   }
   if (digitalRead(BI_BUTTON_B) == false)
   {
-#if defined BUTTON_LEDS && defined MCP_23017
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
     setled(LED_BUT_B, HIGH);
 #endif
     // buttons = buttons + GAMEPAD_BUTTON_B;
     buttons = GAMEPAD_BUTTON_B;
   }
-#endif
+
 
   //}
 #endif
@@ -5415,9 +5908,7 @@ FLASHMEM void lcdml_menu_control(void)
   }
 }
 
-#if defined GLOW
-extern int glow_menu_item;
-#endif
+
 
 extern bool disableDirectMIDIinput;
 
@@ -7210,7 +7701,7 @@ FLASHMEM void addSampleParameterEditor_uint8_t(const char* name, int16_t limit_m
     renderer);
 }
 
-extern voice_group_config_t sample_voice_group_config[NUM_DRUMS];
+extern voice_group_config_t sample_voice_group_config[NUM_VOICE_GROUPS];
 
 FLASHMEM void addDrumParameterEditor_uint8_t(const char* name, int16_t limit_min, int16_t limit_max, uint8_t* valuePtr, void (* const renderer)(Editor* param, bool refresh) = NULL)
 {
@@ -8087,7 +8578,7 @@ FLASHMEM void UI_func_voice_group_config(uint8_t param)
 
     // Update status bar (voices used counter)
     uint8_t total_voices_used = 0;
-    for (uint8_t i = 0; i < NUM_DRUMS; i++) {
+    for (uint8_t i = 0; i < NUM_VOICE_GROUPS; i++) {
       if (sample_voice_group_config[i].max_voices > 0) {
         total_voices_used += sample_voice_group_config[i].max_voices;
       }
@@ -10759,6 +11250,7 @@ FLASHMEM void UI_func_seq_vel_editor(uint8_t param)
   }
 }
 
+
 FLASHMEM void seq_clear_active_pattern()
 {
   memset(seq.note_data[seq.active_pattern], 0, sizeof(seq.note_data[seq.active_pattern]));
@@ -10822,6 +11314,9 @@ FLASHMEM void check_variable_samples_basespeed()
       drum_config[i].p_offset = 100; // %
   }
 }
+
+
+
 
 FLASHMEM void print_sample_type(bool dir)
 {
@@ -13807,6 +14302,7 @@ FLASHMEM void UI_func_song(uint8_t param)
 
     display.setTextSize(1);
   }
+
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
     const EncoderEvents e = getEncoderEvents(ENC_R);
@@ -13853,19 +14349,19 @@ FLASHMEM void UI_func_song(uint8_t param)
           seq.help_text_needs_refresh = true;
         }
         else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
-        {  // 26/01/2025 new dexed instance will start at 70
+        {
           if (seq.instrument[seq.selected_track] < 64 && seq.instrument[seq.selected_track] != 1)
             seq.instrument[seq.selected_track]++;
-          else  if (seq.instrument[seq.selected_track] == 1) //second dexed instance
+          else if (seq.instrument[seq.selected_track] == 1)
             seq.instrument[seq.selected_track] = 70;
-          else  if (seq.instrument[seq.selected_track] == 70) //third dexed instance
+          else if (seq.instrument[seq.selected_track] == 70)
             seq.instrument[seq.selected_track] = 71;
-          else  if (seq.instrument[seq.selected_track] == 71)
-            seq.instrument[seq.selected_track] = 72; // granular synth
-          else  if (seq.instrument[seq.selected_track] == 72)
+          else if (seq.instrument[seq.selected_track] == 71)
+            seq.instrument[seq.selected_track] = 72;
+          else if (seq.instrument[seq.selected_track] == 72)
             seq.instrument[seq.selected_track] = 2;
 
-          if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
+          if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16)
           {
             if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
               seq.instrument[seq.selected_track] = 16;
@@ -13895,11 +14391,10 @@ FLASHMEM void UI_func_song(uint8_t param)
         if (temp_int_song_page == NUM_CHAINS)
           temp_int_song_page = 0;
         else
-          temp_int_song_page = constrain(temp_int_song_page + 1, 0, NUM_CHAINS); // not -1: last element is for empty step
+          temp_int_song_page = constrain(temp_int_song_page + 1, 0, NUM_CHAINS);
       }
       else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
       {
-        // if ( seq.loop_edit_step == 0)
         seq.song_menu = constrain(seq.song_menu + 1, 0, 15);
       }
       else if (seq.edit_state == true && seq.cycle_touch_element == 7)
@@ -13919,7 +14414,6 @@ FLASHMEM void UI_func_song(uint8_t param)
           seq.sub_menu = seq.sub_menu + 1;
         if (seq.sub_menu == NUM_CHAINS)
           seq.sub_menu = 0;
-
       }
     }
     else if (e.up) {
@@ -13932,7 +14426,7 @@ FLASHMEM void UI_func_song(uint8_t param)
           print_song_loop_arrows();
         }
 
-        else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0) // edit instruments for tracks
+        else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step == 0)
         {
           seq.tracktype_or_instrument_assign = 1;
           seq.help_text_needs_refresh = true;
@@ -13941,9 +14435,9 @@ FLASHMEM void UI_func_song(uint8_t param)
           sub_song_print_instruments(GREY1, COLOR_BACKGROUND);
         }
 
-        else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step != 0) // go to clear loop 
+        else if (seq.cursor_scroll == 0 && seq.scrollpos == 0 && seq.tracktype_or_instrument_assign == 0 && seq.loop_edit_step != 0)
         {
-          if (seq.loop_start != 99 || seq.loop_end != 99) //do not go in if no loop is set
+          if (seq.loop_start != 99 || seq.loop_end != 99)
           {
             seq.tracktype_or_instrument_assign = 8;
             seq.loop_edit_step = 3;
@@ -13954,46 +14448,45 @@ FLASHMEM void UI_func_song(uint8_t param)
             clear_song_playhead();
           }
         }
-        else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0) // select instruments for track
-        {//26/01/2025 new dexed instance will start at 70  //27/09/2025 added granular synth at 72
+        else if (seq.tracktype_or_instrument_assign == 2 && seq.loop_edit_step == 0)
+        {
           if (seq.instrument[seq.selected_track] > 0 && seq.instrument[seq.selected_track] < 65 && seq.instrument[seq.selected_track] != 2)
           {
             seq.instrument[seq.selected_track]--;
             if (seq.instrument[seq.selected_track] == 5)
               sub_song_print_tracktypes();
-
           }
           else if (seq.instrument[seq.selected_track] == 2)
-            seq.instrument[seq.selected_track] = 72; //granular
-          else if (seq.instrument[seq.selected_track] == 70) // third dexed instance
+            seq.instrument[seq.selected_track] = 72;
+          else if (seq.instrument[seq.selected_track] == 70)
             seq.instrument[seq.selected_track] = 1;
-          else if (seq.instrument[seq.selected_track] == 71) // fourth dexed instance
+          else if (seq.instrument[seq.selected_track] == 71)
             seq.instrument[seq.selected_track] = 70;
-          else if (seq.instrument[seq.selected_track] == 72) // granular synth
+          else if (seq.instrument[seq.selected_track] == 72)
             seq.instrument[seq.selected_track] = 71;
 
-          if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16) // skip currently unused msp slots
+          if (seq.instrument[seq.selected_track] > 5 && seq.instrument[seq.selected_track] < 16)
           {
             if (seq.instrument[seq.selected_track] > 5 + NUM_MULTISAMPLES)
               seq.instrument[seq.selected_track] = 5 + NUM_MULTISAMPLES;
           }
         }
-        else if (seq.tracktype_or_instrument_assign == 1 && seq.loop_edit_step == 0) // goto for tracktype change
+        else if (seq.tracktype_or_instrument_assign == 1 && seq.loop_edit_step == 0)
         {
           seq.tracktype_or_instrument_assign = 5;
           seq.help_text_needs_refresh = true;
           sub_song_print_instruments(GREY3, COLOR_BACKGROUND);
         }
 
-        else if (seq.tracktype_or_instrument_assign == 6) // tracktype change
+        else if (seq.tracktype_or_instrument_assign == 6)
         {
           if (seq.track_type[seq.selected_track] > 0)
             seq.track_type[seq.selected_track]--;
         }
 
-        else if (seq.tracktype_or_instrument_assign == 5) // goto loop clear
+        else if (seq.tracktype_or_instrument_assign == 5)
         {
-          if (seq.loop_start != 99 || seq.loop_end != 99) //do not go if no loop is set
+          if (seq.loop_start != 99 || seq.loop_end != 99)
           {
             seq.tracktype_or_instrument_assign = 8;
             seq.loop_edit_step = 3;
@@ -14005,17 +14498,12 @@ FLASHMEM void UI_func_song(uint8_t param)
           }
         }
 
-        else if (seq.tracktype_or_instrument_assign == 8) // goto loop copy mode
+        else if (seq.tracktype_or_instrument_assign == 8)
         {
-          if (seq.loop_start != 99 || seq.loop_end != 99) //do not go if no loop is set
+          if (seq.loop_start != 99 || seq.loop_end != 99)
           {
-
             seq.tracktype_or_instrument_assign = 10;
-
-            //scroll display if selected loop is out of screen bounds
-
             adjust_scroll_pos_for_loop_visible_on_screen();
-
             print_song_loop_text();
             seq.help_text_needs_refresh = true;
             clear_song_playhead();
@@ -14035,7 +14523,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         if (temp_int_song_page == 0)
           temp_int_song_page = NUM_CHAINS;
         else
-          temp_int_song_page = constrain(temp_int_song_page - 1, 0, NUM_CHAINS); // not -1:last element is for empty step
+          temp_int_song_page = constrain(temp_int_song_page - 1, 0, NUM_CHAINS);
       }
       else if ((seq.edit_state == true && seq.cycle_touch_element == 6) || (seq.edit_state == true && seq.cycle_touch_element == 8))
       {
@@ -14063,24 +14551,23 @@ FLASHMEM void UI_func_song(uint8_t param)
           seq.sub_menu = NUM_CHAINS + 1;
         if (seq.sub_menu > NUM_CHAINS * 2 - 1)
           seq.sub_menu = NUM_CHAINS * 2 - 1;
-
       }
     }
-    else if (e.pressed) // handle button presses during menu >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    else if (e.pressed)
     {
-      if (seq.tracktype_or_instrument_assign == 5) // tracktype change
+      if (seq.tracktype_or_instrument_assign == 5)
       {
         seq.tracktype_or_instrument_assign = 6;
         seq.help_text_needs_refresh = true;
       }
-      else if (seq.tracktype_or_instrument_assign == 6) // exit track assign menu
+      else if (seq.tracktype_or_instrument_assign == 6)
       {
         seq.tracktype_or_instrument_assign = 5;
         seq.help_text_needs_refresh = true;
       }
-      else if (seq.tracktype_or_instrument_assign == 1) // go into instr. assign menu
+      else if (seq.tracktype_or_instrument_assign == 1)
       {
-        if (seq.track_type[seq.selected_track] != 0) // not set to a drum track
+        if (seq.track_type[seq.selected_track] != 0)
         {
           seq.tracktype_or_instrument_assign = 2;
           seq.help_text_needs_refresh = true;
@@ -14091,14 +14578,14 @@ FLASHMEM void UI_func_song(uint8_t param)
           helptext_r(F("TRACKTYPE [DRUMS] NOT VALID FOR INSTR"));
         }
       }
-      else if (seq.tracktype_or_instrument_assign == 2) // exit instr. assign menu
+      else if (seq.tracktype_or_instrument_assign == 2)
       {
         seq.tracktype_or_instrument_assign = 1;
         sub_song_print_tracktypes();
         seq.help_text_needs_refresh = true;
       }
 
-      else if (seq.tracktype_or_instrument_assign == 8) // clear song loop
+      else if (seq.tracktype_or_instrument_assign == 8)
       {
         seq.tracktype_or_instrument_assign = 0;
         seq.loop_start = 99;
@@ -14112,7 +14599,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         seq.help_text_needs_refresh = true;
       }
 
-      else if (seq.tracktype_or_instrument_assign == 10) // copy mode - not enabled
+      else if (seq.tracktype_or_instrument_assign == 10)
       {
         seq.tracktype_or_instrument_assign = 11;
         if (seq.scrollpos == 0)
@@ -14125,14 +14612,13 @@ FLASHMEM void UI_func_song(uint8_t param)
 
         seq.help_text_needs_refresh = true;
       }
-      else if (seq.tracktype_or_instrument_assign == 11) // confirmed copy mode 
+      else if (seq.tracktype_or_instrument_assign == 11)
       {
-        ////copy loop to destination
         for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
         {
           for (uint8_t y = 0; y < seq.loop_end - seq.loop_start + 1; y++)
           {
-            if (seq.cursor_scroll + seq.scrollpos + y < SONG_LENGTH - 1) // do not copy out of song bounds
+            if (seq.cursor_scroll + seq.scrollpos + y < SONG_LENGTH - 1)
               seq.song[x][seq.cursor_scroll + seq.scrollpos + y] = seq.song[x][seq.loop_start + y];
           }
         }
@@ -14148,15 +14634,15 @@ FLASHMEM void UI_func_song(uint8_t param)
         seq.help_text_needs_refresh = true;
       }
 
-      else  if (seq.tracktype_or_instrument_assign == 0)
+      else if (seq.tracktype_or_instrument_assign == 0)
       {
         seq.help_text_needs_refresh = true;
-        if (seq.loop_edit_step == 1) // edit loop step 1, set start
+        if (seq.loop_edit_step == 1)
         {
           seq.loop_edit_step = 2;
           seq.loop_start = seq.cursor_scroll + seq.scrollpos;
         }
-        else if (seq.loop_edit_step == 2) // edit loop step, set end
+        else if (seq.loop_edit_step == 2)
         {
           seq.loop_edit_step = 0;
           seq.selected_track = 0;
@@ -14177,17 +14663,17 @@ FLASHMEM void UI_func_song(uint8_t param)
         }
         else if (seq.edit_state && seq.cycle_touch_element == 6)
         {
-          seq.cycle_touch_element = 7; // edit chain
+          seq.cycle_touch_element = 7;
           seq.help_text_needs_refresh = true;
           seq.sub_menu = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu];
         }
         else if (seq.edit_state && seq.cycle_touch_element == 7)
         {
-          seq.cycle_touch_element = 6; // go back from chain
+          seq.cycle_touch_element = 6;
         }
         else if (seq.edit_state && seq.cycle_touch_element == 8)
         {
-          seq.cycle_touch_element = 9; // edit transpose
+          seq.cycle_touch_element = 9;
           if (seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] != 99)
             seq.sub_menu = seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu];
           else
@@ -14198,7 +14684,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         {
           if (seq.sub_menu == 0)
             seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = 99;
-          seq.cycle_touch_element = 8; // go back from transpose 
+          seq.cycle_touch_element = 8;
         }
         else if (seq.edit_state == false)
         {
@@ -14212,8 +14698,7 @@ FLASHMEM void UI_func_song(uint8_t param)
         }
         seq.help_text_needs_refresh = true;
       }
-    } // Button END
-
+    }
 
     if (seq.help_text_needs_refresh)
     {
@@ -14222,17 +14707,53 @@ FLASHMEM void UI_func_song(uint8_t param)
       seq.help_text_needs_refresh = false;
     }
 
+    // ========== Song Arranger - Display status and current part name ==========
+    // Position at x=6, y=3 (directly above T1), moved 3 pixels up
+    display.setTextSize(1);
+
+    if (seq.song_arranger_active) {
+      // Display "ARRANGER:" in white
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.setCursor(CHAR_width_small * 6, CHAR_height_small * 3 - 3);
+      display.print(F("ARRANGER:"));
+
+      // Display "ON" in green
+      display.setTextColor(GREEN, COLOR_BACKGROUND);
+      display.print(F("ON "));
+
+      // Display the part name in the part's color (limited to 6 chars)
+      uint8_t current_step = seq.cursor_scroll + seq.scrollpos;
+      uint8_t part = get_song_arranger_part_for_song_step(current_step);
+      if (part < 10) {
+        display.setTextColor(seq.song_arranger_parts[part].color, COLOR_BACKGROUND);
+        display.print(F("P:"));
+        // Show only first 6 characters of the part name
+        char short_name[7];
+        strncpy(short_name, seq.song_arranger_parts[part].name, 6);
+        short_name[6] = '\0';
+        display.setTextColor(seq.song_arranger_parts[part].color, COLOR_BACKGROUND);
+        display.print(short_name);
+        // Clear any remaining space
+        print_empty_spaces(4, 1);
+      }
+      else {
+        // Clear the area if no part is assigned to this step
+        display.setTextColor(GREY2, COLOR_BACKGROUND);
+        display.print(F("P:--"));
+        print_empty_spaces(4, 1);
+      }
+    }
+    else {
+      // Display "ARRANGER:OFF" in grey
+      display.setTextColor(GREY2, COLOR_BACKGROUND);
+      display.setCursor(CHAR_width_small * 6, CHAR_height_small * 3 - 3);
+      display.print(F("ARRANGER:OFF"));
+      print_empty_spaces(8, 1);
+    }
+    // ========== END Song Arranger ==========
+
     if (seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos] != song_previous_displayed_chain)
     {
-      //current displayed chain has changed
-#ifdef DEBUG
-      // LOG.println(F(" "));
-      // LOG.println(F("chain changed from "));
-      // LOG.print(song_previous_displayed_chain);
-      // LOG.print(F(" to "));
-      // LOG.print(seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]);
-#endif
-
       song_page_full_draw_chain_complete = false;
       song_page_full_draw_transpose_complete = false;
       song_previous_displayed_chain = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
@@ -14264,10 +14785,6 @@ FLASHMEM void UI_func_song(uint8_t param)
     chain_endline = 99;
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.fillScreen(COLOR_BACKGROUND);
-
-    // #if defined APC
-    //     apc_clear_grid();
-    // #endif
   }
 }
 
@@ -15592,7 +16109,7 @@ FLASHMEM void print_delay_multiplier(uint8_t instance, uint8_t param)
   set_global_delay_filter(instance);
 }
 
-extern AudioEffectGate* Gate[NUM_DEXED];
+extern AudioEffectGate* Gate[2];
 
 FLASHMEM void update_selective_values_master_effects()
 {
@@ -17950,18 +18467,41 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
     chord_input[1] = 0;
     chord_input[2] = 0;
     chord_input[3] = 0;
-    // virtual_keyboard_smart_preselect_mode();
-    // seq.cycle_touch_element = 1;
-    // drawVirtualKeyboard();
 
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
-    for (uint8_t oct = 0; oct < 8; oct++)
-    {
-      print_sampler_keyboard(oct * 7 + 1, 95);
-      display.setCursor(CHAR_width_small + oct * 42, 137);
-      display.print(oct);
+    // for (uint8_t oct = 0; oct < 8; oct++)
+    // {
+    //   print_sampler_keyboard(oct * 7 + 1, 95);
+    //   display.setCursor(CHAR_width_small + oct * 42, 137);
+    //   display.print(oct);
+    // }
+
+        for (uint8_t oct = 0; oct < 8; oct++) {
+        draw_chord_arranger_keyboard(oct * 7 + 1, 95, oct * 12);
     }
+
+    // Draw the split‑point and zone indicators
+    draw_chord_arranger_indicators();
+
+
+// Draw the split‑point line (separates chord and live‑play areas)
+display.fillRect(CHAR_width_small, 110, seq.arr_split_note * 3.55, 4, DARKGREEN);
+display.fillRect(CHAR_width_small + seq.arr_split_note * 3.55, 110, 320 - seq.arr_split_note * 2, 4, COLOR_BACKGROUND);
+
+// Draw song‑part range indicator (small coloured bar below the keys)
+if (seq.song_arranger_active) {
+    uint8_t base = seq.song_arranger_base_note;
+    for (uint8_t i = 0; i < 10; i++) {
+        uint8_t note = base + i;
+        // Approximate x position: each octave is 42px (7 white keys * 6px)
+        int xPos = CHAR_width_small + (note / 12) * 42 + (note % 12) * 5;
+        display.fillRect(xPos, 110 + 10, 5, 4, COLOR_ARP);
+    }
+}
+
+// Navigation button (static, drawn once)
+TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", "ARR", TouchButton::BUTTON_NORMAL);
 
     seq.edit_state = 0;
     generic_menu = 0;
@@ -18039,40 +18579,6 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
   }
 }
 
-FLASHMEM void UI_func_mdt_arranger(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-    // setup function
-    registerScope(250, 0, 62, 50);
-    encoderDir[ENC_R].reset();
-    display.fillScreen(COLOR_BACKGROUND);
-
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    seq.edit_state = 0;
-    generic_menu = 0;
-
-    if (LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(UI_func_volume) &&
-      LCDML.MENU_getLastActiveFunctionID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
-    {
-      generic_temp_select_menu = 0;
-    }
-
-  }
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-   /// add loop code here
-
-  }
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-    display.fillScreen(COLOR_BACKGROUND);
-    unregisterTouchHandler();
-    unregisterScope();
-    encoderDir[ENC_R].reset();
-  }
-}
-
 FLASHMEM void show_empty_folder_notice() {
   if (fm.sd_sum_files == 0)
   {
@@ -18088,8 +18594,7 @@ FLASHMEM void show_empty_folder_notice() {
 
 }
 
-
-#ifdef  SECOND_SD
+#ifdef SECOND_SD
 extern void  fill_up_with_spaces_right_window();
 
 FLASHMEM void _print_file_and_folder_copy_info(uint8_t f)
@@ -18411,6 +18916,72 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
     }
   }
 }
+
+FLASHMEM uint16_t getNotePixelX(uint8_t note) {
+    const uint8_t whiteOffsets[7] = {0, 2, 4, 5, 7, 9, 11};
+    const uint8_t blackOffsets[5] = {1, 3, 6, 8, 10};
+    const uint8_t offset[5] = {1, 2, 2, 4, 6};
+
+    uint8_t oct = note / 12;
+    uint8_t semitone = note % 12;
+    uint16_t baseX = (oct * 7 + 1) * CHAR_width_small;
+
+    for (uint8_t i = 0; i < 7; i++) {
+        if (whiteOffsets[i] == semitone) {
+            return baseX + 6 * i; // left edge of white key
+        }
+    }
+    for (uint8_t i = 0; i < 5; i++) {
+        if (blackOffsets[i] == semitone) {
+            return baseX + 4 * semitone - offset[i];
+        }
+    }
+    return baseX; // fallback
+}
+
+FLASHMEM void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote) {
+    uint8_t offset[5] = { 1, 2, 2, 4, 6 };
+    int offcount = 0;
+    const uint8_t whiteOffsets[7] = {0, 2, 4, 5, 7, 9, 11};
+
+    // Draw white keys
+    for (uint8_t i = 0; i < 7; i++) {
+        uint8_t note = startNote + whiteOffsets[i];
+        uint16_t color;
+        if (chord_arranger_key_state[note]) {
+            color = GREEN;
+        } else if (seq.song_arranger_active && note >= seq.song_arranger_base_note && note < seq.song_arranger_base_note + 10) {
+            color = COLOR_ARP;
+        } else {
+            color = COLOR_SYSTEXT;
+        }
+        int xPos = x * CHAR_width_small + 6 * i;
+        if (xPos < DISPLAY_WIDTH - 8)
+            display.fillRect(xPos, y + 23, 5, 15, color);
+    }
+
+    // Draw black keys
+    offcount = 0;
+    for (uint8_t i = 0; i < 12; i++) {
+        if (seq.piano[i] == 1) {
+            uint8_t note = startNote + i;
+            uint16_t color;
+            if (chord_arranger_key_state[note]) {
+                color = GREEN;
+            } else if (seq.song_arranger_active && note >= seq.song_arranger_base_note && note < seq.song_arranger_base_note + 10) {
+                color = COLOR_ARP;
+            } else {
+                color = COLOR_BACKGROUND;
+            }
+            int xPos = x * CHAR_width_small + 4 * i - offset[offcount];
+            if (xPos < DISPLAY_WIDTH - 10)
+                display.fillRect(xPos, y + 23, 4, 8, color);
+            offcount++;
+            if (offcount == 5) offcount = 0;
+        }
+    }
+}
+
 
 FLASHMEM void print_note_name_and_octave(uint8_t note)
 {
@@ -19953,7 +20524,7 @@ FLASHMEM void file_manager_copy(bool internalToExternal) {
 #endif
 #endif
 
-#endif
+//#endif
 
 // Recursive folder deletion for internal SD
 bool deleteFolderInternalSD(const String& path) {
@@ -21280,10 +21851,10 @@ FLASHMEM void _system_settings_long_help_texts()
     setCursor_textGrid_small(2, 19);
     display.print(F("EDIT/ACTIVATED MODE"));
   }
-
 }
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+
 extern void set_custom_enc_colors();
 #endif
 
@@ -21297,7 +21868,8 @@ FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t valu
   display.fillRect(280, 10 * (line), 16, 8, RGB24toRGB565(red * 254, green * 254, blue * 254));
   display.console = false;
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+
   set_custom_enc_colors();
 #endif
 
@@ -21306,10 +21878,13 @@ FLASHMEM void _render_rgb_enc_preview_system_settings(uint8_t line, uint8_t valu
 FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_items)
 {
   const uint8_t max_visible_settings = 10;
-  const uint8_t LABEL_WIDTH = 42;      // width of description column (characters)
-  const uint8_t VALUE_WIDTH = 8;       // width of value column (characters)
+  const uint8_t LABEL_WIDTH = 42;
+  const uint8_t VALUE_WIDTH = 8;
 
-  // Helper: left‑justify a string into a fixed‑width buffer with spaces
+#if defined LED_RINGS
+  const uint8_t PREVIEW_COL = 36;
+#endif
+
   auto left_justify = [](char* dst, const char* src, uint8_t width) {
     uint8_t len = strlen(src);
     if (len > width) len = width;
@@ -21317,7 +21892,50 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     if (len < width) memset(dst + len, ' ', width - len);
     };
 
-  // Render a single setting label (fixed width, left‑aligned)
+#if defined LED_RINGS
+  auto schemeIndexFor = [](int idx) -> int {
+    if (idx == 25 || idx == 26) return 24;
+    if (idx == 28 || idx == 29) return 27;
+    if (idx == 31 || idx == 32) return 30;
+    return -1;
+    };
+#endif
+
+#if defined LED_RINGS
+  auto drawSchemePreview = [&](int schemeIdx, int line) {
+    uint16_t preview_x = PREVIEW_COL * CHAR_width_small;
+    uint16_t preview_y = line * 10;
+    display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, COLOR_BACKGROUND);
+
+    uint8_t ring = 0;
+    uint8_t scheme, custom_start, custom_end;
+    switch (schemeIdx) {
+    case 24:
+      ring = 0;
+      scheme = configuration.sys.left_volume_color_scheme;
+      custom_start = configuration.sys.left_volume_custom_start;
+      custom_end = configuration.sys.left_volume_custom_end;
+      break;
+    case 27:
+      ring = 0;
+      scheme = configuration.sys.left_seq_color_scheme;
+      custom_start = configuration.sys.left_seq_custom_start;
+      custom_end = configuration.sys.left_seq_custom_end;
+      break;
+    case 30:
+      ring = 1;
+      scheme = configuration.sys.right_edit_color_scheme;
+      custom_start = configuration.sys.right_edit_custom_start;
+      custom_end = configuration.sys.right_edit_custom_end;
+      break;
+    default: return;
+    }
+    draw_led_gradient_preview(ring, preview_x, preview_y, 4 * CHAR_width_small, 7,
+      scheme, custom_start, custom_end,
+      configuration.sys.led_brightness_gradient);
+    };
+#endif
+
   auto render_label = [&](uint8_t setting_index, uint8_t line) {
     setCursor_textGrid_small(2, line);
     char label[LABEL_WIDTH + 1];
@@ -21349,6 +21967,17 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 20: base = F("MIDI INPUT CC -> CV4 [D]"); break;
     case 21: base = F("NOTE TRANSPOSE -> CV1 [A]"); break;
     case 22: base = F("CV STANDARD RANGE"); break;
+    case 23: base = F("LED RING EDIT MODE OFFSET"); break;
+    case 24: base = F("LEFT RING: VOLUME COLOR"); break;
+    case 25: base = F("LEFT RING: VOL CUSTOM START"); break;
+    case 26: base = F("LEFT RING: VOL CUSTOM END"); break;
+    case 27: base = F("LEFT: SEQ STEP COLOR"); break;
+    case 28: base = F("LEFT: SEQ STEP CUSTOM START"); break;
+    case 29: base = F("LEFT: SEQ STEP CUSTOM END"); break;
+    case 30: base = F("RIGHT: EDIT MODE COLOR"); break;
+    case 31: base = F("RIGHT: EDIT CUSTOM START"); break;
+    case 32: base = F("RIGHT: EDIT CUSTOM END"); break;
+    case 33: base = F("LED BRIGHTNESS GRADIENT"); break;
     }
 
     uint8_t base_len = 0;
@@ -21360,7 +21989,6 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 
     bool append_na = false;
     switch (setting_index) {
-
     case 3: case 4:
 #if defined ESP_DISPLAY
       append_na = true;
@@ -21373,6 +22001,11 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       break;
     case 16: case 17: case 18: case 19: case 20: case 21: case 22:
 #ifndef MCP_CV
+      append_na = true;
+#endif
+      break;
+    case 23: case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
+#if !(defined(LED_RINGS) || defined(LED_DEBUG))
       append_na = true;
 #endif
       break;
@@ -21391,7 +22024,6 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     display.print(label);
     };
 
-  // Render a single setting value (fixed width, left‑aligned)
   auto render_value = [&](uint8_t setting_index, uint8_t line) {
     setModeColor(setting_index);
     setCursor_textGrid_small(42, line);
@@ -21411,15 +22043,10 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       uint8_t start = configuration.sys.screen_saver_start;
       char tmp[VALUE_WIDTH + 1];
       const char* unit = (start > 1) ? "MINS" : "MIN ";
-
-      // Exactly replicate original: two‑digit field (with leading space if needed),
-      // then a space, then the unit.
       if (start < 10) {
-        // single digit: e.g. " 5 MINS"
         snprintf(tmp, sizeof(tmp), "%02d %s", start, unit);
       }
       else {
-        // two digits: e.g. "10 MINS"
         snprintf(tmp, sizeof(tmp), "%02d %s", start, unit);
       }
       left_justify(val_buf, tmp, VALUE_WIDTH);
@@ -21558,13 +22185,120 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       left_justify(val_buf, str, VALUE_WIDTH);
       break;
     }
-
+    case 23: {
+      char tmp[VALUE_WIDTH + 1];
+      snprintf(tmp, sizeof(tmp), "%2d", configuration.sys.led_ring_start_offset);
+      left_justify(val_buf, tmp, VALUE_WIDTH);
+      break;
     }
+#if defined LED_RINGS
+    case 24:
+    case 27:
+    case 30: {
+      const char* name = scheme_names[
+        (setting_index == 24) ? configuration.sys.left_volume_color_scheme :
+          (setting_index == 27) ? configuration.sys.left_seq_color_scheme :
+          configuration.sys.right_edit_color_scheme
+      ];
+      left_justify(val_buf, name, VALUE_WIDTH);
+
+      uint8_t ring = 0;
+      uint8_t scheme, custom_start, custom_end;
+      if (setting_index == 24) {
+        ring = 0;
+        scheme = configuration.sys.left_volume_color_scheme;
+        custom_start = configuration.sys.left_volume_custom_start;
+        custom_end = configuration.sys.left_volume_custom_end;
+      }
+      else if (setting_index == 27) {
+        ring = 0;
+        scheme = configuration.sys.left_seq_color_scheme;
+        custom_start = configuration.sys.left_seq_custom_start;
+        custom_end = configuration.sys.left_seq_custom_end;
+      }
+      else { // 30
+        ring = 1;
+        scheme = configuration.sys.right_edit_color_scheme;
+        custom_start = configuration.sys.right_edit_custom_start;
+        custom_end = configuration.sys.right_edit_custom_end;
+      }
+      uint16_t preview_x = PREVIEW_COL * CHAR_width_small;
+      uint16_t preview_y = line * 10;
+      display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, COLOR_BACKGROUND);
+      draw_led_gradient_preview(ring, preview_x, preview_y, 4 * CHAR_width_small, 7,
+        scheme, custom_start, custom_end,
+        configuration.sys.led_brightness_gradient);
+      break;
+    }
+    case 25:
+    case 26:
+    case 28:
+    case 29:
+    case 31:
+    case 32: {
+      int value;
+      if (setting_index == 25) value = configuration.sys.left_volume_custom_start;
+      else if (setting_index == 26) value = configuration.sys.left_volume_custom_end;
+      else if (setting_index == 28) value = configuration.sys.left_seq_custom_start;
+      else if (setting_index == 29) value = configuration.sys.left_seq_custom_end;
+      else if (setting_index == 31) value = configuration.sys.right_edit_custom_start;
+      else value = configuration.sys.right_edit_custom_end;
+
+      char tmp[VALUE_WIDTH + 1];
+      snprintf(tmp, sizeof(tmp), "%3d", value);
+      left_justify(val_buf, tmp, VALUE_WIDTH);
+
+      uint16_t preview_x = PREVIEW_COL * CHAR_width_small;
+      uint16_t preview_y = line * 10;
+      display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, COLOR_BACKGROUND);
+      uint16_t hue = (uint16_t)(value * 3.59f);
+      uint16_t color = ColorHSV(hue, 255, 255);
+      display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, color);
+
+      int schemeIdx = schemeIndexFor(setting_index);
+      if (schemeIdx >= 0) {
+        int schemeLine = 6 + (schemeIdx - scroll_position);
+        if (schemeLine >= 6 && schemeLine < 6 + max_visible_settings) {
+          drawSchemePreview(schemeIdx, schemeLine);
+        }
+      }
+      break;
+    }
+    case 33: {
+      char tmp[VALUE_WIDTH + 1];
+      snprintf(tmp, sizeof(tmp), "%3d", configuration.sys.led_brightness_gradient);
+      left_justify(val_buf, tmp, VALUE_WIDTH);
+
+      uint16_t preview_x = PREVIEW_COL * CHAR_width_small;
+      uint16_t preview_y = line * 10;
+      display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, COLOR_BACKGROUND);
+      uint8_t grad = configuration.sys.led_brightness_gradient;
+      for (uint16_t px = 0; px < 4 * CHAR_width_small; px++) {
+        float pos = (float)px / (4 * CHAR_width_small - 1);
+        uint8_t ledIdx = (uint8_t)(pos * 23.0f);
+        float factor = get_led_brightness_factor(ledIdx, grad);
+        uint8_t val = (uint8_t)(255 * factor);
+        uint16_t color = RGB24toRGB565(val, val, val);
+        display.drawLine(preview_x + px, preview_y, preview_x + px, preview_y + 7, color);
+      }
+
+      // Redraw visible scheme previews (24,27,30)
+      int schemeLines[3] = { 24, 27, 30 };
+      for (int i = 0; i < 3; i++) {
+        int idx = schemeLines[i];
+        int lineIdx = 6 + (idx - scroll_position);
+        if (lineIdx >= 6 && lineIdx < 6 + max_visible_settings) {
+          drawSchemePreview(idx, lineIdx);
+        }
+      }
+      break;
+    }
+#endif
+    } // end switch
 
     display.print(val_buf);
     };
 
-  // Main rendering – no explicit clearing
   if (scroll_position != previous_scroll_position) {
     for (uint8_t i = 0; i < max_visible_settings; i++) {
       uint8_t idx = scroll_position + i;
@@ -21593,8 +22327,8 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
-  static uint8_t scroll_position = 0; // Track the current scroll position
-  static uint8_t total_menu_items = 23; // Zero Indexed
+  static uint8_t scroll_position = 0;
+  static uint8_t total_menu_items = 34;
 
   if (LCDML.FUNC_setup())
   {
@@ -21602,7 +22336,7 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
     encoderDir[ENC_R].reset();
     generic_active_function = 0;
     generic_temp_select_menu = 0;
-    scroll_position = 0; // Reset scroll position on setup
+    scroll_position = 0;
 
     display.fillScreen(COLOR_BACKGROUND);
     display.setTextSize(2);
@@ -21619,14 +22353,11 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
   if (LCDML.FUNC_loop())
   {
-    // Handle encoders
     const EncoderEvents e = getEncoderEvents(ENC_R);
+
     if (e.turned) {
       if (generic_active_function == 0) {
-        // Navigate through menu
         generic_temp_select_menu = constrain(generic_temp_select_menu + (e.dir * 1), 0, total_menu_items - 1);
-
-        // Update scroll position if necessary
         if (generic_temp_select_menu < scroll_position) {
           scroll_position = generic_temp_select_menu;
         }
@@ -21635,7 +22366,6 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         }
       }
       else {
-        // Handle setting change and load save timer
         save_sys_flag = true;
         save_sys = SAVE_SYS_MS / 2;
 
@@ -21651,44 +22381,92 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
         case 6: configuration.sys.boot_anim_skip = !configuration.sys.boot_anim_skip; break;
 #ifndef ESP_DISPLAY
         case 7: configuration.sys.invert_colors = !configuration.sys.invert_colors; display.invertDisplay(!configuration.sys.invert_colors); break;
-#endif       
+#endif
         case 8: configuration.sys.brightness = constrain(configuration.sys.brightness + (e.dir * ENCODER[ENC_R].speed()), 100, 200); break;
-        case 9:
+        case 9: {
           configuration.sys.dexed_engine_type = constrain(configuration.sys.dexed_engine_type + (e.dir * 1), 0, 2);
           for (uint8_t instance_id = 0; instance_id < NUM_DEXED; instance_id++)
             MicroDexed[instance_id]->setEngineType(configuration.sys.dexed_engine_type);
           break;
+        }
         case 10: configuration.sys.skip_midi_channel_warning = !configuration.sys.skip_midi_channel_warning; break;
         case 11: configuration.sys.send_sysex_on_voice_change = !configuration.sys.send_sysex_on_voice_change; break;
         case 12: configuration.sys.send_midi_cc = !configuration.sys.send_midi_cc; break;
-        case 13: configuration.sys.swap_midi_leds = !configuration.sys.swap_midi_leds;
+        case 13: {
+          configuration.sys.swap_midi_leds = !configuration.sys.swap_midi_leds;
 #if defined MIDI_ACTIVITY_LIGHTS
           set_midi_led_pins();
 #endif
           break;
+        }
         case 14: configuration.sys.rgb_enc_color_def = constrain(configuration.sys.rgb_enc_color_def + (e.dir * 1), 1, 8); break;
         case 15: configuration.sys.rgb_enc_color_sel = constrain(configuration.sys.rgb_enc_color_sel + (e.dir * 1), 1, 8); break;
         case 16: configuration.sys.vol_control = !configuration.sys.vol_control; break;
         case 17: configuration.sys.sus_pedal = !configuration.sys.sus_pedal; break;
-        case 18: configuration.sys.ext_clock = !configuration.sys.ext_clock;
+        case 18: {
+          configuration.sys.ext_clock = !configuration.sys.ext_clock;
           if (configuration.sys.ext_clock)
             seq.clock = 1;
           else
             seq.clock = 0;
           break;
-
+        }
         case 19: configuration.sys.dac_cv_2 = constrain(configuration.sys.dac_cv_2 + (e.dir * 1), 0, 99); break;
         case 20: configuration.sys.dac_cv_4 = constrain(configuration.sys.dac_cv_4 + (e.dir * 1), 0, 99); break;
         case 21: configuration.sys.dac_cv_transpose = constrain(configuration.sys.dac_cv_transpose + (e.dir * 1), 0, 36); break;
         case 22: configuration.sys.dac_5v = constrain(configuration.sys.dac_5v + (e.dir * 1), 0, 1); break;
 
+          // New LED ring cases (23‑32)
+        case 23:
+          configuration.sys.led_ring_start_offset = constrain(configuration.sys.led_ring_start_offset + e.dir, 0, 23);
+          led_ring_preview_mode = true;
+          break;
+        case 24:
+          configuration.sys.left_volume_color_scheme = constrain(configuration.sys.left_volume_color_scheme + e.dir, 0, 10);
+          led_ring_preview_mode = true;
+          break;
+        case 25:
+          configuration.sys.left_volume_custom_start = constrain(configuration.sys.left_volume_custom_start + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
+        case 26:
+          configuration.sys.left_volume_custom_end = constrain(configuration.sys.left_volume_custom_end + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
+        case 27:
+          configuration.sys.left_seq_color_scheme = constrain(configuration.sys.left_seq_color_scheme + e.dir, 0, 10);
+          led_ring_preview_mode = true;
+          break;
+        case 28:
+          configuration.sys.left_seq_custom_start = constrain(configuration.sys.left_seq_custom_start + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
+        case 29:
+          configuration.sys.left_seq_custom_end = constrain(configuration.sys.left_seq_custom_end + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
+        case 30:
+          configuration.sys.right_edit_color_scheme = constrain(configuration.sys.right_edit_color_scheme + e.dir, 0, 10);
+          led_ring_preview_mode = true;
+          break;
+        case 31:
+          configuration.sys.right_edit_custom_start = constrain(configuration.sys.right_edit_custom_start + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
+        case 32:
+          configuration.sys.right_edit_custom_end = constrain(configuration.sys.right_edit_custom_end + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
+        case 33:
+          configuration.sys.led_brightness_gradient = constrain(configuration.sys.led_brightness_gradient + e.dir, 0, 100);
+          led_ring_preview_mode = true;
+          break;
         }
       }
       _render_misc_settings(scroll_position, total_menu_items);
       set_sys_params();
     }
 
-    // Handle button presses during menu
     if (e.pressed) {
       generic_active_function = !generic_active_function;
       _render_misc_settings(scroll_position, total_menu_items);
@@ -21697,11 +22475,16 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
   if (LCDML.FUNC_close())
   {
+#if defined LED_RINGS || defined LED_DEBUG
+    led_ring_preview_mode = false;
+    update_left_led_ring();
+    update_right_led_ring();
+#endif
     unregisterTouchHandler();
     generic_active_function = 99;
     encoderDir[ENC_R].reset();
     display.fillScreen(COLOR_BACKGROUND);
-    previous_scroll_position = 255; //reset
+    previous_scroll_position = 255;
   }
 }
 

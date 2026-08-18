@@ -144,6 +144,11 @@ extern bool esp_draw;
 #define GENERIC_DISPLAY // generic/noname ILI941 TFT + XPT2046 Touchscreen (outdated)
 #endif
 
+#if defined LED_RINGS || defined LED_DEBUG
+#define LEFT_RING_MODE_VOLUME    0
+#define LEFT_RING_MODE_SEQ_STEP  1
+#endif
+
 //*************************************************s************************************************
 //* DEXED SEQUENCER, EPIANO AND EFFECTS SETTINGS
 //*************************************************************************************************
@@ -304,11 +309,14 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define button_size_x 7
 #define button_size_y 4
 
+#if !defined OLED_DISPLAYS 
 #define TFT_DC 37
 #define TFT_CS 41
 #define TFT_RST 24
 #define TFT_SCK 27
+#endif
 
+#if !defined OLED_DISPLAYS
 #if defined GENERIC_DISPLAY || defined RA_DISPLAY 
 #define TFT_MISO 39
 #endif
@@ -320,6 +328,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #if defined GENERIC_DISPLAY
 #define TFT_TOUCH_CS 38
 #endif
+#endif
 
 #define VOICE_SELECTION_MS 60000
 #define BACK_FROM_VOLUME_MS 2000
@@ -330,7 +339,22 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 //* HARDWARE SETTINGS
 //*************************************************************************************************
 
-#if (defined RGB_ENCODERS && defined MCP_23008) || (defined RGB_ENCODERS && defined MCP_23017)
+#ifdef OLED_DISPLAYS
+ #define OLED_SCREEN_WIDTH 128 // OLED display width, in pixels
+ #define OLED_SCREEN_HEIGHT 32 // OLED display height, in pixels
+// Declaration for SSD1306 display connected using software SPI (default case):
+#define OLED_MOSI  11
+#define OLED_CLK   13
+#define OLED_DC    37
+#define OLED_CS    41
+#define OLED_RESET 24
+
+#define OLED_CS_L 8                     // MCP GPB0  = OLED_CS_L    (OLED L = 0,91" 128x32px)
+#define OLED_CS_R 9                     // MCP GPB1  = OLED_CS_R    (OLED R = 0,91" 128x32px)
+#endif
+
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+
 #define RGB_LED_L_RED 0                            // MCP GPA0  = LED_ENC_L RED
 #define RGB_LED_L_GREEN 1                          // MCP GPA1  = LED_ENC_L GREEN
 #define RGB_LED_L_BLUE 2                           // MCP GPA2  = LED_ENC_L BLUE
@@ -339,7 +363,12 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define RGB_LED_R_BLUE 5                           // MCP GPA5  = LED_ENC_R BLUE
 #endif
 
-#if  defined BUTTON_LEDS && defined MCP_23017
+#ifdef OLED_DISPLAYS
+#define LED_SEL 6                                  
+#define LED_START 7
+#endif
+
+#if defined BUTTON_LEDS && defined MCP_23017 && !defined OLED_DISPLAYS
 #define LED_UP 8                                   // MCP GPB0  = LED Button UP
 #define LED_DOWN 9                                 // MCP GPB1  = LED Button DOWN
 #define LED_LEFT 10                                // MCP GPB2  = LED Button LEFT
@@ -421,18 +450,23 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define AUDIO_DEVICE_USB
 
 
-#ifdef ONBOARD_BUTTON_INTERFACE
+#ifdef ONBOARD_BUTTON_INTERFACE // common
 #define BI_UP 2
 #define BI_DOWN 3
 #define BI_LEFT 4
 #define BI_RIGHT 5
 #define BI_SELECT 9
 #define BI_START 10
-#ifndef REDUCED_BUTTON_INTERFACE_ESP
+
+#ifdef OLED_DISPLAYS //MAM 7" ESP only
+#define BI_BUTTON_A 8
+#define BI_BUTTON_B 6
+#else
 #define BI_BUTTON_A 16
 #define BI_BUTTON_B 17
 #endif
-#endif
+
+#endif // END ONBOARD_BUTTON_INTERFACE
 
 #ifdef MUSIKANDMORE
 #define MCP_INTA 8
@@ -440,15 +474,12 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define CV_CLOCK_IN 22
 #define CV_CLOCK_OUT 39
 #define TRS_PEDAL_IN 23
-
 #define GATE_OUT 14
-
 #endif 
 
 #if defined(MUSIKANDMORE) || defined(SECOND_SD)
 #define GEN3_CS_SDCARD_EXTERNAL 35
 #endif
-
 
 #define CONTROL_RATE_MS 50
 #define MICROSYNTH_CONTROL_RATE_MS 30
@@ -1095,6 +1126,28 @@ typedef struct sys_s
 #if defined(RA_DISPLAY) && defined(TOUCHMENU)
   uint8_t ra_btn_target[8];  // index into TARGETS[] for each panel button slot
 #endif
+
+//#if defined LED_RINGS || defined LED_DEBUG
+  uint8_t led_ring_start_offset;        // 0–23, default 12
+
+  // Left ring: Master volume mode (shown when seq stopped, or during volume interaction)
+  uint8_t left_volume_color_scheme;     // 0–9 presets, 10 = custom
+  uint8_t left_volume_custom_start;     // 0–100 → hue 0‑359°
+  uint8_t left_volume_custom_end;
+
+  // Left ring: Sequencer step mode (shown when seq running and no volume override)
+  uint8_t left_seq_color_scheme;
+  uint8_t left_seq_custom_start;
+  uint8_t left_seq_custom_end;
+
+  // Right ring: Edit mode (shown when seq.edit_state == true)
+  uint8_t right_edit_color_scheme;
+  uint8_t right_edit_custom_start;
+  uint8_t right_edit_custom_end;
+  // Brightness gradient intensity (0–100)
+  uint8_t led_brightness_gradient;
+//#endif
+
 } sys_t;
 
 typedef struct storage_file_s
