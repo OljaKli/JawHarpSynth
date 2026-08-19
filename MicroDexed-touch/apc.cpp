@@ -138,57 +138,67 @@ FLASHMEM void apc_clear_bottom_buttons()
   for (uint8_t i = 0; i < 8; i++) //clear bottom row under the grid
     apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1);
   
-  apc_mixmod = APC_EDIT_INIT_INVALID;
+  if(apc_mixmod < APC_EDIT_INIT_INVALID)
+    //apc_mixmod = (enum_apcmixmod_t)((uint8_t)apc_mixmod + APC_EDIT_INIT_INVALID); // not yet implemented: don't change to APC_EDIT_VOLUME, keep the last selected
+    apc_mixmod = APC_EDIT_INIT_INVALID;
 }
 
 FLASHMEM void apc_set_bottom_button(int8_t volpansenddev)
 {
   int new_mixmod;
-
-  switch(volpansenddev)
-  {
-    case APC_EDIT_VOLUME:
-    case APC_EDIT_PAN:
-    case APC_EDIT_P8_ENVATT:
-    case APC_EDIT_M1_ENVSUS:
-    case APC_EDIT_P1_ENVREL:
-      new_mixmod = volpansenddev; // these buttons have only one function
-      break;
-    case APC_EDIT_M8_ENVHOLD:
-      if(APC_EDIT_M8_ENVHOLD <= apc_mixmod && apc_mixmod < APC_EDIT_M8_ENVDEC)
-        new_mixmod = (int8_t)apc_mixmod + 1;
-      else
-        new_mixmod = APC_EDIT_M8_ENVHOLD;
-      break;
-    case APC_EDIT_SEND_REV:
-      if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2)
-        new_mixmod = (int8_t)apc_mixmod + 1;
-      else
-        new_mixmod = APC_EDIT_SEND_REV;
-      break;
-    case APC_EDIT_DEV_PITCH:
-      if(APC_EDIT_DEV_PITCH <= apc_mixmod && apc_mixmod < APC_EDIT_DEV_RESO)
-        new_mixmod = (int8_t)apc_mixmod + 1;
-      else
-        new_mixmod = APC_EDIT_DEV_PITCH;
-      break;
-    default:
-      new_mixmod = (int)apc_mixmod;
-      break;
-  }
   
-  //10 = the step between categories, max 5 (half) enums per category are allowed
-  //  in order to detect a change
-  if(abs(new_mixmod - (int)apc_mixmod) >= /*5*/ APC_EDIT_OFFSET/2)
+  if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
   {
-    for(int i=0;i<8;i++)
-      if(i == new_mixmod/10)
-        apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 1, 1); //set corresponding light
-      else
-        apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1); //clear the others
+    switch(volpansenddev)
+    {
+      case APC_EDIT_VOLUME:
+      case APC_EDIT_PAN:
+      case APC_EDIT_P8_ENVATT:
+      case APC_EDIT_M1_ENVSUS:
+      case APC_EDIT_P1_ENVREL:
+        new_mixmod = volpansenddev; // these buttons have only one function
+        break;
+      case APC_EDIT_M8_ENVHOLD:
+        if(APC_EDIT_M8_ENVHOLD <= apc_mixmod && apc_mixmod < APC_EDIT_M8_ENVDEC && apc_mixmod < APC_EDIT_INIT_INVALID)
+          new_mixmod = (int8_t)apc_mixmod + 1;
+        else
+          new_mixmod = APC_EDIT_M8_ENVHOLD;
+        break;
+      case APC_EDIT_SEND_REV:
+        if(APC_EDIT_SEND_REV <= apc_mixmod && apc_mixmod < APC_EDIT_SEND_DLAY2 && apc_mixmod < APC_EDIT_INIT_INVALID)
+          new_mixmod = (int8_t)apc_mixmod + 1;
+        else
+          new_mixmod = APC_EDIT_SEND_REV;
+        break;
+      case APC_EDIT_DEV_PITCH:
+        if(APC_EDIT_DEV_PITCH <= apc_mixmod && apc_mixmod < APC_EDIT_DEV_RESO && apc_mixmod < APC_EDIT_INIT_INVALID)
+          new_mixmod = (int8_t)apc_mixmod + 1;
+        else
+          new_mixmod = APC_EDIT_DEV_PITCH;
+        break;
+      default:
+        new_mixmod = (int)apc_mixmod;
+        break;
+    }
+    
+    //10 = the step between categories, max 5 (half) enums per category are allowed
+    //  in order to detect a change
+    if(abs(new_mixmod - (int)apc_mixmod) >= /*5*/ APC_EDIT_OFFSET/2 || apc_mixmod >= APC_EDIT_INIT_INVALID)
+    {
+      for(int i=0;i<8;i++)
+        if(i == new_mixmod/10)
+          apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 1, 1); //set corresponding light
+        else
+          apc(APC_MINI_BUTTON_BOTTOM_FIRST + i, 0, 1); //clear the others
+    }
+    else { /* no change of bottom led */ }
+    apc_mixmod = (enum_apcmixmod_t)new_mixmod;
   }
-  else { /* no change of bottom led */ }
-  apc_mixmod = (enum_apcmixmod_t)new_mixmod;
+  else /* No use of bottom buttons volpansenddev when editing pattern piano roll (tonal instrument),
+          they are only for drums. */
+  {
+    apc_clear_bottom_buttons();
+  }
 }
 
 FLASHMEM void apc_print_right_buttons()
@@ -250,10 +260,13 @@ FLASHMEM void apc_trigger_print_in_lcd(void)
           print_track_steps_detailed(0, CHAR_height * 4 + 3, 254, false, true); //refresh all drum steps, unable to refresh the new step only
         else  // tonal instrument
         { // Inst Track or Chord or Arp
-	          /* Disabled because not working, APC-entered-steps are visible only in velocity row, not in piano roll.
-	             Also since 1.9.9.0, it doesn't display entered steps in pattern piano roll, with encoder; it works with step record mode with virtual keyboard.
-            print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, trigger_print_sample_or_step-1000, true); 
-	           */
+          uint8_t active_step = trigger_print_sample_or_step - 1000;
+          if(active_step >= 8) /* Revert the top APC rows, 1st row will be for 1st 8 steps in pattern piano roll. */
+            active_step -= 8;
+          else
+            active_step += 8;
+          /* In pattern piano roll mode, highlight the step on MDT display according to selection from the 2 APC top rows. */
+          print_single_pattern_pianoroll_in_pattern_editor(0, DISPLAY_HEIGHT, seq.active_pattern, active_step /*seq.menu - 3*/, false); 
         }
       }
       else
@@ -603,6 +616,15 @@ FLASHMEM void apc_pattern_change(uint8_t inData1)
   {
     seq.active_pattern = constrain(seq.active_pattern - 1, 0, NUM_SEQ_PATTERN - 1);
   }
+  
+  if (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)  //drum or sliced
+  {
+    if(apc_mixmod >= APC_EDIT_INIT_INVALID)
+      //apc_set_bottom_button(/*APC_EDIT_VOLUME*/ apc_mixmod); // not yet implemented: don't change to APC_EDIT_VOLUME, keep the last selected
+      apc_set_bottom_button(APC_EDIT_VOLUME);
+  }
+  else
+    apc_clear_bottom_buttons(); // no need / no meaning of drum editing in pattern piano roll mode (tonal instrument)
 
   APC_BUTTONS_RIGHT[0] = true;
   APC_BUTTONS_RIGHT[1] = true;
@@ -888,7 +910,10 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
         APC_BUTTONS_RIGHT[7] = false;
       }
       else
-        if (APC_PREVIOUS_NOTE != 254)
+        if ((APC_PREVIOUS_NOTE != 254) ||
+            /* Without this, edit mode can't be set for pattern piano roll mode, unless at least once was set edit mode for pattern drum mode. 
+               Also APC_PREVIOUS_NOTE is not needed for pattern piano roll mode, edit mode is entered only with APC right side buttons. */
+            ((seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2))) // tonal instrument
         {
           if (inData1 == APC_MINI_BUTTON_RIGHT_ENABLE_PADSEL) //118 or 88
             APC_BUTTONS_RIGHT[6] = true;
@@ -919,7 +944,7 @@ FLASHMEM void apc_NoteOn(byte inChannel, byte inData1, byte inData2)
       set_apc_pad_selection(inData1);
       APC_PREVIOUS_NOTE = inData1;
       apc_print_volume_pads();
-      trigger_print_sample_or_step = temp_int; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
+      trigger_print_sample_or_step = APC_TONAL_SCROLL_OFFSET + inData1; //new note selected for pattern piano roll mode, TODO to be refreshed on lcd
     }
     else if ((inData1 >= 64 - 16 && inData1 < 64)) //step input to pattern . LUC PERHAPS CORRECT IS <64 AND NOT <=64
     {

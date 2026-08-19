@@ -86,7 +86,6 @@ const char* hid_driver_names[CNT_DEVICES] = { "joystick[0H]", "joystick[1H]", "j
 bool hid_driver_active[CNT_DEVICES] = { false };
 bool show_changed_only = true;
 uint64_t joystick_full_notify_mask = (uint64_t)-1;
-volatile bool semaphore_midi_in_busy;
 extern uint8_t chord_input[4];
 
 /* #ifdef MIDI_DEVICE_USB
@@ -356,9 +355,6 @@ extern bool chord_autostart;
 
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
-  if (semaphore_midi_in_busy)
-    return;
-  semaphore_midi_in_busy = 1;
 
   liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
@@ -384,10 +380,8 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
     chord_arranger_keyboard_dirty = true;
   }
 
-  if (disableDirectMIDIinput) {
-    semaphore_midi_in_busy = 0;
+  if (disableDirectMIDIinput)
     return;
-  }
 
 #ifdef DEBUG
   char text[10];
@@ -741,7 +735,6 @@ void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi
 #ifdef DEBUG
   LOG.println();
 #endif
-  semaphore_midi_in_busy = 0;
 }
 
 int toPitchBend(uint8_t lsb, uint8_t msb) {
@@ -759,9 +752,6 @@ void handle_generic_by_pitch(byte inChannel, int inPitch, const char* midi_devic
 
 FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* midi_device)
 {
-  if (semaphore_midi_in_busy)
-    return;
-  semaphore_midi_in_busy = 1;
 
   handleSystemExclusive(data, len);
 #ifdef DEBUG
@@ -814,15 +804,11 @@ FLASHMEM void handleSystemExclusive_generic(byte* data, uint len, const char* mi
 #ifdef DEBUG
   LOG.println();
 #endif
-  semaphore_midi_in_busy = 0;
 }
 
 FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, midi::MidiType event)
 {
   //char text[10];
-  if (semaphore_midi_in_busy)
-    return;
-  semaphore_midi_in_busy = 1;
 
   switch (event)
   {
@@ -928,15 +914,11 @@ FLASHMEM void handleSystemCommon_generic(byte inData1, const char* midi_device, 
 #ifdef DEBUG
   LOG.println();
 #endif
-  semaphore_midi_in_busy = 0;
 }
 
 void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 {
   //char text[16];
-  if (semaphore_midi_in_busy)
-    return;
-  semaphore_midi_in_busy = 1;
 
   switch (event)
   {
@@ -1017,7 +999,6 @@ void handleRealtime_generic(const char* midi_device, midi::MidiType event)
 #ifdef DEBUG
   LOG.println();
 #endif
-  semaphore_midi_in_busy = 0;
 }
 
 ///* void handleSystemExclusiveChunk_MIDI_DEVICE_DIN(byte *data, uint len, bool last)
@@ -1085,7 +1066,6 @@ void handleNoteOn_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byte inVelo
 
 void handleNoteOff_MIDI_DEVICE_DIN(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
-  semaphore_midi_in_busy = 0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_DIN, midi::NoteOff);
 }
 
@@ -1207,7 +1187,6 @@ void handleNoteOn_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNoteNumber, byte i
 
 void handleNoteOff_MIDI_DEVICE_USB_HOST(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
-  semaphore_midi_in_busy = 0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_USB_HOST, midi::NoteOff);
 }
 
@@ -1329,7 +1308,6 @@ void handleNoteOn_MIDI_DEVICE_USB(byte inChannel, byte inNoteNumber, byte inVelo
 
 void handleNoteOff_MIDI_DEVICE_USB(byte inChannel, byte inNoteNumber, byte inVelocity)
 {
-  semaphore_midi_in_busy = 0; //always allow note off, to avoid hang notes on
   handle_generic(inChannel, inNoteNumber, inVelocity, MIDI_BY_USB, midi::NoteOff);
 }
 
