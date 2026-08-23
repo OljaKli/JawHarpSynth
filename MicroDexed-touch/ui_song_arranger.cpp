@@ -619,6 +619,7 @@ FLASHMEM void UI_func_song_arranger(uint8_t param) {
             } else {
                 if (generic_temp_select_menu == 40) {
                     seq.song_arranger_base_note = constrain(seq.song_arranger_base_note + e.dir * e.speed, 24, 108);
+                  seq.arr_split_note = seq.song_arranger_base_note; 
                     update_song_arranger_midi_notes();
                     draw_song_arranger_config_grid();
                     draw_song_arranger_midi_note_selector();

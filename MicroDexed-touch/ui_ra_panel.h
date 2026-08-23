@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY)
 
 extern volatile int8_t ra_panel_enc_l;
 extern volatile int8_t ra_panel_enc_r;

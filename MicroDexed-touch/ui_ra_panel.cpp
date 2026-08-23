@@ -1,6 +1,6 @@
 #include "ui_ra_panel.h"
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
 
 #include <LCDMenuLib2.h>
 #include "RA8875.h"

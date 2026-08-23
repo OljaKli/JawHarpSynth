@@ -309,14 +309,14 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define button_size_x 7
 #define button_size_y 4
 
-#if !defined OLED_DISPLAYS 
+#if !ESP_DISPLAY 
 #define TFT_DC 37
 #define TFT_CS 41
 #define TFT_RST 24
 #define TFT_SCK 27
 #endif
 
-#if !defined OLED_DISPLAYS
+#if !ESP_DISPLAY
 #if defined GENERIC_DISPLAY || defined RA_DISPLAY 
 #define TFT_MISO 39
 #endif
@@ -1123,7 +1123,7 @@ typedef struct sys_s
   uint8_t dac_cv_4;
   uint8_t dac_cv_transpose;
   bool dac_5v;
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY)
   uint8_t ra_btn_target[8];  // index into TARGETS[] for each panel button slot
 #endif
 

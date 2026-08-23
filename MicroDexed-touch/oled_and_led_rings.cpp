@@ -46,14 +46,13 @@ extern bool ui_has_editors();
 extern int glow_menu_item;
 #endif
 
-
-
 extern LCDMenuLib2 LCDML;
 extern sequencer_t seq;
 extern config_t configuration;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 extern uint16_t RGB24toRGB565(uint8_t r, uint8_t g, uint8_t b);
-
+extern bool multiband_active;
+extern bool sidechain_active;
 
 //LED RING DEBUG
 
@@ -114,14 +113,6 @@ void draw_ring_simulator() {
 
   draw_ring(x_center_left, y_center_left, ledRingL_colors);
   draw_ring(x_center_right, y_center_right, ledRingR_colors);
-
-  // Labels
-  // display.setTextSize(1);
-  // display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-  // display.setCursor(x_center_left - 16, y_center_left + ring_radius + led_radius + 10);
-  // display.print("LEFT");
-  // display.setCursor(x_center_right - 18, y_center_right + ring_radius + led_radius + 10);
-  // display.print("RIGHT");
 }
 #endif
 
@@ -155,7 +146,7 @@ FLASHMEM void get_led_color(uint8_t ring, uint8_t scheme, float pos, uint8_t& r,
 }
 
 // ring: 0 = left, 1 = right
-void setLEDRing(uint8_t ring, uint8_t led, uint8_t r, uint8_t g, uint8_t b) {
+FLASHMEM void setLEDRing(uint8_t ring, uint8_t led, uint8_t r, uint8_t g, uint8_t b) {
   if (ring == 0) {
     // Update stored colors
 #if defined LED_DEBUG
@@ -189,11 +180,7 @@ void setLEDRing(uint8_t ring, uint8_t led, uint8_t r, uint8_t g, uint8_t b) {
 
 #if defined LED_RINGS || defined LED_DEBUG
 
-
-
-#if defined LED_RINGS || defined LED_DEBUG
 uint8_t leftRingMode = LEFT_RING_MODE_VOLUME;   // default to volume
-#endif
 
 FLASHMEM  float get_led_brightness_factor(uint8_t relIdx, uint8_t gradient) {
   if (gradient == 0) return 1.0f;
@@ -247,32 +234,300 @@ FLASHMEM void draw_led_gradient_preview(uint8_t ring, uint16_t x, uint16_t y, ui
 #endif
 
 #if defined OLED_DISPLAYS 
+uint8_t oled_info_mode = 0;
 
+#include <Audio.h>                // for AudioAnalyzePeak
+#include "config.h"               // for MIDI_CHANNEL_OMNI, MIDI_CHANNEL_OFF, NUM_DEXED, etc.
+#include "synth_dexed.h"          // for AudioSynthDexed (if needed)
+#include "sequencer.h"            // for sequencer_t
+#include "touch.h"
+#include <SD.h>
+
+extern uint8_t external_psram_size;
+extern uint32_t psram_free_bytes;
+extern uint8_t selected_instance_id;
+extern AudioSynthDexed* MicroDexed[NUM_DEXED];
+extern sequencer_t seq;
+extern config_t configuration;
+extern uint8_t sd_card_internal;
+extern uint8_t LED_MIDI_IN_counter;
+extern uint8_t LED_MIDI_OUT_counter;
+extern char g_voice_name[NUM_DEXED][VOICE_NAME_LEN];
+extern SdVolume volume_internal;
+extern uint8_t midi_bpm;
+
+#ifdef SECOND_SD
+extern uint8_t sd_card_external;
+extern SdVolume volume_external;
+#endif
+
+// ---- Helper: print truncated string ----
+FLASHMEM void print_trunc(const char* str, uint8_t maxLen = 10) {
+  uint8_t len = strlen(str);
+  if (len > maxLen) len = maxLen;
+  for (uint8_t i = 0; i < len; i++) oled_display.print(str[i]);
+}
+
+
+FLASHMEM void print_sd_total(SdVolume& vol, bool present, const __FlashStringHelper* label = nullptr) {
+  if (!present) {
+    if (label) display.print(label);
+    display.print(F("NA"));
+    return;
+  }
+
+  // Compute total size in MB using the same method as _print_filemanager_header()
+  uint32_t volumesize = vol.blocksPerCluster();
+  volumesize *= vol.clusterCount();
+  if (volumesize < 0X800000) {
+    volumesize *= 512;   // SD blocks are 512 bytes
+    volumesize /= 1024;  // convert to KB
+  }
+  else {
+    volumesize /= 2;     // already in KB (for large cards)
+  }
+  volumesize /= 1024;      // now in MB
+  volumesize /= 1024;      // now in GB
+  if (label) oled_display.print(label);
+  oled_display.print(volumesize);
+  oled_display.print(F(" GB"));
+}
+
+// ---- Helper: print Dexed instance on right display (2 lines) ----
+FLASHMEM void print_dexed_right(uint8_t inst) {
+  oled_display.setCursor(0, 0);
+  oled_display.print(F("D"));
+  oled_display.print(inst + 1);
+  oled_display.print(F(":"));
+  char name[8];
+  strncpy(name, g_voice_name[inst], 7);
+  name[7] = '\0';
+  oled_display.print(name);
+  oled_display.setCursor(0, 16);
+  oled_display.print(F("CHANNEL:"));
+  uint8_t ch = configuration.dexed[inst].midi_channel;
+  if (ch == 0) oled_display.print(F("OMNI"));
+  else if (ch == 17) oled_display.print(F("OFF"));
+  else oled_display.print(ch);
+}
+
+// ---- Helper: print Dexed instance single line (for non-main menu) ----
+FLASHMEM void print_dexed_single(uint8_t inst) {
+  oled_display.print(F("D"));
+  oled_display.print(inst + 1);
+  oled_display.print(F(":"));
+  char name[5];
+  strncpy(name, g_voice_name[inst], 4);
+  name[4] = '\0';
+  oled_display.print(name);
+  oled_display.print(F(" C"));
+  uint8_t ch = configuration.dexed[inst].midi_channel;
+  if (ch == 0) oled_display.print(F("O"));
+  else if (ch == 17) oled_display.print(F("-"));
+  else oled_display.print(ch);
+}
+
+// ---- Helper: print mute matrix 
+FLASHMEM void print_mute_matrix() {
+  oled_display.setCursor(0, 0);
+  oled_display.print(F("T:"));
+  for (uint8_t i = 0; i < NUM_SEQ_TRACKS; i++) {
+    oled_display.print(i + 1);
+  }
+
+  oled_display.setCursor(0, 16);
+  oled_display.print(F("M:"));
+  for (uint8_t i = 0; i < NUM_SEQ_TRACKS; i++) {
+    oled_display.print(seq.track_mute[i] ? 'o' : 'x');
+  }
+}
+
+// ---- Main OLED status update ----
 FLASHMEM void OLED_status() {
-  // static bool state = false;   // false = LOW, true = HIGH
+  static const uint8_t max_modes = 9;
 
-  if (OLEDTimer >= 1500) {   // 1,5 seconds elapsed
-    OLEDTimer = 0;         // reset timer
-    //state = !state;          // flip the state
+  if (OLEDTimer >= 2500) {
+    OLEDTimer = 0;
+    oled_info_mode++;
+    if (oled_info_mode >= max_modes) oled_info_mode = 0;
 
     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
 
+    bool inMainMenu = (LCDML.FUNC_getID() == 255);
+
+    // ========== LEFT DISPLAY ==========
     mcp.write1(OLED_CS_L, LOW);
     mcp.write1(OLED_CS_R, HIGH);
-    delay(1);
 
-    oled_display.setCursor(4 * 6, 3 * 7);
-    oled_display.print(AudioProcessorUsage());
+    oled_display.clearDisplay();
+    oled_display.setTextSize(2);
+    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+    if (inMainMenu) {
+      switch (oled_info_mode) {
+      case 0:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("CPU:"));
+        oled_display.print(AudioProcessorUsage(), 1);
+        oled_display.print(F("%"));
+        oled_display.setCursor(0, 16);
+        oled_display.print(F("PEAK:"));
+        oled_display.print(AudioProcessorUsageMax(), 1);
+        oled_display.print(F("%"));
+        break;
+      case 1:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("TEMP:"));
+        oled_display.print(tempmonGetTemp(), 1);
+        oled_display.print(F("C"));
+        break;
+      case 2:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("LONG PUSH:"));
+        oled_display.setCursor(0, 16);
+        oled_display.print(seq.running ? F("STOP SEQ") : F("START SEQ"));
+        break;
+      case 3: {
+        uint32_t totalMB = (uint32_t)external_psram_size;
+        oled_display.setCursor(0, 0);
+        if (totalMB == 0) {
+          oled_display.print(F("PSRAM:NONE"));
+        }
+        else {
+          oled_display.print(F("PSRAM:"));
+          oled_display.print(totalMB);
+          oled_display.print(F("MB"));
+        }
+        oled_display.setCursor(0, 16);
+        if (totalMB == 0) {
+          // leave blank
+        }
+        else if (psram_free_bytes == 0) {
+          oled_display.print(F("FULL"));
+        }
+        else {
+          uint8_t freePercent = (uint8_t)((psram_free_bytes * 100) / (totalMB * 1048576));
+          oled_display.print(F("FREE:"));
+          if (freePercent < 10) oled_display.print(F(" "));
+          if (freePercent < 100) oled_display.print(F(" "));
+          oled_display.print(freePercent);
+          oled_display.print(F("%"));
+        }
+        break;
+      }
+      case 4:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("VOL:"));
+        oled_display.print(configuration.sys.vol);
+        oled_display.print(F("%"));
+        break;
+      case 5:
+        print_mute_matrix();
+        break;
+
+      case 6:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("CLOCK:"));
+        oled_display.setCursor(0, 16);
+        if (seq.clock == 0) oled_display.print(F("INTERN"));
+        else if (seq.clock == 1) oled_display.print(F("MIDI SLAVE"));
+        else oled_display.print(F("MIDI MASTER"));
+        break;
+
+      case 7:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("SIDECHAIN:"));
+        oled_display.setCursor(0, 16);
+        oled_display.print(sidechain_active ? F("ON ") : F("OFF"));
+        break;
+      case 8:
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("MULTIBAND:"));
+        oled_display.setCursor(0, 16);
+        oled_display.print(multiband_active ? F("ON") : F("OFF"));
+        break;
+
+
+      }
+    }
+
     oled_display.display();
 
+    // ========== RIGHT DISPLAY ==========
     mcp.write1(OLED_CS_L, HIGH);
     mcp.write1(OLED_CS_R, LOW);
-    delay(1);
 
-    oled_display.setCursor(5 * 6, 3 * 7);
-    oled_display.print(tempmonGetTemp());
+    oled_display.clearDisplay();
+    oled_display.setTextSize(2);
+    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+    if (inMainMenu) {
+      switch (oled_info_mode) {
+
+      case 0: {
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("SONG "));
+        oled_display.print(configuration.sys.performance_number);
+        oled_display.print(F(":"));
+        oled_display.setCursor(0, 16);
+        print_trunc(seq.name, 10);
+        break;
+      }
+      case 1:
+        oled_display.setCursor(0, 0);
+        if (sd_card_internal == 0) {
+          oled_display.print(F("SD:NONE"));
+        }
+        else {
+
+          print_sd_total(volume_internal, sd_card_internal > 0, F("INT: "));
+        }
+        oled_display.setCursor(0, 16);
+
+#ifdef SECOND_SD
+        if (sd_card_external == 0) {
+          oled_display.print(F("NONE"));
+        }
+        else {
+          print_sd_total(volume_external, sd_card_external > 0, F("EXT: "));
+        }
+#else
+        oled_display.print(F("N/A"));
+#endif
+        break;
+
+      case 2: print_dexed_right(0); break;
+      case 3: print_dexed_right(1); break;
+      case 4: print_dexed_right(2); break;
+      case 5: print_dexed_right(3); break;
+      case 6:
+        oled_display.setCursor(0, 0);
+        oled_display.print(seq.bpm);
+        oled_display.print(F(" BPM"));
+        break;
+
+      case 7: {
+        int freeMem = AUDIO_MEM - AudioMemoryUsage();
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("MEM FREE:"));
+        oled_display.setCursor(0, 16);
+        oled_display.print(freeMem);
+        oled_display.print(F(" KB"));
+        break;
+      }
+      case 8: {
+        oled_display.setCursor(0, 0);
+        oled_display.print(F("SMARTFILT."));
+        oled_display.setCursor(0, 16);
+        oled_display.print(seq.smartfilter ? F("ON") : F("OFF"));
+        break;
+      }
+      }
+    }
+
     oled_display.display();
 
+    // ---------- End SPI ----------
     mcp.write1(OLED_CS_L, HIGH);
     mcp.write1(OLED_CS_R, HIGH);
     SPI.endTransaction();
@@ -306,26 +561,12 @@ FLASHMEM void init_oled_displays()
 
   mcp.write1(OLED_CS_L, LOW);
   mcp.write1(OLED_CS_R, HIGH);
-  delay(1);
-  oled_display.display();
   oled_display.clearDisplay();
-  oled_display.setCursor(0, 0);
-  oled_display.println("WELCOME TO");
-  // oled_display.setCursor(0, 3 * 7);
-  // oled_display.print("CPU:   %");
-   oled_display.display();
-
+  oled_display.display();
   mcp.write1(OLED_CS_L, HIGH);
   mcp.write1(OLED_CS_R, LOW);
-    delay(1);
-  oled_display.display();
   oled_display.clearDisplay();
-  oled_display.setCursor(0, 0);
-  oled_display.println("MICRODEXED");
-  // oled_display.setCursor(0, 3 * 7);
-  // oled_display.print("TEMP:");
-   oled_display.display();
-
+  oled_display.display();
   mcp.write1(OLED_CS_L, HIGH);
   mcp.write1(OLED_CS_R, HIGH);
   SPI.endTransaction();

@@ -64,7 +64,8 @@ fm_t fm;                         // file manager
 bool loop_start_button = false;
 bool loop_end_button = false;
 bool isButtonTouched = false;
-uint8_t numTouchPoints = 0;
+
+int numTouchPoints = 0; // this must be int, not uint8_t otherwise breaks RA Touch area
 
 extern bool wakeScreenFlag;
 extern bool chord_arranger_keyboard_dirty;
@@ -102,7 +103,7 @@ FLASHMEM void updateTouchScreen() {
 
 #if defined RA_DISPLAY    
 
-      // TS_Point p = touch.getPoint();
+    //   TS_Point p = touch.getPoint();
 
 #endif
 
@@ -199,46 +200,51 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   }
 
 #ifdef OLED_DISPLAYS
-  if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_file_manager)) {
+  //if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_file_manager)) {
 
     SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
     switch (position) {
     case 0:
       mcp.write1(OLED_CS_L, LOW);
       mcp.write1(OLED_CS_R, HIGH);
-      delay(1);
       oled_display.clearDisplay();
       oled_display.setCursor(0, 0);
       if (is_flash) {
-        oled_display.println((const __FlashStringHelper*)str);
+        oled_display.print((const __FlashStringHelper*)str);
       }
       else {
-        oled_display.println((const char*)str);
+        oled_display.print((const char*)str);
       }
-      oled_display.display();
-      mcp.write1(OLED_CS_L, HIGH);
+       oled_display.setCursor(0, 16);
+         oled_display.setTextColor( SSD1306_BLACK,SSD1306_WHITE);
+     if (seq.running)
+     oled_display.print(F("STOP SEQ. "));
+    else
+     oled_display.print(F("START SEQ."));
+       oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
       break;
 
     case 1:
       mcp.write1(OLED_CS_R, LOW);
       mcp.write1(OLED_CS_L, HIGH);
-      delay(1);
       oled_display.clearDisplay();
       oled_display.setCursor(0, 0);
       if (is_flash) {
-        oled_display.println((const __FlashStringHelper*)str);
+        oled_display.print((const __FlashStringHelper*)str);
       }
       else {
-        oled_display.println((const char*)str);
+        oled_display.print((const char*)str);
       }
-      oled_display.display();
       break;
     }
-  }
-  mcp.write1(OLED_CS_L, HIGH);
+
+//  oled_display.print("               ");
+    oled_display.display();
+ mcp.write1(OLED_CS_L, HIGH);
   mcp.write1(OLED_CS_R, HIGH);
   SPI.endTransaction();
-
+ // }
 #endif
 
   ts.old_helptext_length[position] = l;
@@ -1584,50 +1590,107 @@ extern void preview_chord_suggestion(uint8_t s);
 extern SuggestedChord suggestions[6];
 
 FLASHMEM void draw_chord_arranger_indicators() {
-    const uint8_t leftmostNote = 0;   // first note displayed (C-1)
-    const uint8_t rightmostNote = 95; // last note displayed (B7) – 8 octaves * 12 - 1
-    const uint8_t indicatorY = 110;   // y position where the split line is drawn (same as original)
-    const uint8_t indicatorHeight = 4;
+    const uint8_t leftmostNote = 0;
+    const uint8_t rightmostNote = 95;
+    const uint8_t zoneY = 117;               // Y position of the bar
+    const uint8_t barHeight = 4;
 
-    // 1. Draw the chord zone (left of split) in DARKGREEN
+    // Clear the label area (zoneY-8) and the bar area (zoneY..zoneY+barHeight)
+    // plus a small margin, but stay well above the keyboard (which starts at y=123).
+    checkWebRemote();
+    display.fillRect(0, zoneY - 9, DISPLAY_WIDTH, barHeight + 9, COLOR_BACKGROUND);  // rows 108..121
+
+    // Helper to print note name above the bar
+    auto printNoteLabel = [&](uint16_t x, uint8_t note, uint16_t color) {
+        if (x < 0 || x >= DISPLAY_WIDTH) return;
+        char noteName[6];
+        getNoteName(noteName, note);
+        display.setTextSize(1);
+        display.setTextColor(color, COLOR_BACKGROUND);
+        display.setCursor(x, zoneY - 8);      // label 8 pixels above the bar
+        display.print(noteName);
+        checkWebRemote();
+    };
+
+    // 1. Chord zone (left of split) – DARKGREEN
     if (seq.arr_split_note > 0 && seq.arr_split_note > leftmostNote) {
         uint16_t leftX = getNotePixelX(leftmostNote);
-        uint16_t rightX = getNotePixelX(seq.arr_split_note - 1) + 5; // right edge of last chord note
+        uint16_t rightX = getNotePixelX(seq.arr_split_note - 1) + 5;
         if (rightX > leftX) {
-            display.fillRect(leftX, indicatorY, rightX - leftX, indicatorHeight, DARKGREEN);
-        }
-    }
-
-    // 2. Clear the live zone (right of split) to background color
-    if (seq.arr_split_note > 0 && seq.arr_split_note <= rightmostNote) {
-        uint16_t leftX = getNotePixelX(seq.arr_split_note);
-        uint16_t rightX = getNotePixelX(rightmostNote) + 5;
-        if (rightX > leftX) {
-            display.fillRect(leftX, indicatorY, rightX - leftX, indicatorHeight, COLOR_BACKGROUND);
-        }
-    } else if (seq.arr_split_note == 0 || seq.arr_split_note > rightmostNote) {
-        // No split or split beyond displayed range → clear the whole indicator area
-        uint16_t leftX = getNotePixelX(leftmostNote);
-        uint16_t rightX = getNotePixelX(rightmostNote) + 5;
-        display.fillRect(leftX, indicatorY, rightX - leftX, indicatorHeight, COLOR_BACKGROUND);
-    }
-
-    // 3. Split-point vertical line (if split is within displayed range)
-    if (seq.arr_split_note > 0 && seq.arr_split_note >= leftmostNote && seq.arr_split_note <= rightmostNote + 1) {
-        uint16_t splitX = getNotePixelX(seq.arr_split_note);
-        display.drawLine(splitX, indicatorY, splitX, 118, DARKGREEN); // from y=110 down to the keys
-    }
-
-    // 4. Song-part trigger keys (small rectangles at the top of the keyboard, y=110)
-    if (seq.song_arranger_active) {
-        uint8_t base = seq.song_arranger_base_note;
-        for (uint8_t i = 0; i < 10; i++) {
-            uint8_t note = base + i;
-            if (note >= leftmostNote && note <= rightmostNote) {
-                uint16_t xPos = getNotePixelX(note);
-                // Draw a small vertical bar (or filled rectangle) at the indicator position
-                display.fillRect(xPos, indicatorY, 5, indicatorHeight, COLOR_ARP);
+            checkWebRemote();
+            display.fillRect(leftX, zoneY, rightX - leftX, barHeight, DARKGREEN);
+            if (rightX - leftX > 20) {
+                printNoteLabel(leftX, leftmostNote, DARKGREEN);
             }
+        }
+    }
+
+    // 2. Song‑part zone (if active) – COLOR_ARP
+    if (seq.song_arranger_active) {
+        uint8_t startNote = seq.arr_split_note;
+        uint8_t endNote = startNote + 9;  // 10 notes
+        if (endNote > rightmostNote) endNote = rightmostNote;
+        if (startNote < leftmostNote) startNote = leftmostNote;
+        if (startNote < endNote) {
+            uint16_t leftX = getNotePixelX(startNote);
+            uint16_t rightX = getNotePixelX(endNote) + 5;
+            checkWebRemote();
+            display.fillRect(leftX, zoneY, rightX - leftX, barHeight, COLOR_ARP);
+            if (rightX - leftX > 20) {
+                printNoteLabel(leftX, startNote, COLOR_ARP);
+            }
+            uint8_t liveStart = endNote + 1;
+            if (liveStart <= rightmostNote) {
+                uint16_t liveLeftX = getNotePixelX(liveStart);
+                uint16_t liveRightX = getNotePixelX(rightmostNote) + 5;
+                checkWebRemote();
+                display.fillRect(liveLeftX, zoneY, liveRightX - liveLeftX, barHeight, RED);
+                if (liveRightX - liveLeftX > 20) {
+                    printNoteLabel(liveLeftX, liveStart, RED);
+                }
+            }
+        }
+    } else {
+        // No song‑part zone – live zone starts after chord zone
+        uint8_t liveStart = seq.arr_split_note;
+        if (liveStart < leftmostNote) liveStart = leftmostNote;
+        if (liveStart <= rightmostNote) {
+            uint16_t leftX = getNotePixelX(liveStart);
+            uint16_t rightX = getNotePixelX(rightmostNote) + 5;
+            checkWebRemote();
+            display.fillRect(leftX, zoneY, rightX - leftX, barHeight, RED);
+            if (rightX - leftX > 20) {
+                printNoteLabel(leftX, liveStart, RED);
+            }
+        }
+    }
+
+    // Ensure webremote receives all drawing commands
+    display.flushSysEx();
+}
+
+uint8_t prev_chord_key_state[128] = {0};
+
+void draw_chord_arranger_keyboard_range(uint8_t startNote, uint8_t endNote, int y) {
+    if (startNote > 95) startNote = 95;
+    if (endNote > 95) endNote = 95;
+    if (startNote > endNote) return;
+
+    // 1) Draw white keys
+    for (uint8_t note = startNote; note <= endNote; note++) {
+        if (!seq.piano[note % 12]) {
+            int x = getNotePixelX(note);
+            uint16_t color = chord_arranger_key_state[note] ? RED : COLOR_SYSTEXT;
+            display.fillRect(x, y + 23, 5, 15, color);
+        }
+    }
+
+    // 2) Draw black keys on top
+    for (uint8_t note = startNote; note <= endNote; note++) {
+        if (seq.piano[note % 12]) {
+            int x = getNotePixelX(note);
+            uint16_t color = chord_arranger_key_state[note] ? RED : COLOR_BACKGROUND;
+            display.fillRect(x, y + 23, 4, 8, color);
         }
     }
 }
@@ -1658,25 +1721,40 @@ FLASHMEM void handle_touchscreen_chord_arranger()
       LCDML.OTHER_jumpToFunc(UI_func_song_arranger);
       return;
     }
+  }
 
-    // Redraw the keyboard if a note state changed (dirty flag)
  if (chord_arranger_keyboard_dirty) {
     chord_arranger_keyboard_dirty = false;
 
-    // Clear keyboard and indicator areas
-    display.fillRect(0, 95, DISPLAY_WIDTH, 133 - 95, COLOR_BACKGROUND);
-    display.fillRect(0, 88, DISPLAY_WIDTH, 7, COLOR_BACKGROUND);
-
-    // Redraw keyboard
-    for (uint8_t oct = 0; oct < 8; oct++) {
-        draw_chord_arranger_keyboard(oct * 7 + 1, 95, oct * 12);
+    // Find which octave contains a changed note
+    uint8_t changedOctave = 255;
+    for (uint8_t note = 0; note < 96; note++) {
+        if (chord_arranger_key_state[note] != prev_chord_key_state[note]) {
+            changedOctave = note / 12;
+            break;
+        }
     }
 
-    // Redraw indicators (they were erased)
-    draw_chord_arranger_indicators();
+    if (changedOctave != 255) {
+        uint8_t startNote = changedOctave * 12;
+        uint8_t endNote = startNote + 11;
+        if (endNote > 95) endNote = 95;
+
+        // Compute pixel boundaries for this octave
+        int minX = getNotePixelX(startNote);
+        int maxX = getNotePixelX(endNote) + 5; // white key width
+
+        // Clear and redraw the octave
+        display.fillRect(minX, 123, maxX - minX, 15, COLOR_BACKGROUND);
+        draw_chord_arranger_keyboard_range(startNote, endNote, 100);
+
+        // Update previous state for the entire octave
+        for (uint8_t note = startNote; note <= endNote; note++) {
+            prev_chord_key_state[note] = chord_arranger_key_state[note];
+        }
+    }
 }
 
-  }
 }
 
 FLASHMEM void draw_menu_ui_icons()

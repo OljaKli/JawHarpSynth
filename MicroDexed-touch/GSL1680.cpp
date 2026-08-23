@@ -6,7 +6,7 @@
 
     @thanks to wolfmanjm for the source code this lib is bassed on : https://github.com/wolfmanjm/GSL1680
 
-    Heavily modified or MDT in 2026 by positionhigh
+    Heavily modified for MDT in 2026 by positionhigh
 */
 
 #if defined RA_DISPLAY
@@ -58,6 +58,10 @@ FLASHMEM void displaybootmessage()
 
 FLASHMEM void GSL1680::begin()
 {
+
+ #if defined RA_DISPLAY && defined MUSIKANDMORE
+     display.setRotation(0);
+ #endif
 
     bootMessage("GSL1680: Startup sequence");
     Wire.begin();
@@ -245,15 +249,20 @@ uint8_t GSL1680::touched() {
 
     //if (digitalRead(TFT_TOUCH_IRQ) == HIGH) {
     lastTouchCount = dataread();
+
     if (lastTouchCount > 0) {
         uint16_t rawX = ts_event.fingers[1].x;
         uint16_t rawY = ts_event.fingers[1].y;
-
+        
+ #if defined RA_DISPLAY && defined MUSIKANDMORE
+         ts.p.x = (rawX) / 2;
+         ts.p.y = (rawY) / 2;
+#else
         ts.p.x = (800 - rawX) / 2;
         ts.p.y = (480 - rawY) / 2;
+#endif
     }
     // }
-
     return lastTouchCount;
 
 }

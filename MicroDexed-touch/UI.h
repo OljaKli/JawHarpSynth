@@ -55,8 +55,6 @@ struct ScopeSettings {
   bool onlyDrawWhenRunning;
 };
 
-
-
 void splash_draw_header();
 void splash_draw_D();
 void splash_draw_reverseD();
@@ -89,6 +87,7 @@ void update_display_functions_while_seq_running();
 void loadDexedOrigADSR(int instance);
 
 // Song Arranger
+void update_song_arranger_midi_notes(void);
 void UI_func_song_arranger(uint8_t param);
 void draw_song_arranger_buttons(void);
 void draw_song_arranger_config_grid(void);

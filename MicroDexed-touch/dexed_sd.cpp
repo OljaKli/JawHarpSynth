@@ -2390,7 +2390,7 @@ FLASHMEM bool load_sd_sys_json(void)
         }
         if (data_json.containsKey("gp_speed"))
           configuration.sys.gamepad_speed = data_json["gp_speed"];
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
         if (data_json.containsKey("ra_btn_0"))
           for (uint8_t i = 0; i < 8; i++)
             configuration.sys.ra_btn_target[i] = data_json["ra_btn_" + String(i)] | i;
@@ -2496,7 +2496,7 @@ FLASHMEM bool save_sd_sys_json(void)
         data_json["rgb_enc_color_sel"] = configuration.sys.rgb_enc_color_sel;
 
       data_json["gp_speed"] = configuration.sys.gamepad_speed;
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
       for (uint8_t i = 0; i < 8; i++)
         data_json["ra_btn_" + String(i)] = configuration.sys.ra_btn_target[i];
 #endif

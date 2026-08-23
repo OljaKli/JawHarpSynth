@@ -1342,10 +1342,7 @@ FLASHMEM void setup()
   LEDRing_r.LEDRingSmall_GlobalCurrent(0x10);
   LEDRing_r.LEDRingSmall_SetScaling(0xFF);
   LEDRing_r.LEDRingSmall_PWM_MODE();
-
 #endif
-
-
 
 #ifdef MIDI_ACTIVITY_LIGHTS
   pinMode(LED_MIDI_IN, OUTPUT);
@@ -1441,12 +1438,18 @@ FLASHMEM void setup()
 
 #if defined RA_DISPLAY
   display.begin(RA8875_800x480);
+
   display.setCGRAMAsDefaultFont();
   delay(2);
 
   display.backlight(true);
   delay(2);
+
+#if defined RA_DISPLAY && defined MUSIKANDMORE
+;
+#else
   display.setRotation(2);
+#endif
 
 #else
   display.begin();
@@ -2063,7 +2066,7 @@ FLASHMEM void setup()
 #endif
 
 #if defined OLED_DISPLAYS 
-init_oled_displays();
+  init_oled_displays();
 #endif
 
 }
@@ -2931,11 +2934,13 @@ FLASHMEM void show_chord()
     display.setTextSize(1);
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 
-    setCursor_textGrid_small(20, 1);
+    setCursor_textGrid_small(22, 1);
+    display.print("(");
     display.print(chord_note_count);
+    display.print(")");
     for (uint8_t d = 0; d < 4; d++)
     {
-      setCursor_textGrid_small(24 + d * 4, 1);
+      setCursor_textGrid_small(27 + d * 4, 1);
       display.print(midiToNote(chord_input[d]));
       display.print(chord_input[d] / 12);
       display.print(" ");
@@ -2966,7 +2971,7 @@ FLASHMEM void show_chord()
     //  handleStart();
     //       }
 
-    display.setTextSize(1);
+    display.setTextSize(2);
     show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
   }
 
@@ -3142,7 +3147,8 @@ extern void OLED_status();
 void loop()
 {
 #if defined OLED_DISPLAYS
-  //OLED_status();
+  if (LCDML.FUNC_getID() == 255)
+    OLED_status();
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG
@@ -3280,7 +3286,7 @@ void loop()
   {
     touchReadTimer = 0;
     updateTouchScreen();
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
     ra_panel_handle_touch();
 #endif
     const TouchFn touchHandler = getCurrentTouchHandler();
@@ -6102,6 +6108,9 @@ FLASHMEM void check_configuration_sys(void)
 #if defined ESP_DISPLAY
   configuration.sys.display_rotation = 3;
   configuration.sys.touch_rotation = 2;
+#elif defined RA_DISPLAY
+  configuration.sys.display_rotation = constrain(configuration.sys.display_rotation, 0, 3);
+  configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
 #else
   configuration.sys.display_rotation = constrain(configuration.sys.display_rotation, 0, 3);
   configuration.sys.touch_rotation = constrain(configuration.sys.touch_rotation, 0, 3);
@@ -6113,7 +6122,7 @@ FLASHMEM void check_configuration_sys(void)
 
   configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed, 60, 500);
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
   for (uint8_t i = 0; i < 8; i++) {
     if (configuration.sys.ra_btn_target[i] >= RA_NUM_TARGETS)
       configuration.sys.ra_btn_target[i] = i;  // default: slot i → target i

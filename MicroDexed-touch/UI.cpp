@@ -127,6 +127,8 @@ extern void handleStop(void);
 extern void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device);
 extern void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device);
 
+bool chord_arranger_indicators_dirty = false;
+
 // sidechains
 extern uint8_t sidechain_sample_number;
 extern int sidechain_speed;
@@ -3548,7 +3550,7 @@ FLASHMEM boolean key_right()
   if (joysticks[0].getAxis(0) == GAMEPAD_RIGHT_0 && joysticks[0].getAxis(1) == GAMEPAD_RIGHT_1)
     return true;
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY)
   if (ra_panel_virt_right) { ra_panel_virt_right = false; return true; }
 #endif
   return false;
@@ -3575,7 +3577,7 @@ FLASHMEM boolean key_left()
   if (joysticks[0].getAxis(0) == GAMEPAD_LEFT_0 && joysticks[0].getAxis(1) == GAMEPAD_LEFT_1)
     return true;
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
   if (ra_panel_virt_left) { ra_panel_virt_left = false; return true; }
 #endif
   return false;
@@ -3603,7 +3605,7 @@ FLASHMEM boolean key_up()
   if (joysticks[0].getAxis(0) == GAMEPAD_UP_0 && joysticks[0].getAxis(1) == GAMEPAD_UP_1)
     return true;
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY)
   if (ra_panel_virt_up) { ra_panel_virt_up = false; return true; }
 #endif
   return false;
@@ -3631,7 +3633,7 @@ FLASHMEM boolean key_down()
   if (joysticks[0].getAxis(0) == GAMEPAD_DOWN_0 && joysticks[0].getAxis(1) == GAMEPAD_DOWN_1)
     return true;
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
   if (ra_panel_virt_down) { ra_panel_virt_down = false; return true; }
 #endif
   return false;
@@ -5040,7 +5042,7 @@ FLASHMEM void lcdml_menu_control(void)
   }
 #endif
 
-#if defined(RA_DISPLAY) && defined(TOUCHMENU)
+#if defined(RA_DISPLAY) 
   if (ra_panel_enc_l != 0) {
     g_LCDML_CONTROL_Encoder_position[ENC_L] = ra_panel_enc_l;
     ra_panel_enc_l = 0;
@@ -6321,24 +6323,38 @@ FLASHMEM void UI_func_filter_resonance(uint8_t param)
   }
 }
 
+// FLASHMEM void getNoteName(char* noteName, uint8_t noteNumber)
+// {
+//   const char notes[12][3] = { "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#" };
+//   uint8_t oct_index = noteNumber - 12;
+//   if (noteNumber == 130) // it is a latched note
+//   {
+//     noteName[0] = 'L';
+//     noteName[1] = '\0';
+//   }
+//   else
+//   {
+//     noteNumber -= 21;
+//     if (notes[noteNumber % 12][1] == '\0')
+//       sprintf(noteName, "%1s-%1d", notes[noteNumber % 12], oct_index / 12);
+//     else
+//       sprintf(noteName, "%2s%1d", notes[noteNumber % 12], oct_index / 12);
+//   }
+// }
+
 FLASHMEM void getNoteName(char* noteName, uint8_t noteNumber)
 {
-  const char notes[12][3] = { "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#" };
-  uint8_t oct_index = noteNumber - 12;
-  if (noteNumber == 130) // it is a latched note
-  {
-    noteName[0] = 'L';
-    noteName[1] = '\0';
-  }
-  else
-  {
-    noteNumber -= 21;
-    if (notes[noteNumber % 12][1] == '\0')
-      sprintf(noteName, "%1s-%1d", notes[noteNumber % 12], oct_index / 12);
-    else
-      sprintf(noteName, "%2s%1d", notes[noteNumber % 12], oct_index / 12);
-  }
+    static const char notes[12][3] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+    if (noteNumber == 130) {
+        noteName[0] = 'L';
+        noteName[1] = '\0';
+        return;
+    }
+    int octave = (int)noteNumber / 12 - 1;   // 0→C-1, 12→C0, 24→C1, etc.
+    int index = noteNumber % 12;
+    sprintf(noteName, "%s%d", notes[index], octave);
 }
+
 
 FLASHMEM void UI_func_sound_intensity(uint8_t param)
 {
@@ -9378,6 +9394,88 @@ FLASHMEM void print_arr_split_range(uint8_t x, uint8_t y)
     display.print(F(" "));
 
   }
+}
+
+FLASHMEM void print_arranger_zone_info() {
+    uint8_t splitNote = seq.arr_split_note;
+
+    bool chord_active = (splitNote > 0);
+    bool song_active = seq.song_arranger_active;
+
+    uint8_t chord_low = 0;
+    uint8_t chord_high = chord_active ? splitNote - 1 : 0;
+    uint8_t song_low = song_active ? splitNote : 99;
+    uint8_t song_high = song_active ? min(splitNote + 9, 95) : 99;
+    uint8_t live_low = song_active ? min(splitNote + 10, 95) : splitNote;
+    uint8_t live_high = 95;
+
+    display.setTextSize(1);
+
+    // ---- CHORD (editable) – column 1 ----
+    setCursor_textGrid_small(1, 10);
+    if (generic_temp_select_menu == 8 && !seq.edit_state) {
+        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT); // inverted highlight
+    } else if (generic_temp_select_menu == 8 && seq.edit_state) {
+        display.setTextColor(COLOR_SYSTEXT, RED);             // red background when editing
+    } else {
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
+    display.print(F("CHORD "));
+    if (chord_active) {
+        char lowName[6], highName[6];
+        getNoteName(lowName, chord_low);
+        getNoteName(highName, chord_high);
+        display.print(lowName);
+        display.print(F(" - "));
+        display.print(highName);
+    } else {
+        display.print(F("OFF"));
+    }
+    // Pad to column 19 using background color
+    display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND);
+    while (display.getCursorX() < 19 * CHAR_width_small) {
+        display.print(' ');
+    }
+
+    // ---- SONG-PARTS (display only) – column 20 ----
+    setCursor_textGrid_small(20, 10);
+    if (song_active) {
+        display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
+        display.print(F("SONG "));
+        char lowName[6], highName[6];
+        getNoteName(lowName, song_low);
+        getNoteName(highName, song_high);
+        display.print(lowName);
+        display.print(F(" - "));
+        display.print(highName);
+    } else {
+        display.setTextColor(GREY2, COLOR_BACKGROUND);
+        display.print(F("SONG --"));
+    }
+    // Pad to column 35 using background color
+    display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND);
+    while (display.getCursorX() < 35 * CHAR_width_small) {
+        display.print(' ');
+    }
+
+    // ---- LIVE (display only) – column 36 ----
+    setCursor_textGrid_small(36, 10);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F("LIVE "));
+    char lowName[6], highName[6];
+    getNoteName(lowName, live_low);
+    getNoteName(highName, live_high);
+    display.print(lowName);
+    display.print(F(" - "));
+    display.print(highName);
+    // Pad to end of line with background color
+    display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND);
+    while (display.getCursorX() < DISPLAY_WIDTH) {
+        display.print(' ');
+    }
+
+    // Restore default text color
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
 
 
@@ -18275,183 +18373,161 @@ FLASHMEM void UI_func_cv_page(uint8_t param)
 
 extern bool chord_autostart;
 
-FLASHMEM void  _print_arranger_labels()
-{
-  display.setTextSize(1);
-  setCursor_textGrid_small(1, 1);
-  display.setTextColor(RED);
-  display.print(F("CHORD ARRANGER"));
-  display.setTextColor(GREY2);
-  display.print(F(" VERSION 0.2"));
+FLASHMEM void _print_arranger_labels() {
+    display.setTextSize(1);
+    setCursor_textGrid_small(1, 1);
+    display.setTextColor(RED);
+    display.print(F("CHORD ARRANGER"));
+    display.setTextColor(GREY2);
+    display.print(F(" 0.4"));
 
-  display.setTextSize(1);
-  for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
-  {
-    setCursor_textGrid_small(1 + (x * 5), 6);
-    display.setTextColor(GREY1);
-
-    display.print(x + 1);
-    set_track_type_color(x);
-    setCursor_textGrid_small(1 + (x * 5), 7);
-    if (seq.track_type[x] == 0)
-      display.print(F("DRM"));
-    else if (seq.track_type[x] == 1)
-      display.print(F("INS"));
-    else if (seq.track_type[x] == 2)
-      display.print(F("CHD"));
-    else if (seq.track_type[x] == 3)
-      display.print(F("ARP"));
-    else if (seq.track_type[x] == 4)
-      display.print(F("SLC"));
-    setCursor_textGrid_small(1 + (x * 5), 8);
-
-    if (seq.track_type[x] == 1)  // only instrument tracks
-    {
-      if (seq.arr_type[x] == 0)
-      {
-        display.setTextColor(GREY2);
-        display.print(F("OFF "));
-      }
-
-      else if (seq.arr_type[x] == 1)
-      {
-        display.setTextColor(COLOR_SYSTEXT);
-        display.print(F("ON  "));
-      }
-      else if (seq.arr_type[x] == 2)
-      {
-        display.setTextColor(COLOR_ARP);
-        display.print(F("MELO"));
-      }
-      else if (seq.arr_type[x] == 3)
-      {
-        display.setTextColor(GREEN);
-        display.print(F("BASS"));
-      }
-      else if (seq.arr_type[x] == 4)
-      {
-        display.setTextColor(COLOR_PITCHSMP);
-        display.print(F("ROOT"));
-      }
+    display.setTextSize(1);
+    for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++) {
+        setCursor_textGrid_small(1 + (x * 5), 6);
+        display.setTextColor(GREY1);
+        display.print(x + 1);
+        set_track_type_color(x);
+        setCursor_textGrid_small(1 + (x * 5), 7);
+        if (seq.track_type[x] == 0)
+            display.print(F("DRM"));
+        else if (seq.track_type[x] == 1)
+            display.print(F("INS"));
+        else if (seq.track_type[x] == 2)
+            display.print(F("CHD"));
+        else if (seq.track_type[x] == 3)
+            display.print(F("ARP"));
+        else if (seq.track_type[x] == 4)
+            display.print(F("SLC"));
+        setCursor_textGrid_small(1 + (x * 5), 8);
+        if (seq.track_type[x] == 1) {
+            if (seq.arr_type[x] == 0) {
+                display.setTextColor(GREY2);
+                display.print(F("OFF "));
+            } else if (seq.arr_type[x] == 1) {
+                display.setTextColor(COLOR_SYSTEXT);
+                display.print(F("ON  "));
+            } else if (seq.arr_type[x] == 2) {
+                display.setTextColor(COLOR_ARP);
+                display.print(F("MELO"));
+            } else if (seq.arr_type[x] == 3) {
+                display.setTextColor(GREEN);
+                display.print(F("BASS"));
+            } else if (seq.arr_type[x] == 4) {
+                display.setTextColor(COLOR_PITCHSMP);
+                display.print(F("ROOT"));
+            }
+        }
     }
-  }
-  display.setTextColor(COLOR_SYSTEXT);
-  setCursor_textGrid_small(1, 10);
-  display.print(F("ARRANGER SPLIT NOTE"));
-  setCursor_textGrid_small(26, 10);
-  display.print("-");
 
-  display.setTextColor(GREY2);
+ display.setTextColor(GREY2);
+     const uint16_t yPos = 157;
+    const uint16_t xPositions[6] = { 0, 54, 108, 162, 216, 270 };
 
-  setCursor_textGrid_small(0, 15);
-  display.print("DOMINANT");
-  setCursor_textGrid_small(9, 15);
-  display.print("SUBDOM");
-  setCursor_textGrid_small(18, 15);
-  display.print("RELATIVE");
-  setCursor_textGrid_small(18 + 9, 15);
-  display.print("PARALLEL");
-  setCursor_textGrid_small(18 + 18, 15);
-  display.print("DIATONIC");
-  setCursor_textGrid_small(18 + 18 + 9, 15);
-  display.print("CHROMA");
+    display.setCursor(xPositions[0] + 2, yPos);
+    display.print(F("DOMINANT"));
+    display.setCursor(xPositions[1] + 2, yPos);
+    display.print(F("SUBDOM"));
+    display.setCursor(xPositions[2] + 2, yPos);
+    display.print(F("RELATIVE"));
+    display.setCursor(xPositions[3] + 2, yPos);
+    display.print(F("PARALLEL"));
+    display.setCursor(xPositions[4] + 2, yPos);
+    display.print(F("DIATONIC"));
+    display.setCursor(xPositions[5] + 2, yPos);
+    display.print(F("CHROMA"));
 
-  for (int i = 0; i < 6; i++)
-    TouchButton::drawButton(GRID.X[i], GRID.Y[4], "NONE", "", TouchButton::BUTTON_NORMAL);
+   
+    for (int i = 0; i < 6; i++)
+        TouchButton::drawButton(GRID.X[i], GRID.Y[4] + 2, "NONE", "", TouchButton::BUTTON_NORMAL);
 
-  display.setTextSize(1);
+    // Other labels (help text) remain unchanged
+    display.setTextSize(1);
+    setCursor_textGrid_small(9, 21);
+    display.setTextColor(COLOR_INSTR);
+    display.print(F("INST"));
 
-  setCursor_textGrid_small(9, 21);
-  display.setTextColor(COLOR_INSTR);
-  display.print(F("INST"));
+    display.setTextColor(COLOR_SYSTEXT);
+    display.print(F(", "));
 
-  display.setTextColor(COLOR_SYSTEXT);
-  display.print(F(", "));
+    display.setTextColor(COLOR_CHORDS);
+    display.print(F("CHORD "));
+    display.setTextColor(COLOR_SYSTEXT);
+    display.print(F("AND "));
+    display.setTextColor(COLOR_ARP);
+    display.print(F("ARP "));
 
-  display.setTextColor(COLOR_CHORDS);
-  display.print(F("CHORD "));
-  display.setTextColor(COLOR_SYSTEXT);
-  display.print(F("AND "));
-  display.setTextColor(COLOR_ARP);
-  display.print(F("ARP "));
+    display.setTextColor(GREY1);
+    display.print(F("TRACKS ARE TRANSFORMED"));
 
-  display.setTextColor(GREY1);
-  display.print(F("TRACKS ARE TRANSFORMED"));
+    setCursor_textGrid_small(9, 22);
+    display.setTextColor(COLOR_SYSTEXT);
+    display.print(F("OFF:  "));
+    display.setTextColor(GREY2);
+    display.print(F("PLAY UNALTERED  "));
+    display.setTextColor(COLOR_SYSTEXT);
+    display.print(F("ON: "));
+    display.setTextColor(GREY2);
+    display.print(F("TRANSFORM TO CHORD"));
 
-  setCursor_textGrid_small(9, 22);
-  display.setTextColor(COLOR_SYSTEXT);
-  display.print(F("OFF:  "));
-  display.setTextColor(GREY2);
-  display.print(F("PLAY UNALTERED  "));
-  display.setTextColor(COLOR_SYSTEXT);
-  display.print(F("ON: "));
-  display.setTextColor(GREY2);
-  display.print(F("TRANSFORM TO CHORD"));
+    setCursor_textGrid_small(9, 23);
+    display.setTextColor(COLOR_SYSTEXT);
+    display.print(F("BASS: "));
+    display.setTextColor(GREY2);
+    display.print(F("ADV.BASSLINE "));
+    display.setTextColor(COLOR_SYSTEXT);
+    setCursor_textGrid_small(29, 23);
+    display.print(F("ROOT: "));
+    display.setTextColor(GREY2);
+    display.print(F("ROOT NOTES ONLY"));
 
-
-  setCursor_textGrid_small(9, 23);
-  display.setTextColor(COLOR_SYSTEXT);
-  display.print(F("BASS: "));
-  display.setTextColor(GREY2);
-
-  display.print(F("ADV.BASSLINE "));
-  display.setTextColor(COLOR_SYSTEXT);
-  setCursor_textGrid_small(29, 23);
-  display.print(F("ROOT: "));
-  display.setTextColor(GREY2);
-  display.print(F("ROOT NOTES ONLY"));
-
-
-  TouchButton::drawButton(GRID.X[5], GRID.Y[1] + 16, "AUTO", "START", chord_autostart ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
-
+    TouchButton::drawButton(GRID.X[5], GRID.Y[1] + 16, "AUTO", "START", chord_autostart ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
 }
 
-FLASHMEM void  _print_arranger_values()
-{
-  display.setTextSize(1);
-  for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
-  {
-    setCursor_textGrid_small(1 + (x * 5), 6);
-    // display.setTextColor(COLOR_SYSTEXT);
-    setCursor_textGrid_small(1 + (x * 5), 8);
-    setModeColor(x);
-    // if (seq.track_type[x] == 1 || seq.track_type[x] == 2 || seq.track_type[x] == 3 )  // only instrument and arp tracks
-    // {
-    if (seq.arr_type[x] == 0)
-      display.print(F("OFF "));
-    else if (seq.arr_type[x] == 1)
-      display.print(F("ON  "));
-    else if (seq.arr_type[x] == 2)
-      display.print(F("MELO"));
-    else if (seq.arr_type[x] == 3)
-      display.print(F("BASS"));
-    else if (seq.arr_type[x] == 4)
-      display.print(F("ROOT"));
-    //}
-     // else
-     // {
-     //   // display.setTextColor(GREY2);
-     //   display.print(F("   "));
-     // }
-
-  }
-  setModeColor(8);
-  print_arr_split_range(22, 10);
-  checkWebRemote();
-  if (seq.arr_split_note != 0)
-  {
-    display.fillRect(CHAR_width_small, 110, seq.arr_split_note * 3.55, 4, DARKGREEN);
-    display.fillRect(CHAR_width_small + seq.arr_split_note * 3.55, 110, 320 - seq.arr_split_note * 2, 4, COLOR_BACKGROUND);
-  }
-  else
-    display.fillRect(CHAR_width_small, 110, 320 - CHAR_width_small, 4, COLOR_BACKGROUND);
-
+FLASHMEM void _print_arranger_values() {
+    display.setTextSize(1);
+    for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++) {
+        setCursor_textGrid_small(1 + (x * 5), 8);
+        setModeColor(x);
+        if (seq.arr_type[x] == 0)
+            display.print(F("OFF "));
+        else if (seq.arr_type[x] == 1)
+            display.print(F("ON  "));
+        else if (seq.arr_type[x] == 2)
+            display.print(F("MELO"));
+        else if (seq.arr_type[x] == 3)
+            display.print(F("BASS"));
+        else if (seq.arr_type[x] == 4)
+            display.print(F("ROOT"));
+    }
+    
+    // Print the zone info line
+    print_arranger_zone_info();
+    
+    // Draw the zone bars above the keyboard
+   // draw_chord_arranger_indicators();
 }
 
 extern void print_sampler_keyboard(int x, int y);
 
 
 extern uint8_t chord_input[];
+
+// Helper to set chord split note and update song arranger base note accordingly
+FLASHMEM void set_chord_split_and_song_base(uint8_t newSplit) {
+    // When song arranger is active, limit split note to 85 (leaving 10 notes for song‑part zone)
+    uint8_t maxSplit = (seq.song_arranger_active) ? 85 : 95;
+    newSplit = constrain(newSplit, 0, maxSplit);
+    
+    seq.arr_split_note = newSplit;
+    
+    if (seq.song_arranger_active) {
+        seq.song_arranger_base_note = newSplit;
+        update_song_arranger_midi_notes();
+        chord_arranger_indicators_dirty = true;
+    }
+    
+    _print_arranger_values();  // redraws the zone bars
+}
 
 FLASHMEM void UI_func_chord_arranger(uint8_t param)
 {
@@ -18468,6 +18544,8 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
     chord_input[2] = 0;
     chord_input[3] = 0;
 
+    chord_arranger_indicators_dirty = true;
+
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
     display.setTextSize(1);
     // for (uint8_t oct = 0; oct < 8; oct++)
@@ -18477,28 +18555,25 @@ FLASHMEM void UI_func_chord_arranger(uint8_t param)
     //   display.print(oct);
     // }
 
-        for (uint8_t oct = 0; oct < 8; oct++) {
-        draw_chord_arranger_keyboard(oct * 7 + 1, 95, oct * 12);
-    }
+for (uint8_t oct = 0; oct < 8; oct++) {
+       draw_chord_arranger_keyboard(oct * 7 + 1, 100, oct * 12);
+}
 
-    // Draw the split‑point and zone indicators
-    draw_chord_arranger_indicators();
+memset(prev_chord_key_state, 0, sizeof(prev_chord_key_state));
 
+draw_chord_arranger_indicators();
 
-// Draw the split‑point line (separates chord and live‑play areas)
-display.fillRect(CHAR_width_small, 110, seq.arr_split_note * 3.55, 4, DARKGREEN);
-display.fillRect(CHAR_width_small + seq.arr_split_note * 3.55, 110, 320 - seq.arr_split_note * 2, 4, COLOR_BACKGROUND);
 
 // Draw song‑part range indicator (small coloured bar below the keys)
-if (seq.song_arranger_active) {
-    uint8_t base = seq.song_arranger_base_note;
-    for (uint8_t i = 0; i < 10; i++) {
-        uint8_t note = base + i;
-        // Approximate x position: each octave is 42px (7 white keys * 6px)
-        int xPos = CHAR_width_small + (note / 12) * 42 + (note % 12) * 5;
-        display.fillRect(xPos, 110 + 10, 5, 4, COLOR_ARP);
-    }
-}
+// if (seq.song_arranger_active) {
+//     uint8_t base = seq.song_arranger_base_note;
+//     for (uint8_t i = 0; i < 10; i++) {
+//         uint8_t note = base + i;
+//         // Approximate x position: each octave is 42px (7 white keys * 6px)
+//         int xPos = CHAR_width_small + (note / 12) * 42 + (note % 12) * 5;
+//         display.fillRect(xPos, 110 + 10, 5, 4, COLOR_ARP);
+//     }
+// }
 
 // Navigation button (static, drawn once)
 TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", "ARR", TouchButton::BUTTON_NORMAL);
@@ -18540,24 +18615,48 @@ TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", "ARR", TouchButton::BUTTON
               seq.arr_type[generic_temp_select_menu]--;
           }
         }
-        else if (generic_temp_select_menu == 8)
-        {
-          if (e.down)
-          {
-            if (seq.arr_split_note < 72)
-              seq.arr_split_note++;
+//         else if (generic_temp_select_menu == 8)
+//         {
+//           if (e.down)
+//           {
+//             if (seq.arr_split_note < 72){
+//               seq.arr_split_note++;
+//               draw_chord_arranger_indicators();
+// }
+//           }
 
-          }
+//           else
+//           {
+//             if (seq.arr_split_note > 0){
+//               seq.arr_split_note--;
+//               draw_chord_arranger_indicators();
+//           }
+//           }
 
-          else
-          {
-            if (seq.arr_split_note > 0)
-              seq.arr_split_note--;
-          }
 
-        }
+//         int16_t newSplit = seq.arr_split_note + e.dir;  // step by exactly 1
+//     newSplit = constrain(newSplit, 0, 95);
+//     set_chord_split_and_song_base((uint8_t)newSplit);
+//         }
+else if (generic_temp_select_menu == 8) {
+  
+                // Handle split note: change by exactly 1 semitone per encoder step
+                int16_t newSplit = seq.arr_split_note + e.dir;  // e.dir is +1 or -1
+                chord_arranger_indicators_dirty = true;
+                newSplit = constrain(newSplit, 0, 95);
+                set_chord_split_and_song_base((uint8_t)newSplit);
+
+            }
+
       }
     }
+    
+ if (chord_arranger_indicators_dirty) {
+    draw_chord_arranger_indicators();
+    chord_arranger_indicators_dirty = false;
+}
+
+
     _print_arranger_values();
     if (e.pressed) // handle button presses during menu
     {
@@ -18567,6 +18666,8 @@ TouchButton::drawButton(GRID.X[5], GRID.Y[0], "SONG", "ARR", TouchButton::BUTTON
       _print_arranger_values();
 
     }
+
+   
 
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
@@ -18917,26 +19018,27 @@ FLASHMEM void print_sampler_keyboard(int x, int y)
   }
 }
 
-FLASHMEM uint16_t getNotePixelX(uint8_t note) {
+uint16_t getNotePixelX(uint8_t note) {
+    if (note > 95) return 0;
+    uint8_t oct = note / 12;
+    uint8_t semitone = note % 12;
     const uint8_t whiteOffsets[7] = {0, 2, 4, 5, 7, 9, 11};
     const uint8_t blackOffsets[5] = {1, 3, 6, 8, 10};
     const uint8_t offset[5] = {1, 2, 2, 4, 6};
 
-    uint8_t oct = note / 12;
-    uint8_t semitone = note % 12;
-    uint16_t baseX = (oct * 7 + 1) * CHAR_width_small;
-
+    // White key
     for (uint8_t i = 0; i < 7; i++) {
         if (whiteOffsets[i] == semitone) {
-            return baseX + 6 * i; // left edge of white key
+            return (oct * 7 + 1) * CHAR_width_small + 6 * i;
         }
     }
-    for (uint8_t i = 0; i < 5; i++) {
-        if (blackOffsets[i] == semitone) {
-            return baseX + 4 * semitone - offset[i];
-        }
+
+    // Black key
+    uint8_t offcount = 0;
+    for (uint8_t b = 0; b < 5; b++) {
+        if (blackOffsets[b] < semitone) offcount++;
     }
-    return baseX; // fallback
+    return (oct * 7 + 1) * CHAR_width_small + 4 * semitone - offset[offcount];
 }
 
 FLASHMEM void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote) {
@@ -18949,15 +19051,16 @@ FLASHMEM void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote) {
         uint8_t note = startNote + whiteOffsets[i];
         uint16_t color;
         if (chord_arranger_key_state[note]) {
-            color = GREEN;
-        } else if (seq.song_arranger_active && note >= seq.song_arranger_base_note && note < seq.song_arranger_base_note + 10) {
-            color = COLOR_ARP;
+            color = RED;
         } else {
-            color = COLOR_SYSTEXT;
+            color = COLOR_SYSTEXT;  // always white for inactive keys
         }
         int xPos = x * CHAR_width_small + 6 * i;
         if (xPos < DISPLAY_WIDTH - 8)
+        {
+         checkWebRemote();
             display.fillRect(xPos, y + 23, 5, 15, color);
+        }
     }
 
     // Draw black keys
@@ -18967,18 +19070,30 @@ FLASHMEM void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote) {
             uint8_t note = startNote + i;
             uint16_t color;
             if (chord_arranger_key_state[note]) {
-                color = GREEN;
-            } else if (seq.song_arranger_active && note >= seq.song_arranger_base_note && note < seq.song_arranger_base_note + 10) {
-                color = COLOR_ARP;
+                color = RED;
             } else {
-                color = COLOR_BACKGROUND;
+                color = COLOR_BACKGROUND;  // always black for inactive keys
             }
             int xPos = x * CHAR_width_small + 4 * i - offset[offcount];
             if (xPos < DISPLAY_WIDTH - 10)
+            {
+               checkWebRemote();
                 display.fillRect(xPos, y + 23, 4, 8, color);
+            }
             offcount++;
             if (offcount == 5) offcount = 0;
         }
+    }
+
+    // Draw octave numbers below each C key
+    display.setTextSize(1);
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
+    for (uint8_t oct = 0; oct < 8; oct++) {
+        uint8_t note = startNote + oct * 12;
+        if (note > 95) break;
+        uint16_t xPos = getNotePixelX(note);
+        display.setCursor(xPos + 1, y + 23 + 15 + 2);
+        display.print(note / 12 - 1);
     }
 }
 
@@ -22490,13 +22605,19 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
 FLASHMEM void _setup_rotation_and_encoders(bool init)
 {
-#ifndef RA_DISPLAY
-  display.setRotation(configuration.sys.display_rotation);
+// #if defined RA_DISPLAY && defined MUSIKANDMORE
+//   display.setRotation(0);
+// #endif
 
 #if defined GENERIC_DISPLAY
   touch.setRotation(configuration.sys.touch_rotation);
 #endif
-#endif
+
+// #if defined RA_DISPLAY
+//   touch.setRotation(configuration.sys.touch_rotation);
+// #endif
+
+//#endif
 
   ENCODER[ENC_L].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
   ENCODER[ENC_R].swap_encoder_input_pins(configuration.sys.reverse_encoder_pins);
@@ -23551,19 +23672,43 @@ FLASHMEM void printLiveModButton(int8_t step) {
 
 FLASHMEM void print_voice_select_default_help()
 {
-
-  // Don't show help messages in category mode
+  // In category mode we show a minimal help (or skip)
   if (category_mode_active) {
-    // Clear the help text area
-    // checkWebRemote();
-    // display.fillRect(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2, DISPLAY_WIDTH, CHAR_height_small * 2 + 2, COLOR_BACKGROUND);
-
     return;
   }
 
   if (seq.cycle_touch_element != 1) {
-    helptext_l(back_text);
-    helptext_r(F("< > SELECT VOICE"));
+    helptext_l(back_text);   // back_text is already a flash string
+
+    const __FlashStringHelper* rightHelp = nullptr;
+
+    if (seq.edit_state) {
+      rightHelp = F("EDIT VALUE");
+    } else {
+      switch (generic_temp_select_menu) {
+        case 0:  rightHelp = F("SEL. POOL"); break;
+        case 1:  rightHelp = F("SEL. DEXED INSTANCE"); break;
+        case 2:  rightHelp = F("SEL. BANK"); break;
+        case 3:  rightHelp = F("SEL. VOICE"); break;
+        case 4:  rightHelp = F("ADJ. VOLUME"); break;
+        case 5:  rightHelp = F("ADJ. TRANSPOSE"); break;
+        case 6:  rightHelp = F("ADJ. PAN"); break;
+        case 7:  rightHelp = F("SET LOWEST NOTE"); break;
+        case 8:  rightHelp = F("SET HIGHEST NOTE"); break;
+        case 9:  rightHelp = F("SET MIDI CHANNEL"); break;
+        case 10: rightHelp = F("AUDIO SETTINGS"); break;
+        case 11: rightHelp = F("GO TO EFFECTS"); break;
+        case 12: rightHelp = F("ADJ. CHORUS"); break;
+        case 13: rightHelp = F("ADJ. DELAY1"); break;
+        case 14: rightHelp = F("ADJ. DELAY2"); break;
+        case 15: rightHelp = F("ADJ. REVERB"); break;
+        case 16: rightHelp = F("ADJ. BPM"); break;
+        default: rightHelp = F("SEL. VOICE"); break;
+      }
+    }
+    helptext_r(rightHelp);
+
+    // static hints (long/short press actions)
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.setCursor(0, DISPLAY_HEIGHT - (CHAR_height_small * 2) - 2);
     display.print(F("LONG:"));
@@ -23578,7 +23723,7 @@ FLASHMEM void print_voice_select_default_help()
     display.setTextColor(COLOR_ARP, COLOR_BACKGROUND);
     if (seq.edit_state == 1)
       display.print(F("APPLY"));
-    else if (seq.edit_state == 0)
+    else
       display.print(F(" EDIT"));
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     display.print(F(" LONG:"));
@@ -23942,6 +24087,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
 
         if (seq.edit_state == 0) {
           generic_temp_select_menu = constrain(generic_temp_select_menu + e.dir, 0, 16);
+          print_voice_select_default_help();
         }
         else if (seq.edit_state == 1) {
           switch (generic_temp_select_menu) {
@@ -24067,6 +24213,7 @@ FLASHMEM void UI_func_voice_select(uint8_t param)
       if (e.longPressed && dexed_live_mod.active_button != 99)
       {
         increment_dexed_instance_in_voice_select_round_robin();
+        print_voice_select_default_help(); 
         if (seq.cycle_touch_element == 0) {
           virtual_keyboard_smart_preselect_mode();
         }
