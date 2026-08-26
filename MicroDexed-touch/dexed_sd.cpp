@@ -4288,7 +4288,12 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["arp_style"] = seq.arp_style;
       data_json["arp_num_notes_max"] = seq.arp_num_notes_max;
       data_json["seq_chord_vel"] = seq.chord_vel;
-      data_json["arr_split_note"] = seq.arr_split_note;
+      //data_json["arr_split_note"] = seq.arr_split_note;
+      data_json["chord_zone_start"] = seq.chord_zone_start;
+    data_json["chord_zone_end"] = seq.chord_zone_end;
+    data_json["song_zone_start"] = seq.song_zone_start;
+    data_json["song_zone_end"] = seq.song_zone_end;
+    data_json["song_zone_active"] = seq.song_zone_active;
       data_json["chord_key_ammount"] = seq.chord_key_ammount;
       data_json["seq_oct_shift"] = seq.oct_shift;
       data_json["seq_element_shift"] = seq.element_shift;
@@ -4747,7 +4752,43 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           else
             seq.arp_num_notes_max = 16;
           seq.chord_vel = data_json["seq_chord_vel"];
-          seq.arr_split_note = data_json["arr_split_note"];
+          //seq.arr_split_note = data_json["arr_split_note"];
+    // Load chord arranger zone settings
+    if (data_json.containsKey("chord_zone_start")) {
+        seq.chord_zone_start = data_json["chord_zone_start"];
+    } else {
+        seq.chord_zone_start = 0;  // Default
+    }
+    
+    if (data_json.containsKey("chord_zone_end")) {
+        seq.chord_zone_end = data_json["chord_zone_end"];
+    } else if (data_json.containsKey("arr_split_note")) {
+        // Fallback for old format
+        seq.chord_zone_end = data_json["arr_split_note"];
+    } else {
+        seq.chord_zone_end = 36;  // Default
+    }
+    
+    if (data_json.containsKey("song_zone_start")) {
+        seq.song_zone_start = data_json["song_zone_start"];
+
+        seq.song_zone_end = seq.song_zone_start + 9;
+if (seq.song_zone_end > 95) {
+    seq.song_zone_end = 95;
+    seq.song_zone_start = seq.song_zone_end - 9;
+}
+seq.song_zone_active = true;
+update_song_arranger_midi_notes();
+    } else {
+        seq.song_zone_start = 48;  // Default
+    }
+    
+    if (data_json.containsKey("song_zone_active")) {
+        seq.song_zone_active = data_json["song_zone_active"];
+    } else {
+        seq.song_zone_active = false;  // Default
+    }
+
           seq.chord_key_ammount = data_json["chord_key_ammount"];
           seq.oct_shift = data_json["seq_oct_shift"];
           seq.element_shift = data_json["seq_element_shift"];
@@ -5546,7 +5587,7 @@ FLASHMEM bool load_sd_song_arranger_json(uint8_t number)
 
         // Load Song Arranger data
         seq.song_arranger_active = data_json["active"] | false;
-        seq.song_arranger_base_note = data_json["base_note"] | 60;
+        seq.song_zone_start = data_json["song_zone_start"] | 60;
 
         for (uint8_t i = 0; i < 10; i++)
         {
@@ -5648,7 +5689,7 @@ FLASHMEM bool save_sd_song_arranger_json(uint8_t number)
       auto& data_json = g_json_doc; data_json.clear();
 
       data_json["active"] = seq.song_arranger_active;
-      data_json["base_note"] = seq.song_arranger_base_note;
+      data_json["base_note"] = seq.song_zone_start;
 
 data_json["switch_mode"] = seq.song_arranger_switch_mode;
 

@@ -131,7 +131,7 @@ typedef struct sequencer_s
     char name_temp[FILENAME_LEN];
     uint8_t note_in;
     uint8_t note_in_velocity;
-    uint8_t arr_split_note = 0;
+    //uint8_t arr_split_note = 0;
     uint8_t arr_type[NUM_SEQ_TRACKS] = { 0, 0, 0, 0, 0, 0, 0, 0 }; // 0 = off, 1 = transform, 2 = root note only
     uint8_t chord_vel = 60;
     uint8_t chord_key_ammount = 4;
@@ -356,10 +356,16 @@ bool song_arranger_part_chain_started;                // Flag to prevent re-trig
 uint8_t song_arranger_requested_part;                 // Part requested by touch (0-9, 99 = none)
 bool song_arranger_part_change_pending;               // True when a part change is queued
 uint8_t song_arranger_last_song_step;                 // Last song step for arranger mode
-uint8_t song_arranger_base_note;                      // Base MIDI note for the first part (Intro)
 uint8_t song_arranger_switch_mode;  // 0 = next pattern, 1 = next song step
 bool song_arranger_need_redraw_buttons;
-
+    // Chord Arranger zone configuration
+    uint8_t chord_zone_start;     // First note of chord zone (default: 0)
+    uint8_t chord_zone_end;       // Last note of chord zone (default: 36)
+    uint8_t song_zone_start;      // First note of song-part zone (default: 48)
+    uint8_t song_zone_end;        // Last note of song-part zone (default: 57)
+    bool song_zone_active;        // Is the song zone enabled?
+    uint8_t live_zone_start; 
+    uint8_t song_position_mode;  // 0 = song below live, 1 = song above live
 } sequencer_t;
 
 // Song Arranger functions

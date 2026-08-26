@@ -353,389 +353,477 @@ extern ChordInfo currentChord;
 extern void updateCurrentChord(const uint8_t midiNotes[], uint8_t size);
 extern bool chord_autostart;
 
+// midi_devices.cpp - Refactored with proper on/off guards
+
+// ============================================================================
+// CHORD ARRANGER PROCESSING - Only runs if chord_zone_end > chord_zone_start
+// ============================================================================
+static FLASHMEM void processChordArranger(byte inChannel, byte inData1, byte inData2, midi::MidiType event) {
+    // GUARD: Check if chord arranger is active (zone has valid range)
+    if (seq.chord_zone_end <= seq.chord_zone_start) return;
+    
+    // Check if note is in the chord zone
+    if (inData1 < seq.chord_zone_start || inData1 > seq.chord_zone_end) return;
+    
+    if (event == midi::NoteOn && inData2 > 0) {
+        seq.note_in = inData1;
+        seq.note_in_velocity = inData2;
+
+        // Chord note handling
+        if (since_last_note > CHORD_CAPTURE_WINDOW || chord_note_count >= MAX_CHORD_NOTES) {
+            resetChordBuffer();
+            resetCurrentChord();
+        }
+
+        // Store the note (sorted insertion)
+        for (int i = 0; i < MAX_CHORD_NOTES; i++) {
+            if (chord_input[i] == 0) { // Empty slot
+                chord_input[i] = inData1;
+                break;
+            }
+            if (inData1 < chord_input[i]) { // Insert in order
+                memmove(&chord_input[i + 1], &chord_input[i], MAX_CHORD_NOTES - i - 1);
+                chord_input[i] = inData1;
+                break;
+            }
+        }
+
+        chord_note_count++;
+        since_last_note = 0;
+
+        // Process chord if we have enough notes
+        if (chord_note_count >= 3) {
+            updateCurrentChord(chord_input, min(chord_note_count, MAX_CHORD_NOTES));
+            printSuggestions();
+            show_chord();
+            if (chord_autostart && !seq.running) {
+                handleStart();
+            }
+            resetChordTransformation();
+        }
+    }
+    else if (event == midi::NoteOff || (event == midi::NoteOn && inData2 == 0)) {
+        // Remove the released note from the buffer
+        for (int i = 0; i < MAX_CHORD_NOTES; i++) {
+            if (chord_input[i] == inData1) {
+                memmove(&chord_input[i], &chord_input[i + 1], MAX_CHORD_NOTES - i - 1);
+                chord_input[MAX_CHORD_NOTES - 1] = 0;
+                chord_note_count--;
+                break;
+            }
+        }
+    }
+}
+
+// ============================================================================
+// SONG ARRANGER PROCESSING - Only runs if seq.song_arranger_active == true
+// ============================================================================
+static FLASHMEM void processSongArranger(byte inChannel, byte inData1, byte inData2, midi::MidiType event) {
+    // GUARD: Check if song arranger is active
+    if (!seq.song_arranger_active) return;
+    
+    // GUARD: Check if song zone is valid
+    if (!seq.song_zone_active || seq.song_zone_end <= seq.song_zone_start) return;
+    
+    // Check if note is in the song zone
+    if (inData1 < seq.song_zone_start || inData1 > seq.song_zone_end) return;
+    
+    // Only trigger on NoteOn
+    if (event == midi::NoteOn && inData2 > 0) {
+        uint8_t part_index = inData1 - seq.song_zone_start;
+        if (part_index < 10) {
+            if (seq.running) {
+                // Sequencer is running – queue the part change for the next pattern end
+                seq.song_arranger_requested_part = part_index;
+                seq.song_arranger_part_change_pending = true;
+            } else {
+                // Sequencer is stopped – start it and apply the part immediately
+                song_arranger_part_t& part = seq.song_arranger_parts[part_index];
+                if (part.active && part.start_step < SONG_LENGTH) {
+                    handleStart();  // start the sequencer
+                    seq.song_arranger_current_part = part_index;
+                    seq.song_arranger_playing = true;
+                    seq.song_arranger_next_part = 99;
+                    seq.song_arranger_requested_part = 99;
+                    seq.song_arranger_part_change_pending = false;
+                    seq.current_song_step = part.start_step;
+                    for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++) {
+                        seq.chain_counter[d] = 0;
+                        seq.current_chain[d] = seq.song[d][seq.current_song_step];
+                    }
+                    seq.step = 0;
+                    // Signal UI to redraw buttons
+                    seq.song_arranger_need_redraw_buttons = true;
+                }
+            }
+        }
+    }
+}
+
+// ============================================================================
+// VISUAL FEEDBACK - Track all notes for keyboard visualization
+// ============================================================================
+static FLASHMEM void updateKeyboardVisuals(byte inData1, byte inData2, midi::MidiType event) {
+    if (event == midi::NoteOn && inData2 > 0) {
+        chord_arranger_key_state[inData1] = 1;
+        chord_arranger_keyboard_dirty = true;
+    }
+    else if (event == midi::NoteOff || (event == midi::NoteOn && inData2 == 0)) {
+        chord_arranger_key_state[inData1] = 0;
+        chord_arranger_keyboard_dirty = true;
+    }
+}
+
+// ============================================================================
+// ZONE DETECTION - Priority: CHORD > SONG > LIVE
+// ============================================================================
+static FLASHMEM uint8_t getNoteZone(byte inData1) {
+    // Priority 1: CHORD zone (highest priority - chord detection)
+    // Only check if chord arranger is active (zone has valid range)
+    if (seq.chord_zone_end > seq.chord_zone_start && 
+        inData1 >= seq.chord_zone_start && 
+        inData1 <= seq.chord_zone_end) {
+        return 1; // CHORD zone
+    }
+    
+    // Priority 2: SONG zone (medium priority - song part changes)
+    // Only check if song arranger is active AND song zone is valid
+    if (seq.song_arranger_active && 
+        seq.song_zone_active && 
+        seq.song_zone_end > seq.song_zone_start &&
+        inData1 >= seq.song_zone_start && 
+        inData1 <= seq.song_zone_end) {
+        return 2; // SONG zone
+    }
+    
+    // Priority 3: LIVE zone (default - normal instrument playback)
+    return 0; // LIVE zone
+}
+
+// ============================================================================
+// MAIN handle_generic FUNCTION (refactored with proper guards)
+// ============================================================================
 void handle_generic(byte inChannel, byte inData1, byte inData2, const char* midi_device, midi::MidiType event)
 {
+    // ====================================================================
+    // 1. Live Sequencer - always process first
+    // ====================================================================
+    liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
 
-  liveSeq.handleMidiEvent(inChannel, event, inData1, inData2);
+    // ====================================================================
+    // 2. Visual Feedback - track ALL notes for keyboard visualization
+    // ====================================================================
+    updateKeyboardVisuals(inData1, inData2, event);
 
-  // ---- Song Arranger trigger notes (MIDI notes base..base+9) ----
-  if (seq.song_arranger_active) {
-    if (inData1 >= seq.song_arranger_base_note && inData1 < seq.song_arranger_base_note + 10) {
-      if (event == midi::NoteOn && inData2 > 0) {
-        seq.song_arranger_requested_part = inData1 - seq.song_arranger_base_note;
-        seq.song_arranger_part_change_pending = true;
-      }
-      // Do not process this note further – not chord, not instrument.
-      return;
+    // ====================================================================
+    // 3. Zone Detection - determine which zone the note belongs to
+    // ====================================================================
+    uint8_t zone = getNoteZone(inData1);
+    
+    // ====================================================================
+    // 4. Process by zone (each function has its own internal guards)
+    // ====================================================================
+    switch (zone) {
+        case 1: // CHORD zone
+            processChordArranger(inChannel, inData1, inData2, event);
+            // CHORD zone notes do NOT trigger instruments
+            return;
+            
+        case 2: // SONG zone
+            processSongArranger(inChannel, inData1, inData2, event);
+            // SONG zone notes do NOT trigger instruments
+            return;
+            
+        case 0: // LIVE zone - continue to instrument processing
+        default:
+            // Update sequencer note tracking
+            if (event == midi::NoteOn && inData2 > 0) {
+                seq.note_in = inData1;
+                seq.note_in_velocity = inData2;
+            }
+            else if (event == midi::NoteOff || (event == midi::NoteOn && inData2 == 0)) {
+                seq.note_in = inData1;
+                seq.note_in_velocity = inData2;
+            }
+            break;
     }
-  }
 
-  // ---- Update chord arranger key state (visual feedback) ----
-  if (event == midi::NoteOn && inData2 > 0) {
-    chord_arranger_key_state[inData1] = 1;
-    chord_arranger_keyboard_dirty = true;
-  }
-  else if (event == midi::NoteOff || (event == midi::NoteOn && inData2 == 0)) {
-    chord_arranger_key_state[inData1] = 0;
-    chord_arranger_keyboard_dirty = true;
-  }
-
-  if (disableDirectMIDIinput)
-    return;
+    // ====================================================================
+    // 5. MIDI Device Processing (only for LIVE zone notes that reach here)
+    // ====================================================================
+    if (disableDirectMIDIinput)
+        return;
 
 #ifdef DEBUG
-  char text[10];
+    char text[10];
 #endif
-  bool _internal = false;
+    bool _internal = false;
 
-  switch (event)
-  {
-  case midi::NoteOn:
-    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
+    switch (event)
     {
-      seq.note_in = inData1;
-      seq.note_in_velocity = inData2;
-    }
-    else   //live chord arranger
-    {
-
-      // Shift all notes down (making room for new note)
-         // memmove(chord_input, chord_input+1, 3);  // Moves elements 1,2,3 to 0,1,2
-         // chord_input[3] = inData1;  // Add new note at end
-
-
-      if (!seq.running)
-      {
-        seq.note_in = inData1;
-        seq.note_in_velocity = inData2;
-      }
-
-      // Chord note handling
-      if (since_last_note > CHORD_CAPTURE_WINDOW || chord_note_count >= MAX_CHORD_NOTES) {
-        resetChordBuffer();
-        resetCurrentChord();
-      }
-
-      // Store the note (sorted insertion)
-      for (int i = 0; i < MAX_CHORD_NOTES; i++) {
-        if (chord_input[i] == 0) { // Empty slot
-          chord_input[i] = inData1;
-          break;
-        }
-        if (inData1 < chord_input[i]) { // Insert in order
-          memmove(&chord_input[i + 1], &chord_input[i], MAX_CHORD_NOTES - i - 1);
-          chord_input[i] = inData1;
-          break;
-        }
-      }
-
-      chord_note_count++;
-      since_last_note = 0;
-
-      // Process chord if we have enough notes
-      if (chord_note_count >= 3) {
-        updateCurrentChord(chord_input, min(chord_note_count, MAX_CHORD_NOTES));
-        printSuggestions();
-        show_chord();
-        if (chord_autostart && !seq.running)
+    case midi::NoteOn:
+#if defined APC
+        if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
         {
-          handleStart();
-        }
+            if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key  122 or 98
+                apc_shift_key = true;
+            if (APC_MODE == APC_PATTERN_EDITOR)
+            {
+                apc_NoteOn(inChannel, inData1, inData2);
+                if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)) // drum sample
+                    inData1 = inData1 + APC_SAMPLE_SCROLL_OFFSET;
+                else if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
+                    inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
 
-        resetChordTransformation();
-      }
-    }
+                inChannel = apc_out_channel;
+            }
+            else
+                if (APC_MODE == APC_MUTE_MATRIX)
+                {
+                    apc_NoteOn(inChannel, inData1, inData2);
+                }
+                else
+                    if (APC_MODE == APC_SONG)
+                    {
+                        apc_NoteOn(inChannel, inData1, inData2);
+                    }
+        }
+#endif
+
+        handleNoteOnInput(inChannel, inData1, inData2, 0);
 
 #if defined APC
+        if (APC_MODE == APC_PATTERN_EDITOR)
+            print_apc_source_selection_pads();
+#endif
 
-    if (strcmp(MIDI_BY_USB, midi_device) && inChannel == 1)
-    {
-      if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key  122 or 98
-        apc_shift_key = true;
-      if (APC_MODE == APC_PATTERN_EDITOR)
-      {
-        apc_NoteOn(inChannel, inData1, inData2);
-        if ((inData1 > 7 && inData1 < 16) && (seq.content_type[seq.active_pattern] == 0 || seq.content_type[seq.active_pattern] == 3)) // drum sample
-          inData1 = inData1 + APC_SAMPLE_SCROLL_OFFSET;
-        else if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
-          inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
-
-        inChannel = apc_out_channel;
-      }
-      else
-        if (APC_MODE == APC_MUTE_MATRIX)
+#ifdef DEBUG
+        strcpy(text, "NoteOn");
+#endif
+        break;
+        
+    case midi::NoteOff:
+#if defined APC
+        if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key  122 or 98
+            apc_shift_key = false;
+        if (APC_MODE == APC_PATTERN_EDITOR)
         {
-          apc_NoteOn(inChannel, inData1, inData2);
+            if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
+                inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
+            apc_print_right_buttons();
         }
-        else
-          if (APC_MODE == APC_SONG)
-          {
-            apc_NoteOn(inChannel, inData1, inData2);
-
-          }
-    }
 #endif
 
-    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
-      handleNoteOnInput(inChannel, inData1, inData2, 0);
-    else if (!seq.running)
-    {
-      handleNoteOnInput(inChannel, inData1, inData2, 0);
-    }
-
-#if defined APC
-    if (APC_MODE == APC_PATTERN_EDITOR)
-      print_apc_source_selection_pads();
-#endif
+        handleNoteOff(inChannel, inData1, inData2, 0);
 
 #ifdef DEBUG
-    strcpy(text, "NoteOn");
+        strcpy(text, "NoteOff");
 #endif
-    break;
-  case midi::NoteOff:
-    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
-    {
-      seq.note_in = inData1;
-      seq.note_in_velocity = inData2;
-    }
-    else
-    {
-      if (!seq.running)
-      {
-        seq.note_in = inData1;
-        seq.note_in_velocity = inData2;
-      }
+        break;
+        
+    case midi::ControlChange:
+        // Internal CC ?
+        if (inData1 >= 20 && inData1 <= 31)
+            _internal = true;
 
-      // Only remove the released note from the buffer
-      for (int i = 0; i < MAX_CHORD_NOTES; i++) {
-        if (chord_input[i] == inData1) {
-          memmove(&chord_input[i], &chord_input[i + 1], MAX_CHORD_NOTES - i - 1);
-          chord_input[MAX_CHORD_NOTES - 1] = 0;
-          chord_note_count--;
-          break;
+#if defined APC
+        if (APC_MODE == APC_PATTERN_EDITOR)
+        {
+            if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used
+            {
+                apc_fader_control(inData1, inData2);
+            }
         }
-      }
+#endif
 
-      // // If we dropped below 3 notes, reset chord state
-      // if (chord_note_count < 3) {
-      //     resetCurrentChord();
-      // }
+        handleControlChange(inChannel, inData1, inData2);
+#ifdef DEBUG
+        strcpy(text, "CC");
+#endif
+        break;
+        
+    case midi::AfterTouchChannel:
+        handleAfterTouch(inChannel, inData1);
+#ifdef DEBUG
+        strcpy(text, "Mono AT");
+#endif
+        break;
+        
+    case midi::PitchBend:
+        handlePitchBend(inChannel, ((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192);
+#ifdef DEBUG
+        strcpy(text, "PB");
+#endif
+        break;
+        
+    case midi::ProgramChange:
+        handleProgramChange(inChannel, inData1);
+#ifdef DEBUG
+        strcpy(text, "PC");
+#endif
+        break;
+        
+    case midi::AfterTouchPoly:
+        handleAfterTouchPoly(inChannel, inData1, inData2);
+#ifdef DEBUG
+        strcpy(text, "Poly AT");
+#endif
+        break;
+        
+    default:
+        break;
     }
-
-#if defined APC
-    if (inData1 == APC_MINI_BUTTON_SHIFT) //shift key  122 or 98
-      apc_shift_key = false;
-    if (APC_MODE == APC_PATTERN_EDITOR)
-    {
-      if ((inData1 < 24) && (seq.content_type[seq.active_pattern] == 1 || seq.content_type[seq.active_pattern] == 2)) // tonal instrument
-        inData1 = inData1 + APC_TONAL_SCROLL_OFFSET;
-      apc_print_right_buttons();
-    }
-#endif
-
-    if (seq.arr_split_note == 0 || inData1 > seq.arr_split_note)
-      handleNoteOff(inChannel, inData1, inData2, 0);
-    else if (!seq.running)
-      handleNoteOff(inChannel, inData1, inData2, 0);
-
+    
 #ifdef DEBUG
-    strcpy(text, "NoteOff");
-#endif
-    break;
-  case midi::ControlChange:
-    // Internal CC ?
-    if (inData1 >= 20 && inData1 <= 31)
-      _internal = true;
-
-#if defined APC
-    if (APC_MODE == APC_PATTERN_EDITOR)
-    {
-      if (strcmp(MIDI_BY_USB, midi_device) && inData1 >= 48 && inData1 < 56 && inChannel == 1) //fader 56 (global volume?) is not used
-      {
-        apc_fader_control(inData1, inData2);
-      }
-    }
-#endif
-
-    handleControlChange(inChannel, inData1, inData2);
-#ifdef DEBUG
-    strcpy(text, "CC");
-#endif
-    break;
-  case midi::AfterTouchChannel:
-    handleAfterTouch(inChannel, inData1);
-#ifdef DEBUG
-    strcpy(text, "Mono AT");
-#endif
-    break;
-  case midi::PitchBend:
-    handlePitchBend(inChannel, ((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192); // Combine LSB and MSB as per MIDI spec. Center the value around 0
-#ifdef DEBUG
-    strcpy(text, "PB");
-#endif
-    break;
-  case midi::ProgramChange:
-    handleProgramChange(inChannel, inData1);
-#ifdef DEBUG
-    strcpy(text, "PC");
-#endif
-    break;
-  case midi::AfterTouchPoly:
-    handleAfterTouchPoly(inChannel, inData1, inData2);
-#ifdef DEBUG
-    strcpy(text, "Poly AT");
-#endif
-    break;
-  default:
-    break;
-  }
-#ifdef DEBUG
-  LOG.printf("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d", text, midi_device, inChannel, inData1, inData2);
+    LOG.printf("MIDI handle_generic [%s] by [%s], ch:%d d1:%d d2:%d", text, midi_device, inChannel, inData1, inData2);
 #endif
 
 #ifdef MIDI_ACTIVITY_LIGHTS
-  LED_MIDI_IN_counter = 1;
+    LED_MIDI_IN_counter = 1;
 #endif
 
-  // MIDI THRU (only for non _internal MDT)
-  if (configuration.sys.soft_midi_thru == 1 && !_internal)
-  {
-    // Determine input source
-    bool from_usb = (strcmp(MIDI_BY_USB, midi_device) == 0);
-    bool from_din = (strcmp(MIDI_BY_DIN, midi_device) == 0);
-    bool from_host = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
+    // ====================================================================
+    // 6. MIDI THRU (only for non _internal MDT)
+    // ====================================================================
+    if (configuration.sys.soft_midi_thru == 1 && !_internal)
+    {
+        // Determine input source
+        bool from_usb = (strcmp(MIDI_BY_USB, midi_device) == 0);
+        bool from_din = (strcmp(MIDI_BY_DIN, midi_device) == 0);
+        bool from_host = (strcmp(MIDI_BY_USB_HOST, midi_device) == 0);
 
 #ifdef MIDI_DEVICE_USB
-    // USB output (onboard)
-    if ((from_din && configuration.sys.thru_din_to_usb) ||
-      (from_host && configuration.sys.thru_host_to_usb))
-    {
-      switch (event)
-      {
-      case midi::NoteOn:
-        usbMIDI.sendNoteOn(inData1, inData2, inChannel);
-        break;
-      case midi::NoteOff:
-        usbMIDI.sendNoteOff(inData1, inData2, inChannel);
-        break;
-      case midi::ControlChange:
-        usbMIDI.sendControlChange(inData1, inData2, inChannel);
-        break;
-      case midi::AfterTouchChannel:
-        usbMIDI.sendAfterTouch(inData1, inChannel);
-        break;
-      case midi::PitchBend:
-        usbMIDI.sendPitchBend(inData1, inChannel);
-        break;
-      case midi::ProgramChange:
-        usbMIDI.sendProgramChange(inData1, inChannel);
-        break;
-      case midi::AfterTouchPoly:
-        usbMIDI.sendAfterTouch(inData1, inData2, inChannel);
-        break;
-      default:
-        break;
-      }
+        // USB output (onboard)
+        if ((from_din && configuration.sys.thru_din_to_usb) ||
+            (from_host && configuration.sys.thru_host_to_usb))
+        {
+            switch (event)
+            {
+            case midi::NoteOn:
+                usbMIDI.sendNoteOn(inData1, inData2, inChannel);
+                break;
+            case midi::NoteOff:
+                usbMIDI.sendNoteOff(inData1, inData2, inChannel);
+                break;
+            case midi::ControlChange:
+                usbMIDI.sendControlChange(inData1, inData2, inChannel);
+                break;
+            case midi::AfterTouchChannel:
+                usbMIDI.sendAfterTouch(inData1, inChannel);
+                break;
+            case midi::PitchBend:
+                usbMIDI.sendPitchBend(inData1, inChannel);
+                break;
+            case midi::ProgramChange:
+                usbMIDI.sendProgramChange(inData1, inChannel);
+                break;
+            case midi::AfterTouchPoly:
+                usbMIDI.sendAfterTouch(inData1, inData2, inChannel);
+                break;
+            default:
+                break;
+            }
 #ifdef DEBUG
-      LOG.print(F(" THRU->MIDI_USB"));
+            LOG.print(F(" THRU->MIDI_USB"));
 #endif
-    }
+        }
 #endif
 
 #ifdef MIDI_DEVICE_DIN
-    // DIN output
-    if ((from_usb && configuration.sys.thru_usb_to_din) ||
-      (from_host && configuration.sys.thru_host_to_din))
-    {
-      switch (event)
-      {
-      case midi::NoteOn:
-        midi_serial.sendNoteOn(inData1, inData2, inChannel);
-        break;
-      case midi::NoteOff:
-        midi_serial.sendNoteOff(inData1, inData2, inChannel);
-        break;
-      case midi::ControlChange:
-        midi_serial.sendControlChange(inData1, inData2, inChannel);
-        break;
-      case midi::AfterTouchChannel:
-        midi_serial.sendAfterTouch(inData1, inChannel);
-        break;
-      case midi::PitchBend:
-        // PitchBend is 14‑bit; we have LSB in inData1, MSB in inData2
-        midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel);
-        break;
-      case midi::ProgramChange:
-        midi_serial.sendProgramChange(inData1, inChannel);
-        break;
-      case midi::AfterTouchPoly:
-        midi_serial.sendAfterTouch(inData1, inData2, inChannel);
-        break;
-      default:
-        break;
-      }
+        // DIN output
+        if ((from_usb && configuration.sys.thru_usb_to_din) ||
+            (from_host && configuration.sys.thru_host_to_din))
+        {
+            switch (event)
+            {
+            case midi::NoteOn:
+                midi_serial.sendNoteOn(inData1, inData2, inChannel);
+                break;
+            case midi::NoteOff:
+                midi_serial.sendNoteOff(inData1, inData2, inChannel);
+                break;
+            case midi::ControlChange:
+                midi_serial.sendControlChange(inData1, inData2, inChannel);
+                break;
+            case midi::AfterTouchChannel:
+                midi_serial.sendAfterTouch(inData1, inChannel);
+                break;
+            case midi::PitchBend:
+                midi_serial.sendPitchBend(((inData1 & 0x7F) | ((inData2 & 0x7F) << 7)) - 8192, inChannel);
+                break;
+            case midi::ProgramChange:
+                midi_serial.sendProgramChange(inData1, inChannel);
+                break;
+            case midi::AfterTouchPoly:
+                midi_serial.sendAfterTouch(inData1, inData2, inChannel);
+                break;
+            default:
+                break;
+            }
 #ifdef DEBUG
-      LOG.print(F(" THRU->MIDI_DIN"));
+            LOG.print(F(" THRU->MIDI_DIN"));
 #endif
-    }
+        }
 #endif
 
 #ifdef MIDI_DEVICE_USB_HOST
-    // USB Host output (all three devices)
-    if ((from_usb && configuration.sys.thru_usb_to_host) ||
-      (from_din && configuration.sys.thru_din_to_host))
-    {
-      switch (event)
-      {
-      case midi::NoteOn:
-        midi_usb_1.sendNoteOn(inData1, inData2, inChannel);
-        midi_usb_2.sendNoteOn(inData1, inData2, inChannel);
-        midi_usb_3.sendNoteOn(inData1, inData2, inChannel);
-        break;
-      case midi::NoteOff:
-        midi_usb_1.sendNoteOff(inData1, inData2, inChannel);
-        midi_usb_2.sendNoteOff(inData1, inData2, inChannel);
-        midi_usb_3.sendNoteOff(inData1, inData2, inChannel);
-        break;
-      case midi::ControlChange:
-        midi_usb_1.sendControlChange(inData1, inData2, inChannel);
-        midi_usb_2.sendControlChange(inData1, inData2, inChannel);
-        midi_usb_3.sendControlChange(inData1, inData2, inChannel);
-        break;
-      case midi::AfterTouchChannel:
-        midi_usb_1.sendAfterTouch(inData1, inChannel);
-        midi_usb_2.sendAfterTouch(inData1, inChannel);
-        midi_usb_3.sendAfterTouch(inData1, inChannel);
-        break;
-      case midi::PitchBend:
-        midi_usb_1.sendPitchBend(inData1, inChannel);
-        midi_usb_2.sendPitchBend(inData1, inChannel);
-        midi_usb_3.sendPitchBend(inData1, inChannel);
-        break;
-      case midi::ProgramChange:
-        midi_usb_1.sendProgramChange(inData1, inChannel);
-        midi_usb_2.sendProgramChange(inData1, inChannel);
-        midi_usb_3.sendProgramChange(inData1, inChannel);
-        break;
-      case midi::AfterTouchPoly:
-        midi_usb_1.sendAfterTouch(inData1, inData2, inChannel);
-        midi_usb_2.sendAfterTouch(inData1, inData2, inChannel);
-        midi_usb_3.sendAfterTouch(inData1, inData2, inChannel);
-        break;
-      default:
-        break;
-      }
+        // USB Host output (all three devices)
+        if ((from_usb && configuration.sys.thru_usb_to_host) ||
+            (from_din && configuration.sys.thru_din_to_host))
+        {
+            switch (event)
+            {
+            case midi::NoteOn:
+                midi_usb_1.sendNoteOn(inData1, inData2, inChannel);
+                midi_usb_2.sendNoteOn(inData1, inData2, inChannel);
+                midi_usb_3.sendNoteOn(inData1, inData2, inChannel);
+                break;
+            case midi::NoteOff:
+                midi_usb_1.sendNoteOff(inData1, inData2, inChannel);
+                midi_usb_2.sendNoteOff(inData1, inData2, inChannel);
+                midi_usb_3.sendNoteOff(inData1, inData2, inChannel);
+                break;
+            case midi::ControlChange:
+                midi_usb_1.sendControlChange(inData1, inData2, inChannel);
+                midi_usb_2.sendControlChange(inData1, inData2, inChannel);
+                midi_usb_3.sendControlChange(inData1, inData2, inChannel);
+                break;
+            case midi::AfterTouchChannel:
+                midi_usb_1.sendAfterTouch(inData1, inChannel);
+                midi_usb_2.sendAfterTouch(inData1, inChannel);
+                midi_usb_3.sendAfterTouch(inData1, inChannel);
+                break;
+            case midi::PitchBend:
+                midi_usb_1.sendPitchBend(inData1, inChannel);
+                midi_usb_2.sendPitchBend(inData1, inChannel);
+                midi_usb_3.sendPitchBend(inData1, inChannel);
+                break;
+            case midi::ProgramChange:
+                midi_usb_1.sendProgramChange(inData1, inChannel);
+                midi_usb_2.sendProgramChange(inData1, inChannel);
+                midi_usb_3.sendProgramChange(inData1, inChannel);
+                break;
+            case midi::AfterTouchPoly:
+                midi_usb_1.sendAfterTouch(inData1, inData2, inChannel);
+                midi_usb_2.sendAfterTouch(inData1, inData2, inChannel);
+                midi_usb_3.sendAfterTouch(inData1, inData2, inChannel);
+                break;
+            default:
+                break;
+            }
 #ifdef DEBUG
-      LOG.print(F(" THRU->MIDI_USB_HOST"));
+            LOG.print(F(" THRU->MIDI_USB_HOST"));
+#endif
+        }
 #endif
     }
-#endif
-  }
 
 #ifdef DEBUG
-  LOG.println();
+    LOG.println();
 #endif
 }
+
+
 
 int toPitchBend(uint8_t lsb, uint8_t msb) {
   return ((int16_t)((msb << 7) | lsb) - 8192);

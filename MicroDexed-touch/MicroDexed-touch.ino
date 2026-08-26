@@ -1447,7 +1447,7 @@ FLASHMEM void setup()
 
 #if defined RA_DISPLAY && defined MUSIKANDMORE
 ;
-#else
+#elif defined RA_DISPLAY
   display.setRotation(2);
 #endif
 
@@ -2929,52 +2929,47 @@ extern bool noisemaker_update_params_flag;
 
 FLASHMEM void show_chord()
 {
-  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
-  {
-    display.setTextSize(1);
-    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-    setCursor_textGrid_small(22, 1);
-    display.print("(");
-    display.print(chord_note_count);
-    display.print(")");
-    for (uint8_t d = 0; d < 4; d++)
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
     {
-      setCursor_textGrid_small(27 + d * 4, 1);
-      display.print(midiToNote(chord_input[d]));
-      display.print(chord_input[d] / 12);
-      display.print(" ");
+        display.setTextSize(1);
+        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+        setCursor_textGrid_small(22, 1);
+        display.print("(");
+        display.print(chord_note_count);
+        display.print(")");
+        for (uint8_t d = 0; d < 4; d++)
+        {
+            setCursor_textGrid_small(27 + d * 4, 1);
+            display.print(midiToNote(chord_input[d]));
+            display.print(chord_input[d] / 12);
+            display.print(" ");
+        }
+
+        // Check if note is in chord zone or live zone
+        bool inChordZone = (seq.chord_zone_end > seq.chord_zone_start && 
+                            seq.note_in >= seq.chord_zone_start && 
+                            seq.note_in <= seq.chord_zone_end);
+        
+        if (!inChordZone || seq.note_in == 0)
+        {
+            checkWebRemote();
+            display.fillRect(CHAR_width_small + seq.note_in * 3.55, 110, 4, 4, RED);
+        }
+        else if (chord_input[3] != 0)
+        {
+            checkWebRemote();
+            display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
+        }
+
+        char result1[30];
+        display.setTextSize(0);
+
+        getChordName(chord_input, chord_note_count, result1);
+
+        display.setTextSize(2);
+        show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
     }
-
-    if (seq.arr_split_note == 0 || seq.note_in > seq.arr_split_note)
-    {
-      checkWebRemote();
-      display.fillRect(CHAR_width_small + seq.note_in * 3.55, 110, 4, 4, RED);
-    }
-    else if (chord_input[3] != 0)
-    {
-      checkWebRemote();
-      display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
-    }
-
-    char result1[30];
-    display.setTextSize(0);
-
-    // if (!seq.running)
-    //       updateCurrentChord(chord_input, 3);
-
-    getChordName(chord_input, chord_note_count, result1);
-
-    //       if (!seq.running && chord_arranger_autostart==false)
-    //       {
-    //         chord_arranger_autostart=true;
-    //  handleStart();
-    //       }
-
-    display.setTextSize(2);
-    show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
-  }
-
 }
 
 #ifdef GRANULAR

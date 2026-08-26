@@ -63,6 +63,7 @@ extern void handleStop(void);
 extern void draw_back_touchbutton(void);
 extern const char noteNames[12][3];
 extern void getNoteName(char* noteName, uint8_t noteNumber);
+extern void updateDerivedZones();
 
 // Flag to track if Song Arranger data has been loaded from a performance
 bool song_arranger_data_loaded_from_performance = false;
@@ -103,7 +104,9 @@ FLASHMEM void init_song_arranger() {
             seq.song_arranger_parts[i].midi_note = 60 + i;
         }
         seq.song_arranger_active = false;
-        seq.song_arranger_base_note = 60;
+       seq.song_zone_start = 60;
+    seq.song_zone_end = 69;   
+    update_song_arranger_midi_notes();
     }
     
     // Always reset playing state
@@ -185,7 +188,7 @@ FLASHMEM uint16_t get_song_arranger_color_for_song_step(uint8_t step) {
 
 FLASHMEM void update_song_arranger_midi_notes() {
     for (uint8_t i = 0; i < 10; i++) {
-        seq.song_arranger_parts[i].midi_note = seq.song_arranger_base_note + i;
+        seq.song_arranger_parts[i].midi_note = seq.song_zone_start + i;
     }
 }
 
@@ -260,7 +263,7 @@ FLASHMEM void draw_song_arranger_button_states() {
 }
 
 FLASHMEM void draw_song_arranger_enable_button() {
-    uint16_t x = GRID.X[5];
+    uint16_t x = GRID.X[3];  // previously GRID.X[5]
     uint16_t y = GRID.Y[0];
     
     TouchButton::Color color;
@@ -270,7 +273,7 @@ FLASHMEM void draw_song_arranger_enable_button() {
         color = TouchButton::BUTTON_NORMAL;
     }
     
-    TouchButton::drawButton(x, y, "ARRANGER", seq.song_arranger_active ? "ON" : "OFF", color);
+    TouchButton::drawButton(x, y, "ARANGER", seq.song_arranger_active ? "ON" : "OFF", color);
 }
 
 FLASHMEM void draw_song_arranger_config_grid() {
@@ -468,8 +471,8 @@ FLASHMEM void draw_song_arranger_midi_note_selector() {
     
     char note_name[5];
     char note_name2[5];
-    getNoteName(note_name, seq.song_arranger_base_note);
-    getNoteName(note_name2, seq.song_arranger_base_note + 9);
+    getNoteName(note_name, seq.song_zone_start);
+    getNoteName(note_name2, seq.song_zone_start + 9);
     
     uint8_t value_x = x_pos + 12;
     setCursor_textGrid_small(value_x, y_pos);
@@ -549,19 +552,10 @@ FLASHMEM void UI_func_song_arranger(uint8_t param) {
         setCursor_textGrid_small(0, 0);
         display.print(F("SONG ARRANGER"));
 
-        display.setTextColor(GREY2, COLOR_BACKGROUND);
-        setCursor_textGrid_small(0, 2);
-        display.print(F("TOUCH A BUTTON TO START PLAYING"));
-        setCursor_textGrid_small(0, 3);
-        display.print(F("THAT PART. SET START, END & CONT-"));
-        setCursor_textGrid_small(0, 4);
-        display.print(F("INUE STEP. WHEN CONT. IS EMPTY, IT WILL LOOP ENDLESS."));
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
         draw_song_arranger_buttons();
-        TouchButton::drawButton(GRID.X[3], GRID.Y[0], "CHORD", "ARR", TouchButton::BUTTON_NORMAL);
-        draw_song_arranger_enable_button();    // at GRID.X[5]
-        draw_song_arranger_switch_button();    // at GRID.X[4]
+        TouchButton::drawButton(GRID.X[5], GRID.Y[0], "CHORD", "ARR", TouchButton::BUTTON_NORMAL); 
+        draw_song_arranger_enable_button();    
+        draw_song_arranger_switch_button();    
         draw_song_arranger_config_grid();
         draw_song_arranger_midi_note_selector();
 
@@ -618,11 +612,29 @@ FLASHMEM void UI_func_song_arranger(uint8_t param) {
                 draw_song_arranger_midi_note_selector();
             } else {
                 if (generic_temp_select_menu == 40) {
-                    seq.song_arranger_base_note = constrain(seq.song_arranger_base_note + e.dir * e.speed, 24, 108);
-                  seq.arr_split_note = seq.song_arranger_base_note; 
-                    update_song_arranger_midi_notes();
-                    draw_song_arranger_config_grid();
-                    draw_song_arranger_midi_note_selector();
+                     // Adjust song zone start
+    seq.song_zone_start = constrain(seq.song_zone_start + e.dir * e.speed, 24, 86);
+
+    // If in "CHORD → SONG" mode, the chord zone must end just before the song zone.
+    // Set chord_zone_end so that updateDerivedZones() keeps our new song_zone_start.
+    if (seq.song_position_mode == 0) {
+        seq.chord_zone_end = seq.song_zone_start - 1;
+        // Ensure chord zone has at least 2 notes
+        if (seq.chord_zone_end < seq.chord_zone_start + 2) {
+            seq.chord_zone_start = seq.chord_zone_end - 2;
+            if (seq.chord_zone_start < 0) seq.chord_zone_start = 0;
+        }
+    }
+
+    // Recalculate all zone positions (live_zone_start, etc.) and keep constraints
+    updateDerivedZones();
+
+    // Update the 10 song parts' MIDI notes
+    update_song_arranger_midi_notes();
+
+    // Redraw the configuration grid and the MIDI note selector
+    draw_song_arranger_config_grid();
+    draw_song_arranger_midi_note_selector();
                 } else {
                     uint8_t part_idx = (generic_temp_select_menu - 10) / 3;
                     uint8_t field_idx = (generic_temp_select_menu - 10) % 3;
