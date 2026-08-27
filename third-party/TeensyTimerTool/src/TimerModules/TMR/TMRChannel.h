@@ -13,7 +13,7 @@ namespace TeensyTimerTool
      public:
 
         //phtodo
-	 using ITimerChannel::setPrescaler;
+	    //using ITimerChannel::setPrescaler;
 
         inline TMRChannel(IMXRT_TMR_CH_t *regs, callback_t *cbStorage);
         inline virtual ~TMRChannel();
