@@ -103,7 +103,7 @@ FLASHMEM void updateTouchScreen() {
 
 #if defined RA_DISPLAY    
 
-    //   TS_Point p = touch.getPoint();
+      //   TS_Point p = touch.getPoint();
 
 #endif
 
@@ -202,49 +202,49 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
 #ifdef OLED_DISPLAYS
   //if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_file_manager)) {
 
-    SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
-    switch (position) {
-    case 0:
-      mcp.write1(OLED_CS_L, LOW);
-      mcp.write1(OLED_CS_R, HIGH);
-      oled_display.clearDisplay();
-      oled_display.setCursor(0, 0);
-      if (is_flash) {
-        oled_display.print((const __FlashStringHelper*)str);
-      }
-      else {
-        oled_display.print((const char*)str);
-      }
-       oled_display.setCursor(0, 16);
-         oled_display.setTextColor( SSD1306_BLACK,SSD1306_WHITE);
-     if (seq.running)
-     oled_display.print(F("STOP SEQ. "));
-    else
-     oled_display.print(F("START SEQ."));
-       oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-
-      break;
-
-    case 1:
-      mcp.write1(OLED_CS_R, LOW);
-      mcp.write1(OLED_CS_L, HIGH);
-      oled_display.clearDisplay();
-      oled_display.setCursor(0, 0);
-      if (is_flash) {
-        oled_display.print((const __FlashStringHelper*)str);
-      }
-      else {
-        oled_display.print((const char*)str);
-      }
-      break;
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+  switch (position) {
+  case 0:
+    mcp.write1(OLED_CS_L, LOW);
+    mcp.write1(OLED_CS_R, HIGH);
+    oled_display.clearDisplay();
+    oled_display.setCursor(0, 0);
+    if (is_flash) {
+      oled_display.print((const __FlashStringHelper*)str);
     }
+    else {
+      oled_display.print((const char*)str);
+    }
+    oled_display.setCursor(0, 16);
+    oled_display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    if (seq.running)
+      oled_display.print(F("STOP SEQ. "));
+    else
+      oled_display.print(F("START SEQ."));
+    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
 
-//  oled_display.print("               ");
-    oled_display.display();
- mcp.write1(OLED_CS_L, HIGH);
+    break;
+
+  case 1:
+    mcp.write1(OLED_CS_R, LOW);
+    mcp.write1(OLED_CS_L, HIGH);
+    oled_display.clearDisplay();
+    oled_display.setCursor(0, 0);
+    if (is_flash) {
+      oled_display.print((const __FlashStringHelper*)str);
+    }
+    else {
+      oled_display.print((const char*)str);
+    }
+    break;
+  }
+
+  //  oled_display.print("               ");
+  oled_display.display();
+  mcp.write1(OLED_CS_L, HIGH);
   mcp.write1(OLED_CS_R, HIGH);
   SPI.endTransaction();
- // }
+  // }
 #endif
 
   ts.old_helptext_length[position] = l;
@@ -1590,226 +1590,228 @@ extern void preview_chord_suggestion(uint8_t s);
 extern SuggestedChord suggestions[6];
 
 FLASHMEM void draw_chord_arranger_indicators() {
-    const uint8_t zoneY = 117;
-    const uint8_t barHeight = 4;
+  const uint8_t zoneY = 117;
+  const uint8_t barHeight = 4;
 
+  checkWebRemote();
+  display.fillRect(0, zoneY - 9, DISPLAY_WIDTH, barHeight + 9, COLOR_BACKGROUND);
+
+  auto printNoteLabel = [&](uint16_t x, uint8_t note, uint16_t color) {
+    if (x < 0 || x >= DISPLAY_WIDTH) return;
+    char noteName[6];
+    getNoteName(noteName, note);
+    display.setTextSize(1);
+    display.setTextColor(color, COLOR_BACKGROUND);
+    display.setCursor(x, zoneY - 8);
+    display.print(noteName);
     checkWebRemote();
-    display.fillRect(0, zoneY - 9, DISPLAY_WIDTH, barHeight + 9, COLOR_BACKGROUND);
-
-    auto printNoteLabel = [&](uint16_t x, uint8_t note, uint16_t color) {
-        if (x < 0 || x >= DISPLAY_WIDTH) return;
-        char noteName[6];
-        getNoteName(noteName, note);
-        display.setTextSize(1);
-        display.setTextColor(color, COLOR_BACKGROUND);
-        display.setCursor(x, zoneY - 8);
-        display.print(noteName);
-        checkWebRemote();
     };
 
-    // ---- CHORD zone ----
-    if (seq.chord_zone_end > seq.chord_zone_start) {
-        uint16_t leftX = getNotePixelX(seq.chord_zone_start);
-        uint16_t rightX = getNotePixelX(seq.chord_zone_end) + 5;
-        if (rightX > leftX) {
-            checkWebRemote();
-            display.fillRect(leftX, zoneY, rightX - leftX, barHeight, DARKGREEN);
-            if (rightX - leftX > 20) {
-                printNoteLabel(leftX, seq.chord_zone_start, DARKGREEN);
-            }
-            if (rightX - leftX > 40) {
-                display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
-                display.print("CHORD");
-            }
-        }
+  // ---- CHORD zone ----
+  if (seq.chord_zone_end > seq.chord_zone_start) {
+    uint16_t leftX = getNotePixelX(seq.chord_zone_start);
+    uint16_t rightX = getNotePixelX(seq.chord_zone_end) + 5;
+    if (rightX > leftX) {
+      checkWebRemote();
+      display.fillRect(leftX, zoneY, rightX - leftX, barHeight, DARKGREEN);
+      if (rightX - leftX > 20) {
+        printNoteLabel(leftX, seq.chord_zone_start, DARKGREEN);
+      }
+      if (rightX - leftX > 40) {
+        display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
+        display.print("CHORD");
+      }
     }
+  }
 
-    // ---- SONG zone ----
-    if (seq.song_zone_end > seq.song_zone_start) {
-        uint16_t leftX = getNotePixelX(seq.song_zone_start);
-        uint16_t rightX = getNotePixelX(seq.song_zone_end) + 5;
-        if (rightX > leftX) {
-            checkWebRemote();
-            display.fillRect(leftX, zoneY, rightX - leftX, barHeight, COLOR_ARP);
-            if (rightX - leftX > 20) {
-                printNoteLabel(leftX, seq.song_zone_start, COLOR_ARP);
-            }
-            if (rightX - leftX > 40) {
-                display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
-                display.print("SONG");
-            }
-        }
+  // ---- SONG zone ----
+  if (seq.song_zone_end > seq.song_zone_start) {
+    uint16_t leftX = getNotePixelX(seq.song_zone_start);
+    uint16_t rightX = getNotePixelX(seq.song_zone_end) + 5;
+    if (rightX > leftX) {
+      checkWebRemote();
+      display.fillRect(leftX, zoneY, rightX - leftX, barHeight, COLOR_ARP);
+      if (rightX - leftX > 20) {
+        printNoteLabel(leftX, seq.song_zone_start, COLOR_ARP);
+      }
+      if (rightX - leftX > 40) {
+        display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
+        display.print("SONG");
+      }
     }
+  }
 
-    // ---- LIVE zone (depends on mode) ----
-    uint8_t live_start, live_end;
-    if (seq.song_position_mode == 0) {
-        // CHORD → SONG → LIVE
-        live_start = seq.live_zone_start;
-        live_end = 95;
-    } else {
-        // CHORD → LIVE → SONG
-        live_start = seq.live_zone_start;
-        live_end = seq.song_zone_start - 1;
+  // ---- LIVE zone (depends on mode) ----
+  uint8_t live_start, live_end;
+  if (seq.song_position_mode == 0) {
+    // CHORD → SONG → LIVE
+    live_start = seq.live_zone_start;
+    live_end = 95;
+  }
+  else {
+    // CHORD → LIVE → SONG
+    live_start = seq.live_zone_start;
+    live_end = seq.song_zone_start - 1;
+  }
+
+  if (live_start <= live_end) {
+    uint16_t leftX = getNotePixelX(live_start);
+    uint16_t rightX = getNotePixelX(live_end) + 5;
+    if (rightX > leftX) {
+      checkWebRemote();
+      display.fillRect(leftX, zoneY, rightX - leftX, barHeight, RED);
+      if (rightX - leftX > 20) {
+        printNoteLabel(leftX, live_start, RED);
+      }
+      if (rightX - leftX > 40) {
+        display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
+        display.print("LIVE");
+      }
     }
+  }
 
-    if (live_start <= live_end) {
-        uint16_t leftX = getNotePixelX(live_start);
-        uint16_t rightX = getNotePixelX(live_end) + 5;
-        if (rightX > leftX) {
-            checkWebRemote();
-            display.fillRect(leftX, zoneY, rightX - leftX, barHeight, RED);
-            if (rightX - leftX > 20) {
-                printNoteLabel(leftX, live_start, RED);
-            }
-            if (rightX - leftX > 40) {
-                display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
-                display.print("LIVE");
-            }
-        }
-    }
-
-    display.flushSysEx();
+  display.flushSysEx();
 }
 
-uint8_t prev_chord_key_state[128] = {0};
+uint8_t prev_chord_key_state[128] = { 0 };
 
 void draw_chord_arranger_keyboard_range(uint8_t startNote, uint8_t endNote, int y) {
-    if (startNote > 95) startNote = 95;
-    if (endNote > 95) endNote = 95;
-    if (startNote > endNote) return;
+  if (startNote > 95) startNote = 95;
+  if (endNote > 95) endNote = 95;
+  if (startNote > endNote) return;
 
-    // 1) Draw white keys
-    for (uint8_t note = startNote; note <= endNote; note++) {
-        if (!seq.piano[note % 12]) {
-            int x = getNotePixelX(note);
-            uint16_t color = chord_arranger_key_state[note] ? RED : COLOR_SYSTEXT;
-            display.fillRect(x, y + 23, 5, 15, color);
-        }
+  // 1) Draw white keys
+  for (uint8_t note = startNote; note <= endNote; note++) {
+    if (!seq.piano[note % 12]) {
+      int x = getNotePixelX(note);
+      uint16_t color = chord_arranger_key_state[note] ? RED : COLOR_SYSTEXT;
+      display.fillRect(x, y + 23, 5, 15, color);
     }
+  }
 
-    // 2) Draw black keys on top
-    for (uint8_t note = startNote; note <= endNote; note++) {
-        if (seq.piano[note % 12]) {
-            int x = getNotePixelX(note);
-            uint16_t color = chord_arranger_key_state[note] ? RED : COLOR_BACKGROUND;
-            display.fillRect(x, y + 23, 4, 8, color);
-        }
+  // 2) Draw black keys on top
+  for (uint8_t note = startNote; note <= endNote; note++) {
+    if (seq.piano[note % 12]) {
+      int x = getNotePixelX(note);
+      uint16_t color = chord_arranger_key_state[note] ? RED : COLOR_BACKGROUND;
+      display.fillRect(x, y + 23, 4, 8, color);
     }
+  }
 }
 
 extern void updateDerivedZones();   // recompute all zone positions
-extern void    _print_arranger_values();     
+extern void    _print_arranger_values();
 
 FLASHMEM void handle_touchscreen_chord_arranger()
 {
-    // ====================================================================
-    // 1. MODE button (toggle between BELOW and ABOVE)
-    // ====================================================================
-    if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
-        if (seq.song_position_mode == 0) {
-            // BELOW → ABOVE
-            seq.song_position_mode = 1;
-            seq.song_zone_start = 72;               // start at C5
-            if (seq.chord_zone_end > 70) seq.chord_zone_end = 70;
-            if (seq.chord_zone_end - seq.chord_zone_start < 2) {
-                seq.chord_zone_start = max(0, seq.chord_zone_end - 2);
-            }
-        } else {
-            // ABOVE → BELOW
-            seq.song_position_mode = 0;
-            // BELOW mode will recompute song_zone_start from chord_zone_end
-        }
+  // ====================================================================
+  // 1. MODE button (toggle between BELOW and ABOVE)
+  // ====================================================================
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[0])) {
+    if (seq.song_position_mode == 0) {
+      // BELOW → ABOVE
+      seq.song_position_mode = 1;
+      seq.song_zone_start = 72;               // start at C5
+      if (seq.chord_zone_end > 70) seq.chord_zone_end = 70;
+      if (seq.chord_zone_end - seq.chord_zone_start < 2) {
+        seq.chord_zone_start = max(0, seq.chord_zone_end - 2);
+      }
+    }
+    else {
+      // ABOVE → BELOW
+      seq.song_position_mode = 0;
+      // BELOW mode will recompute song_zone_start from chord_zone_end
+    }
 
-        updateDerivedZones();
-        update_song_arranger_midi_notes();
+    updateDerivedZones();
+    update_song_arranger_midi_notes();
 
-        chord_arranger_indicators_dirty = true;
-        chord_arranger_keyboard_dirty = true;
+    chord_arranger_indicators_dirty = true;
+    chord_arranger_keyboard_dirty = true;
 
-        _print_arranger_values();
-        draw_chord_arranger_indicators();
+    _print_arranger_values();
+    draw_chord_arranger_indicators();
 
-        TouchButton::drawButton(GRID.X[4], GRID.Y[0],
-                                "MODE",
-                                seq.song_position_mode ? "ABOVE" : "BELOW",
-                                TouchButton::BUTTON_ACTIVE);
+    TouchButton::drawButton(GRID.X[4], GRID.Y[0],
+      "MODE",
+      seq.song_position_mode ? "ABOVE" : "BELOW",
+      TouchButton::BUTTON_ACTIVE);
 
-        helptext_r(F("TOGGLED MODE"));
+    helptext_r(F("TOGGLED MODE"));
+    return;
+  }
+
+  // ====================================================================
+  // 2. SONG ARR button – jump to Song Arranger page
+  // ====================================================================
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
+    LCDML.OTHER_jumpToFunc(UI_func_song_arranger);
+    return;
+  }
+
+  // ====================================================================
+  // 3. AUTO START button – toggle chord_autostart
+  // ====================================================================
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[1] + 16)) {
+    chord_autostart = !chord_autostart;
+    TouchButton::drawButton(GRID.X[5], GRID.Y[1] + 16,
+      "AUTO", "START",
+      chord_autostart ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
+    helptext_r(chord_autostart ? F("AUTO-START ON") : F("AUTO-START OFF"));
+    return;
+  }
+
+  // ====================================================================
+  // 4. Chord suggestion buttons (the six bottom buttons)
+  // ====================================================================
+  if (numTouchPoints > 0) {
+    for (int i = 0; i < 6; i++) {
+      if (TouchButton::isPressed(GRID.X[i], GRID.Y[4])) {
+        TouchButton::drawButton(GRID.X[i], GRID.Y[4],
+          suggestions[i].name,
+          suggestions[i].notenames,
+          TouchButton::BUTTON_RED);
+        display.flushSysEx();
+        preview_chord_suggestion(i);
+        TouchButton::drawButton(GRID.X[i], GRID.Y[4],
+          suggestions[i].name,
+          suggestions[i].notenames,
+          TouchButton::BUTTON_NORMAL);
+        display.flushSysEx();
         return;
+      }
     }
+  }
 
-    // ====================================================================
-    // 2. SONG ARR button – jump to Song Arranger page
-    // ====================================================================
-    if (TouchButton::isPressed(GRID.X[5], GRID.Y[0])) {
-        LCDML.OTHER_jumpToFunc(UI_func_song_arranger);
-        return;
-    }
+  // ====================================================================
+  // 5. Keyboard & zone indicator updates (if dirty)
+  // ====================================================================
+  if (chord_arranger_indicators_dirty) {
+    draw_chord_arranger_indicators();
+    chord_arranger_indicators_dirty = false;
+  }
 
-    // ====================================================================
-    // 3. AUTO START button – toggle chord_autostart
-    // ====================================================================
-    if (TouchButton::isPressed(GRID.X[5], GRID.Y[1] + 16)) {
-        chord_autostart = !chord_autostart;
-        TouchButton::drawButton(GRID.X[5], GRID.Y[1] + 16,
-                                "AUTO", "START",
-                                chord_autostart ? TouchButton::BUTTON_RED : TouchButton::BUTTON_NORMAL);
-        helptext_r(chord_autostart ? F("AUTO-START ON") : F("AUTO-START OFF"));
-        return;
-    }
-
-    // ====================================================================
-    // 4. Chord suggestion buttons (the six bottom buttons)
-    // ====================================================================
-    if (numTouchPoints > 0) {
-        for (int i = 0; i < 6; i++) {
-            if (TouchButton::isPressed(GRID.X[i], GRID.Y[4])) {
-                TouchButton::drawButton(GRID.X[i], GRID.Y[4],
-                                        suggestions[i].name,
-                                        suggestions[i].notenames,
-                                        TouchButton::BUTTON_RED);
-                display.flushSysEx();
-                preview_chord_suggestion(i);
-                TouchButton::drawButton(GRID.X[i], GRID.Y[4],
-                                        suggestions[i].name,
-                                        suggestions[i].notenames,
-                                        TouchButton::BUTTON_NORMAL);
-                display.flushSysEx();
-                return;
-            }
+  if (chord_arranger_keyboard_dirty) {
+    chord_arranger_keyboard_dirty = false;
+    for (uint8_t oct = 0; oct < 8; oct++) {
+      uint8_t startNote = oct * 12;
+      if (startNote > 95) break;
+      bool octaveChanged = false;
+      for (uint8_t i = 0; i < 12; i++) {
+        uint8_t note = startNote + i;
+        if (note > 95) break;
+        if (chord_arranger_key_state[note] != prev_chord_key_state[note]) {
+          octaveChanged = true;
+          prev_chord_key_state[note] = chord_arranger_key_state[note];
         }
+      }
+      if (octaveChanged) {
+        int x = oct * 7 + 1;
+        display.fillRect(x * CHAR_width_small, 123, 7 * CHAR_width_small, 23, COLOR_BACKGROUND);
+        draw_chord_arranger_keyboard(x, 100, startNote);
+      }
     }
-
-    // ====================================================================
-    // 5. Keyboard & zone indicator updates (if dirty)
-    // ====================================================================
-    if (chord_arranger_indicators_dirty) {
-        draw_chord_arranger_indicators();
-        chord_arranger_indicators_dirty = false;
-    }
-
-    if (chord_arranger_keyboard_dirty) {
-        chord_arranger_keyboard_dirty = false;
-        for (uint8_t oct = 0; oct < 8; oct++) {
-            uint8_t startNote = oct * 12;
-            if (startNote > 95) break;
-            bool octaveChanged = false;
-            for (uint8_t i = 0; i < 12; i++) {
-                uint8_t note = startNote + i;
-                if (note > 95) break;
-                if (chord_arranger_key_state[note] != prev_chord_key_state[note]) {
-                    octaveChanged = true;
-                    prev_chord_key_state[note] = chord_arranger_key_state[note];
-                }
-            }
-            if (octaveChanged) {
-                int x = oct * 7 + 1;
-                display.fillRect(x * CHAR_width_small, 123, 7 * CHAR_width_small, 23, COLOR_BACKGROUND);
-                draw_chord_arranger_keyboard(x, 100, startNote);
-            }
-        }
-    }
+  }
 }
 
 FLASHMEM void draw_menu_ui_icons()
@@ -1853,7 +1855,8 @@ FLASHMEM void draw_menu_ui_icons()
 
   TouchButton::drawVirtualKeyboardButton(GRID.X[5], GRID.Y[2]);
 #endif
-    }
+}
+
 extern elapsedMillis save_sys;
 extern bool  is_offline_mode;
 extern void  toggleOutputMode();
@@ -1922,7 +1925,7 @@ FLASHMEM void handle_touchscreen_menu()
   }
 
   if (LCDML.FUNC_getID() > _LCDML_DISP_cnt) // only when not in UI_func_volume
-  {
+  { //phtodo check for ESP32
 
 #if defined TOUCHMENU
     static bool touchActive = false;
@@ -1995,16 +1998,16 @@ FLASHMEM void handle_touchscreen_menu()
               }
               else {
                 for (int i = 0; i < -steps; i++) LCDML.BT_up();
-  }
-}
+              }
+            }
             LCDML.BT_enter();
           }
           // If it was a drag, do nothing (cursor already at final position)
-  }
+        }
 
         touchActive = false;
         dragMode = false;
-}
+      }
     }
 #endif
 

@@ -17,7 +17,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.956"
+#define MIN_VERSION_ESP_DISPLAY "1.9.957"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -56,6 +56,12 @@
 #define CMD_DRAW_PARAM_BAR16  36
 #define CMD_DRAW_PIANO_ROLL_BG_REGION  37
 #define CMD_DRAW_PIANO_ROLL_KEYS  38
+#define CMD_TOUCH          41   // Touch coordinates (2 bytes: X, Y)
+#define CMD_TOUCH_RELEASE  42   // Touch release (no payload)
+#define CMD_BUTTON_PRESS   43   // Button press (1 byte: button index 0‑15)
+#define CMD_FUNCTION_JUMP  44   // Jump to UI function (1 byte: function ID)
+#define CMD_EXIT_CONFIG    45   // Exit config / redraw (no payload)
+
 #define CMD_VERSION_REPORT 100   // unique command code
 #define CMD_SET_VOLUME_ICONS_MODE 101
 #define CMD_SET_EDIT_MODE 102

@@ -1,4 +1,4 @@
-#if defined RA_DISPLAY
+#if defined RA_DISPLAY && !defined (RA_TOUCH_FT5XX6)
 #include <avr/pgmspace.h>
 
 PROGMEM const prog_uchar gslx680_fw[] PROGMEM = {

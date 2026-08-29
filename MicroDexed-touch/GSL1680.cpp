@@ -9,7 +9,7 @@
     Heavily modified for MDT in 2026 by positionhigh
 */
 
-#if defined RA_DISPLAY
+#if defined RA_DISPLAY && !defined (RA_TOUCH_FT5XX6)
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -59,7 +59,7 @@ FLASHMEM void displaybootmessage()
 FLASHMEM void GSL1680::begin()
 {
 
- #if defined RA_DISPLAY && defined MUSIKANDMORE
+ #if defined RA_DISPLAY && defined MUSIKANDMORE && !defined (RA_TOUCH_FT5XX6)
      display.setRotation(0);
  #endif
 
@@ -254,7 +254,7 @@ uint8_t GSL1680::touched() {
         uint16_t rawX = ts_event.fingers[1].x;
         uint16_t rawY = ts_event.fingers[1].y;
         
- #if defined RA_DISPLAY && defined MUSIKANDMORE
+ #if defined RA_DISPLAY && defined MUSIKANDMORE && !defined (RA_TOUCH_FT5XX6)
          ts.p.x = (rawX) / 2;
          ts.p.y = (rawY) / 2;
 #else

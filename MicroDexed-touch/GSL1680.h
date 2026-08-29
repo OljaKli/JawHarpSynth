@@ -1,4 +1,4 @@
-#if defined RA_DISPLAY
+#if defined RA_DISPLAY && !defined (RA_TOUCH_FT5XX6)
 /**************************************************************************/
 /*!
     @file       GSL1680.h

@@ -258,7 +258,7 @@ extern AudioAnalyzePeak mb_after_r;
 
 extern PeriodicTimer sequencer_timer;
 
-#ifdef RA_DISPLAY
+#if defined RA_DISPLAY && !defined RA_TOUCH_FT5XX6
 GSL1680 touch;
 #elif defined ESP_DISPLAY
 esp_touchscreen touch(0);
@@ -4652,14 +4652,15 @@ extern uint8_t numTouchPoints;
 #if defined ESP_DISPLAY
 uint8_t esp_function_id = 255;
 bool function_jump_pending = false;
-static uint8_t touchBuffer[16];
-uint8_t esp_buttonNumber = touchBuffer[0];
+//static uint8_t touchBuffer[16];
+//uint8_t esp_buttonNumber = touchBuffer[0];
+uint8_t esp_buttonNumber = 99;
 static uint8_t esp_pending_button = 255;      // 255 = no pending press
 static uint32_t esp_press_start = 0;
 
-static uint8_t packetType = 0;
-static uint8_t touchIndex = 0;
-static bool inTouchPacket = false;
+// static uint8_t packetType = 0;
+// static uint8_t touchIndex = 0;
+// static bool inTouchPacket = false;
 
 
 extern bool  espAlive;
@@ -4800,102 +4801,105 @@ void processIncomingSerial() {
   while (Serial4.available() > 0) {
     uint8_t data = Serial4.read();
 
-    if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
-      data == 0xAE || data == CMD_MIDI_DATA) {
-      packetType = data;
-      inTouchPacket = true;
-      touchIndex = 0;
+    // Only accept sync byte 0xAA
+    if (data != 0xAA) {
+      continue;
     }
 
-    // else if (data == 0xAE && touchIndex == 0) {
-    //   //  force_menu_full_redraw=true;
-    //   //  redraw_current_page_or_fallback();
-    // }
-
-    else if (data == 0xBB && inTouchPacket) {
-
-      if (packetType == CMD_MIDI_DATA && touchIndex >= 1) {
-        uint8_t len = touchBuffer[0];
-        if (len > 0 && touchIndex >= 1 + len) {
-          processMidiDataFromESP(&touchBuffer[1], len);
-        }
-      }
-      else if (packetType == 0xAA && touchIndex == 2) {
-        uint16_t esp_touch_x = touchBuffer[0];
-        uint16_t esp_touch_y = touchBuffer[1];
-        touchX = esp_touch_x;
-        touchY = esp_touch_y;
-        ts.p.x = touchX * 1.250 + 1;
-        ts.p.y = touchY;
-        remote_touched = true;
-
-      }
-      else if (packetType == 0xAC && touchIndex == 1) {
-        // Function ID jump
-        esp_function_id = touchBuffer[0];
-        function_jump_pending = true;
-      }
-
-      else if (packetType == 0xAE && touchIndex == 0) {
-        force_menu_full_redraw = true;
-        redraw_current_page_or_fallback();
-      }
-      else if (packetType == 0xAB && touchIndex == 1) {
-        uint8_t btn = touchBuffer[0];
-        if (btn <= 13) {
-          esp_buttonNumber = btn;
-        }
-        else if (btn == 14 || btn == 15) {
-          esp_pending_button = btn;
-          esp_press_start = millis();
-        }
-      }
-
-      else if (packetType == 0xAD && touchIndex == 0) {
-        // Screensaver stop command
-        remote_touched = true;
-        resetScreenTimer();
-      }
-
-      inTouchPacket = false;
-      touchIndex = 0;
-      packetType = 0;
+    // Need at least command, length, and checksum (3 bytes)
+    if (Serial4.available() < 3) {
+      continue; // wait for more data
     }
-    else if (data == 0xCC) {
-      // release
-      if (esp_pending_button != 255) {
-        esp_buttonNumber = esp_pending_button;
-        esp_pending_button = 255;
+
+    uint8_t cmd = Serial4.read();
+    uint8_t len = Serial4.read();
+
+    // Ensure we have enough bytes for payload + checksum
+    if (Serial4.available() < len + 1) {
+      // Incomplete packet – discard remaining bytes to resync
+      while (Serial4.available()) {
+        Serial4.read();
       }
-      else {
+      continue;
+    }
+
+    // Read payload
+    uint8_t payload[16]; // max payload size (we only use up to 2 bytes)
+    for (uint8_t i = 0; i < len; i++) {
+      payload[i] = Serial4.read();
+    }
+    uint8_t chk = Serial4.read();
+
+    // Verify checksum (same algorithm as sendPacket)
+    uint8_t expected = 0xAA ^ cmd ^ len;
+    for (uint8_t i = 0; i < len; i++) {
+      expected ^= payload[i];
+    }
+    if (chk != expected) {
+      // Checksum mismatch – discard packet
+      continue;
+    }
+
+    // Process valid command
+    switch (cmd) {
+      case CMD_TOUCH:
+        if (len == 2) {
+          touchX = payload[0];
+          touchY = payload[1];
+          ts.p.x = touchX * 1.250 + 1;
+          ts.p.y = touchY;
+          remote_touched = true;
+        }
+        break;
+
+      case CMD_TOUCH_RELEASE:
         remote_touched = false;
         touchX = 0;
         touchY = 0;
         ts.p.x = 0;
         ts.p.y = 0;
-      }
-      inTouchPacket = false;
-      touchIndex = 0;
-      packetType = 0;
-    }
+        break;
 
-    else if (data == 0x98) {
-      // ESP requesting handshake (e.g., after reboot)
-      // Resend our version information
-      sendVersion();
-      sendMinEspVersion();
-      lastESPHandshakeTime = millis();
-    }
+      case CMD_BUTTON_PRESS:
+        if (len == 1) {
+          uint8_t btn = payload[0];
+          if (btn <= 13) {
+            esp_buttonNumber = btn;
+          } else if (btn == 14 || btn == 15) {
+            esp_pending_button = btn;
+            esp_press_start = millis();
+          }
+        }
+        break;
 
-    else if (inTouchPacket && touchIndex < sizeof(touchBuffer)) {
-      touchBuffer[touchIndex++] = data;
-    }
+      case CMD_FUNCTION_JUMP:
+        if (len == 1) {
+          esp_function_id = payload[0];
+          function_jump_pending = true;
+        }
+        break;
 
-    if (function_jump_pending) {
-      LCDML.OTHER_jumpToID(esp_function_id);
-      function_jump_pending = false;
-      esp_function_id = 255;
+      case CMD_SCREENSAVER_STOP:
+        remote_touched = true;
+        resetScreenTimer();
+        break;
+
+      case CMD_EXIT_CONFIG:
+        force_menu_full_redraw = true;
+        redraw_current_page_or_fallback();
+        break;
+
+      default:
+        // Unknown command – ignore
+        break;
     }
+  }
+
+  // Execute any pending function jump (outside the loop)
+  if (function_jump_pending) {
+    LCDML.OTHER_jumpToID(esp_function_id);
+    function_jump_pending = false;
+    esp_function_id = 255;
   }
 }
 #endif

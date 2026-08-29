@@ -1225,13 +1225,16 @@ FLASHMEM uint8_t espdisplay::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...
   va_start(args, nbArg);
   int prev_val = -1;
 
-  uint8_t pos = 0;
+  uint8_t pos = 1; // first byte will be the color mode
+  uint8_t colorCodes[2];
+
   for (uint8_t i = 0; i < nbArg; i++)
   {
     int val = va_arg(args, int);
 
     uint8_t colorCode = 0;
-    switch (val) {
+    switch (val)
+    {
     case COLOR_BACKGROUND:
       colorCode = 0;
       break;
@@ -1292,29 +1295,56 @@ FLASHMEM uint8_t espdisplay::fillSysexDataColor(uint8_t* arr, uint8_t nbArg, ...
       break;
     default:
       colorCode = 255;
-      if (val == prev_val) {
+
+      if (val == prev_val)
+      {
         colorCode = 0;
       }
-      else {
-        // unknown color => to be sent on four 7bits bytes
-        uint16_t hByte = highByte(val);
-        arr[pos] = hByte / 128;
-        arr[pos + 1] = hByte % 128;
-        uint16_t lByte = lowByte(val);
-        arr[pos + 2] = lByte / 128;
-        arr[pos + 3] = lByte % 128;
-
-        pos += 4;
+      else
+      {
+        // unknown color => 16 bits color value
+        // to send on three 7bits bytes
+        arr[pos] = (val >> 14) & 0x7F;
+        arr[pos + 1] = (val >> 7) & 0x7F;
+        arr[pos + 2] = val & 0x7F;
+        pos += 3;
       }
     }
 
-    if (colorCode != 255) {
+    colorCodes[i] = colorCode;
+
+    // Serial.printf("  colorCodes [%d] %d\n", i, colorCodes[i]);
+    if (colorCode != 255)
+    {
       // avoid sending known color on 4 bytes, just send a 1 byte code by MIDI
       arr[pos] = colorCode;
       pos++;
     }
-
     prev_val = val;
+  }
+
+  // set color mode
+  if (colorCodes[0] < 100)
+  {
+    if (nbArg == 2)
+    {
+      arr[0] = colorCodes[1] < 100 ? 0 : 1;
+    }
+    else
+    {
+      arr[0] = 0;
+    }
+  }
+  else
+  {
+    if (nbArg == 2)
+    {
+      arr[0] = colorCodes[1] < 100 ? 2 : 3;
+    }
+    else
+    {
+      arr[0] = 1;
+    }
   }
 
   return pos;

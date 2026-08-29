@@ -3,10 +3,22 @@
 
 #include "config.h"
 
+#if defined RA_TOUCH_FT5XX6
+#ifndef TS_POINT_DEFINED
+#define TS_POINT_DEFINED
+struct TS_Point {
+    int16_t x, y;
+    TS_Point() : x(0), y(0) {}
+    TS_Point(int16_t x0, int16_t y0) : x(x0), y(y0) {}
+};
+#endif
+#endif
 
-#ifdef RA_DISPLAY
-#include <GSL1680.h>
-extern GSL1680 touch;
+#if defined RA_TOUCH_FT5XX6
+    #include "ft5xx6_touch.h"
+#elif defined RA_DISPLAY
+  #include <GSL1680.h>
+  extern GSL1680 touch;
 #elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;

@@ -177,7 +177,7 @@ uint8_t gate_state_old[2];
 
 bool suppressReload; //liveseq
 
-#ifdef RA_DISPLAY
+#if defined RA_DISPLAY &&  !defined (RA_TOUCH_FT5XX6)
 extern GSL1680 touch;
 #elif defined CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
