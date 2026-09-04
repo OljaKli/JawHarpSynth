@@ -3178,7 +3178,7 @@ FLASHMEM void sc_name_fade()
 }
 
 
-#if defined ESP_DISPLAY
+#if defined (ESP_DISPLAY)
 extern void start_screensaver_on_esp(uint8_t id);
 
 // *********************************************************************
@@ -3194,14 +3194,16 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
     {
-      randomSeed(analogRead(0));
+     // randomSeed(analogRead(0));
       screensaver_mode_active = random(ScreenSaver::NUM_SCREENSAVERS - 2) + 1; // skip 0, since that is for random
     }
     else {
       screensaver_mode_active = configuration.sys.screen_saver_mode;
     }
 
-    if (screensaver_mode_active == ScreenSaver::QIX)
+if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
+      start_screensaver_on_esp( screensaver_mode_active);
+   else if (screensaver_mode_active == ScreenSaver::QIX)
       start_screensaver_on_esp(ScreenSaver::QIX);
     else if (screensaver_mode_active == ScreenSaver::CUBE)
       start_screensaver_on_esp(ScreenSaver::CUBE);
@@ -3256,7 +3258,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
       {
         fade_text = 255;
         screensaver_switcher_timer = 0;
-        randomSeed(analogRead(0));
+        //randomSeed(analogRead(0));
         uint8_t oldScreenSaver = screensaver_mode_active;
         while (oldScreenSaver == screensaver_mode_active) {
           screensaver_mode_active = random(ScreenSaver::NUM_SCREENSAVERS - 2) + 1; // skip 0, since that is for random
@@ -3298,9 +3300,9 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
       encoderDir[ENC_L].reset();
       encoderDir[ENC_R].reset();
       display.fillScreen(COLOR_BACKGROUND);
-#if defined ESP_DISPLAY
       sendScreensaverStop();
-#endif
+      checkWebRemote();
+      display.fillScreen(COLOR_BACKGROUND);
 
 #if defined APC
       apc_clear_grid();
@@ -3308,6 +3310,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
     }
   }
 }
+
 #else
 // *********************************************************************
 FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
@@ -3326,7 +3329,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
     {
-      randomSeed(analogRead(0));
+      //randomSeed(analogRead(0));
       screensaver_mode_active = random(ScreenSaver::NUM_SCREENSAVERS - 2) + 1; // skip 0, since that is for random
     }
     else {
@@ -3418,7 +3421,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
         screensaver_switcher_timer = 0;
         display.fillScreen(COLOR_BACKGROUND);
 
-        randomSeed(analogRead(0));
+        //randomSeed(analogRead(0));
         uint8_t oldScreenSaver = screensaver_mode_active;
         while (oldScreenSaver == screensaver_mode_active) {
           screensaver_mode_active = random(ScreenSaver::NUM_SCREENSAVERS - 2) + 1; // skip 0, since that is for random
@@ -3485,7 +3488,7 @@ FLASHMEM void setup_screensaver(void)
   {
     // Enable Screensaver (screensaver menu function, time to activate in ms)
     LCDML.SCREEN_enable(mFunc_screensaver, configuration.sys.screen_saver_start * 60000); // from parameter in minutes
-    // LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
+   // LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
   }
 }
 
@@ -3829,9 +3832,11 @@ FLASHMEM void print_small_scaled_bar(uint8_t x, uint8_t y, int16_t input_value, 
 {
 
 #if defined LED_RINGS || defined LED_DEBUG
-  glow_input_value = input_value;
-  glow_limit_min = limit_min;
-  glow_limit_max = limit_max;
+  if (selected_option == generic_temp_select_menu) {
+    glow_input_value = input_value;
+    glow_limit_min = limit_min;
+    glow_limit_max = limit_max;
+  }
 #endif
 
   setCursor_textGrid_small(x, y);
@@ -4433,7 +4438,6 @@ extern void setLEDRing(uint8_t ring, uint8_t led, uint8_t r, uint8_t g, uint8_t 
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG
-#define LED_RING_START_OFFSET 12   // start at bottom‑center (LED12)
 
 FLASHMEM void update_right_led_ring() {
   static int16_t lastShownValue = -1;
@@ -4842,6 +4846,7 @@ void processIncomingSerial() {
 
     // Process valid command
     switch (cmd) {
+
       case CMD_TOUCH:
         if (len == 2) {
           touchX = payload[0];
@@ -4852,13 +4857,30 @@ void processIncomingSerial() {
         }
         break;
 
-      case CMD_TOUCH_RELEASE:
-        remote_touched = false;
-        touchX = 0;
-        touchY = 0;
-        ts.p.x = 0;
-        ts.p.y = 0;
-        break;
+     case CMD_TOUCH_RELEASE:
+  remote_touched = false;
+  touchX = touchY = 0;
+
+  // ---- Button release handling for encoder buttons 14 and 15 ----
+  if (esp_pending_button != 255) {
+    uint8_t btn = esp_pending_button;
+    // Only handle buttons 14 (EXIT) and 15 (ENTER)
+    if (btn == 14 || btn == 15) {
+      // If held for less than LONG_BUTTON_PRESS, treat as short press
+      if (millis() - esp_press_start < LONG_BUTTON_PRESS) {
+        if (btn == 14) {
+          LCDML.BT_quit();                 // Back / Exit
+        } else if (btn == 15) {
+          LCDML.BT_enter();                // Enter / Select
+          encoderDir[ENC_R].ButtonShort(true);
+        }
+      }
+      // Clear pending state (prevents long‑press later)
+      esp_pending_button = 255;
+      esp_press_start = 0;
+    }
+  }
+  break;
 
       case CMD_BUTTON_PRESS:
         if (len == 1) {
@@ -28020,7 +28042,7 @@ FLASHMEM void draw_logo2(uint8_t yoffset, uint8_t progress)
           display.fillRect(x, y + yoffset, run, 1, color);
 
 #if defined ESP_DISPLAY
-          delayMicroseconds(350);
+          delayMicroseconds(1);
 #endif
 
           x += run;       // skip the whole run
@@ -28657,8 +28679,8 @@ FLASHMEM void drawGranularWaveform(bool fullRedraw) {
   // Extended to full display width (320 pixels)
   // Adjusted Y position to account for moved grain indicators
   uint16_t plotX = 0;
-  uint16_t plotY = 32;  // Was 27, now 32 (grain indicators moved down 5 pixels)
-  uint16_t plotW = 320;
+  uint16_t plotY = 32;
+  uint16_t plotW = 320-1;
   uint16_t plotH = 58;  // Reduced height to fit display with new layout
 
   static int16_t lastPosX = -1;

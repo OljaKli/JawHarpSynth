@@ -1,3 +1,4 @@
+#if defined RA_TOUCH_FT5XX6
 /* 
 
 Arduino library for control of FT5xx6 Capacitive Touch panels (CTPs).
@@ -178,3 +179,4 @@ public:
 
 #endif
 
+#endif

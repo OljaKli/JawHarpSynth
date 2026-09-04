@@ -2,8 +2,13 @@
 #include <Arduino.h>
 #include "config.h"
 #include "sequencer.h"
-//#include "UI.h"
+#include "UI.h"
 #include <LCDMenuLib2.h>
+#include <Audio.h>                // for AudioAnalyzePeak
+#include "synth_dexed.h"          // for AudioSynthDexed (if needed)
+#include "touch.h"
+#include <SD.h>
+
 #ifdef ESP_DISPLAY
 #include "esp32.h"
 #elif defined RA_DISPLAY
@@ -12,8 +17,10 @@
 #include "ILI9341_t3n.h"
 #endif
 
+
 #if defined OLED_DISPLAYS
 #include <Adafruit_SSD1306.h>
+extern char last_right_helptext[20];
 extern Adafruit_SSD1306 oled_display;
 elapsedMillis OLEDTimer;
 #endif
@@ -39,7 +46,7 @@ extern int glow_input_value;
 extern int glow_limit_min;
 extern int glow_limit_max;
 extern bool led_ring_preview_mode;
-extern bool ui_has_editors();
+//extern bool ui_has_editors();
 #endif
 
 #if defined GLOW
@@ -95,7 +102,7 @@ void draw_ring_simulator() {
   auto draw_ring = [&](int cx, int cy, uint8_t colors[24][3]) {
     for (int i = 0; i < 24; i++) {
       // Physical LED index (respect hardware mapping)
-      int physIdx = (LED_RING_START_OFFSET + i) % 24;
+      int physIdx = (configuration.sys.led_ring_start_offset + i) % 24;
       // Anti‑clockwise: angle = -π/2 - i * (2π/24)
       float angle = -M_PI / 2.0f - physIdx * (2.0f * M_PI / 24.0f);
       int x = cx + ring_radius * cos(angle);
@@ -115,6 +122,19 @@ void draw_ring_simulator() {
   draw_ring(x_center_right, y_center_right, ledRingR_colors);
 }
 #endif
+
+#ifdef I2C_ENCODERS
+extern bool encoderActivity;
+extern elapsedMillis encoderActivityTimer;
+extern int16_t currentBPM;
+extern int16_t currentVol;
+extern uint8_t lastEncoder;
+// ---- Tap-Tempo extern declarations ----
+extern bool tapTempoActive;
+extern uint8_t tapCount;
+extern uint32_t lastTapTime;
+#endif
+
 
 #if defined LED_RINGS || defined LED_DEBUG
 
@@ -229,19 +249,8 @@ FLASHMEM void draw_led_gradient_preview(uint8_t ring, uint16_t x, uint16_t y, ui
 
 #endif
 
-#if defined LED_RINGS || defined LED_DEBUG
-
-#endif
-
 #if defined OLED_DISPLAYS 
 uint8_t oled_info_mode = 0;
-
-#include <Audio.h>                // for AudioAnalyzePeak
-#include "config.h"               // for MIDI_CHANNEL_OMNI, MIDI_CHANNEL_OFF, NUM_DEXED, etc.
-#include "synth_dexed.h"          // for AudioSynthDexed (if needed)
-#include "sequencer.h"            // for sequencer_t
-#include "touch.h"
-#include <SD.h>
 
 extern uint8_t external_psram_size;
 extern uint32_t psram_free_bytes;
@@ -342,8 +351,125 @@ FLASHMEM void print_mute_matrix() {
   }
 }
 
+#if defined I2C_ENCODERS
+void updateOLEDsTapTempo() {
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+
+  // ---- Only right OLED ----
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, LOW);
+
+  oled_display.clearDisplay();
+  oled_display.setTextSize(2);
+  oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+  oled_display.setCursor(0, 0);
+  if (tapCount == 0) {
+    oled_display.print(F("TAP TEMPO"));
+  }
+  else if (tapCount == 1) {
+    oled_display.print(F("TAP..."));
+  }
+  else {
+    oled_display.print(F("BPM:"));
+    oled_display.print(currentBPM);
+  }
+
+  oled_display.display();
+
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, HIGH);
+  SPI.endTransaction();
+}
+#endif
+
+void clearRightOLED() {
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, LOW);
+
+  oled_display.clearDisplay();
+  oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+  // Show the last help text from the TFT
+  oled_display.setCursor(0, 0);
+  oled_display.print(last_right_helptext);
+
+  oled_display.display();
+
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, HIGH);
+  SPI.endTransaction();
+}
+
+#if defined I2C_ENCODERS
+FLASHMEM void updateRightOLEDEncoder() {
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, LOW);
+
+  oled_display.clearDisplay();
+  oled_display.setTextSize(2);
+  oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+  // ----- OLED right -----
+  if (lastEncoder == 1) {
+    oled_display.setCursor(0, 0);
+    oled_display.print("BPM:");
+    oled_display.print(currentBPM);
+  }
+  else if (lastEncoder == 2) {
+    oled_display.setCursor(0, 0);
+    oled_display.print("DEXED #");
+    oled_display.print(selected_instance_id + 1);
+    oled_display.setCursor(0, 16);
+    oled_display.print("VOL: ");
+    oled_display.print(currentVol);
+    oled_display.print("%");
+  }
+
+  oled_display.display();
+
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, HIGH);
+  SPI.endTransaction();
+
+  // ----- TFT Update  -----
+  uint8_t currentID = LCDML.FUNC_getID();
+
+  //  Voice Select
+  if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_voice_select)) {
+
+    display.setTextSize(1);
+    setModeColor(16);
+    setCursor_textGrid_small(28, 6);
+    print_formatted_number(seq.bpm, 3);
+
+    // Volume
+    print_small_intbar(11, 6, configuration.dexed[selected_instance_id].sound_intensity, 4, 1, 1);
+  }
+
+  //  Sequencer Settings
+  else if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_seq_settings)) {
+    // BPM 
+    display.setTextSize(1);
+    setModeColor(7);
+    setCursor_textGrid_small(23, 15);
+    print_formatted_number(seq.bpm, 3, 7, 1);
+  }
+}
+#endif
+
 // ---- Main OLED status update ----
 FLASHMEM void OLED_status() {
+
+#if defined I2C_ENCODERS
+  if (tapTempoActive) {
+    return;
+  }
+#endif
   static const uint8_t max_modes = 9;
 
   if (OLEDTimer >= 2500) {
@@ -463,7 +589,6 @@ FLASHMEM void OLED_status() {
 
     if (inMainMenu) {
       switch (oled_info_mode) {
-
       case 0: {
         oled_display.setCursor(0, 0);
         oled_display.print(F("SONG "));
@@ -479,7 +604,6 @@ FLASHMEM void OLED_status() {
           oled_display.print(F("SD:NONE"));
         }
         else {
-
           print_sd_total(volume_internal, sd_card_internal > 0, F("INT: "));
         }
         oled_display.setCursor(0, 16);
@@ -554,11 +678,9 @@ FLASHMEM void init_oled_displays()
   }
 
   SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
-
   oled_display.setTextSize(2);
   oled_display.cp437(true);
   oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-
   mcp.write1(OLED_CS_L, LOW);
   mcp.write1(OLED_CS_R, HIGH);
   oled_display.clearDisplay();

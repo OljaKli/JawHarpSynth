@@ -1,3 +1,5 @@
+#if defined RA_TOUCH_FT5XX6
+
 /*
 
 SparkFun_FT5xx6.cpp
@@ -166,10 +168,6 @@ FT5xx6_Status_TypeDef		FT5xx6::returnStatus(FT5xx6_Status_TypeDef retval, const 
 	FT5xx6_ReturnCallback(retval, file, line);
 	return retval;
 }
-
-
-
-
 
 
 // Begin with provisions for interrupt-driven or polling based sampling
@@ -377,3 +375,5 @@ void FT5316::abstractGuard( void )
 {
 
 }		
+
+#endif

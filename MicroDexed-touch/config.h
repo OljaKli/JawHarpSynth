@@ -477,6 +477,10 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define GATE_OUT 14
 #endif 
 
+// #ifdef I2C_ENCODERS
+// #define I2C_INT 38
+// #endif
+
 #if defined(MUSIKANDMORE) || defined(SECOND_SD)
 #define GEN3_CS_SDCARD_EXTERNAL 35
 #endif

@@ -267,6 +267,8 @@ void sendScreensaverStop() {
   sendPacket(CMD_SCREENSAVER_STOP, nullptr, 0);
 }
 
+
+
 FLASHMEM void start_screensaver_on_esp(uint8_t id) {
   uint8_t buf[4] = { id };
   sendPacket(CMD_SCREENSAVER_START, buf, 1);
@@ -485,7 +487,7 @@ void espdisplay::drawPixel(int16_t x, int16_t y, uint16_t color)
     memcpy(sysexDrawPixel + 4 + 1, colors, nbBytes);
 
     sendSysEx(90, 4 + 1 + nbBytes, sysexDrawPixel, true);
-    delayMicroseconds(20); //40
+    delayMicroseconds(5); //20
   }
 
   if (esp_draw) {

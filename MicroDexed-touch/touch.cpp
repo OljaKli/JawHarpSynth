@@ -16,6 +16,10 @@
 #include "virtualkeyboard.h"
 #include "noisemaker.h"
 
+#if defined OLED_DISPLAYS
+char last_right_helptext[20] = "";
+#endif
+
 #if defined ESP_DISPLAY
 extern espdisplay display;
 #elif defined RA_DISPLAY
@@ -200,8 +204,6 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   }
 
 #ifdef OLED_DISPLAYS
-  //if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_file_manager)) {
-
   SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
   switch (position) {
   case 0:
@@ -236,15 +238,24 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
     else {
       oled_display.print((const char*)str);
     }
+
+    if (is_flash) {
+        strncpy_P(last_right_helptext, (PGM_P)str, sizeof(last_right_helptext) - 1);
+    }
+    else {
+        strncpy(last_right_helptext, (const char*)str, sizeof(last_right_helptext) - 1);
+    }
+    last_right_helptext[sizeof(last_right_helptext) - 1] = '\0';
+
+
     break;
   }
 
-  //  oled_display.print("               ");
   oled_display.display();
   mcp.write1(OLED_CS_L, HIGH);
   mcp.write1(OLED_CS_R, HIGH);
   SPI.endTransaction();
-  // }
+  
 #endif
 
   ts.old_helptext_length[position] = l;

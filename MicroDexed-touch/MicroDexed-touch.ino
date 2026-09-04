@@ -47,10 +47,27 @@ Adafruit_SSD1306 oled_display(OLED_SCREEN_WIDTH, OLED_SCREEN_HEIGHT, &SPI, OLED_
 #include "LEDRingSmall.h"
 LEDRingSmall LEDRing_l(ISSI3746_SJ4 | ISSI3746_SJ5);
 LEDRingSmall LEDRing_r(ISSI3746_SJ1 | ISSI3746_SJ8);
-
 #endif
 
-#ifdef  SECOND_SD
+
+#ifdef I2C_ENCODERS
+#include "i2cEncoderMiniLib.h"
+
+// I2C addresses: 0x24 and 0x25 (7‑bit)
+i2cEncoderMiniLib enc1(0x24);
+i2cEncoderMiniLib enc2(0x25);
+
+// Current values (initialized later)
+int16_t currentBPM = 120;
+int16_t currentVol = 80;          // 0..100
+
+// Activity flag and timer (for OLED override)
+bool encoderActivity = false;
+elapsedMillis encoderActivityTimer;
+#endif
+
+
+#ifdef SECOND_SD
 SDClass SD_EXTERNAL;
 #endif
 
@@ -1253,7 +1270,10 @@ FLASHMEM void update_psram_speed(int speed_mhz) {
 
 #if defined OLED_DISPLAYS 
 extern void init_oled_displays();
+extern void clearRightOLED();
 #endif
+
+
 
 FLASHMEM void setup()
 {
@@ -1295,10 +1315,43 @@ FLASHMEM void setup()
   pinMode(GATE_OUT, OUTPUT);
 #endif
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)  || defined (I2C_ENCODERS)
 
   Wire.begin();
   Wire.setClock(400000);
+
+
+#ifdef I2C_ENCODERS
+  // Configure both encoders (default config: wrap enabled, etc.)
+  // enc1.begin(i2cEncoderMiniLib::WRAP_DISABLE | i2cEncoderMiniLib::IPUP_ENABLE | i2cEncoderMiniLib::RMOD_X1);
+  // enc2.begin(i2cEncoderMiniLib::WRAP_DISABLE | i2cEncoderMiniLib::IPUP_ENABLE | i2cEncoderMiniLib::RMOD_X1);
+
+  enc1.begin(i2cEncoderMiniLib::WRAP_DISABLE);
+  enc2.begin(i2cEncoderMiniLib::WRAP_DISABLE);
+
+  // pinMode(I2C_INT, INPUT_PULLUP);
+  enc1.autoconfigInterrupt();
+  enc2.autoconfigInterrupt();
+
+  // enc2.onButtonPush = onEncoder2ShortPush;
+  // enc2.onButtonLongPush = onEncoder2LongPush;
+
+    // Set initial counter values to match current state
+  enc1.writeCounter(seq.bpm);
+  enc2.writeCounter(configuration.dexed[selected_instance_id].sound_intensity);
+
+  // Assign callbacks
+  enc1.onIncrement = onEncoder1Decrement;    // reversed
+  enc1.onDecrement = onEncoder1Increment;    // reversed
+  enc2.onIncrement = onEncoder2Decrement;  // reversed
+  enc2.onDecrement = onEncoder2Increment;   // reversed
+
+  // Assign push button callback (Tap-Tempo)
+  enc1.onButtonPush = onEncoder1Push;
+
+#endif
+
+
 
 #if defined  MCP_23008 || defined MCP_23017
   mcp.begin();
@@ -1446,7 +1499,7 @@ FLASHMEM void setup()
   delay(2);
 
 #if defined RA_DISPLAY && defined MUSIKANDMORE
-;
+  ;
 #elif defined RA_DISPLAY
   display.setRotation(2);
 #endif
@@ -2929,47 +2982,47 @@ extern bool noisemaker_update_params_flag;
 
 FLASHMEM void show_chord()
 {
-    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
+  {
+    display.setTextSize(1);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    setCursor_textGrid_small(22, 1);
+    display.print("(");
+    display.print(chord_note_count);
+    display.print(")");
+    for (uint8_t d = 0; d < 4; d++)
     {
-        display.setTextSize(1);
-        display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-
-        setCursor_textGrid_small(22, 1);
-        display.print("(");
-        display.print(chord_note_count);
-        display.print(")");
-        for (uint8_t d = 0; d < 4; d++)
-        {
-            setCursor_textGrid_small(27 + d * 4, 1);
-            display.print(midiToNote(chord_input[d]));
-            display.print(chord_input[d] / 12);
-            display.print(" ");
-        }
-
-        // Check if note is in chord zone or live zone
-        bool inChordZone = (seq.chord_zone_end > seq.chord_zone_start && 
-                            seq.note_in >= seq.chord_zone_start && 
-                            seq.note_in <= seq.chord_zone_end);
-        
-        if (!inChordZone || seq.note_in == 0)
-        {
-            checkWebRemote();
-            display.fillRect(CHAR_width_small + seq.note_in * 3.55, 110, 4, 4, RED);
-        }
-        else if (chord_input[3] != 0)
-        {
-            checkWebRemote();
-            display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
-        }
-
-        char result1[30];
-        display.setTextSize(0);
-
-        getChordName(chord_input, chord_note_count, result1);
-
-        display.setTextSize(2);
-        show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
+      setCursor_textGrid_small(27 + d * 4, 1);
+      display.print(midiToNote(chord_input[d]));
+      display.print(chord_input[d] / 12);
+      display.print(" ");
     }
+
+    // Check if note is in chord zone or live zone
+    bool inChordZone = (seq.chord_zone_end > seq.chord_zone_start &&
+      seq.note_in >= seq.chord_zone_start &&
+      seq.note_in <= seq.chord_zone_end);
+
+    if (!inChordZone || seq.note_in == 0)
+    {
+      checkWebRemote();
+      display.fillRect(CHAR_width_small + seq.note_in * 3.55, 110, 4, 4, RED);
+    }
+    else if (chord_input[3] != 0)
+    {
+      checkWebRemote();
+      display.fillRect(CHAR_width_small + chord_input[2] * 3.55, 110, 4, 4, RED);
+    }
+
+    char result1[30];
+    display.setTextSize(0);
+
+    getChordName(chord_input, chord_note_count, result1);
+
+    display.setTextSize(2);
+    show_no_grid(CHAR_height * 2, CHAR_width_small, 26, result1);
+  }
 }
 
 #ifdef GRANULAR
@@ -3139,11 +3192,170 @@ extern elapsedMillis OLEDTimer;
 extern void OLED_status();
 #endif
 
+#if defined I2C_ENCODERS
+extern void updateRightOLEDEncoder();
+#endif
+
+
+
+
+// #if defined I2C_ENCODERS
+// uint8_t lastEncoder = 0;   // 0 = none, 1 = BPM-Encoder, 2 = Volume-Encoder
+
+// // Tap-Tempo variables
+// uint32_t tapTimestamps[4] = { 0 };
+// uint8_t  tapCount = 0;
+// bool     tapTempoActive = false;
+// uint32_t lastTapTime = 0;
+
+// FLASHMEM void updateCurrentPageDisplay(void) {
+//   uint8_t currentID = LCDML.FUNC_getID();
+
+//   // Voice Select page
+//   if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_voice_select)) {
+//     // Update BPM
+//     display.setTextSize(1);
+//     setModeColor(16);
+//     setCursor_textGrid_small(28, 6);
+//     print_formatted_number(seq.bpm, 3);
+
+//     // Update Volume (already updated by print_voice_settings_in_dexed_voice_select)
+//     print_small_intbar(11, 6, configuration.dexed[selected_instance_id].sound_intensity, 4, 1, 1);
+//   }
+
+//   // Sequencer Settings page
+//   else if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_seq_settings)) {
+//     // Update BPM
+//     display.setTextSize(1);
+//     setModeColor(7);
+//     setCursor_textGrid_small(23, 15);
+//     print_formatted_number(seq.bpm, 3, 7, 1);
+//   }
+// }
+
+// extern void updateOLEDsTapTempo();
+
+
+// void onEncoder1Push(i2cEncoderMiniLib* enc) {
+//   uint32_t now = millis();
+//   lastTapTime = now;
+//   if (tapCount == 0) {
+//     tapTempoActive = true;
+//     tapCount = 1;
+//     tapTimestamps[0] = now;
+//     updateOLEDsTapTempo();
+//     return;
+//   }
+//   if (tapCount < 4) {
+//     tapTimestamps[tapCount] = now;
+//     tapCount++;
+//   }
+//   else {
+
+//     tapTimestamps[0] = tapTimestamps[1];
+//     tapTimestamps[1] = tapTimestamps[2];
+//     tapTimestamps[2] = tapTimestamps[3];
+//     tapTimestamps[3] = now;
+//   }
+//   uint8_t numIntervals = tapCount - 1;
+//   if (numIntervals < 1) return;
+
+//   uint32_t sum = 0;
+//   for (uint8_t i = 0; i < numIntervals; i++) {
+
+//     uint8_t newestIdx = (tapCount == 4) ? 3 : tapCount - 1;
+//     uint8_t olderIdx = newestIdx - 1 - i;
+
+//     if (olderIdx > 3) break;
+//     uint32_t diff = tapTimestamps[newestIdx - i] - tapTimestamps[newestIdx - i - 1];
+//     sum += diff;
+//   }
+//   uint32_t avgInterval = sum / numIntervals;
+
+//   uint16_t newBPM = constrain((int)(60000 / avgInterval), 30, 240);
+//   currentBPM = newBPM;
+//   seq.bpm = newBPM;
+//   update_seq_speed();
+//   updateOLEDsTapTempo();
+//   updateCurrentPageDisplay();
+// }
+
+// // Encoder 1: BPM
+// void onEncoder1Increment(i2cEncoderMiniLib* enc) {
+//   currentBPM = constrain(currentBPM + 1, 30, 240);
+//   seq.bpm = currentBPM;
+//   update_seq_speed();
+//   encoderActivity = true;
+//   encoderActivityTimer = 0;
+//   lastEncoder = 1;   // BPM-Encoder
+// }
+// void onEncoder1Decrement(i2cEncoderMiniLib* enc) {
+//   currentBPM = constrain(currentBPM - 1, 30, 240);
+//   seq.bpm = currentBPM;
+//   update_seq_speed();
+//   encoderActivity = true;
+//   encoderActivityTimer = 0;
+//   lastEncoder = 1;
+// }
+
+// void onEncoder2Increment(i2cEncoderMiniLib* enc) {
+//   currentVol = constrain(currentVol + 1, 0, 100);
+//   configuration.dexed[selected_instance_id].sound_intensity = currentVol;
+//   MicroDexed[selected_instance_id]->setGain(
+//     midi_volume_transform(map(currentVol, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)) );
+//   MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, currentVol);
+//   encoderActivity = true;
+//   encoderActivityTimer = 0;
+//   lastEncoder = 2;
+// }
+
+// void onEncoder2Decrement(i2cEncoderMiniLib* enc) {
+//   currentVol = constrain(currentVol - 1, 0, 100);
+//   configuration.dexed[selected_instance_id].sound_intensity = currentVol;
+//   MicroDexed[selected_instance_id]->setGain(
+//     midi_volume_transform(map(currentVol, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127))  );
+//   MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, currentVol);
+//   encoderActivity = true;
+//   encoderActivityTimer = 0;
+//   lastEncoder = 2;
+// }
+// #endif
+
+
+
 void loop()
 {
+
 #if defined OLED_DISPLAYS
   if (LCDML.FUNC_getID() == 255)
     OLED_status();
+#endif
+
+#ifdef I2C_ENCODERS
+  
+  enc1.updateStatus();
+  enc2.updateStatus();
+
+  if (encoderActivity) {
+    if (encoderActivityTimer < 3000) {
+
+      updateRightOLEDEncoder();
+    }
+    else {
+
+      if (LCDML.FUNC_getID() != 255) {
+        clearRightOLED();
+      }
+      encoderActivity = false;
+    }
+  }
+
+  // ---- Tap-Tempo: 
+  if (tapTempoActive && (millis() - lastTapTime > 3000)) {
+    tapTempoActive = false;
+    tapCount = 0;
+  }
+  
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG

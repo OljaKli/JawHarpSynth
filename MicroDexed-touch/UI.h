@@ -249,5 +249,8 @@ extern uint8_t chord_arranger_key_state[128];
 extern bool chord_arranger_keyboard_dirty;
 void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote);
 uint16_t getNotePixelX(uint8_t note);
+void setModeColor(uint8_t selected_option);
+void print_small_intbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option, boolean show_bar, boolean show_zero);
+
 
 #endif //_UI_H_
