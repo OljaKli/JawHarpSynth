@@ -245,19 +245,39 @@ uint8_t  lastTextSize;
 
 extern void processIncomingSerial();
 
-void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
-  if (len > 250) return;   // keep the safety check
+// void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
+//   if (len > 250) return;   // keep the safety check
 
+//   Serial4.write(PKT_SYNC);
+//   Serial4.write(cmd);
+//   Serial4.write(len);
+//   for (uint8_t i = 0; i < len; i++) {
+//     Serial4.write(payload[i]);
+//   }
+//   uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
+//   for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
+//   Serial4.write(checksum);
+// }
+
+void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
+  if (len > 250) return;   // safety check (unchanged)
+
+  // Compute checksum in a single pass
+  uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
+  for (uint16_t i = 0; i < len; i++) {
+    checksum ^= payload[i];
+  }
+
+  // Send everything with minimal write calls
   Serial4.write(PKT_SYNC);
   Serial4.write(cmd);
   Serial4.write(len);
-  for (uint8_t i = 0; i < len; i++) {
-    Serial4.write(payload[i]);
+  if (len > 0) {
+    Serial4.write(payload, len);   // block write – much faster than per‑byte
   }
-  uint8_t checksum = PKT_SYNC ^ cmd ^ (len >> 8) ^ (len & 0xFF);
-  for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
   Serial4.write(checksum);
 }
+
 
 void sendGlowClear() {
   sendPacket(CMD_GLOW_CLEAR, nullptr, 0);

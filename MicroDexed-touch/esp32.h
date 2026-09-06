@@ -17,7 +17,7 @@
 #define SYSEX_HEADER_SIZE 3
 
 // Minimum ESP firmware version required by this Teensy firmware
-#define MIN_VERSION_ESP_DISPLAY "1.9.959"
+#define MIN_VERSION_ESP_DISPLAY "1.9.964"
 
 // Command codes (renumbered consecutively, same as on ESP)
 #define CMD_FILLRECT      2
@@ -67,7 +67,7 @@
 #define CMD_SET_EDIT_MODE 102
 #define CMD_MIN_VERSION_ESP 103
 #define CMD_MIDI_DATA  205
-
+#define PKT_SYNC 0xAA
 
 void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len);
 //void queuePacket(uint8_t cmd, const uint8_t* payload, uint16_t len);

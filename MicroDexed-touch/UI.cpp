@@ -4801,118 +4801,387 @@ void processMidiDataFromESP(uint8_t* data, uint8_t len) {
 }
 #endif
 
+// void processIncomingSerial() {
+//   while (Serial4.available() > 0) {
+//     uint8_t data = Serial4.read();
+
+//     // Only accept sync byte 0xAA
+//     if (data != 0xAA) {
+//       continue;
+//     }
+
+//     // Need at least command, length, and checksum (3 bytes)
+//     if (Serial4.available() < 3) {
+//       continue; // wait for more data
+//     }
+
+//     uint8_t cmd = Serial4.read();
+//     uint8_t len = Serial4.read();
+
+//     // Ensure we have enough bytes for payload + checksum
+//     if (Serial4.available() < len + 1) {
+//       // Incomplete packet – discard remaining bytes to resync
+//       while (Serial4.available()) {
+//         Serial4.read();
+//       }
+//       continue;
+//     }
+
+//     // Read payload
+//     uint8_t payload[16]; // max payload size (we only use up to 2 bytes)
+//     for (uint8_t i = 0; i < len; i++) {
+//       payload[i] = Serial4.read();
+//     }
+//     uint8_t chk = Serial4.read();
+
+//     // Verify checksum (same algorithm as sendPacket)
+//     uint8_t expected = 0xAA ^ cmd ^ len;
+//     for (uint8_t i = 0; i < len; i++) {
+//       expected ^= payload[i];
+//     }
+//     if (chk != expected) {
+//       // Checksum mismatch – discard packet
+//       continue;
+//     }
+
+//     // Process valid command
+//     switch (cmd) {
+
+//       case CMD_TOUCH:
+//         if (len == 2) {
+//           touchX = payload[0];
+//           touchY = payload[1];
+//           ts.p.x = touchX * 1.250 + 1;
+//           ts.p.y = touchY;
+//           remote_touched = true;
+//         }
+//         break;
+
+//      case CMD_TOUCH_RELEASE:
+//   remote_touched = false;
+//   touchX = touchY = 0;
+
+//   // ---- Button release handling for encoder buttons 14 and 15 ----
+//   if (esp_pending_button != 255) {
+//     uint8_t btn = esp_pending_button;
+//     // Only handle buttons 14 (EXIT) and 15 (ENTER)
+//     if (btn == 14 || btn == 15) {
+//       // If held for less than LONG_BUTTON_PRESS, treat as short press
+//       if (millis() - esp_press_start < LONG_BUTTON_PRESS) {
+//         if (btn == 14) {
+//           LCDML.BT_quit();                 // Back / Exit
+//         } else if (btn == 15) {
+//           LCDML.BT_enter();                // Enter / Select
+//           encoderDir[ENC_R].ButtonShort(true);
+//         }
+//       }
+//       // Clear pending state (prevents long‑press later)
+//       esp_pending_button = 255;
+//       esp_press_start = 0;
+//     }
+//   }
+//   break;
+
+//       case CMD_BUTTON_PRESS:
+//         if (len == 1) {
+//           uint8_t btn = payload[0];
+//           if (btn <= 13) {
+//             esp_buttonNumber = btn;
+//           } else if (btn == 14 || btn == 15) {
+//             esp_pending_button = btn;
+//             esp_press_start = millis();
+//           }
+//         }
+//         break;
+
+//       case CMD_FUNCTION_JUMP:
+//         if (len == 1) {
+//           esp_function_id = payload[0];
+//           function_jump_pending = true;
+//           resetScreenTimer();
+//         }
+//         break;
+
+//       case CMD_SCREENSAVER_STOP:
+//         remote_touched = true;
+//         resetScreenTimer();
+//         break;
+
+//       case CMD_EXIT_CONFIG:
+//         force_menu_full_redraw = true;
+//         redraw_current_page_or_fallback();
+//         break;
+
+//       default:
+//         // Unknown command – ignore
+//         break;
+//     }
+//   }
+
+//   // Execute any pending function jump (outside the loop)
+//   if (function_jump_pending) {
+//     LCDML.OTHER_jumpToID(esp_function_id);
+//     function_jump_pending = false;
+//     esp_function_id = 255;
+//   }
+// }
+
+// void processIncomingSerial() {
+//   while (Serial4.available() > 0) {
+//     uint8_t data = Serial4.read();
+
+//     if (data == 0xAA || data == 0xAB || data == 0xAC || data == 0xAD ||
+//       data == 0xAE || data == CMD_MIDI_DATA) {
+//       packetType = data;
+//       inTouchPacket = true;
+//       touchIndex = 0;
+//     }
+
+//     // else if (data == 0xAE && touchIndex == 0) {
+//     //   //  force_menu_full_redraw=true;
+//     //   //  redraw_current_page_or_fallback();
+//     // }
+
+//     else if (data == 0xBB && inTouchPacket) {
+
+//       if (packetType == CMD_MIDI_DATA && touchIndex >= 1) {
+//         uint8_t len = touchBuffer[0];
+//         if (len > 0 && touchIndex >= 1 + len) {
+//           processMidiDataFromESP(&touchBuffer[1], len);
+//         }
+//       }
+//       else if (packetType == 0xAA && touchIndex == 2) {
+//         uint16_t esp_touch_x = touchBuffer[0];
+//         uint16_t esp_touch_y = touchBuffer[1];
+//         touchX = esp_touch_x;
+//         touchY = esp_touch_y;
+//         ts.p.x = touchX * 1.250 + 1;
+//         ts.p.y = touchY;
+//         remote_touched = true;
+
+//       }
+//       else if (packetType == 0xAC && touchIndex == 1) {
+//         // Function ID jump
+//         esp_function_id = touchBuffer[0];
+//         function_jump_pending = true;
+//       }
+
+//       else if (packetType == 0xAE && touchIndex == 0) {
+//         force_menu_full_redraw = true;
+//         redraw_current_page_or_fallback();
+//       }
+//       else if (packetType == 0xAB && touchIndex == 1) {
+//         uint8_t btn = touchBuffer[0];
+//         if (btn <= 13) {
+//           esp_buttonNumber = btn;
+//         }
+//         else if (btn == 14 || btn == 15) {
+//           esp_pending_button = btn;
+//           esp_press_start = millis();
+//         }
+//       }
+
+//       else if (packetType == 0xAD && touchIndex == 0) {
+//         // Screensaver stop command
+//         remote_touched = true;
+//         resetScreenTimer();
+//       }
+
+//       inTouchPacket = false;
+//       touchIndex = 0;
+//       packetType = 0;
+//     }
+//     else if (data == 0xCC) {
+//       // release
+//       if (esp_pending_button != 255) {
+//         esp_buttonNumber = esp_pending_button;
+//         esp_pending_button = 255;
+//       }
+//       else {
+//         remote_touched = false;
+//         touchX = 0;
+//         touchY = 0;
+//         ts.p.x = 0;
+//         ts.p.y = 0;
+//       }
+//       inTouchPacket = false;
+//       touchIndex = 0;
+//       packetType = 0;
+//     }
+
+//     else if (data == 0x98) {
+//       // ESP requesting handshake (e.g., after reboot)
+//       // Resend our version information
+//       sendVersion();
+//       sendMinEspVersion();
+//       lastESPHandshakeTime = millis();
+//     }
+
+//     else if (inTouchPacket && touchIndex < sizeof(touchBuffer)) {
+//       touchBuffer[touchIndex++] = data;
+//     }
+
+//     if (function_jump_pending) {
+//       LCDML.OTHER_jumpToID(esp_function_id);
+//       function_jump_pending = false;
+//       esp_function_id = 255;
+//     }
+//   }
+// }
+
+
+
+void processValidPacket(uint8_t cmd, uint8_t* payload, uint8_t len) {
+  switch (cmd) {
+    case CMD_TOUCH:           // 41
+      if (len == 2) {
+        uint16_t esp_touch_x = payload[0];
+        uint16_t esp_touch_y = payload[1];
+        touchX = esp_touch_x;
+        touchY = esp_touch_y;
+        ts.p.x = touchX * 1.250 + 1;
+        ts.p.y = touchY;
+        remote_touched = true;
+      }
+      break;
+
+    case CMD_TOUCH_RELEASE:   // 42
+      if (len == 0) {
+        // release handling
+        if (esp_pending_button != 255) {
+          esp_buttonNumber = esp_pending_button;
+          esp_pending_button = 255;
+        } else {
+          remote_touched = false;
+          touchX = 0;
+          touchY = 0;
+          ts.p.x = 0;
+          ts.p.y = 0;
+        }
+      }
+      break;
+
+    case CMD_BUTTON_PRESS:    // 43
+      if (len == 1) {
+        uint8_t btn = payload[0];
+        if (btn <= 13) {
+          esp_buttonNumber = btn;
+        } else if (btn == 14 || btn == 15) {
+          esp_pending_button = btn;
+          esp_press_start = millis();
+        }
+      }
+      break;
+
+    case CMD_FUNCTION_JUMP:   // 44
+      if (len == 1) {
+        esp_function_id = payload[0];
+        function_jump_pending = true;
+        resetScreenTimer();   // reset screensaver on page jump
+      }
+      break;
+
+    case CMD_EXIT_CONFIG:     // 45
+      if (len == 0) {
+        force_menu_full_redraw = true;
+        redraw_current_page_or_fallback();
+      }
+      break;
+
+    case CMD_SCREENSAVER_STOP: // 19 (or 0xAD) – check your definition
+      if (len == 0) {
+        remote_touched = true;
+        resetScreenTimer();
+      }
+      break;
+
+    case CMD_SET_EDIT_MODE:   // 102
+      if (len == 1) {
+        // update edit mode state if needed
+      }
+      break;
+
+    case CMD_SET_VOLUME_ICONS_MODE: // 101
+      if (len == 1) {
+        // update volume icons mode if needed
+      }
+      break;
+
+    case CMD_MIDI_DATA:       // 205
+      if (len >= 1) {
+        uint8_t midiLen = payload[0];
+        if (midiLen > 0 && len >= 1 + midiLen) {
+          processMidiDataFromESP(&payload[1], midiLen);
+        }
+      }
+      break;
+
+    default:
+      // unknown command – ignore
+      break;
+  }
+}
+
 void processIncomingSerial() {
+  static enum { WAIT_SYNC, WAIT_CMD, WAIT_LEN, WAIT_PAYLOAD, WAIT_CHK } state = WAIT_SYNC;
+  static uint8_t cmd, len, idx, checksum;
+  static uint8_t buffer[64];   // max payload size (adjust if needed, e.g., 256)
+
   while (Serial4.available() > 0) {
     uint8_t data = Serial4.read();
 
-    // Only accept sync byte 0xAA
-    if (data != 0xAA) {
+    // ---- Handle handshake request (0x98) ----
+    if (data == 0x98) {
+      sendVersion();
+      sendMinEspVersion();
+      lastESPHandshakeTime = millis();
       continue;
     }
 
-    // Need at least command, length, and checksum (3 bytes)
-    if (Serial4.available() < 3) {
-      continue; // wait for more data
-    }
-
-    uint8_t cmd = Serial4.read();
-    uint8_t len = Serial4.read();
-
-    // Ensure we have enough bytes for payload + checksum
-    if (Serial4.available() < len + 1) {
-      // Incomplete packet – discard remaining bytes to resync
-      while (Serial4.available()) {
-        Serial4.read();
-      }
-      continue;
-    }
-
-    // Read payload
-    uint8_t payload[16]; // max payload size (we only use up to 2 bytes)
-    for (uint8_t i = 0; i < len; i++) {
-      payload[i] = Serial4.read();
-    }
-    uint8_t chk = Serial4.read();
-
-    // Verify checksum (same algorithm as sendPacket)
-    uint8_t expected = 0xAA ^ cmd ^ len;
-    for (uint8_t i = 0; i < len; i++) {
-      expected ^= payload[i];
-    }
-    if (chk != expected) {
-      // Checksum mismatch – discard packet
-      continue;
-    }
-
-    // Process valid command
-    switch (cmd) {
-
-      case CMD_TOUCH:
-        if (len == 2) {
-          touchX = payload[0];
-          touchY = payload[1];
-          ts.p.x = touchX * 1.250 + 1;
-          ts.p.y = touchY;
-          remote_touched = true;
+    // ---- State machine for packets starting with 0xAA ----
+    switch (state) {
+      case WAIT_SYNC:
+        if (data == PKT_SYNC) {   // 0xAA
+          state = WAIT_CMD;
+          checksum = data;
         }
         break;
 
-     case CMD_TOUCH_RELEASE:
-  remote_touched = false;
-  touchX = touchY = 0;
+      case WAIT_CMD:
+        cmd = data;
+        checksum ^= data;
+        state = WAIT_LEN;
+        break;
 
-  // ---- Button release handling for encoder buttons 14 and 15 ----
-  if (esp_pending_button != 255) {
-    uint8_t btn = esp_pending_button;
-    // Only handle buttons 14 (EXIT) and 15 (ENTER)
-    if (btn == 14 || btn == 15) {
-      // If held for less than LONG_BUTTON_PRESS, treat as short press
-      if (millis() - esp_press_start < LONG_BUTTON_PRESS) {
-        if (btn == 14) {
-          LCDML.BT_quit();                 // Back / Exit
-        } else if (btn == 15) {
-          LCDML.BT_enter();                // Enter / Select
-          encoderDir[ENC_R].ButtonShort(true);
-        }
-      }
-      // Clear pending state (prevents long‑press later)
-      esp_pending_button = 255;
-      esp_press_start = 0;
-    }
-  }
-  break;
-
-      case CMD_BUTTON_PRESS:
-        if (len == 1) {
-          uint8_t btn = payload[0];
-          if (btn <= 13) {
-            esp_buttonNumber = btn;
-          } else if (btn == 14 || btn == 15) {
-            esp_pending_button = btn;
-            esp_press_start = millis();
-          }
+      case WAIT_LEN:
+        len = data;
+        checksum ^= data;
+        if (len == 0) {
+          state = WAIT_CHK;
+        } else if (len > sizeof(buffer)) {
+          state = WAIT_SYNC;   // invalid length, resync
+        } else {
+          idx = 0;
+          state = WAIT_PAYLOAD;
         }
         break;
 
-      case CMD_FUNCTION_JUMP:
-        if (len == 1) {
-          esp_function_id = payload[0];
-          function_jump_pending = true;
+      case WAIT_PAYLOAD:
+        buffer[idx++] = data;
+        checksum ^= data;
+        if (idx >= len) {
+          state = WAIT_CHK;
         }
         break;
 
-      case CMD_SCREENSAVER_STOP:
-        remote_touched = true;
-        resetScreenTimer();
-        break;
-
-      case CMD_EXIT_CONFIG:
-        force_menu_full_redraw = true;
-        redraw_current_page_or_fallback();
-        break;
-
-      default:
-        // Unknown command – ignore
+      case WAIT_CHK:
+        if (data == checksum) {
+          // ---- Valid packet – process it ----
+          processValidPacket(cmd, buffer, len);
+        } else {
+          // Checksum mismatch – discard packet (no action)
+        }
+        state = WAIT_SYNC;
         break;
     }
   }
@@ -4924,6 +5193,7 @@ void processIncomingSerial() {
     esp_function_id = 255;
   }
 }
+
 #endif
 
 extern bool livemod_touch_state;
@@ -19703,7 +19973,6 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
     }
 
     display.fillScreen(COLOR_BACKGROUND);
-
     encoderDir[ENC_R].reset();
     encoderDir[ENC_L].reset();
 
@@ -19753,12 +20022,17 @@ FLASHMEM void UI_func_MultiSamplePlay(uint8_t param) {
     display.print(F("FILENAME"));
 
     display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+show(1, 4, 11, msp[seq.active_multisample].name);
+last_multisample = seq.active_multisample; 
+
     display.setTextColor(GREY2, COLOR_BACKGROUND);
     setCursor_textGrid(3, 1);
     display.print(F("["));
     setCursor_textGrid(15, 1);
     display.print(F("]"));
     display.setTextSize(1);
+
     print_msp_all_zones();
 
     // Initialize state tracking
@@ -24525,6 +24799,11 @@ FLASHMEM void UI_func_voice_editor(uint8_t param)
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
     ui.reset();
+
+display.setTextSize(1);
+  display.setTextColor(RED, COLOR_BACKGROUND);
+    setCursor_textGrid_small(1, 0);
+display.print(F("DEXED VOICE EDITOR"));
 
     ui.setCursor(0, 1);
 
