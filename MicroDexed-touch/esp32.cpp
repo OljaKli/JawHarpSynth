@@ -8,6 +8,7 @@
 
 extern bool remote_active;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
+extern uint8_t last_glow_menu_item;
 
 // 5x7 font
 PROGMEM const unsigned char font[] = {
@@ -278,9 +279,13 @@ void sendPacket(uint8_t cmd, const uint8_t* payload, uint16_t len) {
   Serial4.write(checksum);
 }
 
-
 void sendGlowClear() {
   sendPacket(CMD_GLOW_CLEAR, nullptr, 0);
+}
+
+void sendGlowStop() {
+  sendPacket(CMD_GLOW_STOP, nullptr, 0);
+  last_glow_menu_item = 255;
 }
 
 void sendScreensaverStop() {

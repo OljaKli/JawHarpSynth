@@ -189,6 +189,7 @@ PsramLoader sampleLoader(psram_free_bytes);
 #if defined ESP_DISPLAY
 espdisplay display(0);
 extern void sendVolumeIconsMode(bool);
+extern void sendGlowStop();
 #elif defined RA_DISPLAY
 
 RA8875 display = RA8875(TFT_CS, 255, TFT_MOSI, TFT_SCK, TFT_MISO);
@@ -5108,13 +5109,10 @@ void processValidPacket(uint8_t cmd, uint8_t* payload, uint8_t len) {
       break;
 
     case CMD_MIDI_DATA:       // 205
-      if (len >= 1) {
-        uint8_t midiLen = payload[0];
-        if (midiLen > 0 && len >= 1 + midiLen) {
-          processMidiDataFromESP(&payload[1], midiLen);
-        }
-      }
-      break;
+  if (len >= 2 && len <= 3) {
+    processMidiDataFromESP(payload, len);
+  }
+  break;
 
     default:
       // unknown command – ignore
@@ -6206,12 +6204,8 @@ FLASHMEM void lcdml_menu_control(void)
   }
 }
 
-
-
 extern bool disableDirectMIDIinput;
-
 extern void sendGlowClear();
-
 
 // static variables that persist between calls
 static uint8_t prev_scroll = 0xFF;
@@ -25001,11 +24995,16 @@ FLASHMEM void UI_func_dexed_controllers(uint8_t param)
   }
 }
 
+
+
 FLASHMEM void UI_func_volume(uint8_t param)
 {
   static uint8_t old_volume;
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+#if defined ESP_DISPLAY
+    sendGlowStop();
+#endif
     registerTouchHandler(handle_touchscreen_menu);
     registerScope(230, 18, 87, 64);
     old_volume = configuration.sys.vol;

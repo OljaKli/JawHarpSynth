@@ -1190,6 +1190,7 @@ FLASHMEM void init_default_sample_voice_group_config()
 #if defined ESP_DISPLAY
 extern void sendScreensaverStop();
 extern void sendGlowClear();
+extern void sendGlowStop();
 bool espAlive = false;
 uint32_t lastESPHandshakeTime = 0;
 
@@ -2432,10 +2433,7 @@ const char* glow_zero_name;
 uint8_t glow_type;
 
 #if defined ESP_DISPLAY
-
-//#include "esp32.h"
-
-static uint8_t last_glow_menu_item = 255;
+uint8_t last_glow_menu_item = 255;
 static int16_t last_glow_value = 0;
 
 // Mimics print_formatted_number (leading zeros)
@@ -2575,11 +2573,6 @@ FLASHMEM void sendGlowStart() {
 
   last_glow_menu_item = generic_temp_select_menu;
   last_glow_value = glow_input_value;
-}
-
-void sendGlowStop() {
-  sendPacket(CMD_GLOW_STOP, nullptr, 0);
-  last_glow_menu_item = 255;
 }
 
 
