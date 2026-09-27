@@ -201,7 +201,7 @@ static const BtnTarget TARGETS[RA_NUM_TARGETS] = {
   { "PAT",  "EDT",  UI_func_seq_pattern_editor    },  // 21
   { "MELO", "PAT",  UI_func_melodic_pattern_editor},  // 22
   { "DRM",  "PAT",  UI_func_drum_pattern_editor   },  // 23
-  { "TRKR", "",     UI_func_seq_tracker           },  // 24
+  { "TRKR", "",     UI_func_mdtracker_pattern_editor},  // 24
   { "MUTE", "MTX",  UI_func_seq_mute_matrix       },  // 25
   { "VEL",  "EDT",  UI_func_seq_vel_editor        },  // 26
   { "PROB", "",     UI_func_seq_probabilities     },  // 27

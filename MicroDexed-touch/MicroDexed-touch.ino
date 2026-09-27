@@ -49,21 +49,26 @@ LEDRingSmall LEDRing_l(ISSI3746_SJ4 | ISSI3746_SJ5);
 LEDRingSmall LEDRing_r(ISSI3746_SJ1 | ISSI3746_SJ8);
 #endif
 
+#include "i2cEncoderMiniLib.h" //do not remove this line - there is a reason why this is not in #MINI_ENCODER
+bool I2C_encoderActivity = false;
 
-#ifdef I2C_ENCODERS
-#include "i2cEncoderMiniLib.h"
+#ifdef MINI_ENCODER
 
-// I2C addresses: 0x24 and 0x25 (7‑bit)
-i2cEncoderMiniLib enc1(0x24);
-i2cEncoderMiniLib enc2(0x25);
+// // I2C addresses: 0x24 and 0x25 (7‑bit)
+// i2cEncoderMiniLib enc1(0x24);
+// i2cEncoderMiniLib enc2(0x25);
 
-// Current values (initialized later)
+// // Current values (initialized later)
 int16_t currentBPM = 120;
 int16_t currentVol = 80;          // 0..100
 
-// Activity flag and timer (for OLED override)
-bool encoderActivity = false;
-elapsedMillis encoderActivityTimer;
+// // Activity flag and timer (for OLED override)
+
+elapsedMillis I2C_encoderActivityTimer;
+#endif
+
+#ifdef MINI_ENCODER
+#include "i2c_encoders.h"
 #endif
 
 
@@ -79,10 +84,17 @@ SDClass SD_EXTERNAL;
 #include "MCP23008.h"
 MCP23008 mcp(0x20);
 #endif
-#if defined MCP_23017
+
+#if defined MCP_23017 && !defined MCP_23017_21
 #include "MCP23017.h"
 MCP23017 mcp(0x20);
 #endif
+
+#if defined MCP_23017_21
+#include "MCP23017.h"
+MCP23017 mcp(0x21);
+#endif
+
 #endif
 
 #include <EEPROM.h> // fixes header file not found when compiling framework's bluetooth.cpp
@@ -93,6 +105,10 @@ MCP23017 mcp(0x20);
 #include "RA8875.h"
 #else
 #include "ILI9341_t3n.h"
+#endif
+
+#if defined XIAO_BLUETOOTH_MIDI
+#include "xiao_midi.h"
 #endif
 
 #include <LCDMenuLib2.h>
@@ -191,11 +207,16 @@ bool back_button_touch_page_check_and_init_done = false;
 bool current_page_has_touch_back_button = false;
 uint8_t gate_state_old[2];
 
+#ifdef MINI_ENCODER
+bool show_encoder_setup = false;
+#endif
 
 bool suppressReload; //liveseq
 
-#if defined RA_DISPLAY &&  !defined (RA_TOUCH_FT5XX6)
+#if defined RA_DISPLAY &&  !defined RA_TOUCH_FT5XX6
 extern GSL1680 touch;
+#elif defined RA_DISPLAY &&  defined RA_TOUCH_FT5XX6
+extern FT5xx6_Touch touch;
 #elif defined CAPACITIVE_TOUCH_DISPLAY
 extern Adafruit_FT6206 touch;
 #elif defined ESP_DISPLAY
@@ -203,6 +224,12 @@ extern esp_touchscreen touch;
 #elif defined GENERIC_DISPLAY
 extern XPT2046_Touchscreen touch;
 #endif
+
+// Per-step drum FX override consumed by the drum noteOn handler.
+// Set by sequencer_part1() (see sequencer.cpp) and cleared by the
+// drum noteOn handler once the destination slot has been determined.
+uint8_t g_drum_fx_override_cmd = 0;   // MDT_FX_NONE
+uint8_t g_drum_fx_override_val = 0;
 
 // Editor operations
 int menuhelper_previous_val;
@@ -1316,43 +1343,18 @@ FLASHMEM void setup()
   pinMode(GATE_OUT, OUTPUT);
 #endif
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)  || defined (I2C_ENCODERS)
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)  || defined (MINI_ENCODER)
 
   Wire.begin();
   Wire.setClock(400000);
 
 
-#ifdef I2C_ENCODERS
-  // Configure both encoders (default config: wrap enabled, etc.)
-  // enc1.begin(i2cEncoderMiniLib::WRAP_DISABLE | i2cEncoderMiniLib::IPUP_ENABLE | i2cEncoderMiniLib::RMOD_X1);
-  // enc2.begin(i2cEncoderMiniLib::WRAP_DISABLE | i2cEncoderMiniLib::IPUP_ENABLE | i2cEncoderMiniLib::RMOD_X1);
-
-  enc1.begin(i2cEncoderMiniLib::WRAP_DISABLE);
-  enc2.begin(i2cEncoderMiniLib::WRAP_DISABLE);
-
-  // pinMode(I2C_INT, INPUT_PULLUP);
-  enc1.autoconfigInterrupt();
-  enc2.autoconfigInterrupt();
-
-  // enc2.onButtonPush = onEncoder2ShortPush;
-  // enc2.onButtonLongPush = onEncoder2LongPush;
-
-    // Set initial counter values to match current state
-  enc1.writeCounter(seq.bpm);
-  enc2.writeCounter(configuration.dexed[selected_instance_id].sound_intensity);
-
-  // Assign callbacks
-  enc1.onIncrement = onEncoder1Decrement;    // reversed
-  enc1.onDecrement = onEncoder1Increment;    // reversed
-  enc2.onIncrement = onEncoder2Decrement;  // reversed
-  enc2.onDecrement = onEncoder2Increment;   // reversed
-
-  // Assign push button callback (Tap-Tempo)
-  enc1.onButtonPush = onEncoder1Push;
-
+#ifdef MINI_ENCODER
+  // Scan the bus and, if the addresses are already correct, initialise the
+  // encoders. Otherwise leave them alone and remember that we must show the
+  // dedicated setup page after the UI has started.
+  show_encoder_setup = i2c_encoders_setup();
 #endif
-
-
 
 #if defined  MCP_23008 || defined MCP_23017
   mcp.begin();
@@ -1456,6 +1458,10 @@ FLASHMEM void setup()
 
 #ifdef ESP_DISPLAY
   Serial4.begin(6000000, SERIAL_8N1);
+#endif
+
+#if defined XIAO_BLUETOOTH_MIDI
+  xiao_midi_setup();
 #endif
 
   //#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
@@ -1987,8 +1993,12 @@ FLASHMEM void setup()
 #ifdef DEBUG
   LOG.println(F("Setup UI."));
 #endif
+
+  mdtracker_init_fx_arrays();
+
   // Load initial Performance or the last used one
   initial_values(false);
+
 
   setup_ui();
 
@@ -2049,70 +2059,78 @@ FLASHMEM void setup()
   load_sd_noisemaker_json();
 #endif
 
-  //SD CARD PRESET CONTENT NOT FOUND, PROVIDE POSSIBLE SOLUTIONS TO USER
-  if (!SD.exists("/DEXED/0/0") || !SD.exists("/DEXED/0/99") || !SD.exists("/PERFORMANCE") || !SD.exists("/DRUMS"))
+#ifdef MINI_ENCODER
+  // I2C ENCODER ADDRESS SETUP NEEDED - SHOW DEDICATED PAGE
+  if (show_encoder_setup)
   {
-    LCDML.OTHER_jumpToFunc(UI_func_sd_content_not_found);
+    LCDML.OTHER_jumpToFunc(UI_func_encoder_address_setup);
   }
-  else {
-    if ((count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning == false) // startup with midi channel setup page
-      LCDML.OTHER_jumpToFunc(UI_func_midi_channels);
-    else
-      if (seq.clock == 1 && configuration.sys.skip_midi_channel_warning == false) //MIDI Slave
-        LCDML.OTHER_jumpToFunc(UI_func_seq_settings);
+  else
+#endif
+    //SD CARD PRESET CONTENT NOT FOUND, PROVIDE POSSIBLE SOLUTIONS TO USER
+    if (!SD.exists("/DEXED/0/0") || !SD.exists("/DEXED/0/99") || !SD.exists("/PERFORMANCE") || !SD.exists("/DRUMS"))
+    {
+      LCDML.OTHER_jumpToFunc(UI_func_sd_content_not_found);
+    }
+    else {
+      if ((count_omni() != 0 || count_midi_channel_duplicates(false) != 0) && configuration.sys.skip_midi_channel_warning == false) // startup with midi channel setup page
+        LCDML.OTHER_jumpToFunc(UI_func_midi_channels);
       else
-      {
-        if (configuration.sys.boot_anim_skip == 0)
-          boot_animation();
-        // Menu Startup
-        switch (configuration.sys.load_at_startup_page)
+        if (seq.clock == 1 && configuration.sys.skip_midi_channel_warning == false) //MIDI Slave
+          LCDML.OTHER_jumpToFunc(UI_func_seq_settings);
+        else
         {
-        case 0:
-          LCDML.OTHER_jumpToFunc(UI_func_voice_select);
-          break;
-        case 1:
-          LCDML.OTHER_jumpToFunc(UI_func_song);
-          break;
-        case 2:
-          LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
-          break;
-        case 3:
-          LCDML.OTHER_jumpToFunc(UI_func_microsynth);
-          break;
-        case 4:
-          LCDML.OTHER_jumpToFunc(UI_func_seq_tracker);
-          break;
-        case 5:
-          LCDML.OTHER_jumpToFunc(UI_func_MultiSamplePlay);
-          break;
-        case 6:
-          LCDML.OTHER_jumpToFunc(UI_func_epiano);
-          break;
-        case 7:
-          LCDML.OTHER_jumpToFunc(UI_func_braids);
-          break;
-        case 8:
-          LCDML.OTHER_jumpToFunc(UI_func_mixer);
-          break;
-        case 9:
-          LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
-          break;
-        case 10:
-          LCDML.FUNC_goBackToMenu();
-          break;
-        case 11:
-          LCDML.OTHER_jumpToFunc(UI_func_chord_arranger);
-        case 12:
-          LCDML.OTHER_jumpToFunc(UI_func_noisemaker);
-          break;
-        case 50:
-          LCDML.OTHER_jumpToFunc(UI_func_information);
-          break;
-        default:
-          LCDML.OTHER_jumpToFunc(UI_func_voice_select); // fallback to voice select
+          if (configuration.sys.boot_anim_skip == 0)
+            boot_animation();
+          // Menu Startup
+          switch (configuration.sys.load_at_startup_page)
+          {
+          case 0:
+            LCDML.OTHER_jumpToFunc(UI_func_voice_select);
+            break;
+          case 1:
+            LCDML.OTHER_jumpToFunc(UI_func_song);
+            break;
+          case 2:
+            LCDML.OTHER_jumpToFunc(UI_func_seq_pattern_editor);
+            break;
+          case 3:
+            LCDML.OTHER_jumpToFunc(UI_func_microsynth);
+            break;
+          case 4:
+            LCDML.OTHER_jumpToFunc(UI_func_mdtracker_pattern_editor);
+            break;
+          case 5:
+            LCDML.OTHER_jumpToFunc(UI_func_MultiSamplePlay);
+            break;
+          case 6:
+            LCDML.OTHER_jumpToFunc(UI_func_epiano);
+            break;
+          case 7:
+            LCDML.OTHER_jumpToFunc(UI_func_braids);
+            break;
+          case 8:
+            LCDML.OTHER_jumpToFunc(UI_func_mixer);
+            break;
+          case 9:
+            LCDML.OTHER_jumpToFunc(UI_func_livesequencer);
+            break;
+          case 10:
+            LCDML.FUNC_goBackToMenu();
+            break;
+          case 11:
+            LCDML.OTHER_jumpToFunc(UI_func_chord_arranger);
+          case 12:
+            LCDML.OTHER_jumpToFunc(UI_func_noisemaker);
+            break;
+          case 50:
+            LCDML.OTHER_jumpToFunc(UI_func_information);
+            break;
+          default:
+            LCDML.OTHER_jumpToFunc(UI_func_voice_select); // fallback to voice select
+          }
         }
-      }
-  }
+    }
 
 #ifdef MIDI_ACTIVITY_LIGHTS
   digitalWrite(LED_MIDI_IN, LOW);
@@ -3185,174 +3203,185 @@ extern elapsedMillis OLEDTimer;
 extern void OLED_status();
 #endif
 
-#if defined I2C_ENCODERS
-extern void updateRightOLEDEncoder();
+#if defined MINI_ENCODER
+extern void I2C_enc_updateRightOLED();
 #endif
 
 
+#ifdef MINI_ENCODER
+uint8_t lastEncoder = 0;   // 0 = none, 1 = BPM-Encoder, 2 = Volume-Encoder
+// Tap-Tempo variables
+uint32_t tapTimestamps[4] = { 0 };
+uint8_t  tapCount = 0;
+bool     tapTempoActive = false;
+uint32_t lastTapTime = 0;
+extern void updateOLEDsTapTempo();
 
+FLASHMEM void updateCurrentPageDisplay(void) {
+  uint8_t currentID = LCDML.FUNC_getID();
 
-// #if defined I2C_ENCODERS
-// uint8_t lastEncoder = 0;   // 0 = none, 1 = BPM-Encoder, 2 = Volume-Encoder
+  // Voice Select page
+  if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_voice_select)) {
+    // Update BPM
+    display.setTextSize(1);
+    setModeColor(16);
+    setCursor_textGrid_small(28, 6);
+    print_formatted_number(seq.bpm, 3);
 
-// // Tap-Tempo variables
-// uint32_t tapTimestamps[4] = { 0 };
-// uint8_t  tapCount = 0;
-// bool     tapTempoActive = false;
-// uint32_t lastTapTime = 0;
+    // Update Volume (already updated by print_voice_settings_in_dexed_voice_select)
+    print_small_intbar(11, 6, configuration.dexed[selected_instance_id].sound_intensity, 4, 1, 1);
+  }
 
-// FLASHMEM void updateCurrentPageDisplay(void) {
-//   uint8_t currentID = LCDML.FUNC_getID();
+  // Sequencer Settings page
+  else if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_seq_settings)) {
+    // Update BPM
+    display.setTextSize(1);
+    setModeColor(7);
+    setCursor_textGrid_small(23, 15);
+    print_formatted_number(seq.bpm, 3, 7, 1);
+  }
+}
 
-//   // Voice Select page
-//   if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_voice_select)) {
-//     // Update BPM
-//     display.setTextSize(1);
-//     setModeColor(16);
-//     setCursor_textGrid_small(28, 6);
-//     print_formatted_number(seq.bpm, 3);
+void onEncoder1Push(i2cEncoderMiniLib* enc) {
+  uint32_t now = millis();
+  lastTapTime = now;
+  if (tapCount == 0) {
+    tapTempoActive = true;
+    tapCount = 1;
+    tapTimestamps[0] = now;
+    updateOLEDsTapTempo();
+    return;
+  }
+  if (tapCount < 4) {
+    tapTimestamps[tapCount] = now;
+    tapCount++;
+  }
+  else {
 
-//     // Update Volume (already updated by print_voice_settings_in_dexed_voice_select)
-//     print_small_intbar(11, 6, configuration.dexed[selected_instance_id].sound_intensity, 4, 1, 1);
-//   }
+    tapTimestamps[0] = tapTimestamps[1];
+    tapTimestamps[1] = tapTimestamps[2];
+    tapTimestamps[2] = tapTimestamps[3];
+    tapTimestamps[3] = now;
+  }
+  uint8_t numIntervals = tapCount - 1;
+  if (numIntervals < 1) return;
 
-//   // Sequencer Settings page
-//   else if (currentID == LCDML.OTHER_getIDFromFunction(UI_func_seq_settings)) {
-//     // Update BPM
-//     display.setTextSize(1);
-//     setModeColor(7);
-//     setCursor_textGrid_small(23, 15);
-//     print_formatted_number(seq.bpm, 3, 7, 1);
-//   }
-// }
+  uint32_t sum = 0;
+  for (uint8_t i = 0; i < numIntervals; i++) {
 
-// extern void updateOLEDsTapTempo();
+    uint8_t newestIdx = (tapCount == 4) ? 3 : tapCount - 1;
+    uint8_t olderIdx = newestIdx - 1 - i;
 
+    if (olderIdx > 3) break;
+    uint32_t diff = tapTimestamps[newestIdx - i] - tapTimestamps[newestIdx - i - 1];
+    sum += diff;
+  }
+  uint32_t avgInterval = sum / numIntervals;
 
-// void onEncoder1Push(i2cEncoderMiniLib* enc) {
-//   uint32_t now = millis();
-//   lastTapTime = now;
-//   if (tapCount == 0) {
-//     tapTempoActive = true;
-//     tapCount = 1;
-//     tapTimestamps[0] = now;
-//     updateOLEDsTapTempo();
-//     return;
-//   }
-//   if (tapCount < 4) {
-//     tapTimestamps[tapCount] = now;
-//     tapCount++;
-//   }
-//   else {
+  uint16_t newBPM = constrain((int)(60000 / avgInterval), 30, 240);
+  currentBPM = newBPM;
+  seq.bpm = newBPM;
+  update_seq_speed();
+  updateOLEDsTapTempo();
+  updateCurrentPageDisplay();
+  I2C_encoderActivity = true;
+  I2C_encoderActivityTimer = 0;
+}
 
-//     tapTimestamps[0] = tapTimestamps[1];
-//     tapTimestamps[1] = tapTimestamps[2];
-//     tapTimestamps[2] = tapTimestamps[3];
-//     tapTimestamps[3] = now;
-//   }
-//   uint8_t numIntervals = tapCount - 1;
-//   if (numIntervals < 1) return;
+// Encoder 1: BPM
+void onEncoder1Increment(i2cEncoderMiniLib* enc) {
+  currentBPM = constrain(currentBPM + 1, 30, 240);
+  seq.bpm = currentBPM;
+  update_seq_speed();
+  I2C_encoderActivity = true;
+  I2C_encoderActivityTimer = 0;
+  lastEncoder = 1;   // BPM-Encoder
+}
+void onEncoder1Decrement(i2cEncoderMiniLib* enc) {
+  currentBPM = constrain(currentBPM - 1, 30, 240);
+  seq.bpm = currentBPM;
+  update_seq_speed();
+  I2C_encoderActivity = true;
+  I2C_encoderActivityTimer = 0;
+  lastEncoder = 1;
+}
 
-//   uint32_t sum = 0;
-//   for (uint8_t i = 0; i < numIntervals; i++) {
+void onEncoder2Increment(i2cEncoderMiniLib* enc) {
+  currentVol = constrain(currentVol + 1, 0, 100);
+  configuration.dexed[selected_instance_id].sound_intensity = currentVol;
+  MicroDexed[selected_instance_id]->setGain(midi_volume_transform(map(currentVol, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
+  MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, currentVol);
+  I2C_encoderActivity = true;
+  I2C_encoderActivityTimer = 0;
+  lastEncoder = 2;
+}
 
-//     uint8_t newestIdx = (tapCount == 4) ? 3 : tapCount - 1;
-//     uint8_t olderIdx = newestIdx - 1 - i;
-
-//     if (olderIdx > 3) break;
-//     uint32_t diff = tapTimestamps[newestIdx - i] - tapTimestamps[newestIdx - i - 1];
-//     sum += diff;
-//   }
-//   uint32_t avgInterval = sum / numIntervals;
-
-//   uint16_t newBPM = constrain((int)(60000 / avgInterval), 30, 240);
-//   currentBPM = newBPM;
-//   seq.bpm = newBPM;
-//   update_seq_speed();
-//   updateOLEDsTapTempo();
-//   updateCurrentPageDisplay();
-// }
-
-// // Encoder 1: BPM
-// void onEncoder1Increment(i2cEncoderMiniLib* enc) {
-//   currentBPM = constrain(currentBPM + 1, 30, 240);
-//   seq.bpm = currentBPM;
-//   update_seq_speed();
-//   encoderActivity = true;
-//   encoderActivityTimer = 0;
-//   lastEncoder = 1;   // BPM-Encoder
-// }
-// void onEncoder1Decrement(i2cEncoderMiniLib* enc) {
-//   currentBPM = constrain(currentBPM - 1, 30, 240);
-//   seq.bpm = currentBPM;
-//   update_seq_speed();
-//   encoderActivity = true;
-//   encoderActivityTimer = 0;
-//   lastEncoder = 1;
-// }
-
-// void onEncoder2Increment(i2cEncoderMiniLib* enc) {
-//   currentVol = constrain(currentVol + 1, 0, 100);
-//   configuration.dexed[selected_instance_id].sound_intensity = currentVol;
-//   MicroDexed[selected_instance_id]->setGain(
-//     midi_volume_transform(map(currentVol, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)) );
-//   MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, currentVol);
-//   encoderActivity = true;
-//   encoderActivityTimer = 0;
-//   lastEncoder = 2;
-// }
-
-// void onEncoder2Decrement(i2cEncoderMiniLib* enc) {
-//   currentVol = constrain(currentVol - 1, 0, 100);
-//   configuration.dexed[selected_instance_id].sound_intensity = currentVol;
-//   MicroDexed[selected_instance_id]->setGain(
-//     midi_volume_transform(map(currentVol, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127))  );
-//   MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, currentVol);
-//   encoderActivity = true;
-//   encoderActivityTimer = 0;
-//   lastEncoder = 2;
-// }
-// #endif
-
-
+void onEncoder2Decrement(i2cEncoderMiniLib* enc) {
+  currentVol = constrain(currentVol - 1, 0, 100);
+  configuration.dexed[selected_instance_id].sound_intensity = currentVol;
+  MicroDexed[selected_instance_id]->setGain(midi_volume_transform(map(currentVol, SOUND_INTENSITY_MIN, SOUND_INTENSITY_MAX, 0, 127)));
+  MD_sendControlChange(configuration.dexed[selected_instance_id].midi_channel, 7, currentVol);
+  I2C_encoderActivity = true;
+  I2C_encoderActivityTimer = 0;
+  lastEncoder = 2;
+}
+#endif
 
 void loop()
 {
 
+  // While WAV recording is running, the SD write loop needs tight timing.
+    // Any I2C traffic on the bus can cause dropped samples / crackles, so we
+    // suspend encoder polling entirely until the recording stops.
+
 #if defined OLED_DISPLAYS
-  if (LCDML.FUNC_getID() == 255)
-    OLED_status();
+  // 2.5 s master tick: rotates oled_info_mode and paints the right panel.
+  if (LCDML.FUNC_getID() == 255 && !I2C_encoderActivity && fm.wav_recorder_mode != 1)
+  {
+    OLED_update();
+  // 1 Hz left-panel tick: info row + countdown bar. Self-throttled and
+  // suppressed while the screensaver is disabled or active.
+  OLED_update_left_panel();
+  }
 #endif
 
-#ifdef I2C_ENCODERS
-  
-  enc1.updateStatus();
-  enc2.updateStatus();
+#ifdef MINI_ENCODER
+  const bool encoder_setup_page_active =
+    (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_encoder_address_setup));
 
-  if (encoderActivity) {
-    if (encoderActivityTimer < 3000) {
+  if (!encoder_setup_page_active && fm.wav_recorder_mode != 1) {
 
-      updateRightOLEDEncoder();
-    }
-    else {
+    enc1.updateStatus();
+    enc2.updateStatus();
 
-      if (LCDML.FUNC_getID() != 255) {
-        clearRightOLED();
+    if (I2C_encoderActivity) {
+      if (I2C_encoderActivityTimer < 3000) {
+        I2C_enc_updateRightOLED();
       }
-      encoderActivity = false;
+      else {
+        clearRightOLED();
+        I2C_encoderActivity = false;
+      }
     }
   }
+  else if (fm.wav_recorder_mode == 1 && I2C_encoderActivity) {
+    // Recording started mid-activity: clear the activity flag so the
+    // right OLED doesn't stay frozen in "encoder activity" mode.
+    I2C_encoderActivity = false;
+    clearRightOLED();
+  }
 
-  // ---- Tap-Tempo: 
+  // ---- Tap-Tempo:
+  // (Tap-tempo timer keeps counting during recording and will simply
+  //  time out after 3 s without further taps — no I2C access needed.)
   if (tapTempoActive && (millis() - lastTapTime > 3000)) {
     tapTempoActive = false;
     tapCount = 0;
   }
-  
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG
-  if (touchReadTimer >= 5) {
+  if (touchReadTimer >= 5 && fm.wav_recorder_mode != 1) {
     update_right_led_ring();
     update_left_led_ring();
 #if  defined LED_DEBUG
@@ -3381,9 +3410,8 @@ void loop()
   }
 
   // MAM functions
-
 #ifdef MUSIKANDMORE
-  if (configuration.sys.sus_pedal)
+  if (configuration.sys.sus_pedal && fm.wav_recorder_mode != 1)
   {
     trs_pedal = digitalRead(TRS_PEDAL_IN);
     if (trs_pedal != trs_pedal_previous)
@@ -3397,8 +3425,7 @@ void loop()
     }
   }
 
-#ifdef MUSIKANDMORE
-  if (configuration.sys.ext_clock)
+  if (configuration.sys.ext_clock && fm.wav_recorder_mode != 1)
   {
     seq.clock = 1;
     cv_clock = digitalRead(CV_CLOCK_IN);
@@ -3434,10 +3461,13 @@ void loop()
   }
 #endif
 
-#endif
 
 #if defined ESP_DISPLAY
   processIncomingSerial();
+#endif
+
+#if defined XIAO_BLUETOOTH_MIDI
+  xiao_midi_loop();
 #endif
 
   // Serial read (commands from web remote)
@@ -3451,7 +3481,6 @@ void loop()
       sd_filemanager();
     }
   }
-
 
 #if 1//defined APC  //only necessary for APC since it is conflicting with Interrupt Timer
   // MIDI input handling
@@ -4431,19 +4460,57 @@ void handleNoteOn(byte inChannel, byte inNumber, byte inVelocity, byte device)
 
           if (slot != 99)
           {
+            // -------------------------------------------------------------------
+            //  Consume the per-step FX override for this specific hit.
+            //
+            //  The slot was just allocated above by drum_get_slot(), so this is
+            //  the correct moment to override the sample defaults for one
+            //  single trigger.  The override pair is cleared here so it can
+            //  never leak into a later step.
+            //
+            //  Values are already in the final range (0..100 for REV/DLY/VOL,
+            //  0..127 with 64=centre for PAN).  Clamp defensively for legacy
+            //  data that might still be 0..127.
+            // -------------------------------------------------------------------
+            uint8_t eff_reverb = drum_config[d].reverb_send;
+            uint8_t eff_delay1 = drum_config[d].delay1;
+            uint8_t eff_delay2 = drum_config[d].delay2;
+            int8_t  eff_pan    = drum_config[d].pan;
+            uint8_t eff_vol    = drum_config[d].vol_max;
+
+            const uint8_t fx_cmd = g_drum_fx_override_cmd;
+            const uint8_t fx_val = g_drum_fx_override_val;
+            g_drum_fx_override_cmd = MDT_FX_NONE;
+            g_drum_fx_override_val = 0;
+
+            if (fx_cmd != MDT_FX_NONE) {
+              const uint8_t max = mdt_fx_param_max[fx_cmd];
+              const uint8_t v   = (fx_val > max) ? max : fx_val;
+              switch (fx_cmd) {
+                case MDT_FX_REV:  eff_reverb = v;                       break;
+                case MDT_FX_DLY1: eff_delay1 = v;                       break;
+                case MDT_FX_DLY2: eff_delay2 = v;                       break;
+                case MDT_FX_PAN:  eff_pan    = map(v, 0, 127, -99, 99); break;
+                case MDT_FX_VOL:  eff_vol    = v;                       break;
+              }
+            }
+
 #if defined(DRUMS_FILTERS) 
             set_filter(d, slot, 0, 0, false);
 #endif
-            global_delay_in_mixer[0]->gain(slot + 10, get_sample_delay1(d) / 5);
-            global_delay_in_mixer[1]->gain(slot + 10, get_sample_delay2(d) / 5);
 
-            float pan = mapfloat(drum_config[d].pan, -99, 99, 0.0, 1.0);
+            // Delay sends — 0..100 converted to the 0..1 the mixer expects,
+            // matching the /5 scaling of get_sample_delay1/2.
+            global_delay_in_mixer[0]->gain(slot + 10, (eff_delay1 / 100.0F) / 5.0F);
+            global_delay_in_mixer[1]->gain(slot + 10, (eff_delay2 / 100.0F) / 5.0F);
 
-            drum_mixer_r.gain(slot, (1.0F - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
-            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, get_sample_vol_max(d))));
+            float pan = mapfloat(eff_pan, -99, 99, 0.0, 1.0);
 
-            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(get_sample_reverb_send(d)));
-            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(get_sample_reverb_send(d)));
+            drum_mixer_r.gain(slot, (1.0F - pan) * volume_transform(mapfloat(inVelocity, 0, 127, 0, eff_vol / 100.0F)));
+            drum_mixer_l.gain(slot, pan * volume_transform(mapfloat(inVelocity, 0, 127, 0, eff_vol / 100.0F)));
+
+            drum_reverb_send_mixer_r.gain(slot, (1.0 - pan) * volume_transform(eff_reverb / 100.0F));
+            drum_reverb_send_mixer_l.gain(slot, pan * volume_transform(eff_reverb / 100.0F));
 
 #if defined(COMPILE_FOR_PROGMEM) || defined(COMPILE_FOR_PSRAM)
             if (drum_config[d].drum_data != NULL && drum_config[d].len > 0 && drum_config[d].len < 10000000) {
@@ -4998,20 +5065,43 @@ void handleNoteOff(byte inChannel, byte inNumber, byte inVelocity, byte device)
   }
 }
 
+// FLASHMEM void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
+// {
+//   if (delay_no == 0)
+//   {
+//     // configuration.fx.delay_level1[instance] = map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+//     // MD_sendControlChange(configuration.dexed[instance].midi_channel, 107, configuration.fx.delay_level1[instance]);
+//     MD_sendControlChange(configuration.dexed[instance].midi_channel, 107, map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX));
+
+//     global_delay_in_mixer[0]->gain(instance, mapfloat(configuration.fx.delay_level1[instance], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 0.9));
+//   }
+//   else if (delay_no == 1)
+//   {
+//     // configuration.fx.delay_level2[instance] = map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
+//     global_delay_in_mixer[1]->gain(instance, mapfloat(configuration.fx.delay_level2[instance], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 0.9));
+//   }
+// }
+
 FLASHMEM void set_dexed_delay_level(uint8_t delay_no, uint8_t instance, uint8_t level)
 {
   if (delay_no == 0)
   {
-    // configuration.fx.delay_level1[instance] = map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-    // MD_sendControlChange(configuration.dexed[instance].midi_channel, 107, configuration.fx.delay_level1[instance]);
-    MD_sendControlChange(configuration.dexed[instance].midi_channel, 107, map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX));
+    MD_sendControlChange(configuration.dexed[instance].midi_channel,
+                         107,
+                         map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX));
 
-    global_delay_in_mixer[0]->gain(instance, mapfloat(configuration.fx.delay_level1[instance], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 0.9));
+    // Use the passed level, not the persistent config value.
+    // The previous version silently ignored the argument, which is why
+    // MDTracker's DLY1 command had no audible effect.
+    global_delay_in_mixer[0]->gain(
+        instance,
+        mapfloat(level, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
   }
   else if (delay_no == 1)
   {
-    // configuration.fx.delay_level2[instance] = map(level, 0, 0x7f, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX);
-    global_delay_in_mixer[1]->gain(instance, mapfloat(configuration.fx.delay_level2[instance], DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0, 0.9));
+    global_delay_in_mixer[1]->gain(
+        instance,
+        mapfloat(level, DELAY_LEVEL_MIN, DELAY_LEVEL_MAX, 0.0, 0.9));
   }
 }
 
@@ -6328,6 +6418,8 @@ FLASHMEM void check_configuration_sys(void)
       configuration.sys.ra_btn_target[i] = i;  // default: slot i → target i
   }
 #endif
+
+
 }
 
 FLASHMEM void check_configuration_fx(void)
@@ -6547,7 +6639,8 @@ FLASHMEM void init_configuration(void)
   configuration.sys.right_edit_color_scheme = 10;
   configuration.sys.right_edit_custom_start = 0;
   configuration.sys.right_edit_custom_end = 2;
-  configuration.sys.led_brightness_gradient = 80;
+  configuration.sys.led_brightness_gradient = 100;
+  configuration.sys.led_brightness = 1;   //  default master brightness
 #endif
 }
 
@@ -6905,15 +6998,36 @@ FLASHMEM void set_sys_params(void)
 {
   // set initial volume
   set_volume(configuration.sys.vol, configuration.sys.mono);
+
 #ifdef CAPACITIVE_TOUCH_DISPLAY
   display.brightness(configuration.sys.brightness);
 #endif
 
-#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
-
+#if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017)
   set_custom_enc_colors();
 #endif
 
+#if defined LED_RINGS
+
+  uint8_t hw_current = constrain(configuration.sys.led_brightness, 0, 1); //hw on/off only, no current level changes
+
+  static uint8_t last_written_hw_current = 0xFF;
+  static bool    first_run = true;
+  if (first_run || hw_current != last_written_hw_current) {
+    last_written_hw_current = hw_current;
+    first_run = false;
+
+    // LEDRing_l.LEDRingSmall_GlobalCurrent(hw_current);
+    // LEDRing_r.LEDRingSmall_GlobalCurrent(hw_current);
+
+    LEDRing_l.LEDRingSmall_GlobalCurrent(3);
+    LEDRing_r.LEDRingSmall_GlobalCurrent(3);
+
+    // GlobalCurrent() leaves the chip on PAGE 1; restore PAGE 0 (PWM).
+    LEDRing_l.LEDRingSmall_PWM_MODE();
+    LEDRing_r.LEDRingSmall_PWM_MODE();
+  }
+#endif
 }
 
 /******************************************************************************

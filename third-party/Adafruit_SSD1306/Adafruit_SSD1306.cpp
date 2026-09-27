@@ -564,7 +564,8 @@ bool Adafruit_SSD1306::begin(uint8_t vcs, uint8_t addr, bool reset,
     }
   }
 
-  // Reset SSD1306 if requested and reset pin specified in constructor
+//phtodo
+  //Reset SSD1306 if requested and reset pin specified in constructor
   if (reset && (rstPin >= 0)) {
     pinMode(rstPin, OUTPUT);
     digitalWrite(rstPin, HIGH);

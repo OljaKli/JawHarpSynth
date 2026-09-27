@@ -51,6 +51,8 @@
 #include "microsynth.h"
 #include "noisemaker.h"
 #include "MultiBandCompressor.h" 
+#include <ArduinoJson.h>
+
 
 #include "ui_liveseq_pianoroll.h"
 #include "ui_livesequencer.h"
@@ -186,6 +188,8 @@ extern uint8_t external_psram_size;
 uint32_t psram_free_bytes = 0;
 PsramLoader sampleLoader(psram_free_bytes);
 
+void UI_func_i2c_scanner(uint8_t param);
+
 #if defined ESP_DISPLAY
 espdisplay display(0);
 extern void sendVolumeIconsMode(bool);
@@ -261,6 +265,8 @@ extern PeriodicTimer sequencer_timer;
 
 #if defined RA_DISPLAY && !defined RA_TOUCH_FT5XX6
 GSL1680 touch;
+#elif defined RA_DISPLAY &&  defined RA_TOUCH_FT5XX6
+extern FT5xx6_Touch touch;
 #elif defined ESP_DISPLAY
 esp_touchscreen touch(0);
 #elif defined GENERIC_DISPLAY
@@ -605,7 +611,7 @@ LCDML_add(24, LCDML_0_10, 4, "Live Sequencer", UI_func_livesequencer);
 LCDML_add(25, LCDML_0_10, 5, "Live Seq. Editor", UI_func_liveseq_graphic);
 LCDML_add(26, LCDML_0_10, 6, "Arpeggio", UI_func_arpeggio);
 LCDML_add(27, LCDML_0_10, 7, "Mute Matrix", UI_func_seq_mute_matrix);
-LCDML_add(28, LCDML_0_10, 8, "Tracker", UI_func_seq_tracker);
+LCDML_add(28, LCDML_0_10, 8, "PatternEditor(NEW)", UI_func_mdtracker_pattern_editor);
 LCDML_add(29, LCDML_0_10, 9, "Probabilities", UI_func_seq_probabilities);
 LCDML_add(30, LCDML_0_10, 10, "Smart Filter", UI_func_smart_filter);
 LCDML_add(31, LCDML_0_10, 11, "Clear ALL", UI_func_clear_all);
@@ -640,18 +646,34 @@ LCDML_add(59, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
 LCDML_add(60, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
 LCDML_add(61, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
 LCDML_add(62, LCDML_0, 18, "Extras/Test", NULL);
-LCDML_add(63, LCDML_0_18, 1, "MIDI/CV Translate", UI_func_cv_page);
-LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(65, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
-LCDML_add(66, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(67, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(68, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
-LCDML_add(69, LCDML_0, 19, "Info", UI_func_information);
-LCDML_addAdvanced(70, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(71, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(72, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(73, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(74, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+
+LCDML_add(63, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
+LCDML_add(64, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
+LCDML_add(65, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(66, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(67, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
+
+#if defined MUSIKANDMORE
+LCDML_add(68, LCDML_0, 19, "MAM Functions", NULL);
+LCDML_add(69, LCDML_0_19, 1, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(70, LCDML_0_19, 2, "I2C Encoder Setup", UI_func_encoder_address_setup);
+LCDML_add(71, LCDML_0_19, 3, "I2C Scanner", UI_func_i2c_scanner);
+LCDML_add(72, LCDML_0_19, 4, "MAM Information", UI_func_mam_info);
+LCDML_add(73, LCDML_0,20, "Info", UI_func_information);
+LCDML_addAdvanced(74, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(75, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(76, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(77, LCDML_0, 24, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(78, LCDML_0, 25, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+#else
+LCDML_add(68, LCDML_0,19, "Info", UI_func_information);
+LCDML_addAdvanced(69, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(72, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(73, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+#endif
+
 
 FLASHMEM void registerScope(uint16_t x, uint16_t y, uint16_t w, uint16_t h = 65, bool onlyDrawWhenRunning = false) {
   currentScopeSettings = {
@@ -800,6 +822,7 @@ FLASHMEM void print_shortcut_navigator()
     display.print("I");
   }
 }
+
 
 FLASHMEM void print_song_playhead()
 {
@@ -1637,6 +1660,23 @@ FLASHMEM bool legacy_touch_button_back_page() //legacy, 2 line text pages with t
     return false;
 }
 
+
+
+#if defined MUSIKANDMORE && !defined MINI_ENCODER
+void UI_func_encoder_address_setup(uint8_t param) {
+  if (LCDML.FUNC_setup()) {
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+  if (LCDML.FUNC_loop()) {
+   ;
+  }
+  if (LCDML.FUNC_close()) {
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+#endif
+
+
 FLASHMEM bool touch_button_back_page() //modern pages with touch back button
 {
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_voice_editor) ||
@@ -1648,6 +1688,9 @@ FLASHMEM bool touch_button_back_page() //modern pages with touch back button
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_noisemaker) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_midi_channels) ||
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_dexed_setup) ||
+#if defined MUSIKANDMORE && defined MINI_ENCODER
+    LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_encoder_address_setup) ||
+#endif
     LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_mixer)
     ) {
     return true;
@@ -2317,9 +2360,20 @@ uint8_t chain_endline = 99;
 
 FLASHMEM void calc_chain_endline()
 {
-  for (uint8_t y = 0; y < 16; y++) // chain
+  // Default to "no end marker" so a fully populated chain cannot
+  // keep a stale value from a previous chain.
+  chain_endline = 99;
+
+  const uint8_t currentChain =
+      seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+
+  // No chain assigned to this song step -> nothing to scan.
+  if (currentChain >= NUM_CHAINS)
+    return;
+
+  for (uint8_t y = 0; y < 16; y++)
   {
-    if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][y] == 99)
+    if (seq.chain[currentChain][y] == 99)
     {
       chain_endline = y;
       break;
@@ -2331,31 +2385,57 @@ uint8_t chain_warning_number_buffer;
 
 FLASHMEM void empty_chain_warning_text_in_song_page()
 {
-  if (chain_warning_number_buffer != seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos])
+  const uint8_t currentChain =
+      seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+
+  if (chain_warning_number_buffer != currentChain)
   {
-    if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][0] == 99)
+    if (currentChain < NUM_CHAINS && seq.chain[currentChain][0] == 99)
     {
       display.setCursor(13 * CHAR_width_small, 29 * CHAR_height_small);
       display.setTextSize(1);
       display.setTextColor(RED, COLOR_BACKGROUND);
       display.print(F("CHAIN "));
-      display.printf("[%02d]", seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]);
+      display.printf("[%02d]", currentChain);
       display.print(F(" IS EMPTY"));
     }
     else
     {
       checkWebRemote();
-      display.fillRect(13 * CHAR_width_small, 29 * CHAR_height_small, 113, 7, COLOR_BACKGROUND);
+      display.fillRect(13 * CHAR_width_small, 29 * CHAR_height_small,
+                       113, 7, COLOR_BACKGROUND);
     }
-    chain_warning_number_buffer = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+    chain_warning_number_buffer = currentChain;
   }
 }
 
 FLASHMEM void print_chain_steps_in_song_page()
 {
-  uint8_t y_start;
-  uint8_t y_end;
-  if (song_page_full_draw_chain_complete == false)
+  // --- Current chain ---
+  const uint8_t currentChain =
+      seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+  const bool chainValid = (currentChain < NUM_CHAINS);
+
+  // --- Recompute END marker FIRST and detect whether it moved ---
+  // This must happen before deciding on the redraw window, otherwise a
+  // moved END marker can never be cleared in the same frame.
+  const uint8_t prevEnd = chain_endline;
+  if (chainValid)
+    calc_chain_endline();
+  else
+    chain_endline = 99;
+
+  const bool endMoved = (chain_endline != prevEnd);
+
+  // --- Determine redraw window ---
+  // A full redraw is required whenever:
+  //   - the caller asked for one (flag was cleared), or
+  //   - the END marker moved (stale markers must be cleared).
+  const bool fullRedraw =
+      (song_page_full_draw_chain_complete == false) || endMoved;
+
+  uint8_t y_start, y_end;
+  if (fullRedraw)
   {
     y_start = 0;
     y_end = 16;
@@ -2368,99 +2448,122 @@ FLASHMEM void print_chain_steps_in_song_page()
   else if (seq.song_menu == 15)
   {
     y_start = 14;
-    y_end = 15;
+    y_end = 16;                 // was 15 -> row 15 was never redrawn
   }
   else
   {
     y_start = seq.song_menu - 1;
     y_end = seq.song_menu + 2;
   }
+
   display.setTextSize(1);
-  if (seq.edit_state && seq.cycle_touch_element == 9)
+
+  // --- Transpose edit (cycle 9), guarded ---
+  if (seq.edit_state && seq.cycle_touch_element == 9 && chainValid)
   {
-    seq.chain_transpose[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = seq.sub_menu;
+    seq.chain_transpose[currentChain][seq.song_menu] = seq.sub_menu;
   }
+
+  // --- Main chain step list ---
   if (seq.cycle_touch_element < 10)
   {
-    calc_chain_endline();
-    for (uint8_t y = y_start; y < y_end; y++) // chain
+    for (uint8_t y = y_start; y < y_end; y++)
     {
-      if (seq.cycle_touch_element != 7)
-      {
-        display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + y * 10);
-        if (y == chain_endline)
-        {
-          display.setTextColor(RED, COLOR_BACKGROUND);
-          display.print(F("END"));
-          display.setTextColor(GREY1, COLOR_BACKGROUND);
-        }
-        if (seq.edit_state && seq.cycle_touch_element == 6 && seq.song_menu == y)
-          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-        else
-          display.setTextColor(GREY1, COLOR_BACKGROUND);
-        display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + y * 10);
+      // In cycle 7 (pattern select) we normally redraw only the cursor row
+      // to avoid flicker. If a full redraw is needed (END moved), we
+      // redraw every row so stale END / "--" text disappears.
+      if (seq.cycle_touch_element == 7 && y != seq.song_menu && !fullRedraw)
+        continue;
 
-        if (seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos] < 99 && seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][y] < 99)
-        {
-          print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][y], 2);
-          display.print(F(" ")); //clear previous END marking after END value changed
-        }
-        else if (chain_endline != y)
-        {
-          display.setTextColor(GREY1, COLOR_BACKGROUND);
-          display.print(F("-- "));
-        }
+      const uint8_t stepValue = chainValid ? seq.chain[currentChain][y] : 99;
+      const bool    isEnd     = chainValid && (y == chain_endline);
+
+      const bool inverted =
+          (seq.edit_state && seq.cycle_touch_element == 6 && seq.song_menu == y);
+
+      display.setCursor(CHAR_width_small * 44,
+                        CHAR_height_small * 8 + y * 10);
+
+      if (inverted)
+        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+      else if (isEnd)
+        display.setTextColor(RED, COLOR_BACKGROUND);
+      else
+        display.setTextColor(GREY1, COLOR_BACKGROUND);
+
+      // Always write exactly 3 characters so nothing from a previous
+      // frame ("END", "05 ", "-- ") can survive underneath.
+      if (stepValue < 99)
+      {
+        print_formatted_number(stepValue, 2);
+        display.print(F(" "));
+      }
+      else if (isEnd)
+      {
+        display.print(F("END"));
+      }
+      else
+      {
+        display.print(F("-- "));
       }
     }
     song_page_full_draw_chain_complete = true;
   }
-  if (seq.edit_state && seq.cycle_touch_element == 6)
-  {
-    display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
 
-    display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + seq.song_menu * 10);
-    if (chain_endline == seq.song_menu)
-      // if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] == 99 && chain_endline == seq.song_menu)
-      display.print(F("END"));
-    else if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] == 99)
-      display.print(F("--"));
-    else
-      print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu], 2);
-  }
-  else if (seq.edit_state && seq.cycle_touch_element == 7)
+  // --- Cycle 7 overlay: cursor row in red ---
+  // This is what makes the value being edited visible while the
+  // encoder is rotated. The main loop already drew the row with the
+  // value of the *previous* frame; this block overwrites it with the
+  // freshly written value.
+  if (seq.edit_state && seq.cycle_touch_element == 7 && chainValid)
   {
     if (seq.sub_menu == NUM_CHAINS)
+      seq.chain[currentChain][seq.song_menu] = 99;
+    else
+      seq.chain[currentChain][seq.song_menu] = seq.sub_menu;
+
+    display.setCursor(CHAR_width_small * 44,
+                      CHAR_height_small * 8 + seq.song_menu * 10);
+    display.setTextColor(COLOR_SYSTEXT, RED);
+
+    const uint8_t newValue = seq.chain[currentChain][seq.song_menu];
+    if (newValue < 99)
     {
-      seq.sub_menu = 99; // Select empty step/chain
-      seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = seq.sub_menu;
-      seq.sub_menu = NUM_CHAINS;
+      print_formatted_number(newValue, 2);
+      display.print(F(" "));
     }
     else
-      seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] = seq.sub_menu;
-    display.setTextColor(COLOR_SYSTEXT, RED);
-    display.setCursor(CHAR_width_small * 44, CHAR_height_small * 8 + seq.song_menu * 10);
-    if (seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu] == 99)
-      display.print(F("--"));
-    else
-      print_formatted_number(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu], 2);
+    {
+      display.print(F("-- "));
+    }
+
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-    display.print(F(" "));
-    pattern_preview_in_song(seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu]);
+    pattern_preview_in_song(newValue);
   }
-  // print current CHAIN Number
+  else if (seq.edit_state && seq.cycle_touch_element == 7 && !chainValid)
+  {
+    // No chain assigned to this song step - don't write into seq.chain[99].
+    display.setCursor(CHAR_width_small * 44,
+                      CHAR_height_small * 8 + seq.song_menu * 10);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F("NOC"));   // "no chain"
+  }
+
+  // --- Current chain number + chain length (guarded) ---
   display.setTextSize(1);
   display.setCursor(47 * CHAR_width_small, CHAR_height_small * 4);
-  if (seq.edit_state && seq.cycle_touch_element > 5 && seq.cycle_touch_element < 10)
+  if (seq.edit_state && seq.cycle_touch_element > 5 &&
+      seq.cycle_touch_element < 10)
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
   else
     display.setTextColor(GREY1, COLOR_BACKGROUND);
 
-  if (seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos] < 99)
-    print_formatted_number(seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos], 2);
+  if (chainValid)
+    print_formatted_number(currentChain, 2);
   else
     display.print(F("--"));
 
-  display.setCursor(51 * CHAR_width_small, CHAR_height_small * 4); // print chain length of current track step
+  display.setCursor(51 * CHAR_width_small, CHAR_height_small * 4);
   print_formatted_number(get_chain_length_from_current_track(seq.selected_track), 2);
 }
 
@@ -2858,40 +2961,6 @@ FLASHMEM void update_display_functions_while_seq_running()
     print_current_chord();
     draw_euclidean_circle();
   }
-  else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker)) // is in UI of Tracker
-  {
-    display.setTextColor(GREEN, COLOR_BACKGROUND);
-    display.setCursor(5 * CHAR_width_small, (5 + seq.step) * (CHAR_height_small + 3) - 7);
-    display.print(F(">"));
-    if (seq.step == 1)
-    {
-      display.setCursor(CHAR_width_small * 46, 2); // print song step at each 1. pattern step
-      display.setTextColor(COLOR_DRUMS, DX_DARKCYAN);
-      print_formatted_number(seq.current_song_step, 2);
-      display.setCursor(CHAR_width_small * 51, 2);
-      print_formatted_number(get_song_length(), 2);
-
-      for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
-      {
-        display.setTextColor(COLOR_BACKGROUND, DX_DARKCYAN);
-        display.setCursor(CHAR_width_small * 16 + (CHAR_width_small * 3) * d, 2);
-        print_formatted_number(seq.chain_counter[d], 2);
-        tracker_print_pattern((6 + 6 * d) * CHAR_width_small, 48, d);
-        update_pattern_number_in_tracker(d);
-      }
-    }
-
-    if (seq.step > 0)
-    {
-      display.setCursor(5 * CHAR_width_small, (5 + seq.step - 1) * (CHAR_height_small + 3) - 7);
-      display.print(F(" "));
-    }
-    else if (seq.step == 0)
-    {
-      display.setCursor(5 * CHAR_width_small, (5 + 15) * (CHAR_height_small + 3) - 7);
-      display.print(F(" "));
-    }
-  }
   else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song))
   {
     print_song_playhead();
@@ -3193,6 +3262,8 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
     // remove compiler warnings when the param variable is not used:
     LCDML_UNUSED(param);
 
+ oled_ring_screensaver_start();
+
     if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
     {
      // randomSeed(analogRead(0));
@@ -3242,6 +3313,7 @@ if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
+    oled_ring_screensaver_update();
     checkWebRemote();
     if (wakeScreenFlag || LCDML.BT_checkAny()) {
       // fast wakeup from MIDI noteOn event and touch presses
@@ -3296,6 +3368,7 @@ if (configuration.sys.screen_saver_mode == ScreenSaver::RANDOM)
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+    oled_ring_screensaver_stop();
     if (configuration.sys.screen_saver_mode != ScreenSaver::DISABLED)
     {
       encoderDir[ENC_L].reset();
@@ -3319,6 +3392,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 {
   if (LCDML.FUNC_setup()) // ****** SETUP *********
   {
+    oled_ring_screensaver_start(); 
     fade_text = 255;
     encoderDir[ENC_R].reset();
     // remove compiler warnings when the param variable is not used:
@@ -3359,6 +3433,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
 
   if (LCDML.FUNC_loop()) // ****** LOOP *********
   {
+    oled_ring_screensaver_update(); 
     checkWebRemote();
     if (wakeScreenFlag || LCDML.BT_checkAny()) {
       // fast wakeup from MIDI noteOn event and touch presses
@@ -3464,6 +3539,7 @@ FLASHMEM void mFunc_screensaver(uint8_t param) // screensaver
   }
   if (LCDML.FUNC_close()) // ****** STABLE END *********
   {
+    oled_ring_screensaver_stop();
     if (configuration.sys.screen_saver_mode != ScreenSaver::DISABLED)
     {
       encoderDir[ENC_L].reset();
@@ -3489,7 +3565,7 @@ FLASHMEM void setup_screensaver(void)
   {
     // Enable Screensaver (screensaver menu function, time to activate in ms)
     LCDML.SCREEN_enable(mFunc_screensaver, configuration.sys.screen_saver_start * 60000); // from parameter in minutes
-   // LCDML.SCREEN_enable(mFunc_screensaver, 3000); // quick screensaver test time
+   // LCDML.SCREEN_enable(mFunc_screensaver, 2000); // quick screensaver test time
   }
 }
 
@@ -3759,6 +3835,7 @@ extern int glow_menu_item;
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG
+void custom_value_to_rgb(uint8_t value, uint8_t& r, uint8_t& g, uint8_t& b);
 extern int glow_input_value;
 extern int glow_limit_min;
 extern int glow_limit_max;
@@ -3782,15 +3859,26 @@ static void draw_led_gradient_preview(uint8_t ring, uint16_t x, uint16_t y, uint
     float ledPos = (float)ledIdx / 23.0f;      // for colour interpolation within the scheme
 
     uint8_t r, g, b;
-    if (scheme == 10) {
-      float h_start = (float)custom_start * 3.59f;
-      float h_end = (float)custom_end * 3.59f;
-      float hue = h_start + (h_end - h_start) * ledPos;
-      uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
-      r = (color >> 11) & 0x1F; r <<= 3;
-      g = (color >> 5) & 0x3F; g <<= 2;
-      b = color & 0x1F; b <<= 3;
-    }
+   if (scheme == 10) {
+  if (custom_start <= 100 && custom_end <= 100) {
+    // Pure hue-to-hue interpolation
+    float h_start = (float)custom_start * 3.59f;
+    float h_end   = (float)custom_end   * 3.59f;
+    float hue     = h_start + (h_end - h_start) * ledPos;
+    uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+    r = (color >> 11) & 0x1F; r <<= 3;
+    g = (color >> 5)  & 0x3F; g <<= 2;
+    b =  color        & 0x1F; b <<= 3;
+  } else {
+    // Any endpoint in the greyscale band -> interpolate in RGB
+    uint8_t r0, g0, b0, r1, g1, b1;
+    custom_value_to_rgb(custom_start, r0, g0, b0);
+    custom_value_to_rgb(custom_end,   r1, g1, b1);
+    r = r0 + (r1 - r0) * ledPos;
+    g = g0 + (g1 - g0) * ledPos;
+    b = b0 + (b1 - b0) * ledPos;
+  }
+}
     else {
       get_led_color(ring, scheme, ledPos, r, g, b);
     }
@@ -4440,7 +4528,32 @@ extern void setLEDRing(uint8_t ring, uint8_t led, uint8_t r, uint8_t g, uint8_t 
 
 #if defined LED_RINGS || defined LED_DEBUG
 
+
+
+FLASHMEM void custom_value_to_rgb(uint8_t value,
+                                  uint8_t& r, uint8_t& g, uint8_t& b)
+{
+  if (value <= 100) {
+    // Hue wheel, full saturation and value
+    float hue = (float)value * 3.59f;
+    uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+    r = (color >> 11) & 0x1F; r <<= 3;
+    g = (color >> 5)  & 0x3F; g <<= 2;
+    b =  color        & 0x1F; b <<= 3;
+  } else {
+    // 101..200 -> linear ramp from dark grey to white
+    const uint8_t GREY_MIN = 30;      // value at 101
+    const uint8_t GREY_MAX = 255;     // value at 200
+    float t = (value - 101) / 99.0f;  // 0.0 .. 1.0
+    uint8_t v = GREY_MIN + (uint8_t)(t * (GREY_MAX - GREY_MIN) + 0.5f);
+    r = g = b = v;
+  }
+}
+
 FLASHMEM void update_right_led_ring() {
+  #if defined LED_RINGS || defined LED_DEBUG
+    if (oled_ring_screensaver_active) return;
+#endif
   static int16_t lastShownValue = -1;
 
   if (!seq.edit_state) {
@@ -4452,20 +4565,29 @@ FLASHMEM void update_right_led_ring() {
   }
 
   // Determine current value from the active editor (or glow)
+    // MDTracker first: it has its own edit state and cursor and does not
+  // feed the generic UI editor stack.
   int16_t value = 0, minVal = 0, maxVal = 100;
   bool hasValue = false;
-  if (ui.hasEditors()) {
+
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor)) {
+    extern bool mdtracker_get_ring_feedback(int16_t*, int16_t*, int16_t*);
+    hasValue = mdtracker_get_ring_feedback(&value, &minVal, &maxVal);
+  }
+
+  if (!hasValue && ui.hasEditors()) {
     value = ui.getLEDRingValue();
     minVal = ui.getLEDRingMin();
     maxVal = ui.getLEDRingMax();
     hasValue = true;
   }
-  else if (glow_menu_item != 9999 && glow_limit_max > glow_limit_min) {
+  else if (!hasValue && glow_menu_item != 9999 && glow_limit_max > glow_limit_min) {
     value = glow_input_value;
     minVal = glow_limit_min;
     maxVal = glow_limit_max;
     hasValue = true;
   }
+  
   if (!hasValue) {
     if (lastShownValue != -1) {
       lastShownValue = -1;
@@ -4491,15 +4613,26 @@ FLASHMEM void update_right_led_ring() {
     uint8_t r, g, b;
     if (i < lit) {
       float pos = (float)i / 23.0f;
-      if (scheme == 10) {
-        float h_start = (float)custom_start * 3.59f;
-        float h_end = (float)custom_end * 3.59f;
-        float hue = h_start + (h_end - h_start) * pos;
-        uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
-        r = (color >> 11) & 0x1F; r <<= 3;
-        g = (color >> 5) & 0x3F; g <<= 2;
-        b = color & 0x1F; b <<= 3;
-      }
+     if (scheme == 10) {
+  if (custom_start <= 100 && custom_end <= 100) {
+    // Pure hue-to-hue interpolation
+    float h_start = (float)custom_start * 3.59f;
+    float h_end   = (float)custom_end   * 3.59f;
+    float hue     = h_start + (h_end - h_start) * pos;
+    uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+    r = (color >> 11) & 0x1F; r <<= 3;
+    g = (color >> 5)  & 0x3F; g <<= 2;
+    b =  color        & 0x1F; b <<= 3;
+  } else {
+    // Any endpoint in the greyscale band -> interpolate in RGB
+    uint8_t r0, g0, b0, r1, g1, b1;
+    custom_value_to_rgb(custom_start, r0, g0, b0);
+    custom_value_to_rgb(custom_end,   r1, g1, b1);
+    r = r0 + (r1 - r0) * pos;
+    g = g0 + (g1 - g0) * pos;
+    b = b0 + (b1 - b0) * pos;
+  }
+}
       else {
         get_led_color(1, scheme, pos, r, g, b);
       }
@@ -4522,6 +4655,9 @@ FLASHMEM void update_right_led_ring() {
 
 
 void update_left_led_ring() {
+  #if defined LED_RINGS || defined LED_DEBUG
+    if (oled_ring_screensaver_active) return;
+#endif
   static int16_t lastShownValue = -1;
 
   // Determine which mode to show:
@@ -4560,14 +4696,25 @@ void update_left_led_ring() {
   auto getColor = [&](uint8_t ledIndex, float pos) {
     uint8_t r, g, b;
     if (scheme == 10) {
-      float h_start = (float)custom_start * 3.59f;
-      float h_end = (float)custom_end * 3.59f;
-      float hue = h_start + (h_end - h_start) * pos;
-      uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
-      r = (color >> 11) & 0x1F; r <<= 3;
-      g = (color >> 5) & 0x3F; g <<= 2;
-      b = color & 0x1F; b <<= 3;
-    }
+  if (custom_start <= 100 && custom_end <= 100) {
+    // Pure hue-to-hue interpolation
+    float h_start = (float)custom_start * 3.59f;
+    float h_end   = (float)custom_end   * 3.59f;
+    float hue     = h_start + (h_end - h_start) * pos;
+    uint16_t color = ColorHSV((uint16_t)hue, 255, 255);
+    r = (color >> 11) & 0x1F; r <<= 3;
+    g = (color >> 5)  & 0x3F; g <<= 2;
+    b =  color        & 0x1F; b <<= 3;
+  } else {
+    // Any endpoint in the greyscale band -> interpolate in RGB
+    uint8_t r0, g0, b0, r1, g1, b1;
+    custom_value_to_rgb(custom_start, r0, g0, b0);
+    custom_value_to_rgb(custom_end,   r1, g1, b1);
+    r = r0 + (r1 - r0) * pos;
+    g = g0 + (g1 - g0) * pos;
+    b = b0 + (b1 - b0) * pos;
+  }
+}
     else {
       get_led_color(0, scheme, pos, r, g, b);
     }
@@ -5198,6 +5345,7 @@ extern bool livemod_touch_state;
 
 FLASHMEM void lcdml_menu_control(void)
 {
+ 
   // If something must init, put in in the setup condition
 
   if (back_from_volume > BACK_FROM_VOLUME_MS && LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_volume))
@@ -5308,33 +5456,33 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
 
 
-#ifdef USB_KEYPAD // USB KEYPAD CONTROL TEST
-  if (USB_KEY != 0)
-  {
-    switch (USB_KEY)
-    {
-    case 211:
-      g_LCDML_CONTROL_Encoder_position[ENC_L] = -4;
-      break;
-    case 218:
-      g_LCDML_CONTROL_Encoder_position[ENC_L] = 4;
-      break;
-    case 43:
-      button[ENC_L] = LOW;
-      break;
+// #ifdef USB_KEYPAD // USB KEYPAD CONTROL TEST
+//   if (USB_KEY != 0)
+//   {
+//     switch (USB_KEY)
+//     {
+//     case 211:
+//       g_LCDML_CONTROL_Encoder_position[ENC_L] = -4;
+//       break;
+//     case 218:
+//       g_LCDML_CONTROL_Encoder_position[ENC_L] = 4;
+//       break;
+//     case 43:
+//       button[ENC_L] = LOW;
+//       break;
 
-    case 214:
-      g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
-      break;
-    case 217:
-      g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
-      break;
-    case 10:
-      button[ENC_R] = LOW;
-      break;
-    }
-  }
-#endif
+//     case 214:
+//       g_LCDML_CONTROL_Encoder_position[ENC_R] = -4;
+//       break;
+//     case 217:
+//       g_LCDML_CONTROL_Encoder_position[ENC_R] = 4;
+//       break;
+//     case 10:
+//       button[ENC_R] = LOW;
+//       break;
+//     }
+//   }
+// #endif
 
 #if defined(RA_DISPLAY) 
   if (ra_panel_enc_l != 0) {
@@ -5353,17 +5501,17 @@ FLASHMEM void lcdml_menu_control(void)
     const bool xy = !seq.edit_state && (
       LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) ||
       LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) ||
-      LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker));
+      LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor));
     if (ra_panel_virt_right) { ra_panel_virt_right = false; if (xy) g_LCDML_CONTROL_Encoder_position[ENC_L] = -4; else g_LCDML_CONTROL_Encoder_position[ENC_R] = -4; }
     if (ra_panel_virt_left) { ra_panel_virt_left = false; if (xy) g_LCDML_CONTROL_Encoder_position[ENC_L] = 4; else g_LCDML_CONTROL_Encoder_position[ENC_R] = 4; }
   }
 #endif
 
 #ifdef MUSIKANDMORE
-  if (configuration.sys.vol_control)
+  if (configuration.sys.vol_control && fm.wav_recorder_mode != 1)
   {
     if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song) && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
-      LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker))
+      LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor))
     {
       // analog_volume_value = 1024 - analogRead(ANALOG_VOLUME_IN);
       analog_volume_value = analogRead(ANALOG_VOLUME_IN);
@@ -5570,7 +5718,7 @@ FLASHMEM void lcdml_menu_control(void)
     //   reverse_y = true;
 
     // some pages do x/y navigation using ENC[R]for y and ENC[L] for x movement - depending on that and the edit state of the field, this needs special handling for gamepad usage
-    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker))
+    if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) || LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor))
     {
 
       if (seq.edit_state)
@@ -5640,7 +5788,7 @@ FLASHMEM void lcdml_menu_control(void)
       }
       else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_pattern_editor) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_settings) &&
-        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) &&
+        LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song))
@@ -5870,7 +6018,11 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
       encoderDir[ENC_L].Down(true);
       LCDML.BT_down();
-      if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_volume))
+      if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_volume)
+
+          && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor)
+
+         )
       {
         // special case : if is in tracker/song edit, left ENC controls x axis, right ENC controls y axis
         if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign == 0)
@@ -5905,10 +6057,12 @@ FLASHMEM void lcdml_menu_control(void)
             else if (seq.cycle_touch_element == 5) // is in song edit
             {
               seq.cycle_touch_element = 6; // switch to chain edit
+              song_page_full_draw_chain_complete = false;
             }
             else if (seq.cycle_touch_element == 6) // is in chain edit
             {
               seq.cycle_touch_element = 8; // switch to transpose edit
+              song_page_full_draw_chain_complete = false;
             }
           seq.help_text_needs_refresh = true;
 
@@ -5916,7 +6070,7 @@ FLASHMEM void lcdml_menu_control(void)
         }
         else if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign == 5) ||
           // select track for instrument or select track for tracktype change
-          (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) && seq.edit_state == false) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) && seq.edit_state == false))
+          (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor) && seq.edit_state == false) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) && seq.edit_state == false))
 
         {
 
@@ -5943,11 +6097,6 @@ FLASHMEM void lcdml_menu_control(void)
               seq.selected_track++;
             }
           }
-        }
-        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) && seq.edit_state)
-        {
-          if (seq.vel[seq.current_pattern[seq.selected_track]][seq.scrollpos] < 253)
-            seq.vel[seq.current_pattern[seq.selected_track]][seq.scrollpos]++;
         }
         else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign != 0)
         { // do nothing
@@ -6002,7 +6151,11 @@ FLASHMEM void lcdml_menu_control(void)
 #endif
       encoderDir[ENC_L].Up(true);
       LCDML.BT_up();
-      if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_volume))
+      if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_volume)
+
+          && LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_mdtracker_pattern_editor)
+
+         )
       {
         // special case : if is in tracker edit, left ENC controls x axis, right ENC controls y axis
         if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign == 0)
@@ -6042,7 +6195,7 @@ FLASHMEM void lcdml_menu_control(void)
         }
         else if ((LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign == 1) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign == 5) ||
           // select track for instrument or select track for tracktype change
-          (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) && seq.edit_state == false) || (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) && seq.edit_state == false))
+           (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_MultiSamplePlay) && seq.edit_state == false))
         {
 
           if (seq.selected_track == 0)
@@ -6054,11 +6207,6 @@ FLASHMEM void lcdml_menu_control(void)
           }
           else
             seq.selected_track--;
-        }
-        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_seq_tracker) && seq.edit_state)
-        {
-          if (seq.vel[seq.current_pattern[seq.selected_track]][seq.scrollpos] > 0)
-            seq.vel[seq.current_pattern[seq.selected_track]][seq.scrollpos]--;
         }
         else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_song) && seq.tracktype_or_instrument_assign != 0)
         { // do nothing
@@ -6168,7 +6316,6 @@ FLASHMEM void lcdml_menu_control(void)
 
             LCDML.BT_quit();
             LCDML.SCREEN_resetTimer(); // reset timer on exiting screensaver through back key
-
           }
         }
       }
@@ -9689,14 +9836,13 @@ FLASHMEM void print_arranger_zone_info() {
     uint8_t chord_col = 1;
     uint8_t song_col, live_col;
     if (seq.song_position_mode == 0) {
-        song_col = 18;
-        live_col = 36;
+        song_col = 20;  
+        live_col = 38;   
     } else {
-        live_col = 18;
-        song_col = 36;
+        live_col = 20;  
+        song_col = 38;  
     }
 
-    // Prepare the zone data with the correct column for each
     struct ZoneInfo {
         const char* label;
         uint8_t start;
@@ -9708,10 +9854,11 @@ FLASHMEM void print_arranger_zone_info() {
     ZoneInfo songZone = { "SONG", seq.song_zone_start, seq.song_zone_end, song_col };
     ZoneInfo liveZone = { "LIVE", seq.live_zone_start, 95, live_col };
 
-    // Order array can remain fixed because the column is assigned correctly
     ZoneInfo zones[3] = { chordZone, songZone, liveZone };
 
     display.setTextSize(1);
+
+    const uint8_t FIXED_WIDTH = 17;
 
     for (uint8_t i = 0; i < 3; i++) {
         ZoneInfo& z = zones[i];
@@ -9729,21 +9876,34 @@ FLASHMEM void print_arranger_zone_info() {
             display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
         }
 
-        display.print(z.label);
-        display.print(" ");
-
         char lowName[6], highName[6];
         getNoteName(lowName, z.start);
         getNoteName(highName, z.end);
-        display.print(lowName);
-        display.print(" - ");
-        display.print(highName);
 
-        // Clear leftover characters to avoid ghosting
-        display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND);
-        while (display.getCursorX() < (z.col + 17) * CHAR_width_small) display.print(' ');
+        // Build the core string: label (exactly as given), a single space, start note, " - ", end note.
+        // No fixed‑width padding for the label – only one space after it.
+        char core[25];
+        snprintf(core, sizeof(core), "%s %s - %s", z.label, lowName, highName);
+
+        // Truncate if it somehow exceeds the fixed width (shouldn't happen)
+        uint8_t coreLen = strlen(core);
+        if (coreLen > FIXED_WIDTH) coreLen = FIXED_WIDTH;
+
+        // Print the core (may be shorter than FIXED_WIDTH)
+        display.print(core);
+ display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+        // Fill the remaining characters with spaces in the background colour.
+        // This erases any leftover pixels from previous content, including any
+        // extra spaces that might have been printed before.
+        if (coreLen < FIXED_WIDTH) {
+           
+            for (uint8_t p = coreLen; p < FIXED_WIDTH; p++) {
+                display.print(" ");
+            }
+        }
     }
 
+    // Restore default text colour
     display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
 }
 
@@ -14270,225 +14430,6 @@ FLASHMEM void UI_func_microsynth(uint8_t param)
   }
 }
 
-FLASHMEM void tracker_print_pattern(int xpos, int ypos, uint8_t track_number)
-{
-  uint8_t yspacer = CHAR_height_small + 3;
-  uint8_t ycount = 0;
-  display.setTextSize(1);
-
-  for (uint8_t y = 0; y < 16; y++)
-  {
-    // print data byte of current step
-    if (track_number == seq.selected_track && y == seq.scrollpos && seq.current_chain[track_number] != 99) // print velocity of active pattern-step
-    {
-      if (seq.edit_state)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      display.setCursor(22 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small);
-      print_formatted_number(seq.vel[seq.current_pattern[track_number]][y], 3);
-      display.setCursor(34 * CHAR_width_small, DISPLAY_HEIGHT - CHAR_height_small);
-      if (seq.vel[seq.current_pattern[track_number]][y] < 128)
-        display.print("VELOCITY");
-      else if (seq.vel[seq.current_pattern[track_number]][y] > 209)
-        display.print("PITCHSMP");
-      else if (seq.vel[seq.current_pattern[track_number]][y] > 199)
-        display.print("CHORD   ");
-      else
-        display.print("OTHER   ");
-    }
-
-    /// -- update all other columns --
-
-    display.setCursor(xpos, ypos + ycount * yspacer);
-    if (seq.note_data[seq.current_pattern[track_number]][y] != 99 && seq.note_data[seq.current_pattern[track_number]][y] != 0 && seq.current_chain[track_number] != 99)
-    {
-      if (seq.edit_state && track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      else
-        set_pattern_content_type_color(seq.current_pattern[track_number]);
-      display.print(tracker_find_shortname_from_pattern_step(track_number, seq.current_pattern[track_number], y)[0]);
-    }
-    else
-    {
-      if (seq.edit_state && track_number == seq.selected_track && y == seq.scrollpos && seq.current_chain[track_number] != 99)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (track_number == seq.selected_track && y == seq.scrollpos && seq.current_chain[track_number] != 99)
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      else
-        display.setTextColor(GREY3, COLOR_BACKGROUND);
-      display.print("-");
-    }
-    display.setCursor(xpos + 2 * CHAR_width_small, ypos + ycount * yspacer);
-    if (seq.note_data[seq.current_pattern[track_number]][y] != 99 && seq.note_data[seq.current_pattern[track_number]][y] != 0 && seq.note_data[seq.current_pattern[track_number]][y] != 130 && seq.current_chain[track_number] != 99)
-    {
-      if (seq.edit_state && track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      else
-        set_pattern_content_type_color(seq.current_pattern[track_number]);
-      print_formatted_number(seq.note_data[seq.current_pattern[track_number]][y], 3);
-    }
-    else if (seq.note_data[seq.current_pattern[track_number]][y] == 0 && seq.current_chain[track_number] != 99) // empty
-    {
-      if (seq.edit_state && track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      else
-        display.setTextColor(GREY2, COLOR_BACKGROUND);
-      print_formatted_number(seq.note_data[seq.current_pattern[track_number]][y], 3);
-    }
-    else if (seq.note_data[seq.current_pattern[track_number]][y] == 130 && seq.current_chain[track_number] != 99) // Latch
-    {
-      if (seq.edit_state && track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (track_number == seq.selected_track && y == seq.scrollpos)
-        display.setTextColor(COLOR_BACKGROUND, DX_DARKCYAN);
-      else
-        display.setTextColor(DX_DARKCYAN, COLOR_BACKGROUND);
-      display.print("LAT");
-    }
-    else
-    {
-      if (seq.edit_state && track_number == seq.selected_track && y == seq.scrollpos && seq.current_chain[track_number] != 99)
-        display.setTextColor(COLOR_SYSTEXT, RED);
-      else if (track_number == seq.selected_track && y == seq.scrollpos && seq.current_chain[track_number] != 99)
-        display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
-      else
-        display.setTextColor(GREY2, COLOR_BACKGROUND);
-      display.print("---");
-    }
-    ycount++;
-  }
-}
-
-FLASHMEM void UI_func_seq_tracker(uint8_t param)
-{
-  if (LCDML.FUNC_setup()) // ****** SETUP *********
-  {
-#if defined ESP_DISPLAY
-    sendVolumeIconsMode(false);
-#endif
-    // setup function
-    seq.menu = 0;
-    seq.edit_state = false;
-    display.setTextSize(1);
-    display.fillScreen(COLOR_BACKGROUND);
-    UI_toplineInfoText(1);
-    display.setCursor(1, 2);
-    display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
-    display.print(F("TRACKER"));
-    display.setCursor(CHAR_width_small * 10, 2);
-    display.print(F("CHAIN"));
-    display.setCursor(CHAR_width_small * 41, 2);
-    display.print(F("SONG"));
-    display.setCursor(CHAR_width_small * 49, 2);
-    display.print(F("/"));
-    display.setCursor(CHAR_width_small * 46, 2); // print song step at init
-    display.setTextColor(COLOR_BACKGROUND, DX_DARKCYAN);
-    print_formatted_number(seq.current_song_step, 2);
-    display.setCursor(CHAR_width_small * 51, 2);
-    print_formatted_number(get_song_length(), 2);
-    display.setCursor(CHAR_width_small * 22, 2);
-
-    for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++) // print chain steps
-    {
-      if (seq.current_chain[d] != 99)
-      {
-        display.setCursor(CHAR_width_small * 16 + (CHAR_width_small * 3) * d, 2);
-        print_formatted_number(seq.chain_counter[d], 2);
-      }
-      //  display.setCursor(CHAR_width_small * 16+ (CHAR_width_small*3)*d , 2);
-      //  print_formatted_number( get_chain_length_from_current_track(d)  , 2);
-    }
-
-    for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
-    {
-      seq.current_chain[x] = seq.song[x][seq.current_song_step];
-      seq.current_pattern[x] = seq.chain[seq.current_chain[x]][seq.chain_counter[x]];
-
-      setCursor_textGrid_small(6 + 6 * x, 2);
-      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
-      display.print(F("TRK:"));
-      display.print(x + 1);
-      setCursor_textGrid_small(6 + 6 * x, 3);
-      display.print("PAT");
-      if (seq.current_chain[x] != 99)
-        update_pattern_number_in_tracker(x);
-    }
-    display.setTextColor(DARKGREEN, COLOR_BACKGROUND);
-    for (uint8_t y = 0; y < 16; y++)
-    {
-      display.setCursor(0, 45 + y * (CHAR_height_small + 3));
-      print_formatted_number(y, 2);
-    }
-    display.setCursor(CHAR_width_small * 11, DISPLAY_HEIGHT - CHAR_height_small);
-    display.print("DATA BYTE: ");
-    display.setCursor(CHAR_width_small * 26, DISPLAY_HEIGHT - CHAR_height_small);
-    display.print("USED AS");
-
-    display.setTextColor(GREEN, COLOR_BACKGROUND);
-    display.setCursor(5 * CHAR_width_small, (5 + seq.step) * (CHAR_height_small + 3) - 7);
-    display.print(F(">"));
-    encoderDir[ENC_R].reset();
-  }
-  if (LCDML.FUNC_loop()) // ****** LOOP *********
-  {
-    const EncoderEvents e = getEncoderEvents(ENC_R);
-    if (e.turned) {
-      if (seq.edit_state == false) {// NOT in editor mode
-        seq.scrollpos = constrain(seq.scrollpos + e.dir, 0, 15);
-      }
-      else // IS in editor mode
-      {
-        seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] = constrain(seq.note_data[seq.current_pattern[seq.selected_track]][seq.scrollpos] + e.dir * e.speed, 0, 254);
-      }
-    }
-    if (e.pressed) {
-      seq.edit_state = !seq.edit_state;
-    }
-    for (uint8_t x = 0; x < NUM_SEQ_TRACKS; x++)
-    {
-      seq.current_chain[x] = seq.song[x][seq.current_song_step];
-      seq.current_pattern[x] = seq.chain[seq.current_chain[x]][seq.chain_counter[x]];
-      // update_pattern_number_in_tracker(x);
-    }
-
-    display.setTextSize(1);
-    setCursor_textGrid_small(1, 2);
-    if (seq.edit_state)
-    {
-      display.setTextColor(RED, COLOR_BACKGROUND);
-      display.print("EDIT");
-      helptext_l(F("< > DATA"));
-      helptext_r(F("< > NOTE"));
-    }
-    else
-    {
-      display.setTextColor(GREEN, COLOR_BACKGROUND);
-      display.print("PLAY");
-      helptext_l(F("< > MOVE X"));
-      helptext_r(F("< > MOVE Y"));
-    }
-    for (uint8_t d = 0; d < NUM_SEQ_TRACKS; d++)
-    {
-      tracker_print_pattern((6 + 6 * d) * CHAR_width_small, 48, d);
-    }
-  }
-  if (LCDML.FUNC_close()) // ****** STABLE END *********
-  {
-#if defined ESP_DISPLAY
-    sendVolumeIconsMode(true);
-#endif
-    encoderDir[ENC_R].reset();
-    display.fillScreen(COLOR_BACKGROUND);
-  }
-}
-
 FLASHMEM void sub_song_print_tracknumbers()
 {
   char str[3];
@@ -15033,15 +14974,28 @@ FLASHMEM void UI_func_song(uint8_t param)
           seq.cycle_touch_element = 5;
           temp_int_song_page = seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
         }
-        else if (seq.edit_state && seq.cycle_touch_element == 6)
-        {
-          seq.cycle_touch_element = 7;
-          seq.help_text_needs_refresh = true;
-          seq.sub_menu = seq.chain[seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos]][seq.song_menu];
-        }
+      else if (seq.edit_state && seq.cycle_touch_element == 6)
+{
+  const uint8_t currentChain =
+      seq.song[seq.selected_track][seq.cursor_scroll + seq.scrollpos];
+  if (currentChain < NUM_CHAINS)
+  {
+    seq.cycle_touch_element = 7;
+    seq.help_text_needs_refresh = true;
+    seq.sub_menu = seq.chain[currentChain][seq.song_menu];
+  }
+  else
+  {
+    helptext_r(F("FIRST ASSIGN A CHAIN TO THIS STEP"));
+  }
+}
         else if (seq.edit_state && seq.cycle_touch_element == 7)
         {
           seq.cycle_touch_element = 6;
+            // The END marker may have moved during pattern selection.
+  // Force a full redraw on the next frame so any stale "END"
+  // or "--" text on other rows is cleared.
+  song_page_full_draw_chain_complete = false;
         }
         else if (seq.edit_state && seq.cycle_touch_element == 8)
         {
@@ -19403,7 +19357,8 @@ uint16_t getNotePixelX(uint8_t note) {
     // White key
     for (uint8_t i = 0; i < 7; i++) {
         if (whiteOffsets[i] == semitone) {
-            return (oct * 7 + 1) * CHAR_width_small + 6 * i;
+             uint16_t x = (oct * 7 + 1) * CHAR_width_small + 6 * i;
+            return (x < DISPLAY_WIDTH-12) ? x : (DISPLAY_WIDTH - 1-12);
         }
     }
 
@@ -19412,7 +19367,8 @@ uint16_t getNotePixelX(uint8_t note) {
     for (uint8_t b = 0; b < 5; b++) {
         if (blackOffsets[b] < semitone) offcount++;
     }
-    return (oct * 7 + 1) * CHAR_width_small + 4 * semitone - offset[offcount];
+    uint16_t x = (oct * 7 + 1) * CHAR_width_small + 4 * semitone - offset[offcount];
+    return (x < DISPLAY_WIDTH-12) ? x : (DISPLAY_WIDTH - 1-12);
 }
 
 FLASHMEM void draw_chord_arranger_keyboard(int x, int y, uint8_t startNote) {
@@ -22359,6 +22315,12 @@ FLASHMEM void _system_settings_long_help_texts()
     setCursor_textGrid_small(2, 19);
     display.print(F("EDIT/ACTIVATED MODE"));
   }
+     else if (generic_temp_select_menu == 34) {
+    setCursor_textGrid_small(2, 18);
+    display.print(F("GLOBAL BRIGHTNESS FOR BOTH LED RINGS"));
+    setCursor_textGrid_small(2, 19);
+    display.print(F("OFF = RINGS DISABLED "));
+  }
 }
 
 #if defined (RGB_ENCODERS) && defined (MCP_23008) || defined (RGB_ENCODERS) && defined (MCP_23017) 
@@ -22486,6 +22448,8 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 31: base = F("RIGHT: EDIT CUSTOM START"); break;
     case 32: base = F("RIGHT: EDIT CUSTOM END"); break;
     case 33: base = F("LED BRIGHTNESS GRADIENT"); break;
+    case 34: base = F("GLOBAL LED RING BRIGHTNESS"); break; 
+
     }
 
     uint8_t base_len = 0;
@@ -22512,7 +22476,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       append_na = true;
 #endif
       break;
-    case 23: case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33:
+    case 23: case 24: case 25: case 26: case 27: case 28: case 29: case 30: case 31: case 32: case 33: case 34:
 #if !(defined(LED_RINGS) || defined(LED_DEBUG))
       append_na = true;
 #endif
@@ -22744,34 +22708,40 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 29:
     case 31:
     case 32: {
-      int value;
-      if (setting_index == 25) value = configuration.sys.left_volume_custom_start;
-      else if (setting_index == 26) value = configuration.sys.left_volume_custom_end;
-      else if (setting_index == 28) value = configuration.sys.left_seq_custom_start;
-      else if (setting_index == 29) value = configuration.sys.left_seq_custom_end;
-      else if (setting_index == 31) value = configuration.sys.right_edit_custom_start;
-      else value = configuration.sys.right_edit_custom_end;
+  int value;
+  if      (setting_index == 25) value = configuration.sys.left_volume_custom_start;
+  else if (setting_index == 26) value = configuration.sys.left_volume_custom_end;
+  else if (setting_index == 28) value = configuration.sys.left_seq_custom_start;
+  else if (setting_index == 29) value = configuration.sys.left_seq_custom_end;
+  else if (setting_index == 31) value = configuration.sys.right_edit_custom_start;
+  else                          value = configuration.sys.right_edit_custom_end;
 
-      char tmp[VALUE_WIDTH + 1];
-      snprintf(tmp, sizeof(tmp), "%3d", value);
-      left_justify(val_buf, tmp, VALUE_WIDTH);
+  char tmp[VALUE_WIDTH + 1];
+  if (value <= 100) {
+    snprintf(tmp, sizeof(tmp), "%3d", value);          // hue
+  } else {
+    snprintf(tmp, sizeof(tmp), "G%02d", value - 101);  // greyscale
+  }
+  left_justify(val_buf, tmp, VALUE_WIDTH);
 
-      uint16_t preview_x = PREVIEW_COL * CHAR_width_small;
-      uint16_t preview_y = line * 10;
-      display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, COLOR_BACKGROUND);
-      uint16_t hue = (uint16_t)(value * 3.59f);
-      uint16_t color = ColorHSV(hue, 255, 255);
-      display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, color);
+  uint16_t preview_x = PREVIEW_COL * CHAR_width_small;
+  uint16_t preview_y = line * 10;
+  display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7, COLOR_BACKGROUND);
 
-      int schemeIdx = schemeIndexFor(setting_index);
-      if (schemeIdx >= 0) {
-        int schemeLine = 6 + (schemeIdx - scroll_position);
-        if (schemeLine >= 6 && schemeLine < 6 + max_visible_settings) {
-          drawSchemePreview(schemeIdx, schemeLine);
-        }
-      }
-      break;
+  uint8_t r, g, b;
+  custom_value_to_rgb((uint8_t)value, r, g, b);
+  display.fillRect(preview_x, preview_y, 4 * CHAR_width_small, 7,
+                   RGB24toRGB565(r, g, b));
+
+  int schemeIdx = schemeIndexFor(setting_index);
+  if (schemeIdx >= 0) {
+    int schemeLine = 6 + (schemeIdx - scroll_position);
+    if (schemeLine >= 6 && schemeLine < 6 + max_visible_settings) {
+      drawSchemePreview(schemeIdx, schemeLine);
     }
+  }
+  break;
+}
     case 33: {
       char tmp[VALUE_WIDTH + 1];
       snprintf(tmp, sizeof(tmp), "%3d", configuration.sys.led_brightness_gradient);
@@ -22801,6 +22771,19 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
       }
       break;
     }
+         case 34: {
+  const char* str;
+  switch (configuration.sys.led_brightness) {
+    case 0:  str = "OFF "; break;
+    case 1:  str = "LOW "; break;
+    case 2:  str = "MID "; break;
+    case 3:  str = "HIGH"; break;
+    default: str = "??? "; break;
+  }
+  left_justify(val_buf, str, VALUE_WIDTH);
+  break;
+}
+
 #endif
     } // end switch
 
@@ -22836,7 +22819,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0;
-  static uint8_t total_menu_items = 34;
+  static uint8_t total_menu_items = 35;
 
   if (LCDML.FUNC_setup())
   {
@@ -22879,7 +22862,10 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
 
         switch (generic_temp_select_menu) {
         case 0: configuration.sys.gamepad_speed = constrain(configuration.sys.gamepad_speed + (e.dir * 10), GAMEPAD_SPEED_MIN, GAMEPAD_SPEED_MAX); break;
-        case 1: configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (e.dir * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX); setup_screensaver(); break;
+                     case 1:
+          configuration.sys.screen_saver_start = constrain(configuration.sys.screen_saver_start + (e.dir * 1), SCREEN_SAVER_START_MIN, SCREEN_SAVER_START_MAX);
+          setup_screensaver();
+          break;
         case 2: configuration.sys.screen_saver_mode = constrain(configuration.sys.screen_saver_mode + (e.dir * 1), SCREEN_SAVER_MODE_MIN, SCREEN_SAVER_MODE_MAX); setup_screensaver(); break;
 #ifndef ESP_DISPLAY
         case 3: configuration.sys.display_rotation = constrain(configuration.sys.display_rotation + (e.dir * 1), DISPLAY_ROTATION_MIN, DISPLAY_ROTATION_MAX); display.setRotation(configuration.sys.display_rotation); break;
@@ -22933,42 +22919,55 @@ FLASHMEM void UI_func_system_settings(uint8_t param)
           configuration.sys.left_volume_color_scheme = constrain(configuration.sys.left_volume_color_scheme + e.dir, 0, 10);
           led_ring_preview_mode = true;
           break;
-        case 25:
-          configuration.sys.left_volume_custom_start = constrain(configuration.sys.left_volume_custom_start + e.dir, 0, 100);
-          led_ring_preview_mode = true;
-          break;
-        case 26:
-          configuration.sys.left_volume_custom_end = constrain(configuration.sys.left_volume_custom_end + e.dir, 0, 100);
-          led_ring_preview_mode = true;
-          break;
+       case 25:
+  configuration.sys.left_volume_custom_start =
+      constrain(configuration.sys.left_volume_custom_start + e.dir, 0, 200);
+  led_ring_preview_mode = true;
+  break;
+
+case 26:
+  configuration.sys.left_volume_custom_end =
+      constrain(configuration.sys.left_volume_custom_end + e.dir, 0, 200);
+  led_ring_preview_mode = true;
+  break;
         case 27:
           configuration.sys.left_seq_color_scheme = constrain(configuration.sys.left_seq_color_scheme + e.dir, 0, 10);
           led_ring_preview_mode = true;
           break;
         case 28:
-          configuration.sys.left_seq_custom_start = constrain(configuration.sys.left_seq_custom_start + e.dir, 0, 100);
-          led_ring_preview_mode = true;
-          break;
-        case 29:
-          configuration.sys.left_seq_custom_end = constrain(configuration.sys.left_seq_custom_end + e.dir, 0, 100);
-          led_ring_preview_mode = true;
-          break;
+  configuration.sys.left_seq_custom_start =
+      constrain(configuration.sys.left_seq_custom_start + e.dir, 0, 200);
+  led_ring_preview_mode = true;
+  break;
+
+case 29:
+  configuration.sys.left_seq_custom_end =
+      constrain(configuration.sys.left_seq_custom_end + e.dir, 0, 200);
+  led_ring_preview_mode = true;
+  break;
         case 30:
           configuration.sys.right_edit_color_scheme = constrain(configuration.sys.right_edit_color_scheme + e.dir, 0, 10);
           led_ring_preview_mode = true;
           break;
         case 31:
-          configuration.sys.right_edit_custom_start = constrain(configuration.sys.right_edit_custom_start + e.dir, 0, 100);
-          led_ring_preview_mode = true;
-          break;
-        case 32:
-          configuration.sys.right_edit_custom_end = constrain(configuration.sys.right_edit_custom_end + e.dir, 0, 100);
-          led_ring_preview_mode = true;
-          break;
+  configuration.sys.right_edit_custom_start =
+      constrain(configuration.sys.right_edit_custom_start + e.dir, 0, 200);
+  led_ring_preview_mode = true;
+  break;
+
+case 32:
+  configuration.sys.right_edit_custom_end =
+      constrain(configuration.sys.right_edit_custom_end + e.dir, 0, 200);
+  led_ring_preview_mode = true;
+  break;
         case 33:
           configuration.sys.led_brightness_gradient = constrain(configuration.sys.led_brightness_gradient + e.dir, 0, 100);
           led_ring_preview_mode = true;
           break;
+              case 34:
+  configuration.sys.led_brightness = constrain( (int)configuration.sys.led_brightness + e.dir, 0, 3);
+  led_ring_preview_mode = true;
+  break;
         }
       }
       _render_misc_settings(scroll_position, total_menu_items);
@@ -29352,6 +29351,1026 @@ FLASHMEM void UI_func_granular(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
   }
 
+}
+
+#endif
+
+
+#if defined MUSIKANDMORE
+/******************************************************************************
+  I2C HELPER: known chip names for common I2C addresses
+  Returns nullptr if the address is not in our list.
+******************************************************************************/
+FLASHMEM const char* i2c_get_known_chip(byte address)
+{
+  switch (address)
+  {
+    case 0x00: return "AS3935";
+    case 0x01: return "AS3935,EncoderV2";
+    case 0x02: return "AS3935,EncoderV2";
+    case 0x03: return "AS3935,EncoderV2";
+    case 0x04: return "AS3935,EncoderV2";
+    case 0x0A: return "SGTL5000";                       // MCLK required
+    case 0x0B: return "SMBusBattery?";
+    case 0x0C: return "AK8963";
+    case 0x10: return "CS4272";
+    case 0x11: return "Si4713";
+    case 0x13: return "VCNL4000,AK4558";
+    case 0x18: return "LIS331DLH";
+    case 0x19: return "LSM303,LIS331DLH";
+    case 0x1A: return "WM8731";
+    case 0x1C: return "LIS3MDL";
+    case 0x1D: return "LSM303D,LSM9DS0,ADXL345,MMA7455L,LSM9DS1,LIS3DSH";
+    case 0x1E: return "LSM303D,HMC5883L,FXOS8700,LIS3DSH";
+    case 0x20: return "ENCODER-MINI-V2,MCP23017,MCP23008";
+    case 0x21: return "MCP23017,MCP23008,ENCODER-MINI-V2";
+    case 0x22: return "MCP23017,MCP23008,ENCODER-MINI-V2";
+    case 0x23: return "MCP23017,MCP23008,ENCODER-MINI-V2";
+    case 0x24: return "ENCODER-MINI-V2,MCP23017,MCP23008";
+    case 0x25: return "ENCODER-MINI-V2,MCP23017,MCP23008";
+    case 0x26: return "ENCODER-MINI-V2,MCP23017,MCP23008";
+    case 0x27: return "ENCODER-MINI-V2,MCP23017,MCP23008";
+    case 0x28: return "BNO055,EM7180,CAP1188";
+    case 0x29: return "TSL2561,VL6180,TSL2591,BNO055,CAP1188";
+    case 0x2A: return "SGTL5000,CAP1188";
+    case 0x2B: return "CAP1188";
+    case 0x2C: return "MCP44XX ePot";
+    case 0x2D: return "MCP44XX ePot";
+    case 0x2E: return "MCP44XX ePot";
+    case 0x2F: return "MCP44XX ePot";
+    case 0x33: return "MAX11614,MAX11615";
+    case 0x34: return "MAX11612,MAX11613";
+    case 0x35: return "MAX11616,MAX11617";
+    case 0x38: return "RA8875 7inch Touch";
+    case 0x39: return "TSL2561,APDS9960";
+    case 0x3C: return "SSD1306,DigisparkOLED";
+    case 0x3D: return "SSD1306";
+    case 0x40: return "RA8875 5inch Touch";
+    case 0x41: return "STMPE610,PCA9685";
+    case 0x42: return "PCA9685";
+    case 0x43: return "PCA9685";
+    case 0x44: return "PCA9685,SHT3X";
+    case 0x45: return "PCA9685,SHT3X";
+    case 0x46: return "PCA9685";
+    case 0x47: return "PCA9685";
+    case 0x48: return "ADS1015,ADS1115,PN532,TMP102,PCF8591";
+    case 0x49: return "ADS1015,ADS1115,TSL2561,PCF8591";
+    case 0x4A: return "ADS1015,ADS1115";
+    case 0x4B: return "ADS1015,ADS1115,TMP102";
+    case 0x50: return "EEPROM";
+    case 0x51: return "EEPROM";
+    case 0x52: return "Nunchuk,EEPROM";
+    case 0x53: return "ADXL345,EEPROM";
+    case 0x54: return "EEPROM";
+    case 0x55: return "EEPROM";
+    case 0x56: return "EEPROM";
+    case 0x57: return "EEPROM";
+    case 0x58: return "TPA2016,MAX21100";
+    case 0x5A: return "MPR121";
+    case 0x60: return "MPL3115,MCP4725,MCP4728,TEA5767,Si5351";
+    case 0x61: return "MCP4725,AtlasEzoDO";
+    case 0x62: return "LidarLite,MCP4725,AtlasEzoORP";
+    case 0x63: return "RGB_LED_RING,MCP4725,AtlasEzoPH";
+    // case 0x64: return "AtlasEzoEC";
+    // case 0x66: return "AtlasEzoRTD";
+    case 0x68: return "DS1307,DS3231,MPU6050,MPU9050,MPU9250,ITG3200,ITG3701,LSM9DS0,L3G4200D";
+    case 0x69: return "MPU6050,MPU9050,MPU9250,ITG3701,L3G4200D";
+    case 0x6A: return "LSM9DS1";
+    case 0x6B: return "LSM9DS0";
+    case 0x6C: return "RGB_LED_RING";
+    // case 0x70: return "HT16K33";
+    // case 0x71: return "SFE7SEG,HT16K33";
+    // case 0x72: return "HT16K33";
+    // case 0x73: return "HT16K33";
+    // case 0x76: return "MS5607,MS5611,MS5637,BMP280";
+    // case 0x77: return "BMP085,BMA180,BMP280,MS5611";
+    default:   return nullptr;
+  }
+}
+
+#include <Wire.h>
+
+FLASHMEM void UI_func_i2c_scanner(uint8_t param)
+{
+  static bool    need_scan     = true;
+  static uint8_t devices_found = 0;
+
+  // ---- layout (small-font grid: x * 6 px, y * 10 px) -------------------
+  constexpr uint8_t X_START       = 2;    // address column
+  constexpr uint8_t X_NAME_START  = 7;    // name column ("0xNN  " = 6 cols)
+  constexpr uint8_t NAME_PER_LINE = 40;   // chars per line before wrapping
+  constexpr uint8_t Y_SUMMARY     = 4;    // "FOUND: N DEVICE(S)"
+  constexpr uint8_t Y_START       = 6;    // first device row
+  constexpr uint8_t Y_MAX         = 22;   // last usable row
+  // ----------------------------------------------------------------------
+
+  // ---- I2C clock (matches boot code) -----------------------------------
+  constexpr uint32_t I2C_CLOCK_SCAN    = 100000;  // robust during scan
+  constexpr uint32_t I2C_CLOCK_RUNTIME = 400000;  // restored after scan
+  // ----------------------------------------------------------------------
+
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    encoderDir[ENC_R].reset();
+
+    // Wire is already initialised by the boot code (MCP23017 / encoders).
+    // Do not call Wire.begin() or touch pinMode() here.
+
+    display.fillScreen(COLOR_BACKGROUND);
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid(1, 1);
+    display.print(F("I2C SCANNER"));
+
+    helptext_l(back_text);
+    helptext_r(F("PUSH ENC_R TO RESCAN"));
+
+    need_scan = true;
+  }
+
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    if (e.pressed || e.longPressed) need_scan = true;
+
+    if (need_scan)
+    {
+      need_scan = false;
+
+      display.setTextSize(1);
+
+      // ---- Clear display (title + help line stay put) ----------------
+      checkWebRemote();
+      display.fillRect(0, 32, DISPLAY_WIDTH, DISPLAY_HEIGHT - 50, COLOR_BACKGROUND);
+      display.console = false;
+
+      // ---- Placeholder rows ------------------------------------------
+      setCursor_textGrid_small(X_START, Y_SUMMARY);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.print(F("FOUND: ... DEVICE(S)  "));
+display.setTextColor(GREY1, COLOR_BACKGROUND);
+      
+      // ================================================================
+      //  SCAN PHASE
+      //  - 100 kHz I2C
+      //  - audio interrupts off
+      //  - CPU interrupts off
+      //  - no display access inside this block
+      // ================================================================
+      bool found[128] = { false };
+
+      Wire.setClock(I2C_CLOCK_SCAN);   // slow and forgiving
+
+      AudioNoInterrupts();             // pause audio DMA
+      noInterrupts();                  // mask all IRQs
+
+      for (uint8_t address = 1; address < 127; address++)
+      {
+        Wire.beginTransmission(address);
+        uint8_t error = Wire.endTransmission();
+        if (error == 0) found[address] = true;
+      }
+
+      interrupts();                    // IRQs first (display / SPI need them)
+      AudioInterrupts();               // then audio back on
+
+      Wire.setClock(I2C_CLOCK_RUNTIME); // restore runtime bus speed
+
+      // ================================================================
+      //  DRAW PHASE (interrupts active again)
+      // ================================================================
+      uint8_t y_pos = Y_START;
+      devices_found = 0;
+
+      for (uint8_t address = 1; address < 127 && y_pos <= Y_MAX; address++)
+      {
+        if (!found[address]) continue;
+
+        // ---- Address ------------------------------------------------
+        setCursor_textGrid_small(X_START, y_pos);
+        display.setTextColor(GREEN, COLOR_BACKGROUND);
+        display.print(F("0x"));
+        if (address < 16) display.print(F("0"));
+        display.print(address, HEX);
+        display.print(F("  "));
+
+        // ---- Chip name with wrapping --------------------------------
+        const char* chip = i2c_get_known_chip(address);
+        if (chip != nullptr)
+        {
+          display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+          const size_t len = strlen(chip);
+          size_t pos = 0;
+          while (pos < len && y_pos <= Y_MAX)
+          {
+            const size_t remain = len - pos;
+            const size_t chunk  = (remain > NAME_PER_LINE) ? NAME_PER_LINE : remain;
+
+            char buf[NAME_PER_LINE + 1];
+            memcpy(buf, chip + pos, chunk);
+            buf[chunk] = '\0';
+            display.print(buf);
+            pos += chunk;
+
+            if (pos < len)
+            {
+              y_pos++;
+              if (y_pos > Y_MAX) break;
+              setCursor_textGrid_small(X_NAME_START, y_pos);
+            }
+          }
+        }
+
+        y_pos++;
+        devices_found++;
+
+        // ---- Blank separator line between devices -------------------
+        y_pos++;
+      }
+
+      // ---- Final summary ---------------------------------------------
+      setCursor_textGrid_small(X_START, Y_SUMMARY);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      display.print(F("FOUND: "));
+      display.print(devices_found);
+      display.print(F(" DEVICE(S)  "));
+
+      if (devices_found == 0)
+      {
+        setCursor_textGrid_small(X_START, Y_START);
+        display.setTextColor(RED, COLOR_BACKGROUND);
+        display.print(F("NO I2C DEVICES RESPONDED."));
+        setCursor_textGrid_small(X_START, Y_START + 2);
+        display.setTextColor(GREY1, COLOR_BACKGROUND);
+        display.print(F("CHECK WIRING / PULL-UPS / POWER."));
+      }
+
+      display.setTextSize(2);
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    }
+  }
+
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+    encoderDir[ENC_R].reset();
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+#endif
+
+#if defined MUSIKANDMORE
+/***********************************************************************
+   MAM INFO PAGE
+
+   Design:
+   - Content is rendered directly from the JSON document on demand.
+     No line buffer is kept in RAM.
+   - CRC32 is computed incrementally over individual JSON fields.
+     No concatenation buffer is needed.
+   - The JSON document is allocated on page entry and freed on page exit.
+
+   Permanent RAM usage while this page is closed: < 100 bytes.
+
+   Features:
+   - jsonVersion, securityCode, notes displayed
+   - CRC32 verification (v2: includes notes field; v3: also includes
+     ESP firmware when displayOption == 'ESP 7"')
+   - Error screen when file is missing/empty/invalid
+   - Custom scrollbar with incremental thumb redraw
+   - Dividers drawn as real lines
+   - Long fields (ESP FW, Core-PCB name, Core-PCB serial) wrap into
+     50-char chunks so 60-char filenames fit on screen
+***********************************************************************/
+
+
+
+// ---- Layout constants ----
+static const uint8_t  MAM_VISIBLE    = 20;
+static const uint8_t  MAM_START_ROW  = 3;
+static const uint8_t  MAM_LINE_LEN   = 51;
+static const uint16_t MAM_SB_X       = 312;
+static const uint16_t MAM_SB_W       = 3;
+static const uint16_t MAM_SB_Y       = MAM_START_ROW * 10;
+static const uint16_t MAM_SB_H       = MAM_VISIBLE * 10;
+
+// ---- Small permanent state (~80 bytes total) ----
+static uint16_t mam_scroll_pos   = 0;
+static uint16_t mam_total_lines  = 0;
+static uint8_t  mam_mode         = 0;         // 1=loaded, 2=error
+static bool     mam_needs_redraw = true;
+static char     mam_error_msg[64] = { 0 };
+
+// Scrollbar cache
+static uint16_t mam_sb_last_y      = 0xFFFF;
+static uint16_t mam_sb_last_h      = 0;
+static bool     mam_sb_track_drawn = false;
+
+// ---- Temporary session state (freed on page close) ----
+static DynamicJsonDocument* mam_doc = nullptr;
+
+#define MAM_STR(key)  (const char*)((*mam_doc)[(key)] | "")
+
+
+// =====================================================================
+//  Incremental CRC32 — no concat buffer needed
+// =====================================================================
+FLASHMEM uint32_t mam_compute_crc(void)
+{
+  uint32_t crc = 0xFFFFFFFFu;
+  bool first = true;
+
+  auto addByte = [&](uint8_t b) {
+    crc ^= b;
+    for (uint8_t j = 0; j < 8; j++) {
+      if (crc & 1u) crc = (crc >> 1) ^ 0xEDB88320u;
+      else          crc >>= 1;
+    }
+  };
+  auto addStr = [&](const char* s) {
+    if (!s) return;
+    while (*s) addByte((uint8_t)*s++);
+  };
+  auto sep = [&]() {
+    if (first) { first = false; return; }
+    addByte('|');
+  };
+
+  sep(); addStr((*mam_doc)["serial"] | "");
+  sep(); addStr((*mam_doc)["charge"] | "");
+
+  {
+    const char* disp = (*mam_doc)["displayOption"] | "";
+    sep();
+    if (strcmp(disp, "Other") == 0)
+      addStr((*mam_doc)["otherDisplay"] | "Andere (nicht spezifiziert)");
+    else
+      addStr(disp);
+  }
+  sep(); addStr((*mam_doc)["displayNote"] | "");
+
+  // ---- ESP 7" only: internal ESP firmware is part of the CRC (JSON v3) ----
+  // Matches the web editor: the segment exists only when
+  // displayOption == 'ESP 7"'. All other files (ILI9341 / RA8875 / Other)
+  // keep their exact legacy checksum and continue to verify.
+  // The firmware value may be up to 60 chars (full filename) — addStr()
+  // reads until the terminating NUL, so arbitrary length is fine here.
+  {
+    const char* disp = (*mam_doc)["displayOption"] | "";
+    if (strcmp(disp, "ESP 7\"") == 0) {
+      sep();
+      addStr((*mam_doc)["espFirmware"] | "");
+    }
+  }
+
+  sep(); addStr((*mam_doc)["customerNumber"]  | "");
+  sep(); addStr((*mam_doc)["customerName"]    | "");
+  sep(); addStr((*mam_doc)["customerEmail"]   | "");
+  sep(); addStr((*mam_doc)["customerPhone"]   | "");
+  sep(); addStr((*mam_doc)["customerAddress"] | "");
+  sep(); addStr((*mam_doc)["purchaseDate"]    | "");
+
+  {
+    JsonArray core = (*mam_doc)["coreFields"].as<JsonArray>();
+    for (JsonObject item : core) {
+      sep(); addStr((const char*)(item["name"]   | ""));
+      sep(); addStr((const char*)(item["serial"] | ""));
+    }
+  }
+  {
+    JsonObject feat = (*mam_doc)["features"].as<JsonObject>();
+    sep(); addStr((bool)(feat["ledRing"]         | false) ? "true" : "false");
+    sep(); addStr((bool)(feat["buttonInterface"] | false) ? "true" : "false");
+    sep(); addStr((bool)(feat["oledDisplays"]    | false) ? "true" : "false");
+  }
+  {
+    JsonArray pcbs = (*mam_doc)["additionalPcbs"].as<JsonArray>();
+    for (JsonObject item : pcbs) {
+      sep(); addStr((const char*)(item["name"]     | ""));
+      sep(); addStr((const char*)(item["revision"] | ""));
+      sep(); addStr((const char*)(item["serial"]   | ""));
+    }
+  }
+  {
+    JsonArray enc = (*mam_doc)["enclosureParts"].as<JsonArray>();
+    for (JsonObject item : enc) {
+      sep(); addStr((const char*)(item["name"]     | ""));
+      sep(); addStr((const char*)(item["material"] | ""));
+    }
+  }
+
+  sep(); addStr((*mam_doc)["notes"] | "");
+
+  return crc ^ 0xFFFFFFFFu;
+}
+
+
+// =====================================================================
+//  Walk through all renderable items.
+//  render=true  : draws items [start, start+count)
+//  render=false : counts all items (count is ignored)
+//  Returns the total number of items.
+//
+//  Notes are split on \n / \r / \r\n and each logical line is
+//  word-wrapped into 50-char chunks. Empty chunks are skipped so
+//  no "ghost rows" appear and the row counter stays in sync.
+// =====================================================================
+FLASHMEM uint16_t mam_walk(bool render, uint16_t start, uint16_t count)
+{
+  uint16_t n = 0;
+  const uint16_t end = (count == 0) ? 0xFFFF : (uint16_t)(start + count);
+  bool stop = false;
+  char buf[MAM_LINE_LEN];
+
+  auto emitText = [&](uint16_t color, const char* text) {
+    if (stop) return;
+    if (render && n >= start && n < end) {
+      uint8_t row = (uint8_t)(n - start);
+      setCursor_textGrid_small(0, MAM_START_ROW + row);
+      display.setTextColor(color, COLOR_BACKGROUND);
+      display.print(text);
+    }
+    n++;
+    if (n >= end) stop = true;
+  };
+
+  auto emitDivider = [&](uint16_t color) {
+    if (stop) return;
+    if (render && n >= start && n < end) {
+      uint8_t row = (uint8_t)(n - start);
+      uint16_t y_row = (MAM_START_ROW + row) * 10;
+      checkWebRemote();
+      display.drawLine(0, y_row + 4, MAM_SB_X - 4, y_row + 4, color);
+      display.console = false;
+    }
+    n++;
+    if (n >= end) stop = true;
+  };
+
+  // Wrap a long value into 50-char chunks and emit each chunk as a row.
+  // Used for ESP firmware and (potentially) long core-PCB fields.
+  // prefix is printed once at the start of the first chunk.
+  auto emitWrapped = [&](uint16_t color, const char* prefix,
+                         const char* value, uint16_t cont_color = 0) {
+    if (!value || value[0] == '\0') return;
+    const size_t plen = prefix ? strlen(prefix) : 0;
+    const size_t vlen = strlen(value);
+
+    // If the whole "prefix + value" fits on one 50-char row, do it in one go.
+    if (plen + vlen <= 50) {
+      snprintf(buf, sizeof(buf), "%s%s", prefix ? prefix : "", value);
+      emitText(color, buf);
+      return;
+    }
+
+    // Otherwise: emit prefix on its own line, then wrap the value.
+    if (plen > 0) emitText(color, prefix);
+
+    size_t pos = 0;
+    while (pos < vlen && !stop) {
+      size_t chunk = vlen - pos;
+      if (chunk > 50) chunk = 50;
+      memcpy(buf, value + pos, chunk);
+      buf[chunk] = 0;
+      emitText(cont_color ? cont_color : color, buf);
+      pos += chunk;
+    }
+  };
+
+  // ---- Header ----
+  {
+    int32_t v = (*mam_doc)["jsonVersion"].as<int32_t>();
+    if (v == 0) v = 1;
+    snprintf(buf, sizeof(buf),
+             "MUSIKANDMORE MDT - mam.json (FILE FORMAT: V%ld)", (long)v);
+    emitText(RED, buf);
+    emitDivider(GREY3);
+  }
+
+  // ---- Customer ----
+  emitText(RED, "CUSTOMER");
+  snprintf(buf, sizeof(buf), "No:      %s", MAM_STR("customerNumber"));  emitText(COLOR_SYSTEXT, buf);
+  snprintf(buf, sizeof(buf), "Name:    %s", MAM_STR("customerName"));    emitText(COLOR_SYSTEXT, buf);
+  snprintf(buf, sizeof(buf), "E-Mail:  %s", MAM_STR("customerEmail"));   emitText(COLOR_SYSTEXT, buf);
+  snprintf(buf, sizeof(buf), "Phone:   %s", MAM_STR("customerPhone"));   emitText(COLOR_SYSTEXT, buf);
+  snprintf(buf, sizeof(buf), "Address: %s", MAM_STR("customerAddress")); emitText(COLOR_SYSTEXT, buf);
+  snprintf(buf, sizeof(buf), "Bought:  %s", MAM_STR("purchaseDate"));    emitText(COLOR_SYSTEXT, buf);
+
+  emitDivider(GREY3);
+  {
+    const char* sc = (*mam_doc)["securityCode"] | "";
+    if (strlen(sc) == 0) sc = (*mam_doc)["secretCode"] | "";
+    if (sc && strlen(sc) >= 4) {
+      snprintf(buf, sizeof(buf), "SECURITY CODE: %s", sc);
+      emitText(COLOR_PITCHSMP, buf);
+    } else {
+      emitText(RED, "SECURITY CODE: not present");
+    }
+  }
+  emitDivider(GREY3);
+
+  // ---- Device ----
+  emitText(RED, "DEVICE");
+  snprintf(buf, sizeof(buf), "Serial:  %s", MAM_STR("serial")); emitText(COLOR_SYSTEXT, buf);
+  snprintf(buf, sizeof(buf), "Charge:  %s", MAM_STR("charge")); emitText(COLOR_SYSTEXT, buf);
+  emitDivider(GREY3);
+
+  // ---- Display ----
+  emitText(RED, "DISPLAY");
+  snprintf(buf, sizeof(buf), "Option:  %s", MAM_STR("displayOption")); emitText(COLOR_SYSTEXT, buf);
+  if ((*mam_doc)["otherDisplay"].is<const char*>()) {
+    snprintf(buf, sizeof(buf), "Other:   %s", MAM_STR("otherDisplay"));
+    emitText(COLOR_SYSTEXT, buf);
+  }
+  snprintf(buf, sizeof(buf), "Note:    %s", MAM_STR("displayNote"));
+  emitText(COLOR_SYSTEXT, buf);
+
+  // ESP internal firmware (only shown when displayOption == 'ESP 7"')
+  // The value may be up to 60 chars (full filename). Reuse emitWrapped()
+  // so a long value wraps cleanly into 50-char chunks on the display.
+  {
+    const char* disp = (*mam_doc)["displayOption"] | "";
+    if (strcmp(disp, "ESP 7\"") == 0) {
+      const char* fw = (*mam_doc)["espFirmware"] | "";
+      if (fw && fw[0] != '\0') {
+        emitWrapped(COLOR_PITCHSMP, "ESP FW:  ", fw);
+      } else {
+        emitText(GREY1, "ESP FW:  (not set)");
+      }
+    }
+  }
+  emitDivider(GREY3);
+
+  // ---- Core PCB ----
+  // Field #4 ("Firmware-Version") may hold a full 60-char filename now.
+  // The name is emitted via emitWrapped() so long entries wrap instead of
+  // being truncated by the 50-char line buffer. All four entries use the
+  // same code path, so nothing is special-cased by index — a short name
+  // still lands on a single row.
+  emitText(RED, "CORE PCB (4 components)");
+  {
+    JsonArray core = (*mam_doc)["coreFields"].as<JsonArray>();
+    uint8_t idx = 1;
+    for (JsonObject item : core) {
+      char prefix[8];
+      snprintf(prefix, sizeof(prefix), "%u. ", (unsigned)idx);
+
+      const char* name = (const char*)(item["name"] | "");
+      emitWrapped(COLOR_SYSTEXT, prefix, name, COLOR_SYSTEXT);
+
+      const char* serial = (const char*)(item["serial"] | "");
+      if (serial && serial[0] != '\0') {
+        emitWrapped(GREY1, "   SN: ", serial, GREY1);
+      }
+      idx++;
+    }
+  }
+  emitDivider(GREY3);
+
+  // ---- Features ----
+  emitText(RED, "OPTIONAL FEATURES");
+  {
+    JsonObject feat = (*mam_doc)["features"].as<JsonObject>();
+    snprintf(buf, sizeof(buf), "LED-RINGS:%s  BUTTONS:%s  OLED:%s",
+             (bool)(feat["ledRing"]         | false) ? "[X]" : "[ ]",
+             (bool)(feat["buttonInterface"] | false) ? "[X]" : "[ ]",
+             (bool)(feat["oledDisplays"]    | false) ? "[X]" : "[ ]");
+    emitText(COLOR_SYSTEXT, buf);
+  }
+  emitDivider(GREY3);
+
+  // ---- Additional PCBs ----
+  emitText(RED, "ADDITIONAL PCBs (max 3)");
+  {
+    JsonArray pcbs = (*mam_doc)["additionalPcbs"].as<JsonArray>();
+    uint8_t idx = 1;
+    for (JsonObject item : pcbs) {
+      char prefix[8];
+      snprintf(prefix, sizeof(prefix), "%u. ", (unsigned)idx);
+      emitWrapped(COLOR_SYSTEXT, prefix, (const char*)(item["name"] | ""), COLOR_SYSTEXT);
+      emitWrapped(GREY1, "   Rev: ", (const char*)(item["revision"] | ""), GREY1);
+      emitWrapped(GREY1, "   SN:  ", (const char*)(item["serial"]   | ""), GREY1);
+      idx++;
+    }
+  }
+  emitDivider(GREY3);
+
+  // ---- Enclosure parts ----
+  emitText(RED, "ENCLOSURE PARTS (max 3)");
+  {
+    JsonArray enc = (*mam_doc)["enclosureParts"].as<JsonArray>();
+    uint8_t idx = 1;
+    for (JsonObject item : enc) {
+      char prefix[8];
+      snprintf(prefix, sizeof(prefix), "%u. ", (unsigned)idx);
+      emitWrapped(COLOR_SYSTEXT, prefix, (const char*)(item["name"] | ""), COLOR_SYSTEXT);
+      emitWrapped(GREY1, "   Mat: ", (const char*)(item["material"] | ""), GREY1);
+      idx++;
+    }
+  }
+  emitDivider(GREY3);
+
+  // ---- Notes (newline-aware, skip-empty-chunks version) ----
+  emitText(RED, "NOTES");
+  {
+    const char* notes = (*mam_doc)["notes"] | "";
+    if (notes && strlen(notes) > 0) {
+      size_t len = strlen(notes);
+      size_t pos = 0;
+
+      while (pos < len && !stop) {
+        // Find the end of the current logical line (up to \n or \r)
+        size_t lineEnd = pos;
+        while (lineEnd < len && notes[lineEnd] != '\n' && notes[lineEnd] != '\r') {
+          lineEnd++;
+        }
+
+        // Word-wrap this logical line into 50-char chunks
+        size_t linePos = pos;
+        while (linePos < lineEnd && !stop) {
+          size_t remaining = lineEnd - linePos;
+          size_t chunk = (remaining > 50) ? 50 : remaining;
+
+          // Try to break at a word boundary
+          if (chunk == 50) {
+            size_t bp = linePos + 50;
+            while (bp > linePos && notes[bp] != ' ' && notes[bp] != '\t') bp--;
+            if (bp > linePos) chunk = bp - linePos;
+          }
+
+          memcpy(buf, notes + linePos, chunk);
+          buf[chunk] = 0;
+
+          // Trim trailing whitespace for display only
+          size_t displayLen = chunk;
+          while (displayLen > 0 && (buf[displayLen-1] == ' ' || buf[displayLen-1] == '\t')) {
+            buf[displayLen-1] = 0;
+            displayLen--;
+          }
+
+          // Skip empty chunks — avoids ghost rows and keeps the row
+          // counter aligned with what's actually visible
+          if (displayLen > 0) {
+            emitText(COLOR_SYSTEXT, buf);
+          }
+
+          // Advance by the FULL chunk size, not the trimmed one
+          linePos += chunk;
+
+          // Skip leading spaces for the next chunk
+          while (linePos < lineEnd && (notes[linePos] == ' ' || notes[linePos] == '\t')) {
+            linePos++;
+          }
+        }
+
+        // Skip the newline sequence (\r, \n, or \r\n)
+        pos = lineEnd;
+        if (pos < len && notes[pos] == '\r') pos++;
+        if (pos < len && notes[pos] == '\n') pos++;
+      }
+    } else {
+      emitText(GREY1, "(no notes)");
+    }
+  }
+  emitDivider(GREY3);
+
+  // ---- Checksum ----
+  emitText(RED, "CHECKSUM VERIFICATION");
+  {
+    uint32_t stored   = (*mam_doc)["checksum"].as<uint32_t>();
+    uint32_t computed = mam_compute_crc();
+
+    snprintf(buf, sizeof(buf), "Stored:   %08lX", (unsigned long)stored);
+    emitText(COLOR_SYSTEXT, buf);
+    snprintf(buf, sizeof(buf), "Computed: %08lX", (unsigned long)computed);
+    emitText(COLOR_SYSTEXT, buf);
+    if (stored == computed) {
+      emitText(MIDDLEGREEN, "Status:   OK - data verified");
+    } else {
+      emitText(RED, "Status:   MISMATCH!");
+      emitText(RED, "          File may be corrupted.");
+    }
+  }
+
+  return n;
+}
+
+
+// =====================================================================
+//  Scrollbar (incremental redraw)
+// =====================================================================
+FLASHMEM void mam_draw_scrollbar(bool force_full = false)
+{
+  const bool needs_scrollbar = (mam_total_lines > MAM_VISIBLE);
+
+  if (!needs_scrollbar) {
+    if (mam_sb_track_drawn) {
+      checkWebRemote();
+      display.fillRect(MAM_SB_X, MAM_SB_Y, MAM_SB_W, MAM_SB_H, COLOR_BACKGROUND);
+      display.console = false;
+      mam_sb_track_drawn = false;
+      mam_sb_last_y = 0xFFFF;
+      mam_sb_last_h = 0;
+    }
+    return;
+  }
+
+  if (!mam_sb_track_drawn || force_full) {
+    checkWebRemote();
+    display.fillRect(MAM_SB_X, MAM_SB_Y, MAM_SB_W, MAM_SB_H, GREY2);
+    display.console = false;
+    mam_sb_track_drawn = true;
+    mam_sb_last_y = 0xFFFF;
+    mam_sb_last_h = 0;
+  }
+
+  uint16_t thumb_h = (uint16_t)((uint32_t)MAM_SB_H * MAM_VISIBLE / mam_total_lines);
+  if (thumb_h < 10) thumb_h = 10;
+
+  const uint16_t max_scroll = mam_total_lines - MAM_VISIBLE;
+  uint16_t thumb_y = 0;
+  if (max_scroll > 0)
+    thumb_y = (uint16_t)((uint32_t)mam_scroll_pos *
+                         (MAM_SB_H - thumb_h) / max_scroll);
+
+  if (!force_full && thumb_y == mam_sb_last_y && thumb_h == mam_sb_last_h)
+    return;
+
+  if (mam_sb_last_y != 0xFFFF) {
+    checkWebRemote();
+    display.fillRect(MAM_SB_X, MAM_SB_Y + mam_sb_last_y, MAM_SB_W, mam_sb_last_h, GREY2);
+    display.console = false;
+  }
+  checkWebRemote();
+  display.fillRect(MAM_SB_X, MAM_SB_Y + thumb_y, MAM_SB_W, thumb_h, COLOR_SYSTEXT);
+  display.console = false;
+
+  mam_sb_last_y = thumb_y;
+  mam_sb_last_h = thumb_h;
+}
+
+
+// =====================================================================
+//  Error screen
+// =====================================================================
+FLASHMEM void mam_show_error(const char* msg)
+{
+  checkWebRemote();
+  display.fillScreen(COLOR_BACKGROUND);
+
+  display.setTextSize(2);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  setCursor_textGrid_small(0, 1);
+  display.print(F("MAM INFO"));
+
+  display.setTextSize(2);
+  display.setTextColor(RED, COLOR_BACKGROUND);
+  setCursor_textGrid_small(0, 4);
+  display.print(F("!! ERROR !!"));
+
+  display.setTextSize(1);
+  display.setTextColor(RED, COLOR_BACKGROUND);
+  setCursor_textGrid_small(2, 8);
+  display.print(msg);
+
+  display.setTextColor(GREY1, COLOR_BACKGROUND);
+  setCursor_textGrid_small(2, 11);
+  display.print(F("Expected file:"));
+  display.setTextColor(COLOR_PITCHSMP, COLOR_BACKGROUND);
+  setCursor_textGrid_small(2, 12);
+  display.print(F("/mam.json (in SD root)"));
+
+  display.setTextColor(GREY1, COLOR_BACKGROUND);
+  setCursor_textGrid_small(2, 15);
+  display.print(F("Please check:"));
+  setCursor_textGrid_small(2, 16);
+  display.print(F("- SD card inserted & readable"));
+  setCursor_textGrid_small(2, 17);
+  display.print(F("- mam.json placed in root dir"));
+  setCursor_textGrid_small(2, 18);
+  display.print(F("- Filename all lowercase"));
+
+  display.setTextColor(MIDDLEGREEN, COLOR_BACKGROUND);
+  setCursor_textGrid_small(2, 21);
+  display.print(F("Press ENC_R to retry"));
+
+  display.setTextSize(2);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+}
+
+
+// =====================================================================
+//  Main UI function
+// =====================================================================
+FLASHMEM void UI_func_mam_info(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+    encoderDir[ENC_R].reset();
+    mam_scroll_pos   = 0;
+    mam_total_lines  = 0;
+    mam_mode         = 0;
+    mam_needs_redraw = true;
+    memset(mam_error_msg, 0, sizeof(mam_error_msg));
+
+    mam_sb_track_drawn = false;
+    mam_sb_last_y      = 0xFFFF;
+    mam_sb_last_h      = 0;
+
+    helptext_l(back_text);
+    helptext_r(F("< > SCROLL"));
+
+    // Safety: free any leftover document
+    if (mam_doc) {
+      delete mam_doc;
+      mam_doc = nullptr;
+    }
+
+    // ---- Open file ----
+    File f = SD.open("/mam.json", FILE_READ);
+    if (!f) {
+      mam_mode = 2;
+      strncpy(mam_error_msg, "File /mam.json not found!",
+              sizeof(mam_error_msg) - 1);
+      mam_show_error(mam_error_msg);
+      helptext_r(F("RETRY"));
+      return;
+    }
+
+    size_t file_size = f.size();
+    if (file_size == 0) {
+      f.close();
+      mam_mode = 2;
+      strncpy(mam_error_msg, "File /mam.json is empty!",
+              sizeof(mam_error_msg) - 1);
+      mam_show_error(mam_error_msg);
+      helptext_r(F("RETRY"));
+      return;
+    }
+
+    if (file_size > 16384) {
+      f.close();
+      mam_mode = 2;
+      snprintf(mam_error_msg, sizeof(mam_error_msg),
+               "File too big: %u bytes (max 16384)", (unsigned)file_size);
+      mam_show_error(mam_error_msg);
+      helptext_r(F("RETRY"));
+      return;
+    }
+
+    // ---- Allocate JSON doc (freed in FUNC_close) ----
+    mam_doc = new DynamicJsonDocument(6144);
+    if (!mam_doc) {
+      f.close();
+      mam_mode = 2;
+      strncpy(mam_error_msg, "Out of memory!",
+              sizeof(mam_error_msg) - 1);
+      mam_show_error(mam_error_msg);
+      helptext_r(F("RETRY"));
+      return;
+    }
+
+    DeserializationError err = deserializeJson(*mam_doc, f);
+    f.close();
+
+    if (err) {
+      mam_mode = 2;
+      snprintf(mam_error_msg, sizeof(mam_error_msg),
+               "JSON error: %s", err.c_str());
+      mam_show_error(mam_error_msg);
+      helptext_r(F("RETRY"));
+      return;
+    }
+
+    // ---- Header ----
+    display.fillScreen(COLOR_BACKGROUND);
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    setCursor_textGrid_small(0, 1);
+    display.print(F("MAM INFO"));
+
+    // ---- Count items (render=false, count=0 → walks entire list) ----
+    mam_total_lines = mam_walk(false, 0, 0);
+
+    // ---- Render first page ----
+    display.setTextSize(1);
+    mam_walk(true, 0, MAM_VISIBLE);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    // ---- Scrollbar ----
+    mam_draw_scrollbar(true);
+    mam_mode = 1;
+
+    {
+      const char* security_code = (*mam_doc)["securityCode"] | "";
+      if (strlen(security_code) == 0)
+        security_code = (*mam_doc)["secretCode"] | "";
+#if defined OLED_DISPLAYS
+      bool security_present = (security_code && strlen(security_code) >= 4);
+#endif
+
+#if defined OLED_DISPLAYS
+      if (security_present)
+        mam_show_code_on_right_oled(security_code);
+      else
+        mam_clear_right_oled();
+#endif
+    }
+  }
+
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+    // ---- Error state ----
+    if (mam_mode == 2) {
+      helptext_r(F("RETRY"));
+      if (LCDML.BT_checkEnter()) LCDML.FUNC_setup();
+      return;
+    }
+    if (mam_mode != 1) return;
+
+    // ---- Scroll input ----
+    const EncoderEvents e = getEncoderEvents(ENC_R);
+    const uint16_t max_scroll = (mam_total_lines > MAM_VISIBLE)
+                                ? (mam_total_lines - MAM_VISIBLE) : 0;
+
+    if (e.turned) {
+      uint16_t new_pos = mam_scroll_pos;
+      if (e.down)
+        new_pos = (new_pos < max_scroll) ? (new_pos + 1) : max_scroll;
+      else
+        new_pos = (new_pos > 0) ? (new_pos - 1) : 0;
+
+      if (new_pos != mam_scroll_pos) {
+        mam_scroll_pos   = new_pos;
+        mam_needs_redraw = true;
+      }
+    }
+
+    if (!mam_needs_redraw) return;
+    mam_needs_redraw = false;
+
+    // 1) Clear content area
+    checkWebRemote();
+    display.fillRect(0, MAM_START_ROW * 10, MAM_SB_X,
+                     MAM_VISIBLE * 10 + 2, COLOR_BACKGROUND);
+    display.console = false;
+
+    // 2) Re-render visible portion
+    display.setTextSize(1);
+    mam_walk(true, mam_scroll_pos, MAM_VISIBLE);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+
+    // 3) Scrollbar
+    mam_draw_scrollbar(false);
+  }
+
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+    #if defined OLED_DISPLAYS
+    mam_clear_right_oled();
+#endif
+    // Free the JSON document — returns memory to the heap
+    if (mam_doc) {
+      delete mam_doc;
+      mam_doc = nullptr;
+    }
+
+    mam_sb_track_drawn = false;
+    mam_sb_last_y      = 0xFFFF;
+    mam_sb_last_h      = 0;
+
+    encoderDir[ENC_R].reset();
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+
+#undef MAM_STR
+
+#else
+FLASHMEM void UI_func_mam_info(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) // ****** SETUP *********
+  {
+   ;
+  }
+
+  if (LCDML.FUNC_loop()) // ****** LOOP *********
+  {
+   ;
+  }
+
+  if (LCDML.FUNC_close()) // ****** STABLE END *********
+  {
+   
+    encoderDir[ENC_R].reset();
+    display.setTextSize(2);
+    display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+    display.fillScreen(COLOR_BACKGROUND);
+  }
 }
 
 #endif

@@ -180,7 +180,7 @@ DO NOT Exceed 23Mhz for RA8875! It will result in garbage on screen or run very 
 	const static uint32_t MAXSPIREADSPEED  = 6000000UL;  //Read don't go higher than 22000000!;
 
 	#if defined(__MK20DX128__) || defined(__MK20DX256__)  || defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__IMXRT1062__)
-		const static uint32_t MAXSPISPEED	= 18000000UL;  //don't go higher than 22000000!;
+       const static uint32_t MAXSPISPEED	= 18000000UL;  //don't go higher than 22000000!;
 	#endif
 #endif
 

@@ -40,6 +40,21 @@
 
 #include <avr/pgmspace.h>
 
+#include "ui_mdtracker.h"
+
+// ---------------------------------------------------------------------------
+//  Per-step drum FX override.
+//
+//  The drum voice slot is allocated dynamically at trigger time by
+//  drum_get_slot(), so the per-step MDTracker FX cannot be applied to a
+//  fixed mixer channel in advance.  The sequencer sets the two globals
+//  below before triggering a drum, and the drum noteOn handler in
+//  MicroDexed-touch.ino consumes (reads + clears) them the instant the
+//  destination slot is known.  Values are MDT_FX_* / parameter byte.
+// ---------------------------------------------------------------------------
+extern uint8_t g_drum_fx_override_cmd;
+extern uint8_t g_drum_fx_override_val;
+
 static const float tune_frequencies2_PGM[128] = {
     8.1758, 8.6620, 9.1770, 9.7227, 10.3009, 10.9134, 11.5623, 12.2499,
     12.9783, 13.7500, 14.5676, 15.4339, 16.3516, 17.3239, 18.3540, 19.4454,
@@ -188,6 +203,8 @@ typedef struct sequencer_s
     uint8_t arp_num_notes_count = 0;
     float arp_volume_fade;
     float arp_volume_base = 50;
+    bool    arp_stopped = false;   // MDT_FX_ARP_STOP: pause arp note generation
+    
     uint8_t data_buffer[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     uint8_t note_data[NUM_SEQ_PATTERN][16] = {
@@ -257,6 +274,19 @@ typedef struct sequencer_s
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} };
+
+
+    // ------------------------------------------------------------------
+    // MDTracker per-step FX columns
+    //   fx_inst: 0xFF = use track's default instrument
+    //   fx_cmd : 0x00 = no effect (see MdtFxCmd in ui_mdtracker.h)
+    //   fx_val : 0x00 = parameter
+    // Default contents are applied by mdtracker_init_fx_arrays()
+    // at boot and on every performance load.
+    // ------------------------------------------------------------------
+    uint8_t fx_inst[NUM_SEQ_PATTERN][16];
+    uint8_t fx_cmd [NUM_SEQ_PATTERN][16];
+    uint8_t fx_val [NUM_SEQ_PATTERN][16];
 
     uint8_t song[NUM_SEQ_TRACKS][SONG_LENGTH] = {
         {99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99},

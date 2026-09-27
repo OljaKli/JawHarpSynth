@@ -80,6 +80,39 @@ extern bool esp_draw;
 #endif
 
 //*************************************************************************************************
+//* XIAO ESP32-S3 BLUETOOTH-MIDI BRIDGE
+//*************************************************************************************************
+// The Seeed XIAO ESP32S3 acts as a pure Bluetooth-MIDI -> Serial bridge.
+// It is meant to be used INSTEAD of the Waveshare ESP32 display, when the
+// user has a different (non-ESP) display attached to the Teensy.
+//
+// It uses the exact same Teensy UART that the ESP_DISPLAY firmware uses
+// (Serial4) and the exact same packet protocol (0xAA sync + XOR checksum,
+// CMD_MIDI_DATA = 205), so it is a drop-in replacement for the Waveshare's
+// built-in Bluetooth module.
+//
+// Mutually exclusive with ESP_DISPLAY (both use Serial4).
+//
+#if defined XIAO_BLUETOOTH_MIDI
+  #if defined ESP_DISPLAY
+    #error "XIAO_BLUETOOTH_MIDI cannot be combined with ESP_DISPLAY (both use Serial4)"
+  #endif
+
+  // -------- Serial port to the XIAO (identical to ESP_DISPLAY) --------
+  #define XIAO_MIDI_SERIAL   Serial4
+  #define XIAO_MIDI_BAUD     6000000
+
+  // -------- Packet protocol (identical to ESP_DISPLAY) -----------------
+  #define XIAO_PKT_SYNC             0xAA
+  #define XIAO_CMD_VERSION_REPORT   100
+  #define XIAO_CMD_MIN_VERSION_ESP  103
+  #define XIAO_CMD_MIDI_DATA        205
+
+  // Handshake request byte sent by the XIAO when it boots / retries
+  #define XIAO_HANDSHAKE_REQ        0x98
+#endif
+
+//*************************************************************************************************
 //* MIDI HARDWARE SETTINGS
 //*************************************************************************************************
 #define MIDI_DEVICE_DIN Serial1
@@ -434,6 +467,14 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define ENVELOPES_CONFIG_NAME "envelope"
 #define MAX_PERF_MOD 50
 
+// MDTracker per-step FX arrays – kept in separate files so that
+// patterns.json stays byte-compatible with firmware versions that
+// do not know about MDTracker.
+#define FX_INST_CONFIG_NAME "fx_inst"
+#define FX_CMD_CONFIG_NAME  "fx_cmd"
+#define FX_VAL_CONFIG_NAME  "fx_val"
+
+
 // SD CARD
 #define MAX_FILES 150
 
@@ -477,7 +518,7 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #define GATE_OUT 14
 #endif 
 
-// #ifdef I2C_ENCODERS
+// #ifdef MINI_ENCODER
 // #define I2C_INT 38
 // #endif
 
@@ -1150,6 +1191,8 @@ typedef struct sys_s
   uint8_t right_edit_custom_end;
   // Brightness gradient intensity (0–100)
   uint8_t led_brightness_gradient;
+    // Hardware GLOBALCURRENT register (IS31FL3746A reg 0x51, range 0x00–0xFF)
+  uint8_t led_brightness;
 //#endif
 
 } sys_t;

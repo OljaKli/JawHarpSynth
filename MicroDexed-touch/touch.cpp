@@ -15,9 +15,11 @@
 #include "touchbutton.h"
 #include "virtualkeyboard.h"
 #include "noisemaker.h"
+#include "screensaver.h"
 
 #if defined OLED_DISPLAYS
-char last_right_helptext[20] = "";
+char last_right_helptext[21] = "";
+char last_left_helptext[21]  = "";   
 #endif
 
 #if defined ESP_DISPLAY
@@ -144,7 +146,6 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   // Calculate string length based on type
   uint8_t l;
   if (is_flash) {
-    // Flash string length calculation
     PGM_P p = reinterpret_cast<PGM_P>(str);
     l = 0;
     char c;
@@ -153,7 +154,6 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
     }
   }
   else {
-    // RAM string length calculation
     l = strlen((const char*)str);
   }
 
@@ -191,7 +191,7 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
     break;
   }
 
-  // Draw the text
+  // Draw the text on the TFT
   display.setCursor(x_pos, y_pos);
   display.setTextColor(COLOR_SYSTEXT, position == 2 ? COLOR_BACKGROUND : DX_DARKCYAN);
 
@@ -200,62 +200,112 @@ FLASHMEM void helptext_impl(const void* str, uint8_t position, bool is_flash)
   }
   else {
     display.print((const char*)str);
-
   }
 
 #ifdef OLED_DISPLAYS
-  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
-  switch (position) {
-  case 0:
-    mcp.write1(OLED_CS_L, LOW);
-    mcp.write1(OLED_CS_R, HIGH);
-    oled_display.clearDisplay();
-    oled_display.setCursor(0, 0);
-    if (is_flash) {
-      oled_display.print((const __FlashStringHelper*)str);
-    }
-    else {
-      oled_display.print((const char*)str);
-    }
-    oled_display.setCursor(0, 16);
-    oled_display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    if (seq.running)
-      oled_display.print(F("STOP SEQ. "));
-    else
-      oled_display.print(F("START SEQ."));
-    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+  // -----------------------------------------------------------------
+  // Skip the OLED redraw when the string on this panel has not changed.
+  //
+  // Pages call helptext_l()/helptext_r() every loop iteration with the
+  // same text. Without this guard each call would clear the shared
+  // framebuffer and push it to the OLED, then the other helptext_*()
+  // call would do the same for its panel, and the two would ping-pong
+  // at loop rate.
+  //
+  // We compare only the string, NOT the framebuffer ownership: the
+  // panel already holds its last drawn content, and a genuine change
+  // (or the periodic 1 Hz / 2.5 s refresh) will repaint it if needed.
+  // -----------------------------------------------------------------
+  char new_text[21];
+  if (is_flash) {
+    strncpy_P(new_text, (PGM_P)str, sizeof(new_text) - 1);
+  }
+  else {
+    strncpy(new_text, (const char*)str, sizeof(new_text) - 1);
+  }
+  new_text[sizeof(new_text) - 1] = '\0';
 
-    break;
-
-  case 1:
-    mcp.write1(OLED_CS_R, LOW);
-    mcp.write1(OLED_CS_L, HIGH);
-    oled_display.clearDisplay();
-    oled_display.setCursor(0, 0);
-    if (is_flash) {
-      oled_display.print((const __FlashStringHelper*)str);
-    }
-    else {
-      oled_display.print((const char*)str);
-    }
-
-    if (is_flash) {
-        strncpy_P(last_right_helptext, (PGM_P)str, sizeof(last_right_helptext) - 1);
-    }
-    else {
-        strncpy(last_right_helptext, (const char*)str, sizeof(last_right_helptext) - 1);
-    }
-    last_right_helptext[sizeof(last_right_helptext) - 1] = '\0';
-
-
-    break;
+  bool skip_oled = false;
+  if (position == 0) {
+    skip_oled = (strcmp(new_text, last_left_helptext) == 0);
+  }
+  else if (position == 1) {
+    skip_oled = (strcmp(new_text, last_right_helptext) == 0);
   }
 
-  oled_display.display();
-  mcp.write1(OLED_CS_L, HIGH);
-  mcp.write1(OLED_CS_R, HIGH);
-  SPI.endTransaction();
-  
+  if (!skip_oled) {
+    SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+    switch (position) {
+
+    case 0: {
+      // ---------------- LEFT OLED ----------------
+      mcp.write1(OLED_CS_L, LOW);
+      mcp.write1(OLED_CS_R, HIGH);
+
+      oled_display.clearDisplay();
+      oled_display.setCursor(0, 0);
+      oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+      if (is_flash) {
+        oled_display.print((const __FlashStringHelper*)str);
+      }
+      else {
+        oled_display.print((const char*)str);
+      }
+
+      strncpy(last_left_helptext, new_text, sizeof(last_left_helptext) - 1);
+      last_left_helptext[sizeof(last_left_helptext) - 1] = '\0';
+
+      oled_display.setCursor(0, 16);
+      oled_display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+      if (seq.running)
+        oled_display.print(F("STOP SEQ. "));
+      else
+        oled_display.print(F("START SEQ."));
+      oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+      oled_draw_bar_row();
+
+      oled_display.display();
+
+      oled_fb_owner = 0;
+      break;
+    }
+
+    case 1: {
+      // ---------------- RIGHT OLED ----------------
+      mcp.write1(OLED_CS_R, LOW);
+      mcp.write1(OLED_CS_L, HIGH);
+
+      oled_display.clearDisplay();
+      oled_display.setCursor(0, 0);
+      oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+      if (is_flash) {
+        oled_display.print((const __FlashStringHelper*)str);
+      }
+      else {
+        oled_display.print((const char*)str);
+      }
+
+      strncpy(last_right_helptext, new_text, sizeof(last_right_helptext) - 1);
+      last_right_helptext[sizeof(last_right_helptext) - 1] = '\0';
+
+      oled_display.display();
+
+      oled_fb_owner = 1;
+      break;
+    }
+
+    default:
+      // position == 2 (center) touches only the TFT; nothing on the OLEDs.
+      break;
+    }
+
+    mcp.write1(OLED_CS_L, HIGH);
+    mcp.write1(OLED_CS_R, HIGH);
+    SPI.endTransaction();
+  }
 #endif
 
   ts.old_helptext_length[position] = l;
@@ -286,6 +336,78 @@ FLASHMEM void helptext_r(const __FlashStringHelper* str) {
 FLASHMEM void helptext_c(const __FlashStringHelper* str) {
   helptext_impl(str, 2, true);
 }
+
+// ---------------------------------------------------------------------------
+// OLED-only helptext helper.
+//
+// Same layout/behaviour as helptext_impl() for the OLEDs, but the TFT is
+// left completely untouched. Used by pages that want to keep the main
+// screen free of helptext (e.g. MDTracker).
+// ---------------------------------------------------------------------------
+FLASHMEM void helptext_oled(const char* str, uint8_t position)
+{
+#ifdef OLED_DISPLAYS
+  if (position > 1) return;
+  if (!str) str = "";
+
+  char new_text[21];
+  strncpy(new_text, str, sizeof(new_text) - 1);
+  new_text[sizeof(new_text) - 1] = '\0';
+
+  bool skip_oled = false;
+  if (position == 0)      skip_oled = (strcmp(new_text, last_left_helptext)  == 0);
+  else if (position == 1) skip_oled = (strcmp(new_text, last_right_helptext) == 0);
+  if (skip_oled) return;
+
+  SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
+
+  if (position == 0) {
+    mcp.write1(OLED_CS_L, LOW);
+    mcp.write1(OLED_CS_R, HIGH);
+
+    oled_display.clearDisplay();
+    oled_display.setCursor(0, 0);
+    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    oled_display.print(new_text);
+
+    strncpy(last_left_helptext, new_text, sizeof(last_left_helptext) - 1);
+    last_left_helptext[sizeof(last_left_helptext) - 1] = '\0';
+
+    oled_display.setCursor(0, 16);
+    oled_display.setTextColor(SSD1306_BLACK, SSD1306_WHITE);
+    if (seq.running) oled_display.print(F("STOP SEQ. "));
+    else             oled_display.print(F("START SEQ."));
+    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+
+    oled_draw_bar_row();
+    oled_display.display();
+    oled_fb_owner = 0;
+  } else {
+    mcp.write1(OLED_CS_R, LOW);
+    mcp.write1(OLED_CS_L, HIGH);
+
+    oled_display.clearDisplay();
+    oled_display.setCursor(0, 0);
+    oled_display.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+    oled_display.print(new_text);
+
+    strncpy(last_right_helptext, new_text, sizeof(last_right_helptext) - 1);
+    last_right_helptext[sizeof(last_right_helptext) - 1] = '\0';
+
+    oled_display.display();
+    oled_fb_owner = 1;
+  }
+
+  mcp.write1(OLED_CS_L, HIGH);
+  mcp.write1(OLED_CS_R, HIGH);
+  SPI.endTransaction();
+#else
+  (void)str; (void)position;
+#endif
+}
+
+FLASHMEM void helptext_oled_l(const char* str) { helptext_oled(str, 0); }
+FLASHMEM void helptext_oled_r(const char* str) { helptext_oled(str, 1); }
 
 extern void clear_bottom_half_screen_without_backbutton();
 
@@ -1607,16 +1729,26 @@ FLASHMEM void draw_chord_arranger_indicators() {
   checkWebRemote();
   display.fillRect(0, zoneY - 9, DISPLAY_WIDTH, barHeight + 9, COLOR_BACKGROUND);
 
-  auto printNoteLabel = [&](uint16_t x, uint8_t note, uint16_t color) {
-    if (x < 0 || x >= DISPLAY_WIDTH) return;
+      auto printNoteLabel = [&](uint16_t x, uint8_t note, uint16_t color) {
+    if (x >= DISPLAY_WIDTH) return;
     char noteName[6];
     getNoteName(noteName, note);
+    uint8_t len = strlen(noteName);
+    if (len > 4) len = 4; // safety, but getNoteName should never exceed 4
+    // Print the note name in the desired colour.
     display.setTextSize(1);
     display.setTextColor(color, COLOR_BACKGROUND);
     display.setCursor(x, zoneY - 8);
     display.print(noteName);
+    // Fill the remaining space up to 4 characters with spaces in background colour.
+    if (len < 4) {
+      display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+      for (uint8_t i = len; i < 4; i++) {
+        display.print(" ");
+      }
+    }
     checkWebRemote();
-    };
+  };
 
   // ---- CHORD zone ----
   if (seq.chord_zone_end > seq.chord_zone_start) {
@@ -1630,6 +1762,7 @@ FLASHMEM void draw_chord_arranger_indicators() {
       }
       if (rightX - leftX > 40) {
         display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
+        display.setTextColor(DARKGREEN, COLOR_BACKGROUND);
         display.print("CHORD");
       }
     }
@@ -1676,6 +1809,7 @@ FLASHMEM void draw_chord_arranger_indicators() {
       }
       if (rightX - leftX > 40) {
         display.setCursor((leftX + rightX) / 2 - 12, zoneY - 8);
+         display.setTextColor(RED, COLOR_BACKGROUND);
         display.print("LIVE");
       }
     }

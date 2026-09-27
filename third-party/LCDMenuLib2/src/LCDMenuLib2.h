@@ -350,5 +350,6 @@
             void                SCREEN_disable(void);                                               // disable the screensaver feature
             void                SCREEN_resetTimer(void);                                            // reset the screensaver timer 
             void                SCREEN_start(void);                                                 // start the screensaver directly
+               unsigned long       SCREEN_getTimeRemaining(void);                                      // remaining ms until the screensaver fires (0 if off, or already due)
     };
 #endif

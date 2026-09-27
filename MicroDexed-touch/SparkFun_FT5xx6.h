@@ -1,12 +1,8 @@
 #if defined RA_TOUCH_FT5XX6
 /* 
-
 Arduino library for control of FT5xx6 Capacitive Touch panels (CTPs).
-
 Based on work by Helge Langehaug (https://github.com/hellange/arduino/tree/master/capacitive_7in_panel)
-
 Author: Owen Lyke
-
 */
 
 #ifndef SF_FT5XX6

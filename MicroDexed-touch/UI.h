@@ -25,7 +25,11 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-#define _LCDML_DISP_cnt 74
+#if defined MUSIKANDMORE
+    #define _LCDML_DISP_cnt 77
+  #else
+    #define _LCDML_DISP_cnt 72
+  #endif
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1100  
@@ -46,6 +50,8 @@
 
 #define MIDI_CHANNEL_ABSENT     255 // no instrument
 
+#include "ui_mdtracker.h"
+
 struct ScopeSettings {
   bool enabled;
   uint16_t x;
@@ -54,6 +60,7 @@ struct ScopeSettings {
   uint16_t h;
   bool onlyDrawWhenRunning;
 };
+
 
 void splash_draw_header();
 void splash_draw_D();
@@ -119,7 +126,6 @@ void UI_func_microsynth(uint8_t param);
 void UI_func_seq_pattern_editor(uint8_t param);
 void UI_func_seq_vel_editor(uint8_t param);
 void UI_func_seq_settings(uint8_t param);
-void UI_func_seq_tracker(uint8_t param);
 void UI_func_drums(uint8_t param);
 void UI_func_voice_group_config(uint8_t param);
 void UI_func_MultiSamplePlay(uint8_t param);
@@ -146,7 +152,9 @@ void UI_func_sound_intensity(uint8_t param);
 void UI_func_filter_resonance(uint8_t param);
 void UI_func_filter_cutoff(uint8_t param);
 void UI_func_granular(uint8_t param);
-
+void UI_func_encoder_address_setup(uint8_t param);
+void UI_func_mam_info(uint8_t param);
+void UI_func_mdtracker_pattern_editor(uint8_t param);
 
 void setup_ui(void);
 #if defined SMFPLAYER
@@ -252,5 +260,9 @@ uint16_t getNotePixelX(uint8_t note);
 void setModeColor(uint8_t selected_option);
 void print_small_intbar(uint8_t x, uint8_t y, uint8_t input_value, uint8_t selected_option, boolean show_bar, boolean show_zero);
 
+#if defined OLED_DISPLAYS
+FLASHMEM void mam_show_code_on_right_oled(const char* code);
+FLASHMEM void mam_clear_right_oled(void);
+#endif
 
 #endif //_UI_H_

@@ -20,10 +20,32 @@ void InitializeCube();
 void cube_screensaver();
 void qix_screensaver();
 
+// Universal OLED & LED-Ring screensaver (works with every main-screen saver)
+extern bool oled_ring_screensaver_active;
+void OLED_update_screensaver_bar(void);
+void oled_ring_screensaver_start(void);
+void oled_ring_screensaver_stop(void);
+void oled_ring_screensaver_update(void);
+extern uint8_t oled_fb_owner;
+// Draws the screensaver countdown bar into the current OLED framebuffer.
+// Caller owns the SPI transaction and the display() call. Silently does
+// nothing when the bar must not be shown.
+void oled_draw_bar_row(void);
+
+// 2.5 s master tick: rotates the OLED info mode and paints the right panel.
+// Also paints the left panel when the screensaver is disabled.
+void OLED_update(void);
+
+// 1 Hz left-panel tick: info row + countdown bar. Self-throttled and
+// suppressed while the screensaver is disabled or active.
+void OLED_update_left_panel(void);
+
 #endif
 
 #ifndef ASTEROIDS_SCREENSAVER_H
 #define ASTEROIDS_SCREENSAVER_H
+
+void oled_draw_bar_row(void);
 
 class AsteroidsScreensaver {
 public:

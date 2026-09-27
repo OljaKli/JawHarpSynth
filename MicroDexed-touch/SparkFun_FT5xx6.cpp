@@ -1,14 +1,10 @@
 #if defined RA_TOUCH_FT5XX6
 
 /*
-
 SparkFun_FT5xx6.cpp
 Header: SparkFun_FT5xx6.h
-
 Purpose: 
-
 Author: Owen Lyke
-
 */
 
 #include "SparkFun_FT5xx6.h"

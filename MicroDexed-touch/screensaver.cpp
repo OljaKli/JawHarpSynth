@@ -24,6 +24,7 @@ uint8_t screensaver_brightness = 255;
 uint16_t screensaver_counthue = 0;
 extern uint16_t ColorHSV(uint16_t hue, uint8_t sat, uint8_t val);
 extern bool remote_active;
+bool oled_ring_screensaver_active = false;
 
 #if defined RA_DISPLAY
 FLASHMEM void boot_animation() {

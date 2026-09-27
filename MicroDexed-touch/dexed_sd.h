@@ -93,4 +93,12 @@ void string_toupper(char* s);
 void load_sd_directory();
 int compare_files_by_name(storage_file_s a, storage_file_s b);
 
+bool load_sd_seq_fx_inst_json(uint8_t number);
+bool save_sd_seq_fx_inst_json(uint8_t number);
+bool load_sd_seq_fx_cmd_json(uint8_t number);
+bool save_sd_seq_fx_cmd_json(uint8_t number);
+bool load_sd_seq_fx_val_json(uint8_t number);
+bool save_sd_seq_fx_val_json(uint8_t number);
+
+
 #endif

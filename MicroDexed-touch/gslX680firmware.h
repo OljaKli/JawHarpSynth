@@ -1,4 +1,4 @@
-#if defined RA_DISPLAY && !defined (RA_TOUCH_FT5XX6)
+#if defined RA_DISPLAY && !defined RA_TOUCH_FT5XX6
 
 #ifndef _GSLX680_H_
 #define _GSLX680_H_

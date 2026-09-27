@@ -7,18 +7,18 @@
 #ifndef TS_POINT_DEFINED
 #define TS_POINT_DEFINED
 struct TS_Point {
-    int16_t x, y;
-    TS_Point() : x(0), y(0) {}
-    TS_Point(int16_t x0, int16_t y0) : x(x0), y(y0) {}
+  int16_t x, y;
+  TS_Point() : x(0), y(0) {}
+  TS_Point(int16_t x0, int16_t y0) : x(x0), y(y0) {}
 };
 #endif
 #endif
 
-#if defined RA_TOUCH_FT5XX6
-    #include "ft5xx6_touch.h"
+#if defined RA_TOUCH_FT5XX6 && defined RA_DISPLAY
+#include "ft5xx6_touch.h"
 #elif defined RA_DISPLAY
-  #include <GSL1680.h>
-  extern GSL1680 touch;
+#include <GSL1680.h>
+extern GSL1680 touch;
 #elif defined CAPACITIVE_TOUCH_DISPLAY
 #include "Adafruit_FT6206.h"
 extern Adafruit_FT6206 touch;
@@ -118,6 +118,11 @@ FLASHMEM void helptext_c(const char* str);
 FLASHMEM void helptext_l(const __FlashStringHelper* str);
 FLASHMEM void helptext_r(const __FlashStringHelper* str);
 FLASHMEM void helptext_c(const __FlashStringHelper* str);
+
+// OLED-only helptext (does not touch the TFT)
+FLASHMEM void helptext_oled(const char* str, uint8_t position);
+FLASHMEM void helptext_oled_l(const char* str);
+FLASHMEM void helptext_oled_r(const char* str);
 
 void update_latch_button();
 void draw_back_touchbutton();

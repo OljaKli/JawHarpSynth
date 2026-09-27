@@ -2376,6 +2376,10 @@ FLASHMEM bool load_sd_sys_json(void)
   configuration.sys.right_edit_custom_end    = data_json["r_e_ce"] | 100;
 
   configuration.sys.led_brightness_gradient  = data_json["l_grad"] | 0;
+  
+   configuration.sys.led_brightness = data_json["ring_bright"] | 1;
+configuration.sys.led_brightness = constrain(configuration.sys.led_brightness, 0, 3);
+  
 #endif
 
         if (data_json["brightness"] == 0)
@@ -2513,6 +2517,8 @@ FLASHMEM bool save_sd_sys_json(void)
   data_json["r_e_cs"]  = configuration.sys.right_edit_custom_start;
   data_json["r_e_ce"]  = configuration.sys.right_edit_custom_end;
   data_json["l_grad"]  = configuration.sys.led_brightness_gradient;
+  data_json["ring_bright"]  = configuration.sys.led_brightness ;
+
 //#endif
 
       if (GAMEPAD_BUTTON_A != GAMEPAD_BUTTON_B)
@@ -4217,9 +4223,14 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   LOG.println(number);
 #endif
 
-  save_sd_seq_sub_vel_json(number);
+   save_sd_seq_sub_vel_json(number);
   save_sd_seq_sub_patterns_json(number);
+  // MDTracker FX arrays – kept in their own files for backward compatibility
+  save_sd_seq_fx_inst_json(number);
+  save_sd_seq_fx_cmd_json(number);
+  save_sd_seq_fx_val_json(number);
   save_sd_drummappings_json(number);
+
   save_sd_song_json(number);
   save_sd_transpose_json(number);
   save_sd_chain_json(number);
@@ -4601,6 +4612,163 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
   return (false);
 }
 
+/******************************************************************************
+   SD MDTRACKER FX ARRAYS
+   Each array is stored in its own file as a single hex string so that:
+     - patterns.json stays byte-compatible with old firmware,
+     - the JSON pool usage is ~1 KB per file instead of ~15 KB.
+ ******************************************************************************/
+
+// 1025 bytes in BSS – never on the stack.
+static char s_fx_hex[NUM_SEQ_PATTERN * 16 * 2 + 1];
+
+// ---- Generic saver ---------------------------------------------------------
+FLASHMEM static bool save_sd_fx_array_json(uint8_t number,
+                                           const char* configName,
+                                           const uint8_t* flat_arr)
+{
+  if (sd_card_internal <= 0) return false;
+
+  number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+  snprintf(filename, sizeof(filename), "/%s/%d/%s.json",
+           PERFORMANCE_CONFIG_PATH, number, configName);
+
+#ifdef DEBUG
+  LOG.print(F("Saving "));
+  LOG.print(configName);
+  LOG.print(F(" for performance "));
+  LOG.println(number);
+#endif
+
+  const size_t n = (size_t)NUM_SEQ_PATTERN * 16;
+
+  static const char hx[] = "0123456789ABCDEF";
+  size_t k = 0;
+  for (size_t i = 0; i < n; i++) {
+    uint8_t v = flat_arr[i];
+    s_fx_hex[k++] = hx[(v >> 4) & 0x0F];
+    s_fx_hex[k++] = hx[v & 0x0F];
+  }
+  s_fx_hex[k] = 0;
+
+  AudioNoInterrupts();
+  SD.remove(filename);
+  json = SD.open(filename, FILE_WRITE);
+  if (!json) {
+    AudioInterrupts();
+#ifdef DEBUG
+    LOG.print(F("E : Cannot open "));
+    LOG.print(filename);
+    LOG.println(F(" on SD."));
+#endif
+    return false;
+  }
+
+  auto& data_json = g_json_doc; data_json.clear();
+  data_json["fx"] = s_fx_hex;
+
+  if (data_json.overflowed()) {
+#ifdef DEBUG
+    LOG.println(F("E: fx array JSON overflowed"));
+#endif
+    json.close();
+    AudioInterrupts();
+    return false;
+  }
+
+  serializeJson(data_json, json);
+  json.close();
+  AudioInterrupts();
+  return true;
+}
+
+// ---- Generic loader --------------------------------------------------------
+FLASHMEM static bool load_sd_fx_array_json(uint8_t number,
+                                           const char* configName,
+                                           uint8_t* flat_arr,
+                                           uint8_t default_value)
+{
+  const size_t n = (size_t)NUM_SEQ_PATTERN * 16;
+
+  // Always start from a known state.  Missing file => defaults.
+  memset(flat_arr, default_value, n);
+
+  if (number < 0) return false;
+  if (sd_card_internal <= 0) return false;
+
+  number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
+  snprintf(filename, sizeof(filename), "/%s/%d/%s.json",
+           PERFORMANCE_CONFIG_PATH, number, configName);
+
+  AudioNoInterrupts();
+  if (!SD.exists(filename)) {
+    AudioInterrupts();
+    return false;   // not an error: caller keeps the defaults
+  }
+
+  json = SD.open(filename);
+  if (!json) {
+    AudioInterrupts();
+    return false;
+  }
+
+  auto& data_json = g_json_doc; data_json.clear();
+  deserializeJson(data_json, json);
+  json.close();
+  AudioInterrupts();
+
+  const char* s = data_json["fx"].as<const char*>();
+  if (!s || strlen(s) < n * 2) return false;
+
+  auto nib = [](char c) -> uint8_t {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return 0;
+  };
+
+  for (size_t i = 0; i < n; i++) {
+    flat_arr[i] = (uint8_t)((nib(s[i * 2]) << 4) | nib(s[i * 2 + 1]));
+  }
+  return true;
+}
+
+// ---- Thin wrappers ---------------------------------------------------------
+FLASHMEM bool save_sd_seq_fx_inst_json(uint8_t number)
+{
+  return save_sd_fx_array_json(number, FX_INST_CONFIG_NAME,
+                               (const uint8_t*)seq.fx_inst);
+}
+FLASHMEM bool load_sd_seq_fx_inst_json(uint8_t number)
+{
+  // 0xFF is the "use track default" marker for fx_inst
+  return load_sd_fx_array_json(number, FX_INST_CONFIG_NAME,
+                               (uint8_t*)seq.fx_inst, 0xFF);
+}
+
+FLASHMEM bool save_sd_seq_fx_cmd_json(uint8_t number)
+{
+  return save_sd_fx_array_json(number, FX_CMD_CONFIG_NAME,
+                               (const uint8_t*)seq.fx_cmd);
+}
+FLASHMEM bool load_sd_seq_fx_cmd_json(uint8_t number)
+{
+  // 0x00 == MDT_FX_NONE
+  return load_sd_fx_array_json(number, FX_CMD_CONFIG_NAME,
+                               (uint8_t*)seq.fx_cmd, 0x00);
+}
+
+FLASHMEM bool save_sd_seq_fx_val_json(uint8_t number)
+{
+  return save_sd_fx_array_json(number, FX_VAL_CONFIG_NAME,
+                               (const uint8_t*)seq.fx_val);
+}
+FLASHMEM bool load_sd_seq_fx_val_json(uint8_t number)
+{
+  return load_sd_fx_array_json(number, FX_VAL_CONFIG_NAME,
+                               (uint8_t*)seq.fx_val, 0x00);
+}
+
 extern void update_seq_speed();
 extern uint8_t perf_load_options;
 extern void set_seq_timing();
@@ -4617,10 +4785,14 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   AudioNoInterrupts();
 
-  if (bitRead(perf_load_options, perf_seq))
+    if (bitRead(perf_load_options, perf_seq))
   {
     load_sd_seq_sub_patterns_json(number);
     load_sd_seq_sub_vel_json(number);
+    // MDTracker FX arrays – missing files leave the defaults in place
+    load_sd_seq_fx_inst_json(number);
+    load_sd_seq_fx_cmd_json(number);
+    load_sd_seq_fx_val_json(number);
     load_sd_song_json(number);
     load_sd_transpose_json(number);
     load_sd_chain_json(number);

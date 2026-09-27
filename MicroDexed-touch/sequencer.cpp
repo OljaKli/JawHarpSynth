@@ -476,8 +476,9 @@ extern granular_params_t granular_params;
 
 FLASHMEM void arp_track(uint8_t d)
 {
-  if (seq.track_type[d] != 3) return;
+   if (seq.track_type[d] != 3) return;
   if (seq.arp_num_notes_count >= seq.arp_num_notes_max) return;
+  if (seq.arp_stopped) return;  
   if (seq.euclidean_active && !seq.euclidean_state[seq.step]) return;
 
   // Arp timing conditions 
@@ -811,26 +812,80 @@ FLASHMEM void sequencer_part1(void)
 
     // Main processing (identical conditions to original)
     if (seq.current_pattern[d] < NUM_SEQ_PATTERN && seq.current_chain[d] != 99 && !seq.track_mute[d]) {
+
+    //   if (seq.note_data[seq.current_pattern[d]][seq.step] > 0) {
+    //     if (seq.track_type[d] == 0) {
+    //       process_drum_track(d, tr);
+    //     }
+    //     else {
+    //       if (seq.track_type[d] == 1) {
+    //         process_instrument_track(d, tr);
+    //       }
+    //       else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) {
+    //         process_chord_track(d, tr);
+    //       }
+    //       else if (seq.track_type[d] == 3 && seq.ticks == 0) {
+    //         process_arp_track(d, tr);
+    //       }
+    //       else if (seq.track_type[d] == 4) {
+    //         process_sliced_drums(d);
+    //       }
+    //     }
+    //   }
+    // }
+
+
+    // Apply CMD/PAR even when the step has no note (e.g. a reverb
+// sweep that starts on a rest).
+      if (seq.fx_cmd[seq.current_pattern[d]][seq.step] != MDT_FX_NONE) {
+
+        // Drum tracks: audio FX must be delivered to the destination
+        // voice slot, which is only known after drum_get_slot() runs at
+        // trigger time.  Queue the override here so the drum noteOn
+        // handler picks it up.  Only queue when the step actually
+        // triggers a drum and the command is a drum audio FX, so that
+        // FX-only control steps on a drum track don't leak into the
+        // next drum hit.
+        if (seq.track_type[d] == 0 &&
+            seq.note_data[seq.current_pattern[d]][seq.step] > 0 &&
+            mdt_cmd_is_drum_audio(seq.fx_cmd[seq.current_pattern[d]][seq.step])) {
+          g_drum_fx_override_cmd = seq.fx_cmd[seq.current_pattern[d]][seq.step];
+          g_drum_fx_override_val = seq.fx_val[seq.current_pattern[d]][seq.step];
+        }
+
+        // Everything else (track-level commands, ARP control commands,
+        // instrument FX) is applied directly.
+        seq_apply_step_fx(d, seq.current_pattern[d], seq.step);
+      }
+
+
       if (seq.note_data[seq.current_pattern[d]][seq.step] > 0) {
+
+
+        // Swap in the effective instrument for this step (INS override)
+        // for the duration of the process_* call, then restore it.
+        const uint8_t mdt_saved_inst = seq.instrument[d];
+        seq.instrument[d] = seq_effective_instrument(d, seq.current_pattern[d], seq.step);
+
+
         if (seq.track_type[d] == 0) {
           process_drum_track(d, tr);
-        }
-        else {
+        } else {
           if (seq.track_type[d] == 1) {
             process_instrument_track(d, tr);
-          }
-          else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) {
+          } else if (seq.track_type[d] == 2 && seq.ticks == 0 && seq.note_data[seq.current_pattern[d]][seq.step] != 130) {
             process_chord_track(d, tr);
-          }
-          else if (seq.track_type[d] == 3 && seq.ticks == 0) {
+          } else if (seq.track_type[d] == 3 && seq.ticks == 0) {
             process_arp_track(d, tr);
-          }
-          else if (seq.track_type[d] == 4) {
+          } else if (seq.track_type[d] == 4) {
             process_sliced_drums(d);
           }
         }
+
+        seq.instrument[d] = mdt_saved_inst;
       }
     }
+    
     seq.noteoffsent[d] = false;
   }
 }

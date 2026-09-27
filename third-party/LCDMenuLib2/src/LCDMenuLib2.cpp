@@ -2896,3 +2896,32 @@ FLASHMEM void    LCDMenuLib2::SCREEN_start(void)
 
     screensaver_timer = millis() + 1000;
 }
+
+/* ******************************************************************** */
+unsigned long LCDMenuLib2::SCREEN_getTimeRemaining(void)
+/* ******************************************************************** */
+{
+    // No screensaver configured at all.
+    if(cb_screensaver == NULL)
+    {
+        return 0;
+    }
+
+    // Screensaver is disabled for the currently active function.
+    if(bitRead(REG_special, _LCDML_REG_special_disable_screensaver) == true)
+    {
+        return 0;
+    }
+
+    // Time already consumed since the last reset.
+    const unsigned long elapsed = millis() - screensaver_timer;
+
+    // Timer has already expired, or is about to.
+    if(elapsed >= screensaver_default_time)
+    {
+        return 0;
+    }
+
+    // Remaining milliseconds until the screensaver will fire.
+    return screensaver_default_time - elapsed;
+}
