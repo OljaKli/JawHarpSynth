@@ -11,6 +11,7 @@
 #include "microsynth.h"
 #include "braids.h"
 #include "drums.h"
+#include "dexed_sd.h"
 #include "template_mixer.hpp"
 #include "effect_mono_stereo.h"
 #include "effect_stereo_panorama.h"
@@ -95,7 +96,6 @@ extern drum_config_t drum_config[NUM_DRUMSET_CONFIG];
 #endif
 
 #ifdef GRANULAR
-// granular_params_t is only visible when granular.h has been included.
 #include "granular.h"
 extern granular_params_t granular_params;
 #endif
@@ -170,7 +170,7 @@ extern granular_params_t granular_params;
 
 #define MDT_PR_ROWH     3
 
-#define MDT_LOOP_INTERVAL_MS 20   // FUNC_loop period: playhead / preview release / step rec
+#define MDT_LOOP_INTERVAL_MS 20
 #define MDT_MENU_BTN_X   202
 #define MDT_MENU_BTN_Y   0
 #define MDT_VK_BTN_X     256
@@ -241,17 +241,6 @@ static uint8_t mdt_prev_cursor_row = 0xFF;
 static uint8_t mdt_prev_cursor_col = 0xFF;
 static bool    mdt_prev_edit_state = false;
 
-// ---------------------------------------------------------------------------
-//  Status-bar caches (field granularity).
-//
-//  The status bar is split into independently-cached fields so that a
-//  cursor scroll only repaints the fields whose inputs actually changed.
-//  mdt_status_force_full is set by _mdt_status_cache_reset(), which is
-//  called only on infrequent events (pattern-type change, step clear,
-//  step-record writes, menu transitions, keyboard open/close).
-//  Cursor movement must NOT call it – the per-field comparisons below
-//  already detect the change.
-// ---------------------------------------------------------------------------
 static bool    mdt_status_force_full = true;
 
 static bool    mdt_step_recording = false;
@@ -267,21 +256,8 @@ static uint8_t mdt_nopv_pat = 0xFF;
 static bool    mdt_drum_preview_valid = false;
 static bool    mdt_note_preview_valid = false;
 
-// ---------------------------------------------------------------------------
-//  Currently auditioned preview notes.
-//
-//  Preview used to fire note-on and note-off in the same tick, which meant
-//  any synth with a non-instant attack (Dexed, MicroSynth, Braids, …) never
-//  had time to sound before the release began.  Instead, notes are now
-//  held and released only when the next preview starts, or when the page
-//  is closed.
-// ---------------------------------------------------------------------------
 static uint8_t mdt_preview_active_notes[16];
 static uint8_t mdt_preview_active_count = 0;
-// How long a preview note is allowed to ring before it is released
-// automatically.  Short enough that scrolling through steps feels
-// responsive, long enough that voices with a real attack (Dexed,
-// MicroSynth, Braids) actually sound.
 static constexpr uint16_t MDT_PREVIEW_HOLD_MS = 500;
 static elapsedMillis     mdt_preview_hold_timer = 0;
 
@@ -331,11 +307,8 @@ static uint8_t mdt_menu_backup_fx_inst[16];
 static uint8_t mdt_menu_backup_fx_cmd[16];
 static uint8_t mdt_menu_backup_fx_val[16];
 
-// form pages (QUANTIZE / GENERATE): selected row and edit flag
 static uint8_t mdt_form_field = 0;
 static bool    mdt_form_edit = false;
-
-
 
 static uint8_t mdt_pr_last_pattern = 0xFF;
 static uint8_t mdt_pr_last_ct = 0xFF;
@@ -343,7 +316,6 @@ static int16_t mdt_pr_last_lo = -1;
 static int16_t mdt_pr_last_hi = -1;
 static uint8_t mdt_pr_last_h = 0;
 static uint8_t mdt_pr_last_cursor = 0xFF;
-static uint8_t mdt_pr_last_play = 0xFF;
 
 static uint8_t mdt_dr_last_pattern = 0xFF;
 static uint8_t mdt_dr_last_cursor = 0xFF;
@@ -354,6 +326,183 @@ static uint8_t mdt_dr_uniq_class[16];
 static uint8_t mdt_dr_row_h = 0;
 static uint8_t mdt_dr_yt = 0;
 static uint8_t mdt_dr_yb = 0;
+
+// ===========================================================================
+//  VOICE / BANK / POOL OVERRIDE STATE
+// ===========================================================================
+uint8_t mdt_manual_voice[NUM_DEXED];
+uint8_t mdt_manual_bank [NUM_DEXED];
+uint8_t mdt_manual_pool [NUM_DEXED];
+bool    mdt_manual_active[NUM_DEXED];
+
+static char    mdt_vn_cur_buf[VOICE_NAME_LEN + 1] = { 0 };
+static char    mdt_vn_tgt_buf[VOICE_NAME_LEN + 1] = { 0 };
+static uint8_t mdt_vn_cur_pool  = 0xFF;
+static uint8_t mdt_vn_cur_bank  = 0xFF;
+static uint8_t mdt_vn_cur_voice = 0xFF;
+static uint8_t mdt_vn_tgt_pool  = 0xFF;
+static uint8_t mdt_vn_tgt_bank  = 0xFF;
+static uint8_t mdt_vn_tgt_voice = 0xFF;
+
+static char    mdt_bn_cur_buf[BANK_NAME_LEN + 1] = { 0 };
+static char    mdt_bn_tgt_buf[BANK_NAME_LEN + 1] = { 0 };
+static uint8_t mdt_bn_cur_pool = 0xFF;
+static uint8_t mdt_bn_cur_bank = 0xFF;
+static uint8_t mdt_bn_tgt_pool = 0xFF;
+static uint8_t mdt_bn_tgt_bank = 0xFF;
+
+static const char* _mdt_voice_name_cur(uint8_t pool, uint8_t bank, uint8_t voice)
+{
+  if (mdt_vn_cur_pool  != pool ||
+      mdt_vn_cur_bank  != bank ||
+      mdt_vn_cur_voice != voice) {
+    mdt_vn_cur_pool  = pool;
+    mdt_vn_cur_bank  = bank;
+    mdt_vn_cur_voice = voice;
+    mdt_vn_cur_buf[0] = '\0';
+    get_voice_name(pool, bank, voice, mdt_vn_cur_buf);
+  }
+  return mdt_vn_cur_buf;
+}
+
+static const char* _mdt_voice_name_tgt(uint8_t pool, uint8_t bank, uint8_t voice)
+{
+  if (mdt_vn_tgt_pool  != pool ||
+      mdt_vn_tgt_bank  != bank ||
+      mdt_vn_tgt_voice != voice) {
+    mdt_vn_tgt_pool  = pool;
+    mdt_vn_tgt_bank  = bank;
+    mdt_vn_tgt_voice = voice;
+    mdt_vn_tgt_buf[0] = '\0';
+    get_voice_name(pool, bank, voice, mdt_vn_tgt_buf);
+  }
+  return mdt_vn_tgt_buf;
+}
+
+static const char* _mdt_bank_name_cur(uint8_t pool, uint8_t bank)
+{
+  if (mdt_bn_cur_pool != pool || mdt_bn_cur_bank != bank) {
+    mdt_bn_cur_pool = pool;
+    mdt_bn_cur_bank = bank;
+    mdt_bn_cur_buf[0] = '\0';
+    get_bank_name(pool, bank, mdt_bn_cur_buf);
+  }
+  return mdt_bn_cur_buf;
+}
+
+static const char* _mdt_bank_name_tgt(uint8_t pool, uint8_t bank)
+{
+  if (mdt_bn_tgt_pool != pool || mdt_bn_tgt_bank != bank) {
+    mdt_bn_tgt_pool = pool;
+    mdt_bn_tgt_bank = bank;
+    mdt_bn_tgt_buf[0] = '\0';
+    get_bank_name(pool, bank, mdt_bn_tgt_buf);
+  }
+  return mdt_bn_tgt_buf;
+}
+
+FLASHMEM uint8_t mdt_get_current_voice(uint8_t dx_idx) {
+  if (dx_idx >= NUM_DEXED) return 0;
+  return mdt_manual_active[dx_idx] ? mdt_manual_voice[dx_idx]
+                                   : configuration.dexed[dx_idx].voice;
+}
+FLASHMEM uint8_t mdt_get_current_bank(uint8_t dx_idx) {
+  if (dx_idx >= NUM_DEXED) return 0;
+  return mdt_manual_active[dx_idx] ? mdt_manual_bank[dx_idx]
+                                   : configuration.dexed[dx_idx].bank;
+}
+FLASHMEM uint8_t mdt_get_current_pool(uint8_t dx_idx) {
+  if (dx_idx >= NUM_DEXED) return 0;
+  return mdt_manual_active[dx_idx] ? mdt_manual_pool[dx_idx]
+                                   : configuration.dexed[dx_idx].pool;
+}
+FLASHMEM bool mdt_voice_override_active(uint8_t dx_idx) {
+  return (dx_idx < NUM_DEXED) && mdt_manual_active[dx_idx];
+}
+
+static FLASHMEM void _mdt_load_manual_voice_now(uint8_t dx_idx)
+{
+  if (dx_idx >= NUM_DEXED) return;
+  const uint8_t sp = configuration.dexed[dx_idx].pool;
+  const uint8_t sb = configuration.dexed[dx_idx].bank;
+  const uint8_t sv = configuration.dexed[dx_idx].voice;
+
+  load_sd_voice(mdt_manual_pool[dx_idx], mdt_manual_bank[dx_idx],
+                mdt_manual_voice[dx_idx], dx_idx);
+
+  configuration.dexed[dx_idx].pool  = sp;
+  configuration.dexed[dx_idx].bank  = sb;
+  configuration.dexed[dx_idx].voice = sv;
+}
+
+static FLASHMEM void _mdt_apply_voice_fx(uint8_t dx_idx, uint8_t cmd, uint8_t val)
+{
+  if (dx_idx >= NUM_DEXED) return;
+
+  if (cmd == MDT_FX_VOICE_CLR) {
+    const bool was_active = mdt_manual_active[dx_idx];
+    mdt_manual_active[dx_idx] = false;
+    if (was_active) {
+      load_sd_voice(configuration.dexed[dx_idx].pool,
+                    configuration.dexed[dx_idx].bank,
+                    configuration.dexed[dx_idx].voice, dx_idx);
+    }
+    return;
+  }
+
+  if (!mdt_manual_active[dx_idx]) {
+    mdt_manual_pool [dx_idx] = configuration.dexed[dx_idx].pool;
+    mdt_manual_bank [dx_idx] = configuration.dexed[dx_idx].bank;
+    mdt_manual_voice[dx_idx] = configuration.dexed[dx_idx].voice;
+    mdt_manual_active[dx_idx] = true;
+  }
+
+  switch (cmd) {
+    case MDT_FX_VOICE_UP:
+      mdt_manual_voice[dx_idx] = (mdt_manual_voice[dx_idx] + 1) % MAX_VOICES;
+      break;
+    case MDT_FX_VOICE_DN:
+      mdt_manual_voice[dx_idx] = (mdt_manual_voice[dx_idx] == 0)
+                                 ? (MAX_VOICES - 1)
+                                 : (mdt_manual_voice[dx_idx] - 1);
+      break;
+    case MDT_FX_VOICE_SEL:
+      mdt_manual_voice[dx_idx] = constrain(val, 0, MAX_VOICES - 1);
+      break;
+    case MDT_FX_BANK_SEL:
+      mdt_manual_bank[dx_idx] = constrain(val, 0, MAX_BANKS - 1);
+      break;
+    case MDT_FX_POOL_SEL:
+      mdt_manual_pool[dx_idx] = constrain(val, 0, DEXED_POOLS - 1);
+      break;
+    default: return;
+  }
+
+  _mdt_load_manual_voice_now(dx_idx);
+}
+
+FLASHMEM void mdt_reset_all_voice_overrides(void)
+{
+  for (uint8_t i = 0; i < NUM_DEXED; i++) {
+    if (mdt_manual_active[i]) {
+      mdt_manual_active[i] = false;
+      load_sd_voice(configuration.dexed[i].pool,
+                    configuration.dexed[i].bank,
+                    configuration.dexed[i].voice, i);
+    }
+  }
+}
+
+static FLASHMEM uint8_t _mdt_voice_fx_target_instance(uint8_t track,
+                                                      uint8_t pattern,
+                                                      uint8_t step)
+{
+  const uint8_t inst = seq_effective_instrument(track, pattern, step);
+  if (inst < 2)   return inst;
+  if (inst == 70) return 2;
+  if (inst == 71) return 3;
+  return 0xFF;
+}
 
 // ===========================================================================
 //  FORWARD DECLARATIONS
@@ -389,8 +538,6 @@ static void _mdt_menu_pattern_preview(uint16_t x, uint16_t y, uint8_t pat, const
 static void _mdt_menu_draw_value_line(void);
 static void _mdt_form_draw_all(void);
 static void _mdt_menu_execute(void);
-static void _mdt_menu_handle_encoder(const EncoderEvents& eR);
-static void _mdt_flush_redraw(void);
 static void _mdt_periodic(void);
 static void _mdt_menu_adjust(int8_t dir);
 static void _mdt_menu_back(void);
@@ -508,41 +655,11 @@ static FLASHMEM bool _mdt_row_insert_preview(uint8_t row, uint8_t* out_note, uin
   return _mdt_insert_value(out_note, out_vel);
 }
 
-// static FLASHMEM bool _mdt_insert_buffer_into_cursor_step(void)
-// {
-//   uint8_t in_note = 0, in_vel = 0;
-//   if (!_mdt_row_insert_preview(mdt_cursor_row, &in_note, &in_vel)) return false;
-
-//   const uint8_t pat = seq.active_pattern;
-//   const uint8_t row = mdt_cursor_row;
-//   seq.note_data[pat][row] = in_note;
-//   seq.vel[pat][row]       = in_vel;
-
-//   if (seq.content_type[pat] == 0) {
-//     mdt_drum_preview_valid = true;
-//     _mdt_preview_active_sample();
-//   } else {
-//     mdt_buf_note = in_note;
-//     mdt_buf_vel  = in_vel;
-//     mdt_note_preview_valid = true;
-//     if (!seq.running) _mdt_preview_step(row);
-//   }
-//   _mdt_preview_invalidate();
-//   mdt_preview_dirty = true;
-//   _mdt_status_cache_reset();
-//   return true;
-// }
-
 static FLASHMEM bool _mdt_insert_buffer_into_cursor_step(void)
 {
-  // An explicit press always means "insert the buffer here", so the
-  // suppression that keeps an empty state visible is lifted first.
   mdt_nopv_row = 0xFF;
   mdt_nopv_pat = 0xFF;
 
-  // Auto-insert only applies on the NOTE column.  On VEL/INS/CMD/PAR
-  // the user is editing an attribute of the step, so we must not
-  // write a note just because the encoder was pressed.
   if (mdt_cursor_col != MDT_COL_NOTE) return false;
 
   uint8_t in_note = 0, in_vel = 0;
@@ -705,7 +822,6 @@ static FLASHMEM void _mdt_ins_label(char* out, size_t n, uint8_t id)
   snprintf(out, n, "???  UNKNOWN %u", (unsigned)id);
 }
 
-
 static FLASHMEM const uint8_t* _mdt_ins_order(uint8_t* count_out)
 {
   static uint8_t order[1 + 9 + NUM_MULTISAMPLES + 16 + 16 + 16 + 1];
@@ -823,11 +939,6 @@ static FLASHMEM void _mdt_preview_active_sample(void)
 #endif
 }
 
-// Release every note that a previous _mdt_preview_step() call is still
-// holding.  Routing is derived from the currently selected track, which
-// matches the routing that started the note in the first place as long
-// as the track has not been changed in between (it cannot be, while the
-// cursor is inside the pattern grid).
 static FLASHMEM void _mdt_preview_release_all(void)
 {
   if (mdt_preview_active_count == 0) return;
@@ -881,27 +992,11 @@ static FLASHMEM void _mdt_preview_release_all(void)
   mdt_preview_active_count = 0;
 }
 
-// ---------------------------------------------------------------------------
-//  Chord-aware single-step preview.
-//
-//  Used while the cursor is moving through the pattern (not while the
-//  sequencer is running).  Mirrors the routing that process_chord_track()
-//  and process_instrument_track() use in sequencer.cpp, so what you hear
-//  in the tracker is what the sequencer will play.
-//
-//   - Drum patterns (content_type 0) and slice patterns (3) use the
-//     existing pattern_editor_play_current_step() path.
-//   - Instrument / chord / arp tracks:
-//       * chord-type velocity (200..205)  -> expand seq.arps[chord_type][]
-//       * otherwise                       -> single note
-//     Routing uses the selected track's instrument mapping.
-// ---------------------------------------------------------------------------
 static FLASHMEM void _mdt_preview_step(uint8_t row)
 {
   if (seq.running) return;
   if (row >= MDT_ROWS) return;
 
-  // Release whatever the previous audition left ringing.
   _mdt_preview_release_all();
 
   const uint8_t pat = seq.active_pattern;
@@ -912,27 +1007,8 @@ static FLASHMEM void _mdt_preview_step(uint8_t row)
   const uint8_t fxv = seq.fx_val[pat][row];
   const uint8_t track = seq.selected_track;
 
-  // Effective instrument for this step, taking the per-step INS override
-  // into account.  Used both for applying the FX and for triggering the
-  // preview note, so they always target the same synth.
   const uint8_t eff_inst = seq_effective_instrument(track, pat, row);
 
-  // ------------------------------------------------------------------
-  //  Apply the step's FX first.
-  //
-  //  Routing is by CONTENT type, because that is what the pattern editor
-  //  is editing.  The track type is only used by the sequencer at
-  //  playback time; for preview we follow what the user sees.
-  //
-  //   - ARP commands and TRN/GAT/HLD are content-agnostic; they go
-  //     through seq_apply_step_fx() which knows how to handle them.
-  //   - Audio FX on DRM content are delivered through the note-on
-  //     override, so they must be queued *before* the drum triggers.
-  //   - Audio FX on INS/CHD content are applied directly to the
-  //     effective instrument, exactly as seq_apply_step_fx() would do
-  //     for a melodic track.
-  //   - SLC content does not use MDT FX.
-  // ------------------------------------------------------------------
   if (fxc != MDT_FX_NONE) {
     const bool is_global_cmd =
       mdt_cmd_is_arp(fxc) ||
@@ -943,41 +1019,42 @@ static FLASHMEM void _mdt_preview_step(uint8_t row)
     if (is_global_cmd) {
       seq_apply_step_fx(track, pat, row);
     }
+    else if (mdt_cmd_is_voice(fxc)) {
+      // Voice overrides are applied globally when the sequencer fires
+      // the step. Preview does not touch the DX voice so that stepping
+      // through the pattern with the cursor does not blow away the
+      // persistent configuration.dexed[] state on every cursor move.
+    }
     else {
       switch (ct) {
-      case 0:   // DRM
+      case 0:
         if (note > 0 && mdt_cmd_is_drum_audio(fxc)) {
           g_drum_fx_override_cmd = fxc;
           g_drum_fx_override_val = fxv;
         }
         break;
 
-      case 1:   // INS
-      case 2:   // CHD
+      case 1:
+      case 2:
         mdt_apply_fx_to_instrument(eff_inst, fxc, fxv);
         break;
 
-      case 3:   // SLC
+      case 3:
       default:
         break;
       }
     }
   }
 
-  // Drums and slices use the existing preview path; they trigger their
-  // own sample playback internally, and the drum path already consumes
-  // g_drum_fx_override_* if it was queued above.
   if (ct == 0 || ct == 3) {
     pattern_editor_play_current_step(row);
     return;
   }
 
-  // Nothing to play for empty / latch-only steps.
   if (note == 0 || note == 130) return;
 
   const uint8_t pvel = (vel > 0 && vel < 128) ? vel : 100;
 
-  // ---- Routing (uses eff_inst now, not the track default) ------------
   auto trigger_note = [&](uint8_t in_note, uint8_t in_vel) {
     if (eff_inst < 2 || eff_inst == 70 || eff_inst == 71) {
       const uint8_t i = (eff_inst < 2) ? eff_inst : (uint8_t)(eff_inst - 68);
@@ -1015,20 +1092,15 @@ static FLASHMEM void _mdt_preview_step(uint8_t row)
       handleNoteOn(21, in_note, in_vel, 0);
     }
     else {
-      // Fallback so *something* is audible.
       handleNoteOn(configuration.epiano.midi_channel, in_note, in_vel, 0);
     }
 
     if (mdt_preview_active_count < sizeof(mdt_preview_active_notes)) {
       mdt_preview_active_notes[mdt_preview_active_count++] = in_note;
-      // Start (or restart) the auto-release countdown.  The note will be
-    // released automatically after MDT_PREVIEW_HOLD_MS if the cursor
-    // does not move to another step first.
       mdt_preview_hold_timer = 0;
     }
     };
 
-  // ---- Chord track with a chord-type velocity (200..205) -------------
   if ((ct == 2 || ct == 3) && vel >= 200 && vel <= 205) {
     const uint8_t chord_type = (uint8_t)(vel - 200);
     uint8_t count = seq.chord_key_ammount;
@@ -1043,7 +1115,6 @@ static FLASHMEM void _mdt_preview_step(uint8_t row)
     return;
   }
 
-  // ---- Single note preview -------------------------------------------
   trigger_note(note, pvel);
 }
 
@@ -1074,17 +1145,8 @@ static FLASHMEM bool _mdt_commit_sample_to_step(void)
   }
 
   mdt_drum_preview_valid = true;
-
-  // Only invalidate the drum-preview caches. _mdt_dr_update() will
-  // detect by itself whether the unique drum list actually changed and,
-  // in that case only, fall back to a full redraw.
   mdt_dr_last_cursor = 0xFF;
-
   mdt_preview_dirty = true;
-  // NOTE: deliberately NOT calling _mdt_status_cache_reset() here.
-  // The status bar uses per-field caches that already pick up the
-  // note / vel / activeSample change and repaint only the fields that
-  // actually differ.
   return true;
 #else
   return false;
@@ -1177,8 +1239,15 @@ static FLASHMEM void _mdt_update_oled_help(void)
 // ===========================================================================
 static FLASHMEM void _mdt_action_clear_pattern(void)
 {
-  memset(seq.note_data[seq.active_pattern], 0, sizeof(seq.note_data[seq.active_pattern]));
-  memset(seq.vel[seq.active_pattern], 0, sizeof(seq.vel[seq.active_pattern]));
+  const uint8_t pat = seq.active_pattern;
+
+  memset(seq.note_data[pat], 0, sizeof(seq.note_data[pat]));
+  memset(seq.vel[pat], 0, sizeof(seq.vel[pat]));
+
+  // FX columns: INS = 0xFF (none), CMD = MDT_FX_NONE, PAR = 0
+  memset(seq.fx_inst[pat], 0xFF, sizeof(seq.fx_inst[pat]));
+  memset(seq.fx_cmd[pat], MDT_FX_NONE, sizeof(seq.fx_cmd[pat]));
+  memset(seq.fx_val[pat], 0, sizeof(seq.fx_val[pat]));
 }
 
 static FLASHMEM void _mdt_action_clear_step(void)
@@ -1210,6 +1279,9 @@ static FLASHMEM void _mdt_action_clear_all_patterns(void)
   for (uint8_t i = 0; i < NUM_SEQ_PATTERN; i++) {
     memset(seq.note_data[i], 0, sizeof(seq.note_data[i]));
     memset(seq.vel[i], 0, sizeof(seq.vel[i]));
+    memset(seq.fx_inst[i], 0xFF, sizeof(seq.fx_inst[i]));
+    memset(seq.fx_cmd[i], MDT_FX_NONE, sizeof(seq.fx_cmd[i]));
+    memset(seq.fx_val[i], 0, sizeof(seq.fx_val[i]));
     seq.content_type[i] = 0;
   }
 }
@@ -1317,48 +1389,45 @@ static FLASHMEM void _mdt_clear_backup(void)
 }
 
 // ===========================================================================
-//  MUSIC THEORY TABLES  (SCALE QUANTIZE + GENERATOR)
-//  Pitch-class sets are 12-bit masks, bit 0 = root.
+//  MUSIC THEORY TABLES
 // ===========================================================================
 struct MdtScaleDef { const char* name; uint16_t mask; };
 static const MdtScaleDef mdt_scales[] = {
-  { "MAJOR",    0xAB5 },  // 0 2 4 5 7 9 11
-  { "MINOR",    0x5AD },  // 0 2 3 5 7 8 10
-  { "DORIAN",   0x6AD },  // 0 2 3 5 7 9 10
-  { "PHRYGIAN", 0x5AB },  // 0 1 3 5 7 8 10
-  { "LYDIAN",   0xAD5 },  // 0 2 4 6 7 9 11
-  { "MIXOLYD",  0x6B5 },  // 0 2 4 5 7 9 10
-  { "LOCRIAN",  0x56B },  // 0 1 3 5 6 8 10
-  { "HARM MIN", 0x9AD },  // 0 2 3 5 7 8 11
-  { "MEL MIN",  0xAAD },  // 0 2 3 5 7 9 11
-  { "PENT MAJ", 0x295 },  // 0 2 4 7 9
-  { "PENT MIN", 0x4A9 },  // 0 3 5 7 10
-  { "BLUES",    0x4E9 },  // 0 3 5 6 7 10
+  { "MAJOR",    0xAB5 },
+  { "MINOR",    0x5AD },
+  { "DORIAN",   0x6AD },
+  { "PHRYGIAN", 0x5AB },
+  { "LYDIAN",   0xAD5 },
+  { "MIXOLYD",  0x6B5 },
+  { "LOCRIAN",  0x56B },
+  { "HARM MIN", 0x9AD },
+  { "MEL MIN",  0xAAD },
+  { "PENT MAJ", 0x295 },
+  { "PENT MIN", 0x4A9 },
+  { "BLUES",    0x4E9 },
 };
 #define MDT_NUM_SCALES ((uint8_t)(sizeof(mdt_scales) / sizeof(mdt_scales[0])))
 
-// Chord intervals + the parent scale used for passing / neighbour tones.
 struct MdtChordDef { const char* name; uint8_t n; uint8_t iv[5]; uint16_t scale; };
 static const MdtChordDef mdt_chords[] = {
-  { "MAJ",  3, { 0, 4, 7 },         0xAB5 },  // ionian
-  { "MIN",  3, { 0, 3, 7 },         0x5AD },  // aeolian
-  { "7",    4, { 0, 4, 7, 10 },     0x6B5 },  // mixolydian
-  { "MAJ7", 4, { 0, 4, 7, 11 },     0xAB5 },  // ionian
-  { "MIN7", 4, { 0, 3, 7, 10 },     0x6AD },  // dorian
-  { "MIN9", 5, { 0, 3, 7, 10, 14 }, 0x6AD },  // dorian
-  { "MAJ9", 5, { 0, 4, 7, 11, 14 }, 0xAB5 },  // ionian
-  { "SUS2", 3, { 0, 2, 7 },         0x6A5 },  // 0 2 5 7 9 10 (no 3rd)
+  { "MAJ",  3, { 0, 4, 7 },         0xAB5 },
+  { "MIN",  3, { 0, 3, 7 },         0x5AD },
+  { "7",    4, { 0, 4, 7, 10 },     0x6B5 },
+  { "MAJ7", 4, { 0, 4, 7, 11 },     0xAB5 },
+  { "MIN7", 4, { 0, 3, 7, 10 },     0x6AD },
+  { "MIN9", 5, { 0, 3, 7, 10, 14 }, 0x6AD },
+  { "MAJ9", 5, { 0, 4, 7, 11, 14 }, 0xAB5 },
+  { "SUS2", 3, { 0, 2, 7 },         0x6A5 },
   { "SUS4", 3, { 0, 5, 7 },         0x6A5 },
-  { "DIM",  3, { 0, 3, 6 },         0xB6D },  // whole-half diminished
-  { "M7B5", 4, { 0, 3, 6, 10 },     0x56B },  // locrian
-  { "AUG",  3, { 0, 4, 8 },         0x555 },  // whole tone
+  { "DIM",  3, { 0, 3, 6 },         0xB6D },
+  { "M7B5", 4, { 0, 3, 6, 10 },     0x56B },
+  { "AUG",  3, { 0, 4, 8 },         0x555 },
 };
 #define MDT_NUM_CHORDS ((uint8_t)(sizeof(mdt_chords) / sizeof(mdt_chords[0])))
 
 enum { MDT_GEN_BASS = 0, MDT_GEN_MELODY, MDT_GEN_ARP, MDT_GEN_STYLES };
 static const char* const mdt_gen_style_names[MDT_GEN_STYLES] = { "BASS", "MELODY", "ARP" };
 
-// Metric weight of each 1/16 step (downbeats strong, off-16ths weak).
 static const uint8_t mdt_metric_w[16] = {
   100, 10, 35, 15,  70, 10, 40, 20,  85, 10, 35, 15,  70, 15, 45, 25
 };
@@ -1368,7 +1437,6 @@ static FLASHMEM bool _mdt_pc_in(uint16_t mask, uint8_t root, uint8_t note)
   return (mask >> ((note % 12 + 12 - root) % 12)) & 1;
 }
 
-// ---- small deterministic PRNG (xorshift32): same VARIANT = same result
 static uint32_t mdt_rng_state = 1;
 static FLASHMEM uint32_t _mdt_rng(void)
 {
@@ -1411,7 +1479,7 @@ static FLASHMEM uint8_t _mdt_pattern_len(void)
 }
 
 // ===========================================================================
-//  ACTION: CLEAR COLUMNS  (0 = FX only, 1 = notes only)
+//  ACTION: CLEAR COLUMNS
 // ===========================================================================
 static FLASHMEM void _mdt_action_clear_cols(uint8_t mode)
 {
@@ -1423,14 +1491,14 @@ static FLASHMEM void _mdt_action_clear_cols(uint8_t mode)
       seq.fx_val[pat][s] = 0;
     }
     else {
-      seq.note_data[pat][s] = 0;   // FX stay -> step becomes an FX control step
+      seq.note_data[pat][s] = 0;
       seq.vel[pat][s] = 0;
     }
   }
 }
 
 // ===========================================================================
-//  ACTION: SCALE QUANTIZE  (instrument + chord patterns)
+//  ACTION: SCALE QUANTIZE
 // ===========================================================================
 static FLASHMEM bool _mdt_quantize_allowed(void)
 {
@@ -1445,8 +1513,8 @@ static FLASHMEM void _mdt_action_quantize(uint8_t root, uint8_t scale)
   const uint8_t pat = seq.active_pattern;
   for (uint8_t s = 0; s < 16; s++) {
     const uint8_t n = seq.note_data[pat][s];
-    if (n == 0 || n > 127) continue;              // empty, latch (130)
-    for (uint8_t d = 0; d <= 6; d++) {            // nearest, ties go down
+    if (n == 0 || n > 127) continue;
+    for (uint8_t d = 0; d <= 6; d++) {
       if (n > d && _mdt_pc_in(mask, root, n - d)) { seq.note_data[pat][s] = n - d; break; }
       if (n + d <= 127 && _mdt_pc_in(mask, root, n + d)) { seq.note_data[pat][s] = n + d; break; }
     }
@@ -1454,16 +1522,7 @@ static FLASHMEM void _mdt_action_quantize(uint8_t root, uint8_t scale)
 }
 
 // ===========================================================================
-//  ACTION: GENERATOR  (bassline / melody / arpeggio, instrument patterns)
-//
-//  Not plain random:
-//   - rhythm follows metric weights, 2-phrase call/response with a fill
-//   - strong beats get chord tones, weak beats get approach / passing /
-//     neighbour tones from the chord's parent scale
-//   - melody moves by voice leading and resolves (question/answer)
-//   - motif repetition, accents by beat strength, light humanizing
-//   - rhythm and pitch use separate seeds, so changing ROOT / CHORD /
-//     OCTAVE keeps the groove of the current VARIANT
+//  ACTION: GENERATOR
 // ===========================================================================
 static FLASHMEM bool _mdt_generate_allowed(void)
 {
@@ -1486,12 +1545,9 @@ static FLASHMEM void _mdt_gen_rhythm(bool* on, uint8_t len, uint8_t style, uint8
     return;
   }
 
-  // DENSITY = number of notes per 16 steps (not a probability), so every
-  // setting sounds clearly different.  Steps are ranked by metric weight
-  // plus a seeded random bonus and the best ones win.
   static const uint8_t target16[2][5] = {
-    { 2, 4, 6, 9, 12 },   // BASS
-    { 3, 5, 7, 9, 12 },   // MELODY
+    { 2, 4, 6, 9, 12 },
+    { 3, 5, 7, 9, 12 },
   };
   const uint8_t half = (len >= 8) ? len / 2 : len;
   uint8_t want = (uint8_t)((target16[style == MDT_GEN_MELODY][dens - 1] * half + 8) / 16);
@@ -1501,10 +1557,10 @@ static FLASHMEM void _mdt_gen_rhythm(bool* on, uint8_t len, uint8_t style, uint8
   uint8_t score[16];
   for (uint8_t s = 0; s < half; s++) {
     uint16_t sc = mdt_metric_w[s] + _mdt_rnd(45);
-    if (style == MDT_GEN_MELODY && (s & 1)) sc += 10;       // a bit more syncopation
+    if (style == MDT_GEN_MELODY && (s & 1)) sc += 10;
     score[s] = (sc > 254) ? 254 : (uint8_t)sc;
   }
-  if (style == MDT_GEN_BASS) score[0] = 255;                // bass starts on the one
+  if (style == MDT_GEN_BASS) score[0] = 255;
   for (uint8_t k = 0; k < want; k++) {
     int8_t best = -1;
     for (uint8_t s = 0; s < half; s++)
@@ -1512,14 +1568,12 @@ static FLASHMEM void _mdt_gen_rhythm(bool* on, uint8_t len, uint8_t style, uint8
     if (best >= 0) on[best] = true;
   }
 
-  // anticipations: move a beat note one 1/16 earlier (count unchanged)
   for (uint8_t s = 4; s < half; s += 4)
     if (on[s] && !on[s - 1] && _mdt_pct(style == MDT_GEN_MELODY ? 25 : 15)) {
       on[s] = false; on[s - 1] = true;
     }
 
   if (half < len) {
-    // answer phrase: repeat the call, then shift 1-2 notes by one step
     for (uint8_t s = half; s < len; s++) on[s] = on[s - half];
     const uint8_t nvar = 1 + _mdt_rnd(2);
     for (uint8_t v = 0; v < nvar; v++) {
@@ -1530,7 +1584,6 @@ static FLASHMEM void _mdt_gen_rhythm(bool* on, uint8_t len, uint8_t style, uint8
       if (u > (int16_t)half && u < (int16_t)len && !on[u]) { on[t] = false; on[u] = true; }
     }
 
-    // fill: re-pick the last 3 steps, one note busier at high density
     if (len >= 12) {
       uint8_t c = 0;
       for (uint8_t s = len - 3; s < len; s++) { c += on[s]; on[s] = false; }
@@ -1563,7 +1616,6 @@ static FLASHMEM void _mdt_gen_bass(const bool* on, uint8_t len, uint8_t* notes,
   const uint8_t octave = base + 12;
   const uint8_t half = (len >= 8) ? len / 2 : len;
 
-  // pass 1: structural notes on the beats
   for (uint8_t s = 0; s < len; s += 4) {
     if (!on[s]) continue;
     if (s == 0)            notes[s] = base;
@@ -1574,7 +1626,6 @@ static FLASHMEM void _mdt_gen_bass(const bool* on, uint8_t len, uint8_t* notes,
     }
   }
 
-  // pass 2: weak onsets connect the structural notes
   uint8_t prev = base;
   for (uint8_t s = 0; s < len; s++) {
     if (!on[s]) continue;
@@ -1585,15 +1636,15 @@ static FLASHMEM void _mdt_gen_bass(const bool* on, uint8_t len, uint8_t* notes,
       if (on[t] && (t % 4) == 0 && notes[t]) { next = notes[t]; tn = t; break; }
 
     uint8_t n;
-    if (next && tn <= s + 2 && _mdt_pct(45)) {           // approach tone
-      if (_mdt_pct(55))       n = next - 1;               // chromatic from below
-      else if (_mdt_pct(50))  n = next + 1;               // chromatic from above
-      else {                                              // scale tone below
+    if (next && tn <= s + 2 && _mdt_pct(45)) {
+      if (_mdt_pct(55))       n = next - 1;
+      else if (_mdt_pct(50))  n = next + 1;
+      else {
         const uint8_t i = _mdt_pool_nearest(sp, np, next);
         n = (i > 0) ? sp[i - 1] : next - 2;
       }
     }
-    else if (prev == base && _mdt_pct(30))   n = octave;  // octave pop
+    else if (prev == base && _mdt_pct(30))   n = octave;
     else if (prev == octave && _mdt_pct(40)) n = base;
     else {
       const uint8_t r = _mdt_rnd(100);
@@ -1601,7 +1652,7 @@ static FLASHMEM void _mdt_gen_bass(const bool* on, uint8_t len, uint8_t* notes,
       else if (r < 60) n = fifth;
       else if (r < 75) n = third;
       else if (r < 87) n = seventh;
-      else {                                              // scale neighbour
+      else {
         const uint8_t i = _mdt_pool_nearest(sp, np, prev);
         n = (_mdt_pct(50) && i + 1 < np) ? sp[i + 1] : (i > 0 ? sp[i - 1] : sp[i]);
       }
@@ -1627,19 +1678,17 @@ static FLASHMEM void _mdt_gen_melody(const bool* on, uint8_t len, uint8_t* notes
   }
   if (first < 0) return;
 
-  // skeleton: first onset, beats, phrase ends -> chord tones by voice leading
   bool skel[16] = { false };
   for (uint8_t s = 0; s < len; s++)
     skel[s] = on[s] && ((s % 4) == 0 || s == first || s == last || s == last_call);
 
-  uint8_t si = nc / 3 + _mdt_rnd(nc / 3 + 1);           // start in the lower-middle
+  uint8_t si = nc / 3 + _mdt_rnd(nc / 3 + 1);
   if (si >= nc) si = nc - 1;
   uint8_t prev = cp[si];
   for (uint8_t s = 0; s < len; s++) {
     if (!skel[s]) continue;
     uint8_t pick;
     if (s == last) {
-      // answer: resolve to the nearest root or 3rd
       uint8_t best = cp[0], bd = 255;
       for (uint8_t i = 0; i < nc; i++) {
         const uint8_t iv = (cp[i] % 12 + 12 - root) % 12;
@@ -1650,19 +1699,17 @@ static FLASHMEM void _mdt_gen_melody(const bool* on, uint8_t len, uint8_t* notes
       pick = best;
     }
     else {
-      // rank chord tones by distance, mostly move to a near one
       const uint8_t i0 = _mdt_pool_nearest(cp, nc, prev);
       const uint8_t r = _mdt_rnd(100);
       int8_t idx;
-      if (r < 30)      idx = i0;                                  // hold / nearest
-      else if (r < 60) idx = i0 + 1;                              // step up
-      else if (r < 88) idx = i0 - 1;                              // step down
-      else             idx = _mdt_rnd(nc);                        // leap
+      if (r < 30)      idx = i0;
+      else if (r < 60) idx = i0 + 1;
+      else if (r < 88) idx = i0 - 1;
+      else             idx = _mdt_rnd(nc);
       if (idx < 0)   idx = 1;
       if (idx >= nc) idx = nc - 2;
       if (idx < 0)   idx = 0;
       pick = cp[idx];
-      // question: avoid ending the call phrase on the root
       if (s == last_call && (pick % 12) == root % 12 && nc > 1)
         pick = cp[(idx + 1 < nc) ? idx + 1 : idx - 1];
     }
@@ -1670,7 +1717,6 @@ static FLASHMEM void _mdt_gen_melody(const bool* on, uint8_t len, uint8_t* notes
     prev = pick;
   }
 
-  // weak onsets: passing / neighbour / anticipation / escape tones
   uint8_t last_note = notes[first];
   for (uint8_t s = 0; s < len; s++) {
     if (!on[s]) continue;
@@ -1687,9 +1733,9 @@ static FLASHMEM void _mdt_gen_melody(const bool* on, uint8_t len, uint8_t* notes
     else {
       const int16_t ni = _mdt_pool_nearest(sp, np, next);
       const int16_t d = ni - pidx;
-      if (d >= 2 || d <= -2)  idx = pidx + (d > 0 ? 1 : -1);                    // passing
-      else if (d == 0)        idx = _mdt_pct(70) ? pidx + (_mdt_pct(50) ? 1 : -1) : pidx; // neighbour
-      else                    idx = _mdt_pct(50) ? ni : pidx - d;               // anticipation / escape
+      if (d >= 2 || d <= -2)  idx = pidx + (d > 0 ? 1 : -1);
+      else if (d == 0)        idx = _mdt_pct(70) ? pidx + (_mdt_pct(50) ? 1 : -1) : pidx;
+      else                    idx = _mdt_pct(50) ? ni : pidx - d;
     }
     if (idx < 0)   idx = 1;
     if (idx >= np) idx = np - 2;
@@ -1703,9 +1749,9 @@ static FLASHMEM void _mdt_gen_arp(const bool* on, uint8_t len, uint8_t* notes,
   uint8_t hi, const uint8_t* cp, uint8_t nc)
 {
   static const uint8_t broken[4] = { 0, 2, 1, 3 };
-  const uint8_t shape = _mdt_rnd(5);         // UP, DOWN, UPDOWN, PEDAL, BROKEN
+  const uint8_t shape = _mdt_rnd(5);
   const uint8_t half = (len >= 8) ? len / 2 : len;
-  const bool    lift = _mdt_pct(40);        // answer phrase one octave up
+  const bool    lift = _mdt_pct(40);
   uint8_t j = 0;
   for (uint8_t s = 0; s < len; s++) {
     if (!on[s]) continue;
@@ -1720,7 +1766,7 @@ static FLASHMEM void _mdt_gen_arp(const bool* on, uint8_t len, uint8_t* notes,
     }
     if (i >= nc) i = nc - 1;
     uint8_t n = cp[i];
-    if (lift && s >= half && n + 12 <= hi) n += 12;    // stay inside the range
+    if (lift && s >= half && n + 12 <= hi) n += 12;
     notes[s] = n;
     j++;
   }
@@ -1737,7 +1783,7 @@ static FLASHMEM void _mdt_action_generate(uint8_t root, uint8_t chord, uint8_t o
   for (uint8_t i = 0; i < cd.n; i++) cmask |= 1u << (cd.iv[i] % 12);
   const uint16_t smask = cd.scale | cmask;
 
-  const uint8_t base = (oct + 1) * 12 + root;              // C4 = 60
+  const uint8_t base = (oct + 1) * 12 + root;
   uint8_t hi = base + ((style == MDT_GEN_BASS) ? 14 : (style == MDT_GEN_MELODY) ? 19 : 24);
   if (hi > 127) hi = 127;
 
@@ -1746,32 +1792,27 @@ static FLASHMEM void _mdt_action_generate(uint8_t root, uint8_t chord, uint8_t o
   const uint8_t nc = _mdt_build_pool(cp, sizeof(cp), base, hi, root, cmask);
   if (np < 2 || nc < 2) return;
 
-  // rhythm (own seed -> groove survives ROOT / CHORD / OCTAVE changes)
   bool on[16];
   _mdt_rng_seed((uint32_t)seed * 7919u + style * 131u + dens * 17u);
   _mdt_gen_rhythm(on, len, style, dens);
 
-  // FX-only control steps keep their content
   bool ctrl[16];
   for (uint8_t s = 0; s < 16; s++) {
     ctrl[s] = mdt_step_is_control(mdt_menu_backup_notes[s], seq.fx_cmd[pat][s]);
     if (ctrl[s]) on[s] = false;
   }
 
-  // pitches
   uint8_t notes[16] = { 0 };
   _mdt_rng_seed((uint32_t)seed * 104729u + style);
-  if (style == MDT_GEN_BASS)   _mdt_gen_bass(on, len, notes, base, cd, sp, np);
+  if (style == MDT_GEN_BASS)        _mdt_gen_bass(on, len, notes, base, cd, sp, np);
   else if (style == MDT_GEN_MELODY) _mdt_gen_melody(on, len, notes, root, sp, np, cp, nc);
   else                              _mdt_gen_arp(on, len, notes, hi, cp, nc);
 
-  // motif repetition: answer phrase repeats the call (except its ending)
   const uint8_t half = (len >= 8) ? len / 2 : len;
   if (style != MDT_GEN_ARP && half < len && _mdt_pct(60))
     for (uint8_t s = half + 1; s + 4 < len; s++)
       if (on[s] && on[s - half] && notes[s - half]) notes[s] = notes[s - half];
 
-  // write: velocity accents + humanize, ties (latch) for longer notes
   bool    can_tie = false;
   uint8_t tie_p = 0;
   for (uint8_t s = 0; s < len; s++) {
@@ -1779,7 +1820,7 @@ static FLASHMEM void _mdt_action_generate(uint8_t root, uint8_t chord, uint8_t o
     if (on[s] && notes[s]) {
       const uint8_t w = mdt_metric_w[s];
       int16_t v;
-      if (style == MDT_GEN_BASS)   v = 72 + w * 45 / 100 - ((s & 1) ? 12 : 0);
+      if (style == MDT_GEN_BASS)        v = 72 + w * 45 / 100 - ((s & 1) ? 12 : 0);
       else if (style == MDT_GEN_MELODY) v = 78 + w * 35 / 100;
       else                              v = 70 + w * 40 / 100;
       v += (int16_t)_mdt_rnd(11) - 5;
@@ -1788,14 +1829,13 @@ static FLASHMEM void _mdt_action_generate(uint8_t root, uint8_t chord, uint8_t o
       seq.note_data[pat][s] = notes[s];
       seq.vel[pat][s] = (uint8_t)v;
       can_tie = true;
-      // longer notes at low density, almost none when busy
       static const uint8_t tie_mel[5] = { 55, 40, 28, 15, 5 };
       static const uint8_t tie_bass[5] = { 60, 35, 10, 0, 0 };
       tie_p = (style == MDT_GEN_MELODY) ? tie_mel[dens - 1] + ((w >= 70) ? 10 : 0)
         : (style == MDT_GEN_BASS) ? tie_bass[dens - 1] : 0;
     }
     else if (can_tie && _mdt_pct(tie_p)) {
-      seq.note_data[pat][s] = 130;                          // hold previous note
+      seq.note_data[pat][s] = 130;
       seq.vel[pat][s] = 0;
     }
     else {
@@ -1816,24 +1856,19 @@ static FLASHMEM void _mdt_cycle_pattern_type(void)
   _mdt_preview_invalidate();
   _mdt_status_cache_reset();
 
-  // Only redraw what depends on the content type.  The four top-right
-  // buttons (MENU / V.KEYB / STEP / PLAY) and the other bottom buttons
-  // don't change, so they are left alone.
   if (mdt_is_vk_mode()) {
-    _mdt_draw_header();                 // includes the type box
+    _mdt_draw_header();
     _mdt_draw_all_rows(mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
     _mdt_draw_vk_latch_button();
   }
   else {
-    // Clear only the preview pane (caption down to the status bar); the
-    // renderers differ per type, so the old one must be wiped.
     checkWebRemote();
     display.fillRect(MDT_PREV_X, MDT_PREV_CAP_Y,
       DISPLAY_WIDTH - MDT_PREV_X, MDT_STATUS_Y - MDT_PREV_CAP_Y,
       COLOR_BACKGROUND);
     display.console = false;
-    _mdt_draw_col_captions();           // redraws the "PREVIEW:" caption
-    _mdt_light_redraw_body();           // header, rows, status
+    _mdt_draw_col_captions();
+    _mdt_light_redraw_body();
     _mdt_draw_type_button();
     _mdt_draw_pattern_preview(mdt_cursor_row);
   }
@@ -1981,12 +2016,10 @@ FLASHMEM bool mdtracker_get_ring_feedback(int16_t* value,
   const uint8_t pat = seq.active_pattern, row = mdt_cursor_row;
   const uint8_t ct = seq.content_type[pat];
 
-  // Column ranges, indexed by MDT_COL_*.
   static const uint8_t colMax[MDT_COL_COUNT] = {
     127, 127, 72, MDT_FX_END - 1, 255, 0
   };
 
-  // Pointer to the byte the cursor is sitting on.
   const uint8_t* cell[MDT_COL_COUNT] = {
     &seq.note_data[pat][row], &seq.vel[pat][row], &seq.fx_inst[pat][row],
     &seq.fx_cmd[pat][row],    &seq.fx_val[pat][row], nullptr
@@ -1998,10 +2031,6 @@ FLASHMEM bool mdtracker_get_ring_feedback(int16_t* value,
   *maxVal = colMax[mdt_cursor_col];
   *value = *p;
 
-  // Ranges shown on screen differ from the raw byte for two columns:
-  //   drum NOTE : encoder scrolls the sample list
-  //   chord VEL : 200..205 is the chord-type enum
-  // PAR reflects the currently selected FX command's clamp.
   if (mdt_cursor_col == MDT_COL_NOTE && ct == 0) {
     *value = activeSample;   *maxVal = MDT_MAX_SAMPLE_IDX;
   }
@@ -2013,7 +2042,11 @@ FLASHMEM bool mdtracker_get_ring_feedback(int16_t* value,
     if (*value > *maxVal) *value = *maxVal;
   }
   else if (mdt_cursor_col == MDT_COL_CMD) {
-    *maxVal = MDT_FX_END - 1;
+    // Ring shows the position inside the commands allowed for this pattern type
+    const uint8_t cnt = mdt_cmd_allowed_count(ct);
+    *maxVal = (cnt > 0) ? (cnt - 1) : 0;
+    *value = mdt_cmd_allowed_index(ct, seq.fx_cmd[pat][row]);
+    if (*value > *maxVal) *value = *maxVal;
   }
   return true;
 }
@@ -2181,6 +2214,7 @@ static FLASHMEM void _mdt_menu_pattern_preview(uint16_t x, uint16_t y,
     char c = '-';
     const uint8_t n = seq.note_data[pat][r];
     const uint8_t v = seq.vel[pat][r];
+    const uint8_t fx = seq.fx_cmd[pat][r];
     uint16_t col = GREY3;
 
     if (n == 130) { c = 'L'; col = GREEN; }
@@ -2189,6 +2223,11 @@ static FLASHMEM void _mdt_menu_pattern_preview(uint16_t x, uint16_t y,
       if (ct == 0 && v > 209)         col = COLOR_PITCHSMP;
       else if (is_chordy && v > 199)  col = _mdt_chord_color((uint8_t)(v - 200));
       else                            col = _mdt_shade_by_velocity(_mdt_type_color(), v);
+    }
+    else if (fx != MDT_FX_NONE) {
+      // FX-only control step - same color as the ">FX" marker in the grid
+      c = 'x';
+      col = COLOR_ARP;
     }
     display.setTextColor(col, COLOR_BACKGROUND);
     display.setCursor(x + r * 6, y + 10);
@@ -2273,7 +2312,7 @@ static FLASHMEM void _mdt_menu_draw_value_line(void)
       seq.active_pattern, "WILL:");
     display.setTextColor(GREY1, COLOR_BACKGROUND);
     display.setCursor(MDT_MENU_X0 + 5, MDT_MENU_VALUE_Y + 60);
-    display.print(F("R:OK BACK:CANCEL"));
+    display.print(F("L:CANCEL R:OK"));
     break;
 
   case MDT_MENU_CLEAR_ALL_CONFIRM: {
@@ -2281,7 +2320,7 @@ static FLASHMEM void _mdt_menu_draw_value_line(void)
     for (uint8_t p = 0; p < NUM_SEQ_PATTERN; p++) {
       bool has = false;
       for (uint8_t s = 0; s < 16 && !has; s++)
-        if (seq.note_data[p][s] != 0) has = true;
+        if (seq.note_data[p][s] != 0 || seq.fx_cmd[p][s] != MDT_FX_NONE) has = true;
       if (has) used++;
     }
     display.setTextColor(RED, COLOR_BACKGROUND);
@@ -2291,7 +2330,7 @@ static FLASHMEM void _mdt_menu_draw_value_line(void)
     display.printf("%d / %d HAVE DATA", used, NUM_SEQ_PATTERN);
     display.setTextColor(GREY1, COLOR_BACKGROUND);
     display.setCursor(MDT_MENU_X0 + 5, MDT_MENU_VALUE_Y + 60);
-    display.print(F("R:OK BACK:CANCEL"));
+    display.print(F("L:CANCEL R:OK"));
     break;
   }
 
@@ -2353,26 +2392,18 @@ static FLASHMEM void _mdt_menu_full_redraw(void)
       TouchButton::drawButton(MDT_MENU_TB_X2, MDT_MENU_TB_ADJ_Y, "VALUE", "+",
         TouchButton::BUTTON_NORMAL);
     }
-    TouchButton::drawButton(MDT_MENU_TB_X2, MDT_MENU_TB_OK_Y, "CONFIRM", "OK",   // right = ENC_R
+    TouchButton::drawButton(MDT_MENU_TB_X2, MDT_MENU_TB_OK_Y, "CONFIRM", "OK",
       confirm_only ? TouchButton::BUTTON_RED
       : TouchButton::BUTTON_ACTIVE);
-    TouchButton::drawButton(MDT_MENU_TB_X1, MDT_MENU_TB_OK_Y, "GO", "BACK",      // left  = ENC_L
+    TouchButton::drawButton(MDT_MENU_TB_X1, MDT_MENU_TB_OK_Y, "GO", "BACK",
       TouchButton::BUTTON_NORMAL);
   }
 
   display.console = false;
 }
 
-
 // ===========================================================================
-//  FORM PAGES  (SCALE QUANTIZE, GENERATOR)
-//  A list of fields plus an APPLY row, drawn in the menu's value area.
-//  Encoder:  turn = select row,  press = edit field / APPLY
-//            (while editing: turn = change value, press = done)
-//  Touch:    tap row = select (tap again = edit),  VALUE -/+ = change,
-//            CONFIRM OK = apply,  GO BACK = cancel (pattern restored)
-//  Every value change re-runs the action on the backed-up pattern, so the
-//  rows on the left show (and a running sequencer plays) the result live.
+//  FORM PAGES
 // ===========================================================================
 #define MDT_FORM_ROW_H 10
 
@@ -2383,7 +2414,7 @@ enum {
 };
 
 static uint8_t mdt_qz_val[MDT_QZ_COUNT] = { 0, 0 };
-static uint8_t mdt_gen_val[MDT_GF_COUNT] = { 0, 1, 2, MDT_GEN_BASS, 3, 1 };  // kept between uses
+static uint8_t mdt_gen_val[MDT_GF_COUNT] = { 0, 1, 2, MDT_GEN_BASS, 3, 1 };
 
 static FLASHMEM bool _mdt_is_form_state(void)
 {
@@ -2410,7 +2441,7 @@ static FLASHMEM void _mdt_form_range(uint8_t f, uint8_t* lo, uint8_t* hi)
   case MDT_GF_OCT:   *lo = 1; *hi = 6; break;
   case MDT_GF_STYLE: *hi = MDT_GEN_STYLES - 1; break;
   case MDT_GF_DENS:  *lo = 1; *hi = 5; break;
-  default:           *hi = 255; break;               // VARIANT
+  default:           *hi = 255; break;
   }
 }
 
@@ -2493,12 +2524,12 @@ static FLASHMEM void _mdt_form_commit(void)
 static FLASHMEM void _mdt_form_change_value(int8_t dir)
 {
   const uint8_t f = mdt_form_field;
-  if (f >= _mdt_form_nfields()) return;               // APPLY row
+  if (f >= _mdt_form_nfields()) return;
   uint8_t lo, hi;
   _mdt_form_range(f, &lo, &hi);
   uint8_t* v = &_mdt_form_vals()[f];
   int16_t nv = (int16_t)*v + dir;
-  if (nv < lo) nv = hi;                                // wrap
+  if (nv < lo) nv = hi;
   if (nv > hi) nv = lo;
   *v = (uint8_t)nv;
   _mdt_form_preview();
@@ -2516,17 +2547,17 @@ static FLASHMEM void _mdt_form_select(uint8_t f)
   _mdt_update_oled_help();
 }
 
-static FLASHMEM void _mdt_form_adjust(int8_t dir)       // ENC_R turn
+static FLASHMEM void _mdt_form_adjust(int8_t dir)
 {
   if (mdt_form_edit) { _mdt_form_change_value(dir); return; }
-  const int16_t n = _mdt_form_nfields() + 1;          // + APPLY row
+  const int16_t n = _mdt_form_nfields() + 1;
   int16_t f = (int16_t)mdt_form_field + dir;
   if (f < 0)  f = n - 1;
   if (f >= n) f = 0;
   _mdt_form_select((uint8_t)f);
 }
 
-static FLASHMEM void _mdt_form_press(void)              // ENC_R press
+static FLASHMEM void _mdt_form_press(void)
 {
   if (mdt_form_field >= _mdt_form_nfields()) { _mdt_form_commit(); return; }
   mdt_form_edit = !mdt_form_edit;
@@ -2534,11 +2565,11 @@ static FLASHMEM void _mdt_form_press(void)              // ENC_R press
   _mdt_update_oled_help();
 }
 
-static FLASHMEM void _mdt_form_tap(uint8_t row)         // touch on a row
+static FLASHMEM void _mdt_form_tap(uint8_t row)
 {
   if (row > _mdt_form_nfields()) return;
   if (row == _mdt_form_nfields()) { _mdt_form_commit(); return; }
-  if (row == mdt_form_field) _mdt_form_press();         // second tap = edit
+  if (row == mdt_form_field) _mdt_form_press();
   else                       _mdt_form_select(row);
 }
 
@@ -2719,28 +2750,13 @@ static FLASHMEM void _mdt_menu_back(void)
     _mdt_clear_backup();
   }
   mdt_form_edit = false;
-  mdt_menu_state = MDT_MENU_MAIN;      // highlight stays on the item
+  mdt_menu_state = MDT_MENU_MAIN;
   _mdt_menu_full_redraw();
   _mdt_update_oled_help();
 }
 
-static FLASHMEM void _mdt_menu_handle_encoder(const EncoderEvents& eR)
-{
-  // Only ENC_R is read here.  ENC_L short presses never set LCDML's
-  // enter flag, so encoderDir[ENC_L]'s one-shot "short" flag used to sit
-  // stale until the next ENC_R press, which then reported BOTH
-  // eR.pressed and eL.pressed -> execute + back in the same loop
-  // ("opens and closes immediately").  ENC_L short press is handled
-  // globally by LCDML (BT_quit = leave page), like on every other page.
-  if (eR.turned)       _mdt_menu_adjust((int8_t)eR.dir);
-  else if (eR.pressed) _mdt_menu_execute();
-}
-
-// Timed work that must run without any input event.  Called at the top
-// of every FUNC_loop pass (FUNC_setLoopInterval in setup).
 static FLASHMEM void _mdt_periodic(void)
 {
-  // Auto-release the preview note so it never stays stuck.
   if (mdt_preview_active_count > 0 &&
     mdt_preview_hold_timer >= MDT_PREVIEW_HOLD_MS) {
     _mdt_preview_release_all();
@@ -2748,24 +2764,6 @@ static FLASHMEM void _mdt_periodic(void)
   _mdt_update_playhead();
   _mdt_handle_step_recording();
 }
-
-// Perform any pending body / preview redraw right now.  Used after every
-// menu input (encoder, touch, ENC_L back) so all paths behave the same.
-static FLASHMEM void _mdt_flush_redraw(void)
-{
-  if (mdt_full_redraw)       _mdt_full_redraw_body();
-  else if (mdt_light_redraw) _mdt_light_redraw_body();
-  else return;
-
-  _mdt_draw_pattern_preview(mdt_cursor_row);
-  if (mdt_menu_state != MDT_MENU_OFF) _mdt_menu_full_redraw();
-
-  mdt_full_redraw = false;
-  mdt_light_redraw = false;
-  mdt_preview_dirty = false;
-  mdt_force_preview = false;
-}
-
 
 // ===========================================================================
 //  PREVIEW helpers
@@ -2778,7 +2776,6 @@ static FLASHMEM void _mdt_preview_invalidate(void)
   mdt_pr_last_hi = -1;
   mdt_pr_last_h = 0;
   mdt_pr_last_cursor = 0xFF;
-  mdt_pr_last_play = 0xFF;
 
   mdt_dr_last_pattern = 0xFF;
   mdt_dr_last_cursor = 0xFF;
@@ -2856,12 +2853,6 @@ static FLASHMEM void _mdt_dr_redraw_col(uint8_t step)
   display.drawLine(x0, mdt_dr_yt, x1, mdt_dr_yt, GREY3);
   display.drawLine(x0, mdt_dr_yb, x1, mdt_dr_yb, GREY3);
 
-  if (seq.running && seq.step == step) {
-    uint16_t phx = x0 + MDT_PREV_STEP_W / 2;
-    display.drawLine(phx, mdt_dr_yt, phx, mdt_dr_yb, RED);
-    display.drawLine(phx + 1, mdt_dr_yt, phx + 1, mdt_dr_yb, RED);
-  }
-
   if (step == 0) display.drawLine(x0, mdt_dr_yt, x0, mdt_dr_yb, GREY3);
 
   const uint8_t note = seq.note_data[seq.active_pattern][step];
@@ -2889,8 +2880,6 @@ static FLASHMEM void _mdt_dr_redraw_col(uint8_t step)
   display.print(c);
 }
 
-// "EMPTY" label of an empty drum pattern.  Printed without a background
-// colour so it stays readable on top of the cursor / playhead column.
 static FLASHMEM void _mdt_dr_draw_empty_label(uint8_t pane_h)
 {
   if (pane_h > MDT_PREV_H) pane_h = MDT_PREV_H;
@@ -2948,7 +2937,6 @@ static FLASHMEM void _mdt_dr_full_redraw(uint8_t cursor_row, uint8_t pane_h)
     mdt_dr_last_cursor = cursor_row;
     mdt_dr_last_play = seq.running ? seq.step : 0xFF;
     if (mdt_dr_last_cursor < MDT_ROWS) _mdt_dr_redraw_col(mdt_dr_last_cursor);
-    if (mdt_dr_last_play < MDT_ROWS) _mdt_dr_redraw_col(mdt_dr_last_play);
     _mdt_dr_draw_empty_label(pane_h);
     return;
   }
@@ -2960,14 +2948,6 @@ static FLASHMEM void _mdt_dr_full_redraw(uint8_t cursor_row, uint8_t pane_h)
   mdt_dr_last_play = seq.running ? seq.step : 0xFF;
 }
 
-// ---------------------------------------------------------------------------
-//  Incremental drum-preview update.
-//
-//  The unique drum list is recomputed on every call.  If the set changed
-//  (a new drum appeared or the last occurrence of one disappeared), a full
-//  redraw is performed.  Otherwise only the columns whose state actually
-//  changed are repainted.
-// ---------------------------------------------------------------------------
 static FLASHMEM void _mdt_dr_update(uint8_t cursor_row, uint8_t pane_h)
 {
   uint8_t new_uniq[16], new_class[16];
@@ -3014,10 +2994,9 @@ static FLASHMEM void _mdt_dr_update(uint8_t cursor_row, uint8_t pane_h)
     repainted = true;
   }
 
-  // Empty pattern: column repaints may have cut through the label.
   if (repainted && mdt_dr_count == 0) _mdt_dr_draw_empty_label(pane_h);
 }
-#endif // NUM_DRUMS > 0
+#endif
 
 // ===========================================================================
 //  Piano roll preview
@@ -3090,11 +3069,6 @@ static FLASHMEM void _mdt_pr_draw_keys(int16_t lo, int16_t hi, uint8_t y_top, ui
     if (yb > (int16_t)y_bot) yb = y_bot;
     if (yb < yt) continue;
 
-    // Like a real keyboard: white keys are only separated where they
-    // touch.  C|D, D|E, F|G, G|A, A|B meet behind a black key, so their
-    // border is the middle of the black key's row (right of the black
-    // key only).  E|F and B|C touch directly: full-width line on the
-    // bottom pixel of F and C.
     const int16_t pc = ((n % 12) + 12) % 12;
     const bool is_black = (pc == 1 || pc == 3 || pc == 6 || pc == 8 || pc == 10);
     if (is_black) {
@@ -3131,7 +3105,6 @@ static FLASHMEM void _mdt_pr_redraw_col(bool chord_mode, uint8_t step,
 
   for (int16_t n = lo; n <= hi; n++) {
     if (((n % 12) + 12) % 12 != 0 || n == lo) continue;
-    // octave line on the B|C border = bottom pixel of the C row
     const int16_t yl = _mdt_pr_pitch_y(n, lo, y_bot) + MDT_PR_ROWH - 1;
     if (yl < (int16_t)y_top || yl >(int16_t)y_bot) continue;
     display.drawLine(x0, (uint8_t)yl, x1, (uint8_t)yl, GREY3);
@@ -3139,12 +3112,6 @@ static FLASHMEM void _mdt_pr_redraw_col(bool chord_mode, uint8_t step,
 
   display.drawLine(x0, y_top, x1, y_top, GREY3);
   display.drawLine(x0, y_bot, x1, y_bot, GREY3);
-
-  if (seq.running && seq.step == step) {
-    uint16_t phx = x0 + MDT_PREV_STEP_WK / 2;
-    display.drawLine(phx, y_top, phx, y_bot, RED);
-    display.drawLine(phx + 1, y_top, phx + 1, y_bot, RED);
-  }
 
   const uint8_t note = seq.note_data[seq.active_pattern][step];
   if (note == 0) return;
@@ -3234,7 +3201,6 @@ static FLASHMEM void _mdt_pr_draw_step_grid(bool chord_mode, int16_t lo, int16_t
 
   for (int16_t n = lo; n <= hi; n++) {
     if (((n % 12) + 12) % 12 != 0 || n == lo) continue;
-    // octave line on the B|C border, aligned with the keyboard
     const int16_t yl = _mdt_pr_pitch_y(n, lo, y_bot) + MDT_PR_ROWH - 1;
     if (yl < (int16_t)y_top || yl >(int16_t)y_bot) continue;
     display.drawLine(step0_x, (uint8_t)yl, MDT_PREV_PR_RIGHT, (uint8_t)yl, GREY3);
@@ -3262,7 +3228,6 @@ static FLASHMEM void _mdt_pr_full_redraw(bool chord_mode, uint8_t cursor_row,
     _mdt_pr_redraw_col(chord_mode, s, lo, hi, y_top, y_bot);
 
   mdt_pr_last_cursor = cursor_row;
-  mdt_pr_last_play = seq.running ? seq.step : 0xFF;
 }
 
 static FLASHMEM void _mdt_pr_update(bool chord_mode, uint8_t cursor_row, uint8_t pane_h)
@@ -3290,7 +3255,6 @@ static FLASHMEM void _mdt_pr_update(bool chord_mode, uint8_t cursor_row, uint8_t
 
   const uint8_t y_top = MDT_PREV_Y + 2;
   const uint8_t y_bot = MDT_PREV_Y + pane_h - 3;
-  const uint8_t cur_play = seq.running ? seq.step : 0xFF;
 
   if (mdt_pr_last_cursor != cursor_row) {
     if (mdt_pr_last_cursor < MDT_ROWS)
@@ -3298,14 +3262,6 @@ static FLASHMEM void _mdt_pr_update(bool chord_mode, uint8_t cursor_row, uint8_t
     if (cursor_row < MDT_ROWS)
       _mdt_pr_redraw_col(chord_mode, cursor_row, lo, hi, y_top, y_bot);
     mdt_pr_last_cursor = cursor_row;
-  }
-
-  if (mdt_pr_last_play != cur_play) {
-    if (mdt_pr_last_play < MDT_ROWS)
-      _mdt_pr_redraw_col(chord_mode, mdt_pr_last_play, lo, hi, y_top, y_bot);
-    if (cur_play < MDT_ROWS)
-      _mdt_pr_redraw_col(chord_mode, cur_play, lo, hi, y_top, y_bot);
-    mdt_pr_last_play = cur_play;
   }
 }
 
@@ -3331,11 +3287,6 @@ static FLASHMEM void _mdt_preview_slice(uint8_t cursor_row, uint8_t pane_h)
     uint16_t x = MDT_PREV_STEP_X(cursor_row);
     checkWebRemote();
     display.fillRect(x, y_top, MDT_PREV_STEP_W, y_bot - y_top + 1, DX_DARKCYAN);
-  }
-  if (seq.running && seq.step < MDT_ROWS) {
-    uint16_t x = MDT_PREV_STEP_X(seq.step) + MDT_PREV_STEP_W / 2;
-    display.drawLine(x, y_top, x, y_bot, RED);
-    display.drawLine(x + 1, y_top, x + 1, y_bot, RED);
   }
 
   static const uint16_t palette[] = {
@@ -3378,7 +3329,7 @@ static FLASHMEM uint8_t _mdt_preview_compute_height(void)
 static FLASHMEM void _mdt_draw_pattern_preview(uint8_t cursor_row)
 {
   if (mdt_is_vk_mode()) return;
-  if (mdt_menu_state != MDT_MENU_OFF) return;   // pane is covered by the menu
+  if (mdt_menu_state != MDT_MENU_OFF) return;
   const uint8_t ct = seq.content_type[seq.active_pattern];
   const uint8_t pane_h = _mdt_preview_compute_height();
 
@@ -3499,9 +3450,6 @@ static void _mdt_draw_cell(uint16_t x, uint8_t y,
   uint8_t  cell_w_chars,
   bool     is_preview = false)
 {
-  // is_playhead is intentionally ignored here: the playhead is shown on
-  // the ST column only, so the rest of the row stays readable while the
-  // sequencer is running.
   (void)is_playhead;
 
   uint16_t fg, bg;
@@ -3570,7 +3518,6 @@ static FLASHMEM void _mdt_draw_info_cell(uint8_t row, bool is_playhead, bool is_
   const uint8_t ct = seq.content_type[seq.active_pattern];
   const uint8_t fxc = seq.fx_cmd[seq.active_pattern][row];
 
-  // ---- Base info (used when the step carries no FX command) ----
   const char* base_info = "";
   if (ct == 0) {
 #if NUM_DRUMS > 0
@@ -3588,10 +3535,6 @@ static FLASHMEM void _mdt_draw_info_cell(uint8_t row, bool is_playhead, bool is_
     base_info = "LATCH";
   }
 
-  // ---- FX takes priority in the INFO column when present ----
-  // The note / chord is still readable from the NOTE and VEL columns
-  // (and, for chords, from the piano roll preview), so showing the FX
-  // here makes automation immediately visible on every step.
   char info_work[MDT_INFO_W + 1];
   memset(info_work, ' ', MDT_INFO_W);
   info_work[MDT_INFO_W] = 0;
@@ -3602,7 +3545,50 @@ static FLASHMEM void _mdt_draw_info_cell(uint8_t row, bool is_playhead, bool is_
     const char* fxn = mdt_fx_names[fxc];
 
     char tmp[16];
-    if (fxm == 0) {
+
+    if (mdt_cmd_is_voice(fxc)) {
+      const uint8_t dx_idx = _mdt_voice_fx_target_instance(
+          seq.selected_track, seq.active_pattern, row);
+      if (dx_idx < NUM_DEXED) {
+        const uint8_t cur_v = mdt_get_current_voice(dx_idx);
+        const uint8_t cur_b = mdt_get_current_bank (dx_idx);
+        const uint8_t cur_p = mdt_get_current_pool (dx_idx);
+        switch (fxc) {
+          case MDT_FX_VOICE_UP: {
+            const uint8_t tgt = (cur_v + 1) % MAX_VOICES;
+            snprintf(tmp, sizeof(tmp), "%s%02u>%02u", fxn,
+                     (unsigned)(cur_v + 1), (unsigned)(tgt + 1));
+            break;
+          }
+          case MDT_FX_VOICE_DN: {
+            const uint8_t tgt = (cur_v == 0) ? (MAX_VOICES - 1) : (cur_v - 1);
+            snprintf(tmp, sizeof(tmp), "%s%02u>%02u", fxn,
+                     (unsigned)(cur_v + 1), (unsigned)(tgt + 1));
+            break;
+          }
+          case MDT_FX_VOICE_SEL: {
+            const uint8_t tgt = constrain(fxp, 0, MAX_VOICES - 1);
+            snprintf(tmp, sizeof(tmp), "%s%02u>%02u", fxn,
+                     (unsigned)(cur_v + 1), (unsigned)(tgt + 1));
+            break;
+          }
+          case MDT_FX_BANK_SEL:
+            snprintf(tmp, sizeof(tmp), "%s%02u>%02u", fxn,
+                     (unsigned)cur_b, (unsigned)fxp);
+            break;
+          case MDT_FX_POOL_SEL:
+            snprintf(tmp, sizeof(tmp), "%s%02u>%02u", fxn,
+                     (unsigned)cur_p, (unsigned)fxp);
+            break;
+          case MDT_FX_VOICE_CLR:
+            snprintf(tmp, sizeof(tmp), "%s%02u", fxn, (unsigned)(cur_v + 1));
+            break;
+        }
+      } else {
+        snprintf(tmp, sizeof(tmp), "%s?", fxn);
+      }
+    }
+    else if (fxm == 0) {
       snprintf(tmp, sizeof(tmp), "%s", fxn);
     }
     else if (fxc == MDT_FX_PAN) {
@@ -3624,7 +3610,6 @@ static FLASHMEM void _mdt_draw_info_cell(uint8_t row, bool is_playhead, bool is_
     memcpy(info_work, base_info, n);
   }
 
-  // ---- Preview ("INSERT?") overrides everything while hovering ----
   uint8_t pv_note = 0, pv_vel = 0;
   const bool row_preview = _mdt_row_insert_preview(row, &pv_note, &pv_vel);
   if (row_preview) {
@@ -3649,7 +3634,6 @@ static FLASHMEM void _mdt_draw_info_cell(uint8_t row, bool is_playhead, bool is_
     }
   }
 
-  // ---- Draw ----
   const bool row_is_empty = _mdt_step_is_empty(ct, note, vel);
 
   uint16_t fg, bg;
@@ -3707,8 +3691,6 @@ static FLASHMEM void _mdt_draw_single_cell(uint8_t row, uint8_t col,
       cell_preview = true;
     }
     else if (mdt_step_is_control(note, fx_cmd)) {
-      // FX-only control step: show ">FX" instead of "---" so the user
-      // can tell that a note will not be triggered on this step.
       buf[0] = '>'; buf[1] = 'F'; buf[2] = 'X'; buf[3] = 0;
       content_fg = COLOR_ARP;
     }
@@ -3772,7 +3754,10 @@ static FLASHMEM void _mdt_draw_single_cell(uint8_t row, uint8_t col,
     break;
 
   case MDT_COL_PAR:
-    snprintf(buf, sizeof(buf), "%03d", (int)fx_val);
+    if (fx_cmd == MDT_FX_VOICE_SEL)
+      snprintf(buf, sizeof(buf), "%03d", (int)fx_val + 1);
+    else
+      snprintf(buf, sizeof(buf), "%03d", (int)fx_val);
     content_fg = (fx_cmd == MDT_FX_NONE) ? GREY3 : COLOR_PITCHSMP;
     x = MDT_PAR_X;
     break;
@@ -3850,22 +3835,11 @@ static FLASHMEM void _mdt_redraw_left_rows(void)
 
 static FLASHMEM void _mdt_status_cache_reset(void)
 {
-  // Force the next _mdt_draw_status() call to repaint every field.
-  // Called only on infrequent events (pattern-type change, step clear,
-  // step-record writes, menu transitions, virtual-keyboard toggles).
   mdt_status_force_full = true;
 }
 
 // ===========================================================================
-//  STATUS BAR  (two text lines below the rows)
-//
-//  Line 1 - pattern level (changes only when the pattern is edited):
-//     summary (or encoder help on builds without OLED) | key | transport
-//  Line 2 - cursor level, depends on the column under the cursor:
-//     main info | detail (value meaning / bar)          | step flag
-//
-//  Every field is formatted into a small buffer and repainted only when
-//  its text or colour actually changed.  Nothing else is redrawn.
+//  STATUS BAR
 // ===========================================================================
 #define MDT_ST_Y1   (MDT_STATUS_Y + 2)
 #define MDT_ST_Y2   (MDT_STATUS_Y + 13)
@@ -3874,7 +3848,7 @@ struct MdtStField {
   uint16_t x;
   uint16_t w;
   uint8_t  y;
-  bool     right;       // right-aligned inside its box
+  bool     right;
   bool     valid;
   uint16_t color;
   char     last[24];
@@ -3883,30 +3857,47 @@ struct MdtStField {
 enum { MDT_ST_SUM = 0, MDT_ST_KEY, MDT_ST_TRN, MDT_ST_A, MDT_ST_B, MDT_ST_FLAG, MDT_ST_COUNT };
 
 static MdtStField mdt_st[MDT_ST_COUNT] = {
-  {   1, 108, MDT_ST_Y1, false, false, 0, "" },   // summary / help   (18 chars)
-  { 115,  90, MDT_ST_Y1, false, false, 0, "" },   // key / drum count (15 chars)
-  { 208, 111, MDT_ST_Y1, true,  false, 0, "" },   // transport        (18 chars)
-  {   1, 138, MDT_ST_Y2, false, false, 0, "" },   // main info
-  { 141, 108, MDT_ST_Y2, false, false, 0, "" },   // detail
-  { 252,  67, MDT_ST_Y2, true,  false, 0, "" },   // flag
+  {   1, 108, MDT_ST_Y1, false, false, 0, "" },
+  { 115,  90, MDT_ST_Y1, false, false, 0, "" },
+  { 208, 111, MDT_ST_Y1, true,  false, 0, "" },
+
+  {   1, 108, MDT_ST_Y2, false, false, 0, "" },
+  { 115, 174, MDT_ST_Y2, false, false, 0, "" },
+  { 291,  28, MDT_ST_Y2, true,  false, 0, "" },
 };
 
-// velocity bar inside the detail box (VEL column only)
-#define MDT_ST_BAR_X  (141 + 2)
+#define MDT_ST_BAR_X  (115 + 2)
 #define MDT_ST_BAR_W  100
-static int16_t  mdt_st_bar_last = -1;   // -1 = no bar on screen
+static int16_t  mdt_st_bar_last = -1;
 
-// pattern-level cache (line 1 summary / key are recomputed only on change)
 static uint32_t mdt_st_sig = 0;
 static bool     mdt_st_sig_valid = false;
 static char     mdt_st_sum_txt[24];
 static char     mdt_st_key_txt[24];
 static uint16_t mdt_st_key_col = 0;
 
-// "where is this pattern used" cache (PATTERN column)
 static uint8_t  mdt_st_use_pat = 0xFF;
 static char     mdt_st_use_a[24];
 static char     mdt_st_use_b[24];
+
+// Value renderer mode (voice / bank / pool)
+enum mdt_vvm_mode : uint8_t {
+  MDT_VVM_VOICE = 0,
+  MDT_VVM_BANK  = 1,
+  MDT_VVM_POOL  = 2,
+};
+
+static uint8_t mdt_vcv_last_pool = 0xFF;
+static uint8_t mdt_vcv_last_bank = 0xFF;
+static uint8_t mdt_vcv_last_curv = 0xFF;
+static uint8_t mdt_vcv_last_tgtv = 0xFF;
+static bool    mdt_vcv_last_show = false;
+static uint8_t mdt_vcv_last_mode = 0xFF;
+
+// Which renderer last wrote field B?
+//   false → _mdt_st_set() (single-colour text) owns it, f.last is valid.
+//   true  → _mdt_st_set_voice_value() (chips) owns it, f.last is not usable.
+static bool    mdt_st_b_voice_drawn = false;
 
 static FLASHMEM void _mdt_st_invalidate(void)
 {
@@ -3919,7 +3910,17 @@ static FLASHMEM void _mdt_st_invalidate(void)
 static FLASHMEM void _mdt_st_set(uint8_t id, const char* text, uint16_t color)
 {
   MdtStField& f = mdt_st[id];
-  if (f.valid && f.color == color && strncmp(f.last, text, sizeof(f.last)) == 0) return;
+
+  const bool voice_owns_b = (id == MDT_ST_B) && mdt_st_b_voice_drawn;
+
+  // Skip only if the text renderer wrote last AND the text/colour are
+  // unchanged. If a voice command drew field B, f.last is stale and the
+  // text renderer must always repaint.
+  if (f.valid && !voice_owns_b &&
+      f.color == color &&
+      strncmp(f.last, text, sizeof(f.last)) == 0) return;
+
+  if (id == MDT_ST_B) mdt_st_b_voice_drawn = false;
 
   strncpy(f.last, text, sizeof(f.last) - 1);
   f.last[sizeof(f.last) - 1] = '\0';
@@ -3944,7 +3945,120 @@ static FLASHMEM void _mdt_st_set(uint8_t id, const char* text, uint16_t color)
   display.print(buf);
 }
 
-// value < 0 removes the bar
+static FLASHMEM void _mdt_st_set_voice_value(uint8_t id,
+                                             uint8_t pool,  uint8_t bank,
+                                             uint8_t cur_val, uint8_t tgt_val,
+                                             uint8_t mode,
+                                             bool    show_target)
+{
+  MdtStField& f = mdt_st[id];
+
+  const bool voice_owns_b = (id == MDT_ST_B) && mdt_st_b_voice_drawn;
+
+  const bool same = f.valid && voice_owns_b &&
+      mdt_vcv_last_pool == pool &&
+      mdt_vcv_last_bank == bank &&
+      mdt_vcv_last_curv == cur_val &&
+      mdt_vcv_last_tgtv == tgt_val &&
+      mdt_vcv_last_show == show_target &&
+      mdt_vcv_last_mode == mode;
+
+  if (same) return;
+
+  mdt_vcv_last_pool = pool;
+  mdt_vcv_last_bank = bank;
+  mdt_vcv_last_curv = cur_val;
+  mdt_vcv_last_tgtv = tgt_val;
+  mdt_vcv_last_show = show_target;
+  mdt_vcv_last_mode = mode;
+
+  if (id == MDT_ST_B) mdt_st_b_voice_drawn = true;
+  f.valid = true;
+
+  // Poison f.last so the text renderer's strncmp() is guaranteed to
+  // mismatch on the next call — even when that call's text is empty.
+  f.last[0] = '\x01';
+  f.last[1] = '\0';
+
+  const char* cn = nullptr;
+  const char* tn = nullptr;
+  if (mode == MDT_VVM_VOICE) {
+    cn = _mdt_voice_name_cur(pool, bank, cur_val);
+    if (show_target) tn = _mdt_voice_name_tgt(pool, bank, tgt_val);
+  }
+  else if (mode == MDT_VVM_BANK) {
+    cn = _mdt_bank_name_cur(pool, cur_val);
+    if (show_target) tn = _mdt_bank_name_tgt(pool, tgt_val);
+  }
+
+  checkWebRemote();
+  display.fillRect(f.x, f.y, f.w, 8, COLOR_BACKGROUND);
+  display.console = false;
+
+  display.setTextSize(1);
+  const uint16_t y = f.y;
+  uint16_t       x = f.x;
+
+  auto displayNum = [&](uint8_t v) -> uint8_t {
+    return (mode == MDT_VVM_VOICE) ? (uint8_t)(v + 1) : v;
+  };
+
+  auto printNum = [&](uint8_t v) {
+    checkWebRemote();
+    display.fillRect(x, y, 2 * CHAR_width_small, 8, COLOR_SYSTEXT);
+    display.console = false;
+
+    display.setTextColor(COLOR_BACKGROUND, COLOR_SYSTEXT);
+    display.setCursor(x, y);
+    char nb[4];
+    snprintf(nb, sizeof(nb), "%02u", (unsigned)displayNum(v));
+    display.print(nb);
+    x += 2 * CHAR_width_small;
+  };
+
+  auto printSep = [&](char c) {
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
+    display.setCursor(x, y);
+    char sb[2] = { c, 0 };
+    display.print(sb);
+    x += CHAR_width_small;
+  };
+
+  auto printName = [&](const char* n) {
+    char nb[11];
+    if (n) { strncpy(nb, n, 10); nb[10] = '\0'; } else { nb[0] = '\0'; }
+
+    checkWebRemote();
+    display.fillRect(x, y, 10 * CHAR_width_small, 8, DX_DARKCYAN);
+    display.console = false;
+
+    if (nb[0] != '\0') {
+      display.setTextColor(COLOR_SYSTEXT, DX_DARKCYAN);
+      display.setCursor(x, y);
+      display.print(nb);
+    }
+
+    x += 10 * CHAR_width_small;
+  };
+
+  printNum(cur_val);
+  if (cn) {
+    printSep(' ');
+    printName(cn);
+  }
+
+  if (show_target) {
+    printSep(' ');
+    printSep('>');
+    printSep(' ');
+    printNum(tgt_val);
+    if (cn) {
+      printSep(' ');
+      printName(tn);
+    }
+  }
+}
+
 static FLASHMEM void _mdt_st_bar(int16_t value)
 {
   if (value == mdt_st_bar_last) return;
@@ -3974,7 +4088,6 @@ static FLASHMEM void _mdt_st_note_name(char* out, size_t n, uint8_t note)
   snprintf(out, n, "%s", nb);
 }
 
-// ---- FX: long name and the meaning of the parameter value --------------
 static FLASHMEM const char* _mdt_fx_long_name(uint8_t cmd)
 {
   switch (cmd) {
@@ -3998,6 +4111,12 @@ static FLASHMEM const char* _mdt_fx_long_name(uint8_t cmd)
   case MDT_FX_ARP_EUCL:  return "ARP EUCLID";
   case MDT_FX_ARP_EUOFF: return "ARP EUCL.OFFSET";
   case MDT_FX_ARP_RESET: return "ARP RESET";
+  case MDT_FX_VOICE_UP:  return "VOICE +";
+  case MDT_FX_VOICE_DN:  return "VOICE -";
+  case MDT_FX_VOICE_SEL: return "SELECT VOICE";
+  case MDT_FX_BANK_SEL:  return "SELECT BANK";
+  case MDT_FX_POOL_SEL:  return "SELECT POOL";
+  case MDT_FX_VOICE_CLR: return "CLEAR OVERRIDE";
   default:               return "UNKNOWN";
   }
 }
@@ -4050,16 +4169,21 @@ static FLASHMEM void _mdt_fx_value_text(char* out, size_t n, uint8_t cmd, uint8_
     snprintf(out, n, "= +%u STEPS", (unsigned)v); return;
   case MDT_FX_ARP_RESET:
     snprintf(out, n, v ? "= RESET HERE" : "= IDLE"); return;
+  case MDT_FX_VOICE_UP:  snprintf(out, n, "= next voice");     return;
+  case MDT_FX_VOICE_DN:  snprintf(out, n, "= previous voice"); return;
+  case MDT_FX_VOICE_SEL: snprintf(out, n, "= voice %u", (unsigned)(v + 1)); return;
+  case MDT_FX_BANK_SEL:  snprintf(out, n, "= bank %u",  (unsigned)v); return;
+  case MDT_FX_POOL_SEL:  snprintf(out, n, "= pool %u",  (unsigned)v); return;
+  case MDT_FX_VOICE_CLR: snprintf(out, n, "= default voice");  return;
   default:
     snprintf(out, n, "= %u", (unsigned)v); return;
   }
 }
 
-// ---- line 1: pattern summary + key detection ---------------------------
 static FLASHMEM uint32_t _mdt_st_pattern_sig(void)
 {
   const uint8_t pat = seq.active_pattern;
-  uint32_t h = 2166136261u;                         // FNV-1a
+  uint32_t h = 2166136261u;
   for (uint8_t s = 0; s < 16; s++) {
     h = (h ^ seq.note_data[pat][s]) * 16777619u;
     h = (h ^ seq.vel[pat][s]) * 16777619u;
@@ -4105,8 +4229,6 @@ static FLASHMEM void _mdt_st_compute_pattern_info(void)
     return;
   }
 
-  // Key detection: pitch-class histogram (chord patterns add their chord
-  // tones).  Tonic evidence = notes on beats, the first and the last note.
   uint8_t hist[12] = { 0 }, tonic[12] = { 0 };
   uint8_t total = 0;
   int8_t  first = -1, last = -1;
@@ -4137,7 +4259,6 @@ static FLASHMEM void _mdt_st_compute_pattern_info(void)
   tonic[seq.note_data[pat][first] % 12] += 3;
   tonic[seq.note_data[pat][last] % 12] += 3;
 
-  // 7-note scales only (MAJOR .. MEL MIN); earlier scales win ties
   uint8_t best_root = 0, best_scale = 0, best_hits = 0;
   int16_t best_score = -1;
   for (uint8_t sc = 0; sc <= 8; sc++) {
@@ -4161,11 +4282,10 @@ static FLASHMEM void _mdt_st_compute_pattern_info(void)
   else {
     snprintf(mdt_st_key_txt, sizeof(mdt_st_key_txt), "%s %s +%u",
       noteNames[best_root], mdt_scales[best_scale].name, (unsigned)off);
-    mdt_st_key_col = YELLOW;                         // some notes off-key
+    mdt_st_key_col = YELLOW;
   }
 }
 
-// ---- PATTERN column: where is the pattern used ---------------------------
 static FLASHMEM void _mdt_st_compute_usage(void)
 {
   const uint8_t pat = seq.active_pattern;
@@ -4199,7 +4319,6 @@ static FLASHMEM void _mdt_st_compute_usage(void)
   snprintf(mdt_st_use_b, sizeof(mdt_st_use_b), "NOT IN SONG");
 }
 
-// ---- short encoder help for the status bar (builds without an OLED) ------
 static FLASHMEM const char* _mdt_st_help_text(uint8_t cursor_col, bool edit_state)
 {
   if (mdt_menu_state == MDT_MENU_MAIN)      return "R:SELECT P:OK";
@@ -4212,7 +4331,6 @@ static FLASHMEM const char* _mdt_st_help_text(uint8_t cursor_col, bool edit_stat
   return "R:VALUE P:OK L:COL";
 }
 
-// ---- the status bar ------------------------------------------------------
 static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
   uint8_t cursor_col,
   bool edit_state)
@@ -4233,7 +4351,6 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
   const uint8_t row = (cursor_row < MDT_ROWS) ? cursor_row : 0;
   char a[32], b[32];
 
-  // ---------------- LINE 1 ----------------
   const uint32_t sig = _mdt_st_pattern_sig();
   if (!mdt_st_sig_valid || sig != mdt_st_sig) {
     mdt_st_sig = sig;
@@ -4243,7 +4360,7 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
 #if defined OLED_DISPLAYS
   _mdt_st_set(MDT_ST_SUM, mdt_st_sum_txt, GREY2);
 #else
-  _mdt_st_set(MDT_ST_SUM, _mdt_st_help_text(cursor_col, edit_state), GREY1);  // no OLED: help here
+  _mdt_st_set(MDT_ST_SUM, _mdt_st_help_text(cursor_col, edit_state), GREY1);
 #endif
   _mdt_st_set(MDT_ST_KEY, mdt_st_key_txt, mdt_st_key_col);
 
@@ -4257,7 +4374,6 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
     _mdt_st_set(MDT_ST_TRN, a, GREY2);
   }
 
-  // ---------------- LINE 2 ----------------
   const uint8_t note = seq.note_data[pat][row];
   const uint8_t vel = seq.vel[pat][row];
   const uint8_t fxCmd = seq.fx_cmd[pat][row];
@@ -4279,14 +4395,94 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
   case MDT_COL_CMD:
   case MDT_COL_PAR:
     if (fxCmd < MDT_FX_END) {
-      snprintf(a, sizeof(a), "%s %s", mdt_fx_names[fxCmd], _mdt_fx_long_name(fxCmd));
-      _mdt_fx_value_text(b, sizeof(b), fxCmd, fxPar);
+      if (mdt_cmd_is_voice(fxCmd)) {
+        const uint8_t dx_idx = _mdt_voice_fx_target_instance(
+            seq.selected_track, pat, row);
+
+        if (dx_idx < NUM_DEXED) {
+          const uint8_t cur_v = mdt_get_current_voice(dx_idx);
+          const uint8_t cur_b = mdt_get_current_bank (dx_idx);
+          const uint8_t cur_p = mdt_get_current_pool (dx_idx);
+
+          uint8_t cur_disp    = 0;
+          uint8_t tgt_disp    = 0;
+          uint8_t mode        = MDT_VVM_VOICE;
+          bool    show_target = false;
+
+          switch (fxCmd) {
+            case MDT_FX_VOICE_UP:
+              cur_disp    = cur_v;
+              tgt_disp    = (uint8_t)((cur_v + 1) % MAX_VOICES);
+              mode        = MDT_VVM_VOICE;
+              show_target = true;
+              break;
+            case MDT_FX_VOICE_DN:
+              cur_disp    = cur_v;
+              tgt_disp    = (cur_v == 0) ? (uint8_t)(MAX_VOICES - 1)
+                                         : (uint8_t)(cur_v - 1);
+              mode        = MDT_VVM_VOICE;
+              show_target = true;
+              break;
+            case MDT_FX_VOICE_SEL:
+              cur_disp    = cur_v;
+              tgt_disp    = (uint8_t)constrain(fxPar, 0, MAX_VOICES - 1);
+              mode        = MDT_VVM_VOICE;
+              show_target = true;
+              break;
+            case MDT_FX_VOICE_CLR:
+              cur_disp    = cur_v;
+              tgt_disp    = cur_v;
+              mode        = MDT_VVM_VOICE;
+              show_target = false;
+              break;
+            case MDT_FX_BANK_SEL:
+              cur_disp    = cur_b;
+              tgt_disp    = fxPar;
+              mode        = MDT_VVM_BANK;
+              show_target = true;
+              break;
+            case MDT_FX_POOL_SEL:
+              cur_disp    = cur_p;
+              tgt_disp    = fxPar;
+              mode        = MDT_VVM_POOL;
+              show_target = true;
+              break;
+            default: break;
+          }
+
+          snprintf(a, sizeof(a), "%s %s",
+                   mdt_fx_names[fxCmd], _mdt_fx_long_name(fxCmd));
+          _mdt_st_set(MDT_ST_A, a, COLOR_ARP);
+
+          _mdt_st_set_voice_value(MDT_ST_B, cur_p, cur_b,
+                                  cur_disp, tgt_disp,
+                                  mode, show_target);
+
+          if (edit_state)                                   _mdt_st_set(MDT_ST_FLAG, "EDIT", RED);
+          else if ((int16_t)row > 15 - seq.pattern_len_dec) _mdt_st_set(MDT_ST_FLAG, "LEN",  GREY3);
+          else if (mdt_step_is_control(note, fxCmd))        _mdt_st_set(MDT_ST_FLAG, "FX",   COLOR_CHORDS);
+          else                                              _mdt_st_set(MDT_ST_FLAG, "",     GREY3);
+          return;
+        }
+        else {
+          snprintf(a, sizeof(a), "%s %s",
+                   mdt_fx_names[fxCmd], _mdt_fx_long_name(fxCmd));
+          _mdt_st_set(MDT_ST_A, a, RED);
+          _mdt_st_set(MDT_ST_B, "NO DX TARGET", RED);
+        }
+      }
+      else {
+        snprintf(a, sizeof(a), "%s %s",
+                 mdt_fx_names[fxCmd], _mdt_fx_long_name(fxCmd));
+        _mdt_fx_value_text(b, sizeof(b), fxCmd, fxPar);
+        ca = COLOR_CHORDS;
+        cb = COLOR_SYSTEXT;
+      }
     }
     else {
       snprintf(a, sizeof(a), "CMD %u UNKNOWN", (unsigned)fxCmd);
+      _mdt_st_set(MDT_ST_A, a, COLOR_CHORDS);
     }
-    ca = COLOR_CHORDS;
-    cb = COLOR_SYSTEXT;
     break;
 
   case MDT_COL_INS: {
@@ -4326,7 +4522,6 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
   case MDT_COL_NOTE:
   default:
     if (ct == 0) {
-      // drums: sample on this step + sample selected for input
 #if NUM_DRUMS > 0
       const uint8_t idx = (note == 0) ? 0xFF : _mdt_drum_index_for_step(note, vel);
       if (note == 0)                       snprintf(a, sizeof(a), "STEP: EMPTY");
@@ -4353,7 +4548,6 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
       break;
     }
     if (note == 130) {
-      // which note does this latch hold?
       int8_t src = -1;
       for (int8_t s = (int8_t)row - 1; s >= 0; s--) {
         const uint8_t n = seq.note_data[pat][s];
@@ -4390,7 +4584,6 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
       }
       else {
         snprintf(a, sizeof(a), "NOTE %s  MIDI %03u", nn, (unsigned)note);
-        // interval to the previous real note
         int8_t prv = -1;
         for (int8_t s = (int8_t)row - 1; s >= 0; s--) {
           const uint8_t n = seq.note_data[pat][s];
@@ -4413,8 +4606,6 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
 
   _mdt_st_set(MDT_ST_A, a, ca);
   if (want_bar) {
-    // text field must be empty under the bar; mark it so a later text
-    // repaints the box (the bar is drawn on top of the cleared box)
     if (mdt_st[MDT_ST_B].last[0] != '\0' || !mdt_st[MDT_ST_B].valid) {
       _mdt_st_set(MDT_ST_B, "", cb);
       mdt_st_bar_last = -1;
@@ -4424,16 +4615,15 @@ static FLASHMEM void _mdt_draw_status(uint8_t cursor_row,
   else {
     if (mdt_st_bar_last >= 0) {
       _mdt_st_bar(-1);
-      mdt_st[MDT_ST_B].valid = false;              // force text repaint
+      mdt_st[MDT_ST_B].valid = false;
     }
     _mdt_st_set(MDT_ST_B, b, cb);
   }
 
-  // step flag
-  if (edit_state)                               _mdt_st_set(MDT_ST_FLAG, "EDIT", RED);
-  else if ((int16_t)row > 15 - seq.pattern_len_dec) _mdt_st_set(MDT_ST_FLAG, "BEYOND LEN", GREY3);
-  else if (mdt_step_is_control(note, fxCmd))    _mdt_st_set(MDT_ST_FLAG, "FX STEP", COLOR_CHORDS);
-  else                                          _mdt_st_set(MDT_ST_FLAG, "", GREY3);
+  if (edit_state)                                   _mdt_st_set(MDT_ST_FLAG, "EDIT", RED);
+  else if ((int16_t)row > 15 - seq.pattern_len_dec) _mdt_st_set(MDT_ST_FLAG, "LEN",  GREY3);
+  else if (mdt_step_is_control(note, fxCmd))        _mdt_st_set(MDT_ST_FLAG, "FX",   COLOR_CHORDS);
+  else                                              _mdt_st_set(MDT_ST_FLAG, "",     GREY3);
 }
 
 // ===========================================================================
@@ -4446,8 +4636,6 @@ static FLASHMEM void _mdt_draw_type_button(void)
     TouchButton::BUTTON_ACTIVE);
 }
 
-// VK mode: LATCH NOTE is the only step button that depends on the
-// content type (disabled for drum patterns).
 static FLASHMEM void _mdt_draw_vk_latch_button(void)
 {
   const bool can_latch = mdt_step_recording &&
@@ -4557,17 +4745,12 @@ static void _mdt_update_playhead(void)
       const uint8_t old = mdt_prev_play_row;
       mdt_prev_play_row = cur;
 
-      // Only the ST column of the affected rows changes when the playhead
-      // moves, so we redraw just those two cells.
       if (old < MDT_ROWS && old != cur) {
         _mdt_draw_one_cell(old, MDT_CELL_ST,
           mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
       }
       _mdt_draw_one_cell(cur, MDT_CELL_ST,
         mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
-
-      _mdt_draw_pattern_preview(mdt_cursor_row);
-      mdt_preview_dirty = false;
     }
   }
   else if (mdt_prev_play_row != 0xFF) {
@@ -4577,18 +4760,12 @@ static void _mdt_update_playhead(void)
       _mdt_draw_one_cell(old, MDT_CELL_ST,
         mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
     }
-    _mdt_draw_pattern_preview(mdt_cursor_row);
-    mdt_preview_dirty = false;
   }
 }
 
 // ===========================================================================
 //  TOUCH HANDLER
 // ===========================================================================
-// Input only -- same shape as the handle_touchscreen_*() functions in
-// touch.cpp.  Timed work (preview release, playhead, MIDI step recording)
-// lives in _mdt_periodic(), called from FUNC_loop, so it also runs on
-// builds without a touch IC.
 static void _mdt_touch_handler(void)
 {
   if (mdt_is_vk_mode() && mdt_menu_state == MDT_MENU_OFF) {
@@ -4596,22 +4773,14 @@ static void _mdt_touch_handler(void)
   }
 
   if (numTouchPoints == 0) {
-    // This handler returns early on release, so feed one no-touch call
-    // into TouchButton so its press latch (isButtonTouched) is cleared.
     TouchButton::isAreaPressed(0, 0, 1, 1);
     return;
   }
 
   if (mdt_menu_state != MDT_MENU_OFF) {
-    // Every menu hit goes through TouchButton::isAreaPressed/isPressed.
-    // Their shared latch fires once per touch, so the touch that opened
-    // the menu (or just executed a row) cannot hit it again.  No private
-    // "ignore touch" flag needed.
-    bool acted = false;
     if (!TouchButton::isInArea(MDT_MENU_X0, MDT_MENU_Y0, MDT_MENU_W, MDT_MENU_H)) {
       if (TouchButton::isAreaPressed(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
         _mdt_menu_back();
-        acted = true;
       }
     }
     else if (mdt_menu_state == MDT_MENU_MAIN) {
@@ -4626,7 +4795,6 @@ static void _mdt_touch_handler(void)
             _mdt_menu_draw_row(mdt_menu_highlight, true);
           }
           _mdt_menu_execute();
-          acted = true;
         }
       }
     }
@@ -4636,26 +4804,21 @@ static void _mdt_touch_handler(void)
       const bool form = _mdt_is_form_state();
       if (form && TouchButton::isAreaPressed(MDT_MENU_X0, MDT_MENU_VALUE_Y - 1, MDT_MENU_W,
         (_mdt_form_nfields() + 1) * MDT_FORM_ROW_H)) {
-        _mdt_form_tap((ts.p.y - (MDT_MENU_VALUE_Y - 1)) / MDT_FORM_ROW_H); acted = true;
+        _mdt_form_tap((ts.p.y - (MDT_MENU_VALUE_Y - 1)) / MDT_FORM_ROW_H);
       }
-      else if (TouchButton::isPressed(MDT_MENU_TB_X2, MDT_MENU_TB_OK_Y)) { // right: OK
+      else if (TouchButton::isPressed(MDT_MENU_TB_X2, MDT_MENU_TB_OK_Y)) {
         if (form) _mdt_form_commit(); else _mdt_menu_execute();
-        acted = true;
       }
-      else if (TouchButton::isPressed(MDT_MENU_TB_X1, MDT_MENU_TB_OK_Y)) { // left: BACK
-        _mdt_menu_back();    acted = true;
+      else if (TouchButton::isPressed(MDT_MENU_TB_X1, MDT_MENU_TB_OK_Y)) {
+        _mdt_menu_back();
       }
       else if (!confirm_only && TouchButton::isPressed(MDT_MENU_TB_X1, MDT_MENU_TB_ADJ_Y)) {
         if (form) _mdt_form_change_value(-1); else _mdt_menu_adjust(-1);
-        acted = true;
       }
       else if (!confirm_only && TouchButton::isPressed(MDT_MENU_TB_X2, MDT_MENU_TB_ADJ_Y)) {
         if (form) _mdt_form_change_value(+1); else _mdt_menu_adjust(+1);
-        acted = true;
       }
     }
-
-    if (acted) _mdt_flush_redraw();
     return;
   }
 
@@ -4905,10 +5068,6 @@ static FLASHMEM bool _mdt_edit_value(uint8_t row, uint8_t col, int16_t step)
 
     if (v == 0) {
       seq.vel[pat][row] = 0;
-      // Sticky suppression: the step is now empty, so keep the
-      // auto-insert preview off for this row until the cursor moves
-      // or the user presses the encoder to insert a note.  This is
-      // what makes ">FX" (or "---") actually visible.
       mdt_nopv_row = row;
       mdt_nopv_pat = pat;
     }
@@ -4922,8 +5081,6 @@ static FLASHMEM bool _mdt_edit_value(uint8_t row, uint8_t col, int16_t step)
       mdt_note_preview_valid = true;
     }
 
-    // If the note was just cleared, stop any preview voice that is
-    // still ringing on this step immediately.
     if (v == 0 && !seq.running) {
       _mdt_preview_release_all();
     }
@@ -4992,15 +5149,26 @@ static FLASHMEM bool _mdt_edit_value(uint8_t row, uint8_t col, int16_t step)
   }
 
   case MDT_COL_CMD: {
-    int16_t v = (int16_t)seq.fx_cmd[pat][row] + step;
-    if (v < 0)           v = MDT_FX_END - 1;
-    if (v >= MDT_FX_END) v = 0;
-    if ((uint8_t)v == seq.fx_cmd[pat][row]) return false;
+    // Walk through the command list, skipping commands that make no
+    // sense for this pattern type (see mdt_cmd_allowed_for_type()).
+    const uint8_t ct = seq.content_type[pat];
+    const uint8_t old_cmd = seq.fx_cmd[pat][row];
+    const int8_t  dir = (step > 0) ? 1 : -1;
+    uint16_t      moves = (step > 0) ? step : -step;
+    int16_t       v = old_cmd;
+
+    while (moves--) {
+      for (uint8_t guard = 0; guard < MDT_FX_END; guard++) {
+        v += dir;
+        if (v < 0)           v = MDT_FX_END - 1;
+        if (v >= MDT_FX_END) v = 0;
+        if (mdt_cmd_allowed_for_type(ct, (uint8_t)v)) break;
+      }
+    }
+
+    if ((uint8_t)v == old_cmd) return false;
     seq.fx_cmd[pat][row] = (uint8_t)v;
 
-    // Clamp PAR to the new command's range so legacy values
-    // (e.g. 127 on an MDT_FX_ARP_STOP step) can never survive a
-    // command switch.
     const uint8_t newmax = mdt_fx_param_max[(uint8_t)v];
     if (seq.fx_val[pat][row] > newmax) seq.fx_val[pat][row] = newmax;
     return true;
@@ -5046,7 +5214,7 @@ FLASHMEM void UI_func_mdtracker_pattern_editor(uint8_t param)
 {
   if (LCDML.FUNC_setup()) {
     registerTouchHandler(_mdt_touch_handler);
-    LCDML.FUNC_setLoopInterval(MDT_LOOP_INTERVAL_MS); // periodic FUNC_loop (see _mdt_periodic)
+    LCDML.FUNC_setLoopInterval(MDT_LOOP_INTERVAL_MS);
     virtual_keyboard_smart_preselect_mode();
 
     display.fillScreen(COLOR_BACKGROUND);
@@ -5103,15 +5271,31 @@ FLASHMEM void UI_func_mdtracker_pattern_editor(uint8_t param)
 
   if (LCDML.FUNC_loop()) {
     const EncoderEvents eR = getEncoderEvents(ENC_R);
-    const EncoderEvents eL = getEncoderEvents(ENC_L);   // turns only (column move)
+    const EncoderEvents eL = getEncoderEvents(ENC_L);
 
     _mdt_periodic();
 
     if (mdt_menu_state != MDT_MENU_OFF) {
-      // Menu owns the encoder.  Nothing falls through to the editor, so
-      // the press that closes the menu can't also toggle edit mode.
-      _mdt_menu_handle_encoder(eR);
-      _mdt_flush_redraw();
+      if (eR.turned)       _mdt_menu_adjust((int8_t)eR.dir);
+      else if (eR.pressed) _mdt_menu_execute();
+
+      if (mdt_menu_state == MDT_MENU_OFF) {
+        if (mdt_full_redraw)       _mdt_full_redraw_body();
+        else if (mdt_light_redraw) _mdt_light_redraw_body();
+
+        _mdt_draw_pattern_preview(mdt_cursor_row);
+
+        mdt_full_redraw = false;
+        mdt_light_redraw = false;
+        mdt_preview_dirty = false;
+        mdt_force_preview = false;
+        return;
+      }
+
+      mdt_full_redraw = false;
+      mdt_light_redraw = false;
+      mdt_preview_dirty = false;
+      mdt_force_preview = false;
       return;
     }
 
@@ -5229,9 +5413,6 @@ FLASHMEM void UI_func_mdtracker_pattern_editor(uint8_t param)
                 mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
             _mdt_draw_status(mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
             mdt_preview_dirty = true;
-            // Audition the new note whenever it changed and we're not
-            // running.  On CHD/SLC this plays the whole chord; on INS
-            // it plays a single note on the track's instrument.
             if (note_changed && !seq.running) {
               _mdt_preview_step(mdt_cursor_row);
             }
@@ -5248,7 +5429,6 @@ FLASHMEM void UI_func_mdtracker_pattern_editor(uint8_t param)
             if (note_changed && ((old_note == 0) != (new_note == 0)))
               _mdt_draw_one_cell(mdt_cursor_row, MDT_CELL_ST,
                 mdt_cursor_row, mdt_cursor_col, mdt_edit_state);
-            // Chord type changed: audition the new chord
             if (vel_changed && !seq.running &&
               (seq.content_type[seq.active_pattern] == 2 ||
                 seq.content_type[seq.active_pattern] == 3)) {
@@ -5343,10 +5523,6 @@ FLASHMEM void UI_func_mdtracker_pattern_editor(uint8_t param)
     }
     if (seq.running != mdt_last_running) {
       mdt_last_running = seq.running;
-      mdt_prev_play_row = 0xFF;
-      mdt_full_redraw = true;
-      mdt_light_redraw = false;
-      mdt_preview_dirty = true;
     }
 
     if (mdt_full_redraw) {
@@ -5424,7 +5600,8 @@ FLASHMEM void UI_func_mdtracker_pattern_editor(uint8_t param)
 // ===========================================================================
 const char mdt_fx_names[MDT_FX_END][3] = {
   "--", "RV", "D1", "D2", "CH", "PN", "VL", "TR", "GT", "HL",
-  "AS", "AY", "AD", "AL", "AN", "AO", "AV", "AE", "AF", "AR"
+  "AS", "AY", "AD", "AL", "AN", "AO", "AV", "AE", "AF", "AR",
+  "V+", "V-", "VS", "BS", "PS", "VC"
 };
 
 const uint8_t mdt_fx_param_max[MDT_FX_END] = {
@@ -5435,10 +5612,9 @@ const uint8_t mdt_fx_param_max[MDT_FX_END] = {
   100,   // MDT_FX_CHR
   127,   // MDT_FX_PAN
   100,   // MDT_FX_VOL
-  96,    // MDT_FX_TRN     48 = no transpose
+  96,    // MDT_FX_TRN
   16,    // MDT_FX_GAT
   1,     // MDT_FX_HLD
-  // ARP
   1,     // MDT_FX_ARP_STOP
   3,     // MDT_FX_ARP_STYLE
   3,     // MDT_FX_ARP_SPEED
@@ -5448,35 +5624,19 @@ const uint8_t mdt_fx_param_max[MDT_FX_END] = {
   127,   // MDT_FX_ARP_VEL
   1,     // MDT_FX_ARP_EUCL
   15,    // MDT_FX_ARP_EUOFF
-  1      // MDT_FX_ARP_RESET
+  1,     // MDT_FX_ARP_RESET
+  0,     // MDT_FX_VOICE_UP
+  0,     // MDT_FX_VOICE_DN
+  31,    // MDT_FX_VOICE_SEL
+  99,    // MDT_FX_BANK_SEL
+  99,    // MDT_FX_POOL_SEL
+  0      // MDT_FX_VOICE_CLR
 };
 
-// Neutral default per FX command.  Used the moment the user selects a
-// command, so a leftover parameter value (usually 0) cannot be silently
-// applied with a destructive meaning (0 = hard-left pan, 0 = silent
-// volume, 0 = 1-note arp, ...).
 const uint8_t mdt_fx_param_default[MDT_FX_END] = {
-  0,     // MDT_FX_NONE
-  0,     // MDT_FX_REV     (no reverb)
-  0,     // MDT_FX_DLY1    (no delay)
-  0,     // MDT_FX_DLY2    (no delay)
-  0,     // MDT_FX_CHR     (no chorus)
-  64,    // MDT_FX_PAN     (centre)
-  100,   // MDT_FX_VOL     (full volume)
-  48,    // MDT_FX_TRN     (no transpose)
-  16,    // MDT_FX_GAT     (full gate)
-  0,     // MDT_FX_HLD     (off)
-  // ARP
-  0,     // MDT_FX_ARP_STOP  (running)
-  0,     // MDT_FX_ARP_STYLE (UP)
-  0,     // MDT_FX_ARP_SPEED (1/16)
-  8,     // MDT_FX_ARP_LEN   (length 8)
-  22,    // MDT_FX_ARP_MAXNT (max notes = 22)
-  2,     // MDT_FX_ARP_OCT   (no octave shift)
-  100,   // MDT_FX_ARP_VEL   (velocity 100)
-  0,     // MDT_FX_ARP_EUCL  (euclid off)
-  0,     // MDT_FX_ARP_EUOFF (no offset)
-  0      // MDT_FX_ARP_RESET (idle)
+  0, 0, 0, 0, 0, 64, 100, 48, 16, 0,
+  0, 0, 0, 8, 22, 2, 100, 0, 0, 0,
+  0, 0, 0, 0, 0, 0
 };
 
 FLASHMEM void mdtracker_init_fx_arrays(void)
@@ -5631,6 +5791,13 @@ void seq_apply_step_fx(uint8_t track, uint8_t pattern, uint8_t step)
   const uint8_t val = seq.fx_val[pattern][step];
   if (cmd == MDT_FX_NONE) return;
 
+  // ---- Voice/Bank/Pool overrides target one DX instance ----
+  if (mdt_cmd_is_voice(cmd)) {
+    const uint8_t dx_idx = _mdt_voice_fx_target_instance(track, pattern, step);
+    if (dx_idx < NUM_DEXED) _mdt_apply_voice_fx(dx_idx, cmd, val);
+    return;
+  }
+
   // ---- ARP control commands: global, valid on any track ----
   switch (cmd) {
   case MDT_FX_ARP_STOP:  seq.arp_stopped = (val != 0);              break;
@@ -5655,7 +5822,6 @@ void seq_apply_step_fx(uint8_t track, uint8_t pattern, uint8_t step)
   // ---- Track-level commands (apply on any track) ----
   switch (cmd) {
   case MDT_FX_TRN: {
-    // val is 0..96, 48 = no transpose
     const int8_t shift = (int8_t)val - 48;
     seq.element_shift = constrain(shift, -48, 48);
     break;
@@ -5665,14 +5831,11 @@ void seq_apply_step_fx(uint8_t track, uint8_t pattern, uint8_t step)
   default: break;
   }
 
-  // ---- Drum track: audio FX are delivered via the note-on override
-  //                   queued in sequencer_part1(); nothing more here. ----
   if (seq.track_type[track] == 0) return;
 
-  // ---- Instrument / chord / arp track: apply instrument FX ----
   if (mdt_cmd_is_arp(cmd) ||
     cmd == MDT_FX_TRN || cmd == MDT_FX_GAT || cmd == MDT_FX_HLD) {
-    return; // already handled above
+    return;
   }
 
   const uint8_t inst = seq_effective_instrument(track, pattern, step);

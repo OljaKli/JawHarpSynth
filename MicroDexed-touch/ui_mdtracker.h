@@ -6,7 +6,6 @@
 
 #include "config.h"
 
-
 #include <stdint.h>
 
 extern bool mdtracker_get_ring_feedback(int16_t* value,
@@ -43,6 +42,13 @@ enum MdtFxCmd : uint8_t {
   MDT_FX_ARP_EUCL   = 0x11,   // 0/1
   MDT_FX_ARP_EUOFF  = 0x12,   // 0..15
   MDT_FX_ARP_RESET  = 0x13,   // 0 = idle, 1 = reset on this step
+  // ---- Dexed voice/bank/pool overrides (targets one DX instance) ----
+  MDT_FX_VOICE_UP   = 0x14,   // voice + 1 (wrap inside current bank)
+  MDT_FX_VOICE_DN   = 0x15,   // voice - 1 (wrap inside current bank)
+  MDT_FX_VOICE_SEL  = 0x16,   // voice = PAR (PAR 0..31, shown as 1..32)
+  MDT_FX_BANK_SEL   = 0x17,   // bank  = PAR (0..99)
+  MDT_FX_POOL_SEL   = 0x18,   // pool  = PAR (0..99)
+  MDT_FX_VOICE_CLR  = 0x19,   // revert to default voice (no param)
   MDT_FX_END
 };
 
@@ -78,6 +84,24 @@ inline bool mdt_cmd_is_arp(uint8_t cmd) {
   return (cmd >= MDT_FX_ARP_STOP && cmd <= MDT_FX_ARP_RESET);
 }
 
+// Voice/bank/pool override commands.
+inline bool mdt_cmd_is_voice(uint8_t cmd) {
+  return (cmd >= MDT_FX_VOICE_UP && cmd <= MDT_FX_VOICE_CLR);
+}
+
+// ---------------------------------------------------------------------------
+// Manual voice override state (implemented in ui_mdtracker.cpp).
+//
+// These are TEMPORARY.  They are never written into configuration.dexed[].
+// They are reset on VC command and at every fresh song start via
+// mdt_reset_all_voice_overrides() (called from handleStart()).
+// ---------------------------------------------------------------------------
+uint8_t mdt_get_current_voice(uint8_t dx_idx);
+uint8_t mdt_get_current_bank (uint8_t dx_idx);
+uint8_t mdt_get_current_pool (uint8_t dx_idx);
+bool    mdt_voice_override_active(uint8_t dx_idx);
+void    mdt_reset_all_voice_overrides(void);
+
 // ---------------------------------------------------------------------------
 // Library entry points
 // ---------------------------------------------------------------------------
@@ -91,3 +115,30 @@ void UI_func_mdtracker_pattern_editor(uint8_t param);
 // Exposed so the sequencer and MIDI path can drive step recording when the
 // MDTracker page is active. Kept in ui_mdtracker.cpp.
 extern bool mdtracker_step_recording_active(void);
+
+// Is the command available for the given pattern content type?
+//   0 = drum        -> no ARP, no Dexed voice commands
+//   1 = instrument  -> no ARP commands
+//   2 = chord, 3 = arp -> everything
+inline bool mdt_cmd_allowed_for_type(uint8_t content_type, uint8_t cmd) {
+  if (cmd >= MDT_FX_END) return false;
+  if (content_type == 0) return !mdt_cmd_is_arp(cmd) && !mdt_cmd_is_voice(cmd);
+  if (content_type == 1) return !mdt_cmd_is_arp(cmd);
+  return true;
+}
+
+// Number of commands available for the given content type.
+inline uint8_t mdt_cmd_allowed_count(uint8_t content_type) {
+  uint8_t n = 0;
+  for (uint8_t c = 0; c < MDT_FX_END; c++)
+    if (mdt_cmd_allowed_for_type(content_type, c)) n++;
+  return n;
+}
+
+// Position of cmd inside the allowed list (number of allowed commands below it).
+inline uint8_t mdt_cmd_allowed_index(uint8_t content_type, uint8_t cmd) {
+  uint8_t n = 0;
+  for (uint8_t c = 0; c < cmd && c < MDT_FX_END; c++)
+    if (mdt_cmd_allowed_for_type(content_type, c)) n++;
+  return n;
+}

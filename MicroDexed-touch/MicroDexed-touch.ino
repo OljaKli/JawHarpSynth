@@ -230,6 +230,7 @@ extern XPT2046_Touchscreen touch;
 // drum noteOn handler once the destination slot has been determined.
 uint8_t g_drum_fx_override_cmd = 0;   // MDT_FX_NONE
 uint8_t g_drum_fx_override_val = 0;
+extern void mdt_reset_all_voice_overrides(void);
 
 // Editor operations
 int menuhelper_previous_val;
@@ -5949,6 +5950,11 @@ bool pendingFirstStepDraw;
 FLASHMEM void handleStart(void)
 {
 
+  // A fresh song start reverts any manual DX voice/bank/pool override
+  // set by MDTracker. If step 0 carries a voice command it will simply
+  // re-establish state on the first step.
+  mdt_reset_all_voice_overrides();
+  
   LiveSequencer::LiveSeqData* data = liveSeq.getData();
   if (data->useGridSongMode) {
     if (data->seq_started_from_pattern_mode) {
