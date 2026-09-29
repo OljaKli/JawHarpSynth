@@ -1065,7 +1065,7 @@ FLASHMEM void UI_LiveSeq_PianoRoll::handleTouchScreen() {
 
   // Now check for touches on the piano roll area (non-button area)
   extern ts_t ts;
-  extern uint8_t numTouchPoints;
+  extern int numTouchPoints;
   extern bool isButtonTouched;
 
   // Only process if there is a touch and it hasn't been consumed by a button

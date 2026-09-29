@@ -49,7 +49,7 @@ extern ILI9341_t3n display;
 extern LCDMenuLib2 LCDML;
 extern sequencer_t seq;
 extern uint8_t generic_temp_select_menu;
-extern uint8_t numTouchPoints;
+extern int numTouchPoints;
 extern ts_t ts;
 extern void checkWebRemote();
 extern void helptext_l(const char* text);

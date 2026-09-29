@@ -1,0 +1,2 @@
+The firmware in the 32MB_PSRAM folder is fully alpha state and at very early testing.
+If you want a stable MDT, at the moment, please use only the 8MB Chips that are suggested in the manual.

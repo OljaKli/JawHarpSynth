@@ -20,7 +20,7 @@ extern ILI9341_t3n display;
 
 extern void checkWebRemote();
 
-extern uint8_t numTouchPoints;
+extern int numTouchPoints;
 
 // Keyboard layout
 static const char *keyboard_rows[] = {

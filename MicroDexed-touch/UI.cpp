@@ -441,7 +441,9 @@ FLASHMEM void flush_sysex()
    GLOBAL
 ************************************************************************/
 elapsedMillis back_from_volume;
-extern PROGMEM const char accepted_chars[] = " _ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyz";
+
+//extern PROGMEM const char accepted_chars[] = " _ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyz";
+PROGMEM const char accepted_chars[] = " _ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-abcdefghijklmnopqrstuvwxyz";
 
 int temp_int;
 
@@ -4799,7 +4801,7 @@ extern void All_Button_LEDS(bool state);
 
 uint8_t touchX = 0;
 uint8_t touchY = 0;
-extern uint8_t numTouchPoints;
+extern int numTouchPoints;
 
 #if defined ESP_DISPLAY
 uint8_t esp_function_id = 255;

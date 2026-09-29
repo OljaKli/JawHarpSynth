@@ -20,7 +20,7 @@ extern ILI9341_t3n display;
 extern void checkWebRemote();
 
 extern ts_t ts;
-extern uint8_t numTouchPoints;
+extern int numTouchPoints;
 
 static const ColorCombo colorMap[TouchButton::BUTTONCOLOR_NUM] = {
   { GREY1, GREY3 },               // COLOR_NORMAL

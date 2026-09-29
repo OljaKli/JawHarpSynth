@@ -30,7 +30,7 @@ extern void handleNoteOn(byte channel, byte note, byte velocity, byte device);
 extern uint8_t drum_midi_channel;
 extern MD_REncoder ENCODER[];
 extern ts_t ts;
-extern uint8_t numTouchPoints;
+extern int numTouchPoints;
 extern LCDMenuLib2 LCDML;
 extern sequencer_t seq;
 

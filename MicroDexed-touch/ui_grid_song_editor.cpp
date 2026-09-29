@@ -19,7 +19,7 @@
 extern void checkWebRemote();
 
 extern ts_t ts;
-extern uint8_t numTouchPoints;
+extern int numTouchPoints;
 extern bool remote_active;
 extern sequencer_t seq;
 
