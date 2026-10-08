@@ -646,34 +646,37 @@ LCDML_add(57, LCDML_0_17, 4, "MIDI Mapping", UI_func_custom_mappings);
 LCDML_add(58, LCDML_0_17, 5, "Favorites", UI_func_favorites);
 LCDML_add(59, LCDML_0_17, 6, "Startup Perform.", UI_func_startup_performance);
 LCDML_add(60, LCDML_0_17, 7, "Startup Page", UI_func_startup_page);
-LCDML_add(61, LCDML_0_17, 8, "System Settings", UI_func_system_settings);
-LCDML_add(62, LCDML_0, 18, "Extras/Test", NULL);
 
-LCDML_add(63, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(64, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
-LCDML_add(65, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(66, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(67, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
+LCDML_add(61, LCDML_0_17, 8, "Bluetooth", UI_func_bluetooth_devices);
+
+LCDML_add(62, LCDML_0_17, 9, "System Settings", UI_func_system_settings);
+LCDML_add(63, LCDML_0, 18, "Extras/Test", NULL);
+
+LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
+LCDML_add(65, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
+LCDML_add(66, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(67, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(68, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
 
 #if defined MUSIKANDMORE
-LCDML_add(68, LCDML_0, 19, "MAM Functions", NULL);
-LCDML_add(69, LCDML_0_19, 1, "MIDI/CV Translate", UI_func_cv_page);
-LCDML_add(70, LCDML_0_19, 2, "I2C Encoder Setup", UI_func_encoder_address_setup);
-LCDML_add(71, LCDML_0_19, 3, "I2C Scanner", UI_func_i2c_scanner);
-LCDML_add(72, LCDML_0_19, 4, "MAM Information", UI_func_mam_info);
-LCDML_add(73, LCDML_0,20, "Info", UI_func_information);
-LCDML_addAdvanced(74, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(75, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(76, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(77, LCDML_0, 24, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(78, LCDML_0, 25, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_add(69, LCDML_0, 19, "MAM Functions", NULL);
+LCDML_add(70, LCDML_0_19, 1, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(71, LCDML_0_19, 2, "I2C Encoder Setup", UI_func_encoder_address_setup);
+LCDML_add(72, LCDML_0_19, 3, "I2C Scanner", UI_func_i2c_scanner);
+LCDML_add(73, LCDML_0_19, 4, "MAM Information", UI_func_mam_info);
+LCDML_add(74, LCDML_0,20, "Info", UI_func_information);
+LCDML_addAdvanced(75, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(76, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(77, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(78, LCDML_0, 24, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(79, LCDML_0, 25, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
 #else
-LCDML_add(68, LCDML_0,19, "Info", UI_func_information);
-LCDML_addAdvanced(69, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(70, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(71, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(72, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(73, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_add(69, LCDML_0,19, "Info", UI_func_information);
+LCDML_addAdvanced(70, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(71, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(72, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(73, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(74, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
 #endif
 
 
@@ -6356,6 +6359,8 @@ FLASHMEM void lcdml_menu_control(void)
 extern bool disableDirectMIDIinput;
 extern void sendGlowClear();
 
+
+
 // static variables that persist between calls
 static uint8_t prev_scroll = 0xFF;
 static uint8_t prev_cursor = 0xFF;
@@ -6364,7 +6369,6 @@ static uint8_t prev_cursor = 0xFF;
  ***********************************************************************/
 FLASHMEM void lcdml_menu_clear(void)
 {
-
   if (seq.menu_status == 0)
     border1_clear();
 
@@ -6377,6 +6381,11 @@ FLASHMEM void lcdml_menu_clear(void)
   force_menu_full_redraw = true;
   prev_scroll = 0xFF;      // force scroll change detection
   prev_cursor = 0xFF;
+  
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+   UI_bluetooth_status_cache_invalidate();
+#endif
+
 }
 
 FLASHMEM void lcdml_menu_display(void)
@@ -6501,6 +6510,10 @@ FLASHMEM void lcdml_menu_display(void)
       LCDML.MENU_getCursorPosAbs(),
       CHAR_height);
   }
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+   UI_refresh_bluetooth_status();
+#endif
+
 }
 
 FLASHMEM void draw_instance_editor(Editor* editor, bool refresh)
@@ -17358,6 +17371,82 @@ FLASHMEM void UI_func_information(uint8_t param)
 //   }
 // }
 
+
+// Draws the BT status right-aligned on the menu header line.
+
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+
+#include "xiao_midi.h"
+
+static char UI_bt_last_buf[15] = { 0 };
+static bool UI_bt_first_call   = true;
+
+void UI_bluetooth_status_cache_invalidate(void) {
+  UI_bt_first_call  = true;
+  UI_bt_last_buf[0] = '\0';
+}
+
+void UI_refresh_bluetooth_status(void) {
+  const uint8_t MAX_LEN = 14;
+
+  char buf[MAX_LEN + 1];
+
+  if (!bt_enabled) {
+    snprintf(buf, sizeof(buf), "BT: OFF");
+  } else if (bt_connected) {
+    // Up to 10 chars of the connected device name.
+    snprintf(buf, sizeof(buf), "BT: %.*s", 10, bt_connected_name);
+  } else if (bt_scanning) {
+    // Animated dots. Fixed field width so the strip always repaints the
+    // same 11-character area: "SCAN.  ", "SCAN.. ", "SCAN...".
+    static uint8_t  tick  = 0;
+    static uint32_t tlast = 0;
+    uint32_t now = millis();
+    if (now - tlast >= 400) {
+      tlast = now;
+      tick = (tick + 1) % 3;
+    }
+    static const char* dots[3] = { ".", "..", "..." };
+    snprintf(buf, sizeof(buf), "BT: SCAN%-3s", dots[tick]);
+  } else {
+    snprintf(buf, sizeof(buf), "BT: --");
+  }
+
+  // Cache: skip the clear+redraw when the text has not changed.
+  if (!UI_bt_first_call && strcmp(buf, UI_bt_last_buf) == 0) return;
+  UI_bt_first_call = false;
+  strncpy(UI_bt_last_buf, buf, sizeof(UI_bt_last_buf));
+  UI_bt_last_buf[MAX_LEN] = '\0';
+
+  const uint8_t len = (uint8_t)strlen(buf);
+
+  const int16_t X_RIGHT = 230;
+  const int16_t X_MIN   = 142;
+  const int16_t Y_BAND  = 7;
+  const uint8_t Y_CLEAR = 6;
+  const uint8_t H_CLEAR = 9;
+
+  display.setTextSize(1);
+
+  checkWebRemote();
+  display.fillRect(X_MIN, Y_CLEAR, X_RIGHT - X_MIN, H_CLEAR, COLOR_BACKGROUND);
+  display.console = false;
+
+  display.setCursor(X_RIGHT - (len * 6), Y_BAND);
+
+  if (!bt_enabled)       display.setTextColor(GREY2,  COLOR_BACKGROUND);
+  else if (bt_connected) display.setTextColor(DX_DARKCYAN,  COLOR_BACKGROUND);
+  else if (bt_scanning)  display.setTextColor(GREY2, COLOR_BACKGROUND);
+  else                   display.setTextColor(GREY1,  COLOR_BACKGROUND);
+
+  display.print(buf);
+
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  display.setTextSize(2);
+}
+#endif
+
+
 FLASHMEM void mb_set_master()
 {
   if (multiband_active)
@@ -22451,6 +22540,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
     case 32: base = F("RIGHT: EDIT CUSTOM END"); break;
     case 33: base = F("LED BRIGHTNESS GRADIENT"); break;
     case 34: base = F("GLOBAL LED RING BRIGHTNESS"); break; 
+    case 35: base = F("XIAO BLUETOOTH BRIDGE"); break;
 
     }
 
@@ -22787,6 +22877,15 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 }
 
 #endif
+
+
+    case 35: {
+      const char* str = configuration.sys.bluetooth_enabled ? "ON " : "OFF";
+      left_justify(val_buf, str, VALUE_WIDTH);
+      break;
+    }
+
+
     } // end switch
 
     display.print(val_buf);
@@ -22821,7 +22920,7 @@ FLASHMEM void _render_misc_settings(uint8_t scroll_position, uint8_t total_menu_
 FLASHMEM void UI_func_system_settings(uint8_t param)
 {
   static uint8_t scroll_position = 0;
-  static uint8_t total_menu_items = 35;
+  static uint8_t total_menu_items = 36;
 
   if (LCDML.FUNC_setup())
   {
@@ -22970,6 +23069,16 @@ case 32:
   configuration.sys.led_brightness = constrain( (int)configuration.sys.led_brightness + e.dir, 0, 3);
   led_ring_preview_mode = true;
   break;
+
+case 35:
+          configuration.sys.bluetooth_enabled = !configuration.sys.bluetooth_enabled;
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+          xiao_midi_set_enabled(configuration.sys.bluetooth_enabled);
+#endif
+          save_sys_flag = true;
+          save_sys = 0;
+          break;
+
         }
       }
       _render_misc_settings(scroll_position, total_menu_items);
@@ -27508,6 +27617,334 @@ FLASHMEM void UI_func_test_psram(uint8_t param)
     display.fillScreen(COLOR_BACKGROUND);
   }
 }
+
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+
+// ---------------------------------------------------------------------
+//  Bluetooth device selection page
+//
+//  Pattern (matches all other pages in this project):
+//    - LCDML.FUNC_setup()  : one-time init, register touch handler,
+//                            register list callback
+//    - handle_touchscreen_bluetooth() : called ~100 Hz by the main
+//                            loop. Handles touch buttons, list-row
+//                            selection and any state-driven redraw
+//                            (status header, scan-done → refresh list).
+//    - LCDML.FUNC_loop()   : encoder navigation only
+//    - LCDML.FUNC_close()  : unregister handler + list callback
+// ---------------------------------------------------------------------
+
+static constexpr uint8_t BT_VISIBLE_ROWS = 8;
+static constexpr uint8_t BT_ROW_Y0       = 6;   // small-font grid rows 6..13
+static constexpr uint8_t BT_NAME_COLS    = 42;  // reserve columns for name
+
+static uint8_t bt_list_scroll = 0;
+static uint8_t bt_selected    = 0;
+static bool    bt_scanned     = false;
+
+FLASHMEM void bt_list_receiver(uint8_t index, uint8_t total,
+                             bool is_midi, const char* name) {
+  (void)total;
+  if (index < bt_list_scroll) return;
+  uint8_t row = index - bt_list_scroll;
+  if (row >= BT_VISIBLE_ROWS) return;
+
+  display.setTextSize(1);                 // <-- added
+  uint8_t y = BT_ROW_Y0 + row;
+
+  setCursor_textGrid_small(1, y);
+  if (is_midi) display.setTextColor(GREEN, COLOR_BACKGROUND);
+  else         display.setTextColor(GREY1, COLOR_BACKGROUND);
+
+  if (index < 10)  display.print('0');
+  if (index < 100) display.print((char)('0' + (index / 10) % 10));
+  display.print((char)('0' + (index % 10)));
+  display.print(' ');
+
+  display.print(is_midi ? 'M' : ' ');
+  display.print(' ');
+
+  const char* nm = name ? name : "";
+  uint8_t n = 0;
+  const uint8_t name_cols = (BT_NAME_COLS > 2) ? (BT_NAME_COLS - 2) : 0;
+  while (nm[n] != '\0' && n < name_cols) {
+    display.print(nm[n]);
+    n++;
+  }
+  while (n < name_cols) {
+    display.print(' ');
+    n++;
+  }
+
+  setCursor_textGrid_small(0, y);
+  if (index == bt_selected) {
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F(">"));
+  } else {
+    display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND);
+    display.print(F(" "));
+  }
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+}
+
+FLASHMEM void bt_draw_marker(uint8_t index, bool selected) {
+  if (index < bt_list_scroll) return;
+  uint8_t row = index - bt_list_scroll;
+  if (row >= BT_VISIBLE_ROWS) return;
+  display.setTextSize(1);                 // <-- added
+  setCursor_textGrid_small(0, BT_ROW_Y0 + row);
+  if (selected) {
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F(">"));
+  } else {
+    display.setTextColor(COLOR_BACKGROUND, COLOR_BACKGROUND);
+    display.print(F(" "));
+  }
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+}
+
+FLASHMEM void bt_clear_window(void) {
+  checkWebRemote();
+  display.fillRect(0, BT_ROW_Y0 * 10,
+                   DISPLAY_WIDTH, BT_VISIBLE_ROWS * 10, COLOR_BACKGROUND);
+  display.console = false;
+}
+
+FLASHMEM void bt_request_window(void) {
+  bt_clear_window();
+  xiao_midi_request_list(bt_list_scroll, BT_VISIBLE_ROWS);
+}
+
+FLASHMEM void bt_refresh_status_header(void) {
+  setCursor_textGrid_small(0, 2);
+  display.setTextSize(1);
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+  for (uint8_t i = 0; i < 53; i++) display.print(" ");
+  setCursor_textGrid_small(0, 2);
+
+  if (!bt_enabled) {
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    display.print(F("BT DISABLED "));
+  } else if (bt_connected) {
+    display.setTextColor(GREEN, COLOR_BACKGROUND);
+    display.print(F("CONNECTED: "));
+    display.print(bt_connected_name);
+  } else if (bt_scanning) {
+    display.setTextColor(DX_DARKCYAN, COLOR_BACKGROUND);
+    display.print(F("SCANNING..."));
+  } else {
+    display.setTextColor(GREY1, COLOR_BACKGROUND);
+    display.print(F("NOT CONNECTED"));
+  }
+  display.setTextColor(COLOR_SYSTEXT, COLOR_BACKGROUND);
+}
+
+static void bt_draw_touch_buttons(void) {
+  TouchButton::drawButton(GRID.X[0], GRID.Y[5], "BACK",   "",        TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[1], GRID.Y[5], "SCAN",   "NOW",     TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[2], GRID.Y[5], "STOP",   "SCAN",    TouchButton::BUTTON_NORMAL);
+  TouchButton::drawButton(GRID.X[4], GRID.Y[5], "CONNECT","DEVICE",  TouchButton::BUTTON_ACTIVE);
+
+  if (bt_enabled) {
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "BT",   "ON",  TouchButton::BUTTON_HIGHLIGHTED);
+  } else {
+    TouchButton::drawButton(GRID.X[5], GRID.Y[5], "BT",   "OFF", TouchButton::BUTTON_RED);
+  }
+}
+
+// Row selection via touch anywhere inside the list strip.
+FLASHMEM void bt_handle_touch_select(void) {
+  if (numTouchPoints == 0) return;
+
+  if (ts.p.y < BT_ROW_Y0 * 10)                       return;
+  if (ts.p.y >= (BT_ROW_Y0 + BT_VISIBLE_ROWS) * 10)  return;
+  if (ts.p.x >= DISPLAY_WIDTH - 4)                    return;
+
+  uint8_t row = (ts.p.y - (BT_ROW_Y0 * 10)) / 10;
+  uint8_t idx = bt_list_scroll + row;
+  if (idx >= bt_device_count) return;
+
+  if (idx != bt_selected) {
+    bt_draw_marker(bt_selected, false);
+    bt_selected = idx;
+    bt_draw_marker(bt_selected, true);
+  }
+}
+
+FLASHMEM void handle_touchscreen_bluetooth(void)
+{
+  // ---- Header refresh: only when the visible state changed --------
+  static uint8_t last_status_gen = 0;
+  if (bt_status_generation != last_status_gen) {
+    last_status_gen = bt_status_generation;
+    bt_refresh_status_header();
+    bt_draw_touch_buttons();
+  }
+
+  // ---- List refresh: when the list contents changed ---------------
+  static uint8_t last_list_gen = 0;
+  if (bt_list_generation != last_list_gen) {
+    last_list_gen = bt_list_generation;
+    if (bt_enabled) bt_request_window();
+  }
+
+  // ---- Row selection ---------------------------------------------
+  bt_handle_touch_select();
+
+  // ---- Touch buttons ---------------------------------------------
+  if (TouchButton::isPressed(GRID.X[0], GRID.Y[5])) {
+    LCDML.BT_quit();
+    return;
+  }
+  if (TouchButton::isPressed(GRID.X[1], GRID.Y[5])) {
+    if (bt_enabled) xiao_midi_start_scan();
+    return;
+  }
+  if (TouchButton::isPressed(GRID.X[2], GRID.Y[5])) {
+    if (bt_enabled) xiao_midi_stop_scan();
+    return;
+  }
+  if (TouchButton::isPressed(GRID.X[4], GRID.Y[5])) {
+    if (bt_enabled && bt_device_count > 0) xiao_midi_connect_index(bt_selected);
+    return;
+  }
+  if (TouchButton::isPressed(GRID.X[5], GRID.Y[5])) {
+    configuration.sys.bluetooth_enabled = !configuration.sys.bluetooth_enabled;
+    xiao_midi_set_enabled(configuration.sys.bluetooth_enabled);
+
+    if (configuration.sys.bluetooth_enabled) {
+      xiao_midi_set_list_callback(&bt_list_receiver);
+      bt_list_scroll = 0;
+      bt_selected    = 0;
+      bt_clear_window();
+      xiao_midi_request_status();
+      bt_request_window();
+    } else {
+      bt_list_scroll = 0;
+      bt_selected    = 0;
+      bt_clear_window();
+    }
+
+    bt_draw_touch_buttons();
+    bt_refresh_status_header();
+    return;
+  }
+}
+
+FLASHMEM void UI_func_bluetooth_devices(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) {
+    registerTouchHandler(handle_touchscreen_bluetooth);
+    encoderDir[ENC_R].reset();
+    encoderDir[ENC_L].reset();
+
+    bt_list_scroll = 0;
+    bt_selected    = 0;
+    bt_scanned     = false;
+
+    if (configuration.sys.bluetooth_enabled && !bt_enabled) {
+      xiao_midi_set_enabled(true);
+    }
+
+    display.fillScreen(COLOR_BACKGROUND);
+    display.setTextSize(2);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    setCursor_textGrid_small(0, 0);
+    display.print(F("BLUETOOTH DEVICES"));
+
+    display.setTextSize(1);
+    setCursor_textGrid_small(0, 4);
+    display.setTextColor(GREY2, COLOR_BACKGROUND);
+    display.print(F("IDX M NAME"));
+
+    bt_draw_touch_buttons();
+    bt_refresh_status_header();
+
+    xiao_midi_set_list_callback(&bt_list_receiver);
+    xiao_midi_request_status();
+    if (bt_enabled) {
+      bt_request_window();
+    }
+  }
+
+  if (LCDML.FUNC_loop()) {
+    // Encoder navigation only. All touch / async redraw lives in the
+    // registered touch handler above.
+    const EncoderEvents eR = getEncoderEvents(ENC_R);
+    const EncoderEvents eL = getEncoderEvents(ENC_L);
+
+    if (eR.turned && bt_enabled && bt_device_count > 0) {
+      uint8_t prev = bt_selected;
+
+      if (eR.down) {
+        if (bt_selected + 1 < bt_device_count) bt_selected++;
+      } else {
+        if (bt_selected > 0) bt_selected--;
+      }
+
+      if (bt_selected != prev) {
+        if (bt_selected < bt_list_scroll) {
+          bt_list_scroll = bt_selected;
+          bt_request_window();
+        } else if (bt_selected >= bt_list_scroll + BT_VISIBLE_ROWS) {
+          bt_list_scroll = bt_selected - BT_VISIBLE_ROWS + 1;
+          bt_request_window();
+        } else {
+          bt_draw_marker(prev, false);
+          bt_draw_marker(bt_selected, true);
+        }
+      }
+    }
+
+    if (eL.turned && bt_enabled && bt_device_count > BT_VISIBLE_ROWS) {
+      int16_t new_scroll = (int16_t)bt_list_scroll + eL.dir;
+      int16_t max_scroll = (int16_t)bt_device_count - BT_VISIBLE_ROWS;
+      if (max_scroll < 0) max_scroll = 0;
+      if (new_scroll < 0) new_scroll = 0;
+      if (new_scroll > max_scroll) new_scroll = max_scroll;
+
+      if ((uint8_t)new_scroll != bt_list_scroll) {
+        bt_list_scroll = (uint8_t)new_scroll;
+        if (bt_selected < bt_list_scroll)
+          bt_selected = bt_list_scroll;
+        else if (bt_selected >= bt_list_scroll + BT_VISIBLE_ROWS)
+          bt_selected = bt_list_scroll + BT_VISIBLE_ROWS - 1;
+        bt_request_window();
+      }
+    }
+  }
+
+  if (LCDML.FUNC_close()) {
+    unregisterTouchHandler();
+    xiao_midi_set_list_callback(nullptr);
+    encoderDir[ENC_R].reset();
+    encoderDir[ENC_L].reset();
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+
+#else
+void UI_func_bluetooth_devices(uint8_t param)
+{
+  if (LCDML.FUNC_setup()) {
+  
+    display.fillScreen(COLOR_BACKGROUND);
+    display.setTextSize(2);
+    display.setTextColor(RED, COLOR_BACKGROUND);
+    setCursor_textGrid_small(0, 0);
+    display.print(F("BLUETOOTH HANDLED BY ESP DISPLAY"));
+  }
+  if (LCDML.FUNC_loop()) {
+   ;
+  }
+  if (LCDML.FUNC_close()) {
+   
+    display.fillScreen(COLOR_BACKGROUND);
+  }
+}
+
+#endif
+
 
 #if defined RA_DISPLAY
 extern bool ra_panel_initialised;

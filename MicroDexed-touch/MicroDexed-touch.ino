@@ -107,9 +107,7 @@ MCP23017 mcp(0x21);
 #include "ILI9341_t3n.h"
 #endif
 
-#if defined XIAO_BLUETOOTH_MIDI
 #include "xiao_midi.h"
-#endif
 
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
@@ -1461,7 +1459,7 @@ FLASHMEM void setup()
   Serial4.begin(6000000, SERIAL_8N1);
 #endif
 
-#if defined XIAO_BLUETOOTH_MIDI
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
   xiao_midi_setup();
 #endif
 
@@ -2000,7 +1998,6 @@ FLASHMEM void setup()
   // Load initial Performance or the last used one
   initial_values(false);
 
-
   setup_ui();
 
   gamepad_buttons_neutral = joysticks[0].getButtons();
@@ -2058,6 +2055,10 @@ FLASHMEM void setup()
 
 #ifdef COMPILE_FOR_PSRAM
   load_sd_noisemaker_json();
+#endif
+
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+  xiao_midi_set_enabled(configuration.sys.bluetooth_enabled);
 #endif
 
 #ifdef MINI_ENCODER
@@ -3467,8 +3468,10 @@ void loop()
   processIncomingSerial();
 #endif
 
-#if defined XIAO_BLUETOOTH_MIDI
-  xiao_midi_loop();
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+  if (configuration.sys.bluetooth_enabled) {
+    xiao_midi_loop();
+  }
 #endif
 
   // Serial read (commands from web remote)
@@ -3511,6 +3514,27 @@ void loop()
 #endif
 
   LCDML.loop();
+
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+
+  static uint8_t last_func_id = 254;
+  const uint8_t cur_func_id = LCDML.FUNC_getID();
+
+  // FUNC -> menu transition: invalidate the cache once, so the next
+  // paint redraws even if the text is identical (a FUNC page's
+  // fillScreen() wiped the strip).
+  if (cur_func_id == 255 && last_func_id != 255) {
+    UI_bluetooth_status_cache_invalidate();
+  }
+  last_func_id = cur_func_id;
+
+  // Paint when in the menu. The cache short-circuits this when the
+  // text is unchanged, so it is effectively free on every loop.
+  if (cur_func_id == 255) {
+    UI_refresh_bluetooth_status();
+  }
+#endif
+
 
   if (touchReadTimer >= TOUCH_MAX_REFRESH_RATE_MS && touch_ic_found)
   {
@@ -6648,6 +6672,9 @@ FLASHMEM void init_configuration(void)
   configuration.sys.led_brightness_gradient = 100;
   configuration.sys.led_brightness = 1;   //  default master brightness
 #endif
+
+configuration.sys.bluetooth_enabled = false;
+
 }
 
 /******************************************************************************

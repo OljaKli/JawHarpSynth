@@ -1060,8 +1060,8 @@ FLASHMEM bool save_sd_drumsettings_json(uint8_t number)
 /******************************************************************************
    SD VOICECONFIG
  ******************************************************************************/
-// Shared JSON document kept in BSS (not on the stack) so repeated calls
-// from within load_sd_performance_json don't overflow the call stack.
+ // Shared JSON document kept in BSS (not on the stack) so repeated calls
+ // from within load_sd_performance_json don't overflow the call stack.
 
 
 FLASHMEM bool load_sd_voiceconfig_json(uint8_t vc, uint8_t instance_id)
@@ -2340,6 +2340,7 @@ FLASHMEM bool load_sd_sys_json(void)
         configuration.sys.send_sysex_on_voice_change = data_json["send_sysex_on_voice_change"];
         configuration.sys.send_midi_cc = data_json["send_midi_cc"];
         configuration.sys.swap_midi_leds = data_json["swap_midi_leds"];
+        configuration.sys.bluetooth_enabled = data_json["bluetooth_enabled"] | false;
 
         configuration.sys.vol_control = data_json["vol_control"];
         configuration.sys.sus_pedal = data_json["sus_pedal"];
@@ -2361,25 +2362,25 @@ FLASHMEM bool load_sd_sys_json(void)
 #endif
 
 #if defined LED_RINGS || defined LED_DEBUG
-  configuration.sys.led_ring_start_offset = data_json["led_ring_start_offset"] | 12;
+        configuration.sys.led_ring_start_offset = data_json["led_ring_start_offset"] | 12;
 
-  configuration.sys.left_volume_color_scheme = data_json["l_v_sch"] | 0;
-  configuration.sys.left_volume_custom_start = data_json["l_v_cs"] | 0;
-  configuration.sys.left_volume_custom_end   = data_json["l_v_ce"] | 100;
+        configuration.sys.left_volume_color_scheme = data_json["l_v_sch"] | 0;
+        configuration.sys.left_volume_custom_start = data_json["l_v_cs"] | 0;
+        configuration.sys.left_volume_custom_end = data_json["l_v_ce"] | 100;
 
-  configuration.sys.left_seq_color_scheme    = data_json["l_s_sch"] | 3;
-  configuration.sys.left_seq_custom_start    = data_json["l_s_cs"] | 0;
-  configuration.sys.left_seq_custom_end      = data_json["l_s_ce"] | 100;
+        configuration.sys.left_seq_color_scheme = data_json["l_s_sch"] | 3;
+        configuration.sys.left_seq_custom_start = data_json["l_s_cs"] | 0;
+        configuration.sys.left_seq_custom_end = data_json["l_s_ce"] | 100;
 
-  configuration.sys.right_edit_color_scheme  = data_json["r_e_sch"] | 1;
-  configuration.sys.right_edit_custom_start  = data_json["r_e_cs"] | 0;
-  configuration.sys.right_edit_custom_end    = data_json["r_e_ce"] | 100;
+        configuration.sys.right_edit_color_scheme = data_json["r_e_sch"] | 1;
+        configuration.sys.right_edit_custom_start = data_json["r_e_cs"] | 0;
+        configuration.sys.right_edit_custom_end = data_json["r_e_ce"] | 100;
 
-  configuration.sys.led_brightness_gradient  = data_json["l_grad"] | 0;
-  
-   configuration.sys.led_brightness = data_json["ring_bright"] | 1;
-configuration.sys.led_brightness = constrain(configuration.sys.led_brightness, 0, 3);
-  
+        configuration.sys.led_brightness_gradient = data_json["l_grad"] | 0;
+
+        configuration.sys.led_brightness = data_json["ring_bright"] | 1;
+        configuration.sys.led_brightness = constrain(configuration.sys.led_brightness, 0, 3);
+
 #endif
 
         if (data_json["brightness"] == 0)
@@ -2486,6 +2487,7 @@ FLASHMEM bool save_sd_sys_json(void)
       data_json["vol_control"] = configuration.sys.vol_control;
       data_json["sus_pedal"] = configuration.sys.sus_pedal;
       data_json["ext_clock"] = configuration.sys.ext_clock;
+      data_json["bluetooth_enabled"] = configuration.sys.bluetooth_enabled;
 
       data_json["cvtranspose"] = configuration.sys.dac_cv_transpose;
       data_json["cv2cc"] = configuration.sys.dac_cv_2;
@@ -2505,21 +2507,21 @@ FLASHMEM bool save_sd_sys_json(void)
         data_json["ra_btn_" + String(i)] = configuration.sys.ra_btn_target[i];
 #endif
 
-//#if defined LED_RINGS || defined LED_DEBUG
-  data_json["led_ring_start_offset"] = configuration.sys.led_ring_start_offset;
-  data_json["l_v_sch"] = configuration.sys.left_volume_color_scheme;
-  data_json["l_v_cs"]  = configuration.sys.left_volume_custom_start;
-  data_json["l_v_ce"]  = configuration.sys.left_volume_custom_end;
-  data_json["l_s_sch"] = configuration.sys.left_seq_color_scheme;
-  data_json["l_s_cs"]  = configuration.sys.left_seq_custom_start;
-  data_json["l_s_ce"]  = configuration.sys.left_seq_custom_end;
-  data_json["r_e_sch"] = configuration.sys.right_edit_color_scheme;
-  data_json["r_e_cs"]  = configuration.sys.right_edit_custom_start;
-  data_json["r_e_ce"]  = configuration.sys.right_edit_custom_end;
-  data_json["l_grad"]  = configuration.sys.led_brightness_gradient;
-  data_json["ring_bright"]  = configuration.sys.led_brightness ;
+      //#if defined LED_RINGS || defined LED_DEBUG
+      data_json["led_ring_start_offset"] = configuration.sys.led_ring_start_offset;
+      data_json["l_v_sch"] = configuration.sys.left_volume_color_scheme;
+      data_json["l_v_cs"] = configuration.sys.left_volume_custom_start;
+      data_json["l_v_ce"] = configuration.sys.left_volume_custom_end;
+      data_json["l_s_sch"] = configuration.sys.left_seq_color_scheme;
+      data_json["l_s_cs"] = configuration.sys.left_seq_custom_start;
+      data_json["l_s_ce"] = configuration.sys.left_seq_custom_end;
+      data_json["r_e_sch"] = configuration.sys.right_edit_color_scheme;
+      data_json["r_e_cs"] = configuration.sys.right_edit_custom_start;
+      data_json["r_e_ce"] = configuration.sys.right_edit_custom_end;
+      data_json["l_grad"] = configuration.sys.led_brightness_gradient;
+      data_json["ring_bright"] = configuration.sys.led_brightness;
 
-//#endif
+      //#endif
 
       if (GAMEPAD_BUTTON_A != GAMEPAD_BUTTON_B)
       {
@@ -3278,9 +3280,9 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
       json = SD.open(filename);
       if (json)
       {
-       
+
         auto& data_json = g_json_doc; data_json.clear();
-       
+
         deserializeJson(data_json, json);
         json.close();
         AudioInterrupts();
@@ -3293,7 +3295,7 @@ FLASHMEM bool load_sd_samples_json(uint8_t number)
         unload_all_custom_samples();
         // Clear stale PSRAM/DRAM state that can persist across warm resets
         memset(customSamples, 0, sizeof(CustomSample) * NUM_CUSTOM_SAMPLES);
-       // Serial.println("SMP: unload done");
+        // Serial.println("SMP: unload done");
 
         for (int i = 0; i < NUM_CUSTOM_SAMPLES; i++) {
           strcpy(drum_config[i + NUM_STATIC_PITCHED_SAMPLES].name, data_json[i]["name"]);
@@ -4223,7 +4225,7 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
   LOG.println(number);
 #endif
 
-   save_sd_seq_sub_vel_json(number);
+  save_sd_seq_sub_vel_json(number);
   save_sd_seq_sub_patterns_json(number);
   // MDTracker FX arrays – kept in their own files for backward compatibility
   save_sd_seq_fx_inst_json(number);
@@ -4301,10 +4303,10 @@ FLASHMEM bool save_sd_performance_json(uint8_t number)
       data_json["seq_chord_vel"] = seq.chord_vel;
       //data_json["arr_split_note"] = seq.arr_split_note;
       data_json["chord_zone_start"] = seq.chord_zone_start;
-    data_json["chord_zone_end"] = seq.chord_zone_end;
-    data_json["song_zone_start"] = seq.song_zone_start;
-    data_json["song_zone_end"] = seq.song_zone_end;
-    data_json["song_zone_active"] = seq.song_zone_active;
+      data_json["chord_zone_end"] = seq.chord_zone_end;
+      data_json["song_zone_start"] = seq.song_zone_start;
+      data_json["song_zone_end"] = seq.song_zone_end;
+      data_json["song_zone_active"] = seq.song_zone_active;
       data_json["chord_key_ammount"] = seq.chord_key_ammount;
       data_json["seq_oct_shift"] = seq.oct_shift;
       data_json["seq_element_shift"] = seq.element_shift;
@@ -4619,19 +4621,19 @@ FLASHMEM bool load_sd_seq_sub_patterns_json(uint8_t number)
      - the JSON pool usage is ~1 KB per file instead of ~15 KB.
  ******************************************************************************/
 
-// 1025 bytes in BSS – never on the stack.
+ // 1025 bytes in BSS – never on the stack.
 static char s_fx_hex[NUM_SEQ_PATTERN * 16 * 2 + 1];
 
 // ---- Generic saver ---------------------------------------------------------
 FLASHMEM static bool save_sd_fx_array_json(uint8_t number,
-                                           const char* configName,
-                                           const uint8_t* flat_arr)
+  const char* configName,
+  const uint8_t* flat_arr)
 {
   if (sd_card_internal <= 0) return false;
 
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   snprintf(filename, sizeof(filename), "/%s/%d/%s.json",
-           PERFORMANCE_CONFIG_PATH, number, configName);
+    PERFORMANCE_CONFIG_PATH, number, configName);
 
 #ifdef DEBUG
   LOG.print(F("Saving "));
@@ -4684,9 +4686,9 @@ FLASHMEM static bool save_sd_fx_array_json(uint8_t number,
 
 // ---- Generic loader --------------------------------------------------------
 FLASHMEM static bool load_sd_fx_array_json(uint8_t number,
-                                           const char* configName,
-                                           uint8_t* flat_arr,
-                                           uint8_t default_value)
+  const char* configName,
+  uint8_t* flat_arr,
+  uint8_t default_value)
 {
   const size_t n = (size_t)NUM_SEQ_PATTERN * 16;
 
@@ -4698,7 +4700,7 @@ FLASHMEM static bool load_sd_fx_array_json(uint8_t number,
 
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   snprintf(filename, sizeof(filename), "/%s/%d/%s.json",
-           PERFORMANCE_CONFIG_PATH, number, configName);
+    PERFORMANCE_CONFIG_PATH, number, configName);
 
   AudioNoInterrupts();
   if (!SD.exists(filename)) {
@@ -4725,7 +4727,7 @@ FLASHMEM static bool load_sd_fx_array_json(uint8_t number,
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     return 0;
-  };
+    };
 
   for (size_t i = 0; i < n; i++) {
     flat_arr[i] = (uint8_t)((nib(s[i * 2]) << 4) | nib(s[i * 2 + 1]));
@@ -4737,36 +4739,36 @@ FLASHMEM static bool load_sd_fx_array_json(uint8_t number,
 FLASHMEM bool save_sd_seq_fx_inst_json(uint8_t number)
 {
   return save_sd_fx_array_json(number, FX_INST_CONFIG_NAME,
-                               (const uint8_t*)seq.fx_inst);
+    (const uint8_t*)seq.fx_inst);
 }
 FLASHMEM bool load_sd_seq_fx_inst_json(uint8_t number)
 {
   // 0xFF is the "use track default" marker for fx_inst
   return load_sd_fx_array_json(number, FX_INST_CONFIG_NAME,
-                               (uint8_t*)seq.fx_inst, 0xFF);
+    (uint8_t*)seq.fx_inst, 0xFF);
 }
 
 FLASHMEM bool save_sd_seq_fx_cmd_json(uint8_t number)
 {
   return save_sd_fx_array_json(number, FX_CMD_CONFIG_NAME,
-                               (const uint8_t*)seq.fx_cmd);
+    (const uint8_t*)seq.fx_cmd);
 }
 FLASHMEM bool load_sd_seq_fx_cmd_json(uint8_t number)
 {
   // 0x00 == MDT_FX_NONE
   return load_sd_fx_array_json(number, FX_CMD_CONFIG_NAME,
-                               (uint8_t*)seq.fx_cmd, 0x00);
+    (uint8_t*)seq.fx_cmd, 0x00);
 }
 
 FLASHMEM bool save_sd_seq_fx_val_json(uint8_t number)
 {
   return save_sd_fx_array_json(number, FX_VAL_CONFIG_NAME,
-                               (const uint8_t*)seq.fx_val);
+    (const uint8_t*)seq.fx_val);
 }
 FLASHMEM bool load_sd_seq_fx_val_json(uint8_t number)
 {
   return load_sd_fx_array_json(number, FX_VAL_CONFIG_NAME,
-                               (uint8_t*)seq.fx_val, 0x00);
+    (uint8_t*)seq.fx_val, 0x00);
 }
 
 extern void update_seq_speed();
@@ -4785,7 +4787,7 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
   number = constrain(number, PERFORMANCE_NUM_MIN, PERFORMANCE_NUM_MAX);
   AudioNoInterrupts();
 
-    if (bitRead(perf_load_options, perf_seq))
+  if (bitRead(perf_load_options, perf_seq))
   {
     load_sd_seq_sub_patterns_json(number);
     load_sd_seq_sub_vel_json(number);
@@ -4926,40 +4928,45 @@ FLASHMEM bool load_sd_performance_json(uint8_t number)
           seq.chord_vel = data_json["seq_chord_vel"];
           //seq.arr_split_note = data_json["arr_split_note"];
     // Load chord arranger zone settings
-    if (data_json.containsKey("chord_zone_start")) {
-        seq.chord_zone_start = data_json["chord_zone_start"];
-    } else {
-        seq.chord_zone_start = 0;  // Default
-    }
-    
-    if (data_json.containsKey("chord_zone_end")) {
-        seq.chord_zone_end = data_json["chord_zone_end"];
-    } else if (data_json.containsKey("arr_split_note")) {
-        // Fallback for old format
-        seq.chord_zone_end = data_json["arr_split_note"];
-    } else {
-        seq.chord_zone_end = 36;  // Default
-    }
-    
-    if (data_json.containsKey("song_zone_start")) {
-        seq.song_zone_start = data_json["song_zone_start"];
+          if (data_json.containsKey("chord_zone_start")) {
+            seq.chord_zone_start = data_json["chord_zone_start"];
+          }
+          else {
+            seq.chord_zone_start = 0;  // Default
+          }
 
-        seq.song_zone_end = seq.song_zone_start + 9;
-if (seq.song_zone_end > 95) {
-    seq.song_zone_end = 95;
-    seq.song_zone_start = seq.song_zone_end - 9;
-}
-seq.song_zone_active = true;
-update_song_arranger_midi_notes();
-    } else {
-        seq.song_zone_start = 48;  // Default
-    }
-    
-    if (data_json.containsKey("song_zone_active")) {
-        seq.song_zone_active = data_json["song_zone_active"];
-    } else {
-        seq.song_zone_active = false;  // Default
-    }
+          if (data_json.containsKey("chord_zone_end")) {
+            seq.chord_zone_end = data_json["chord_zone_end"];
+          }
+          else if (data_json.containsKey("arr_split_note")) {
+            // Fallback for old format
+            seq.chord_zone_end = data_json["arr_split_note"];
+          }
+          else {
+            seq.chord_zone_end = 36;  // Default
+          }
+
+          if (data_json.containsKey("song_zone_start")) {
+            seq.song_zone_start = data_json["song_zone_start"];
+
+            seq.song_zone_end = seq.song_zone_start + 9;
+            if (seq.song_zone_end > 95) {
+              seq.song_zone_end = 95;
+              seq.song_zone_start = seq.song_zone_end - 9;
+            }
+            seq.song_zone_active = true;
+            update_song_arranger_midi_notes();
+          }
+          else {
+            seq.song_zone_start = 48;  // Default
+          }
+
+          if (data_json.containsKey("song_zone_active")) {
+            seq.song_zone_active = data_json["song_zone_active"];
+          }
+          else {
+            seq.song_zone_active = false;  // Default
+          }
 
           seq.chord_key_ammount = data_json["chord_key_ammount"];
           seq.oct_shift = data_json["seq_oct_shift"];
@@ -5473,7 +5480,7 @@ FLASHMEM bool get_voice_name(uint8_t p, uint8_t b, uint8_t v, char* voice_name)
     string_toupper(voice_name);
 
 #ifdef DEBUG
-   LOG.printf("Found voice-name [%s] for bank [%d] and voice [%d]\n", voice_name, b, v + 1);
+    LOG.printf("Found voice-name [%s] for bank [%d] and voice [%d]\n", voice_name, b, v + 1);
 #endif
 
     AudioNoInterrupts();
@@ -5725,9 +5732,9 @@ FLASHMEM bool load_sd_multisample_presets_json(uint8_t number) {
 /******************************************************************************
    SD Song Arranger
  ******************************************************************************/
-/******************************************************************************
-   SD Song Arranger
- ******************************************************************************/
+ /******************************************************************************
+    SD Song Arranger
+  ******************************************************************************/
 
 FLASHMEM bool load_sd_song_arranger_json(uint8_t number)
 {
@@ -5767,37 +5774,40 @@ FLASHMEM bool load_sd_song_arranger_json(uint8_t number)
           const char* name = data_json["parts"][i]["name"] | "CUSTM";
           strncpy(seq.song_arranger_parts[i].name, name, 15);
           seq.song_arranger_parts[i].name[15] = '\0';
-          
+
           // Load step values (stored as 1-indexed, convert to 0-indexed for internal storage)
           int start_step = data_json["parts"][i]["start_step"] | 99;
           int end_step = data_json["parts"][i]["end_step"] | 99;
           int continue_step = data_json["parts"][i]["continue_step"] | 99;
-          
+
           seq.song_arranger_switch_mode = data_json["switch_mode"] | 0;
 
           // Convert from 1-indexed (display) to 0-indexed (storage)
           if (start_step >= 1 && start_step <= SONG_LENGTH) {
             seq.song_arranger_parts[i].start_step = start_step - 1;
-          } else {
+          }
+          else {
             seq.song_arranger_parts[i].start_step = 99;
           }
-          
+
           if (end_step >= 1 && end_step <= SONG_LENGTH) {
             seq.song_arranger_parts[i].end_step = end_step - 1;
-          } else {
+          }
+          else {
             seq.song_arranger_parts[i].end_step = 99;
           }
-          
+
           if (continue_step >= 1 && continue_step <= SONG_LENGTH) {
             seq.song_arranger_parts[i].continue_step = continue_step - 1;
-          } else {
+          }
+          else {
             seq.song_arranger_parts[i].continue_step = 99;
           }
-          
+
           seq.song_arranger_parts[i].color = data_json["parts"][i]["color"] | 0;
           seq.song_arranger_parts[i].active = data_json["parts"][i]["active"] | false;
           seq.song_arranger_parts[i].midi_note = data_json["parts"][i]["midi_note"] | (60 + i);
-          
+
           // Ensure active flag is consistent with start_step being set
           if (seq.song_arranger_parts[i].start_step < SONG_LENGTH) {
             seq.song_arranger_parts[i].active = true;
@@ -5863,32 +5873,35 @@ FLASHMEM bool save_sd_song_arranger_json(uint8_t number)
       data_json["active"] = seq.song_arranger_active;
       data_json["base_note"] = seq.song_zone_start;
 
-data_json["switch_mode"] = seq.song_arranger_switch_mode;
+      data_json["switch_mode"] = seq.song_arranger_switch_mode;
 
       for (uint8_t i = 0; i < 10; i++)
       {
         data_json["parts"][i]["name"] = seq.song_arranger_parts[i].name;
-        
+
         // Convert from 0-indexed (storage) to 1-indexed (display) for saving
         // 99 means "not set" and stays as 99
         if (seq.song_arranger_parts[i].start_step < SONG_LENGTH) {
           data_json["parts"][i]["start_step"] = seq.song_arranger_parts[i].start_step + 1;
-        } else {
+        }
+        else {
           data_json["parts"][i]["start_step"] = 99;
         }
-        
+
         if (seq.song_arranger_parts[i].end_step < SONG_LENGTH) {
           data_json["parts"][i]["end_step"] = seq.song_arranger_parts[i].end_step + 1;
-        } else {
+        }
+        else {
           data_json["parts"][i]["end_step"] = 99;
         }
-        
+
         if (seq.song_arranger_parts[i].continue_step < SONG_LENGTH) {
           data_json["parts"][i]["continue_step"] = seq.song_arranger_parts[i].continue_step + 1;
-        } else {
+        }
+        else {
           data_json["parts"][i]["continue_step"] = 99;
         }
-        
+
         data_json["parts"][i]["color"] = seq.song_arranger_parts[i].color;
         data_json["parts"][i]["active"] = seq.song_arranger_parts[i].active;
         data_json["parts"][i]["midi_note"] = seq.song_arranger_parts[i].midi_note;

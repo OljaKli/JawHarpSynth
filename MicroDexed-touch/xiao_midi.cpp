@@ -1,7 +1,7 @@
+
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
+
 #include "xiao_midi.h"
-
-#if defined XIAO_BLUETOOTH_MIDI
-
 #include <Arduino.h>
 #include <string.h>
 #include "version.h"
@@ -14,32 +14,39 @@ extern void handleProgramChange(byte inChannel, byte inProgram);
 extern void handleAfterTouch(byte inChannel, byte inPressure);
 extern void handlePitchBend(byte inChannel, int16_t inPitch);
 
+// --- Public state (small, no arrays of names) ------------------------------
+bool    bt_enabled              = true;
+bool    bt_connected            = false;
+bool    bt_scanning             = false;
+uint8_t bt_status_generation    = 0;
+uint8_t bt_list_generation      = 0;
+uint8_t bt_device_count         = 0;
+char    bt_connected_name[24]   = { 0 };
+
 // --- Version strings (identical to ESP_DISPLAY path) -----------------------
-static const char XIAO_VERSION_STRING[] = VERSION;
-static const char XIAO_MIN_ESP_STRING[] = VERSION;
+static const char XIAO_VERSION_STRING[]  = VERSION;
+static const char XIAO_MIN_ESP_STRING[]  = VERSION;
+
 
 // --- Parser state ----------------------------------------------------------
 enum XiaoParserState : uint8_t {
-  X_WAIT_SYNC,
-  X_WAIT_CMD,
-  X_WAIT_LEN,
-  X_WAIT_PAYLOAD,
-  X_WAIT_CHK
+  X_WAIT_SYNC, X_WAIT_CMD, X_WAIT_LEN, X_WAIT_PAYLOAD, X_WAIT_CHK
 };
-
 static XiaoParserState xState      = X_WAIT_SYNC;
 static uint8_t         xCmd        = 0;
 static uint8_t         xPayloadLen = 0;
 static uint8_t         xPayloadIdx = 0;
 static uint8_t         xChecksum   = 0;
-static uint8_t         xBuffer[64];    // MIDI packets are <= 3 bytes; 64 is plenty
+static uint8_t         xBuffer[64];
 
-// --------------------------------------------------------------------------
-//  Packet TX (identical to sendPacket() in esp32.cpp - same UART, same framing)
-// --------------------------------------------------------------------------
-static void xiaoSendPacket(uint8_t cmd, const uint8_t* payload, uint8_t len) {
+// --- Streaming list callback ----------------------------------------------
+static xiao_bt_list_cb xListCb = nullptr;
+
+// ==========================================================================
+//  Packet TX / helpers
+// ==========================================================================
+FLASHMEM void xiaoSendPacket(uint8_t cmd, const uint8_t* payload, uint8_t len) {
   if (len > 250) return;
-
   uint8_t checksum = XIAO_PKT_SYNC ^ cmd ^ len;
   for (uint8_t i = 0; i < len; i++) checksum ^= payload[i];
 
@@ -50,7 +57,7 @@ static void xiaoSendPacket(uint8_t cmd, const uint8_t* payload, uint8_t len) {
   XIAO_MIDI_SERIAL.write(checksum);
 }
 
-static void xiaoSendVersion(void) {
+FLASHMEM void xiaoSendVersion(void) {
   uint8_t len = (uint8_t)strlen(XIAO_VERSION_STRING);
   uint8_t payload[1 + 16];
   payload[0] = len;
@@ -58,7 +65,7 @@ static void xiaoSendVersion(void) {
   xiaoSendPacket(XIAO_CMD_VERSION_REPORT, payload, 1 + len);
 }
 
-static void xiaoSendMinEspVersion(void) {
+FLASHMEM void xiaoSendMinEspVersion(void) {
   uint8_t len = (uint8_t)strlen(XIAO_MIN_ESP_STRING);
   uint8_t payload[1 + 16];
   payload[0] = len;
@@ -66,17 +73,60 @@ static void xiaoSendMinEspVersion(void) {
   xiaoSendPacket(XIAO_CMD_MIN_VERSION_ESP, payload, 1 + len);
 }
 
-static void xiaoSendHandshakeReply(void) {
+FLASHMEM void xiaoSendHandshakeReply(void) {
   xiaoSendVersion();
   delayMicroseconds(200);
   xiaoSendMinEspVersion();
 }
 
-// --------------------------------------------------------------------------
+// ==========================================================================
+//  Public API
+// ==========================================================================
+FLASHMEM void xiao_midi_set_enabled(bool en) {
+  if (bt_enabled != en) {
+    bt_enabled = en;
+    if (!en) {
+      // Reflect the state immediately on the local side so the UI does not
+      // display a stale "connected" state while the XIAO tears down.
+      bt_connected = false;
+      bt_scanning  = false;
+      bt_connected_name[0] = '\0';
+    }
+    bt_status_generation++;   // triggers UI refresh
+  }
+  uint8_t p = en ? 1 : 0;
+  xiaoSendPacket(XIAO_CMD_BT_ENABLE, &p, 1);
+}
+
+FLASHMEM void xiao_midi_request_status(void) {
+  xiaoSendPacket(XIAO_CMD_BT_STATUS_REQ, nullptr, 0);
+}
+
+FLASHMEM void xiao_midi_start_scan(void) {
+  xiaoSendPacket(XIAO_CMD_BT_SCAN_START, nullptr, 0);
+}
+
+FLASHMEM void xiao_midi_stop_scan(void) {
+  xiaoSendPacket(XIAO_CMD_BT_SCAN_STOP, nullptr, 0);
+}
+
+FLASHMEM void xiao_midi_connect_index(uint8_t idx) {
+  xiaoSendPacket(XIAO_CMD_BT_CONNECT, &idx, 1);
+}
+
+FLASHMEM void xiao_midi_set_list_callback(xiao_bt_list_cb cb) {
+  xListCb = cb;
+}
+
+FLASHMEM void xiao_midi_request_list(uint8_t from, uint8_t count) {
+  uint8_t payload[2] = { from, count };
+  xiaoSendPacket(XIAO_CMD_BT_LIST_REQ, payload, 2);
+}
+
+// ==========================================================================
 //  Raw MIDI dispatcher - identical to processMidiDataFromESP() in UI.cpp
-//  Channels arrive as 0..15 on the wire and are converted to 1..16 here.
-// --------------------------------------------------------------------------
-static void xiaoDispatchMidi(const uint8_t* data, uint8_t len) {
+// ==========================================================================
+FLASHMEM void xiaoDispatchMidi(const uint8_t* data, uint8_t len) {
   uint8_t idx = 0;
   uint8_t runningStatus = 0;
 
@@ -87,7 +137,7 @@ static void xiaoDispatchMidi(const uint8_t* data, uint8_t len) {
       runningStatus = byte;
       idx++;
       uint8_t cmd     = runningStatus & 0xF0;
-      uint8_t channel = (runningStatus & 0x0F) + 1;   // 1..16
+      uint8_t channel = (runningStatus & 0x0F) + 1;
 
       if (cmd == 0x90 || cmd == 0x80) {
         if (idx + 1 >= len) break;
@@ -119,7 +169,7 @@ static void xiaoDispatchMidi(const uint8_t* data, uint8_t len) {
       }
       else {
         if (idx + 1 >= len) break;
-        idx += 2;   // skip unknown 2-byte messages
+        idx += 2;
       }
     }
     else if (runningStatus != 0) {
@@ -151,29 +201,101 @@ static void xiaoDispatchMidi(const uint8_t* data, uint8_t len) {
       }
     }
     else {
-      break;   // orphan data byte - abort
+      break;
     }
   }
 }
 
-// --------------------------------------------------------------------------
-//  Setup / Loop
-// --------------------------------------------------------------------------
-void xiao_midi_setup(void) {
-  XIAO_MIDI_SERIAL.begin(XIAO_MIDI_BAUD);   // Serial4, exactly like ESP_DISPLAY
-  XIAO_MIDI_SERIAL.setTimeout(1);
-#ifdef DEBUG
-  LOG.print(F("XIAO_BLUETOOTH_MIDI: Serial4 ready @ "));
-  LOG.println(XIAO_MIDI_BAUD, DEC);
-#endif
+// ==========================================================================
+//  BLE bridge response handlers
+// ==========================================================================
+FLASHMEM void handleBtStatus(const uint8_t* p, uint8_t len) {
+  if (len < 4) return;
+
+  bool    new_enabled   = (p[0] != 0);
+  bool    new_connected = (p[1] != 0);
+  bool    new_scanning  = (p[2] != 0);
+  uint8_t nameLen       = p[3];
+  if (nameLen > 23) nameLen = 23;
+
+  char new_name[24] = { 0 };
+  if (new_connected && nameLen > 0 && len >= (uint8_t)(4 + nameLen)) {
+    memcpy(new_name, &p[4], nameLen);
+    new_name[nameLen] = '\0';
+  }
+
+  bool changed = (new_enabled   != bt_enabled)
+              || (new_connected != bt_connected)
+              || (new_scanning  != bt_scanning)
+              || (strcmp(new_name, bt_connected_name) != 0);
+
+  bt_enabled   = new_enabled;
+  bt_connected = new_connected;
+  bt_scanning  = new_scanning;
+  strncpy(bt_connected_name, new_name, sizeof(bt_connected_name) - 1);
+  bt_connected_name[sizeof(bt_connected_name) - 1] = '\0';
+
+  if (changed) {
+    bt_status_generation++;
+  }
 }
 
-void xiao_midi_loop(void) {
+FLASHMEM void handleBtListItem(const uint8_t* p, uint8_t len) {
+  if (len < 4) return;
+
+  uint8_t index   = p[0];
+  uint8_t total   = p[1];
+  bool    is_midi = (p[2] & 0x01) != 0;
+  uint8_t nameLen = p[3];
+  if (nameLen > 20) nameLen = 20;
+  if (len < (uint8_t)(4 + nameLen)) return;
+
+  bt_device_count = total;
+
+  char name[21];
+  memcpy(name, &p[4], nameLen);
+  name[nameLen] = '\0';
+
+  if (xListCb) xListCb(index, total, is_midi, name);
+}
+
+FLASHMEM void handleBtListEnd(const uint8_t* p, uint8_t len) {
+  if (len < 1) return;
+  bt_device_count = p[0];
+  // NOTE: do NOT bump bt_list_generation here. The items were already
+  // drawn by handleBtListItem as they streamed in; bumping now would
+  // trigger a second window request from the BT page and cause a
+  // continuous clear-and-redraw loop.
+}
+
+FLASHMEM void handleBtScanDone(void) {
+  bt_list_generation++;
+}
+
+FLASHMEM void handleBtError(const uint8_t* p, uint8_t len) {
+  if (len < 1) return;
+#if defined DEBUG
+  LOG.print(F("XIAO BT error: "));
+  LOG.println(p[0]);
+#endif
+  bt_status_generation++;
+}
+
+
+
+// ==========================================================================
+//  Setup / Loop
+// ==========================================================================
+FLASHMEM void xiao_midi_setup(void) {
+  XIAO_MIDI_SERIAL.begin(XIAO_MIDI_BAUD);
+  XIAO_MIDI_SERIAL.setTimeout(1);
+}
+
+FLASHMEM void xiao_midi_loop(void) {
   while (XIAO_MIDI_SERIAL.available() > 0) {
     uint8_t b = (uint8_t)XIAO_MIDI_SERIAL.read();
 
-    // The handshake byte 0x98 is always sent as a bare byte, never inside a
-    // packet, so it is safe to intercept it while we are waiting for a sync.
+    // 0x98 is the handshake request, always sent as a bare byte.
     if (xState == X_WAIT_SYNC && b == XIAO_HANDSHAKE_REQ) {
       xiaoSendHandshakeReply();
       continue;
@@ -188,9 +310,9 @@ void xiao_midi_loop(void) {
         break;
 
       case X_WAIT_CMD:
-        xCmd       = b;
-        xChecksum ^= b;
-        xState     = X_WAIT_LEN;
+        xCmd        = b;
+        xChecksum  ^= b;
+        xState      = X_WAIT_LEN;
         break;
 
       case X_WAIT_LEN:
@@ -200,7 +322,7 @@ void xiao_midi_loop(void) {
           xState = X_WAIT_CHK;
         }
         else if (xPayloadLen > sizeof(xBuffer)) {
-          xState = X_WAIT_SYNC;         // corrupt - resync
+          xState = X_WAIT_SYNC;
         }
         else {
           xPayloadIdx = 0;
@@ -216,12 +338,18 @@ void xiao_midi_loop(void) {
 
       case X_WAIT_CHK:
         if (b == xChecksum) {
-          // Only command we need to act on
-          if (xCmd == XIAO_CMD_MIDI_DATA &&
-              xPayloadLen >= 2 && xPayloadLen <= 3) {
-            xiaoDispatchMidi(xBuffer, xPayloadLen);
+          switch (xCmd) {
+            case XIAO_CMD_MIDI_DATA:
+              if (xPayloadLen >= 2 && xPayloadLen <= 3)
+                xiaoDispatchMidi(xBuffer, xPayloadLen);
+              break;
+            case XIAO_CMD_BT_STATUS:    handleBtStatus   (xBuffer, xPayloadLen); break;
+            case XIAO_CMD_BT_LIST_ITEM: handleBtListItem (xBuffer, xPayloadLen); break;
+            case XIAO_CMD_BT_LIST_END:  handleBtListEnd  (xBuffer, xPayloadLen); break;
+            case XIAO_CMD_BT_SCAN_DONE: handleBtScanDone ();                     break;
+            case XIAO_CMD_BT_ERROR:     handleBtError    (xBuffer, xPayloadLen); break;
+            default: break;
           }
-          // All other XIAO -> Teensy commands are silently ignored.
         }
         xState = X_WAIT_SYNC;
         break;
@@ -229,4 +357,4 @@ void xiao_midi_loop(void) {
   }
 }
 
-#endif // XIAO_BLUETOOTH_MIDI
+#endif

@@ -79,37 +79,21 @@
 extern bool esp_draw;
 #endif
 
-//*************************************************************************************************
-//* XIAO ESP32-S3 BLUETOOTH-MIDI BRIDGE
-//*************************************************************************************************
-// The Seeed XIAO ESP32S3 acts as a pure Bluetooth-MIDI -> Serial bridge.
-// It is meant to be used INSTEAD of the Waveshare ESP32 display, when the
-// user has a different (non-ESP) display attached to the Teensy.
-//
-// It uses the exact same Teensy UART that the ESP_DISPLAY firmware uses
-// (Serial4) and the exact same packet protocol (0xAA sync + XOR checksum,
-// CMD_MIDI_DATA = 205), so it is a drop-in replacement for the Waveshare's
-// built-in Bluetooth module.
-//
-// Mutually exclusive with ESP_DISPLAY (both use Serial4).
-//
-#if defined XIAO_BLUETOOTH_MIDI
-  #if defined ESP_DISPLAY
-    #error "XIAO_BLUETOOTH_MIDI cannot be combined with ESP_DISPLAY (both use Serial4)"
-  #endif
+#if !defined(ESP_DISPLAY) && !defined (ONBOARD_BUTTON_INTERFACE)
 
-  // -------- Serial port to the XIAO (identical to ESP_DISPLAY) --------
-  #define XIAO_MIDI_SERIAL   Serial4
-  #define XIAO_MIDI_BAUD     6000000
+// -------- Serial port to the XIAO (identical to ESP_DISPLAY) --------
+#define XIAO_MIDI_SERIAL   Serial4
+#define XIAO_MIDI_BAUD     6000000
 
-  // -------- Packet protocol (identical to ESP_DISPLAY) -----------------
-  #define XIAO_PKT_SYNC             0xAA
-  #define XIAO_CMD_VERSION_REPORT   100
-  #define XIAO_CMD_MIN_VERSION_ESP  103
-  #define XIAO_CMD_MIDI_DATA        205
+// -------- Packet protocol (identical to ESP_DISPLAY) -----------------
+#define XIAO_PKT_SYNC             0xAA
+#define XIAO_CMD_VERSION_REPORT   100
+#define XIAO_CMD_MIN_VERSION_ESP  103
+#define XIAO_CMD_MIDI_DATA        205
 
-  // Handshake request byte sent by the XIAO when it boots / retries
-  #define XIAO_HANDSHAKE_REQ        0x98
+// Handshake request byte sent by the XIAO when it boots / retries
+#define XIAO_HANDSHAKE_REQ        0x98
+
 #endif
 
 //*************************************************************************************************
@@ -373,8 +357,8 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 //*************************************************************************************************
 
 #ifdef OLED_DISPLAYS
- #define OLED_SCREEN_WIDTH 128 // OLED display width, in pixels
- #define OLED_SCREEN_HEIGHT 32 // OLED display height, in pixels
+#define OLED_SCREEN_WIDTH 128 // OLED display width, in pixels
+#define OLED_SCREEN_HEIGHT 32 // OLED display height, in pixels
 // Declaration for SSD1306 display connected using software SPI (default case):
 #define OLED_MOSI  11
 #define OLED_CLK   13
@@ -489,7 +473,6 @@ const char back_clear[5] = { ' ', ' ', ' ', ' ' };
 #endif
 
 #define AUDIO_DEVICE_USB
-
 
 #ifdef ONBOARD_BUTTON_INTERFACE // common
 #define BI_UP 2
@@ -1172,7 +1155,7 @@ typedef struct sys_s
   uint8_t ra_btn_target[8];  // index into TARGETS[] for each panel button slot
 #endif
 
-//#if defined LED_RINGS || defined LED_DEBUG
+  //#if defined LED_RINGS || defined LED_DEBUG
   uint8_t led_ring_start_offset;        // 0–23, default 12
 
   // Left ring: Master volume mode (shown when seq stopped, or during volume interaction)
@@ -1191,9 +1174,11 @@ typedef struct sys_s
   uint8_t right_edit_custom_end;
   // Brightness gradient intensity (0–100)
   uint8_t led_brightness_gradient;
-    // Hardware GLOBALCURRENT register (IS31FL3746A reg 0x51, range 0x00–0xFF)
+  // Hardware GLOBALCURRENT register (IS31FL3746A reg 0x51, range 0x00–0xFF)
   uint8_t led_brightness;
-//#endif
+  //#endif
+
+  bool bluetooth_enabled;   // XIAO_BLUETOOTH_MIDI bridge on/off
 
 } sys_t;
 
