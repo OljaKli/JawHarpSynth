@@ -1250,6 +1250,7 @@ enum master_mixer_ports
 #ifdef GRANULAR
   MASTER_MIX_CH_GRANULAR,
 #endif
+  MASTER_MIX_CH_AMB,  
   MASTER_MIX_CH_MAX,
 };
 
@@ -1267,9 +1268,11 @@ enum reverb_mixer_ports
   REVERB_MIX_CH_AUX_DELAY2,
 #ifdef GRANULAR
   REVERB_MIX_CH_GRANULAR,
-#endif
+#endif  
   REVERB_MIX_CH_MAX,
 };
+
+#define DELAY_MIX_CH_MAX  (2 * NUM_DRUMS+4)
 
 enum fm_modes
 {

@@ -25,7 +25,12 @@ https://www.pjrc.com/teensy/loader.html
 * Power on the Teensy and attach USB MIDI Keyboard (or use the virtual Touch Keyboard and the Encoders to navigate)
 
 
-In the subfolder "32MB_PSRAM_ONLY" are firmware versions that support the new 16MB PSRAM chip(s) - It should work with one or two chips of these, however it is named "32MB" since it does not make sense to have only one chip - since that same memory you could also get with the previously 2x8 MB, well tested, configuration.
+In the subfolder "32MB_PSRAM (ONLY-TESTING-UNSTABLE)" are firmware versions that support the new 16MB PSRAM chip(s) - It should work with one or two chips of these, however it is named "32MB" since it does not make sense to have only one chip - since that same memory you could also get with the previously 2x8 MB, well tested, configuration. These versions are currently only for testing purposes, they are not fully stable.
+
+
+Firmware in the LEGACY_PROGMEM_ONLY Folder are only for a quick test with a Teensy without any PSRAM. It is lacking a lot of features and functionality like only having 2 dexed instances instead for 4 and only very limited free memory for the LiveSequencer.
+
+Firmware in the MAM_MUSIKANDMORE folder are only for special hardware builds by musikandmore
 
 Please check out the MDT manual for any question you might have:
 https://codeberg.org/positionhigh/MicroDexed-touch/raw/branch/main/doc/MicroDexed-touch-manual.pdf

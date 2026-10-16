@@ -999,9 +999,18 @@ extern void send_midi_clock();
 // #endif
 extern void updateCurrentChord(const uint8_t midiNotes[], uint8_t size);
 extern uint8_t chord_input[];
+#include "ambient_garden.h"
 
 void sequencer(void)
 {
+ if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_ambient_garden))
+  {
+    // Ambient Garden: the garden owns the sequencer on its page (song, patterns,
+    // arpeggiator and live sequencer do not run). See ambient_garden_impl.h.
+    ambient_garden_sequencer();
+    return;
+  }
+
   if (seq.running) {
     // if (seq.ticks < 4)
     //   seq_live_recording();

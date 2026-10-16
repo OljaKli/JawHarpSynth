@@ -57,7 +57,7 @@ extern uint8_t get_sample_note(uint8_t sample);
 
 extern AudioMixer<REVERB_MIX_CH_MAX> reverb_mixer_r;
 extern AudioMixer<REVERB_MIX_CH_MAX> reverb_mixer_l;
-extern AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
+extern AudioMixer<DELAY_MIX_CH_MAX>* global_delay_in_mixer[2];
 extern AudioMixer<2> dexed_chorus_mixer_r[NUM_DEXED];
 extern AudioMixer<2> dexed_chorus_mixer_l[NUM_DEXED];
 extern AudioEffectMonoStereo* dexed_mono2stereo[NUM_DEXED];

@@ -53,9 +53,9 @@
 #include "MultiBandCompressor.h" 
 #include <ArduinoJson.h>
 
-
 #include "ui_liveseq_pianoroll.h"
 #include "ui_livesequencer.h"
+#include "ambient_garden.h"
 
 #ifdef RA_DISPLAY
 #include "ui_ra_panel.h"
@@ -319,7 +319,7 @@ void update_category_buttons_for_new_voice();
 
 // FX
 extern AudioSynthWaveform* chorus_modulator[NUM_DEXED];
-extern AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
+extern AudioMixer<DELAY_MIX_CH_MAX>* global_delay_in_mixer[2];
 extern AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
 #ifdef PSRAM
@@ -652,31 +652,32 @@ LCDML_add(61, LCDML_0_17, 8, "Bluetooth", UI_func_bluetooth_devices);
 LCDML_add(62, LCDML_0_17, 9, "System Settings", UI_func_system_settings);
 LCDML_add(63, LCDML_0, 18, "Extras/Test", NULL);
 
-LCDML_add(64, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
-LCDML_add(65, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
-LCDML_add(66, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
-LCDML_add(67, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
-LCDML_add(68, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
+LCDML_add(64, LCDML_0_18, 1, "Ambient Garden", UI_func_ambient_garden);
+LCDML_add(65, LCDML_0_18, 2, "Chord Arranger", UI_func_chord_arranger);
+LCDML_add(66, LCDML_0_18, 3, "Song Arranger", UI_func_song_arranger);
+LCDML_add(67, LCDML_0_18, 4, "Test Touchscreen", UI_func_test_touchscreen);
+LCDML_add(68, LCDML_0_18, 5, "Test Audio Mute", UI_func_test_mute);
+LCDML_add(69, LCDML_0_18, 6, "Test PSRAM", UI_func_test_psram);
 
 #if defined MUSIKANDMORE
-LCDML_add(69, LCDML_0, 19, "MAM Functions", NULL);
-LCDML_add(70, LCDML_0_19, 1, "MIDI/CV Translate", UI_func_cv_page);
-LCDML_add(71, LCDML_0_19, 2, "I2C Encoder Setup", UI_func_encoder_address_setup);
-LCDML_add(72, LCDML_0_19, 3, "I2C Scanner", UI_func_i2c_scanner);
-LCDML_add(73, LCDML_0_19, 4, "MAM Information", UI_func_mam_info);
-LCDML_add(74, LCDML_0,20, "Info", UI_func_information);
-LCDML_addAdvanced(75, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(76, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(77, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(78, LCDML_0, 24, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(79, LCDML_0, 25, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_add(70, LCDML_0, 19, "MAM Functions", NULL);
+LCDML_add(71, LCDML_0_19, 1, "MIDI/CV Translate", UI_func_cv_page);
+LCDML_add(72, LCDML_0_19, 2, "I2C Encoder Setup", UI_func_encoder_address_setup);
+LCDML_add(73, LCDML_0_19, 3, "I2C Scanner", UI_func_i2c_scanner);
+LCDML_add(74, LCDML_0_19, 4, "MAM Information", UI_func_mam_info);
+LCDML_add(75, LCDML_0,20, "Info", UI_func_information);
+LCDML_addAdvanced(76, LCDML_0, 21, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(77, LCDML_0, 22, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(78, LCDML_0, 23, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(79, LCDML_0, 24, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(80, LCDML_0, 25, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
 #else
-LCDML_add(69, LCDML_0,19, "Info", UI_func_information);
-LCDML_addAdvanced(70, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(71, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(72, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(73, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
-LCDML_addAdvanced(74, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_add(70, LCDML_0,19, "Info", UI_func_information);
+LCDML_addAdvanced(71, LCDML_0, 20, COND_hide, "Volume", UI_func_volume, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(72, LCDML_0, 21, COND_hide, "Screensaver", mFunc_screensaver, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(73, LCDML_0, 22, COND_hide, "SD_NOT_FOUND", UI_func_sd_content_not_found, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(74, LCDML_0, 23, COND_hide, "DrumPatternEditor", UI_func_drum_pattern_editor, 0, _LCDML_TYPE_default);
+LCDML_addAdvanced(75, LCDML_0, 24, COND_hide, "MeloPatternEditor", UI_func_melodic_pattern_editor, 0, _LCDML_TYPE_default);
 #endif
 
 
@@ -5798,6 +5799,9 @@ FLASHMEM void lcdml_menu_control(void)
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_seq_vel_editor) &&
         LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(UI_func_song))
       {
+         if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_ambient_garden))
+          ambient_garden_adjust_volume(key_up() ? +1 : -1);
+        else
         LCDML.OTHER_jumpToFunc(UI_func_volume);
       }
     }
@@ -6131,7 +6135,9 @@ FLASHMEM void lcdml_menu_control(void)
           prev_menu_item = seq.menu;
           seq.menu = constrain(seq.menu + 1, 0, 17);
         }
-        else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
+        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_ambient_garden))
+          ambient_garden_adjust_volume(+1); //+1
+         else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
           LCDML.OTHER_jumpToFunc(UI_func_volume);
       }
     }
@@ -6251,6 +6257,8 @@ FLASHMEM void lcdml_menu_control(void)
           }
 
         }
+        else if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_ambient_garden))
+          ambient_garden_adjust_volume(-1);
         else if (LCDML.FUNC_getID() != LCDML.OTHER_getIDFromFunction(mFunc_screensaver))
           LCDML.OTHER_jumpToFunc(UI_func_volume);
       }
@@ -30813,3 +30821,5 @@ FLASHMEM void UI_func_mam_info(uint8_t param)
 }
 
 #endif
+
+#include "ambient_garden_impl.h"

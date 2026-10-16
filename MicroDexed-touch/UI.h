@@ -25,11 +25,11 @@
 #ifndef _UI_H_
 #define _UI_H_
 
-  #if defined MUSIKANDMORE
-    #define _LCDML_DISP_cnt 78
-  #else
-    #define _LCDML_DISP_cnt 73
-  #endif
+ #if defined MUSIKANDMORE
+  #define _LCDML_DISP_cnt 79
+#else
+  #define _LCDML_DISP_cnt 74
+#endif
 
 #define SCREENSAVER_INTERVAL_MS 40  // 25Hz refresh rate
 #define SCREENSAVER_STAY_TIME 1100  
@@ -158,6 +158,7 @@ void UI_func_mdtracker_pattern_editor(uint8_t param);
 void UI_bluetooth_status_cache_invalidate(void);
 void UI_func_bluetooth_devices(uint8_t param);
 void UI_refresh_bluetooth_status(void);
+void UI_func_ambient_garden(uint8_t param);
 
 void setup_ui(void);
 #if defined SMFPLAYER

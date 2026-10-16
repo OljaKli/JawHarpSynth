@@ -112,6 +112,7 @@ MCP23017 mcp(0x21);
 #include <LCDMenuLib2.h>
 #include "screensaver.h"
 #include "UI.h"
+#include "ambient_garden.h"
 
 #ifdef RA_DISPLAY
 #include "ui_ra_panel.h"
@@ -294,7 +295,7 @@ AudioEffectModulatedDelay* dexed_chorus[NUM_DEXED];
 
 AudioEffectGate* Gate[2];  //noise gate for delay feedback channels A+B
 
-AudioMixer<2 * NUM_DRUMS + 4>* global_delay_in_mixer[2];
+AudioMixer<DELAY_MIX_CH_MAX>* global_delay_in_mixer[2];
 
 AudioMixer<2>* delay_fb_mixer[NUM_DEXED];
 
@@ -336,6 +337,8 @@ AudioEffectPlateReverb reverb;
 
 AudioMixer<MASTER_MIX_CH_MAX> master_mixer_r;
 AudioMixer<MASTER_MIX_CH_MAX> master_mixer_l;
+
+AudioSynthAmbientGarden ambient_garden_engine;   // Ambient Garden: AMB-1's engine (silent until its page opens)
 
 AudioAmplifier volume_r;
 AudioAmplifier volume_l;
@@ -691,8 +694,8 @@ FLASHMEM void create_audio_dexed_chain(uint8_t instance_id)
   // Allocate global delay mixer once for all instances
   if (instance_id == 0)
   {
-    global_delay_in_mixer[0] = new AudioMixer<2 * NUM_DRUMS + 4>();
-    global_delay_in_mixer[1] = new AudioMixer<2 * NUM_DRUMS + 4>();
+    global_delay_in_mixer[0] = new AudioMixer<DELAY_MIX_CH_MAX>();
+    global_delay_in_mixer[1] = new AudioMixer<DELAY_MIX_CH_MAX>();
   }
 
   delay_fb_mixer[instance_id] = new AudioMixer<2>();
@@ -945,6 +948,17 @@ FLASHMEM void create_audio_drum_chain(uint8_t instance_id)
   LOG.print(F("Dynamic-Connection-Counter="));
   LOG.println(dynamicConnections.size());
 #endif
+}
+
+// Ambient Garden: AMB-1's engine into the master mix, the plate reverb and
+// both delays. Its inputs start closed; the garden page opens them while it
+// is open (ag_route() in ambient_garden_impl.h) and closes them again.
+FLASHMEM void create_audio_ambient_garden_chain()
+{
+  dynamicConnections.emplace_back(new AudioConnection(ambient_garden_engine, 0, master_mixer_l, MASTER_MIX_CH_AMB));
+  dynamicConnections.emplace_back(new AudioConnection(ambient_garden_engine, 1, master_mixer_r, MASTER_MIX_CH_AMB));
+  master_mixer_r.gain(MASTER_MIX_CH_AMB, 1.0);
+  master_mixer_l.gain(MASTER_MIX_CH_AMB, 1.0);
 }
 
 FLASHMEM void create_audio_wav_preview_chain()
@@ -1793,6 +1807,8 @@ FLASHMEM void setup()
 
   // Setup WAV preview play
   create_audio_wav_preview_chain();
+
+create_audio_ambient_garden_chain();
 
 #if defined(COMPILE_FOR_PSRAM)
   master_mixer_r.gain(MASTER_MIX_CH_WAV_PREVIEW_PSRAM, 0.5);
@@ -5974,6 +5990,32 @@ bool pendingFirstStepDraw;
 FLASHMEM void handleStart(void)
 {
 
+// Ambient Garden page: the sequencer plays the garden, not the song.
+ if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_ambient_garden))
+  {
+    if (seq.running && (seq.clock == 0 || seq.clock == 2))
+      sequencer_timer.stop();                 // a restart: from the top
+
+    midi_bpm_timer = 0;
+    midi_bpm_counter = 0;
+    seq.ticks = 0;
+    seq.step = 0;
+
+    ambient_garden_start_playing();           // the garden from its top (timer not running yet)
+    seq.running = true;
+
+#if defined BUTTON_LEDS && defined MCP_23017
+    setled(LED_START, HIGH);
+#endif
+
+    // MIDI SYNC: use timer only when internal or MIDI Master
+    if (seq.clock == 0 || seq.clock == 2)
+      sequencer_timer.begin(sequencer, seq.tempo_ms / (seq.ticks_max + 1), true); // first callback immediately
+
+    midiSendRealtime(midi::Start);
+    return;
+  }
+
   // A fresh song start reverts any manual DX voice/bank/pool override
   // set by MDTracker. If step 0 carries a voice command it will simply
   // re-establish state on the first step.
@@ -6076,6 +6118,35 @@ FLASHMEM void handleContinue(void)
 
 FLASHMEM void handleStop(void)
 {
+
+ // Ambient Garden page, the garden playing: stop the timer, then the
+  // garden's own notes. (Not playing yet - the song still running as the page
+  // opens - falls through to the normal stop below.)
+  if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_ambient_garden) && ambient_garden_playing())
+  {
+    if (seq.running && (seq.clock == 0 || seq.clock == 2))
+      sequencer_timer.stop();
+
+    seq.running = false;
+    seq.ticks = 0;
+    seq.step = 0;
+    midi_bpm_counter = 0;
+    midi_bpm_timer = 0;
+
+    ambient_garden_stop_playing();            // pad / bass note-offs, queued bell note-offs
+
+#if defined BUTTON_LEDS && defined MCP_23017
+    setled(LED_START, LOW);
+#endif
+
+    midiSendRealtime(midi::Stop);
+
+#ifdef MUSIKANDMORE
+    digitalWrite(CV_CLOCK_OUT, LOW);
+#endif
+    return;
+  }
+
   if (LCDML.FUNC_getID() == LCDML.OTHER_getIDFromFunction(UI_func_chord_arranger))
   {
     chord_input[0] = 0;
