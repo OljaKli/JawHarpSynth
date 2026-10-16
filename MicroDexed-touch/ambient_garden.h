@@ -52,4 +52,11 @@ bool ambient_garden_playing(void);         // the garden is playing (handleStop(
 // so the garden keeps playing while the user rides the volume.
 void ambient_garden_adjust_volume(int delta);
 
+// Called from the main loop of MicroDexed-touch.ino on every iteration,
+// regardless of which page is currently active. Drains the garden's MIDI
+// out ring so a starved garden page cannot silently orphan bell note-offs
+// (which would leave stuck Dexed voices, crackling audio, and eventually
+// an unresponsive UI). Cheap when the ring is empty.
+void ambient_garden_tick(void);
+
 #endif

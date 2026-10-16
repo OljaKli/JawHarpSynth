@@ -319,6 +319,13 @@ void AudioSynthAmbientGarden::update(void)
 #define AG_SW_FADE_OUT_MS 150
 #define AG_SW_FADE_IN_MS  300
 #define AG_SW_SETTLE_MS    80
+// If a bell-voice swap stays pending longer than this (stalled SD read,
+// bank never becomes ready, bank never reports failure), give up, abort
+// the loader, restore the previous voice and fade back in. Without the
+// watchdog ag_sw_pending stays true forever, which silently swallows
+// every bell note-on in ag_drain_midi_out() and eventually starves the
+// audio ISR.
+#define AG_SW_WATCHDOG_MS 8000
 #define AG_BELL_DEX_GAIN  0.35f            /* bell Dexed gain at full level */
 
 static bool          ag_sw_pending = false;
@@ -332,9 +339,19 @@ static elapsedMillis ag_sw_req_age;
 // ============================================================================
 // MIDI out: lock-free ring, drained from the main loop
 // ============================================================================
-#define AG_MIDI_Q 64
+// ============================================================================
+// MIDI out: lock-free ring, drained from the main loop and from
+// ambient_garden_tick()
+//
+// Ring raised from 64 to 256 entries (768 bytes). en_midi_out() now
+// purges an older pending note-on for the same (channel, note) when the
+// ring is full, so a stuck voice can never be orphaned by a full queue.
+// The drain now copies each message out with interrupts briefly masked
+// so a concurrent purge cannot corrupt a partially-read slot.
+// ============================================================================
+#define AG_MIDI_Q 256
 static volatile uint32_t ag_mq_w = 0, ag_mq_r = 0;
-static uint8_t ag_mq_data[AG_MIDI_Q][3];    /* 192 bytes */
+static uint8_t ag_mq_data[AG_MIDI_Q][3];    /* 768 bytes */
 
 extern "C" void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
@@ -342,14 +359,41 @@ extern "C" void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
     __asm__ volatile("mrs %0, primask" : "=r"(primask) :: "memory");
     __asm__ volatile("cpsid i" ::: "memory");
 
-    uint32_t w = ag_mq_w;
-    if (w - ag_mq_r < AG_MIDI_Q) {
-        ag_mq_data[w % AG_MIDI_Q][0] = st;
-        ag_mq_data[w % AG_MIDI_Q][1] = d1;
-        ag_mq_data[w % AG_MIDI_Q][2] = d2;
+    const uint32_t w = ag_mq_w;
+    const uint32_t r = ag_mq_r;
+
+    if (w - r >= AG_MIDI_Q) {
+        // Ring is full. If we are about to push a note-on and an older
+        // note-on for the same (channel, note) is still pending, turn
+        // that older one into a note-off so the invariant "every
+        // note-on in the queue has a matching note-off behind it"
+        // survives.
+        const uint32_t vch    = st & 0x0F;
+        const uint32_t status = st & 0xF0;
+        if (status == 0x90) {
+            for (uint32_t k = r; k != w; k++) {
+                const uint32_t idx = k % AG_MIDI_Q;
+                const uint32_t s2  = ag_mq_data[idx][0];
+                if ((s2 & 0x0F) == vch && (s2 & 0xF0) == 0x90 &&
+                    ag_mq_data[idx][1] == d1) {
+                    ag_mq_data[idx][0] = (uint8_t)(0x80u | vch);
+                    ag_mq_data[idx][2] = 0;
+                }
+            }
+        }
+    }
+
+    if (w - r < AG_MIDI_Q) {
+        const uint32_t idx = w % AG_MIDI_Q;
+        ag_mq_data[idx][0] = (uint8_t)st;
+        ag_mq_data[idx][1] = (uint8_t)d1;
+        ag_mq_data[idx][2] = (uint8_t)d2;
         __asm__ volatile("" ::: "memory");
         ag_mq_w = w + 1;
     }
+    // else: still full. Drop the newest message. With Q=256 and the
+    // periodic ambient_garden_tick() drain this is effectively
+    // unreachable in normal play.
 
     if (!(primask & 1u))
         __asm__ volatile("cpsie i" ::: "memory");
@@ -358,15 +402,36 @@ extern "C" void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 FLASHMEM static void ag_drain_midi_out(void)
 {
     static bool warned_channel_collision = false;
-    while (ag_mq_r != ag_mq_w) {
-        uint32_t st = ag_mq_data[ag_mq_r % AG_MIDI_Q][0];
-        uint32_t d1 = ag_mq_data[ag_mq_r % AG_MIDI_Q][1];
-        uint32_t d2 = ag_mq_data[ag_mq_r % AG_MIDI_Q][2];
-        __asm__ volatile("" ::: "memory");
-        ag_mq_r++;
 
-        uint32_t status = st & 0xF0u;
-        uint32_t vch = st & 0x0Fu;
+    while (true) {
+        uint32_t st, d1, d2;
+
+        // Copy the message out atomically so a concurrent purge in
+        // en_midi_out() cannot corrupt a slot we are about to process.
+        {
+            uint32_t primask;
+            __asm__ volatile("mrs %0, primask" : "=r"(primask) :: "memory");
+            __asm__ volatile("cpsid i" ::: "memory");
+
+            const uint32_t r = ag_mq_r;
+            if (r == ag_mq_w) {
+                if (!(primask & 1u))
+                    __asm__ volatile("cpsie i" ::: "memory");
+                break;
+            }
+            const uint32_t idx = r % AG_MIDI_Q;
+            st = ag_mq_data[idx][0];
+            d1 = ag_mq_data[idx][1];
+            d2 = ag_mq_data[idx][2];
+            __asm__ volatile("" ::: "memory");
+            ag_mq_r = r + 1;
+
+            if (!(primask & 1u))
+                __asm__ volatile("cpsie i" ::: "memory");
+        }
+
+        const uint32_t status = st & 0xF0u;
+        const uint32_t vch    = st & 0x0Fu;
 
         if (vch == 0u) {
             uint8_t ch = braids_osc.midi_channel;
@@ -564,26 +629,26 @@ FLASHMEM static void ag_braids_apply_garden_patch(void)
 
     braids_osc.algo = 14;    /* SUPERSAW */
     braids_osc.color = 0;
-    braids_osc.timbre = 80;
+    braids_osc.timbre = 87;
     braids_osc.coarse = 0;
     braids_osc.sound_intensity = 40;
 
-    braids_osc.env_attack = 35;
-    braids_osc.env_decay = 95;
-    braids_osc.env_sustain = 45;
-    braids_osc.env_release = 45;
+    braids_osc.env_attack = 245;
+    braids_osc.env_decay = 97;
+    braids_osc.env_sustain = 75;
+    braids_osc.env_release = 95;
 
     braids_osc.filter_mode = 1;
     braids_osc.filter_freq_from = 9500;
-    braids_osc.filter_freq_to = 2100;
-    braids_osc.filter_resonance = 0;
+    braids_osc.filter_freq_to = 100;
+    braids_osc.filter_resonance = 3;
     braids_osc.filter_speed = 1;
-    braids_osc.filter_lfo_intensity = 0;
-    braids_osc.filter_lfo_speed = 0;
+    braids_osc.filter_lfo_intensity = 1;
+    braids_osc.filter_lfo_speed = 1;
 
-    braids_osc.flanger = 0;
-    braids_osc.flanger_spread = 0;
-    braids_osc.pan = 20;
+    braids_osc.flanger = 33;
+    braids_osc.flanger_spread = 66;
+    braids_osc.pan = 0;
 
     braids_osc.rev_send = AG_PAD_SEND_REV;
     braids_osc.delay_send_1 = 0;
@@ -1290,9 +1355,16 @@ FLASHMEM static void ag_bell_swap_tick(void)
                     ag_sw_pending = false;
                     ag_draw_top_name();
                 }
-                else if (ag_bank_failed(pool, ag_sw_bank)) {
-                    /* Bank unreadable: keep the old voice, show the error
-                     * like the voice page does, and fade back in. */
+                               else if (ag_bank_failed(pool, ag_sw_bank) ||
+                         (uint32_t)ag_sw_req_age > AG_SW_WATCHDOG_MS) {
+                    /* Bank unreadable, or the SD read never completed.
+                     * Abort the loader, keep the old voice, show the
+                     * error like the voice page does, and fade back in.
+                     * Without the watchdog a stalled SD read leaves
+                     * ag_sw_pending set forever, which silently swallows
+                     * every bell note-on in ag_drain_midi_out() and
+                     * eventually starves the audio ISR. */
+                    ag_bank_abort();
                     for (int i = 0; i < AG_NBELLDEX; i++) {
                         strcpy(g_voice_name[i], sError);
                         strcpy(g_bank_name[i], sError);
@@ -1499,15 +1571,22 @@ FLASHMEM static void ag_pad_mixer_tick_audio(void)
 FLASHMEM static void ag_bright_apply(void)
 {
     const float b = (float)ag_par[P_BRIGHT] * 0.015f;
-    float fc = 250.0f * fm_exp2f(b * 4.5f + 1.1f * en_arc);
-    if (fc < 250.0f) fc = 250.0f;
-    if (fc > 15000.0f) fc = 15000.0f;
+    float lift = fm_exp2f(b * 0.8f + 0.25f * en_arc);
+    if (lift < 0.85f) lift = 0.85f;
+    if (lift > 1.20f) lift = 1.20f;
 
-    braids_osc.filter_mode = 1;
-    braids_osc.filter_freq_from = (uint16_t)fc * 1.5;
-    braids_osc.filter_freq_to = (uint16_t)fc;
-    braids_osc.filter_resonance = 1;
-    braids_osc.filter_speed = 1;
+    uint16_t from = (uint16_t)(6500.0f * lift);
+    uint16_t to   = (uint16_t)(40.0f * lift); 
+   
+    braids_osc.filter_mode          = 1;     // LP12
+    braids_osc.filter_freq_from     = from;
+    braids_osc.filter_freq_to       = to;
+    braids_osc.filter_resonance     = 5;
+    braids_osc.filter_speed         = 1;
+    braids_osc.filter_lfo_intensity = 25;
+    braids_osc.filter_lfo_speed     = 1;
+
+    braids_update_all_settings();
 }
 
 // ============================================================================
@@ -2262,6 +2341,18 @@ FLASHMEM static void handle_touchscreen_ambient_garden(void)
         ag_feedback_timer = 0;
         return;
     }
+}
+
+// Called once per main-loop iteration from MicroDexed-touch.ino::loop(),
+// regardless of which page is currently active. Without this, an idle
+// garden page — or one whose touch handler is starved by a slow display
+// flush, a slow SD read, or a heavy chord change — leaves the MIDI-out
+// ring to fill and drop. Dropped bell note-offs orphan Dexed voices,
+// which is what causes the audio crackle and the frozen screen after a
+// few minutes of playing.
+FLASHMEM void ambient_garden_tick(void)
+{
+    ag_drain_midi_out();
 }
 
 // ============================================================================

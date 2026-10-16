@@ -3507,6 +3507,14 @@ void loop()
   check_midi_devices();
 #endif
 
+  // Ambient Garden: drain the MIDI-out ring on every main-loop iteration,
+  // regardless of which page is active. Without this, a garden page whose
+  // touch handler has been starved (or that the user has just navigated
+  // away from) leaves the ring to fill and drop, which orphans bell
+  // note-offs and eventually produces stuck Dexed voices, crackling
+  // audio, and an unresponsive UI.
+  ambient_garden_tick();
+  
   // check encoder (old, polling)
   //ENCODER[ENC_L].update();
   //ENCODER[ENC_R].update();
