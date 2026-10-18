@@ -5,19 +5,18 @@
 #include <Arduino.h>
 #include <Audio.h>
 #include <Encoder.h>
-#include <string.h>
-
-#include "embedded_presets.h"
 #include "song_player.h"
 #include "config.h"
 #include "synth_dexed.h"
 
 extern AudioSynthDexed* MicroDexed[NUM_DEXED];
+extern AudioControlSGTL5000 sgtl5000;
 extern config_t configuration;
-extern char g_voice_name[NUM_DEXED][VOICE_NAME_LEN];
-extern char g_bank_name[NUM_DEXED][BANK_NAME_LEN];
 extern void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device);
 extern void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device);
+extern void set_volume(uint8_t volume, uint8_t mono);
+extern void set_fx_params(void);
+extern void set_sidechain_levels(void);
 
 namespace jaw_harp_mvp0 {
 namespace {
@@ -26,6 +25,24 @@ constexpr uint8_t kEncoderA = 2;
 constexpr uint8_t kEncoderB = 3;
 constexpr uint8_t kEncoderButton = 4;
 constexpr uint8_t kVelocity = 100;
+constexpr uint8_t kMasterVolume = 80;
+constexpr uint8_t kDexedPolyphony = 32;
+constexpr uint8_t kDexedOperators = OP_ENABLED_MAX;
+constexpr float kDexedGain = 0.65f;
+// Known-working decoded FM piano voice from Synth_Dexed's SimplePlay example.
+uint8_t fm_piano_voice[155] = {
+    95, 29, 20, 50, 99, 95, 0, 0, 41, 0, 19, 0, 0, 3, 0, 6, 79, 0, 1, 0, 14,
+    95, 20, 20, 50, 99, 95, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 99, 0, 1, 0, 0,
+    95, 29, 20, 50, 99, 95, 0, 0, 0, 0, 0, 0, 0, 3, 0, 6, 89, 0, 1, 0, 7,
+    95, 20, 20, 50, 99, 95, 0, 0, 0, 0, 0, 0, 0, 3, 0, 2, 99, 0, 1, 0, 7,
+    95, 50, 35, 78, 99, 75, 0, 0, 0, 0, 0, 0, 0, 3, 0, 7, 58, 0, 14, 0, 7,
+    96, 25, 25, 67, 99, 75, 0, 0, 0, 0, 0, 0, 0, 3, 0, 2, 99, 0, 1, 0, 10,
+    94, 67, 95, 60, 50, 50, 50, 50,
+    4, 6, 0,
+    34, 33, 0, 0, 0, 4,
+    3, 24,
+    70, 77, 45, 80, 73, 65, 78, 79, 0, 0,
+};
 constexpr uint16_t kDebounceMs = 20;
 constexpr uint16_t kLongPressMs = 500;
 constexpr uint16_t kStartupDelayMs = 500;
@@ -69,7 +86,7 @@ void routeEvent(uint8_t channel, uint8_t note, uint8_t velocity, bool note_on, v
   uint8_t& din_references = din_note_references[channel - 1][note];
   if (note_on) {
     if (internal_references++ == 0 && MicroDexed[0]) {
-      MicroDexed[0]->keydown(note, velocity ? velocity : kVelocity);
+      MicroDexed[0]->keydown(note, kVelocity);
     }
     ++din_references;
     midiNoteOn(note, velocity, channel, 2);
@@ -84,30 +101,6 @@ void routeEvent(uint8_t channel, uint8_t note, uint8_t velocity, bool note_on, v
 
 void allNotesOffCallback(void*) {
   allNotesOff();
-}
-
-void loadPreset(uint8_t index) {
-  if (!MicroDexed[0]) return;
-  allNotesOff();
-
-  uint8_t packed[128];
-  uint8_t decoded[156];
-  memcpy(packed, kPresets[index].packed_voice, sizeof(packed));
-  if (!MicroDexed[0]->decodeVoice(decoded, packed)) {
-    Serial.println("MVP0: preset decode failed");
-    return;
-  }
-
-  AudioNoInterrupts();
-  MicroDexed[0]->loadVoiceParameters(decoded);
-  MicroDexed[0]->setTranspose(configuration.dexed[0].transpose);
-  AudioInterrupts();
-
-  memset(g_voice_name[0], 0, VOICE_NAME_LEN);
-  strncpy(g_voice_name[0], kPresets[index].name, VOICE_NAME_LEN - 1);
-  memset(g_bank_name[0], 0, BANK_NAME_LEN);
-  strncpy(g_bank_name[0], "MVP0 EMBED", BANK_NAME_LEN - 1);
-  Serial.printf("MVP0: preset %u/%u %s\n", index + 1, kPresetCount, kPresets[index].name);
 }
 
 void restart(uint32_t now_ms) {
@@ -176,7 +169,33 @@ void jawHarpMvp0Setup() {
   button_changed_ms = millis();
 
   player.configure(routeEvent, allNotesOffCallback, nullptr);
-  loadPreset(0);
+  configuration.sys.vol = kMasterVolume;
+  configuration.sys.mono = 0;
+  configuration.dexed[0].pan = PANORAMA_DEFAULT;
+  configuration.dexed[0].sidechain_send = REVERB_SEND_MIN;
+  configuration.fx.chorus_level[0] = CHORUS_LEVEL_MIN;
+  configuration.fx.delay_level1[0] = DELAY_LEVEL_MIN;
+  configuration.fx.delay_level2[0] = DELAY_LEVEL_MIN;
+  configuration.fx.reverb_send[0] = REVERB_SEND_MIN;
+  set_fx_params();
+  set_sidechain_levels();
+  set_volume(kMasterVolume, 0);
+  const bool codec_ok = sgtl5000.enable();
+  sgtl5000.volume(0.5f);
+  Serial.printf("MVP0: Audio Shield reinit %s\n", codec_ok ? "OK" : "FAILED");
+  MicroDexed[0]->setMaxNotes(kDexedPolyphony);
+  MicroDexed[0]->setMonoMode(false);
+  MicroDexed[0]->setEngineType(MKI);
+  MicroDexed[0]->setOPAll(kDexedOperators);
+  MicroDexed[0]->setFilterCutoff(1.0f);
+  MicroDexed[0]->setFilterResonance(0.0f);
+  MicroDexed[0]->setGain(kDexedGain);
+  MicroDexed[0]->setSustain(false);
+  MicroDexed[0]->ControllersRefresh();
+  MicroDexed[0]->loadVoiceParameters(fm_piano_voice);
+  MicroDexed[0]->setTranspose(TRANSPOSE_FIX);
+  MicroDexed[0]->doRefreshVoice();
+  Serial.println("MVP0: preset FM PIANO");
   boot_ms = millis();
   ready = true;
   Serial.println("MVP0: ready, turn selects Katy/Bach/Rick; press pauses; hold restarts");
