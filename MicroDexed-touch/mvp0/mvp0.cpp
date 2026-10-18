@@ -5,6 +5,8 @@
 #include <Arduino.h>
 #include <Audio.h>
 #include <Encoder.h>
+#include <string.h>
+#include "embedded_presets.h"
 #include "song_player.h"
 #include "config.h"
 #include "synth_dexed.h"
@@ -12,6 +14,8 @@
 extern AudioSynthDexed* MicroDexed[NUM_DEXED];
 extern AudioControlSGTL5000 sgtl5000;
 extern config_t configuration;
+extern char g_voice_name[NUM_DEXED][VOICE_NAME_LEN];
+extern char g_bank_name[NUM_DEXED][BANK_NAME_LEN];
 extern void midiNoteOn(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device);
 extern void midiNoteOff(uint8_t note, uint8_t velocity, uint8_t channel, uint8_t device);
 extern void set_volume(uint8_t volume, uint8_t mono);
@@ -29,6 +33,7 @@ constexpr uint8_t kMasterVolume = 80;
 constexpr uint8_t kDexedPolyphony = 32;
 constexpr uint8_t kDexedOperators = OP_ENABLED_MAX;
 constexpr float kDexedGain = 0.65f;
+constexpr uint8_t kMvp0PresetCount = kPresetCount + 1;
 // Known-working decoded FM piano voice from Synth_Dexed's SimplePlay example.
 uint8_t fm_piano_voice[155] = {
     95, 29, 20, 50, 99, 95, 0, 0, 41, 0, 19, 0, 0, 3, 0, 6, 79, 0, 1, 0, 14,
@@ -53,6 +58,7 @@ SongPlayer player;
 uint8_t internal_note_references[128] = {};
 uint8_t din_note_references[16][128] = {};
 uint8_t track_index = 0;
+uint8_t preset_index = 0;
 int encoder_detent = 0;
 uint32_t boot_ms = 0;
 uint32_t button_changed_ms = 0;
@@ -60,6 +66,7 @@ uint32_t button_pressed_ms = 0;
 bool button_raw = true;
 bool button_stable = true;
 bool long_press_fired = false;
+bool button_turn_used = false;
 bool ready = false;
 bool auto_started = false;
 SongPlayer::State logged_state = SongPlayer::State::stopped;
@@ -103,6 +110,37 @@ void allNotesOffCallback(void*) {
   allNotesOff();
 }
 
+void loadPreset(uint8_t index, uint32_t now_ms) {
+  if (!MicroDexed[0]) return;
+  preset_index = index % kMvp0PresetCount;
+  const bool was_playing = player.state() == SongPlayer::State::playing;
+  if (was_playing) player.pause(now_ms);
+  else allNotesOff();
+
+  const char* name = "FM PIANO";
+  AudioNoInterrupts();
+  if (preset_index == 0) {
+    MicroDexed[0]->loadVoiceParameters(fm_piano_voice);
+  } else {
+    uint8_t packed[128];
+    uint8_t decoded[155];
+    memcpy(packed, kPresets[preset_index - 1].packed_voice, sizeof(packed));
+    MicroDexed[0]->decodeVoice(decoded, packed);
+    MicroDexed[0]->loadVoiceParameters(decoded);
+    name = kPresets[preset_index - 1].name;
+  }
+  MicroDexed[0]->setTranspose(TRANSPOSE_FIX);
+  MicroDexed[0]->doRefreshVoice();
+  AudioInterrupts();
+
+  memset(g_voice_name[0], 0, VOICE_NAME_LEN);
+  strncpy(g_voice_name[0], name, VOICE_NAME_LEN - 1);
+  memset(g_bank_name[0], 0, BANK_NAME_LEN);
+  strncpy(g_bank_name[0], "MVP0", BANK_NAME_LEN - 1);
+  Serial.printf("MVP0: preset %u/%u %s\n", preset_index + 1, kMvp0PresetCount, name);
+  if (was_playing) player.resume(now_ms);
+}
+
 void restart(uint32_t now_ms) {
   player.restart(now_ms);
   auto_started = true;
@@ -124,17 +162,21 @@ void updateButton(uint32_t now_ms) {
   if (raw != button_raw) {
     button_raw = raw;
     button_changed_ms = now_ms;
+    if (!raw) {
+      long_press_fired = false;
+      button_turn_used = false;
+    }
   }
   if (raw != button_stable && now_ms - button_changed_ms >= kDebounceMs) {
     button_stable = raw;
     if (!button_stable) {
       button_pressed_ms = now_ms;
-      long_press_fired = false;
-    } else if (!long_press_fired) {
+    } else if (!long_press_fired && !button_turn_used) {
       shortPress(now_ms);
     }
   }
-  if (!button_stable && !long_press_fired && now_ms - button_pressed_ms >= kLongPressMs) {
+  if (!button_stable && !long_press_fired && !button_turn_used &&
+      now_ms - button_pressed_ms >= kLongPressMs) {
     long_press_fired = true;
     restart(now_ms);
   }
@@ -152,6 +194,13 @@ void updateEncoder(uint32_t now_ms) {
   if (detent == encoder_detent) return;
   const int delta = detent - encoder_detent;
   encoder_detent = detent;
+  if (!button_raw || !button_stable) {
+    button_turn_used = true;
+    int next = static_cast<int>(preset_index) + delta;
+    while (next < 0) next += kMvp0PresetCount;
+    loadPreset(static_cast<uint8_t>(next % kMvp0PresetCount), now_ms);
+    return;
+  }
   int next = static_cast<int>(track_index) + delta;
   while (next < 0) next += kTrackCount;
   selectTrack(static_cast<uint8_t>(next % kTrackCount), now_ms);
@@ -192,21 +241,18 @@ void jawHarpMvp0Setup() {
   MicroDexed[0]->setGain(kDexedGain);
   MicroDexed[0]->setSustain(false);
   MicroDexed[0]->ControllersRefresh();
-  MicroDexed[0]->loadVoiceParameters(fm_piano_voice);
-  MicroDexed[0]->setTranspose(TRANSPOSE_FIX);
-  MicroDexed[0]->doRefreshVoice();
-  Serial.println("MVP0: preset FM PIANO");
+  loadPreset(0, millis());
   boot_ms = millis();
   ready = true;
-  Serial.println("MVP0: ready, turn selects Katy/Bach/Rick/Pink Floyd; press pauses; hold restarts");
+  Serial.println("MVP0: turn=song, push+turn=preset; press pauses; hold restarts");
 }
 
 void jawHarpMvp0Loop() {
   using namespace jaw_harp_mvp0;
   if (!ready) return;
   const uint32_t now_ms = millis();
-  updateEncoder(now_ms);
   updateButton(now_ms);
+  updateEncoder(now_ms);
 
   if (!auto_started && now_ms - boot_ms >= kStartupDelayMs) {
     selectTrack(0, now_ms);
