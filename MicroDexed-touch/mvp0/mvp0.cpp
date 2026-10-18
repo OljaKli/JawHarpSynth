@@ -7,8 +7,8 @@
 #include <Encoder.h>
 #include <string.h>
 
-#include "abc_player.h"
 #include "embedded_presets.h"
+#include "song_player.h"
 #include "config.h"
 #include "synth_dexed.h"
 
@@ -25,30 +25,17 @@ namespace {
 constexpr uint8_t kEncoderA = 2;
 constexpr uint8_t kEncoderB = 3;
 constexpr uint8_t kEncoderButton = 4;
-constexpr uint8_t kMidiChannel = 1;
 constexpr uint8_t kVelocity = 100;
 constexpr uint16_t kDebounceMs = 20;
 constexpr uint16_t kLongPressMs = 500;
 constexpr uint16_t kStartupDelayMs = 500;
 constexpr int kEncoderCountsPerDetent = 4;
 
-constexpr char kTestPhrase[] =
-    "X:1\n"
-    "T:Jaw Harp MVP0\n"
-    "M:4/4\n"
-    "L:1/4\n"
-    "Q:120\n"
-    "K:C\n"
-    "V:1\n"
-    "C D E F | [EG]2 z2 |\n"
-    "V:2\n"
-    "C,2 G,2 | z4 |\n";
-
 Encoder encoder(kEncoderA, kEncoderB);
-Score score;
-Player player;
-uint8_t note_references[128] = {};
-uint8_t preset_index = 0;
+SongPlayer player;
+uint8_t internal_note_references[128] = {};
+uint8_t din_note_references[16][128] = {};
+uint8_t track_index = 0;
 int encoder_detent = 0;
 uint32_t boot_ms = 0;
 uint32_t button_changed_ms = 0;
@@ -58,29 +45,40 @@ bool button_stable = true;
 bool long_press_fired = false;
 bool ready = false;
 bool auto_started = false;
-Player::State logged_state = Player::State::stopped;
+SongPlayer::State logged_state = SongPlayer::State::stopped;
 
 void allNotesOff() {
-  if (!MicroDexed[0]) return;
   for (uint16_t note = 0; note < 128; ++note) {
-    if (!note_references[note]) continue;
-    MicroDexed[0]->keyup(static_cast<uint8_t>(note));
-    midiNoteOff(static_cast<uint8_t>(note), 0, kMidiChannel, 2);
-    note_references[note] = 0;
+    if (internal_note_references[note] && MicroDexed[0]) {
+      MicroDexed[0]->keyup(static_cast<uint8_t>(note));
+    }
+    internal_note_references[note] = 0;
+  }
+  for (uint8_t channel = 0; channel < 16; ++channel) {
+    for (uint16_t note = 0; note < 128; ++note) {
+      while (din_note_references[channel][note]) {
+        midiNoteOff(static_cast<uint8_t>(note), 0, channel + 1, 2);
+        --din_note_references[channel][note];
+      }
+    }
   }
 }
 
-void routeEvent(const Event& event, void*) {
-  if (!MicroDexed[0]) return;
-  uint8_t& references = note_references[event.note];
-  if (event.note_on) {
-    if (references++ == 0) {
-      MicroDexed[0]->keydown(event.note, kVelocity);
-      midiNoteOn(event.note, kVelocity, kMidiChannel, 2);
+void routeEvent(uint8_t channel, uint8_t note, uint8_t velocity, bool note_on, void*) {
+  uint8_t& internal_references = internal_note_references[note];
+  uint8_t& din_references = din_note_references[channel - 1][note];
+  if (note_on) {
+    if (internal_references++ == 0 && MicroDexed[0]) {
+      MicroDexed[0]->keydown(note, velocity ? velocity : kVelocity);
     }
-  } else if (references && --references == 0) {
-    MicroDexed[0]->keyup(event.note);
-    midiNoteOff(event.note, 0, kMidiChannel, 2);
+    ++din_references;
+    midiNoteOn(note, velocity, channel, 2);
+  } else {
+    if (internal_references && --internal_references == 0 && MicroDexed[0]) {
+      MicroDexed[0]->keyup(note);
+    }
+    if (din_references) --din_references;
+    midiNoteOff(note, 0, channel, 2);
   }
 }
 
@@ -115,14 +113,14 @@ void loadPreset(uint8_t index) {
 void restart(uint32_t now_ms) {
   player.restart(now_ms);
   auto_started = true;
-  Serial.println("MVP0: restarted");
+  Serial.printf("MVP0: restarted %s\n", player.trackName());
 }
 
 void shortPress(uint32_t now_ms) {
-  if (player.state() == Player::State::playing) {
+  if (player.state() == SongPlayer::State::playing) {
     player.pause(now_ms);
     Serial.println("MVP0: paused");
-  } else if (player.state() == Player::State::paused) {
+  } else if (player.state() == SongPlayer::State::paused) {
     player.resume(now_ms);
     Serial.println("MVP0: resumed");
   }
@@ -149,15 +147,21 @@ void updateButton(uint32_t now_ms) {
   }
 }
 
-void updateEncoder() {
+void selectTrack(uint8_t index, uint32_t now_ms) {
+  track_index = index % kTrackCount;
+  player.select(track_index, now_ms);
+  auto_started = true;
+  Serial.printf("MVP0: track %u/%u %s\n", track_index + 1, kTrackCount, player.trackName());
+}
+
+void updateEncoder(uint32_t now_ms) {
   const int detent = static_cast<int>(encoder.read() / kEncoderCountsPerDetent);
   if (detent == encoder_detent) return;
   const int delta = detent - encoder_detent;
   encoder_detent = detent;
-  int next = static_cast<int>(preset_index) + delta;
-  while (next < 0) next += kPresetCount;
-  preset_index = static_cast<uint8_t>(next % kPresetCount);
-  loadPreset(preset_index);
+  int next = static_cast<int>(track_index) + delta;
+  while (next < 0) next += kTrackCount;
+  selectTrack(static_cast<uint8_t>(next % kTrackCount), now_ms);
 }
 
 }  // namespace
@@ -171,34 +175,27 @@ void jawHarpMvp0Setup() {
   button_raw = button_stable = digitalRead(kEncoderButton) != LOW;
   button_changed_ms = millis();
 
-  const char* error = nullptr;
-  if (!parseAbc(kTestPhrase, score, &error)) {
-    Serial.printf("MVP0: ABC error: %s\n", error ? error : "unknown");
-    return;
-  }
-
-  player.configure(&score, routeEvent, allNotesOffCallback, nullptr);
-  loadPreset(preset_index);
+  player.configure(routeEvent, allNotesOffCallback, nullptr);
+  loadPreset(0);
   boot_ms = millis();
   ready = true;
-  Serial.printf("MVP0: ready, %u events, encoder pins 2/3/4, MIDI DIN channel %u\n",
-                static_cast<unsigned>(score.event_count), kMidiChannel);
+  Serial.println("MVP0: ready, turn selects Katy/Bach/Rick; press pauses; hold restarts");
 }
 
 void jawHarpMvp0Loop() {
   using namespace jaw_harp_mvp0;
   if (!ready) return;
   const uint32_t now_ms = millis();
-  updateEncoder();
+  updateEncoder(now_ms);
   updateButton(now_ms);
 
   if (!auto_started && now_ms - boot_ms >= kStartupDelayMs) {
-    restart(now_ms);
+    selectTrack(0, now_ms);
   }
   player.update(now_ms);
   if (player.state() != logged_state) {
     logged_state = player.state();
-    if (logged_state == Player::State::ended) Serial.println("MVP0: phrase ended");
+    if (logged_state == SongPlayer::State::ended) Serial.println("MVP0: song ended; turn or hold to play");
   }
 }
 
