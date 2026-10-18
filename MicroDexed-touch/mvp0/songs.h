@@ -1225,4 +1225,6 @@ const size_t RICK_EVENT_COUNT = sizeof(rickEvents) / sizeof(rickEvents[0]);
 const uint32_t RICK_DURATION_MS = 16271;
 const uint8_t RICK_REPEATS = 4;
 
+#include "pink_floyd_song.h"
+
 }  // namespace jaw_harp_mvp0

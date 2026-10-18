@@ -48,4 +48,11 @@ int main() {
   player.select(2, 3000);
   assert(player.track() == 2);
   assert(recorder.note_ons > before_rick);  // Rick has a chord at t=0.
+
+  const unsigned before_pink_floyd = recorder.note_ons;
+  player.select(3, 4000);
+  assert(player.track() == 3);
+  assert(recorder.note_ons > before_pink_floyd);  // Leading silence is trimmed.
+  player.update(300032);
+  assert(player.state() == SongPlayer::State::ended);
 }

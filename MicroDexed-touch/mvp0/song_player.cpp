@@ -11,6 +11,7 @@ constexpr const char* kTrackNames[kTrackCount] = {
     "Katy Perry - I Kissed a Girl",
     "Bach - Toccata and Fugue BWV 565",
     "Rick Astley - Never Gonna Give You Up (chorus x4)",
+    "Pink Floyd - Wish You Were Here",
 };
 
 int letterBase(char note) {
@@ -115,9 +116,18 @@ void SongPlayer::update(uint32_t now_ms) {
 }
 
 void SongPlayer::updateMidi(uint32_t delta_ms) {
-  const MidiEvent* events = track_ == 0 ? katyEvents : rickEvents;
-  const size_t count = track_ == 0 ? KATY_EVENT_COUNT : RICK_EVENT_COUNT;
-  const uint32_t duration_ms = track_ == 0 ? KATY_DURATION_MS : RICK_DURATION_MS;
+  const MidiEvent* events = katyEvents;
+  size_t count = KATY_EVENT_COUNT;
+  uint32_t duration_ms = KATY_DURATION_MS;
+  if (track_ == 2) {
+    events = rickEvents;
+    count = RICK_EVENT_COUNT;
+    duration_ms = RICK_DURATION_MS;
+  } else if (track_ == 3) {
+    events = wishYouWereHereEvents;
+    count = WISH_YOU_WERE_HERE_EVENT_COUNT;
+    duration_ms = WISH_YOU_WERE_HERE_DURATION_MS;
+  }
   midi_position_ms_ += delta_ms;
 
   while (midi_index_ < count && events[midi_index_].atMs <= midi_position_ms_) {

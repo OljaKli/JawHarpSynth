@@ -198,7 +198,7 @@ void jawHarpMvp0Setup() {
   Serial.println("MVP0: preset FM PIANO");
   boot_ms = millis();
   ready = true;
-  Serial.println("MVP0: ready, turn selects Katy/Bach/Rick; press pauses; hold restarts");
+  Serial.println("MVP0: ready, turn selects Katy/Bach/Rick/Pink Floyd; press pauses; hold restarts");
 }
 
 void jawHarpMvp0Loop() {

@@ -4,7 +4,7 @@
 
 namespace jaw_harp_mvp0 {
 
-constexpr uint8_t kTrackCount = 3;
+constexpr uint8_t kTrackCount = 4;
 
 class SongPlayer {
 public:
