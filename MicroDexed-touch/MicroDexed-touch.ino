@@ -30,6 +30,10 @@
 #include <MIDI.h>
 #include <SD.h>
 
+#ifdef JAW_HARP_MVP0
+#include "mvp0/mvp0.h"
+#endif
+
 #ifdef  MCP_CV
 #include "MCP4728.h"  // 4-Channel DAC 12Bit mcp4728
 MCP4728 dac;
@@ -2159,6 +2163,10 @@ create_audio_ambient_garden_chain();
   init_oled_displays();
 #endif
 
+#ifdef JAW_HARP_MVP0
+  jawHarpMvp0Setup();
+#endif
+
 }
 
 #ifdef COMPILE_FOR_PSRAM
@@ -3347,6 +3355,10 @@ void onEncoder2Decrement(i2cEncoderMiniLib* enc) {
 
 void loop()
 {
+
+#ifdef JAW_HARP_MVP0
+  jawHarpMvp0Loop();
+#endif
 
   // While WAV recording is running, the SD write loop needs tight timing.
     // Any I2C traffic on the bus can cause dropped samples / crackles, so we
